@@ -287,26 +287,19 @@ MODEL_SPEC = {
         },
         "machine_param_path": {
             "type": "csv",
-            "rows": {
-                "capmax": {
-                    "about": gettext("Maximum capacity for device."),
-                    "type": "number",
-                    "units": u.kilowatt
-                },
-                "hsmax": {
+            "columns": {
+                "name": {
+                    "type": "freestyle_string",
                     "about": gettext(
-                        "Upper limit of wave height for device operation. The "
-                        "device shuts down when waves are higher than this."),
-                    "type": "number",
-                    "units": u.meter
+                        "Name of the machine parameter. Expected parameters are: "
+                        "'capmax' (maximum capacity for device, in kilowatts), "
+                        "'hsmax' (upper limit of wave height for device operation, "
+                        "in meters), and 'tpmax' (upper limit of wave period for "
+                        "device operation, in seconds).")
                 },
-                "tpmax": {
-                    "about": gettext(
-                        "Upper limit of wave period for device operation. The "
-                        "device shuts down when the wave period is longer "
-                        "than this."),
+                "value": {
                     "type": "number",
-                    "units": u.second
+                    "about": gettext("Value of the machine parameter.")
                 }
             },
             "about": gettext("Table of parameters for the wave energy machine in use."),
@@ -335,52 +328,25 @@ MODEL_SPEC = {
         },
         "machine_econ_path": {
             "type": "csv",
-            "rows": {
-                "capmax": {
-                    "type": "number",
-                    "units": u.kilowatt,
-                    "about": gettext("Maximum capacity of the device.")
+            "columns": {
+                "name": {
+                    "type": "freestyle_string",
+                    "about": gettext(
+                        "Name of the machine parameter. Expected parameters are: "
+                        "'capmax' (maximum capacity for device, in kilowatts), "
+                        "'cc' (capital cost per device installed, $/kilowatt), "
+                        "'cml' (cost of mooring lines, $/kilometer), "
+                        "'cul' (cost of underwater cable, $/kilometer), "
+                        "'col' (cost of overland transmission lines, $/kilometer), "
+                        "'omc' (operating and maintenance cost, $/kilowatt hour), "
+                        "'p' (price of electricity, $/kilowatt hour), "
+                        "'r' (discount rate, between 0 and 1), "
+                        "'smlpm' (number of slack lines required per machine)")
                 },
-                "cc": {
+                "value": {
                     "type": "number",
-                    "units": u.currency/u.kilowatt,
-                    "about": gettext("Capital cost per device installed.")
-                },
-                "cml": {
-                    "type": "number",
-                    "units": u.currency/u.meter,
-                    "about": gettext("Cost of mooring lines.")
-                },
-                "cul": {
-                    "type": "number",
-                    "units": u.currency/u.kilometer,
-                    "about": gettext("Cost of underwater cable.")
-                },
-                "col": {
-                    "type": "number",
-                    "units": u.currency/u.kilometer,
-                    "about": gettext("Cost of overland transmission lines.")
-                },
-                "omc": {
-                    "type": "number",
-                    "units": u.currency/u.kilowatt_hour,
-                    "about": gettext("Operating and maintenance cost.")
-                },
-                "p": {
-                    "type": "number",
-                    "units": u.currency/u.kilowatt_hour,
-                    "about": gettext("Price of electricity.")
-                },
-                "r": {
-                    "type": "ratio",
-                    "about": gettext("Discount rate.")
-                },
-                "smlpm": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext("Number of slack lines required per machine.")
+                    "about": gettext("Value of the machine parameter.")
                 }
-
             },
             "required": "valuation_container",
             "about": gettext(
