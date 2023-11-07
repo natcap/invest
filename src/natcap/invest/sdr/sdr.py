@@ -626,7 +626,7 @@ def execute(args):
     mutual_mask_task = task_graph.add_task(
         func=pygeoprocessing.raster_map,
         kwargs={
-            'op': _mask_op,
+            'op': _create_mutual_mask_op,
             'rasters': aligned_list,
             'target_path': f_reg['mask_path'],
             'target_nodata': 0,
@@ -641,7 +641,7 @@ def execute(args):
         mask_tasks[f"masked_{key}"] = task_graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs={
-                'op': _mask_op,
+                'op': _mask_single_raster_op,
                 'rasters': [aligned_path, f_reg['mask_path']],
                 'target_path': masked_path,
             },
@@ -933,7 +933,11 @@ def execute(args):
 
 
 # raster_map op for building a mask where all pixels in the stack are valid.
-def _mask_op(*arrays): return 1
+def _create_mutual_mask_op(*arrays): return 1
+
+
+# raster_map op for using a mask raster to mask out another raster.
+def _mask_single_raster_op(source_array, mask_array): return source_array
 
 
 def _avoided_export_op(avoided_erosion, sdr, sed_deposition):
