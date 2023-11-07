@@ -55,9 +55,13 @@ Unreleased Changes
     * Removed the ``utils`` functions ``array_equals_nodata``,
       ``exponential_decay_kernel_raster``, and ``gaussian_decay_kernel_raster``,
       which were obsoleted by new ``pygeoprocessing`` features.
-* Pollination
-    * Replaced custom kernel implementation with ``pygeoprocessing.kernels``.
-      Convolution results may be slightly different (more accurate).
+    * Version metadata at import time is now fetched with
+      ``importlib.metadata`` instead of ``pkg_resources``.
+      (`#1442 <https://github.com/natcap/invest/issues/1442>`_)
+* Coastal Vulnerability
+    * Fixed a bug where the model would crash when processing a float type
+      bathymetry raster with no nodata value.
+      https://github.com/natcap/invest/issues/992
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
@@ -68,6 +72,9 @@ Unreleased Changes
     * Fixed an issue in NDR's effective retention where, on rasters with more
       than 2^31 pixels, the model would crash with an error relating to a
       negative (overflowed) index. https://github.com/natcap/invest/issues/1431
+* Pollination
+    * Replaced custom kernel implementation with ``pygeoprocessing.kernels``.
+      Convolution results may be slightly different (more accurate).
 * SDR
     * Fixed an issue with SDR's sediment deposition where large regions would
       become nodata in cases where the DEM has valid data but other inputs
