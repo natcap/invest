@@ -641,6 +641,8 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
                     df[col] = df[col].astype(pandas.Int64Dtype())
                 elif col_spec['type'] == 'boolean':
                     df[col] = df[col].astype('boolean')
+                else:
+                    raise ValueError(f'Unknown type: {col_spec['type']}')
             except Exception as err:
                 raise ValueError(
                     f'Value(s) in the "{col}" column could not be interpreted '

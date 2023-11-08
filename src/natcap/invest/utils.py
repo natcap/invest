@@ -600,48 +600,30 @@ def expand_path(path, base_path):
 def read_csv_to_dataframe(path, **kwargs):
     """Return a dataframe representation of the CSV.
 
-    Wrapper around ``pandas.read_csv`` that performs some common data cleaning
-    based on information in the arg spec.
-
-    Columns are filtered to just those that match a pattern in the spec.
-    Column names are lowercased and whitespace is stripped off. Empty rows are
-    dropped. Values in each column are processed and cast to an appropriate
-    dtype according to the type in the spec:
-
-    - Values in raster, vector, csv, file, and directory columns are cast to
-      str, whitespace stripped, and expanded as paths relative to the input path
-    - Values in freestyle_string and option_string columns are cast to str,
-      whitespace stripped, and converted to lowercase
-    - Values in number, ratio, and percent columns are cast to float
-    - Values in integer columns are cast to int
-    - Values in boolean columns are cast to bool
-
-    Empty or NA cells are returned as ``numpy.nan`` (for floats) or
-    ``pandas.NA`` (for all other types).
-
-    Also sets custom defaults for some kwargs passed to ``pandas.read_csv``,
-    which you can override with kwargs:
+    Wrapper around ``pandas.read_csv`` that performs some common data cleaning.
+    Column names are lowercased and whitespace is stripped off. Empty rows and
+    columns are dropped. Sets custom defaults for some kwargs passed to
+    ``pandas.read_csv``, which you can override with kwargs:
 
     - sep=None: lets the Python engine infer the separator
     - engine='python': The 'python' engine supports the sep=None option.
     - encoding='utf-8-sig': 'utf-8-sig' handles UTF-8 with or without BOM.
+    - index_col=False: force pandas not to index by any column, useful in
+        case of trailing separators
 
     Args:
         path (str): path to a CSV file
-        spec (dict): dictionary specifying the structure of the CSV table
         **kwargs: additional kwargs will be passed to ``pandas.read_csv``
 
     Returns:
         pandas.DataFrame with the contents of the given CSV
     """
     try:
-        # set index_col=False to force pandas not to index by any column
-        # this is useful in case of trailing separators
-        # we'll explicitly set the index column later on
         df = pandas.read_csv(
             path,
             index_col=False,
             **{
+                'index_col': False,
                 'sep': None,
                 'engine': 'python',
                 'encoding': 'utf-8-sig',

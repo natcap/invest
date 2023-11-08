@@ -287,6 +287,8 @@ MODEL_SPEC = {
         },
         "machine_param_path": {
             "type": "csv",
+            # use columns because of the non standard format of this table,
+            # we cannot validate it with the rows as headers.
             "columns": {
                 "name": {
                     "type": "freestyle_string",
@@ -329,6 +331,8 @@ MODEL_SPEC = {
         },
         "machine_econ_path": {
             "type": "csv",
+            # use columns because of the non standard format of this table,
+            # we cannot validate it with the rows as headers.
             "columns": {
                 "name": {
                     "type": "freestyle_string",
