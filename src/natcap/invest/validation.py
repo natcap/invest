@@ -626,7 +626,8 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
         available_cols -= set(matching_cols)
         for col in matching_cols:
             try:
-                if col_spec['type'] in ['csv', 'directory', 'file', 'raster', 'vector', {'vector', 'raster'}]:
+                # frozenset needed to make the set hashable.  A frozenset and set with the same members are equal.
+                if col_spec['type'] in {'csv', 'directory', 'file', 'raster', 'vector', frozenset({'vector', 'raster'})}:
                     df[col] = df[col].apply(
                         lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), csv_path))
                     df[col] = df[col].astype(pandas.StringDtype())
