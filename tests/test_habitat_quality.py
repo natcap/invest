@@ -2056,7 +2056,6 @@ class HabitatQualityTests(unittest.TestCase):
                 '0.07,1.0,threat_2,threat_2_c.tif,threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
-        print(validate_result)
         expected = [(
             ['threats_table_path'],
             validation.MESSAGES['MATCHED_NO_HEADERS'].format(
