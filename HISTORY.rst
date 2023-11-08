@@ -49,6 +49,9 @@ Unreleased Changes
       (`#1374 <https://github.com/natcap/invest/issues/1374>`_)
     * Datastack archives will now be correctly extracted
       (`#1308 <https://github.com/natcap/invest/issues/1308>`_)
+    * Validation of tables has been improved and standardized, which should
+      result in more readable validation errors.
+      (`#1379 <https://github.com/natcap/invest/issues/1379>`_)
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
