@@ -621,7 +621,6 @@ def read_csv_to_dataframe(path, **kwargs):
     try:
         df = pandas.read_csv(
             path,
-            index_col=False,
             **{
                 'index_col': False,
                 'sep': None,

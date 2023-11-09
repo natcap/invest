@@ -1162,7 +1162,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             csv_file,
             columns={
                 'index': {'type': 'freestyle_string'},
-                'h1': {'type': 'bool', 'na_allowed': True}})
+                'h1': {'type': 'boolean', 'na_allowed': True}})
         self.assertEqual(df['h1'][0], True)
         self.assertEqual(df['h1'][1], False)
         # empty values are returned as pandas.NA
