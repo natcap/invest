@@ -770,41 +770,12 @@ def calculate_crop_production(lulc_path, yield_path, crop_lucode,
     Returns:
         None
     """
-
-    lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
-    yield_nodata = pygeoprocessing.get_raster_info(yield_path)['nodata'][0]
-
-    def _crop_production_op(lulc_array, yield_array):
-        """Mask in yields that overlap with `crop_lucode`.
-
-        Args:
-            lulc_array (numpy.ndarray): landcover raster values
-            yield_array (numpy.ndarray): interpolated yield raster values
-
-        Returns:
-            numpy.ndarray with float values of yields for the current crop
-
-        """
-        result = numpy.full(lulc_array.shape, _NODATA_YIELD,
-                            dtype=numpy.float32)
-
-        valid_mask = numpy.full(lulc_array.shape, True)
-        if lulc_nodata is not None:
-            valid_mask &= ~utils.array_equals_nodata(lulc_array, lulc_nodata)
-        if yield_nodata is not None:
-            valid_mask &= ~utils.array_equals_nodata(yield_array, yield_nodata)
-        result[valid_mask] = 0
-
-        lulc_mask = lulc_array == crop_lucode
-        result[valid_mask & lulc_mask] = (
-            yield_array[valid_mask & lulc_mask] * pixel_area_ha)
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(lulc_path, 1), (yield_path, 1)],
-        _crop_production_op,
-        target_path,
-        gdal.GDT_Float32, _NODATA_YIELD),
+    pygeoprocessing.raster_map(
+        op=lambda lulc, _yield: numpy.where(
+            lulc == crop_lucode, _yield * pixel_area_ha, 0),
+        rasters=[lulc_path, yield_path],
+        target_path=target_path,
+        target_nodata=_NODATA_YIELD)
 
 
 def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
@@ -823,7 +794,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result[:] = 0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
-        valid_mask = ~utils.array_equals_nodata(
+        valid_mask = ~pygeoprocessing.array_equals_nodata(
             observed_yield_array, observed_yield_nodata)
     result[valid_mask] = observed_yield_array[valid_mask]
     return result
@@ -849,7 +820,7 @@ def _mask_observed_yield_op(
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
-        valid_mask = ~utils.array_equals_nodata(lulc_array, landcover_nodata)
+        valid_mask = ~pygeoprocessing.array_equals_nodata(lulc_array, landcover_nodata)
         result[valid_mask] = 0
     else:
         result[:] = 0
@@ -923,7 +894,7 @@ def tabulate_results(
                 # if nodata value undefined, assume all pixels are valid
                 valid_mask = numpy.full(yield_block.shape, True)
                 if observed_yield_nodata is not None:
-                    valid_mask = ~utils.array_equals_nodata(
+                    valid_mask = ~pygeoprocessing.array_equals_nodata(
                         yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
                     valid_mask & (yield_block > 0))
@@ -943,7 +914,7 @@ def tabulate_results(
                         (yield_percentile_raster_path, 1)):
                     # _NODATA_YIELD will always have a value (defined above)
                     yield_sum += numpy.sum(
-                        yield_block[~utils.array_equals_nodata(
+                        yield_block[~pygeoprocessing.array_equals_nodata(
                             yield_block, _NODATA_YIELD)])
                 production_lookup[yield_percentile_id] = yield_sum
                 result_table.write(",%f" % yield_sum)
@@ -970,7 +941,7 @@ def tabulate_results(
                 (landcover_raster_path, 1)):
             if landcover_nodata is not None:
                 total_area += numpy.count_nonzero(
-                    ~utils.array_equals_nodata(band_values, landcover_nodata))
+                    ~pygeoprocessing.array_equals_nodata(band_values, landcover_nodata))
             else:
                 total_area += band_values.size
         result_table.write(

@@ -1434,7 +1434,7 @@ def _calculate_npv_levelized_rasters(
             pygeoprocessing.iterblocks((base_dist_raster_path, 1))):
 
         target_arr_shape = harvest_block_data.shape
-        target_nodata_mask = utils.array_equals_nodata(
+        target_nodata_mask = pygeoprocessing.array_equals_nodata(
             harvest_block_data, _TARGET_NODATA)
 
         # Total cable distance converted to kilometers
@@ -1613,7 +1613,7 @@ def _depth_op(bath, min_depth, max_depth):
     out_array = numpy.full(
         bath.shape, _TARGET_NODATA, dtype=numpy.float32)
     valid_pixels_mask = ((bath >= max_depth) & (bath <= min_depth) &
-                         ~utils.array_equals_nodata(bath, _TARGET_NODATA))
+                         ~pygeoprocessing.array_equals_nodata(bath, _TARGET_NODATA))
     out_array[
         valid_pixels_mask] = bath[valid_pixels_mask]
     return out_array
@@ -1633,7 +1633,7 @@ def _add_avg_dist_op(tmp_dist, avg_grid_distance):
     """
     out_array = numpy.full(
         tmp_dist.shape, _TARGET_NODATA, dtype=numpy.float32)
-    valid_pixels_mask = ~utils.array_equals_nodata(tmp_dist, _TARGET_NODATA)
+    valid_pixels_mask = ~pygeoprocessing.array_equals_nodata(tmp_dist, _TARGET_NODATA)
     out_array[valid_pixels_mask] = (
         tmp_dist[valid_pixels_mask] + avg_grid_distance)
     return out_array
@@ -1700,7 +1700,7 @@ def _mask_out_depth_dist(*rasters):
     out_array = numpy.full(rasters[0].shape, _TARGET_NODATA, dtype=numpy.float32)
     nodata_mask = numpy.full(rasters[0].shape, False, dtype=bool)
     for array in rasters:
-        nodata_mask = nodata_mask | utils.array_equals_nodata(
+        nodata_mask = nodata_mask | pygeoprocessing.array_equals_nodata(
                 array, _TARGET_NODATA)
     out_array[~nodata_mask] = rasters[0][~nodata_mask]
     return out_array
@@ -1720,7 +1720,7 @@ def _calculate_carbon_op(harvested_arr, carbon_coef):
     """
     out_array = numpy.full(
         harvested_arr.shape, _TARGET_NODATA, dtype=numpy.float32)
-    valid_pixels_mask = ~utils.array_equals_nodata(
+    valid_pixels_mask = ~pygeoprocessing.array_equals_nodata(
         harvested_arr, _TARGET_NODATA)
 
     # The energy value converted from MWhr/yr (Mega Watt hours as output
@@ -1836,7 +1836,7 @@ def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
         """Mask distance values by min/max values."""
         out_array = numpy.full(dist_arr.shape, out_nodata, dtype=numpy.float32)
         valid_pixels_mask = (
-            ~utils.array_equals_nodata(dist_arr, raster_nodata) &
+            ~pygeoprocessing.array_equals_nodata(dist_arr, raster_nodata) &
             (dist_arr >= min_dist) & (dist_arr <= max_dist))
         out_array[
             valid_pixels_mask] = dist_arr[valid_pixels_mask]
