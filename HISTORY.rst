@@ -49,6 +49,9 @@ Unreleased Changes
       (`#1374 <https://github.com/natcap/invest/issues/1374>`_)
     * Datastack archives will now be correctly extracted
       (`#1308 <https://github.com/natcap/invest/issues/1308>`_)
+    * Validation of tables has been improved and standardized, which should
+      result in more readable validation errors.
+      (`#1379 <https://github.com/natcap/invest/issues/1379>`_)
     * Updated to ``pygeoprocessing`` 2.4.2. This includes an update to
       ``pygeoprocessing.zonal_statistics``, which is now more correct on certain
       edge cases. Aggregated model results may change slightly.

@@ -413,9 +413,9 @@ def execute(args):
     # Map non-forest landcover codes to carbon biomasses
     LOGGER.info('Calculating direct mapped carbon stocks')
     carbon_maps = []
-    biophysical_df = utils.read_csv_to_dataframe(
+    biophysical_df = validation.get_validated_dataframe(
         args['biophysical_table_path'],
-        MODEL_SPEC['args']['biophysical_table_path'])
+        **MODEL_SPEC['args']['biophysical_table_path'])
     pool_list = [('c_above', True)]
     if args['pools_to_calculate'] == 'all':
         pool_list.extend([
@@ -624,8 +624,8 @@ def _calculate_lulc_carbon_map(
 
     """
     # classify forest pixels from lulc
-    biophysical_df = utils.read_csv_to_dataframe(
-        biophysical_table_path, MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = validation.get_validated_dataframe(
+        biophysical_table_path, **MODEL_SPEC['args']['biophysical_table_path'])
 
     lucode_to_per_cell_carbon = {}
     cell_size = pygeoprocessing.get_raster_info(
@@ -688,8 +688,8 @@ def _map_distance_from_tropical_forest_edge(
 
     """
     # Build a list of forest lucodes
-    biophysical_df = utils.read_csv_to_dataframe(
-        biophysical_table_path, MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = validation.get_validated_dataframe(
+        biophysical_table_path, **MODEL_SPEC['args']['biophysical_table_path'])
     forest_codes = biophysical_df[biophysical_df['is_tropical_forest']].index.values
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest

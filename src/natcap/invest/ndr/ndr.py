@@ -1,4 +1,5 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
+import copy
 import itertools
 import logging
 import os
@@ -574,9 +575,9 @@ def execute(args):
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
 
-    biophysical_df = utils.read_csv_to_dataframe(
+    biophysical_df = validation.get_validated_dataframe(
         args['biophysical_table_path'],
-        MODEL_SPEC['args']['biophysical_table_path'])
+        **MODEL_SPEC['args']['biophysical_table_path'])
 
     # these are used for aggregation in the last step
     field_pickle_map = {}
@@ -1161,39 +1162,30 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
+    spec_copy = copy.deepcopy(MODEL_SPEC['args'])
+    # Check required fields given the state of ``calc_n`` and ``calc_p``
+    nutrients_selected = []
+    for nutrient_letter in ('n', 'p'):
+        if f'calc_{nutrient_letter}' in args and args[f'calc_{nutrient_letter}']:
+            nutrients_selected.append(nutrient_letter)
+
+    for param in ['load', 'eff', 'crit_len']:
+        for nutrient in nutrients_selected:
+            spec_copy['biophysical_table_path']['columns'][f'{param}_{nutrient}'] = (
+                spec_copy['biophysical_table_path']['columns'][f'{param}_[NUTRIENT]'])
+            spec_copy['biophysical_table_path']['columns'][f'{param}_{nutrient}']['required'] = True
+        spec_copy['biophysical_table_path']['columns'].pop(f'{param}_[NUTRIENT]')
+
+    if 'n' in nutrients_selected:
+        spec_copy['biophysical_table_path']['columns']['proportion_subsurface_n'][
+            'required'] = True
+
     validation_warnings = validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+        args, spec_copy, MODEL_SPEC['args_with_spatial_overlap'])
 
-    invalid_keys = validation.get_invalid_keys(validation_warnings)
-
-    LOGGER.debug('Starting logging for biophysical table')
-    if 'biophysical_table_path' not in invalid_keys:
-        # Check required fields given the state of ``calc_n`` and ``calc_p``
-        nutrient_required_fields = ['lucode']
-        nutrients_selected = set()
-        for nutrient_letter in ('n', 'p'):
-            if nutrient_letter == 'n':
-                nutrient_required_fields += ['proportion_subsurface_n']
-            do_nutrient_key = f'calc_{nutrient_letter}'
-            if do_nutrient_key in args and args[do_nutrient_key]:
-                nutrients_selected.add(do_nutrient_key)
-                nutrient_required_fields += [
-                    f'load_{nutrient_letter}',
-                    f'eff_{nutrient_letter}',
-                    f'crit_len_{nutrient_letter}'
-                ]
-        if not nutrients_selected:
-            validation_warnings.append(
-                (['calc_n', 'calc_p'], MISSING_NUTRIENT_MSG))
-
-        # Check that these nutrient-specific keys are in the table
-        # validate has already checked all the other keys
-        error_msg = validation.check_csv(
-            args['biophysical_table_path'],
-            columns={key: '' for key in nutrient_required_fields})
-        if error_msg:
-            validation_warnings.append(
-                (['biophysical_table_path'], error_msg))
+    if not nutrients_selected:
+        validation_warnings.append(
+            (['calc_n', 'calc_p'], MISSING_NUTRIENT_MSG))
 
     return validation_warnings
 

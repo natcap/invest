@@ -954,6 +954,7 @@ class RecreationRegressionTests(unittest.TestCase):
     def test_existing_regression_coef(self):
         """Recreation test regression coefficients handle existing output."""
         from natcap.invest.recreation import recmodel_client
+        from natcap.invest import validation
 
         # Initialize a TaskGraph
         taskgraph_db_dir = os.path.join(
@@ -971,9 +972,9 @@ class RecreationRegressionTests(unittest.TestCase):
         predictor_table_path = os.path.join(SAMPLE_DATA, 'predictors.csv')
 
         # make outputs to be overwritten
-        predictor_dict = utils.read_csv_to_dataframe(
+        predictor_dict = validation.get_validated_dataframe(
             predictor_table_path,
-            recmodel_client.MODEL_SPEC['args']['predictor_table_path']
+            **recmodel_client.MODEL_SPEC['args']['predictor_table_path']
         ).to_dict(orient='index')
         predictor_list = predictor_dict.keys()
         tmp_working_dir = tempfile.mkdtemp(dir=self.workspace_dir)

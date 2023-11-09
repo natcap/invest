@@ -410,125 +410,48 @@ def expand_path(path, base_path):
     return os.path.abspath(os.path.join(os.path.dirname(base_path), path))
 
 
-def read_csv_to_dataframe(path, spec, **kwargs):
+def read_csv_to_dataframe(path, **kwargs):
     """Return a dataframe representation of the CSV.
 
-    Wrapper around ``pandas.read_csv`` that performs some common data cleaning
-    based on information in the arg spec.
-
-    Columns are filtered to just those that match a pattern in the spec.
-    Column names are lowercased and whitespace is stripped off. Empty rows are
-    dropped. Values in each column are processed and cast to an appropriate
-    dtype according to the type in the spec:
-
-    - Values in raster, vector, csv, file, and directory columns are cast to
-      str, whitespace stripped, and expanded as paths relative to the input path
-    - Values in freestyle_string and option_string columns are cast to str,
-      whitespace stripped, and converted to lowercase
-    - Values in number, ratio, and percent columns are cast to float
-    - Values in integer columns are cast to int
-    - Values in boolean columns are cast to bool
-
-    Empty or NA cells are returned as ``numpy.nan`` (for floats) or
-    ``pandas.NA`` (for all other types).
-
-    Also sets custom defaults for some kwargs passed to ``pandas.read_csv``,
-    which you can override with kwargs:
+    Wrapper around ``pandas.read_csv`` that performs some common data cleaning.
+    Column names are lowercased and whitespace is stripped off. Empty rows and
+    columns are dropped. Sets custom defaults for some kwargs passed to
+    ``pandas.read_csv``, which you can override with kwargs:
 
     - sep=None: lets the Python engine infer the separator
     - engine='python': The 'python' engine supports the sep=None option.
     - encoding='utf-8-sig': 'utf-8-sig' handles UTF-8 with or without BOM.
+    - index_col=False: force pandas not to index by any column, useful in
+        case of trailing separators
 
     Args:
         path (str): path to a CSV file
-        spec (dict): dictionary specifying the structure of the CSV table
         **kwargs: additional kwargs will be passed to ``pandas.read_csv``
 
     Returns:
         pandas.DataFrame with the contents of the given CSV
     """
-    # build up a list of regex patterns to match columns against columns from
-    # the table that match a pattern in this list (after stripping whitespace
-    # and lowercasing) will be included in the dataframe
-    patterns = []
-    for column in spec['columns']:
-        column = column.lower()
-        match = re.match(r'(.*)\[(.+)\](.*)', column)
-        if match:
-            # for column name patterns, convert it to a regex pattern
-            groups = match.groups()
-            patterns.append(f'{groups[0]}(.+){groups[2]}')
-        else:
-            # for regular column names, use the exact name as the pattern
-            patterns.append(column.replace('(', '\(').replace(')', '\)'))
-
     try:
-        # set index_col=False to force pandas not to index by any column
-        # this is useful in case of trailing separators
-        # we'll explicitly set the index column later on
         df = pandas.read_csv(
             path,
-            index_col=False,
-            usecols=lambda col: any(
-                re.fullmatch(pattern, col.strip().lower()) for pattern in patterns
-            ),
             **{
+                'index_col': False,
                 'sep': None,
                 'engine': 'python',
                 'encoding': 'utf-8-sig',
                 **kwargs
             })
     except UnicodeDecodeError as error:
-        LOGGER.error(
+        raise ValueError(
             f'The file {path} must be encoded as UTF-8 or ASCII')
-        raise error
+
+    # drop columns whose header is NA
+    df = df[[col for col in df.columns if not pandas.isna(col)]]
 
     # strip whitespace from column names and convert to lowercase
     # this won't work on integer types, which happens if you set header=None
     # however, there's little reason to use this function if there's no header
-    df.columns = df.columns.str.strip().str.lower()
-
-    # drop any empty rows
-    df = df.dropna(how="all")
-
-    available_cols = set(df.columns)
-
-    for col_spec, pattern in zip(spec['columns'].values(), patterns):
-        matching_cols = [c for c in available_cols if re.match(pattern, c)]
-        available_cols -= set(matching_cols)
-        for col in matching_cols:
-            try:
-                if col_spec['type'] in ['csv', 'directory', 'file', 'raster', 'vector', {'vector', 'raster'}]:
-                    df[col] = df[col].apply(
-                        lambda p: p if pandas.isna(p) else expand_path(str(p).strip(), path))
-                    df[col] = df[col].astype(pandas.StringDtype())
-                elif col_spec['type'] in {'freestyle_string', 'option_string'}:
-                    df[col] = df[col].apply(
-                        lambda s: s if pandas.isna(s) else str(s).strip().lower())
-                    df[col] = df[col].astype(pandas.StringDtype())
-                elif col_spec['type'] in {'number', 'percent', 'ratio'}:
-                    df[col] = df[col].astype(float)
-                elif col_spec['type'] == 'integer':
-                    df[col] = df[col].astype(pandas.Int64Dtype())
-                elif col_spec['type'] == 'boolean':
-                    df[col] = df[col].astype('boolean')
-            except ValueError as err:
-                raise ValueError(
-                    f'Value(s) in the "{col}" column of the table {path} '
-                    f'could not be interpreted as {col_spec["type"]}s. '
-                    f'Original error: {err}')
-
-     # set the index column, if specified
-    if 'index_col' in spec and spec['index_col'] is not None:
-        index_col = spec['index_col'].lower()
-        try:
-            df = df.set_index(index_col, verify_integrity=True)
-        except KeyError:
-            # If 'index_col' is not a column then KeyError is raised for using
-            # it as the index column
-            LOGGER.error(f"The column '{index_col}' could not be found "
-                         f"in the table {path}")
-            raise
+    df.columns = df.columns.astype(str).str.strip().str.lower()
 
     return df
 
