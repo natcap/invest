@@ -1090,7 +1090,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             csv_file,
             columns={
                 'id': {'type': 'integer'},
-                'header': {'type': 'integer', 'na_allowed': True}})
+                'header': {'type': 'integer'}})
         self.assertIsInstance(df['header'][0], numpy.int64)
         self.assertIsInstance(df['header'][1], numpy.int64)
         # empty values are returned as pandas.NA
@@ -1105,7 +1105,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 """\
                 h1,h2,h3
                 5,0.5,.4
-                -1,-.3,
+                -1,.3,
                 """
             ))
         df = validation.get_validated_dataframe(
@@ -1113,7 +1113,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             columns={
                 'h1': {'type': 'number'},
                 'h2': {'type': 'ratio'},
-                'h3': {'type': 'percent', 'na_allowed': True},
+                'h3': {'type': 'percent'},
             })
         self.assertEqual(df['h1'].dtype, float)
         self.assertEqual(df['h2'].dtype, float)
@@ -1137,7 +1137,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             csv_file,
             columns={
                 'h1': {'type': 'freestyle_string'},
-                'h2': {'type': 'option_string'},
+                'h2': {'type': 'option_string', 'options': ['a', 'b']},
                 'h3': {'type': 'freestyle_string'},
             })
         self.assertEqual(df['h1'][0], '1')
@@ -1162,7 +1162,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             csv_file,
             columns={
                 'index': {'type': 'freestyle_string'},
-                'h1': {'type': 'boolean', 'na_allowed': True}})
+                'h1': {'type': 'boolean'}})
         self.assertEqual(df['h1'][0], True)
         self.assertEqual(df['h1'][1], False)
         # empty values are returned as pandas.NA
@@ -1172,15 +1172,19 @@ class TestGetValidatedDataframe(unittest.TestCase):
         """validation: test values in path columns are expanded."""
         from natcap.invest import validation
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        # create files so that validation will pass
+        open(os.path.join(self.workspace_dir,'foo.txt'), 'w').close()
+        os.mkdir(os.path.join(self.workspace_dir, 'foo'))
+        open(os.path.join(self.workspace_dir,'foo', 'bar.txt'), 'w').close()
+        print(os.path.join(self.workspace_dir,'foo', 'bar.txt'))
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
                 f"""\
                 bar,path
                 1,foo.txt
-                2,foo/bar.txt
-                3,foo\\bar.txt
-                4,{self.workspace_dir}/foo.txt
-                5,
+                2,foo{os.sep}bar.txt
+                3,{self.workspace_dir}/foo.txt
+                4,
                 """
             ))
         df = validation.get_validated_dataframe(
@@ -1196,13 +1200,10 @@ class TestGetValidatedDataframe(unittest.TestCase):
             f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
             df['path'][1])
         self.assertEqual(
-            f'{self.workspace_dir}{os.sep}foo\\bar.txt',
-            df['path'][2])
-        self.assertEqual(
             f'{self.workspace_dir}{os.sep}foo.txt',
-            df['path'][3])
+            df['path'][2])
         # empty values are returned as empty strings
-        self.assertTrue(pandas.isna(df['path'][4]))
+        self.assertTrue(pandas.isna(df['path'][3]))
 
     def test_other_kwarg(self):
         """validation: any other kwarg should be passed to pandas.read_csv"""

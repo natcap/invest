@@ -414,6 +414,27 @@ def check_vector(filepath, geometries, fields=None, projected=False,
     return projection_warning
 
 
+def check_raster_or_vector(filepath, **kwargs):
+    """Validate an input that may be a raster or vector.
+
+    Args:
+        filepath (string):  The path to the raster or vector.
+        **kwargs: kwargs of the raster and vector spec. Will be
+            passed to ``check_raster`` or ``check_vector``.
+
+    Returns:
+        A string error message if an error was found. ``None`` otherwise.
+    """
+    try:
+        gis_type = pygeoprocessing.get_gis_type(filepath)
+    except ValueError as err:
+        return str(err)
+    if gis_type == pygeoprocessing.RASTER_TYPE:
+        return check_raster(filepath, **kwargs)
+    else:
+        return check_vector(filepath, **kwargs)
+
+
 def check_freestyle_string(value, regexp=None, **kwargs):
     """Validate an arbitrary string.
 
@@ -627,7 +648,7 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
         for col in matching_cols:
             try:
                 # frozenset needed to make the set hashable.  A frozenset and set with the same members are equal.
-                if col_spec['type'] in {'csv', 'directory', 'file', 'raster', 'vector', frozenset({'vector', 'raster'})}:
+                if col_spec['type'] in {'csv', 'directory', 'file', 'raster', 'vector', 'raster_or_vector'}:
                     df[col] = df[col].apply(
                         lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), csv_path))
                     df[col] = df[col].astype(pandas.StringDtype())
@@ -647,6 +668,16 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
                 raise ValueError(
                     f'Value(s) in the "{col}" column could not be interpreted '
                     f'as {col_spec["type"]}s. Original error: {err}')
+
+            # validate the values within each column
+            def check_value(value):
+                if pandas.isna(value):
+                    return
+                err_msg = _VALIDATION_FUNCS[col_spec['type']](value, **col_spec)
+                if err_msg:
+                    raise ValueError(
+                        f'Error in {axis} "{col}", value "{value}": {err_msg}')
+            df[col].apply(check_value)
 
     if any(df.columns.duplicated()):
         duplicated_columns = df.columns[df.columns.duplicated]
@@ -686,10 +717,11 @@ def check_csv(filepath, **kwargs):
     if file_warning:
         return file_warning
     if 'columns' in kwargs or 'rows' in kwargs:
-        try:
-            get_validated_dataframe(filepath, **kwargs)
-        except Exception as e:
-            return str(e)
+        # try:
+        #     get_validated_dataframe(filepath, **kwargs)
+        # except Exception as e:
+        #     return str(e)
+        get_validated_dataframe(filepath, **kwargs)
 
 
 def check_headers(expected_headers, actual_headers, header_type='header'):
@@ -873,6 +905,7 @@ _VALIDATION_FUNCS = {
     'option_string': check_option_string,
     'raster': functools.partial(timeout, check_raster),
     'vector': functools.partial(timeout, check_vector),
+    'raster_or_vector': functools.partial(timeout, check_raster_or_vector),
     'other': None,  # Up to the user to define their validate()
 }
 
