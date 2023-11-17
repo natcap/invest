@@ -1,4 +1,5 @@
 export const ipcMainChannels = {
+  ADD_PLUGIN: 'add-plugin',
   CHANGE_LANGUAGE: 'change-language',
   CHECK_FILE_PERMISSIONS: 'check-file-permissions',
   CHECK_STORAGE_TOKEN: 'check-storage-token',

@@ -25,6 +25,7 @@ import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
+import setupAddPlugin from './setupAddPlugin';
 import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
@@ -94,6 +95,7 @@ export const createWindow = async () => {
   setupInvestLogReaderHandler();
   setupOpenExternalUrl();
   setupRendererLogger();
+  setupAddPlugin();
   await getFlaskIsReady();
 
   const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';

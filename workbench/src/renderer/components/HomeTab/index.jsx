@@ -1,17 +1,23 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 
+import Form from 'react-bootstrap/Form';
+import Button from 'react-bootstrap/Button';
 import ListGroup from 'react-bootstrap/ListGroup';
 import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
+import Modal from 'react-bootstrap/Modal';
 import { useTranslation } from 'react-i18next';
+import { MdOutlineAdd } from "react-icons/md";
 
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
 
 const { logger } = window.Workbench;
+const { ipcRenderer } = window.Workbench.electron;
 
 /**
  * Renders a table of buttons for each invest model and
@@ -78,6 +84,7 @@ export default class HomeTab extends React.Component {
             {investButtons}
           </ListGroup>
         </Col>
+        <PluginModal />
         <Col className="recent-job-card-col">
           <RecentInvestJobs
             openInvestModel={this.props.openInvestModel}
@@ -203,4 +210,53 @@ RecentInvestJobs.propTypes = {
     })
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,
+};
+
+
+function PluginModal(props) {
+  const [aboutShow, setAboutShow] = useState(false);
+  const [url, setURL] = useState(undefined);
+  const handleAboutClose = () => setAboutShow(false);
+  const handleAboutOpen = () => setAboutShow(true);
+  const handleSubmit = (event) => {
+    console.log('add plugin', url);
+    ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, url)
+  }
+  const handleChange = (event) => {
+    setURL(event.currentTarget.value);
+  }
+
+  const { t, i18n } = useTranslation();
+
+  return (
+    <React.Fragment>
+      <Button onClick={handleAboutOpen}>
+        <MdOutlineAdd className="mr-1" />
+        {'Add a plugin'}
+      </Button>
+      <Modal show={aboutShow} onHide={handleAboutClose}>
+        <Modal.Header>
+          <Modal.Title>{t('Add a plugin')}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group className="mb-3" controlId="formBasicEmail">
+              <Form.Label>Git URL</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Enter Git URL"
+                onChange={handleChange}/>
+            </Form.Group>
+
+            <Button onClick={handleSubmit}>
+              Add
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
+    </React.Fragment>
+  );
+}
+
+PluginModal.propTypes = {
 };
