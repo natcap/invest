@@ -239,7 +239,7 @@ class SDRTests(unittest.TestCase):
 
         expected_results = {
             'sed_export': 0.08896198869,
-            'usle_tot': 1.86480903625,
+            'usle_tot': 1.86480891705,
             'avoid_exp': 9203.955078125,
             'avoid_eros': 194212.28125,
         }
