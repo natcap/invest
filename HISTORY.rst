@@ -65,6 +65,11 @@ Unreleased Changes
     * Fixed a bug where the model would crash when processing a float type
       bathymetry raster with no nodata value.
       https://github.com/natcap/invest/issues/992
+* Habitat Quality
+    * Updated the threat table column description to clarify that the threat
+      table columns: ``cur_path``, ``fut_path``, and ``base_path`` are meant
+      to be file system path strings.
+      https://github.com/natcap/invest/issues/1455
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
