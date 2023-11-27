@@ -118,29 +118,33 @@ MODEL_SPEC = {
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                     "about": gettext(
-                        "Map of the threat's distribution in the current "
-                        "scenario. Each pixel value is the relative intensity "
-                        "of the threat at that location. ")
+                        "File system path to a raster of the threat's "
+                        "distribution in the current scenario. Each pixel "
+                        "value in the threat raster is the relative intensity "
+                        "of the threat at that location, with values between "
+                        "0 and 1.")
                 },
                 "fut_path": {
                     "required": "lulc_fut_path",
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                     "about": gettext(
-                        "Map of the threat's distribution in the future "
-                        "scenario. Each pixel value is the relative intensity "
-                        "of the threat at that location. "
-                        "Required if Future LULC is provided.")
+                        "File system path to a raster of the threat's "
+                        "distribution in a future scenario. Each pixel "
+                        "value in the threat raster is the relative intensity "
+                        "of the threat at that location, with values between "
+                        "0 and 1.")
                 },
                 "base_path": {
                     "required": "lulc_bas_path",
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                     "about": gettext(
-                        "Map of the threat's distribution in the baseline "
-                        "scenario. Each pixel value is the relative intensity "
-                        "of the threat at that location. "
-                        "Required if Baseline LULC is provided.")
+                        "File system path to a raster of the threat's "
+                        "distribution in the baseline scenario. Each pixel "
+                        "value in the threat raster is the relative intensity "
+                        "of the threat at that location, with values between "
+                        "0 and 1. Required if Baseline LULC is provided.")
                 }
             },
             "about": gettext(
