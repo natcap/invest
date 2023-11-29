@@ -1,0 +1,68 @@
+
+# https://github.com/emlys/demo-invest-plugin.git
+set -e  # Exit the script immediately if any subshell has a nonzero exit code.
+
+PLUGIN_URL=$1
+DOWNLOAD_DIR=$2
+CONFIG_PATH=$3
+
+echo $PLUGIN_URL
+echo $DOWNLOAD_DIR
+echo "config path: $CONFIG_PATH"
+
+mkdir -p "$DOWNLOAD_DIR"
+
+PLUGIN_REPO_NAME=$(basename $PLUGIN_URL .git)
+cd "$DOWNLOAD_DIR"
+rm -rf $PLUGIN_REPO_NAME
+git clone --quiet $PLUGIN_URL
+ls
+
+# pip install tomli
+PLUGIN_NAME=$(python -c "
+
+import tomli
+
+with open('$DOWNLOAD_DIR/$PLUGIN_REPO_NAME/pyproject.toml', 'rb') as f:
+    toml_dict = tomli.load(f)
+
+print(toml_dict['project']['name'])
+")
+echo $PLUGIN_NAME
+
+
+curl -Ls https://micro.mamba.pm/api/micromamba/osx-64/latest | tar -xvj bin/micromamba
+# export MAMBA_ROOT_PREFIX=/some/prefix  # optional, defaults to ~/micromamba
+eval "$(./bin/micromamba shell hook -s posix)"
+
+ENV_NAME=natcap_plugin_$PLUGIN_NAME
+
+micromamba create --yes --name $ENV_NAME pip gdal
+echo "created env"
+micromamba activate $ENV_NAME
+echo "activated env"
+
+ENV_PATH=$(mamba info | grep 'active env location' | awk 'NF>1{print $NF}')
+echo $ENV_PATH
+
+pip install "git+$PLUGIN_URL"
+
+python -c "
+import json
+
+with open('$CONFIG_PATH') as f:
+    config = json.load(f)
+
+if 'plugins' not in config:
+    config['plugins'] = {}
+
+config['plugins']['$PLUGIN_NAME'] = {
+    'env': '$ENV_PATH'
+}
+print(config)
+
+with open('$CONFIG_PATH', 'w') as f:
+    json.dump(config, f)
+"
+echo "done"
+
