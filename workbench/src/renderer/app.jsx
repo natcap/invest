@@ -26,6 +26,8 @@ import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 
 const { ipcRenderer } = window.Workbench.electron;
+import { ipcMainChannels } from '../main/ipcMainChannels';
+
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
@@ -54,7 +56,14 @@ export default class App extends React.Component {
 
   /** Initialize the list of invest models, recent invest jobs, etc. */
   async componentDidMount() {
-    const investList = await getInvestModelNames();
+    const modelList = await getInvestModelNames();
+    const pluginList = await ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, 'plugins');
+    const investList = {
+      ...modelList,
+      ...pluginList,
+    }
+    console.log(investList);
     const recentJobs = await InvestJob.getJobStore();
     this.setState({
       investList: investList,

@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
+import Spinner from 'react-bootstrap/Spinner';
 import ListGroup from 'react-bootstrap/ListGroup';
 import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
@@ -216,11 +217,19 @@ RecentInvestJobs.propTypes = {
 function PluginModal(props) {
   const [aboutShow, setAboutShow] = useState(false);
   const [url, setURL] = useState(undefined);
+  const [loading, setLoading] = useState(false);
+
   const handleAboutClose = () => setAboutShow(false);
   const handleAboutOpen = () => setAboutShow(true);
   const handleSubmit = (event) => {
     console.log('add plugin', url);
-    ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, url)
+    setLoading(true);
+    ipcRenderer.invoke(
+      ipcMainChannels.ADD_PLUGIN, url
+    ).then((result) => {
+      setLoading(false);
+      console.log(result)
+    })
   }
   const handleChange = (event) => {
     setURL(event.currentTarget.value);
@@ -234,10 +243,16 @@ function PluginModal(props) {
         <MdOutlineAdd className="mr-1" />
         {'Add a plugin'}
       </Button>
+
       <Modal show={aboutShow} onHide={handleAboutClose}>
         <Modal.Header>
           <Modal.Title>{t('Add a plugin')}</Modal.Title>
         </Modal.Header>
+        {loading &&
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </Spinner>
+        }
         <Modal.Body>
           <Form>
             <Form.Group className="mb-3" controlId="formBasicEmail">
