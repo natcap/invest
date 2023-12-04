@@ -142,7 +142,7 @@ MODEL_SPEC = {
                     "about": gettext(
                         "File system path to a raster of the threat's "
                         "distribution in the baseline scenario. Each pixel "
-                        "value in the threat raster is the relative intensity "
+                        "value in this raster is the relative intensity "
                         "of the threat at that location, with values between "
                         "0 and 1. Required if Baseline LULC is provided.")
                 }
