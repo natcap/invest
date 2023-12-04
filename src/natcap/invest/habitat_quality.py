@@ -118,7 +118,7 @@ MODEL_SPEC = {
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                     "about": gettext(
-                        "File system path to a raster of the threat's "
+                        "Path to a raster of the threat's "
                         "distribution in the current scenario. Each pixel "
                         "value in this raster is the relative intensity "
                         "of the threat at that location, with values between "
@@ -129,7 +129,7 @@ MODEL_SPEC = {
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                     "about": gettext(
-                        "File system path to a raster of the threat's "
+                        "Path to a raster of the threat's "
                         "distribution in a future scenario. Each pixel "
                         "value in this raster is the relative intensity "
                         "of the threat at that location, with values between "
@@ -140,7 +140,7 @@ MODEL_SPEC = {
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                     "about": gettext(
-                        "File system path to a raster of the threat's "
+                        "Path to a raster of the threat's "
                         "distribution in the baseline scenario. Each pixel "
                         "value in this raster is the relative intensity "
                         "of the threat at that location, with values between "
