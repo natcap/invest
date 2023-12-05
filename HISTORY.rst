@@ -62,6 +62,10 @@ Unreleased Changes
     * Fixed a bug where the model would crash when processing a float type
       bathymetry raster with no nodata value.
       https://github.com/natcap/invest/issues/992
+* HRA
+    * Fixed an issue preventing the HRA criteria table from loading when the
+      table was UTF-8 encoded with a Byte-Order Marker.
+      https://github.com/natcap/invest/issues/1460
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
