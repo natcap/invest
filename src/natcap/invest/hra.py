@@ -1830,7 +1830,7 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
     # This function requires that the table is read as a numpy array, so it's
     # easiest to read the table directly.
     table = pandas.read_csv(criteria_table_path, header=None, sep=None,
-                            engine='python').to_numpy()
+                            engine='python', encoding='utf-8-sig').to_numpy()
 
     # clean up any leading or trailing whitespace.
     for row_num in range(table.shape[0]):
