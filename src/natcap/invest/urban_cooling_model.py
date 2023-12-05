@@ -413,8 +413,9 @@ def execute(args):
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate')
     utils.make_directories([args['workspace_dir'], intermediate_dir])
-    biophysical_df = utils.read_csv_to_dataframe(
-        args['biophysical_table_path'], MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = validation.get_validated_dataframe(
+        args['biophysical_table_path'],
+        **MODEL_SPEC['args']['biophysical_table_path'])
 
     # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide
@@ -1084,9 +1085,9 @@ def calculate_energy_savings(
                   for field in target_building_layer.schema]
     type_field_index = fieldnames.index('type')
 
-    energy_consumption_df = utils.read_csv_to_dataframe(
+    energy_consumption_df = validation.get_validated_dataframe(
         energy_consumption_table_path,
-        MODEL_SPEC['args']['energy_consumption_table_path'])
+        **MODEL_SPEC['args']['energy_consumption_table_path'])
 
     target_building_layer.StartTransaction()
     last_time = time.time()

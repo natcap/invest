@@ -587,19 +587,19 @@ def execute(args):
     # fail early on a missing required rain events table
     if (not args['user_defined_local_recharge'] and
             not args['user_defined_climate_zones']):
-        rain_events_df = utils.read_csv_to_dataframe(
+        rain_events_df = validation.get_validated_dataframe(
             args['rain_events_table_path'],
-            MODEL_SPEC['args']['rain_events_table_path'])
+            **MODEL_SPEC['args']['rain_events_table_path'])
 
-    biophysical_df = utils.read_csv_to_dataframe(
+    biophysical_df = validation.get_validated_dataframe(
         args['biophysical_table_path'],
-        MODEL_SPEC['args']['biophysical_table_path'])
+        **MODEL_SPEC['args']['biophysical_table_path'])
 
     if args['monthly_alpha']:
         # parse out the alpha lookup table of the form (month_id: alpha_val)
-        alpha_month_map = utils.read_csv_to_dataframe(
+        alpha_month_map = validation.get_validated_dataframe(
             args['monthly_alpha_path'],
-            MODEL_SPEC['args']['monthly_alpha_path']
+            **MODEL_SPEC['args']['monthly_alpha_path']
         )['alpha'].to_dict()
     else:
         # make all 12 entries equal to args['alpha_m']
@@ -766,9 +766,9 @@ def execute(args):
             'table_name': 'Climate Zone'}
         for month_id in range(N_MONTHS):
             if args['user_defined_climate_zones']:
-                cz_rain_events_df = utils.read_csv_to_dataframe(
+                cz_rain_events_df = validation.get_validated_dataframe(
                     args['climate_zone_table_path'],
-                    MODEL_SPEC['args']['climate_zone_table_path'])
+                    **MODEL_SPEC['args']['climate_zone_table_path'])
                 climate_zone_rain_events_month = (
                     cz_rain_events_df[MONTH_ID_TO_LABEL[month_id]].to_dict())
                 n_events_task = task_graph.add_task(

@@ -167,30 +167,6 @@ class WindEnergyUnitTests(unittest.TestCase):
             result_val = point_feat.GetField(field_index)
             numpy.testing.assert_allclose(result_val, exp_results[i])
 
-    def test_read_csv_wind_parameters(self):
-        """WindEnergy: testing 'read_csv_wind_parameter' function."""
-        from natcap.invest import wind_energy
-
-        csv_path = os.path.join(
-            SAMPLE_DATA,
-            'global_wind_energy_parameters.csv')
-
-        parameter_list = [
-            'air_density', 'exponent_power_curve', 'decommission_cost',
-            'operation_maintenance_cost', 'miscellaneous_capex_cost']
-
-        result = wind_energy._read_csv_wind_parameters(
-            csv_path, parameter_list)
-
-        expected_result = {
-            'air_density': 1.225,
-            'exponent_power_curve': 2,
-            'decommission_cost': 0.037,
-            'operation_maintenance_cost': .035,
-            'miscellaneous_capex_cost': .05
-        }
-        self.assertDictEqual(expected_result, result)
-
     def test_wind_data_to_point_vector(self):
         """WindEnergy: testing 'wind_data_to_point_vector' function."""
         from natcap.invest import wind_energy

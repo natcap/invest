@@ -390,12 +390,62 @@ MODEL_SPEC = {
                 },
                 "aligned_lulc.tif": {
                     "about": gettext(
-                        "Copy of the input drainage map, clipped to "
+                        "Copy of the input Land Use Land Cover map, clipped to "
                         "the extent of the other raster inputs and "
                         "aligned to the DEM."),
                     "bands": {1: {"type": "integer"}},
+                },
+                "mask.tif": {
+                    "about": gettext(
+                        "A raster aligned to the DEM and clipped to the "
+                        "extent of the other raster inputs. Pixel values "
+                        "indicate where a nodata value exists in the stack "
+                        "of aligned rasters (pixel value of 0), or if all "
+                        "values in the stack of rasters at this pixel "
+                        "location are valid."),
+                    "bands": {1: {"type": "integer"}},
+                },
+                "masked_dem.tif": {
+                    "about": gettext(
+                        "A copy of the aligned DEM, masked using the mask raster."
+                    ),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.meter}},
+                },
+                "masked_drainage.tif": {
+                    "about": gettext(
+                        "A copy of the aligned drainage map, masked using the "
+                        "mask raster."
+                    ),
+                    "bands": {1: {"type": "integer"}}
+                },
+                "masked_erodibility.tif": {
+                    "about": gettext(
+                        "A copy of the aligned erodibility map, masked using "
+                        "the mask raster."
+                    ),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)
+                    }},
+                },
+                "masked_erosivity.tif": {
+                    "about": gettext(
+                        "A copy of the aligned erosivity map, masked using "
+                        "the mask raster."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)
+                    }},
+                },
+                "masked_lulc.tif": {
+                    "about": gettext(
+                        "A copy of the aligned Land Use Land Cover map, "
+                        "masked using the mask raster."),
+                    "bands": {1: {"type": "integer"}},
                 }
-            }
+            },
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
@@ -421,6 +471,12 @@ _INTERMEDIATE_BASE_FILES = {
     'aligned_erodibility_path': 'aligned_erodibility.tif',
     'aligned_erosivity_path': 'aligned_erosivity.tif',
     'aligned_lulc_path': 'aligned_lulc.tif',
+    'mask_path': 'mask.tif',
+    'masked_dem_path': 'masked_dem.tif',
+    'masked_drainage_path': 'masked_drainage.tif',
+    'masked_erodibility_path': 'masked_erodibility.tif',
+    'masked_erosivity_path': 'masked_erosivity.tif',
+    'masked_lulc_path': 'masked_lulc.tif',
     'cp_factor_path': 'cp.tif',
     'd_dn_path': 'd_dn.tif',
     'd_up_path': 'd_up.tif',
@@ -494,8 +550,9 @@ def execute(args):
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    biophysical_df = utils.read_csv_to_dataframe(
-        args['biophysical_table_path'], MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = validation.get_validated_dataframe(
+        args['biophysical_table_path'],
+        **MODEL_SPEC['args']['biophysical_table_path'])
 
     # Test to see if c or p values are outside of 0..1
     for key in ['usle_c', 'usle_p']:
@@ -529,17 +586,22 @@ def execute(args):
 
     base_list = []
     aligned_list = []
-    for file_key in ['dem', 'lulc', 'erosivity', 'erodibility']:
-        base_list.append(args[file_key + "_path"])
-        aligned_list.append(f_reg["aligned_" + file_key + "_path"])
-    # all continuous rasters can use bilinaer, but lulc should be mode
+    masked_list = []
+    input_raster_key_list = ['dem', 'lulc', 'erosivity', 'erodibility']
+    for file_key in input_raster_key_list:
+        base_list.append(args[f"{file_key}_path"])
+        aligned_list.append(f_reg[f"aligned_{file_key}_path"])
+        masked_list.append(f_reg[f"masked_{file_key}_path"])
+    # all continuous rasters can use bilinear, but lulc should be mode
     interpolation_list = ['bilinear', 'mode', 'bilinear', 'bilinear']
 
     drainage_present = False
     if 'drainage_path' in args and args['drainage_path'] != '':
         drainage_present = True
+        input_raster_key_list.append('drainage')
         base_list.append(args['drainage_path'])
         aligned_list.append(f_reg['aligned_drainage_path'])
+        masked_list.append(f_reg['masked_drainage_path'])
         interpolation_list.append('near')
 
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
@@ -562,13 +624,39 @@ def execute(args):
         target_path_list=aligned_list,
         task_name='align input rasters')
 
+    mutual_mask_task = task_graph.add_task(
+        func=pygeoprocessing.raster_map,
+        kwargs={
+            'op': _create_mutual_mask_op,
+            'rasters': aligned_list,
+            'target_path': f_reg['mask_path'],
+            'target_nodata': 0,
+        },
+        target_path_list=[f_reg['mask_path']],
+        dependent_task_list=[align_task],
+        task_name='create mask')
+
+    mask_tasks = {}  # use a dict so we can put these in a loop
+    for key, aligned_path, masked_path in zip(input_raster_key_list,
+                                              aligned_list, masked_list):
+        mask_tasks[f"masked_{key}"] = task_graph.add_task(
+            func=pygeoprocessing.raster_map,
+            kwargs={
+                'op': _mask_single_raster_op,
+                'rasters': [aligned_path, f_reg['mask_path']],
+                'target_path': masked_path,
+            },
+            target_path_list=[masked_path],
+            dependent_task_list=[mutual_mask_task, align_task],
+            task_name=f'mask {key}')
+
     pit_fill_task = task_graph.add_task(
         func=pygeoprocessing.routing.fill_pits,
         args=(
-            (f_reg['aligned_dem_path'], 1),
+            (f_reg['masked_dem_path'], 1),
             f_reg['pit_filled_dem_path']),
         target_path_list=[f_reg['pit_filled_dem_path']],
-        dependent_task_list=[align_task],
+        dependent_task_list=[mask_tasks['masked_dem']],
         task_name='fill pits')
 
     slope_task = task_graph.add_task(
@@ -637,11 +725,11 @@ def execute(args):
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=add_drainage_op,
-                rasters=[f_reg['stream_path'], f_reg['aligned_drainage_path']],
+                rasters=[f_reg['stream_path'], f_reg['masked_drainage_path']],
                 target_path=f_reg['stream_and_drainage_path'],
                 target_dtype=numpy.uint8),
             target_path_list=[f_reg['stream_and_drainage_path']],
-            dependent_task_list=[stream_task, align_task],
+            dependent_task_list=[stream_task, mask_tasks['masked_drainage']],
             task_name='add drainage')
         drainage_raster_path_task = (
             f_reg['stream_and_drainage_path'], drainage_task)
@@ -653,33 +741,34 @@ def execute(args):
     threshold_w_task = task_graph.add_task(
         func=_calculate_w,
         args=(
-            lulc_to_c, f_reg['aligned_lulc_path'], f_reg['w_path'],
+            lulc_to_c, f_reg['masked_lulc_path'], f_reg['w_path'],
             f_reg['thresholded_w_path']),
         target_path_list=[f_reg['w_path'], f_reg['thresholded_w_path']],
-        dependent_task_list=[align_task],
+        dependent_task_list=[mask_tasks['masked_lulc']],
         task_name='calculate W')
 
     lulc_to_cp = (biophysical_df['usle_c'] * biophysical_df['usle_p']).to_dict()
     cp_task = task_graph.add_task(
         func=_calculate_cp,
         args=(
-            lulc_to_cp, f_reg['aligned_lulc_path'],
+            lulc_to_cp, f_reg['masked_lulc_path'],
             f_reg['cp_factor_path']),
         target_path_list=[f_reg['cp_factor_path']],
-        dependent_task_list=[align_task],
+        dependent_task_list=[mask_tasks['masked_lulc']],
         task_name='calculate CP')
 
     rkls_task = task_graph.add_task(
         func=_calculate_rkls,
         args=(
             f_reg['ls_path'],
-            f_reg['aligned_erosivity_path'],
-            f_reg['aligned_erodibility_path'],
+            f_reg['masked_erosivity_path'],
+            f_reg['masked_erodibility_path'],
             drainage_raster_path_task[0],
             f_reg['rkls_path']),
         target_path_list=[f_reg['rkls_path']],
         dependent_task_list=[
-            align_task, drainage_raster_path_task[1], ls_factor_task],
+            mask_tasks['masked_erosivity'], mask_tasks['masked_erodibility'],
+            drainage_raster_path_task[1], ls_factor_task],
         task_name='calculate RKLS')
 
     usle_task = task_graph.add_task(
@@ -710,8 +799,7 @@ def execute(args):
                 accumulation_path, out_bar_path),
             target_path_list=[accumulation_path, out_bar_path],
             dependent_task_list=[
-                align_task, factor_task, flow_accumulation_task,
-                flow_dir_task],
+                factor_task, flow_accumulation_task, flow_dir_task],
             task_name='calculate %s' % bar_id)
         bar_task_map[bar_id] = bar_task
 
@@ -843,6 +931,14 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+
+
+# raster_map op for building a mask where all pixels in the stack are valid.
+def _create_mutual_mask_op(*arrays): return 1
+
+
+# raster_map op for using a mask raster to mask out another raster.
+def _mask_single_raster_op(source_array, mask_array): return source_array
 
 
 def _avoided_export_op(avoided_erosion, sdr, sed_deposition):

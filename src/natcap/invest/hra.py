@@ -551,8 +551,7 @@ def execute(args):
                 f"  Missing from criteria table: {missing_from_criteria_table}"
             )
 
-    criteria_df = pandas.read_csv(composite_criteria_table_path,
-                                  index_col=False)
+    criteria_df = utils.read_csv_to_dataframe(composite_criteria_table_path)
     # Because criteria may be spatial, we need to prepare those spatial inputs
     # as well.
     spatial_criteria_attrs = {}
@@ -1786,8 +1785,8 @@ def _parse_info_table(info_table_path):
     info_table_path = os.path.abspath(info_table_path)
 
     try:
-        table = utils.read_csv_to_dataframe(
-            info_table_path, MODEL_SPEC['args']['info_table_path'])
+        table = validation.get_validated_dataframe(
+            info_table_path, **MODEL_SPEC['args']['info_table_path'])
     except ValueError as err:
         if 'Index has duplicate keys' in str(err):
             raise ValueError("Habitat and stressor names may not overlap.")
@@ -1829,8 +1828,8 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
     """
     # This function requires that the table is read as a numpy array, so it's
     # easiest to read the table directly.
-    table = pandas.read_csv(criteria_table_path, header=None, sep=None,
-                            engine='python', encoding='utf-8-sig').to_numpy()
+    table = utils.read_csv_to_dataframe(
+        criteria_table_path, header=None).to_numpy()
 
     # clean up any leading or trailing whitespace.
     for row_num in range(table.shape[0]):
@@ -2379,8 +2378,8 @@ def _override_datastack_archive_criteria_table_path(
         the data dir.
     """
     args_key = 'criteria_table_path'
-    criteria_table_array = pandas.read_csv(
-        criteria_table_path, header=None, sep=None, engine='python').to_numpy()
+    criteria_table_array = utils.read_csv_to_dataframe(
+        criteria_table_path, header=None).to_numpy()
     contained_data_dir = os.path.join(data_dir, f'{args_key}_data')
 
     known_rating_cols = set()

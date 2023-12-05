@@ -842,8 +842,8 @@ def _schedule_predictor_data_processing(
         'line_intersect_length': _line_intersect_length,
     }
 
-    predictor_df = utils.read_csv_to_dataframe(
-        predictor_table_path, MODEL_SPEC['args']['predictor_table_path'])
+    predictor_df = validation.get_validated_dataframe(
+        predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
     predictor_task_list = []
     predictor_json_list = []  # tracks predictor files to add to shp
 
@@ -1530,8 +1530,8 @@ def _validate_same_id_lengths(table_path):
         string message if IDs are too long
 
     """
-    predictor_df = utils.read_csv_to_dataframe(
-        table_path, MODEL_SPEC['args']['predictor_table_path'])
+    predictor_df = validation.get_validated_dataframe(
+        table_path, **MODEL_SPEC['args']['predictor_table_path'])
     too_long = set()
     for p_id in predictor_df.index:
         if len(p_id) > 10:
@@ -1559,12 +1559,12 @@ def _validate_same_ids_and_types(
         string message if any of the fields in 'id' and 'type' don't match
         between tables.
     """
-    predictor_df = utils.read_csv_to_dataframe(
-        predictor_table_path, MODEL_SPEC['args']['predictor_table_path'])
+    predictor_df = validation.get_validated_dataframe(
+        predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
 
-    scenario_predictor_df = utils.read_csv_to_dataframe(
+    scenario_predictor_df = validation.get_validated_dataframe(
         scenario_predictor_table_path,
-        MODEL_SPEC['args']['scenario_predictor_table_path'])
+        **MODEL_SPEC['args']['scenario_predictor_table_path'])
 
     predictor_pairs = set([
         (p_id, row['type']) for p_id, row in predictor_df.iterrows()])
@@ -1589,8 +1589,8 @@ def _validate_same_projection(base_vector_path, table_path):
     """
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
-    data_paths = utils.read_csv_to_dataframe(
-        table_path, MODEL_SPEC['args']['predictor_table_path']
+    data_paths = validation.get_validated_dataframe(
+        table_path, **MODEL_SPEC['args']['predictor_table_path']
     )['path'].tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
@@ -1640,8 +1640,8 @@ def _validate_predictor_types(table_path):
         string message if any value in the ``type`` column does not match a
         valid type, ignoring leading/trailing whitespace.
     """
-    df = utils.read_csv_to_dataframe(
-        table_path, MODEL_SPEC['args']['predictor_table_path'])
+    df = validation.get_validated_dataframe(
+        table_path, **MODEL_SPEC['args']['predictor_table_path'])
     # ignore leading/trailing whitespace because it will be removed
     # when the type values are used
     valid_types = set({'raster_mean', 'raster_sum', 'point_count',

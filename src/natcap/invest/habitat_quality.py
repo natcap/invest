@@ -118,29 +118,33 @@ MODEL_SPEC = {
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                     "about": gettext(
-                        "Map of the threat's distribution in the current "
-                        "scenario. Each pixel value is the relative intensity "
-                        "of the threat at that location. ")
+                        "Path to a raster of the threat's "
+                        "distribution in the current scenario. Each pixel "
+                        "value in this raster is the relative intensity "
+                        "of the threat at that location, with values between "
+                        "0 and 1.")
                 },
                 "fut_path": {
                     "required": "lulc_fut_path",
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                     "about": gettext(
-                        "Map of the threat's distribution in the future "
-                        "scenario. Each pixel value is the relative intensity "
-                        "of the threat at that location. "
-                        "Required if Future LULC is provided.")
+                        "Path to a raster of the threat's "
+                        "distribution in a future scenario. Each pixel "
+                        "value in this raster is the relative intensity "
+                        "of the threat at that location, with values between "
+                        "0 and 1.")
                 },
                 "base_path": {
                     "required": "lulc_bas_path",
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                     "about": gettext(
-                        "Map of the threat's distribution in the baseline "
-                        "scenario. Each pixel value is the relative intensity "
-                        "of the threat at that location. "
-                        "Required if Baseline LULC is provided.")
+                        "Path to a raster of the threat's "
+                        "distribution in the baseline scenario. Each pixel "
+                        "value in this raster is the relative intensity "
+                        "of the threat at that location, with values between "
+                        "0 and 1. Required if Baseline LULC is provided.")
                 }
             },
             "about": gettext(
@@ -372,12 +376,12 @@ def execute(args):
 
     LOGGER.info("Checking Threat and Sensitivity tables for compliance")
     # Get CSVs as dictionaries and ensure the key is a string for threats.
-    threat_df = utils.read_csv_to_dataframe(
-        args['threats_table_path'], MODEL_SPEC['args']['threats_table_path']
+    threat_df = validation.get_validated_dataframe(
+        args['threats_table_path'], **MODEL_SPEC['args']['threats_table_path']
     ).fillna('')
-    sensitivity_df = utils.read_csv_to_dataframe(
+    sensitivity_df = validation.get_validated_dataframe(
         args['sensitivity_table_path'],
-        MODEL_SPEC['args']['sensitivity_table_path'])
+        **MODEL_SPEC['args']['sensitivity_table_path'])
 
     half_saturation_constant = float(args['half_saturation_constant'])
 
@@ -1086,12 +1090,12 @@ def validate(args, limit_to=None):
             "sensitivity_table_path" not in invalid_keys and
             "threat_raster_folder" not in invalid_keys):
         # Get CSVs as dictionaries and ensure the key is a string for threats.
-        threat_df = utils.read_csv_to_dataframe(
+        threat_df = validation.get_validated_dataframe(
                 args['threats_table_path'],
-                MODEL_SPEC['args']['threats_table_path']).fillna('')
-        sensitivity_df = utils.read_csv_to_dataframe(
+                **MODEL_SPEC['args']['threats_table_path']).fillna('')
+        sensitivity_df = validation.get_validated_dataframe(
             args['sensitivity_table_path'],
-            MODEL_SPEC['args']['sensitivity_table_path'])
+            **MODEL_SPEC['args']['sensitivity_table_path'])
 
         # check that the threat names in the threats table match with the
         # threats columns in the sensitivity table.
