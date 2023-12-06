@@ -84,6 +84,9 @@ Unreleased Changes
       than 2^31 pixels, the model would crash with an error relating to a
       negative (overflowed) index. https://github.com/natcap/invest/issues/1431
 * Pollination
+    * Fixed a regression where nodata values were not being properly compared.
+      This was only an issue in some development builds after 3.14.0.
+      (`#1458 <https://github.com/natcap/invest/issues/1458>`_)
     * Replaced custom kernel implementation with ``pygeoprocessing.kernels``.
       Convolution results may be slightly different (more accurate).
 * SDR
