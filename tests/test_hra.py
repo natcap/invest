@@ -331,12 +331,11 @@ class HRAUnitTests(unittest.TestCase):
         from natcap.invest import hra
 
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
-        with open(criteria_table_path, 'w') as criteria_table:
-            bom_char = "\uFEFF"  # byte-order marker in 16-bit hex value
+        with open(criteria_table_path, 'w', encoding='utf-8-sig') as criteria_table:
             criteria_table.write(
                 textwrap.dedent(
-                    f"""\
-                    {bom_char}HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
+                    """\
+                    HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
                     HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     recruitment rate,2,2,2,2,2,2,C
                     connectivity rate,2,2,2,2,2,2,C
@@ -351,6 +350,11 @@ class HRAUnitTests(unittest.TestCase):
                     management effectiveness,2,2,1,2,2,1,E
                     """
                 ))
+
+        # Sanity check: make sure the file has the expected BOM
+        bom_char = "\uFEFF"  # byte-order marker in 16-bit hex value
+        assert open(criteria_table_path).read().startswith(bom_char)
+
         target_composite_csv_path = os.path.join(self.workspace_dir,
                                                  'composite.csv')
         hra._parse_criteria_table(criteria_table_path,
