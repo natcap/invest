@@ -352,9 +352,9 @@ class HRAUnitTests(unittest.TestCase):
                 ))
 
         # Sanity check: make sure the file has the expected BOM
-        bom_char = "\uFEFF"  # byte-order marker in 16-bit hex value
-        with open(criteria_table_path) as criteria_table:
-            assert criteria_table.read().startswith(bom_char)
+        # Gotta use binary mode so that python doesn't silently strip the BOM
+        with open(criteria_table_path, 'rb') as criteria_table:
+            self.assertTrue(criteria_table.read().startswith(b"\xef\xbb\xbf"))
 
         target_composite_csv_path = os.path.join(self.workspace_dir,
                                                  'composite.csv')
