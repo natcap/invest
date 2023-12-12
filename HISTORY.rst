@@ -61,6 +61,8 @@ Unreleased Changes
     * Version metadata at import time is now fetched with
       ``importlib.metadata`` instead of ``pkg_resources``.
       (`#1442 <https://github.com/natcap/invest/issues/1442>`_)
+    * The API docs logo has been updated to use the latest version of the
+      InVEST logo. (`#1463 <https://github.com/natcap/invest/issues/1463>`_)
 * Workbench
     * Fixed a broken "Find my logfiles" button on MacOS.
       https://github.com/natcap/invest/issues/1452
