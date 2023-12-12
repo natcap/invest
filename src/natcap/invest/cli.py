@@ -326,6 +326,10 @@ def main(user_args=None):
     export_py_subparser.add_argument(
         '-f', '--filepath', default=None,
         help='Define a location for the saved .py file')
+    export_py_subparser.add_argument(
+        '-d', '--datastack', default=None,
+        help=('Include an args dict in the Python script '
+              'with values from this datastack'))
 
     args = parser.parse_args(user_args)
     natcap.invest.set_locale(args.language)
@@ -474,10 +478,19 @@ def main(user_args=None):
         parser.exit(0)
 
     if args.subcommand == 'export-py':
+        args_dict = None
         target_filepath = args.filepath
         if not args.filepath:
             target_filepath = f'{args.model}_execute.py'
-        export_to_python(target_filepath, args.model)
+        if args.datastack:
+            try:
+                parsed_datastack = datastack.extract_parameter_set(
+                    args.datastack)
+            except Exception as error:
+                parser.exit(
+                    1, "Error when parsing JSON datastack:\n    " + str(error))
+            args_dict = parsed_datastack.args
+        export_to_python(target_filepath, args.model, args_dict)
         parser.exit()
 
 
