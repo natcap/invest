@@ -371,7 +371,7 @@ class CLIHeadlessTests(unittest.TestCase):
         self.assertEqual(exit_cm.exception.code, 0)
 
     def test_export_python_with_datastack(self):
-        """CLI: Export a python script for a given model."""
+        """CLI: Export a python script including args, for a given model."""
         from natcap.invest import cli
 
         datastack_dict = {
