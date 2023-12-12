@@ -61,6 +61,10 @@ Unreleased Changes
     * Version metadata at import time is now fetched with
       ``importlib.metadata`` instead of ``pkg_resources``.
       (`#1442 <https://github.com/natcap/invest/issues/1442>`_)
+    * The command-line interface for exporting python scripts
+      (``invest export-py``) now accepts a ``-d`` datastack arg that populates
+      the args dict values of the script.
+      https://github.com/natcap/invest/issues/1472
 * Workbench
     * Fixed a broken "Find my logfiles" button on MacOS.
       https://github.com/natcap/invest/issues/1452
