@@ -370,6 +370,35 @@ class CLIHeadlessTests(unittest.TestCase):
 
         self.assertEqual(exit_cm.exception.code, 0)
 
+    def test_export_python_with_datastack(self):
+        """CLI: Export a python script for a given model."""
+        from natcap.invest import cli
+
+        datastack_dict = {
+            'model_name': 'natcap.invest.carbon',
+            'invest_version': '3.10',
+            'args': {}
+        }
+        new_parameter_set_path = os.path.join(
+            self.workspace_dir, 'paramset.invs.json')
+        with open(new_parameter_set_path, 'w') as parameter_set_file:
+            parameter_set_file.write(
+                json.dumps(datastack_dict, indent=4, sort_keys=True))
+
+        target_filepath = os.path.join(self.workspace_dir, 'foo.py')
+        with redirect_stdout() as stdout_stream:
+            with self.assertRaises(SystemExit) as exit_cm:
+                cli.main([
+                    'export-py',
+                    'carbon',
+                    '-f', target_filepath,
+                    '-d', new_parameter_set_path])
+
+        self.assertTrue(os.path.exists(target_filepath))
+        # the contents of the file are asserted in CLIUnitTests
+
+        self.assertEqual(exit_cm.exception.code, 0)
+
 
 class CLIUnitTests(unittest.TestCase):
     """Unit Tests for CLI utilities."""
