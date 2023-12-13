@@ -344,7 +344,7 @@ class CLIHeadlessTests(unittest.TestCase):
         from natcap.invest import cli
 
         target_filepath = os.path.join(self.workspace_dir, 'foo.py')
-        with redirect_stdout() as stdout_stream:
+        with redirect_stdout():
             with self.assertRaises(SystemExit) as exit_cm:
                 cli.main(['export-py', 'carbon', '-f', target_filepath])
 
@@ -361,7 +361,7 @@ class CLIHeadlessTests(unittest.TestCase):
         # cannot write this file to self.workspace because we're
         # specifically testing the file is created in a default location.
         expected_filepath = f'{model}_execute.py'
-        with redirect_stdout() as stdout_stream:
+        with redirect_stdout():
             with self.assertRaises(SystemExit) as exit_cm:
                 cli.main(['export-py', model])
 
@@ -386,7 +386,7 @@ class CLIHeadlessTests(unittest.TestCase):
                 json.dumps(datastack_dict, indent=4, sort_keys=True))
 
         target_filepath = os.path.join(self.workspace_dir, 'foo.py')
-        with redirect_stdout() as stdout_stream:
+        with redirect_stdout():
             with self.assertRaises(SystemExit) as exit_cm:
                 cli.main([
                     'export-py',
