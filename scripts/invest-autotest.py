@@ -67,7 +67,7 @@ def run_model(modelname, binary, workspace, datastack):
         binary = binary.replace('/', '\\')
     # Using a list here allows subprocess to handle escaping of paths.
     command = [binary, 'run', '--workspace', workspace,
-               '--datastack', datastack, '--headless', modelname]
+               '--datastack', datastack, modelname]
 
     # Subprocess on linux/mac seems to prefer a list of args, but path escaping
     # (by passing the command as a list) seems to work better on Windows.
@@ -201,6 +201,8 @@ def main(user_args=None):
     print(status_messages)
     with open(os.path.join(args.workspace, 'model_results.txt'), 'w') as log:
         log.write(status_messages)
+    if failures > 0:
+        parser.exit(1, 'invest autotest failed')
 
 
 if __name__ == '__main__':

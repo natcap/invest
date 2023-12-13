@@ -266,7 +266,7 @@ jobs:
       - name: Set up node
         uses: actions/setup-node@v3
         with:
-          node-version: lts/*
+          node-version: 18
 
       - name: Restore node_modules cache
         id: nodemodules-cache
@@ -339,6 +339,7 @@ jobs:
         run: make CONDA="$MAMBA_EXE" binaries
 
       - name: Run invest-autotest with binaries
+        continue-on-error: true
         if : |
           github.event_name == 'push' &&
           (contains(github.ref, 'release') || github.ref == 'refs/heads/main')
@@ -347,7 +348,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: lts/*
+          node-version: 18
 
       - name: Restore node_modules cache
         id: nodemodules-cache
