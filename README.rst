@@ -41,7 +41,7 @@ http://invest.readthedocs.io/en/latest/installing.html or locally at ``doc/api-d
 
 .. note::
     The ``make`` commands for InVEST require a BASH shell environment. Windows
-    users can use Git Bash within the Git for Windows suite. More infomration
+    users can use Git Bash within the Git for Windows suite. More information
     can be found at https://gitforwindows.org
 
 Managing python dependencies
@@ -193,7 +193,7 @@ InVEST includes a battery of tests to ensure software quality.
 Model tests
 +++++++++++
 
-To run tests on the suite of Ecosytem Service models in InVEST::
+To run tests on the suite of Ecosystem Service models in InVEST::
 
     $ make test
 

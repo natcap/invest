@@ -61,6 +61,8 @@ Unreleased Changes
     * Version metadata at import time is now fetched with
       ``importlib.metadata`` instead of ``pkg_resources``.
       (`#1442 <https://github.com/natcap/invest/issues/1442>`_)
+    * The API docs logo has been updated to use the latest version of the
+      InVEST logo. (`#1463 <https://github.com/natcap/invest/issues/1463>`_)
 * Workbench
     * Fixed a broken "Find my logfiles" button on MacOS.
       https://github.com/natcap/invest/issues/1452
@@ -73,6 +75,10 @@ Unreleased Changes
       table columns: ``cur_path``, ``fut_path``, and ``base_path`` are meant
       to be file system path strings.
       https://github.com/natcap/invest/issues/1455
+* HRA
+    * Fixed an issue preventing the HRA criteria table from loading when the
+      table was UTF-8 encoded with a Byte-Order Marker.
+      https://github.com/natcap/invest/issues/1460
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
