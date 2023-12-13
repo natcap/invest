@@ -456,7 +456,7 @@ jobs:
       - name: Run invest-autotest with binaries
         if : |
           github.event_name == 'push' &&
-          (contains(github.ref, 'release') || github.ref == 'refs/heads/main')
+          (startsWith(github.ref, 'release') || github.ref == 'refs/heads/main')
         run: make invest_autotest
 
       - name: Tar the workspace to preserve permissions (macOS)
