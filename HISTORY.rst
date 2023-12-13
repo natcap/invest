@@ -79,6 +79,8 @@ Unreleased Changes
     * Fixed an issue preventing the HRA criteria table from loading when the
       table was UTF-8 encoded with a Byte-Order Marker.
       https://github.com/natcap/invest/issues/1460
+    * Fixed an issue with the cross-OS loading of InVEST datastack files.
+      https://github.com/natcap/invest/issues/1065
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.

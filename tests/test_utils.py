@@ -4,6 +4,7 @@ import glob
 import logging
 import logging.handlers
 import os
+import platform
 import queue
 import re
 import shutil
@@ -11,6 +12,7 @@ import tempfile
 import textwrap
 import threading
 import unittest
+import unittest.mock
 import warnings
 
 import numpy
@@ -1176,3 +1178,47 @@ class ReclassifyRasterOpTests(unittest.TestCase):
             " the LULC raster but not the table are: [3].")
         self.assertTrue(
             expected_message in str(context.exception), str(context.exception))
+
+
+class ExpandPathTests(unittest.TestCase):
+    def setUp(self):
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace_dir)
+
+    @unittest.skipIf(platform.system == 'Windows',
+                     "Function behavior differs across systems.")
+    def test_os_path_normalization_linux(self):
+        """Utils: test path separator conversion Win to Linux."""
+        from natcap.invest import utils
+
+        # Assumption: a path was created on Windows and is now being loaded on
+        # a Mac or Linux computer.
+        rel_path = "foo\\bar.shp"
+        relative_to = os.path.join(self.workspace_dir, 'test.csv')
+        expected_path = os.path.join(self.workspace_dir, "foo/bar.shp")
+        path = utils.expand_path(rel_path, relative_to)
+        self.assertEquals(path, expected_path)
+
+    @unittest.skipIf(platform.system != 'Windows',
+                     "Function behavior differs across systems.")
+    def test_os_path_normalization_windows(self):
+        """Utils: test path separator conversion Mac/Linux to Windows."""
+        from natcap.invest import utils
+
+        # Assumption: a path was created on Windows and is now being loaded on
+        # a Mac or Linux computer.
+        rel_path = "foo/bar.shp"
+        relative_to = os.path.join(self.workspace_dir, 'test.csv')
+        expected_path = os.path.join(self.workspace_dir, "foo\\bar.shp")
+        path = utils.expand_path(rel_path, relative_to)
+        self.assertEquals(path, expected_path)
+
+    def test_falsey(self):
+        """Utils: test return None when falsey."""
+        from natcap.invest import utils
+
+        for value in ('', None, False, 0):
+            self.assertEqual(
+                None, utils.expand_path(value, self.workspace_dir))
