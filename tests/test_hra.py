@@ -192,7 +192,7 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.raster_to_numpy_array(decayed_edt_path))
 
     def test_info_table_parsing(self):
-        """HRA: check info table parsing."""
+        """HRA: check info table parsing w/ case sensitivity."""
         from natcap.invest import hra
 
         info_table_path = os.path.join(self.workspace_dir, 'info_table.csv')
@@ -206,9 +206,9 @@ class HRAUnitTests(unittest.TestCase):
                     # this function is merely parsing the table contents.
                     """\
                     NAME,PATH,TYPE,STRESSOR BUFFER (meters)
-                    corals,habitat/corals.shp,habitat,
-                    oil,stressors/oil.shp,stressor,1000
-                    transportation,stressors/transport.shp,stressor,100"""
+                    Corals,habitat/corals.shp,habitat,
+                    Oil,stressors/oil.shp,stressor,1000
+                    Transportation,stressors/transport.shp,stressor,100"""
                 ))
 
         habitats, stressors = hra._parse_info_table(info_table_path)
@@ -260,7 +260,7 @@ class HRAUnitTests(unittest.TestCase):
                       str(cm.exception))
 
     def test_criteria_table_parsing(self):
-        """HRA: check parsing of the criteria table."""
+        """HRA: check parsing of the criteria table w/ case sensitivity."""
         from natcap.invest import hra
 
         eelgrass_relpath = 'foo/eelgrass_connectivity.shp'
@@ -270,17 +270,17 @@ class HRAUnitTests(unittest.TestCase):
             criteria_table.write(
                 textwrap.dedent(
                     f"""\
-                    HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
+                    HABITAT NAME,Eelgrass,,,Hardbottom,,,CRITERIA TYPE
                     HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     recruitment rate,2,2,2,2,2,2,C
                     connectivity rate,{eelgrass_relpath},2,2,2,2,2,C
                     ,,,,,,,
                     HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
-                    oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    Oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     frequency of disturbance,2,2,3,2,2,3,C
                     management effectiveness,2,2,1,2,2,1,E
                     ,,,,,,,
-                    fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    Fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     frequency of disturbance,2,2,3,2,2,3,C
                     management effectiveness,2,2,1,2,2,1,E
                     """
@@ -309,10 +309,10 @@ class HRAUnitTests(unittest.TestCase):
             io.StringIO(textwrap.dedent(
                 f"""\
                 habitat,stressor,criterion,rating,dq,weight,e/c
-                eelgrass,RESILIENCE,recruitment rate,2,2,2,C
-                hardbottom,RESILIENCE,recruitment rate,2,2,2,C
-                eelgrass,RESILIENCE,connectivity rate,{eelgrass_abspath},2,2,C
-                hardbottom,RESILIENCE,connectivity rate,2,2,2,C
+                eelgrass,resilience,recruitment rate,2,2,2,C
+                hardbottom,resilience,recruitment rate,2,2,2,C
+                eelgrass,resilience,connectivity rate,{eelgrass_abspath},2,2,C
+                hardbottom,resilience,connectivity rate,2,2,2,C
                 eelgrass,oil,frequency of disturbance,2,2,3,C
                 hardbottom,oil,frequency of disturbance,2,2,3,C
                 eelgrass,oil,management effectiveness,2,2,1,E
