@@ -79,6 +79,8 @@ Unreleased Changes
     * Fixed an issue preventing the HRA criteria table from loading when the
       table was UTF-8 encoded with a Byte-Order Marker.
       https://github.com/natcap/invest/issues/1460
+    * Fixed an issue with the cross-OS loading of InVEST datastack files.
+      https://github.com/natcap/invest/issues/1065
     * Fixed an issue where habitats and stressors in the criteria table were
       not being lowercased causing a comparison issue against values from the
       info table that were being lowercased.

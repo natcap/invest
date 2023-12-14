@@ -2,8 +2,8 @@
 import codecs
 import contextlib
 import logging
-import math
 import os
+import platform
 import re
 import shutil
 import tempfile
@@ -405,6 +405,8 @@ def expand_path(path, base_path):
     """
     if not path:
         return None
+    if platform.system() in {'Darwin', 'Linux'} and '\\' in path:
+        path = path.replace('\\', '/')
     if os.path.isabs(path):
         return os.path.abspath(path)  # normalize path separators
     return os.path.abspath(os.path.join(os.path.dirname(base_path), path))
