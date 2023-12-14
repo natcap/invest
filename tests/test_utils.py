@@ -1187,7 +1187,7 @@ class ExpandPathTests(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.workspace_dir)
 
-    @unittest.skipIf(platform.system == 'Windows',
+    @unittest.skipIf(platform.system() == 'Windows',
                      "Function behavior differs across systems.")
     def test_os_path_normalization_linux(self):
         """Utils: test path separator conversion Win to Linux."""
@@ -1201,14 +1201,14 @@ class ExpandPathTests(unittest.TestCase):
         path = utils.expand_path(rel_path, relative_to)
         self.assertEquals(path, expected_path)
 
-    @unittest.skipIf(platform.system != 'Windows',
+    @unittest.skipIf(platform.system() != 'Windows',
                      "Function behavior differs across systems.")
     def test_os_path_normalization_windows(self):
         """Utils: test path separator conversion Mac/Linux to Windows."""
         from natcap.invest import utils
 
-        # Assumption: a path was created on Windows and is now being loaded on
-        # a Mac or Linux computer.
+        # Assumption: a path was created on mac/linux and is now being loaded
+        # on a Windows computer.
         rel_path = "foo/bar.shp"
         relative_to = os.path.join(self.workspace_dir, 'test.csv')
         expected_path = os.path.join(self.workspace_dir, "foo\\bar.shp")
