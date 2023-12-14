@@ -81,6 +81,10 @@ Unreleased Changes
       https://github.com/natcap/invest/issues/1460
     * Fixed an issue with the cross-OS loading of InVEST datastack files.
       https://github.com/natcap/invest/issues/1065
+    * Fixed an issue where habitats and stressors in the criteria table were
+      not being lowercased causing a comparison issue against values from the
+      info table that were being lowercased.
+      https://github.com/natcap/invest/issues/1467
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
