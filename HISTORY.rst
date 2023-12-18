@@ -35,12 +35,8 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
-
-3.14.1 (2023-12-15)
--------------------
+Unreleased Changes
+------------------
 * General
     * In advance of the numpy 2.0 release, function calls to ``numpy.product``
       have been replaced with ``numpy.prod``.
