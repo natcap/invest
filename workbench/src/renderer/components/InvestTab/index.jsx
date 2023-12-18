@@ -70,6 +70,11 @@ class InvestTab extends React.Component {
 
   async componentDidMount() {
     const { job } = this.props;
+    // start up the server for this model
+    await ipcRenderer.invoke(
+      ipcMainChannels.INVEST_SERVE,
+      job.modelRunName
+    );
     const {
       modelSpec, argsSpec, uiSpec,
     } = await investGetSpec(job.modelRunName);

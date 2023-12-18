@@ -1,11 +1,51 @@
 import { spawn, execSync } from 'child_process';
-
+import http from 'http';
 import fetch from 'node-fetch';
 
 import { getLogger } from './logger';
+import { settingsStore } from './settingsStore';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const HOSTNAME = 'http://127.0.0.1';
+
+// https://stackoverflow.com/a/71178451
+async function getFreePort() {
+  return new Promise((res) => {
+    const srv = http.createServer();
+    srv.listen(0, () => {
+      const { port } = srv.address();
+      srv.close(() => res(port));
+    });
+  });
+}
+
+/** Find out if the Flask server is online, waiting until it is.
+ *
+ * @param {number} i - the number or previous tries
+ * @param {number} retries - number of recursive calls this function is allowed.
+ * @returns { Promise } resolves text indicating success.
+ */
+export async function getFlaskIsReady(port, i = 0, retries = 41) {
+  console.log('port:', port);
+  try {
+    await fetch(`${HOSTNAME}:${port}/api/ready`, {
+      method: 'get',
+    });
+  } catch (error) {
+    if (error.code === 'ECONNREFUSED') {
+      while (i < retries) {
+        i++;
+        // Try every X ms, usually takes a couple seconds to startup.
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        logger.debug(`retry # ${i}`);
+        return getFlaskIsReady(port, i, retries);
+      }
+      logger.error(`Not able to connect to server after ${retries} tries.`);
+    }
+    logger.error(error);
+    throw error;
+  }
+}
 
 /**
  * Spawn a child process running the Python Flask app.
@@ -13,12 +53,19 @@ const HOSTNAME = 'http://127.0.0.1';
  * @param  {string} investExe - path to executeable that launches flask app.
  * @returns {ChildProcess} - a reference to the subprocess.
  */
-export function createPythonFlaskProcess(investExe) {
+export async function createPythonFlaskProcess(modelName) {
+  const micromambaPath = settingsStore.get('micromamba_path');
+  const modelEnvPath = settingsStore.get(`plugins.${modelName}.env`);
+  const port = await getFreePort();
+  console.log(port);
+  console.log(micromambaPath);
+  console.log(['run', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port]);
   const pythonServerProcess = spawn(
-    investExe,
-    ['--debug', 'serve', '--port', process.env.PORT],
+    '"' + micromambaPath + '"',
+    ['run', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port],
     { shell: true } // necessary in dev mode & relying on a conda env
   );
+  settingsStore.set(`plugins.${modelName}.port`, port);
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
   pythonServerProcess.stdout.on('data', (data) => {
@@ -30,7 +77,7 @@ export function createPythonFlaskProcess(investExe) {
   pythonServerProcess.on('error', (err) => {
     logger.error(err.stack);
     logger.error(
-      `The flask app ${investExe} crashed or failed to start
+      `The invest flask app in ${modelEnvPath} crashed or failed to start
        so this application must be restarted`
     );
     throw err;
@@ -42,37 +89,11 @@ export function createPythonFlaskProcess(investExe) {
     logger.debug(`Flask process exited with code ${code}`);
   });
   pythonServerProcess.on('disconnect', () => {
-    logger.debug(`Flask process disconnected`);
+    logger.debug('Flask process disconnected');
   });
 
+  await getFlaskIsReady(port);
   return pythonServerProcess;
-}
-
-/** Find out if the Flask server is online, waiting until it is.
- *
- * @param {number} i - the number or previous tries
- * @param {number} retries - number of recursive calls this function is allowed.
- * @returns { Promise } resolves text indicating success.
- */
-export async function getFlaskIsReady({ i = 0, retries = 41 } = {}) {
-  try {
-    await fetch(`${HOSTNAME}:${process.env.PORT}/api/ready`, {
-      method: 'get',
-    });
-  } catch (error) {
-    if (error.code === 'ECONNREFUSED') {
-      while (i < retries) {
-        i++;
-        // Try every X ms, usually takes a couple seconds to startup.
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        logger.debug(`retry # ${i}`);
-        return getFlaskIsReady({ i: i, retries: retries });
-      }
-      logger.error(`Not able to connect to server after ${retries} tries.`);
-    }
-    logger.error(error);
-    throw error;
-  }
 }
 
 /**

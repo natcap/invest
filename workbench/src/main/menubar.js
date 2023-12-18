@@ -123,7 +123,7 @@ function createWindow(parentWindow, isDevMode) {
       minimumFontSize: 12,
       preload: path.join(__dirname, '../preload/preload.js'),
       defaultEncoding: 'UTF-8',
-      additionalArguments: [devModeArg, `--port=${process.env.PORT}`],
+      additionalArguments: [devModeArg],
     },
   });
   setupContextMenu(win);

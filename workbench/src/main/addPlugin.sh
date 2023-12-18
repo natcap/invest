@@ -35,6 +35,8 @@ curl -Ls https://micro.mamba.pm/api/micromamba/osx-64/latest | tar -xvj bin/micr
 # export MAMBA_ROOT_PREFIX=/some/prefix  # optional, defaults to ~/micromamba
 eval "$(./bin/micromamba shell hook -s posix)"
 
+MICROMAMBA_PATH=$(realpath bin/micromamba)
+
 ENV_NAME=natcap_plugin_$PLUGIN_NAME
 
 micromamba create --yes --name $ENV_NAME pip gdal
@@ -53,10 +55,13 @@ import json
 with open('$CONFIG_PATH') as f:
     config = json.load(f)
 
+config['micromamba_path'] = '$MICROMAMBA_PATH'
+
 if 'plugins' not in config:
     config['plugins'] = {}
 
 config['plugins']['$PLUGIN_NAME'] = {
+    'model_name': '$PLUGIN_NAME',
     'env': '$ENV_PATH'
 }
 print(config)

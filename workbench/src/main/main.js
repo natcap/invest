@@ -9,11 +9,6 @@ import {
   ipcMain
 } from 'electron';
 
-import {
-  createPythonFlaskProcess,
-  getFlaskIsReady,
-  shutdownPythonProcess
-} from './createPythonFlaskProcess';
 import findInvestBinaries from './findInvestBinaries';
 import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
@@ -52,15 +47,10 @@ process.on('unhandledRejection', (err, promise) => {
   process.exit(1);
 });
 
-if (!process.env.PORT) {
-  process.env.PORT = '56789';
-}
-
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
 let splashScreen;
-let flaskSubprocess;
 let forceQuit = false;
 
 export function destroyWindow() {
@@ -84,7 +74,6 @@ export const createWindow = async () => {
   splashScreen.loadURL(path.join(BASE_URL, 'splash.html'));
 
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
-  flaskSubprocess = createPythonFlaskProcess(investExe);
   setupDialogs();
   setupCheckFilePermissions();
   setupCheckFirstRun();
@@ -96,7 +85,7 @@ export const createWindow = async () => {
   setupOpenExternalUrl();
   setupRendererLogger();
   setupAddPlugin();
-  await getFlaskIsReady();
+  console.log('finished setup handlers');
 
   const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';
   // Create the browser window.
@@ -106,7 +95,7 @@ export const createWindow = async () => {
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       defaultEncoding: 'UTF-8',
-      additionalArguments: [devModeArg, `--port=${process.env.PORT}`],
+      additionalArguments: [devModeArg],
     },
   });
   Menu.setApplicationMenu(
@@ -114,6 +103,7 @@ export const createWindow = async () => {
       menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
     )
   );
+  console.log('made main window');
   mainWindow.loadURL(path.join(BASE_URL, 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
@@ -202,7 +192,6 @@ export function main() {
     event.preventDefault();
     shuttingDown = true;
     removeIpcMainListeners();
-    await shutdownPythonProcess(flaskSubprocess);
     app.quit();
   });
 }

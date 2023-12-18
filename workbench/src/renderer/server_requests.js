@@ -1,5 +1,9 @@
+import { ipcMainChannels } from '../main/ipcMainChannels';
+
+const { logger, LANGUAGE } = window.Workbench;
+const { ipcRenderer } = window.Workbench.electron;
+
 const HOSTNAME = 'http://127.0.0.1';
-const { logger, PORT, LANGUAGE } = window.Workbench;
 const PREFIX = 'api';
 
 // The Flask server sends UTF-8 encoded responses by default
@@ -8,20 +12,6 @@ const PREFIX = 'api';
 // response.json() doesn't say but is presumably also UTF-8
 // https://developer.mozilla.org/en-US/docs/Web/API/Body/json
 
-/**
- * Get the list of invest model names that can be passed to getSpec.
- *
- * @returns {Promise} resolves object
- */
-export async function getInvestModelNames() {
-  return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/models?language=${LANGUAGE}`, {
-      method: 'get',
-    })
-      .then((response) => response.json())
-      .catch((error) => { logger.error(`${error.stack}`); })
-  );
-}
 
 /**
  * Get the MODEL_SPEC dict from an invest model as a JSON.
@@ -29,11 +19,13 @@ export async function getInvestModelNames() {
  * @param {string} payload - model name as given by `invest list`
  * @returns {Promise} resolves object
  */
-export async function getSpec(payload) {
+export async function getSpec(modelName) {
+  const port = await ipcRenderer.invoke(
+    ipcMainChannels.GET_SETTING, `plugins.${modelName}.port`);
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/getspec?language=${LANGUAGE}`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/getspec?language=${LANGUAGE}`, {
       method: 'post',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(modelName),
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
@@ -42,8 +34,10 @@ export async function getSpec(payload) {
 }
 
 export async function fetchArgsEnabled(payload) {
+  const port = await ipcRenderer.invoke(
+    ipcMainChannels.GET_SETTING, `plugins.${payload.model_module}.port`);
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/args_enabled`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/args_enabled`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -69,8 +63,10 @@ export async function fetchArgsEnabled(payload) {
  * @returns {Promise} resolves array
  */
 export async function fetchValidation(payload) {
+  const port = await ipcRenderer.invoke(
+    ipcMainChannels.GET_SETTING, `plugins.${payload.model_module}.port`);
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/validate?language=${LANGUAGE}`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/validate?language=${LANGUAGE}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },

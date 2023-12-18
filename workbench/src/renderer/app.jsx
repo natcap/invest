@@ -21,7 +21,6 @@ import InvestTab from './components/InvestTab';
 import SettingsModal from './components/SettingsModal';
 import DataDownloadModal from './components/DataDownloadModal';
 import DownloadProgressBar from './components/DownloadProgressBar';
-import { getInvestModelNames } from './server_requests';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 
@@ -56,13 +55,8 @@ export default class App extends React.Component {
 
   /** Initialize the list of invest models, recent invest jobs, etc. */
   async componentDidMount() {
-    const modelList = await getInvestModelNames();
-    const pluginList = await ipcRenderer.invoke(
+    const investList = await ipcRenderer.invoke(
       ipcMainChannels.GET_SETTING, 'plugins');
-    const investList = {
-      ...modelList,
-      ...pluginList,
-    }
     console.log(investList);
     const recentJobs = await InvestJob.getJobStore();
     this.setState({

@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import http from 'http';
 import os from 'os';
 import { spawn, exec } from 'child_process';
 
@@ -12,6 +13,7 @@ import investUsageLogger from './investUsageLogger';
 import markupMessage from './investLogMarkup';
 import writeInvestParameters from './writeInvestParameters';
 import { settingsStore } from './settingsStore';
+import { createPythonFlaskProcess } from './createPythonFlaskProcess';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -32,6 +34,14 @@ const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 
 export function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
+  console.log('setup invest handlers');
+
+  ipcMain.handle(
+    ipcMainChannels.INVEST_SERVE,
+    async (event, modelName) => {
+      await createPythonFlaskProcess(modelName);
+    }
+  );
 
   ipcMain.on(ipcMainChannels.INVEST_KILL, (event, jobID) => {
     if (runningJobs[jobID]) {
@@ -48,14 +58,15 @@ export function setupInvestRunHandlers(investExe) {
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
     event, modelRunName, pyModuleName, args, tabID
   ) => {
-    let investRun;
     let investStarted = false;
-    let investStdErr = '';
+    const investStdErr = '';
     const usageLogger = investUsageLogger();
     const loggingLevel = settingsStore.get('loggingLevel');
     const taskgraphLoggingLevel = settingsStore.get('taskgraphLoggingLevel');
     const language = settingsStore.get('language');
     const nWorkers = settingsStore.get('nWorkers');
+    const micromambaPath = settingsStore.get('micromamba_path');
+    const modelEnv = settingsStore.get(`plugins.${modelRunName}.env`);
 
     // Write a temporary datastack json for passing to invest CLI
     try {
@@ -77,6 +88,8 @@ export function setupInvestRunHandlers(investExe) {
     await writeInvestParameters(payload);
 
     const cmdArgs = [
+      'run',
+      `--prefix ${modelEnv}`,
       LOGLEVELMAP[loggingLevel],
       TGLOGLEVELMAP[taskgraphLoggingLevel],
       `--language "${language}"`,
@@ -86,16 +99,16 @@ export function setupInvestRunHandlers(investExe) {
       `-d "${datastackPath}"`,
     ];
     logger.debug(`set to run ${cmdArgs}`);
+
+    // without shell, IOError when datastack.py loads json
+    const spawnOptions = { shell: true };
     if (process.platform !== 'win32') {
-      investRun = spawn(investExe, cmdArgs, {
-        shell: true, // without shell, IOError when datastack.py loads json
-        detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
-      });
-    } else { // windows
-      investRun = spawn(investExe, cmdArgs, {
-        shell: true,
-      });
+      // counter-intuitive, but w/ true: invest terminates when this shell terminates
+      spawnOptions.detached = true;
     }
+    console.log(micromambaPath);
+    console.log(cmdArgs);
+    const investRun = spawn(micromambaPath, cmdArgs, spawnOptions);
 
     // There's no general way to know that a spawned process started,
     // so this logic to listen once on stdout seems like the way.
@@ -132,7 +145,7 @@ export function setupInvestRunHandlers(investExe) {
     };
     investRun.stderr.on('data', stdErrCallback);
 
-    investRun.on('close', (code) => {
+    investRun.on('close', () => {
       logger.debug('invest subprocess stdio streams closed');
     });
 
@@ -156,7 +169,8 @@ export function setupInvestRunHandlers(investExe) {
 }
 
 export function setupInvestLogReaderHandler() {
-  ipcMain.on(ipcMainChannels.INVEST_READ_LOG,
+  ipcMain.on(
+    ipcMainChannels.INVEST_READ_LOG,
     (event, logfile, channel) => {
       const fileStream = fs.createReadStream(logfile);
       fileStream.on('error', (err) => {
@@ -170,5 +184,6 @@ export function setupInvestLogReaderHandler() {
       fileStream.on('data', (data) => {
         event.reply(`invest-stdout-${channel}`, [`${data}`, '']);
       });
-    });
+    }
+  );
 }
