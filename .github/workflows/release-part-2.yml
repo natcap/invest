@@ -45,6 +45,7 @@ jobs:
           echo "RUN_ID=$( \
             gh run list \
               --branch $VERSION \
+              --workflow 'Run Tests and Build' \
               --limit 1 \
               --json databaseId \
               --jq .[].databaseId)" >> $GITHUB_ENV
