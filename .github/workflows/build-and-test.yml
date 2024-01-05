@@ -457,7 +457,7 @@ jobs:
         if : |
           (github.event_name == 'push' &&
           (startsWith(github.ref, 'release') || github.ref == 'refs/heads/main')) ||
-          (github.event_name == 'pull_request' && startsWith(github.ref, 'task/GHA-1495'))
+          (github.event_name == 'pull_request' && startsWith(github.ref, 'task'))
         run: make invest_autotest
 
       - name: Tar the workspace to preserve permissions (macOS)
