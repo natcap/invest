@@ -453,10 +453,16 @@ jobs:
           name: ${{ runner.os }}_puppeteer_log.zip'
           path: ${{ matrix.puppeteer-log }}
 
+      - name: echo stuff
+        run: |
+          echo ${{ github.event_name }}
+          echo ${{ github.head_ref }}
+
       - name: Run invest-autotest with binaries
         if : |
-          github.event_name == 'push' &&
-          (startsWith(github.ref, 'release') || github.ref == 'refs/heads/main')
+          (github.event_name == 'push' &&
+          (startsWith(github.ref, 'refs/heads/release') || github.ref == 'refs/heads/main')) ||
+          (github.event_name == 'pull_request' && startsWith(github.head_ref, 'task/GHA'))
         run: make invest_autotest
 
       - name: Tar the workspace to preserve permissions (macOS)
