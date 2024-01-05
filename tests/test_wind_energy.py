@@ -338,13 +338,12 @@ class WindEnergyUnitTests(unittest.TestCase):
             'air_density_coefficient': 1.19E-04,
             'loss_parameter': 0.05,
             'turbine_cost': 10000,
-            'turbine_rated_pwr': 5
-            }
-        args = {
+            'turbine_rated_pwr': 5,
             'foundation_cost': 1000000,
             'discount_rate': 0.01,
             'number_of_turbines': 10
             }
+
         price_list = [0.10, 0.10, 0.10, 0.10, 0.10]
 
         srs = osr.SpatialReference()
@@ -381,7 +380,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         wind_energy._calculate_npv_levelized_rasters(
             base_harvest_path, base_distance_path,
             target_npv_raster_path, target_levelized_raster_path,
-            val_parameters_dict, args, price_list)
+            val_parameters_dict, price_list)
 
         # Compare the results that were "eye" tested.
         desired_npv_array = numpy.array(
