@@ -456,13 +456,13 @@ jobs:
       - name: echo stuff
         run: |
           echo ${{ github.event_name }}
-          echo ${{ github.ref }}
+          echo ${{ github.head_ref }}
 
       - name: Run invest-autotest with binaries
         if : |
           (github.event_name == 'push' &&
           (startsWith(github.ref, 'refs/heads/release') || github.ref == 'refs/heads/main')) ||
-          (github.event_name == 'pull_request' && contains(github.ref, 'task/GHA'))
+          (github.event_name == 'pull_request' && startsWith(github.head_ref, 'task/GHA'))
         run: make invest_autotest
 
       - name: Tar the workspace to preserve permissions (macOS)
