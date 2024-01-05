@@ -453,6 +453,11 @@ jobs:
           name: ${{ runner.os }}_puppeteer_log.zip'
           path: ${{ matrix.puppeteer-log }}
 
+      - name: echo stuff
+        run: |
+          echo github.event_name
+          echo github.ref
+
       - name: Run invest-autotest with binaries
         if : |
           (github.event_name == 'push' &&
