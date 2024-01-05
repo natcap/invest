@@ -1,15 +1,18 @@
 """Testing module for validation."""
-# encoding=UTF-8
-import tempfile
-import unittest
-from unittest.mock import Mock
+import codecs
 import functools
 import os
+import platform
 import shutil
 import string
+import tempfile
+import textwrap
 import time
+import unittest
+from unittest.mock import Mock
 import warnings
 
+import numpy
 from osgeo import gdal, osr, ogr
 import pandas
 
@@ -458,7 +461,7 @@ class VectorValidation(unittest.TestCase):
         from natcap.invest import validation
 
         filepath = os.path.join(self.workspace_dir, 'file.txt')
-        error_msg = validation.check_vector(filepath)
+        error_msg = validation.check_vector(filepath, geometries={'POINT'})
         self.assertEqual(error_msg, validation.MESSAGES['FILE_NOT_FOUND'])
 
     def test_invalid_vector(self):
@@ -469,7 +472,7 @@ class VectorValidation(unittest.TestCase):
         with open(filepath, 'w') as bad_vector:
             bad_vector.write('not a vector')
 
-        error_msg = validation.check_vector(filepath)
+        error_msg = validation.check_vector(filepath, geometries={'POINT'})
         self.assertEqual(error_msg, validation.MESSAGES['NOT_GDAL_VECTOR'])
 
     def test_missing_fieldnames(self):
@@ -481,7 +484,7 @@ class VectorValidation(unittest.TestCase):
         vector = driver.Create(filepath, 0, 0, 0, gdal.GDT_Unknown)
         wgs84_srs = osr.SpatialReference()
         wgs84_srs.ImportFromEPSG(4326)
-        layer = vector.CreateLayer('sample_layer', wgs84_srs, ogr.wkbUnknown)
+        layer = vector.CreateLayer('sample_layer', wgs84_srs, ogr.wkbPoint)
 
         for field_name, field_type in (('COL_A', ogr.OFTInteger),
                                        ('col_b', ogr.OFTString)):
@@ -497,7 +500,8 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = validation.check_vector(
-            filepath, fields={'col_a': {}, 'col_b': {}, 'col_c': {}})
+            filepath, geometries={'POINT'},
+            fields={'col_a': {}, 'col_b': {}, 'col_c': {}})
         expected = validation.MESSAGES['MATCHED_NO_HEADERS'].format(
             header='field', header_name='col_c')
         self.assertEqual(error_msg, expected)
@@ -511,19 +515,39 @@ class VectorValidation(unittest.TestCase):
         vector = driver.Create(filepath, 0, 0, 0, gdal.GDT_Unknown)
         meters_srs = osr.SpatialReference()
         meters_srs.ImportFromEPSG(32731)
-        layer = vector.CreateLayer('sample_layer', meters_srs, ogr.wkbUnknown)
+        layer = vector.CreateLayer('sample_layer', meters_srs, ogr.wkbPoint)
 
         layer = None
         vector = None
 
         error_msg = validation.check_vector(
-            filepath, projected=True, projection_units=spec_utils.u.foot)
+            filepath, geometries={'POINT'}, projected=True,
+            projection_units=spec_utils.u.foot)
         expected_msg = validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
             unit_a='foot', unit_b='metre')
         self.assertEqual(error_msg, expected_msg)
 
         self.assertEqual(None, validation.check_vector(
-            filepath, projected=True, projection_units=spec_utils.u.meter))
+            filepath, geometries={'POINT'}, projected=True,
+            projection_units=spec_utils.u.meter))
+
+    def test_wrong_geom_type(self):
+        """Validation: checks that the vector's geometry type is correct."""
+        from natcap.invest import spec_utils, validation
+        driver = gdal.GetDriverByName('GPKG')
+        filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
+        vector = driver.Create(filepath, 0, 0, 0, gdal.GDT_Unknown)
+        meters_srs = osr.SpatialReference()
+        meters_srs.ImportFromEPSG(32731)
+        layer = vector.CreateLayer('sample_layer', meters_srs, ogr.wkbPoint)
+        layer = None
+        vector = None
+        self.assertEqual(
+            validation.check_vector(filepath, geometries={'POLYGON', 'POINT'}),
+            None)
+        self.assertEqual(
+            validation.check_vector(filepath, geometries={'MULTIPOINT'}),
+            validation.MESSAGES['WRONG_GEOM_TYPE'].format(allowed={'MULTIPOINT'}))
 
 
 class FreestyleStringValidation(unittest.TestCase):
@@ -696,7 +720,8 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file)
 
         self.assertEqual(None, validation.check_csv(
-            target_file, columns={'foo': {}, 'bar': {}}))
+            target_file, columns={
+                'foo': {'type': 'integer'}, 'bar': {'type': 'integer'}}))
 
     def test_csv_bom_fieldnames(self):
         """Validation: test that we can check fieldnames in a CSV with BOM."""
@@ -711,7 +736,8 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file, encoding='utf-8-sig')
 
         self.assertEqual(None, validation.check_csv(
-            target_file, columns={'foo': {}, 'bar': {}}))
+            target_file, columns={
+                'foo': {'type': 'integer'}, 'bar': {'type': 'integer'}}))
 
     def test_csv_missing_fieldnames(self):
         """Validation: test that we can check missing fieldnames in a CSV."""
@@ -744,7 +770,7 @@ class CSVValidation(unittest.TestCase):
         df.to_pickle(target_file)
 
         error_msg = validation.check_csv(target_file, columns={'field_a': {}})
-        self.assertEqual(error_msg, validation.MESSAGES['NOT_CSV'])
+        self.assertIn('must be encoded as UTF-8', error_msg)
 
     def test_slow_to_open(self):
         """Test timeout by mocking a CSV that is slow to open"""
@@ -814,6 +840,517 @@ class CSVValidation(unittest.TestCase):
         actual = ['hello', '1', 'x', 'x']
         result = validation.check_headers(expected_headers, actual)
         self.assertEqual(result, None)
+
+
+class TestGetValidatedDataframe(unittest.TestCase):
+    """Tests for validation.get_validated_dataframe."""
+    def setUp(self):
+        """Create a new workspace to use for each test."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove the workspace created for this test."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_get_validated_dataframe(self):
+        """validation: test the default behavior"""
+        from natcap.invest import validation
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                header, ,
+                a, ,
+                b,c
+                """
+            ))
+        df = validation.get_validated_dataframe(
+            csv_file,
+            columns={'header': {'type': 'freestyle_string'}})
+        # header and table values should be lowercased
+        self.assertEqual(df.columns[0], 'header')
+        self.assertEqual(df['header'][0], 'a')
+        self.assertEqual(df['header'][1], 'b')
+
+    def test_unique_key_not_first_column(self):
+        """validation: test success when key field is not first column."""
+        from natcap.invest import validation
+        csv_text = ("desc,lucode,val1,val2\n"
+                    "corn,1,0.5,2\n"
+                    "bread,2,1,4\n"
+                    "beans,3,0.5,4\n"
+                    "butter,4,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        df = validation.get_validated_dataframe(
+            table_path,
+            index_col='lucode',
+            columns={
+                    'desc': {'type': 'freestyle_string'},
+                    'lucode': {'type': 'integer'},
+                    'val1': {'type': 'number'},
+                    'val2': {'type': 'number'}
+            })
+        self.assertEqual(df.index.name, 'lucode')
+        self.assertEqual(list(df.index.values), [1, 2, 3, 4])
+        self.assertEqual(df['desc'][2], 'bread')
+
+    def test_non_unique_keys(self):
+        """validation: test error is raised if keys are not unique."""
+        from natcap.invest import validation
+        csv_text = ("lucode,desc,val1,val2\n"
+                    "1,corn,0.5,2\n"
+                    "2,bread,1,4\n"
+                    "2,beans,0.5,4\n"
+                    "4,butter,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        with self.assertRaises(ValueError):
+            validation.get_validated_dataframe(
+                table_path,
+                index_col='lucode',
+                columns={
+                    'desc': {'type': 'freestyle_string'},
+                    'lucode': {'type': 'integer'},
+                    'val1': {'type': 'number'},
+                    'val2': {'type': 'number'}
+                })
+
+    def test_missing_key_field(self):
+        """validation: test error is raised when missing key field."""
+        from natcap.invest import validation
+        csv_text = ("luode,desc,val1,val2\n"
+                    "1,corn,0.5,2\n"
+                    "2,bread,1,4\n"
+                    "3,beans,0.5,4\n"
+                    "4,butter,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        with self.assertRaises(ValueError):
+            validation.get_validated_dataframe(
+                table_path,
+                index_col='lucode',
+                columns={
+                    'desc': {'type': 'freestyle_string'},
+                    'lucode': {'type': 'integer'},
+                    'val1': {'type': 'number'},
+                    'val2': {'type': 'number'}
+                })
+
+    def test_column_subset(self):
+        """validation: test column subset is properly returned."""
+        from natcap.invest import validation
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(
+                "lucode,desc,val1,val2\n"
+                "1,corn,0.5,2\n"
+                "2,bread,1,4\n"
+                "3,beans,0.5,4\n"
+                "4,butter,9,1")
+        df = validation.get_validated_dataframe(
+            table_path,
+            columns={
+                'lucode': {'type': 'integer'},
+                'val1': {'type': 'number'},
+                'val2': {'type': 'number'}
+            })
+        self.assertEqual(list(df.columns), ['lucode', 'val1', 'val2'])
+
+    def test_column_pattern_matching(self):
+        """validation: test column subset is properly returned."""
+        from natcap.invest import validation
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(
+                "lucode,grassland_value,forest_value,wetland_valueee\n"
+                "1,0.5,2\n"
+                "2,1,4\n"
+                "3,0.5,4\n"
+                "4,9,1")
+        df = validation.get_validated_dataframe(
+            table_path,
+            columns={
+                'lucode': {'type': 'integer'},
+                '[HABITAT]_value': {'type': 'number'}
+            })
+        self.assertEqual(
+            list(df.columns), ['lucode', 'grassland_value', 'forest_value'])
+
+    def test_trailing_comma(self):
+        """validation: test a trailing comma on first line is handled properly."""
+        from natcap.invest import validation
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(
+                "lucode,desc,val1,val2\n"
+                "1,corn,0.5,2,\n"
+                "2,bread,1,4\n"
+                "3,beans,0.5,4\n"
+                "4,butter,9,1")
+        result = validation.get_validated_dataframe(
+            table_path,
+            columns={
+                'desc': {'type': 'freestyle_string'},
+                'lucode': {'type': 'integer'},
+                'val1': {'type': 'number'},
+                'val2': {'type': 'number'}
+            })
+        self.assertEqual(result['val2'][0], 2)
+        self.assertEqual(result['lucode'][1], 2)
+
+    def test_trailing_comma_second_line(self):
+        """validation: test a trailing comma on second line is handled properly."""
+        from natcap.invest import validation
+        csv_text = ("lucode,desc,val1,val2\n"
+                    "1,corn,0.5,2\n"
+                    "2,bread,1,4,\n"
+                    "3,beans,0.5,4\n"
+                    "4,butter,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        result = validation.get_validated_dataframe(
+            table_path,
+            index_col='lucode',
+            columns={
+                'desc': {'type': 'freestyle_string'},
+                'lucode': {'type': 'integer'},
+                'val1': {'type': 'number'},
+                'val2': {'type': 'number'}
+            }).to_dict(orient='index')
+
+        expected_result = {
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2},
+            2: {'desc': 'bread', 'val1': 1, 'val2': 4},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1}}
+
+        self.assertDictEqual(result, expected_result)
+
+    def test_convert_cols_to_lower(self):
+        """validation: test that column names are converted to lowercase"""
+        from natcap.invest import validation
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                header,
+                A,
+                b
+                """
+            ))
+        df = validation.get_validated_dataframe(
+            csv_file,
+            columns={'header': {'type': 'freestyle_string'}})
+        self.assertEqual(df['header'][0], 'a')
+
+    def test_convert_vals_to_lower(self):
+        """validation: test that values are converted to lowercase"""
+        from natcap.invest import validation
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                HEADER,
+                a,
+                b
+                """
+            ))
+        df = validation.get_validated_dataframe(
+            csv_file, columns={'header': {'type': 'freestyle_string'}})
+        self.assertEqual(df.columns[0], 'header')
+
+    def test_integer_type_columns(self):
+        """validation: integer column values are returned as integers."""
+        from natcap.invest import validation
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                id,header,
+                1,5.0,
+                2,-1,
+                3,
+                """
+            ))
+        df = validation.get_validated_dataframe(
+            csv_file,
+            columns={
+                'id': {'type': 'integer'},
+                'header': {'type': 'integer', 'na_allowed': True}})
+        self.assertIsInstance(df['header'][0], numpy.int64)
+        self.assertIsInstance(df['header'][1], numpy.int64)
+        # empty values are returned as pandas.NA
+        self.assertTrue(pandas.isna(df['header'][2]))
+
+    def test_float_type_columns(self):
+        """validation: float column values are returned as floats."""
+        from natcap.invest import validation
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                h1,h2,h3
+                5,0.5,.4
+                -1,-.3,
+                """
+            ))
+        df = validation.get_validated_dataframe(
+            csv_file,
+            columns={
+                'h1': {'type': 'number'},
+                'h2': {'type': 'ratio'},
+                'h3': {'type': 'percent', 'na_allowed': True},
+            })
+        self.assertEqual(df['h1'].dtype, float)
+        self.assertEqual(df['h2'].dtype, float)
+        self.assertEqual(df['h3'].dtype, float)
+        # empty values are returned as numpy.nan
+        self.assertTrue(numpy.isnan(df['h3'][1]))
+
+    def test_string_type_columns(self):
+        """validation: string column values are returned as strings."""
+        from natcap.invest import validation
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                h1,h2,h3
+                1,a,foo
+                2,b,
+                """
+            ))
+        df = validation.get_validated_dataframe(
+            csv_file,
+            columns={
+                'h1': {'type': 'freestyle_string'},
+                'h2': {'type': 'option_string'},
+                'h3': {'type': 'freestyle_string'},
+            })
+        self.assertEqual(df['h1'][0], '1')
+        self.assertEqual(df['h2'][1], 'b')
+        # empty values are returned as NA
+        self.assertTrue(pandas.isna(df['h3'][1]))
+
+    def test_boolean_type_columns(self):
+        """validation: boolean column values are returned as booleans."""
+        from natcap.invest import validation
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                index,h1
+                a,1
+                b,0
+                c,
+                """
+            ))
+        df = validation.get_validated_dataframe(
+            csv_file,
+            columns={
+                'index': {'type': 'freestyle_string'},
+                'h1': {'type': 'boolean', 'na_allowed': True}})
+        self.assertEqual(df['h1'][0], True)
+        self.assertEqual(df['h1'][1], False)
+        # empty values are returned as pandas.NA
+        self.assertTrue(pandas.isna(df['h1'][2]))
+
+    def test_expand_path_columns(self):
+        """validation: test values in path columns are expanded."""
+        from natcap.invest import validation
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                f"""\
+                bar,path
+                1,foo.txt
+                2,foo/bar.txt
+                3,foo\\bar.txt
+                4,{self.workspace_dir}/foo.txt
+                5,
+                """
+            ))
+        df = validation.get_validated_dataframe(
+            csv_file,
+            columns={
+                'bar': {'type': 'integer'},
+                'path': {'type': 'file'}
+            })
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo.txt',
+            df['path'][0])
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
+            df['path'][1])
+
+        # utils.expand_path() will convert Windows path separators to linux if
+        # we're on mac/linux
+        if platform.system() == 'Windows':
+            self.assertEqual(
+                f'{self.workspace_dir}{os.sep}foo\\bar.txt',
+                df['path'][2])
+        else:
+            self.assertEqual(
+                f'{self.workspace_dir}{os.sep}foo/bar.txt',
+                df['path'][2])
+
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo.txt',
+            df['path'][3])
+        # empty values are returned as empty strings
+        self.assertTrue(pandas.isna(df['path'][4]))
+
+    def test_other_kwarg(self):
+        """validation: any other kwarg should be passed to pandas.read_csv"""
+        from natcap.invest import validation
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                h1;h2;h3
+                a;b;c
+                d;e;f
+                """
+            ))
+        # using sep=None with the default engine='python',
+        # it should infer what the separator is
+        df = validation.get_validated_dataframe(
+            csv_file,
+            columns={
+                'h1': {'type': 'freestyle_string'},
+                'h2': {'type': 'freestyle_string'},
+                'h3': {'type': 'freestyle_string'}},
+            read_csv_kwargs={'converters': {'h2': lambda val: f'foo_{val}'}})
+
+        self.assertEqual(df.columns[0], 'h1')
+        self.assertEqual(df['h2'][1], 'foo_e')
+
+    def test_csv_with_integer_headers(self):
+        """
+        validation: CSV with integer headers should be read into strings.
+
+        This shouldn't matter for any of the models, but if a user inputs a CSV
+        with extra columns that are labeled with numbers, it should still work.
+        """
+        from natcap.invest import validation
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                1,2,3
+                a,b,c
+                d,e,f
+                """
+            ))
+        df = validation.get_validated_dataframe(
+            csv_file,
+            columns={
+                '1': {'type': 'freestyle_string'},
+                '2': {'type': 'freestyle_string'},
+                '3': {'type': 'freestyle_string'}
+            })
+        # expect headers to be strings
+        self.assertEqual(df.columns[0], '1')
+        self.assertEqual(df['1'][0], 'a')
+
+    def test_removal_whitespace(self):
+        """validation: test that leading/trailing whitespace is removed."""
+        from natcap.invest import validation
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(" Col1, Col2 ,Col3 \n")
+            file_obj.write(" val1, val2 ,val3 \n")
+            file_obj.write(" , 2 1 ,  ")
+        df = validation.get_validated_dataframe(
+            csv_file,
+            columns={
+                'col1': {'type': 'freestyle_string'},
+                'col2': {'type': 'freestyle_string'},
+                'col3': {'type': 'freestyle_string'}
+            })
+        # header should have no leading / trailing whitespace
+        self.assertEqual(list(df.columns), ['col1', 'col2', 'col3'])
+
+        # values should have no leading / trailing whitespace
+        self.assertEqual(df['col1'][0], 'val1')
+        self.assertEqual(df['col2'][0], 'val2')
+        self.assertEqual(df['col3'][0], 'val3')
+        self.assertEqual(df['col1'][1], '')
+        self.assertEqual(df['col2'][1], '2 1')
+        self.assertEqual(df['col3'][1], '')
+
+    def test_nan_row(self):
+        """validation: test NaN row is dropped."""
+        from natcap.invest import validation
+        csv_text = ("lucode,desc,val1,val2\n"
+                    "1,corn,0.5,2\n"
+                    ",,,\n"
+                    "3,beans,0.5,4\n"
+                    "4,butter,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        result = validation.get_validated_dataframe(
+            table_path,
+            index_col='lucode',
+            columns={
+                'desc': {'type': 'freestyle_string'},
+                'lucode': {'type': 'integer'},
+                'val1': {'type': 'number'},
+                'val2': {'type': 'number'}
+            }).to_dict(orient='index')
+        expected_result = {
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1}}
+
+        self.assertDictEqual(result, expected_result)
+
+    def test_rows(self):
+        """validation: read csv with row headers instead of columns"""
+        from natcap.invest import validation
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write("row1, a ,b\n")
+            file_obj.write("row2,1,3\n")
+        df = validation.get_validated_dataframe(
+            csv_file,
+            rows={
+                'row1': {'type': 'freestyle_string'},
+                'row2': {'type': 'number'},
+            })
+        print(df)
+        # header should have no leading / trailing whitespace
+        self.assertEqual(list(df.columns), ['row1', 'row2'])
+
+        self.assertEqual(df['row1'][0], 'a')
+        self.assertEqual(df['row1'][1], 'b')
+        self.assertEqual(df['row2'][0], 1)
+        self.assertEqual(df['row2'][1], 3)
+        self.assertEqual(df['row2'].dtype, float)
 
 
 class TestValidationFromSpec(unittest.TestCase):
@@ -1172,7 +1709,8 @@ class TestValidationFromSpec(unittest.TestCase):
                 'name': 'vector 1',
                 'about': 'vector 1',
                 'required': True,
-                'fields': {}
+                'fields': {},
+                'geometries': {'POINT'}
             }
         }
 
@@ -1287,6 +1825,7 @@ class TestValidationFromSpec(unittest.TestCase):
                 'name': 'vector 1',
                 'about': 'vector 1',
                 'required': False,
+                'geometries': {'POINT'}
             }
         }
 

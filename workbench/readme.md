@@ -3,7 +3,7 @@ Ecosystem Services and Tradeoffs).
 InVEST can be found at https://github.com/natcap/invest.
 
 The purpose of this project is to provide a single entry-point for all
-InVEST models, and to be extensible to future models or common auxilary
+InVEST models, and to be extensible to future models or common auxiliary
 workflows of an InVEST user.
 
 ## To develop and launch this Application
@@ -25,7 +25,7 @@ workflows of an InVEST user.
 ## Dependency management in package.json
 `dependencies` should only include node modules used by the main process.  
 
-Renderer & preload process dependencies (`react`, `boostrap`, etc) belong in `devDependencies`. 
+Renderer & preload process dependencies (`react`, `bootstrap`, etc) belong in `devDependencies`. 
 They are required in production, but we want electron-builder to ignore them
 because they are already packaged via the vite bundle.
 electron-builder will package everything under `dependencies` and nothing under `devDependencies`.  

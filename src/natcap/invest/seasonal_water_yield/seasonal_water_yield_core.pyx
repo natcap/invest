@@ -415,17 +415,20 @@ cpdef calculate_local_recharge(
     """
     cdef int i_n, flow_dir_nodata, flow_dir_mfd
     cdef int peak_pixel
-    cdef int xs, ys, xs_root, ys_root, xoff, yoff, flow_dir_s
-    cdef int xi, yi, xj, yj, flow_dir_j, p_ij_base
-    cdef int win_xsize, win_ysize, n_dir
-    cdef int raster_x_size, raster_y_size
+    cdef long xs, ys, xs_root, ys_root, xoff, yoff
+    cdef int flow_dir_s
+    cdef long xi, yi, xj, yj
+    cdef int flow_dir_j, p_ij_base
+    cdef long win_xsize, win_ysize
+    cdef int n_dir
+    cdef long raster_x_size, raster_y_size
     cdef double pet_m, p_m, qf_m, et0_m, aet_i, p_i, qf_i, l_i, l_avail_i
     cdef float qf_nodata, kc_nodata
 
     cdef int j_neighbor_end_index, mfd_dir_sum
     cdef float mfd_direction_array[8]
 
-    cdef queue[pair[int, int]] work_queue
+    cdef queue[pair[long, long]] work_queue
     cdef _ManagedRaster et0_m_raster, qf_m_raster, kc_m_raster
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=1] alpha_month_array = (
@@ -554,7 +557,7 @@ cpdef calculate_local_recharge(
                         break
                 if peak_pixel:
                     work_queue.push(
-                        pair[int, int](xs_root, ys_root))
+                        pair[long, long](xs_root, ys_root))
 
                 while work_queue.size() > 0:
                     xi = work_queue.front().first
@@ -685,7 +688,7 @@ cpdef calculate_local_recharge(
                         if (xi_n < 0 or xi_n >= raster_x_size or
                                 yi_n < 0 or yi_n >= raster_y_size):
                             continue
-                        work_queue.push(pair[int, int](xi_n, yi_n))
+                        work_queue.push(pair[long, long](xi_n, yi_n))
 
 
 def route_baseflow_sum(
@@ -717,13 +720,14 @@ def route_baseflow_sum(
     cdef float target_nodata = -1e32
     cdef int stream_val, outlet
     cdef float b_i, b_sum_i, l_j, l_avail_j, l_sum_j
-    cdef int xi, yi, xj, yj, flow_dir_i, p_ij_base
+    cdef long xi, yi, xj, yj
+    cdef int flow_dir_i, p_ij_base
     cdef int mfd_dir_sum, flow_dir_nodata
-    cdef int raster_x_size, raster_y_size, xs_root, ys_root, xoff, yoff
+    cdef long raster_x_size, raster_y_size, xs_root, ys_root, xoff, yoff
     cdef int n_dir
     cdef int xs, ys, flow_dir_s, win_xsize, win_ysize
     cdef int stream_nodata
-    cdef stack[pair[int, int]] work_stack
+    cdef stack[pair[long, long]] work_stack
 
     # we know the PyGeoprocessing MFD raster flow dir type is a 32 bit int.
     flow_dir_raster_info = pygeoprocessing.get_raster_info(flow_dir_mfd_path)
@@ -783,7 +787,7 @@ def route_baseflow_sum(
                             break
                 if not outlet:
                     continue
-                work_stack.push(pair[int, int](xs_root, ys_root))
+                work_stack.push(pair[long, long](xs_root, ys_root))
 
                 while work_stack.size() > 0:
                     xi = work_stack.top().first
@@ -871,4 +875,4 @@ def route_baseflow_sum(
                         if (0xF & (flow_dir_j >> (
                                 4 * FLOW_DIR_REVERSE_DIRECTION[n_dir]))):
                             # pixel flows here, push on queue
-                            work_stack.push(pair[int, int](xj, yj))
+                            work_stack.push(pair[long, long](xj, yj))

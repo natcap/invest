@@ -304,26 +304,22 @@ MODEL_SPEC = {
         },
         "machine_param_path": {
             "type": "csv",
-            "rows": {
-                "capmax": {
-                    "about": gettext("Maximum capacity for device."),
-                    "type": "number",
-                    "units": u.kilowatt
-                },
-                "hsmax": {
+            # use columns because of the non standard format of this table,
+            # we cannot validate it with the rows as headers.
+            "columns": {
+                "name": {
+                    "type": "freestyle_string",
                     "about": gettext(
-                        "Upper limit of wave height for device operation. The "
-                        "device shuts down when waves are higher than this."),
-                    "type": "number",
-                    "units": u.meter
+                        "Name of the machine parameter. Expected parameters are: "
+                        "'capmax' (maximum capacity for device, in kilowatts), "
+                        "'hsmax' (upper limit of wave height for device operation, "
+                        "in meters), and 'tpmax' (upper limit of wave period for "
+                        "device operation, in seconds).")
                 },
-                "tpmax": {
-                    "about": gettext(
-                        "Upper limit of wave period for device operation. The "
-                        "device shuts down when the wave period is longer "
-                        "than this."),
+                "value": {
                     "type": "number",
-                    "units": u.second
+                    "units": u.none,
+                    "about": gettext("Value of the machine parameter.")
                 }
             },
             "about": gettext("Table of parameters for the wave energy machine in use."),
@@ -353,52 +349,28 @@ MODEL_SPEC = {
         },
         "machine_econ_path": {
             "type": "csv",
-            "rows": {
-                "capmax": {
-                    "type": "number",
-                    "units": u.kilowatt,
-                    "about": gettext("Maximum capacity of the device.")
+            # use columns because of the non standard format of this table,
+            # we cannot validate it with the rows as headers.
+            "columns": {
+                "name": {
+                    "type": "freestyle_string",
+                    "about": gettext(
+                        "Name of the machine parameter. Expected parameters are: "
+                        "'capmax' (maximum capacity for device, in kilowatts), "
+                        "'cc' (capital cost per device installed, $/kilowatt), "
+                        "'cml' (cost of mooring lines, $/kilometer), "
+                        "'cul' (cost of underwater cable, $/kilometer), "
+                        "'col' (cost of overland transmission lines, $/kilometer), "
+                        "'omc' (operating and maintenance cost, $/kilowatt hour), "
+                        "'p' (price of electricity, $/kilowatt hour), "
+                        "'r' (discount rate, between 0 and 1), "
+                        "'smlpm' (number of slack lines required per machine)")
                 },
-                "cc": {
-                    "type": "number",
-                    "units": u.currency/u.kilowatt,
-                    "about": gettext("Capital cost per device installed.")
-                },
-                "cml": {
-                    "type": "number",
-                    "units": u.currency/u.meter,
-                    "about": gettext("Cost of mooring lines.")
-                },
-                "cul": {
-                    "type": "number",
-                    "units": u.currency/u.kilometer,
-                    "about": gettext("Cost of underwater cable.")
-                },
-                "col": {
-                    "type": "number",
-                    "units": u.currency/u.kilometer,
-                    "about": gettext("Cost of overland transmission lines.")
-                },
-                "omc": {
-                    "type": "number",
-                    "units": u.currency/u.kilowatt_hour,
-                    "about": gettext("Operating and maintenance cost.")
-                },
-                "p": {
-                    "type": "number",
-                    "units": u.currency/u.kilowatt_hour,
-                    "about": gettext("Price of electricity.")
-                },
-                "r": {
-                    "type": "ratio",
-                    "about": gettext("Discount rate.")
-                },
-                "smlpm": {
+                "value": {
                     "type": "number",
                     "units": u.none,
-                    "about": gettext("Number of slack lines required per machine.")
+                    "about": gettext("Value of the machine parameter.")
                 }
-
             },
             "required": "valuation_container",
             "allowed": "valuation_container",
@@ -761,7 +733,7 @@ def execute(args):
     # arrays. Also store the amount of energy the machine produces
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
-    machine_perf_data = pandas.read_csv(args['machine_perf_path'])
+    machine_perf_data = utils.read_csv_to_dataframe(args['machine_perf_path'])
     # Get the wave period fields, starting from the second column of the table
     machine_perf_dict['periods'] = machine_perf_data.columns.values[1:]
     # Build up the height field by taking the first column of the table
@@ -789,14 +761,21 @@ def execute(args):
     LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
     LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
 
-    machine_param_dict = _machine_csv_to_dict(args['machine_param_path'])
+    machine_param_dict = validation.get_validated_dataframe(
+        args['machine_param_path'],
+        index_col='name',
+        columns={
+            'name': {'type': 'option_string'},
+            'value': {'type': 'number'}
+        },
+    )['value'].to_dict()
 
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_df dataframe for later use in valuation
-        grid_land_df = utils.read_csv_to_dataframe(
+        grid_land_df = validation.get_validated_dataframe(
             args['land_gridPts_path'],
-            MODEL_SPEC['args']['land_gridPts_path'])
+            **MODEL_SPEC['args']['land_gridPts_path'])
         missing_grid_land_fields = []
         for field in ['id', 'type', 'lat', 'long', 'location']:
             if field not in grid_land_df.columns:
@@ -808,7 +787,14 @@ def execute(args):
                 'Connection Points File: %s' % missing_grid_land_fields)
 
     if 'valuation_container' in args and args['valuation_container']:
-        machine_econ_dict = _machine_csv_to_dict(args['machine_econ_path'])
+        machine_econ_dict = validation.get_validated_dataframe(
+            args['machine_econ_path'],
+            index_col='name',
+            columns={
+                'name': {'type': 'option_string'},
+                'value': {'type': 'number'}
+            }
+        )['value'].to_dict()
 
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
@@ -1646,42 +1632,6 @@ def _binary_wave_data_to_dict(wave_file_path):
     return wave_dict
 
 
-def _machine_csv_to_dict(machine_csv_path):
-    """Create a dictionary from the table in machine csv file.
-
-    The dictionary's keys are the 'NAME' from the machine table and its values
-    are from the corresponding 'VALUE' field. No need to check for missing
-    columns since the file is validated by validate() function.
-
-    Args:
-        machine_csv_path (str): path to the input machine CSV file.
-
-    Returns:
-        machine_dict (dict): a dictionary of keys from the first column of the
-            CSV file and corresponding values from the `VALUE` column.
-
-    """
-    machine_dict = {}
-    # make columns and indexes lowercased and strip whitespace
-    machine_data = utils.read_csv_to_dataframe(
-        machine_csv_path,
-        {
-            'index_col': 'name',
-            'columns': {
-                'name': {'type': 'freestyle_string'},
-                'value': {'type': 'number'}
-        }})
-
-    # drop NaN indexed rows in dataframe
-    machine_data = machine_data[machine_data.index.notnull()]
-    LOGGER.debug('machine_data dataframe from %s: %s' %
-                 (machine_csv_path, machine_data))
-    machine_dict = machine_data.to_dict('index')
-    for key in machine_dict.keys():
-        machine_dict[key] = machine_dict[key]['value']
-    return machine_dict
-
-
 def _get_vector_spatial_ref(base_vector_path):
     """Get the spatial reference of an OGR vector (datasource).
 
@@ -1739,7 +1689,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
 
     def _mask_below_start_value(array):
         valid_mask = (
-            ~utils.array_equals_nodata(array, base_nodata) &
+            ~pygeoprocessing.array_equals_nodata(array, base_nodata) &
             (array >= float(start_value)))
         result = numpy.empty_like(array)
         result[:] = base_nodata
@@ -1780,19 +1730,13 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     value_ranges.append('Greater than %s' % rounded_percentiles[-1])
     LOGGER.debug('Range_values : %s', value_ranges)
 
-    def raster_percentile(band):
-        """Group the band pixels together based on _PERCENTILES, starting from 1.
-        """
-        valid_data_mask = ~utils.array_equals_nodata(band, base_nodata)
-        band[valid_data_mask] = numpy.searchsorted(
-            percentile_values, band[valid_data_mask]) + 1
-        band[~valid_data_mask] = target_nodata
-        return band
-
     # Classify the pixels of raster_dataset into groups and write to output
-    pygeoprocessing.raster_calculator([(base_raster_path, 1)],
-                                      raster_percentile, target_raster_path,
-                                      gdal.GDT_Byte, target_nodata)
+    pygeoprocessing.raster_map(
+        op=lambda band: numpy.searchsorted(percentile_values, band) + 1,
+        rasters=[base_raster_path],
+        target_path=target_raster_path,
+        target_dtype=numpy.uint8,
+        target_nodata=target_nodata)
 
     # Create percentile groups of how percentile ranges are classified
     percentile_groups = numpy.arange(1, len(percentile_values) + 2)

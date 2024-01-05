@@ -149,12 +149,12 @@ export function setupInvestRunHandlers(investExe) {
       logger.debug('invest subprocess stdio streams closed');
     });
 
-    investRun.on('exit', (code) => {
+    investRun.on('exit', (code, signal) => {
       delete runningJobs[tabID];
       event.reply(`invest-exit-${tabID}`, {
         code: code,
       });
-      logger.debug(code);
+      logger.debug(`invest exited with code: ${code} and signal: ${signal}`);
       fs.unlink(datastackPath, (err) => {
         if (err) { logger.error(err); }
         fs.rmdir(tempDatastackDir, (e) => {

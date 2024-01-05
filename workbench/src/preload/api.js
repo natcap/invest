@@ -2,7 +2,6 @@
 const { ipcRenderer } = require('electron');
 // using `import` for electron messes with vite and yields a bad bundle.
 // `import`` is okay for local modules though
-
 import { ipcMainChannels } from '../main/ipcMainChannels';
 
 // Most IPC initiates in renderer and main does the listening,

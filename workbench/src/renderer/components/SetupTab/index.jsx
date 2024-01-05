@@ -287,7 +287,21 @@ class SetupTab extends React.Component {
     const { pyModuleName, switchTabs, t } = this.props;
     let datastack;
     try {
-      datastack = await fetchDatastackFromFile(filepath);
+      if (filepath.endsWith('gz')) {  // .tar.gz, .tgz
+        const extractLocation = await ipcRenderer.invoke(
+          ipcMainChannels.SHOW_SAVE_DIALOG,
+          { title: t('Choose location to extract archive') }
+        );
+        if (extractLocation.filePath) {
+          datastack = await fetchDatastackFromFile({
+            filepath: filepath,
+            extractPath: extractLocation.filePath});
+        } else {
+          return;
+        }
+      } else {
+          datastack = await fetchDatastackFromFile({ filepath: filepath });
+      }
     } catch (error) {
       logger.error(error);
       alert( // eslint-disable-line no-alert
@@ -634,7 +648,8 @@ SetupTab.propTypes = {
     enabledFunctions: PropTypes.objectOf(PropTypes.func),
     dropdownFunctions: PropTypes.objectOf(PropTypes.func),
   }).isRequired,
-  argsInitValues: PropTypes.objectOf(PropTypes.oneOfType([PropTypes.string, PropTypes.bool])),
+  argsInitValues: PropTypes.objectOf(PropTypes.oneOfType(
+    [PropTypes.string, PropTypes.bool, PropTypes.number])),
   investExecute: PropTypes.func.isRequired,
   sidebarSetupElementId: PropTypes.string.isRequired,
   sidebarFooterElementId: PropTypes.string.isRequired,

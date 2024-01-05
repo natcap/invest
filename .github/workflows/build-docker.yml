@@ -1,0 +1,73 @@
+name: Build containers
+
+on:
+    workflow_dispatch:
+    push:
+        paths:
+            - 'docker/*'
+            - '.github/workflows/build-docker.yml'
+            - 'src/**/*'
+            - 'requirements*.txt'
+            - 'pyproject.toml'
+            - 'setup.py'
+            - 'scripts/convert-requirements-to-conda-yml.py'
+
+concurrency:
+    # make sure only one run of this workflow for a given PR or a given branch
+    # can happen at one time. previous queued or started runs will be cancelled.
+    # github.workflow is the workflow name
+    # github.ref is the ref that triggered the workflow run
+    # on push, this is refs/heads/<branch name>
+    # on pull request, this is refs/pull/<pull request number>/merge
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+defaults:
+    run:
+        shell: bash -l {0}
+
+env:
+    # Customize this name if needed.
+    # The repo name is a very reasonable default!
+    CONTAINER_NAME: invest
+
+jobs:
+    build:
+        name: Build containers
+        runs-on: ubuntu-latest
+        permissions:
+            packages: write
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: login to GitHub Container Registry
+              uses: docker/login-action@v2
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Create environment file
+              run: |
+                  python scripts/convert-requirements-to-conda-yml.py requirements.txt > docker/environment.yml
+
+            - name: Build docker
+              run: |
+                  # Replace / (invalid tag character) with .
+                  SANITIZED_REF="$(echo ${{github.ref_name}} | sed 's|/|.|g')"
+                  cd docker && docker build \
+                        --build-arg="INVEST_REPO=${{ github.repository }}" \
+                        --build-arg="INVEST_VERSION=${{ github.sha }}" \
+                        -t ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:latest \
+                        -t ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:${{ github.sha }} \
+                        -t ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:${SANITIZED_REF} \
+                        .
+
+            - name: Test that GDAL and InVEST import
+              run: |
+                  docker run --rm ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:latest python -c "from osgeo import gdal"
+                  docker run --rm ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:latest python -m natcap.invest --version
+
+            - name: Push docker
+              if: github.event_name != 'pull_request'
+              run: docker image push --all-tags ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}

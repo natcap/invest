@@ -9,6 +9,7 @@ import re
 
 import numpy
 import pygeoprocessing
+import pygeoprocessing.kernels
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
@@ -620,7 +621,7 @@ def execute(args):
             substrate_path_map = scenario_variables[
                 'farm_nesting_substrate_index_path']
         else:
-            dependent_task_list = landcover_substrate_index_tasks.values()
+            dependent_task_list = list(landcover_substrate_index_tasks.values())
             substrate_path_map = scenario_variables[
                 'nesting_substrate_index_path']
 
@@ -629,14 +630,13 @@ def execute(args):
                 intermediate_output_dir,
                 _HABITAT_NESTING_INDEX_FILE_PATTERN % (species, file_suffix)))
 
-        calculate_habitat_nesting_index_op = _CalculateHabitatNestingIndex(
-            substrate_path_map,
-            scenario_variables['species_substrate_index'][species],
-            scenario_variables['habitat_nesting_index_path'][species])
-
         habitat_nesting_tasks[species] = task_graph.add_task(
             task_name=f'calculate_habitat_nesting_{species}',
-            func=calculate_habitat_nesting_index_op,
+            func=_calculate_habitat_nesting_index,
+            args=(
+                substrate_path_map,
+                scenario_variables['species_substrate_index'][species],
+                scenario_variables['habitat_nesting_index_path'][species]),
             dependent_task_list=dependent_task_list,
             target_path_list=[
                 scenario_variables['habitat_nesting_index_path'][species]])
@@ -711,17 +711,14 @@ def execute(args):
             relative_abundance_path = (
                 scenario_variables['relative_floral_abundance_index_path'][
                     season])
-            mult_by_scalar_op = _MultByScalar(
-                scenario_variables['species_foraging_activity'][
-                    (species, season)])
             foraged_flowers_index_task_map[(species, season)] = (
                 task_graph.add_task(
                     task_name=f'calculate_foraged_flowers_{species}_{season}',
-                    func=pygeoprocessing.raster_calculator,
+                    func=_multiply_by_scalar,
                     args=(
-                        [(relative_abundance_path, 1)],
-                        mult_by_scalar_op, foraged_flowers_index_path,
-                        gdal.GDT_Float32, _INDEX_NODATA),
+                        relative_abundance_path,
+                        scenario_variables['species_foraging_activity'][(species, season)],
+                        foraged_flowers_index_path),
                     dependent_task_list=[
                         relative_floral_abudance_task_map[season]],
                     target_path_list=[foraged_flowers_index_path]))
@@ -750,7 +747,7 @@ def execute(args):
             func=pygeoprocessing.raster_calculator,
             args=(
                 foraged_flowers_path_band_list,
-                _SumRasters(), local_foraging_effectiveness_path,
+                _sum_arrays, local_foraging_effectiveness_path,
                 gdal.GDT_Float32, _INDEX_NODATA),
             target_path_list=[
                 local_foraging_effectiveness_path],
@@ -784,8 +781,11 @@ def execute(args):
         except:
             alpha_kernel_raster_task = task_graph.add_task(
                 task_name=f'decay_kernel_raster_{alpha}',
-                func=utils.exponential_decay_kernel_raster,
-                args=(alpha, kernel_path),
+                func=pygeoprocessing.kernels.exponential_decay_kernel,
+                kwargs=dict(
+                    target_kernel_path=kernel_path,
+                    max_distance=alpha * 5,
+                    expected_distance=alpha),
                 target_path_list=[kernel_path])
             alpha_kernel_map[kernel_path] = alpha_kernel_raster_task
 
@@ -816,17 +816,14 @@ def execute(args):
         pollinator_supply_index_path = os.path.join(
             output_dir, _POLLINATOR_SUPPLY_FILE_PATTERN % (
                 species, file_suffix))
-        ps_index_op = _PollinatorSupplyIndexOp(
-            scenario_variables['species_abundance'][species])
         pollinator_supply_task = task_graph.add_task(
             task_name=f'calculate_pollinator_supply_{species}',
-            func=pygeoprocessing.raster_calculator,
+            func=_calculate_pollinator_supply_index,
             args=(
-                [(scenario_variables['habitat_nesting_index_path'][species],
-                  1),
-                 (floral_resources_index_path, 1)], ps_index_op,
-                pollinator_supply_index_path, gdal.GDT_Float32,
-                _INDEX_NODATA),
+                scenario_variables['habitat_nesting_index_path'][species],
+                floral_resources_index_path,
+                scenario_variables['species_abundance'][species],
+                pollinator_supply_index_path),
             dependent_task_list=[
                 floral_resources_task, habitat_nesting_tasks[species]],
             target_path_list=[pollinator_supply_index_path])
@@ -863,13 +860,15 @@ def execute(args):
             pollinator_abundance_task_map[(species, season)] = (
                 task_graph.add_task(
                     task_name=f'calculate_poll_abudance_{species}',
-                    func=pygeoprocessing.raster_calculator,
-                    args=(
-                        [(foraged_flowers_index_path, 1),
-                         (floral_resources_index_path_map[species], 1),
-                         (convolve_ps_path, 1)],
-                        _PollinatorSupplyOp(), pollinator_abundance_path,
-                        gdal.GDT_Float32, _INDEX_NODATA),
+                    func=pygeoprocessing.raster_map,
+                    kwargs=dict(
+                        op=pollinator_supply_op,
+                        rasters=[
+                            foraged_flowers_index_path,
+                            floral_resources_index_path_map[species],
+                            convolve_ps_path],
+                        target_path=pollinator_abundance_path,
+                        target_nodata=_INDEX_NODATA),
                     dependent_task_list=[
                         foraged_flowers_index_task_map[(species, season)],
                         floral_resources_index_task_map[species],
@@ -894,7 +893,7 @@ def execute(args):
             task_name=f'calculate_poll_abudnce_{species}_{season}',
             func=pygeoprocessing.raster_calculator,
             args=(
-                pollinator_abundance_season_path_band_list, _SumRasters(),
+                pollinator_abundance_season_path_band_list, _sum_arrays,
                 total_pollinator_abundance_index_path, gdal.GDT_Float32,
                 _INDEX_NODATA),
             dependent_task_list=[
@@ -943,12 +942,13 @@ def execute(args):
                 season, file_suffix))
         farm_pollinator_season_task_list.append(task_graph.add_task(
             task_name=f'farm_pollinator_{season}',
-            func=pygeoprocessing.raster_calculator,
-            args=(
-                [(half_saturation_raster_path, 1),
-                 (total_pollinator_abundance_index_path, 1)],
-                _OnFarmPollinatorAbundance(), farm_pollinator_season_path,
-                gdal.GDT_Float32, _INDEX_NODATA),
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=on_farm_pollinator_abundance_op,
+                rasters=[
+                    half_saturation_raster_path,
+                    total_pollinator_abundance_index_path],
+                target_path=farm_pollinator_season_path),
             dependent_task_list=[
                 half_saturation_task, total_pollinator_abundance_task[season]],
             target_path_list=[farm_pollinator_season_path]))
@@ -962,7 +962,7 @@ def execute(args):
         func=pygeoprocessing.raster_calculator,
         args=(
             [(path, 1) for path in farm_pollinator_season_path_list],
-            _SumRasters(), farm_pollinator_path, gdal.GDT_Float32,
+            _sum_arrays, farm_pollinator_path, gdal.GDT_Float32,
             _INDEX_NODATA),
         dependent_task_list=farm_pollinator_season_task_list,
         target_path_list=[farm_pollinator_path])
@@ -985,11 +985,11 @@ def execute(args):
         output_dir, _TOTAL_POLLINATOR_YIELD_FILE_PATTERN % file_suffix)
     pyt_task = task_graph.add_task(
         task_name='calculate_total_pollinators',
-        func=pygeoprocessing.raster_calculator,
-        args=(
-            [(managed_pollinator_path, 1), (farm_pollinator_path, 1)],
-            _PYTOp(), total_pollinator_yield_path, gdal.GDT_Float32,
-            _INDEX_NODATA),
+        func=pygeoprocessing.raster_map,
+        kwargs=dict(
+            op=pyt_op,
+            rasters=[managed_pollinator_path, farm_pollinator_path],
+            target_path=total_pollinator_yield_path),
         dependent_task_list=[farm_pollinator_task, managed_pollinator_task],
         target_path_list=[total_pollinator_yield_path])
 
@@ -998,11 +998,11 @@ def execute(args):
         output_dir, _WILD_POLLINATOR_YIELD_FILE_PATTERN % file_suffix)
     wild_pollinator_task = task_graph.add_task(
         task_name='calcualte_wild_pollinators',
-        func=pygeoprocessing.raster_calculator,
-        args=(
-            [(managed_pollinator_path, 1), (total_pollinator_yield_path, 1)],
-            _PYWOp(), wild_pollinator_yield_path, gdal.GDT_Float32,
-            _INDEX_NODATA),
+        func=pygeoprocessing.raster_map,
+        kwargs=dict(
+            op=pyw_op,
+            rasters=[managed_pollinator_path, total_pollinator_yield_path],
+            target_path=wild_pollinator_yield_path),
         dependent_task_list=[pyt_task, managed_pollinator_task],
         target_path_list=[wild_pollinator_yield_path])
 
@@ -1079,6 +1079,25 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+
+
+def pollinator_supply_op(
+        foraged_flowers_array, floral_resources_array,
+        convolve_ps_array):
+    """raster_map equation: calculate (RA*fa)/FR * convolve(PS)."""
+    return numpy.where(
+        floral_resources_array == 0, 0,
+        foraged_flowers_array / floral_resources_array * convolve_ps_array)
+
+def on_farm_pollinator_abundance_op(h, pat):
+    """raster_map equation: return (pat * (1 - h)) / (h * (1 - 2*pat)+pat))"""
+    return (pat * (1 - h)) / (h * (1 - 2 * pat) + pat)
+
+# raster_map equation: return min(mp_array+FP_array, 1)
+def pyt_op(mp_array, FP_array): return numpy.minimum(mp_array + FP_array, 1)
+
+# raster_map equation: return max(0,PYT_array-mp_array)
+def pyw_op(mp_array, PYT_array): return numpy.maximum(PYT_array - mp_array, 0)
 
 
 def _rasterize_vector_onto_base(
@@ -1200,8 +1219,8 @@ def _parse_scenario_variables(args):
     else:
         farm_vector_path = None
 
-    guild_df = utils.read_csv_to_dataframe(
-        guild_table_path, MODEL_SPEC['args']['guild_table_path'])
+    guild_df = validation.get_validated_dataframe(
+        guild_table_path, **MODEL_SPEC['args']['guild_table_path'])
 
     LOGGER.info('Checking to make sure guild table has all expected headers')
     for header in _EXPECTED_GUILD_HEADERS:
@@ -1212,9 +1231,9 @@ def _parse_scenario_variables(args):
                 f"'{header}' but was unable to find one. Here are all the "
                 f"headers from {guild_table_path}: {', '.join(guild_df.columns)}")
 
-    landcover_biophysical_df = utils.read_csv_to_dataframe(
+    landcover_biophysical_df = validation.get_validated_dataframe(
         landcover_biophysical_table_path,
-        MODEL_SPEC['args']['landcover_biophysical_table_path'])
+        **MODEL_SPEC['args']['landcover_biophysical_table_path'])
     biophysical_table_headers = landcover_biophysical_df.columns
     for header in _EXPECTED_BIOPHYSICAL_HEADERS:
         matches = re.findall(header, " ".join(biophysical_table_headers))
@@ -1380,288 +1399,77 @@ def _parse_scenario_variables(args):
     return result
 
 
-class _CalculateHabitatNestingIndex(object):
-    """Closure for HN(x, s) = max_n(N(x, n) ns(s,n)) calculation."""
-
-    def __init__(
-            self, substrate_path_map, species_substrate_index_map,
-            target_habitat_nesting_index_path):
-        """Define parameters necessary for HN(x,s) calculation.
-
-        Args:
-            substrate_path_map (dict): map substrate name to substrate index
-                raster path. (N(x, n))
-            species_substrate_index_map (dict): map substrate name to
-                scalar value of species substrate suitability. (ns(s,n))
-            target_habitat_nesting_index_path (string): path to target
-                raster
-        """
-        # try to get the source code of __call__ so task graph will recompute
-        # if the function has changed
-        try:
-            self.__name__ = hashlib.sha1(inspect.getsource(
-                    _CalculateHabitatNestingIndex.__call__
-                ).encode('utf-8')).hexdigest()
-        except IOError:
-            # default to the classname if it doesn't work
-            self.__name__ = _CalculateHabitatNestingIndex.__name__
-        self.__name__ += str([
-            substrate_path_map, species_substrate_index_map,
-            target_habitat_nesting_index_path])
-        self.substrate_path_list = [
-            substrate_path_map[substrate_id]
-            for substrate_id in sorted(substrate_path_map)]
-
-        self.species_substrate_suitability_index_array = numpy.array([
-            species_substrate_index_map[substrate_id]
-            for substrate_id in sorted(substrate_path_map)]).reshape(
-                (len(species_substrate_index_map), 1))
-
-        self.target_habitat_nesting_index_path = (
-            target_habitat_nesting_index_path)
-
-    def __call__(self):
-        """Calculate HN(x, s) = max_n(N(x, n) ns(s,n))."""
-        def max_op(*substrate_index_arrays):
-            """Return the max of index_array[n] * ns[n]."""
-            result = numpy.max(
-                numpy.stack([x.flatten() for x in substrate_index_arrays]) *
-                self.species_substrate_suitability_index_array, axis=0)
-            result = result.reshape(substrate_index_arrays[0].shape)
-            nodata_mask = utils.array_equals_nodata(
-                substrate_index_arrays[0], _INDEX_NODATA)
-            result[nodata_mask] = _INDEX_NODATA
-            return result
-
-        pygeoprocessing.raster_calculator(
-            [(x, 1) for x in self.substrate_path_list], max_op,
-            self.target_habitat_nesting_index_path,
-            gdal.GDT_Float32, _INDEX_NODATA)
+def _sum_arrays(*array_list):
+    """Calculate sum of array_list and account for nodata."""
+    valid_mask = numpy.zeros(array_list[0].shape, dtype=bool)
+    result = numpy.empty_like(array_list[0])
+    result[:] = 0
+    for array in array_list:
+        local_valid_mask = ~pygeoprocessing.array_equals_nodata(array, _INDEX_NODATA)
+        result[local_valid_mask] += array[local_valid_mask]
+        valid_mask |= local_valid_mask
+    result[~valid_mask] = _INDEX_NODATA
+    return result
 
 
-class _SumRasters(object):
-    """Sum all rasters where nodata is 0 unless the entire stack is nodata."""
+def _calculate_habitat_nesting_index(
+        substrate_path_map, species_substrate_index_map,
+        target_habitat_nesting_index_path):
+    """Calculate HN(x, s) = max_n(N(x, n) ns(s,n))."""
 
-    def __init__(self):
-        # try to get the source code of __call__ so task graph will recompute
-        # if the function has changed
-        try:
-            self.__name__ = hashlib.sha1(
-                inspect.getsource(
-                    _SumRasters.__call__
-                ).encode('utf-8')).hexdigest()
-        except IOError:
-            # default to the classname if it doesn't work
-            self.__name__ = (
-                _SumRasters.__name__)
+    substrate_path_list = [
+        substrate_path_map[substrate_id]
+        for substrate_id in sorted(substrate_path_map)]
 
-    def __call__(self, *array_list):
-        """Calculate sum of array_list and account for nodata."""
-        valid_mask = numpy.zeros(array_list[0].shape, dtype=bool)
-        result = numpy.empty_like(array_list[0])
-        result[:] = 0
-        for array in array_list:
-            local_valid_mask = ~utils.array_equals_nodata(array, _INDEX_NODATA)
-            result[local_valid_mask] += array[local_valid_mask]
-            valid_mask |= local_valid_mask
-        result[~valid_mask] = _INDEX_NODATA
-        return result
+    species_substrate_suitability_index_array = numpy.array([
+        species_substrate_index_map[substrate_id]
+        for substrate_id in sorted(substrate_path_map)]).reshape(
+            (len(species_substrate_index_map), 1))
+
+    def max_op(*substrate_index_arrays):
+        """Return the max of index_array[n] * ns[n]."""
+        return numpy.max(
+            numpy.stack([x.flatten() for x in substrate_index_arrays]) *
+            species_substrate_suitability_index_array, axis=0
+        ).reshape(substrate_index_arrays[0].shape)
+
+    pygeoprocessing.raster_map(
+        op=max_op,
+        rasters=substrate_path_list,
+        target_path=target_habitat_nesting_index_path)
 
 
-class _PollinatorSupplyOp(object):
-    """Calc PA=RA*fa/FR * convolve(PS)."""
-
-    def __init__(self):
-        # try to get the source code of __call__ so task graph will recompute
-        # if the function has changed
-        try:
-            self.__name__ = hashlib.sha1(
-                inspect.getsource(
-                    _PollinatorSupplyOp.__call__
-                ).encode('utf-8')).hexdigest()
-        except IOError:
-            # default to the classname if it doesn't work
-            self.__name__ = (
-                _PollinatorSupplyOp.__name__)
-
-    def __call__(
-            self, foraged_flowers_array, floral_resources_array,
-            convolve_ps_array):
-        """Calculating (RA*fa)/FR * convolve(PS)."""
-        valid_mask = ~utils.array_equals_nodata(
-            foraged_flowers_array, _INDEX_NODATA)
-        result = numpy.empty_like(foraged_flowers_array)
-        result[:] = _INDEX_NODATA
-        zero_mask = floral_resources_array == 0
-        result[zero_mask & valid_mask] = 0
-        result_mask = valid_mask & ~zero_mask
-        result[result_mask] = (
-            foraged_flowers_array[result_mask] /
-            floral_resources_array[result_mask] *
-            convolve_ps_array[result_mask])
-        return result
+def _multiply_by_scalar(raster_path, scalar, target_path):
+    """Multiply a raster by a scalar and write out result."""
+    pygeoprocessing.raster_map(
+        op=lambda array: array * scalar,
+        rasters=[raster_path],
+        target_path=target_path,
+        target_nodata=_INDEX_NODATA,
+    )
 
 
-class _PollinatorSupplyIndexOp(object):
-    """Calculate PS(x,s) = FR(x,s) * HN(x,s) * sa(s)."""
+def _calculate_pollinator_supply_index(
+        habitat_nesting_suitability_path, floral_resources_path,
+        species_abundance, target_path):
+    """Calculate pollinator supply index..
 
-    def __init__(self, species_abundance):
-        """Create a closure for species abundance to multiply later.
+    Args:
+        habitat_nesting_suitability_path (str): path to habitat nesting
+            suitability raster
+        floral_resources_path (str): path to floral resources raster
+        species_abundance (float): species abundance value
+        target_path (str): path to write out result raster
 
-        Args:
-            species_abundance (float): value to use in `__call__` when
-                calculating pollinator abundance.
-
-        Returns:
-            None.
-        """
-        self.species_abundance = species_abundance
-        # try to get the source code of __call__ so task graph will recompute
-        # if the function has changed
-        try:
-            self.__name__ = hashlib.sha1(
-                inspect.getsource(
-                    _PollinatorSupplyIndexOp.__call__
-                ).encode('utf-8')).hexdigest()
-        except IOError:
-            # default to the classname if it doesn't work
-            self.__name__ = (
-                _PollinatorSupplyIndexOp.__name__)
-        self.__name__ += str(species_abundance)
-
-    def __call__(
-            self, floral_resources_array, habitat_nesting_suitability_array):
-        """Calculate f_r * h_n * self.species_abundance."""
-        result = numpy.empty_like(floral_resources_array)
-        result[:] = _INDEX_NODATA
-        valid_mask = ~utils.array_equals_nodata(
-            floral_resources_array, _INDEX_NODATA)
-        result[valid_mask] = (
-            self.species_abundance * floral_resources_array[valid_mask] *
-            habitat_nesting_suitability_array[valid_mask])
-        return result
-
-
-class _MultByScalar(object):
-    """Calculate a raster * scalar.  Mask through nodata."""
-
-    def __init__(self, scalar):
-        """Create a closure for multiplying an array by a scalar.
-
-        Args:
-            scalar (float): value to use in `__call__` when multiplying by
-                its parameter.
-
-        Returns:
-            None.
-        """
-        self.scalar = scalar
-        # try to get the source code of __call__ so task graph will recompute
-        # if the function has changed
-        try:
-            self.__name__ = hashlib.sha1(
-                inspect.getsource(
-                    _MultByScalar.__call__
-                ).encode('utf-8')).hexdigest()
-        except IOError:
-            # default to the classname if it doesn't work
-            self.__name__ = (
-                _MultByScalar.__name__)
-        self.__name__ += str(scalar)
-
-    def __call__(self, array):
-        """Return array * self.scalar accounting for nodata."""
-        result = numpy.empty_like(array)
-        result[:] = _INDEX_NODATA
-        valid_mask = ~utils.array_equals_nodata(array, _INDEX_NODATA)
-        result[valid_mask] = array[valid_mask] * self.scalar
-        return result
-
-
-class _OnFarmPollinatorAbundance(object):
-    """Calculate FP(x) = (PAT * (1 - h)) / (h * (1 - 2*pat)+pat))."""
-
-    def __init__(self):
-        # try to get the source code of __call__ so task graph will recompute
-        # if the function has changed
-        try:
-            self.__name__ = hashlib.sha1(
-                inspect.getsource(
-                    _OnFarmPollinatorAbundance.__call__
-                ).encode('utf-8')).hexdigest()
-        except IOError:
-            # default to the classname if it doesn't work
-            self.__name__ = (
-                _OnFarmPollinatorAbundance.__name__)
-
-    def __call__(self, h_array, pat_array):
-        """Return (pad * (1 - h)) / (h * (1 - 2*pat)+pat)) tolerate nodata."""
-        result = numpy.empty_like(h_array)
-        result[:] = _INDEX_NODATA
-
-        valid_mask = (
-            ~utils.array_equals_nodata(h_array, _INDEX_NODATA) &
-            ~utils.array_equals_nodata(pat_array, _INDEX_NODATA))
-
-        result[valid_mask] = (
-            (pat_array[valid_mask]*(1-h_array[valid_mask])) /
-            (h_array[valid_mask]*(1-2*pat_array[valid_mask]) +
-             pat_array[valid_mask]))
-        return result
-
-
-class _PYTOp(object):
-    """Calculate PYT=min((mp+FP), 1)."""
-
-    def __init__(self):
-        # try to get the source code of __call__ so task graph will recompute
-        # if the function has changed
-        try:
-            self.__name__ = hashlib.sha1(
-                inspect.getsource(
-                    _PYTOp.__call__
-                ).encode('utf-8')).hexdigest()
-        except IOError:
-            # default to the classname if it doesn't work
-            self.__name__ = (
-                _PYTOp.__name__)
-
-    def __call__(self, mp_array, FP_array):
-        """Return min(mp_array+FP_array, 1) accounting for nodata."""
-        valid_mask = ~utils.array_equals_nodata(mp_array, _INDEX_NODATA)
-        result = numpy.empty_like(mp_array)
-        result[:] = _INDEX_NODATA
-        result[valid_mask] = mp_array[valid_mask]+FP_array[valid_mask]
-        min_mask = valid_mask & (result > 1)
-        result[min_mask] = 1
-        return result
-
-
-class _PYWOp(object):
-    """Calculate PYW=max(0,PYT-mp)."""
-
-    def __init__(self):
-        # try to get the source code of __call__ so task graph will recompute
-        # if the function has changed
-        try:
-            self.__name__ = hashlib.sha1(
-                inspect.getsource(
-                    _PYWOp.__call__
-                ).encode('utf-8')).hexdigest()
-        except IOError:
-            # default to the classname if it doesn't work
-            self.__name__ = (
-                _PYWOp.__name__)
-
-    def __call__(self, mp_array, PYT_array):
-        """Return max(0,PYT_array-mp_array) accounting for nodata."""
-        valid_mask = ~utils.array_equals_nodata(mp_array, _INDEX_NODATA)
-        result = numpy.empty_like(mp_array)
-        result[:] = _INDEX_NODATA
-        result[valid_mask] = PYT_array[valid_mask]-mp_array[valid_mask]
-        max_mask = valid_mask & (result < 0)
-        result[max_mask] = 0
-        return result
+    Returns:
+        None.
+    """
+    pygeoprocessing.raster_map(
+        op=lambda f_r, h_n: species_abundance * f_r * h_n,
+        rasters=[habitat_nesting_suitability_path, floral_resources_path],
+        target_path=target_path,
+        target_nodata=_INDEX_NODATA
+    )
 
 
 @validation.invest_validator

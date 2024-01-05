@@ -504,13 +504,13 @@ def execute(args):
 
     LOGGER.info(
         "Checking if the landcover raster is missing lucodes")
-    crop_to_landcover_df = utils.read_csv_to_dataframe(
+    crop_to_landcover_df = validation.get_validated_dataframe(
         args['landcover_to_crop_table_path'],
-        MODEL_SPEC['args']['landcover_to_crop_table_path'])
+        **MODEL_SPEC['args']['landcover_to_crop_table_path'])
 
-    crop_to_fertilization_rate_df = utils.read_csv_to_dataframe(
+    crop_to_fertilization_rate_df = validation.get_validated_dataframe(
         args['fertilization_rate_table_path'],
-        MODEL_SPEC['args']['fertilization_rate_table_path'])
+        **MODEL_SPEC['args']['fertilization_rate_table_path'])
 
     crop_lucodes = list(crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER])
 
@@ -585,10 +585,10 @@ def execute(args):
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
-        crop_regression_df = utils.read_csv_to_dataframe(
+        crop_regression_df = validation.get_validated_dataframe(
             os.path.join(args['model_data_path'],
                          _REGRESSION_TABLE_PATTERN % crop_name),
-            MODEL_SPEC['args']['model_data_path']['contents'][
+            **MODEL_SPEC['args']['model_data_path']['contents'][
                 'climate_regression_yield_tables']['contents'][
                 '[CROP]_regression_yield_table.csv'])
         for _, row in crop_regression_df.iterrows():
@@ -725,12 +725,14 @@ def execute(args):
                 crop_name, file_suffix))
 
         calc_min_NKP_task = task_graph.add_task(
-            func=pygeoprocessing.raster_calculator,
-            args=([(nitrogen_yield_raster_path, 1),
-                   (phosphorus_yield_raster_path, 1),
-                   (potassium_yield_raster_path, 1)],
-                  _min_op, crop_production_raster_path,
-                  gdal.GDT_Float32, _NODATA_YIELD),
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=_min_op,
+                rasters=[nitrogen_yield_raster_path,
+                         phosphorus_yield_raster_path,
+                         potassium_yield_raster_path],
+                target_path=crop_production_raster_path,
+                target_nodata=_NODATA_YIELD),
             target_path_list=[crop_production_raster_path],
             dependent_task_list=dependent_task_list,
             task_name='calc_min_of_NKP')
@@ -810,9 +812,9 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_df = utils.read_csv_to_dataframe(
+    nutrient_df = validation.get_validated_dataframe(
         os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
-        MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv'])
+        **MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv'])
 
     LOGGER.info("Generating report table")
     crop_names = list(crop_to_landcover_df.index)
@@ -864,9 +866,9 @@ def _x_yield_op(
     result = numpy.empty(b_x.shape, dtype=numpy.float32)
     result[:] = _NODATA_YIELD
     valid_mask = (
-        ~utils.array_equals_nodata(y_max, _NODATA_YIELD) &
-        ~utils.array_equals_nodata(b_x, _NODATA_YIELD) &
-        ~utils.array_equals_nodata(c_x, _NODATA_YIELD) &
+        ~pygeoprocessing.array_equals_nodata(y_max, _NODATA_YIELD) &
+        ~pygeoprocessing.array_equals_nodata(b_x, _NODATA_YIELD) &
+        ~pygeoprocessing.array_equals_nodata(c_x, _NODATA_YIELD) &
         (lulc_array == crop_lucode))
     result[valid_mask] = pixel_area_ha * y_max[valid_mask] * (
         1 - b_x[valid_mask] * numpy.exp(
@@ -875,19 +877,8 @@ def _x_yield_op(
     return result
 
 
-def _min_op(y_n, y_p, y_k):
-    """Calculate the min of the three inputs and multiply by Ymax."""
-    result = numpy.empty(y_n.shape, dtype=numpy.float32)
-    result[:] = _NODATA_YIELD
-    valid_mask = (
-        ~utils.array_equals_nodata(y_n, _NODATA_YIELD) &
-        ~utils.array_equals_nodata(y_k, _NODATA_YIELD) &
-        ~utils.array_equals_nodata(y_p, _NODATA_YIELD))
-    result[valid_mask] = (
-        numpy.min(
-            [y_n[valid_mask], y_k[valid_mask], y_p[valid_mask]],
-            axis=0))
-    return result
+"""equation for raster_map: calculate min of inputs and multiply by Ymax."""
+def _min_op(y_n, y_p, y_k): return numpy.min([y_n, y_k, y_p], axis=0)
 
 
 def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
@@ -906,7 +897,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result[:] = 0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
-        valid_mask = ~utils.array_equals_nodata(
+        valid_mask = ~pygeoprocessing.array_equals_nodata(
             observed_yield_array, observed_yield_nodata)
     result[valid_mask] = observed_yield_array[valid_mask]
     return result
@@ -932,7 +923,7 @@ def _mask_observed_yield_op(
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
-        valid_mask = ~utils.array_equals_nodata(lulc_array, landcover_nodata)
+        valid_mask = ~pygeoprocessing.array_equals_nodata(lulc_array, landcover_nodata)
         result[valid_mask] = 0
     else:
         result[:] = 0
@@ -994,7 +985,7 @@ def tabulate_regression_results(
                 # if nodata value undefined, assume all pixels are valid
                 valid_mask = numpy.full(yield_block.shape, True)
                 if observed_yield_nodata is not None:
-                    valid_mask = ~utils.array_equals_nodata(
+                    valid_mask = ~pygeoprocessing.array_equals_nodata(
                         yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
                     valid_mask & (yield_block > 0.0))
@@ -1012,7 +1003,7 @@ def tabulate_regression_results(
                     (crop_production_raster_path, 1)):
                 yield_sum += numpy.sum(
                     # _NODATA_YIELD will always have a value (defined above)
-                    yield_block[~utils.array_equals_nodata(
+                    yield_block[~pygeoprocessing.array_equals_nodata(
                         yield_block, _NODATA_YIELD)])
             production_lookup['modeled'] = yield_sum
             result_table.write(",%f" % yield_sum)
@@ -1038,7 +1029,7 @@ def tabulate_regression_results(
                 (landcover_raster_path, 1)):
             if landcover_nodata is not None:
                 total_area += numpy.count_nonzero(
-                    ~utils.array_equals_nodata(band_values, landcover_nodata))
+                    ~pygeoprocessing.array_equals_nodata(band_values, landcover_nodata))
             else:
                 total_area += band_values.size
         result_table.write(

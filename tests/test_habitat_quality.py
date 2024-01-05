@@ -1117,7 +1117,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         scenarios = ['_bas_', '_cur_', '_fut_']
         for lulc_val, scenario in enumerate(scenarios, start=1):
-            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array = numpy.ones((100, 100), dtype=numpy.uint8)
             lulc_array[50:, :] = lulc_val
             path = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
@@ -1317,7 +1317,7 @@ class HabitatQualityTests(unittest.TestCase):
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(
-            args['sensitivity_table_path'], include_threat=False)
+            args['sensitivity_table_path'], include_threat=True)
 
         make_threats_raster(
             args['workspace_dir'], threat_values=[1, 1],
@@ -1333,7 +1333,7 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_3,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         # At least one threat header is expected, so there should be a message

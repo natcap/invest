@@ -102,7 +102,7 @@ class EndpointFunctionTests(unittest.TestCase):
         with open(filepath, 'w') as file:
             file.write(json.dumps(expected_datastack))
         response = test_client.post(
-            f'{ROUTE_PREFIX}/post_datastack_file', json=filepath)
+            f'{ROUTE_PREFIX}/post_datastack_file', json={'filepath': filepath})
         response_data = json.loads(response.get_data(as_text=True))
         self.assertEqual(
             set(response_data),

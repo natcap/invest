@@ -312,9 +312,9 @@ def execute(args):
         task_name='align raster stack')
 
     # Load CN table
-    cn_df = utils.read_csv_to_dataframe(
+    cn_df = validation.get_validated_dataframe(
         args['curve_number_table_path'],
-        MODEL_SPEC['args']['curve_number_table_path'])
+        **MODEL_SPEC['args']['curve_number_table_path'])
 
     # make cn_table into a 2d array where first dim is lucode, second is
     # 0..3 to correspond to CN_A..CN_D
@@ -654,9 +654,9 @@ def _calculate_damage_to_infrastructure_in_aoi(
     infrastructure_vector = gdal.OpenEx(structures_vector_path, gdal.OF_VECTOR)
     infrastructure_layer = infrastructure_vector.GetLayer()
 
-    damage_type_map = utils.read_csv_to_dataframe(
+    damage_type_map = validation.get_validated_dataframe(
         structures_damage_table,
-        MODEL_SPEC['args']['infrastructure_damage_loss_table_path']
+        **MODEL_SPEC['args']['infrastructure_damage_loss_table_path']
     )['damage'].to_dict()
 
     infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()
@@ -736,7 +736,7 @@ def _flood_vol_op(
     """
     result = numpy.empty(q_pi_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
-    valid_mask = ~utils.array_equals_nodata(q_pi_array, q_pi_nodata)
+    valid_mask = ~pygeoprocessing.array_equals_nodata(q_pi_array, q_pi_nodata)
     # 0.001 converts mm (quickflow) to m (pixel area units)
     result[valid_mask] = (
         q_pi_array[valid_mask] * pixel_area * 0.001)
@@ -761,7 +761,7 @@ def _runoff_retention_vol_op(
     """
     result = numpy.empty(runoff_retention_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
-    valid_mask = ~utils.array_equals_nodata(
+    valid_mask = ~pygeoprocessing.array_equals_nodata(
         runoff_retention_array, runoff_retention_nodata)
     # the 1e-3 converts the mm of p_value to meters.
     result[valid_mask] = (
@@ -787,7 +787,7 @@ def _runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
     result[:] = result_nodata
     valid_mask = numpy.ones(q_pi_array.shape, dtype=bool)
     if q_pi_nodata is not None:
-        valid_mask[:] = ~utils.array_equals_nodata(q_pi_array, q_pi_nodata)
+        valid_mask[:] = ~pygeoprocessing.array_equals_nodata(q_pi_array, q_pi_nodata)
     result[valid_mask] = 1 - (q_pi_array[valid_mask] / p_value)
     return result
 
@@ -812,7 +812,7 @@ def _q_pi_op(p_value, s_max_array, s_max_nodata, result_nodata):
     zero_mask = (p_value <= lam * s_max_array)
     non_nodata_mask = numpy.ones(s_max_array.shape, dtype=bool)
     if s_max_nodata is not None:
-        non_nodata_mask[:] = ~utils.array_equals_nodata(
+        non_nodata_mask[:] = ~pygeoprocessing.array_equals_nodata(
             s_max_array, s_max_nodata)
 
     # valid if not nodata and not going to be set to 0.
@@ -842,7 +842,7 @@ def _s_max_op(cn_array, cn_nodata, result_nodata):
     zero_mask = cn_array == 0
     valid_mask = ~zero_mask
     if cn_nodata is not None:
-        valid_mask[:] &= ~utils.array_equals_nodata(cn_array, cn_nodata)
+        valid_mask[:] &= ~pygeoprocessing.array_equals_nodata(cn_array, cn_nodata)
     result[valid_mask] = 25400 / cn_array[valid_mask] - 254
     result[zero_mask] = 0
     return result
@@ -870,10 +870,10 @@ def _lu_to_cn_op(
     result[:] = cn_nodata
     valid_mask = numpy.ones(lucode_array.shape, dtype=bool)
     if lucode_nodata is not None:
-        valid_mask[:] &= ~utils.array_equals_nodata(
+        valid_mask[:] &= ~pygeoprocessing.array_equals_nodata(
             lucode_array, lucode_nodata)
     if soil_type_nodata is not None:
-        valid_mask[:] &= ~utils.array_equals_nodata(
+        valid_mask[:] &= ~pygeoprocessing.array_equals_nodata(
             soil_type_array, soil_type_nodata)
 
     # this is an array where each column represents a valid landcover
@@ -956,9 +956,9 @@ def validate(args, limit_to=None):
     if ("curve_number_table_path" not in invalid_keys and
             "curve_number_table_path" in sufficient_keys):
         # Load CN table. Resulting DF has index and CN_X columns only.
-        cn_df = utils.read_csv_to_dataframe(
+        cn_df = validation.get_validated_dataframe(
             args['curve_number_table_path'],
-            MODEL_SPEC['args']['curve_number_table_path'])
+            **MODEL_SPEC['args']['curve_number_table_path'])
         # Check for NaN values.
         nan_mask = cn_df.isna()
         if nan_mask.any(axis=None):

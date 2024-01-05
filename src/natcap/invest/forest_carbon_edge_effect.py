@@ -431,9 +431,9 @@ def execute(args):
     # Map non-forest landcover codes to carbon biomasses
     LOGGER.info('Calculating direct mapped carbon stocks')
     carbon_maps = []
-    biophysical_df = utils.read_csv_to_dataframe(
+    biophysical_df = validation.get_validated_dataframe(
         args['biophysical_table_path'],
-        MODEL_SPEC['args']['biophysical_table_path'])
+        **MODEL_SPEC['args']['biophysical_table_path'])
     pool_list = [('c_above', True)]
     if args['pools_to_calculate'] == 'all':
         pool_list.extend([
@@ -541,7 +541,7 @@ def combine_carbon_maps(*carbon_maps):
     nodata_mask = numpy.empty(carbon_maps[0].shape, dtype=bool)
     nodata_mask[:] = True
     for carbon_map in carbon_maps:
-        valid_mask = ~utils.array_equals_nodata(carbon_map, NODATA_VALUE)
+        valid_mask = ~pygeoprocessing.array_equals_nodata(carbon_map, NODATA_VALUE)
         nodata_mask &= ~valid_mask
         result[valid_mask] += carbon_map[valid_mask]
     result[nodata_mask] = NODATA_VALUE
@@ -642,8 +642,8 @@ def _calculate_lulc_carbon_map(
 
     """
     # classify forest pixels from lulc
-    biophysical_df = utils.read_csv_to_dataframe(
-        biophysical_table_path, MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = validation.get_validated_dataframe(
+        biophysical_table_path, **MODEL_SPEC['args']['biophysical_table_path'])
 
     lucode_to_per_cell_carbon = {}
     cell_size = pygeoprocessing.get_raster_info(
@@ -706,34 +706,20 @@ def _map_distance_from_tropical_forest_edge(
 
     """
     # Build a list of forest lucodes
-    biophysical_df = utils.read_csv_to_dataframe(
-        biophysical_table_path, MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = validation.get_validated_dataframe(
+        biophysical_table_path, **MODEL_SPEC['args']['biophysical_table_path'])
     forest_codes = biophysical_df[biophysical_df['is_tropical_forest']].index.values
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
     lulc_nodata = pygeoprocessing.get_raster_info(
         base_lulc_raster_path)['nodata']
 
-    forest_mask_nodata = 255
-
-    def mask_non_forest_op(lulc_array):
-        """Convert forest lulc codes to 0.
-        Args:
-            lulc_array (numpy.ndarray): array representing a LULC raster where
-                each forest LULC code is in `forest_codes`.
-        Returns:
-            numpy.ndarray with the same shape as lulc_array. All pixels are
-                0 (forest), 1 (non-forest), or 255 (nodata).
-        """
-        non_forest_mask = ~numpy.isin(lulc_array, forest_codes)
-        nodata_mask = lulc_array == lulc_nodata
-        # where LULC has nodata, set value to nodata value (255)
-        # where LULC has data, set to 0 if LULC is a forest type, 1 if it's not
-        return numpy.where(nodata_mask, forest_mask_nodata, non_forest_mask)
-
-    pygeoprocessing.raster_calculator(
-        [(base_lulc_raster_path, 1)], mask_non_forest_op,
-        target_non_forest_mask_path, gdal.GDT_Byte, forest_mask_nodata)
+    pygeoprocessing.raster_map(
+        op=lambda lulc_array: ~numpy.isin(lulc_array, forest_codes),
+        rasters=[base_lulc_raster_path],
+        target_path=target_non_forest_mask_path,
+        target_dtype=numpy.uint8,
+        target_nodata=255)
 
     # Do the distance transform on non-forest pixels
     # This is the distance from each pixel to the nearest pixel with value 1.
@@ -753,7 +739,7 @@ def _map_distance_from_tropical_forest_edge(
         # where LULC has nodata, overwrite edge distance with nodata value
         lulc_block = lulc_band.ReadAsArray(**offset_dict)
         distance_block = edge_distance_band.ReadAsArray(**offset_dict)
-        nodata_mask = utils.array_equals_nodata(lulc_block, lulc_nodata)
+        nodata_mask = pygeoprocessing.array_equals_nodata(lulc_block, lulc_nodata)
         distance_block[nodata_mask] = lulc_nodata
         edge_distance_band.WriteArray(
             distance_block,

@@ -1,4 +1,5 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
+import copy
 import itertools
 import logging
 import os
@@ -459,6 +460,7 @@ _OUTPUT_BASE_FILES = {
 INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
 
 _INTERMEDIATE_BASE_FILES = {
+    'mask_path': 'watersheds_mask.tif',
     'ic_factor_path': 'ic_factor.tif',
     'load_n_path': 'load_n.tif',
     'load_p_path': 'load_p.tif',
@@ -590,9 +592,9 @@ def execute(args):
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
 
-    biophysical_df = utils.read_csv_to_dataframe(
+    biophysical_df = validation.get_validated_dataframe(
         args['biophysical_table_path'],
-        MODEL_SPEC['args']['biophysical_table_path'])
+        **MODEL_SPEC['args']['biophysical_table_path'])
 
     # these are used for aggregation in the last step
     field_pickle_map = {}
@@ -620,61 +622,66 @@ def execute(args):
         target_path_list=aligned_raster_list,
         task_name='align rasters')
 
-    # Use the cutline feature of gdal.Warp to mask pixels outside the watershed
-    # it's possible that the DEM, LULC, or runoff proxy inputs might have an
-    # undefined nodata value. since we're introducing nodata pixels, set a nodata
-    # value if one is not already defined.
-    rp_nodata = pygeoprocessing.get_raster_info(
-        f_reg['aligned_runoff_proxy_path'])['nodata'][0]
+    # Since we mask multiple rasters using the same vector, we can just do the
+    # rasterization once.  Calling pygeoprocessing.mask_raster() multiple times
+    # unfortunately causes the rasterization to happen once per call.
+    mask_task = task_graph.add_task(
+        func=_create_mask_raster,
+        kwargs={
+            'source_raster_path': f_reg['aligned_dem_path'],
+            'source_vector_path': args['watersheds_path'],
+            'target_raster_path': f_reg['mask_path']
+        },
+        target_path_list=[f_reg['mask_path']],
+        dependent_task_list=[align_raster_task],
+        task_name='create watersheds mask'
+    )
     mask_runoff_proxy_task = task_graph.add_task(
-        func=gdal.Warp,
+        func=_mask_raster,
         kwargs={
-            'destNameOrDestDS': f_reg['masked_runoff_proxy_path'],
-            'srcDSOrSrcDSTab': f_reg['aligned_runoff_proxy_path'],
-            'dstNodata': _TARGET_NODATA if rp_nodata is None else rp_nodata,
-            'cutlineDSName': args['watersheds_path']},
-        dependent_task_list=[align_raster_task],
+            'source_raster_path': f_reg['aligned_runoff_proxy_path'],
+            'mask_raster_path': f_reg['mask_path'],
+            'target_masked_raster_path': f_reg['masked_runoff_proxy_path'],
+            'target_dtype': gdal.GDT_Float32,
+            'default_nodata': _TARGET_NODATA,
+        },
+        dependent_task_list=[mask_task, align_raster_task],
         target_path_list=[f_reg['masked_runoff_proxy_path']],
-        task_name='mask runoff proxy raster')
-
-    dem_nodata = pygeoprocessing.get_raster_info(
-        f_reg['aligned_dem_path'])['nodata'][0]
-    dem_target_nodata = float(  # GDAL expects a python float, not numpy.float32
-        numpy.finfo(numpy.float32).min if dem_nodata is None else dem_nodata)
+        task_name='mask runoff proxy raster',
+    )
     mask_dem_task = task_graph.add_task(
-        func=gdal.Warp,
+        func=_mask_raster,
         kwargs={
-            'destNameOrDestDS': f_reg['masked_dem_path'],
-            'srcDSOrSrcDSTab': f_reg['aligned_dem_path'],
-            'outputType': gdal.GDT_Float32,
-            'dstNodata': dem_target_nodata,
-            'cutlineDSName': args['watersheds_path']},
-        dependent_task_list=[align_raster_task],
+            'source_raster_path': f_reg['aligned_dem_path'],
+            'mask_raster_path': f_reg['mask_path'],
+            'target_masked_raster_path': f_reg['masked_dem_path'],
+            'target_dtype': gdal.GDT_Float32,
+            'default_nodata': float(numpy.finfo(numpy.float32).min),
+        },
+        dependent_task_list=[mask_task, align_raster_task],
         target_path_list=[f_reg['masked_dem_path']],
-        task_name='mask dem raster')
-
-    lulc_nodata = pygeoprocessing.get_raster_info(
-        f_reg['aligned_lulc_path'])['nodata'][0]
-    lulc_target_nodata = (
-        numpy.iinfo(numpy.int32).min if lulc_nodata is None else lulc_nodata)
+        task_name='mask dem raster',
+    )
     mask_lulc_task = task_graph.add_task(
-        func=gdal.Warp,
+        func=_mask_raster,
         kwargs={
-            'destNameOrDestDS': f_reg['masked_lulc_path'],
-            'srcDSOrSrcDSTab': f_reg['aligned_lulc_path'],
-            'outputType': gdal.GDT_Int32,
-            'dstNodata': lulc_target_nodata,
-            'cutlineDSName': args['watersheds_path']},
-        dependent_task_list=[align_raster_task],
+            'source_raster_path': f_reg['aligned_lulc_path'],
+            'mask_raster_path': f_reg['mask_path'],
+            'target_masked_raster_path': f_reg['masked_lulc_path'],
+            'target_dtype': gdal.GDT_Int32,
+            'default_nodata': numpy.iinfo(numpy.int32).min,
+        },
+        dependent_task_list=[mask_task, align_raster_task],
         target_path_list=[f_reg['masked_lulc_path']],
-        task_name='mask lulc raster')
+        task_name='mask lulc raster',
+    )
 
     fill_pits_task = task_graph.add_task(
         func=pygeoprocessing.routing.fill_pits,
         args=(
             (f_reg['masked_dem_path'], 1), f_reg['filled_dem_path']),
         kwargs={'working_dir': intermediate_output_dir},
-        dependent_task_list=[align_raster_task],
+        dependent_task_list=[align_raster_task, mask_dem_task],
         target_path_list=[f_reg['filled_dem_path']],
         task_name='fill pits')
 
@@ -715,8 +722,11 @@ def execute(args):
         task_name='calculate slope')
 
     threshold_slope_task = task_graph.add_task(
-        func=_slope_proportion_and_threshold,
-        args=(f_reg['slope_path'], f_reg['thresholded_slope_path']),
+        func=pygeoprocessing.raster_map,
+        kwargs=dict(
+            op=_slope_proportion_and_threshold_op,
+            rasters=[f_reg['slope_path']],
+            target_path=f_reg['thresholded_slope_path']),
         target_path_list=[f_reg['thresholded_slope_path']],
         dependent_task_list=[calculate_slope_task],
         task_name='threshold slope')
@@ -726,7 +736,7 @@ def execute(args):
         args=((f_reg['masked_runoff_proxy_path'], 1),
               f_reg['runoff_proxy_index_path']),
         target_path_list=[f_reg['runoff_proxy_index_path']],
-        dependent_task_list=[align_raster_task],
+        dependent_task_list=[align_raster_task, mask_runoff_proxy_task],
         task_name='runoff proxy mean')
 
     s_task = task_graph.add_task(
@@ -739,9 +749,13 @@ def execute(args):
         task_name='route s')
 
     s_bar_task = task_graph.add_task(
-        func=s_bar_calculate,
-        args=(f_reg['s_accumulation_path'], f_reg['flow_accumulation_path'],
-              f_reg['s_bar_path']),
+        func=pygeoprocessing.raster_map,
+        kwargs=dict(
+            op=numpy.divide,  # s_bar = s_accum / flow_accum
+            rasters=[f_reg['s_accumulation_path'], f_reg['flow_accumulation_path']],
+            target_path=f_reg['s_bar_path'],
+            target_dtype=numpy.float32,
+            target_nodata=_TARGET_NODATA),
         target_path_list=[f_reg['s_bar_path']],
         dependent_task_list=[s_task, flow_accum_task],
         task_name='calculate s bar')
@@ -755,8 +769,12 @@ def execute(args):
         task_name='d up')
 
     s_inv_task = task_graph.add_task(
-        func=invert_raster_values,
-        args=(f_reg['thresholded_slope_path'], f_reg['s_factor_inverse_path']),
+        func=pygeoprocessing.raster_map,
+        kwargs=dict(
+            op=_inverse_op,
+            rasters=[f_reg['thresholded_slope_path']],
+            target_path=f_reg['s_factor_inverse_path'],
+            target_nodata=_TARGET_NODATA),
         target_path_list=[f_reg['s_factor_inverse_path']],
         dependent_task_list=[threshold_slope_task],
         task_name='s inv')
@@ -816,14 +834,17 @@ def execute(args):
                 f_reg['masked_lulc_path'],
                 biophysical_df[f'load_{nutrient}'],
                 load_path),
-            dependent_task_list=[align_raster_task],
+            dependent_task_list=[align_raster_task, mask_lulc_task],
             target_path_list=[load_path],
             task_name=f'{nutrient} load')
 
         modified_load_task = task_graph.add_task(
-            func=_multiply_rasters,
-            args=([load_path, f_reg['runoff_proxy_index_path']],
-                  _TARGET_NODATA, modified_load_path),
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=_mult_op,
+                rasters=[load_path, f_reg['runoff_proxy_index_path']],
+                target_path=modified_load_path,
+                target_nodata=_TARGET_NODATA),
             target_path_list=[modified_load_path],
             dependent_task_list=[load_task, runoff_proxy_index_task],
             task_name=f'modified load {nutrient}')
@@ -883,8 +904,12 @@ def execute(args):
 
         surface_export_path = f_reg[f'{nutrient}_surface_export_path']
         surface_export_task = task_graph.add_task(
-            func=_calculate_export,
-            args=(surface_load_path, ndr_path, surface_export_path),
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=numpy.multiply,  # export = load * ndr
+                rasters=[surface_load_path, ndr_path],
+                target_path=surface_export_path,
+                target_nodata=_TARGET_NODATA),
             target_path_list=[surface_export_path],
             dependent_task_list=[
                 load_task, ndr_task, surface_load_task],
@@ -918,9 +943,12 @@ def execute(args):
                 task_name='sub ndr n')
 
             subsurface_export_task = task_graph.add_task(
-                func=_calculate_export,
-                args=(f_reg['sub_load_n_path'], f_reg['sub_ndr_n_path'],
-                      f_reg['n_subsurface_export_path']),
+                func=pygeoprocessing.raster_map,
+                kwargs=dict(
+                    op=numpy.multiply,  # export = load * ndr
+                    rasters=[f_reg['sub_load_n_path'], f_reg['sub_ndr_n_path']],
+                    target_path=f_reg['n_subsurface_export_path'],
+                    target_nodata=_TARGET_NODATA),
                 target_path_list=[f_reg['n_subsurface_export_path']],
                 dependent_task_list=[
                     subsurface_load_task, subsurface_ndr_task],
@@ -929,9 +957,12 @@ def execute(args):
             # only need to calculate total for nitrogen because
             # phosphorus only has surface export
             total_export_task = task_graph.add_task(
-                func=_sum_rasters,
-                args=([surface_export_path, f_reg['n_subsurface_export_path']],
-                      _TARGET_NODATA, f_reg['n_total_export_path']),
+                func=pygeoprocessing.raster_map,
+                kwargs=dict(
+                    op=_sum_op,
+                    rasters=[surface_export_path, f_reg['n_subsurface_export_path']],
+                    target_path=f_reg['n_total_export_path'],
+                    target_nodata=_TARGET_NODATA),
                 target_path_list=[f_reg['n_total_export_path']],
                 dependent_task_list=[
                     surface_export_task, subsurface_export_task],
@@ -1012,35 +1043,86 @@ def execute(args):
     LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
 
 
-def _slope_proportion_and_threshold(slope_path, target_threshold_slope_path):
-    """Rescale slope to proportion and threshold to between 0.005 and 1.0.
+# raster_map equation: Multiply a series of arrays element-wise
+def _mult_op(*array_list): return numpy.prod(numpy.stack(array_list), axis=0)
+
+# raster_map equation: Sum a list of arrays element-wise
+def _sum_op(*array_list): return numpy.sum(array_list, axis=0)
+
+# raster_map equation: calculate inverse of S factor
+def _inverse_op(base_val): return numpy.where(base_val == 0, 0, 1 / base_val)
+
+# raster_map equation: rescale and threshold slope between 0.005 and 1
+def _slope_proportion_and_threshold_op(slope):
+    slope_fraction = slope / 100
+    slope_fraction[slope_fraction < 0.005] = 0.005
+    slope_fraction[slope_fraction > 1] = 1
+    return slope_fraction
+
+
+def _create_mask_raster(source_raster_path, source_vector_path,
+                        target_raster_path):
+    """Create a mask raster from a vector.
+
+    Masking like this is more tolerant of geometry errors than using gdalwarp's
+    cutline functionality, which fails on even simple geometry errors.
 
     Args:
-        slope_path (string): a raster with slope values in percent.
-        target_threshold_slope_path (string): generated raster with slope
-            values as a proportion (100% is 1.0) and thresholded to values
-            between 0.005 and 1.0.
+        source_raster_path (str): The path to a source raster from which the
+            raster size, geotransform and spatial reference will be copied.
+        source_vector_path (str): The path to a vector on disk to be
+            rasterized onto a new raster matching the attributes of the raster
+            at ``source_raster_path``.
+        target_raster_path (str): The path to where the output raster should be
+            written.
 
     Returns:
-        None.
-
+        ``None``
     """
-    slope_nodata = pygeoprocessing.get_raster_info(slope_path)['nodata'][0]
+    pygeoprocessing.new_raster_from_base(
+        source_raster_path, target_raster_path, gdal.GDT_Byte, [255], [0])
+    pygeoprocessing.rasterize(source_vector_path, target_raster_path, [1],
+                              option_list=['ALL_TOUCHED=FALSE'])
 
-    def _slope_proportion_and_threshold_op(slope):
-        """Rescale and threshold slope between 0.005 and 1.0."""
-        valid_mask = ~utils.array_equals_nodata(slope, slope_nodata)
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = slope_nodata
-        slope_fraction = slope[valid_mask] / 100
-        slope_fraction[slope_fraction < 0.005] = 0.005
-        slope_fraction[slope_fraction > 1.0] = 1.0
-        result[valid_mask] = slope_fraction
+
+def _mask_raster(source_raster_path, mask_raster_path,
+                 target_masked_raster_path, default_nodata, target_dtype):
+    """Using a raster of 1s and 0s, determine which pixels remain in output.
+
+    Args:
+        source_raster_path (str): The path to a source raster that contains
+            pixel values, some of which will propagate through to the target
+            raster.
+        mask_raster_path (str): The path to a raster of 1s and 0s indicating
+            whether a pixel should (1) or should not (0) be copied to the
+            target raster.
+        target_masked_raster_path (str): The path to where the target raster
+            should be written.
+        default_nodata (int, float, None): The nodata value that should be used
+            if ``source_raster_path`` does not have a defined nodata value.
+        target_dtype (int): The ``gdal.GDT_*`` datatype of the target raster.
+
+    Returns:
+        ``None``
+    """
+    source_raster_info = pygeoprocessing.get_raster_info(source_raster_path)
+    source_nodata = source_raster_info['nodata'][0]
+    nodata = source_nodata
+    if nodata is None:
+        nodata = default_nodata
+
+    def _mask_op(mask, raster):
+        result = numpy.full(mask.shape, nodata,
+                            dtype=source_raster_info['numpy_type'])
+        valid_pixels = (
+            ~pygeoprocessing.array_equals_nodata(raster, nodata) &
+            (mask == 1))
+        result[valid_pixels] = raster[valid_pixels]
         return result
 
     pygeoprocessing.raster_calculator(
-        [(slope_path, 1)], _slope_proportion_and_threshold_op,
-        target_threshold_slope_path, gdal.GDT_Float32, slope_nodata)
+        [(mask_raster_path, 1), (source_raster_path, 1)], _mask_op,
+        target_masked_raster_path, target_dtype, nodata)
 
 
 def _add_fields_to_shapefile(field_pickle_map, target_vector_path):
@@ -1097,39 +1179,30 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
+    spec_copy = copy.deepcopy(MODEL_SPEC['args'])
+    # Check required fields given the state of ``calc_n`` and ``calc_p``
+    nutrients_selected = []
+    for nutrient_letter in ('n', 'p'):
+        if f'calc_{nutrient_letter}' in args and args[f'calc_{nutrient_letter}']:
+            nutrients_selected.append(nutrient_letter)
+
+    for param in ['load', 'eff', 'crit_len']:
+        for nutrient in nutrients_selected:
+            spec_copy['biophysical_table_path']['columns'][f'{param}_{nutrient}'] = (
+                spec_copy['biophysical_table_path']['columns'][f'{param}_[NUTRIENT]'])
+            spec_copy['biophysical_table_path']['columns'][f'{param}_{nutrient}']['required'] = True
+        spec_copy['biophysical_table_path']['columns'].pop(f'{param}_[NUTRIENT]')
+
+    if 'n' in nutrients_selected:
+        spec_copy['biophysical_table_path']['columns']['proportion_subsurface_n'][
+            'required'] = True
+
     validation_warnings = validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+        args, spec_copy, MODEL_SPEC['args_with_spatial_overlap'])
 
-    invalid_keys = validation.get_invalid_keys(validation_warnings)
-
-    LOGGER.debug('Starting logging for biophysical table')
-    if 'biophysical_table_path' not in invalid_keys:
-        # Check required fields given the state of ``calc_n`` and ``calc_p``
-        nutrient_required_fields = ['lucode']
-        nutrients_selected = set()
-        for nutrient_letter in ('n', 'p'):
-            if nutrient_letter == 'n':
-                nutrient_required_fields += ['proportion_subsurface_n']
-            do_nutrient_key = f'calc_{nutrient_letter}'
-            if do_nutrient_key in args and args[do_nutrient_key]:
-                nutrients_selected.add(do_nutrient_key)
-                nutrient_required_fields += [
-                    f'load_{nutrient_letter}',
-                    f'eff_{nutrient_letter}',
-                    f'crit_len_{nutrient_letter}'
-                ]
-        if not nutrients_selected:
-            validation_warnings.append(
-                (['calc_n', 'calc_p'], MISSING_NUTRIENT_MSG))
-
-        # Check that these nutrient-specific keys are in the table
-        # validate has already checked all the other keys
-        error_msg = validation.check_csv(
-            args['biophysical_table_path'],
-            columns={key: '' for key in nutrient_required_fields})
-        if error_msg:
-            validation_warnings.append(
-                (['biophysical_table_path'], error_msg))
+    if not nutrients_selected:
+        validation_warnings.append(
+            (['calc_n', 'calc_p'], MISSING_NUTRIENT_MSG))
 
     return validation_warnings
 
@@ -1147,42 +1220,21 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
         None.
 
     """
-    value_sum = 0.0
-    value_count = 0.0
-    base_nodata = pygeoprocessing.get_raster_info(
-        base_raster_path_band[0])['nodata'][base_raster_path_band[1]-1]
-    for _, raster_block in pygeoprocessing.iterblocks(
-            base_raster_path_band):
-        valid_mask = slice(None)
-        if base_nodata is not None:
-            valid_mask = ~utils.array_equals_nodata(raster_block, base_nodata)
-
-        valid_block = raster_block[valid_mask]
-        value_sum += numpy.sum(valid_block)
-        value_count += valid_block.size
+    value_sum, value_count = pygeoprocessing.raster_reduce(
+        function=lambda sum_count, block:  # calculate both in one pass
+            (sum_count[0] + numpy.sum(block), sum_count[1] + block.size),
+        raster_path_band=base_raster_path_band,
+        initializer=(0, 0))
 
     value_mean = value_sum
-    if value_count > 0.0:
+    if value_count > 0:
         value_mean /= value_count
-    target_nodata = float(numpy.finfo(numpy.float32).min)
 
-    def _normalize_raster_op(array):
-        """Divide values by mean."""
-        result = numpy.empty(array.shape, dtype=numpy.float32)
-        result[:] = target_nodata
-
-        valid_mask = slice(None)
-        if base_nodata is not None:
-            valid_mask = ~utils.array_equals_nodata(array, base_nodata)
-        result[valid_mask] = array[valid_mask]
-        if value_mean != 0:
-            result[valid_mask] /= value_mean
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [base_raster_path_band], _normalize_raster_op,
-        target_normalized_raster_path, gdal.GDT_Float32,
-        target_nodata)
+    pygeoprocessing.raster_map(
+        op=lambda array: array if value_mean == 0 else array / value_mean,
+        rasters=[base_raster_path_band[0]],
+        target_path=target_normalized_raster_path,
+        target_dtype=numpy.float32)
 
 
 def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
@@ -1199,99 +1251,28 @@ def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
         None.
 
     """
-    lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
-    nodata_landuse = lulc_raster_info['nodata'][0]
-    cell_area_ha = abs(numpy.prod(lulc_raster_info['pixel_size'])) * 0.0001
+    cell_area_ha = abs(numpy.prod(pygeoprocessing.get_raster_info(
+        lulc_raster_path)['pixel_size'])) * 0.0001
 
     def _map_load_op(lucode_array):
         """Convert unit load to total load & handle nodata."""
         result = numpy.empty(lucode_array.shape)
-        result[:] = _TARGET_NODATA
         for lucode in numpy.unique(lucode_array):
-            if lucode != nodata_landuse:
-                try:
-                    result[lucode_array == lucode] = (
-                        lucode_to_load[lucode] * cell_area_ha)
-                except KeyError:
-                    raise KeyError(
-                        'lucode: %d is present in the landuse raster but '
-                        'missing from the biophysical table' % lucode)
+            try:
+                result[lucode_array == lucode] = (
+                    lucode_to_load[lucode] * cell_area_ha)
+            except KeyError:
+                raise KeyError(
+                    'lucode: %d is present in the landuse raster but '
+                    'missing from the biophysical table' % lucode)
         return result
 
-    pygeoprocessing.raster_calculator(
-        [(lulc_raster_path, 1)], _map_load_op, target_load_raster,
-        gdal.GDT_Float32, _TARGET_NODATA)
-
-
-def _multiply_rasters(raster_path_list, target_nodata, target_result_path):
-    """Multiply the rasters in `raster_path_list`.
-
-    Args:
-        raster_path_list (list): list of single band raster paths.
-        target_nodata (float): desired target nodata value.
-        target_result_path (string): path to float 32 target raster
-            multiplied where all rasters are not nodata.
-
-    Returns:
-        None.
-
-    """
-    def _mult_op(*array_nodata_list):
-        """Multiply non-nodata stacks."""
-        result = numpy.empty(array_nodata_list[0].shape)
-        result[:] = target_nodata
-        valid_mask = numpy.full(result.shape, True)
-        for array, nodata in zip(*[iter(array_nodata_list)]*2):
-            if nodata is not None:
-                valid_mask &= ~utils.array_equals_nodata(array, nodata)
-        result[valid_mask] = array_nodata_list[0][valid_mask]
-        for array in array_nodata_list[2::2]:
-            result[valid_mask] *= array[valid_mask]
-        return result
-
-    # make a list of (raster_path_band, nodata) tuples, then flatten it
-    path_nodata_list = list(itertools.chain(*[
-        ((path, 1),
-         (pygeoprocessing.get_raster_info(path)['nodata'][0], 'raw'))
-        for path in raster_path_list]))
-    pygeoprocessing.raster_calculator(
-        path_nodata_list, _mult_op, target_result_path,
-        gdal.GDT_Float32, target_nodata)
-
-
-def _sum_rasters(raster_path_list, target_nodata, target_result_path):
-    """Sum two or more rasters pixelwise.
-
-    The result has nodata where any input raster has nodata.
-
-    Args:
-        raster_path_list (list): list of raster paths to sum
-        target_nodata (float): desired target nodata value
-        target_result_path (string): path to write out the sum raster
-
-    Returns:
-        None.
-
-    """
-    nodata_list = [pygeoprocessing.get_raster_info(
-        path)['nodata'][0] for path in raster_path_list]
-
-    def _sum_op(*array_list):
-        """Sum arrays where all are valid."""
-        result = numpy.full(array_list[0].shape, target_nodata,
-                            dtype=numpy.float32)
-        valid_mask = numpy.full(result.shape, True)
-        for array, nodata in zip(array_list, nodata_list):
-            if nodata is not None:
-                valid_mask &= ~numpy.isclose(array, nodata)
-        result[valid_mask] = 0
-        for array in array_list:
-            result[valid_mask] += array[valid_mask]
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(path, 1) for path in raster_path_list],
-        _sum_op, target_result_path, gdal.GDT_Float32, target_nodata)
+    pygeoprocessing.raster_map(
+        op=_map_load_op,
+        rasters=[lulc_raster_path],
+        target_path=target_load_raster,
+        target_dtype=numpy.float32,
+        target_nodata=_TARGET_NODATA)
 
 
 def _map_surface_load(
@@ -1312,9 +1293,6 @@ def _map_surface_load(
         None.
 
     """
-    lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
-    nodata_landuse = lulc_raster_info['nodata'][0]
-
     if lucode_to_subsurface_proportion is not None:
         keys = sorted(lucode_to_subsurface_proportion.keys())
         subsurface_values = numpy.array(
@@ -1324,23 +1302,16 @@ def _map_surface_load(
         """Convert unit load to total load & handle nodata."""
         # If we don't have subsurface, just return 0.0.
         if lucode_to_subsurface_proportion is None:
-            return numpy.where(
-                ~utils.array_equals_nodata(lucode_array, nodata_landuse),
-                modified_load_array, _TARGET_NODATA)
+            return modified_load_array
+        index = numpy.digitize(lucode_array.ravel(), keys, right=True)
+        return modified_load_array * (1 - subsurface_values[index])
 
-        valid_mask = ~utils.array_equals_nodata(lucode_array, nodata_landuse)
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-        index = numpy.digitize(
-            lucode_array[valid_mask].ravel(), keys, right=True)
-        result[valid_mask] = (
-            modified_load_array[valid_mask] * (1 - subsurface_values[index]))
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(lulc_raster_path, 1), (modified_load_path, 1)],
-        _map_surface_load_op, target_surface_load_path, gdal.GDT_Float32,
-        _TARGET_NODATA)
+    pygeoprocessing.raster_map(
+        op=_map_surface_load_op,
+        rasters=[lulc_raster_path, modified_load_path],
+        target_path=target_surface_load_path,
+        target_dtype=numpy.float32,
+        target_nodata=_TARGET_NODATA)
 
 
 def _map_subsurface_load(
@@ -1359,29 +1330,17 @@ def _map_subsurface_load(
         None.
 
     """
-    lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
-    nodata_landuse = lulc_raster_info['nodata'][0]
-
     keys = sorted(numpy.array(list(proportion_subsurface_map)))
     subsurface_permeance_values = numpy.array(
         [proportion_subsurface_map[x] for x in keys])
-
-    def _map_subsurface_load_op(lucode_array, modified_load_array):
-        """Convert unit load to total load & handle nodata."""
-        valid_mask = ~utils.array_equals_nodata(lucode_array, nodata_landuse)
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-        index = numpy.digitize(
-            lucode_array[valid_mask].ravel(), keys, right=True)
-        result[valid_mask] = (
-            modified_load_array[valid_mask] *
-            subsurface_permeance_values[index])
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(lulc_raster_path, 1), (modified_load_path, 1)],
-        _map_subsurface_load_op, target_sub_load_path, gdal.GDT_Float32,
-        _TARGET_NODATA)
+    pygeoprocessing.raster_map(
+        op=lambda lulc, modified_load: (
+            modified_load * subsurface_permeance_values[
+                numpy.digitize(lulc.ravel(), keys, right=True)]),
+        rasters=[lulc_raster_path, modified_load_path],
+        target_path=target_sub_load_path,
+        target_dtype=numpy.float32,
+        target_nodata=_TARGET_NODATA)
 
 
 def _map_lulc_to_val_mask_stream(
@@ -1402,110 +1361,27 @@ def _map_lulc_to_val_mask_stream(
     """
     lucodes = sorted(lucodes_to_vals.keys())
     values = numpy.array([lucodes_to_vals[x] for x in lucodes])
-
-    nodata_landuse = pygeoprocessing.get_raster_info(
-        lulc_raster_path)['nodata'][0]
-    nodata_stream = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
-
-    def _map_eff_op(lucode_array, stream_array):
-        """Map efficiency from LULC and handle nodata/streams."""
-        valid_mask = (
-            ~utils.array_equals_nodata(lucode_array, nodata_landuse) &
-            ~utils.array_equals_nodata(stream_array, nodata_stream))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-        index = numpy.digitize(
-            lucode_array[valid_mask].ravel(), lucodes, right=True)
-        result[valid_mask] = (
-            values[index] * (1 - stream_array[valid_mask]))
-        return result
-
-    pygeoprocessing.raster_calculator(
-        ((lulc_raster_path, 1), (stream_path, 1)), _map_eff_op,
-        target_eff_path, gdal.GDT_Float32, _TARGET_NODATA)
-
-
-def s_bar_calculate(
-        s_accumulation_path, flow_accumulation_path, target_s_bar_path):
-    """Calculate bar op which is s/flow."""
-    s_nodata = pygeoprocessing.get_raster_info(
-        s_accumulation_path)['nodata'][0]
-    flow_nodata = pygeoprocessing.get_raster_info(
-        flow_accumulation_path)['nodata'][0]
-
-    def _bar_op(s_accumulation, flow_accumulation):
-        """Calculate bar operation of s_accum / flow_accum."""
-        valid_mask = (
-            ~utils.array_equals_nodata(s_accumulation, s_nodata) &
-            ~utils.array_equals_nodata(flow_accumulation, flow_nodata))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-        result[valid_mask] = (
-            s_accumulation[valid_mask] / flow_accumulation[valid_mask])
-        return result
-
-    pygeoprocessing.raster_calculator(
-        ((s_accumulation_path, 1), (flow_accumulation_path, 1)), _bar_op,
-        target_s_bar_path, gdal.GDT_Float32, _TARGET_NODATA)
+    pygeoprocessing.raster_map(
+        op=lambda lulc, stream: (
+            values[numpy.digitize(lulc.ravel(), lucodes, right=True)] *
+            (1 - stream)),
+        rasters=[lulc_raster_path, stream_path],
+        target_path=target_eff_path,
+        target_dtype=numpy.float32,
+        target_nodata=_TARGET_NODATA)
 
 
 def d_up_calculation(s_bar_path, flow_accum_path, target_d_up_path):
     """Calculate d_up = s_bar * sqrt(upslope area)."""
-    s_bar_info = pygeoprocessing.get_raster_info(s_bar_path)
-    s_bar_nodata = s_bar_info['nodata'][0]
-    flow_accum_nodata = pygeoprocessing.get_raster_info(
-        flow_accum_path)['nodata'][0]
-    cell_area_m2 = abs(numpy.prod(s_bar_info['pixel_size']))
-
-    def _d_up_op(s_bar, flow_accumulation):
-        """Calculate d_up index."""
-        valid_mask = (
-            ~utils.array_equals_nodata(s_bar, s_bar_nodata) &
-            ~utils.array_equals_nodata(flow_accumulation, flow_accum_nodata))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-        result[valid_mask] = (
-            s_bar[valid_mask] * numpy.sqrt(
-                flow_accumulation[valid_mask] * cell_area_m2))
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(s_bar_path, 1), (flow_accum_path, 1)], _d_up_op,
-        target_d_up_path, gdal.GDT_Float32, _TARGET_NODATA)
-
-
-def invert_raster_values(base_raster_path, target_raster_path):
-    """Invert (1/x) the values in `base`.
-
-    Args:
-        base_raster_path (string): path to floating point raster.
-        target_raster_path (string): path to created output raster whose
-            values are 1/x of base.
-
-    Returns:
-        None.
-
-    """
-    base_nodata = pygeoprocessing.get_raster_info(
-        base_raster_path)['nodata'][0]
-
-    def _inverse_op(base_val):
-        """Calculate inverse of S factor."""
-        result = numpy.empty(base_val.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-        valid_mask = slice(None)
-        if base_nodata is not None:
-            valid_mask = ~utils.array_equals_nodata(base_val, base_nodata)
-
-        zero_mask = base_val == 0.0
-        result[valid_mask & ~zero_mask] = (
-            1.0 / base_val[valid_mask & ~zero_mask])
-        result[zero_mask] = 0.0
-        return result
-
-    pygeoprocessing.raster_calculator(
-        ((base_raster_path, 1),), _inverse_op,
-        target_raster_path, gdal.GDT_Float32, _TARGET_NODATA)
+    cell_area_m2 = abs(numpy.prod(pygeoprocessing.get_raster_info(
+        s_bar_path)['pixel_size']))
+    pygeoprocessing.raster_map(
+        op=lambda s_bar, flow_accum: (
+            s_bar * numpy.sqrt(flow_accum * cell_area_m2)),
+        rasters=[s_bar_path, flow_accum_path],
+        target_path=target_d_up_path,
+        target_dtype=numpy.float32,
+        target_nodata=_TARGET_NODATA)
 
 
 def calculate_ic(d_up_path, d_dn_path, target_ic_path):
@@ -1517,8 +1393,8 @@ def calculate_ic(d_up_path, d_dn_path, target_ic_path):
     def _ic_op(d_up, d_dn):
         """Calculate IC0."""
         valid_mask = (
-            ~utils.array_equals_nodata(d_up, d_up_nodata) &
-            ~utils.array_equals_nodata(d_dn, d_dn_nodata) & (d_up != 0) &
+            ~pygeoprocessing.array_equals_nodata(d_up, d_up_nodata) &
+            ~pygeoprocessing.array_equals_nodata(d_dn, d_dn_nodata) & (d_up != 0) &
             (d_dn != 0))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = ic_nodata
@@ -1538,83 +1414,26 @@ def _calculate_ndr(
     ic_min, ic_max, _, _ = ic_factor_band.GetStatistics(0, 1)
     ic_factor_band = None
     ic_factor_raster = None
-    ic_0_param = (ic_min + ic_max) / 2.0
-    effective_retention_nodata = pygeoprocessing.get_raster_info(
-        effective_retention_path)['nodata'][0]
-    ic_nodata = pygeoprocessing.get_raster_info(ic_factor_path)['nodata'][0]
+    ic_0_param = (ic_min + ic_max) / 2
 
-    def _calculate_ndr_op(effective_retention_array, ic_array):
-        """Calculate NDR."""
-        valid_mask = (
-            ~utils.array_equals_nodata(
-                effective_retention_array, effective_retention_nodata) &
-            ~utils.array_equals_nodata(ic_array, ic_nodata))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-        result[valid_mask] = (
-            (1.0 - effective_retention_array[valid_mask]) /
-            (1.0 + numpy.exp(
-                (ic_0_param - ic_array[valid_mask]) / k_param)))
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(effective_retention_path, 1), (ic_factor_path, 1)],
-        _calculate_ndr_op, target_ndr_path, gdal.GDT_Float32, _TARGET_NODATA)
+    pygeoprocessing.raster_map(
+        op=lambda eff, ic: ((1 - eff) /
+                            (1 + numpy.exp((ic_0_param - ic) / k_param))),
+        rasters=[effective_retention_path, ic_factor_path],
+        target_path=target_ndr_path,
+        target_nodata=_TARGET_NODATA)
 
 
 def _calculate_sub_ndr(
         eff_sub, crit_len_sub, dist_to_channel_path, target_sub_ndr_path):
     """Calculate subsurface: subndr = eff_sub(1-e^(-5*l/crit_len)."""
-    dist_to_channel_nodata = pygeoprocessing.get_raster_info(
-        dist_to_channel_path)['nodata'][0]
-
-    def _sub_ndr_op(dist_to_channel_array):
-        """Calculate subsurface NDR."""
-        # nodata value from this intermediate output should always be
-        # defined by pygeoprocessing, not None
-        valid_mask = ~utils.array_equals_nodata(
-            dist_to_channel_array, dist_to_channel_nodata)
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-        result[valid_mask] = 1.0 - eff_sub * (
-            1-numpy.exp(-5*dist_to_channel_array[valid_mask]/crit_len_sub))
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(dist_to_channel_path, 1)], _sub_ndr_op, target_sub_ndr_path,
-        gdal.GDT_Float32, _TARGET_NODATA)
-
-
-def _calculate_export(load_path, ndr_path, target_export_path):
-    """Calculate export.
-
-    Args:
-        load_path (str): path to nutrient load raster
-        ndr_path (str): path to corresponding ndr raster
-        target_export_path (str): path to write out export raster.
-
-    Returns:
-        None
-    """
-    load_nodata = pygeoprocessing.get_raster_info(load_path)['nodata'][0]
-    ndr_nodata = pygeoprocessing.get_raster_info(ndr_path)['nodata'][0]
-
-    def _calculate_export_op(load_array, ndr_array):
-        """Multiply load by NDR."""
-        # these intermediate outputs should always have defined nodata
-        # values assigned by pygeoprocessing
-        valid_mask = ~(
-            utils.array_equals_nodata(load_array, load_nodata) |
-            utils.array_equals_nodata(ndr_array, ndr_nodata))
-        result = numpy.full(valid_mask.shape, _TARGET_NODATA,
-                            dtype=numpy.float32)
-        result[valid_mask] = load_array[valid_mask] * ndr_array[valid_mask]
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(load_path, 1), (ndr_path, 1)],
-        _calculate_export_op, target_export_path, gdal.GDT_Float32,
-        _TARGET_NODATA)
+    pygeoprocessing.raster_map(
+        op=lambda dist_to_channel: (
+            1 - eff_sub *
+            (1 - numpy.exp(-5 * dist_to_channel / crit_len_sub))),
+        rasters=[dist_to_channel_path],
+        target_path=target_sub_ndr_path,
+        target_nodata=_TARGET_NODATA)
 
 
 def _aggregate_and_pickle_total(
