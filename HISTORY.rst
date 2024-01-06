@@ -35,9 +35,14 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* Wind Energy
+    * Fixed a bug where some number inputs were not being properly cast to
+      ``float`` or ``int`` types. If the inputs happened to be passed as
+      a ``str`` this caused unintended side effects such as a concatenation
+      error. (https://github.com/natcap/invest/issues/1498)
+
 
 3.14.1 (2023-12-18)
 -------------------
