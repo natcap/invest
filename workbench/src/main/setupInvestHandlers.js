@@ -66,7 +66,7 @@ export function setupInvestRunHandlers() {
     const language = settingsStore.get('language');
     const nWorkers = settingsStore.get('nWorkers');
     const micromambaPath = settingsStore.get('micromamba_path');
-    const modelEnv = settingsStore.get(`plugins.${modelRunName}.env`);
+    const modelEnv = settingsStore.get(`models.${modelRunName}.env`);
 
     // Write a temporary datastack json for passing to invest CLI
     try {
@@ -91,12 +91,12 @@ export function setupInvestRunHandlers() {
       'run',
       '--no-capture-output',
       `--prefix ${modelEnv}`,
+      'invest',
       LOGLEVELMAP[loggingLevel],
       TGLOGLEVELMAP[taskgraphLoggingLevel],
       `--language "${language}"`,
       'run',
       modelRunName,
-      '--headless',
       `-d "${datastackPath}"`,
     ];
     logger.debug(`set to run ${cmdArgs}`);
