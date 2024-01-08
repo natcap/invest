@@ -55,17 +55,17 @@ export async function getFlaskIsReady(port, i = 0, retries = 41) {
  */
 export async function createPythonFlaskProcess(modelName) {
   const micromambaPath = settingsStore.get('micromamba_path');
-  const modelEnvPath = settingsStore.get(`plugins.${modelName}.env`);
+  const modelEnvPath = settingsStore.get(`models.${modelName}.env`);
   const port = await getFreePort();
   console.log(port);
   console.log(micromambaPath);
-  console.log(['run', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port]);
+  console.log(['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port]);
   const pythonServerProcess = spawn(
     '"' + micromambaPath + '"',
-    ['run', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port],
+    ['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port],
     { shell: true } // necessary in dev mode & relying on a conda env
   );
-  settingsStore.set(`plugins.${modelName}.port`, port);
+  settingsStore.set(`models.${modelName}.port`, port);
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
   pythonServerProcess.stdout.on('data', (data) => {
@@ -93,6 +93,7 @@ export async function createPythonFlaskProcess(modelName) {
   });
 
   await getFlaskIsReady(port);
+  logger.info('flask is ready');
   return pythonServerProcess;
 }
 

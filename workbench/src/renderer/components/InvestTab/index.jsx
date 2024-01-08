@@ -31,6 +31,7 @@ const { logger } = window.Workbench;
  */
 async function investGetSpec(modelName) {
   const spec = await getSpec(modelName);
+  console.log(spec);
   if (spec) {
     const { args, ui_spec, ...modelSpec } = spec;
     return { modelSpec: modelSpec, argsSpec: args, uiSpec: ui_spec };

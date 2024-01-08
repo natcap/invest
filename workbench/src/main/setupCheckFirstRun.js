@@ -1,9 +1,10 @@
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
 import {
   app,
-  ipcMain,
+  ipcMain
 } from 'electron';
 
 import { ipcMainChannels } from './ipcMainChannels';
@@ -24,7 +25,10 @@ export function checkFirstRun() {
     if (fs.existsSync(hasRunTokenPath)) {
       return false;
     }
+    logger.info('first run');
     fs.writeFileSync(hasRunTokenPath, '');
+    const stdout = execSync('src/main/coreSetup.sh', { encoding: 'utf-8' });
+    logger.info(stdout);
   } catch (error) {
     logger.warn(`Unable to write first-run token: ${error}`);
   }

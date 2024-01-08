@@ -5,6 +5,8 @@ const { ipcRenderer } = window.Workbench.electron;
 
 const HOSTNAME = 'http://127.0.0.1';
 const PREFIX = 'api';
+const CORE_PORT = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
+
 
 // The Flask server sends UTF-8 encoded responses by default
 // response.text() always decodes the response using UTF-8
@@ -21,7 +23,7 @@ const PREFIX = 'api';
  */
 export async function getSpec(modelName) {
   const port = await ipcRenderer.invoke(
-    ipcMainChannels.GET_SETTING, `plugins.${modelName}.port`);
+    ipcMainChannels.GET_SETTING, `models.${modelName}.port`);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/getspec?language=${LANGUAGE}`, {
       method: 'post',
@@ -35,7 +37,7 @@ export async function getSpec(modelName) {
 
 export async function fetchArgsEnabled(payload) {
   const port = await ipcRenderer.invoke(
-    ipcMainChannels.GET_SETTING, `plugins.${payload.model_module}.port`);
+    ipcMainChannels.GET_SETTING, `models.${payload.model_module.slice(14)}.port`);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/args_enabled`, {
       method: 'post',
@@ -63,8 +65,9 @@ export async function fetchArgsEnabled(payload) {
  * @returns {Promise} resolves array
  */
 export async function fetchValidation(payload) {
+  console.log(payload);
   const port = await ipcRenderer.invoke(
-    ipcMainChannels.GET_SETTING, `plugins.${payload.model_module}.port`);
+    ipcMainChannels.GET_SETTING, `models.${payload.model_module.slice(14)}.port`);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/validate?language=${LANGUAGE}`, {
       method: 'post',
@@ -107,7 +110,7 @@ export function fetchDatastackFromFile(payload) {
  */
 export function getVectorColumnNames(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/colnames`, {
+    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/colnames`, {
       method: 'post',
       body: JSON.stringify({ vector_path: payload }),
       headers: { 'Content-Type': 'application/json' },
@@ -182,7 +185,7 @@ export function archiveDatastack(payload) {
  */
 export function writeParametersToFile(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/write_parameter_set_file`, {
+    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/write_parameter_set_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -202,11 +205,12 @@ export function writeParametersToFile(payload) {
  * @returns {Promise} resolves object
  */
 export async function getSupportedLanguages() {
-  return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/languages`, {
-      method: 'get',
-    })
-      .then((response) => response.json())
-      .catch((error) => logger.error(error.stack))
-  );
+  return { en: 'English' };
+  // return (
+  //   window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/languages`, {
+  //     method: 'get',
+  //   })
+  //     .then((response) => response.json())
+  //     .catch((error) => logger.error(error.stack))
+  // );
 }

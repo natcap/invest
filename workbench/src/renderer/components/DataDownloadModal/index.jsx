@@ -66,12 +66,12 @@ class DataDownloadModal extends React.Component {
 
     const { investList } = this.props;
     const registry = {};
-    for (const modelName of Object.keys(investList)) {
-      let spec = await investGetSpec(investList[modelName].model_name)
-      if (spec.uiSpec.sampledata) {
-        registry[modelName] = spec.uiSpec.sampledata;
-      }
-    }
+    // for (const modelName of Object.keys(investList)) {
+    //   let spec = await investGetSpec(investList[modelName].model_name)
+    //   if (spec.uiSpec.sampledata) {
+    //     registry[modelName] = spec.uiSpec.sampledata;
+    //   }
+    // }
 
     const tokenURL = await ipcRenderer.invoke(ipcMainChannels.CHECK_STORAGE_TOKEN);
     const baseURL = tokenURL || BASE_URL;

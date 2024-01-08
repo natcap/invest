@@ -32,7 +32,7 @@ const TGLOGLEVELMAP = {
 };
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 
-export function setupInvestRunHandlers(investExe) {
+export function setupInvestRunHandlers() {
   const runningJobs = {};
   console.log('setup invest handlers');
 
@@ -89,6 +89,7 @@ export function setupInvestRunHandlers(investExe) {
 
     const cmdArgs = [
       'run',
+      '--no-capture-output',
       `--prefix ${modelEnv}`,
       LOGLEVELMAP[loggingLevel],
       TGLOGLEVELMAP[taskgraphLoggingLevel],

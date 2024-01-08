@@ -9,7 +9,6 @@ import {
   ipcMain
 } from 'electron';
 
-import findInvestBinaries from './findInvestBinaries';
 import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
@@ -73,7 +72,6 @@ export const createWindow = async () => {
   });
   splashScreen.loadURL(path.join(BASE_URL, 'splash.html'));
 
-  const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   setupDialogs();
   setupCheckFilePermissions();
   setupCheckFirstRun();
@@ -139,7 +137,7 @@ export const createWindow = async () => {
   // have callbacks that won't work until the invest server is ready.
   setupContextMenu(mainWindow);
   setupDownloadHandlers(mainWindow);
-  setupInvestRunHandlers(investExe);
+  setupInvestRunHandlers();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
   if (ELECTRON_DEV_MODE) {
     // The timing of this is fussy due a chromium bug. It seems to only

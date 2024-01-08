@@ -56,7 +56,7 @@ export default class App extends React.Component {
   /** Initialize the list of invest models, recent invest jobs, etc. */
   async componentDidMount() {
     const investList = await ipcRenderer.invoke(
-      ipcMainChannels.GET_SETTING, 'plugins');
+      ipcMainChannels.GET_SETTING, 'models');
     console.log(investList);
     const recentJobs = await InvestJob.getJobStore();
     this.setState({
