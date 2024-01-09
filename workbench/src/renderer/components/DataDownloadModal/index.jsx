@@ -63,22 +63,21 @@ class DataDownloadModal extends React.Component {
   }
 
   async componentDidMount() {
-
     const { investList } = this.props;
     const registry = {};
-    // for (const modelName of Object.keys(investList)) {
-    //   let spec = await investGetSpec(investList[modelName].model_name)
-    //   if (spec.uiSpec.sampledata) {
-    //     registry[modelName] = spec.uiSpec.sampledata;
-    //   }
-    // }
+    Object.values(investList).forEach((modelMetadata) => {
+      if (modelMetadata.sampledata) {
+        registry[modelMetadata.model_name] = modelMetadata.sampledata;
+      }
+    });
 
     const tokenURL = await ipcRenderer.invoke(ipcMainChannels.CHECK_STORAGE_TOKEN);
     const baseURL = tokenURL || BASE_URL;
     let filesizes;
     try {
       const response = await window.fetch(
-        `${baseURL}/registry.json`, { signal: this.signal, method: 'get' }
+        `${baseURL}/registry.json`,
+        { signal: this.signal, method: 'get' }
       );
       filesizes = await response.json();
     } catch (error) {
@@ -312,7 +311,7 @@ DataDownloadModal.propTypes = {
   investList: PropTypes.objectOf(
     PropTypes.shape({
       model_name: PropTypes.string,
-    }),
+    })
   ).isRequired,
 };
 

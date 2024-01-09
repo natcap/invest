@@ -37,22 +37,6 @@ def get_is_ready():
     return 'Flask ready'
 
 
-@app.route(f'/{PREFIX}/models', methods=['GET'])
-def get_invest_models():
-    """Gets a list of available InVEST models.
-
-    Accepts a `language` query parameter which should be an ISO 639-1 language
-    code. Model names will be translated to the requested language if
-    translations are available, or fall back to English otherwise.
-
-    Returns:
-        A JSON string
-    """
-    LOGGER.debug('get model list')
-    locale_code = request.args.get('language', 'en')
-    return cli.build_model_list_json(locale_code)
-
-
 @app.route(f'/{PREFIX}/getspec', methods=['POST'])
 def get_invest_getspec():
     """Gets the MODEL_SPEC dict from an InVEST model.
