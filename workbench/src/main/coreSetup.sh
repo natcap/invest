@@ -1,5 +1,6 @@
 set -e  # Exit the script immediately if any subshell has a nonzero exit code.
 
+CONFIG_PATH=$1
 # curl -Ls https://micro.mamba.pm/api/micromamba/osx-64/latest | tar -xvj bin/micromamba
 # # export MAMBA_ROOT_PREFIX=/some/prefix  # optional, defaults to ~/micromamba
 # eval "$(./bin/micromamba shell hook -s posix)"
@@ -9,9 +10,11 @@ MICROMAMBA_PATH=/Users/emily/mambaforge/envs/plugin/bin/mamba
 
 ENV_NAME=natcap_core
 
-mamba create --yes --name $ENV_NAME pip gdal #natcap.invest
+eval "$(micromamba shell hook --shell bash)"
+
+micromamba create --yes --name $ENV_NAME pip gdal natcap.invest
 echo "created env"
-mamba activate $ENV_NAME
+micromamba activate $ENV_NAME
 echo "activated env"
 
 cd /Users/emily/invest
@@ -33,7 +36,7 @@ if 'models' not in config:
     config['models'] = {}
 
 for model_id, pyname in model_id_to_pyname.items():
-    config['models'][pyname] = {
+    config['models'][model_id] = {
         'model_name': model_id,
         'type': 'core',
         'env': '$ENV_PATH'
