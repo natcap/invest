@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import Spinner from 'react-bootstrap/Spinner';
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
@@ -206,7 +207,15 @@ class InvestTab extends React.Component {
 
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
-      return (<div />);
+      return (
+        <div className="invest-tab-loading">
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </Spinner>
+          <br />
+          {t('Starting up model...')}
+        </div>
+      );
     }
 
     const logDisabled = !logfile;
@@ -272,7 +281,7 @@ class InvestTab extends React.Component {
                 <SetupTab
                   pyModuleName={modelSpec.pyname}
                   userguide={modelSpec.userguide}
-                  modelName={modelRunName}
+                  modelId={modelRunName}
                   argsSpec={argsSpec}
                   uiSpec={uiSpec}
                   argsInitValues={argsValues}

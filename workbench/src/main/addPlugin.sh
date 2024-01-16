@@ -1,5 +1,5 @@
 # Install a plugin
-# Assumes that micromamba is available and initialized
+# Assumes that micromamba is available
 set -e  # Exit the script immediately if any subshell has a nonzero exit code.
 
 PLUGIN_URL=$1  # git https url
@@ -46,6 +46,7 @@ print(toml_dict['tool']['natcap']['invest']['pyname'])
 
 # Create a conda env containing the plugin and its dependencies ###############
 ENV_NAME=natcap_plugin_$PLUGIN_ID
+eval "$(micromamba shell hook --shell bash)"
 micromamba create --yes --name $ENV_NAME pip gdal natcap.invest
 echo "created env"
 micromamba activate $ENV_NAME
@@ -54,7 +55,8 @@ pip install "git+$PLUGIN_URL"
 echo "installed plugin"
 
 # Write plugin metadata to the workbench's config.json ########################
-ENV_PATH=$(micromamba info | grep 'active env location' | awk 'NF>1{print $NF}')
+ENV_PATH=$(micromamba info | grep 'env location' | awk 'NF>1{print $NF}')
+micromamba info
 echo $ENV_PATH
 python -c "
 import json
@@ -72,7 +74,7 @@ config['models']['$PLUGIN_ID'] = {
 print(config)
 
 with open('$CONFIG_PATH', 'w') as f:
-    json.dump(config, f)
+    json.dump(config, f, indent=4)
 "
 echo "done"
 

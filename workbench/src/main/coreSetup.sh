@@ -49,7 +49,7 @@ for model_id, pyname in model_id_to_pyname.items():
 print(config)
 
 with open('$CONFIG_PATH', 'w') as f:
-    json.dump(config, f)
+    json.dump(config, f, indent=4)
 "
 echo "done"
 

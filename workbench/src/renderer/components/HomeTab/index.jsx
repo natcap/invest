@@ -28,52 +28,63 @@ export default class HomeTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      sortedModels: []
+      sortedModelIds: [],
     };
     this.handleClick = this.handleClick.bind(this);
   }
 
   componentDidMount() {
+    const { investList } = this.props;
     // sort the model list alphabetically, by the model title,
     // and with special placement of CBC Preprocessor before CBC model.
-    const sortedModels = Object.keys(this.props.investList).sort();
-    const cbcpElement = 'Coastal Blue Carbon Preprocessor';
-    const cbcIdx = sortedModels.indexOf('Coastal Blue Carbon');
-    const cbcpIdx = sortedModels.indexOf(cbcpElement);
+    console.log(this.props.investList);
+    const sortedModelIds = Object.keys(investList).sort(
+      (a, b) => {
+        if (investList[a].model_name > investList[b].model_name) {
+          return 1;
+        }
+        if (investList[b].model_name > investList[a].model_name) {
+          return -1;
+        }
+        return 0;
+      }
+    );
+    const cbcpElement = 'coastal_blue_carbon_preprocessor';
+    const cbcIdx = sortedModelIds.indexOf('coastal_blue_carbon');
+    const cbcpIdx = sortedModelIds.indexOf(cbcpElement);
     if (cbcIdx > -1 && cbcpIdx > -1) {
-      sortedModels.splice(cbcpIdx, 1); // remove it
-      sortedModels.splice(cbcIdx, 0, cbcpElement); // insert it
+      sortedModelIds.splice(cbcpIdx, 1); // remove it
+      sortedModelIds.splice(cbcIdx, 0, cbcpElement); // insert it
     }
-    this.setState({
-      sortedModels: sortedModels
-    });
+    this.setState({ sortedModelIds: sortedModelIds });
   }
 
   handleClick(value) {
     const { investList, openInvestModel } = this.props;
-    const modelRunName = investList[value].model_name;
     const job = new InvestJob({
-      modelRunName: modelRunName,
-      modelHumanName: value
+      modelRunName: value,
+      modelHumanName: investList[value].model_name,
     });
     openInvestModel(job);
   }
 
   render() {
-    const { recentJobs } = this.props;
-    const { sortedModels } = this.state;
+    const { recentJobs, investList, openInvestModel } = this.props;
+    const { sortedModelIds } = this.state;
     // A button in a table row for each model
     const investButtons = [];
-    sortedModels.forEach((model) => {
+    sortedModelIds.forEach((modelId) => {
+      console.log(modelId);
+      const modelName = investList[modelId].model_name;
       investButtons.push(
         <ListGroup.Item
-          key={model}
+          key={modelName}
           className="invest-button"
-          title={model}
+          title={modelName}
           action
-          onClick={() => this.handleClick(model)}
+          onClick={() => this.handleClick(modelId)}
         >
-          {model}
+          {modelName}
         </ListGroup.Item>
       );
     });
@@ -88,7 +99,7 @@ export default class HomeTab extends React.Component {
         <PluginModal />
         <Col className="recent-job-card-col">
           <RecentInvestJobs
-            openInvestModel={this.props.openInvestModel}
+            openInvestModel={openInvestModel}
             recentJobs={recentJobs}
           />
         </Col>
@@ -101,7 +112,7 @@ HomeTab.propTypes = {
   investList: PropTypes.objectOf(
     PropTypes.shape({
       model_name: PropTypes.string,
-    }),
+    })
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,
   recentJobs: PropTypes.arrayOf(

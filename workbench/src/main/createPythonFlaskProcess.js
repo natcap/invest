@@ -54,7 +54,8 @@ export async function getFlaskIsReady(port, i = 0, retries = 41) {
  * @returns {ChildProcess} - a reference to the subprocess.
  */
 export async function createPythonFlaskProcess(modelName) {
-  const micromambaPath = settingsStore.get('micromamba_path');
+  const micromambaPath = 'mamba'//settingsStore.get('micromamba_path');
+  console.log(modelName);
   const modelEnvPath = settingsStore.get(`models.${modelName}.env`);
   const port = await getFreePort();
   console.log(port);

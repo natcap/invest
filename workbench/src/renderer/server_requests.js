@@ -36,8 +36,9 @@ export async function getSpec(modelName) {
 }
 
 export async function fetchArgsEnabled(payload) {
+  console.log(payload);
   const port = await ipcRenderer.invoke(
-    ipcMainChannels.GET_SETTING, `models.${payload.model_module.slice(14)}.port`);
+    ipcMainChannels.GET_SETTING, `models.${payload.modelId}.port`);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/args_enabled`, {
       method: 'post',
@@ -67,7 +68,7 @@ export async function fetchArgsEnabled(payload) {
 export async function fetchValidation(payload) {
   console.log(payload);
   const port = await ipcRenderer.invoke(
-    ipcMainChannels.GET_SETTING, `models.${payload.model_module.slice(14)}.port`);
+    ipcMainChannels.GET_SETTING, `models.${payload.modelId}.port`);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/validate?language=${LANGUAGE}`, {
       method: 'post',

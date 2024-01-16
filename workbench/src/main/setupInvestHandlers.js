@@ -65,7 +65,7 @@ export function setupInvestRunHandlers() {
     const taskgraphLoggingLevel = settingsStore.get('taskgraphLoggingLevel');
     const language = settingsStore.get('language');
     const nWorkers = settingsStore.get('nWorkers');
-    const micromambaPath = settingsStore.get('micromamba_path');
+    const micromambaPath = 'mamba'//settingsStore.get('micromamba_path');
     const modelEnv = settingsStore.get(`models.${modelRunName}.env`);
 
     // Write a temporary datastack json for passing to invest CLI
