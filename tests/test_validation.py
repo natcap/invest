@@ -1177,13 +1177,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
         open(os.path.join(self.workspace_dir,'foo.txt'), 'w').close()
         os.mkdir(os.path.join(self.workspace_dir, 'foo'))
         open(os.path.join(self.workspace_dir,'foo', 'bar.txt'), 'w').close()
-        print(os.path.join(self.workspace_dir,'foo', 'bar.txt'))
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
                 f"""\
                 bar,path
                 1,foo.txt
-                2,foo{os.sep}bar.txt
+                2,foo/bar.txt
                 3,{self.workspace_dir}/foo.txt
                 4,
                 """
@@ -1195,25 +1194,13 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 'path': {'type': 'file'}
             })
         self.assertEqual(
-            f'{self.workspace_dir}{os.sep}foo.txt',
+            f'{self.workspace_dir}/foo.txt',
             df['path'][0])
         self.assertEqual(
-            f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
+            f'{self.workspace_dir}/foo/bar.txt',
             df['path'][1])
-
-        # utils.expand_path() will convert Windows path separators to linux if
-        # we're on mac/linux
-        if platform.system() == 'Windows':
-            self.assertEqual(
-                f'{self.workspace_dir}{os.sep}foo\\bar.txt',
-                df['path'][2])
-        else:
-            self.assertEqual(
-                f'{self.workspace_dir}{os.sep}foo/bar.txt',
-                df['path'][2])
-
         self.assertEqual(
-            f'{self.workspace_dir}{os.sep}foo.txt',
+            f'{self.workspace_dir}/foo.txt',
             df['path'][2])
         # empty values are returned as empty strings
         self.assertTrue(pandas.isna(df['path'][3]))
@@ -1346,7 +1333,6 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 'row1': {'type': 'freestyle_string'},
                 'row2': {'type': 'number'},
             })
-        print(df)
         # header should have no leading / trailing whitespace
         self.assertEqual(list(df.columns), ['row1', 'row2'])
 
@@ -1355,6 +1341,43 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(df['row2'][0], 1)
         self.assertEqual(df['row2'][1], 3)
         self.assertEqual(df['row2'].dtype, float)
+
+    def test_recursive_path_validation(self):
+        """validation: validate paths within csv columns"""
+        from natcap.invest import validation
+
+        csv_path = os.path.join(self.workspace_dir, 'csv.csv')
+        raster_path = os.path.join(self.workspace_dir, 'foo.tif')
+
+        with open(csv_path, 'w') as file_obj:
+            file_obj.write('col1,col2\n')
+            file_obj.write(f'1,{raster_path}\n')
+
+        with self.assertRaises(ValueError) as cm:
+            validation.get_validated_dataframe(
+                csv_path,
+                columns={
+                    'col1': {'type': 'number'},
+                    'col2': {'type': 'raster'}
+                })
+        self.assertTrue('File not found' in str(cm.exception))
+
+        # create a non-linear projected raster and validate it
+        driver = gdal.GetDriverByName('GTiff')
+        raster = driver.Create(raster_path, 3, 3, 1, gdal.GDT_Int32)
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        raster.SetProjection(wgs84_srs.ExportToWkt())
+        raster = None
+
+        with self.assertRaises(ValueError) as cm:
+            validation.get_validated_dataframe(
+                csv_path,
+                columns={
+                    'col1': {'type': 'number'},
+                    'col2': {'type': 'raster', 'projected': True}
+                })
+        self.assertTrue('must be projected' in str(cm.exception))
 
 
 class TestValidationFromSpec(unittest.TestCase):

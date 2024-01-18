@@ -652,6 +652,15 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
                     df[col] = df[col].apply(
                         lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), csv_path))
                     df[col] = df[col].astype(pandas.StringDtype())
+                    # validate the values within each column
+                    def check_value(value):
+                        if pandas.isna(value):
+                            return
+                        err_msg = _VALIDATION_FUNCS[col_spec['type']](value, **col_spec)
+                        if err_msg:
+                            raise ValueError(
+                                f'Error in {axis} "{col}", value "{value}": {err_msg}')
+                    df[col].apply(check_value)
                 elif col_spec['type'] in {'freestyle_string', 'option_string'}:
                     df[col] = df[col].apply(
                         lambda s: s if pandas.isna(s) else str(s).strip().lower())
@@ -668,16 +677,6 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
                 raise ValueError(
                     f'Value(s) in the "{col}" column could not be interpreted '
                     f'as {col_spec["type"]}s. Original error: {err}')
-
-            # validate the values within each column
-            def check_value(value):
-                if pandas.isna(value):
-                    return
-                err_msg = _VALIDATION_FUNCS[col_spec['type']](value, **col_spec)
-                if err_msg:
-                    raise ValueError(
-                        f'Error in {axis} "{col}", value "{value}": {err_msg}')
-            df[col].apply(check_value)
 
     if any(df.columns.duplicated()):
         duplicated_columns = df.columns[df.columns.duplicated]
@@ -701,8 +700,6 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
     return df
 
 
-
-
 def check_csv(filepath, **kwargs):
     """Validate a table.
 
@@ -717,11 +714,10 @@ def check_csv(filepath, **kwargs):
     if file_warning:
         return file_warning
     if 'columns' in kwargs or 'rows' in kwargs:
-        # try:
-        #     get_validated_dataframe(filepath, **kwargs)
-        # except Exception as e:
-        #     return str(e)
-        get_validated_dataframe(filepath, **kwargs)
+        try:
+            get_validated_dataframe(filepath, **kwargs)
+        except Exception as e:
+            return str(e)
 
 
 def check_headers(expected_headers, actual_headers, header_type='header'):
