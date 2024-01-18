@@ -29,7 +29,7 @@ class OpenButton extends React.Component {
     if (!data.canceled) {
       let datastack;
       try {
-        datastack = await fetchDatastackFromFile(data.filePaths[0]);
+        datastack = await fetchDatastackFromFile({ filepath: data.filePaths[0] });
       } catch (error) {
         logger.error(error);
         alert(

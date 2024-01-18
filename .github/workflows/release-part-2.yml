@@ -7,6 +7,12 @@ on:
     branches:
       - main
 
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        type: string
+
 env:
   GITHUB_TOKEN: ${{ secrets.AUTORELEASE_BOT_PAT }}
 
@@ -29,7 +35,8 @@ jobs:
 
   publish_release:
     # run this job if a PR was merged from an autorelease branch into main
-    if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged == true
+    # or if manually triggered, github.head_ref is undefined
+    if: ${{ ! github.head_ref || (startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged == true) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -38,13 +45,19 @@ jobs:
         run: pip install twine
 
       - name: Extract version from autorelease branch name
+        if: ${{ github.head_ref }}
         run: echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
+
+      - name: Get version from manual trigger input
+        if: ${{ ! github.head_ref }}
+        run: echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
 
       - name: Find actions run for the $VERSION tag
         run: |
           echo "RUN_ID=$( \
             gh run list \
               --branch $VERSION \
+              --workflow 'Run Tests and Build' \
               --limit 1 \
               --json databaseId \
               --jq .[].databaseId)" >> $GITHUB_ENV
@@ -57,8 +70,6 @@ jobs:
           # move the artifacts out of the folders
           mv artifacts/*/* artifacts
           rm -rf artifacts/Wheel*
-          # verify that all 6 wheels are there
-          if [ `find artifacts/* | wc -l` -ne 6 ]; then exit 1; fi
 
           # download each artifact separately so that the command will fail if any is missing
           for artifact in Workbench-Windows-binary \

@@ -35,8 +35,12 @@
 
 .. :changelog:
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.14.1 (2023-12-18)
+-------------------
 * General
     * In advance of the numpy 2.0 release, function calls to ``numpy.product``
       have been replaced with ``numpy.prod``.
@@ -61,10 +65,30 @@ Unreleased Changes
     * Version metadata at import time is now fetched with
       ``importlib.metadata`` instead of ``pkg_resources``.
       (`#1442 <https://github.com/natcap/invest/issues/1442>`_)
+    * The API docs logo has been updated to use the latest version of the
+      InVEST logo. (`#1463 <https://github.com/natcap/invest/issues/1463>`_)
+* Workbench
+    * Fixed a broken "Find my logfiles" button on MacOS.
+      https://github.com/natcap/invest/issues/1452
 * Coastal Vulnerability
     * Fixed a bug where the model would crash when processing a float type
       bathymetry raster with no nodata value.
       https://github.com/natcap/invest/issues/992
+* Habitat Quality
+    * Updated the threat table column description to clarify that the threat
+      table columns: ``cur_path``, ``fut_path``, and ``base_path`` are meant
+      to be file system path strings.
+      https://github.com/natcap/invest/issues/1455
+* HRA
+    * Fixed an issue preventing the HRA criteria table from loading when the
+      table was UTF-8 encoded with a Byte-Order Marker.
+      https://github.com/natcap/invest/issues/1460
+    * Fixed an issue with the cross-OS loading of InVEST datastack files.
+      https://github.com/natcap/invest/issues/1065
+    * Fixed an issue where habitats and stressors in the criteria table were
+      not being lowercased causing a comparison issue against values from the
+      info table that were being lowercased.
+      https://github.com/natcap/invest/issues/1467
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
@@ -76,9 +100,18 @@ Unreleased Changes
       than 2^31 pixels, the model would crash with an error relating to a
       negative (overflowed) index. https://github.com/natcap/invest/issues/1431
 * Pollination
+    * Fixed a regression where nodata values were not being properly compared.
+      This was only an issue in some development builds after 3.14.0.
+      (`#1458 <https://github.com/natcap/invest/issues/1458>`_)
     * Replaced custom kernel implementation with ``pygeoprocessing.kernels``.
       Convolution results may be slightly different (more accurate).
 * SDR
+    * Fixed an issue with SDR's sediment deposition where large regions would
+      become nodata in cases where the DEM has valid data but other inputs
+      (LULC, erosivity, erodibility) did not have valid pixels.  Now, all
+      raster inputs are mutually masked so that only those pixel stacks
+      continue through to the model where all pixels in the stack are
+      non-nodata. (`#911 <https://github.com/natcap/invest/issues/911>`_)
     * RKLS, USLE, avoided erosion, and avoided export rasters will now have
       nodata in streams (`#1415 <https://github.com/natcap/invest/issues/1415>`_)
     * Fixed an issue in SDR's sediment deposition where, on rasters with more

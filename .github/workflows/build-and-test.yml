@@ -266,7 +266,7 @@ jobs:
       - name: Set up node
         uses: actions/setup-node@v3
         with:
-          node-version: lts/*
+          node-version: 18
 
       - name: Restore node_modules cache
         id: nodemodules-cache
@@ -338,16 +338,10 @@ jobs:
       - name: Build binaries
         run: make CONDA="$MAMBA_EXE" binaries
 
-      - name: Run invest-autotest with binaries
-        if : |
-          github.event_name == 'push' &&
-          (contains(github.ref, 'release') || github.ref == 'refs/heads/main')
-        run: make invest_autotest
-
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: lts/*
+          node-version: 18
 
       - name: Restore node_modules cache
         id: nodemodules-cache
@@ -458,6 +452,13 @@ jobs:
         with:
           name: ${{ runner.os }}_puppeteer_log.zip'
           path: ${{ matrix.puppeteer-log }}
+
+      - name: Run invest-autotest with binaries
+        if : |
+          (github.event_name == 'push' &&
+          (startsWith(github.ref, 'refs/heads/release') || github.ref == 'refs/heads/main')) ||
+          (github.event_name == 'pull_request' && startsWith(github.head_ref, 'autorelease'))
+        run: make invest_autotest
 
       - name: Tar the workspace to preserve permissions (macOS)
         if: failure() && matrix.os == 'macos-latest'

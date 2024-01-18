@@ -854,7 +854,8 @@ def execute(args):
                             foraged_flowers_index_path,
                             floral_resources_index_path_map[species],
                             convolve_ps_path],
-                        target_path=pollinator_abundance_path),
+                        target_path=pollinator_abundance_path,
+                        target_nodata=_INDEX_NODATA),
                     dependent_task_list=[
                         foraged_flowers_index_task_map[(species, season)],
                         floral_resources_index_task_map[species],
@@ -1430,7 +1431,9 @@ def _multiply_by_scalar(raster_path, scalar, target_path):
     pygeoprocessing.raster_map(
         op=lambda array: array * scalar,
         rasters=[raster_path],
-        target_path=target_path)
+        target_path=target_path,
+        target_nodata=_INDEX_NODATA,
+    )
 
 
 def _calculate_pollinator_supply_index(
@@ -1451,7 +1454,9 @@ def _calculate_pollinator_supply_index(
     pygeoprocessing.raster_map(
         op=lambda f_r, h_n: species_abundance * f_r * h_n,
         rasters=[habitat_nesting_suitability_path, floral_resources_path],
-        target_path=target_path)
+        target_path=target_path,
+        target_nodata=_INDEX_NODATA
+    )
 
 
 @validation.invest_validator

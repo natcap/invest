@@ -2,6 +2,7 @@
 import codecs
 import functools
 import os
+import platform
 import shutil
 import string
 import tempfile
@@ -1199,6 +1200,18 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(
             f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
             df['path'][1])
+
+        # utils.expand_path() will convert Windows path separators to linux if
+        # we're on mac/linux
+        if platform.system() == 'Windows':
+            self.assertEqual(
+                f'{self.workspace_dir}{os.sep}foo\\bar.txt',
+                df['path'][2])
+        else:
+            self.assertEqual(
+                f'{self.workspace_dir}{os.sep}foo/bar.txt',
+                df['path'][2])
+
         self.assertEqual(
             f'{self.workspace_dir}{os.sep}foo.txt',
             df['path'][2])

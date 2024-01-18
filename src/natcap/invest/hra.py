@@ -26,13 +26,8 @@ from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-# Parameters to be used in dataframe and output stats CSV
-_HABITAT_HEADER = 'HABITAT'
-_STRESSOR_HEADER = 'STRESSOR'
-_TOTAL_REGION_NAME = 'Total Region'
-
-# Parameters for the spatially explicit criteria shapefiles
-_RATING_FIELD = 'rating'
+# RESILIENCE stressor shorthand to use when parsing tables
+_RESILIENCE_STRESSOR = 'resilience'
 
 # Target cell type or values for raster files.
 _TARGET_GDAL_TYPE_FLOAT32 = gdal.GDT_Float32
@@ -791,7 +786,7 @@ def execute(args):
                 if criteria_type == 'C':
                     local_resilience_df = criteria_df[
                         (criteria_df['habitat'] == habitat) &
-                        (criteria_df['stressor'] == 'RESILIENCE') &
+                        (criteria_df['stressor'] == _RESILIENCE_STRESSOR) &
                         (criteria_df['e/c'] == 'C')]
                     local_criteria_df = pandas.concat(
                         [local_criteria_df, local_resilience_df])
@@ -994,7 +989,7 @@ def execute(args):
     for habitat in habitats_info:
         resilience_criteria_df = criteria_df[
             (criteria_df['habitat'] == habitat) &
-            (criteria_df['stressor'] == 'RESILIENCE')]
+            (criteria_df['stressor'] == _RESILIENCE_STRESSOR)]
         criteria_attributes_list = []
         for attrs in resilience_criteria_df[
                 ['rating', 'weight', 'dq']].to_dict(orient='records'):
@@ -1822,9 +1817,9 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
 
     Returns:
         criteria_habitats (set): A set of string names of habitats found in the
-            criteria table.
+            criteria table, lowercased.
         criteria_stressors (set): A set of string names of stressors found in
-            the criteria table.
+            the criteria table, lowercased.
     """
     # This function requires that the table is read as a numpy array, so it's
     # easiest to read the table directly.
@@ -1903,8 +1898,11 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
         if (row[0] in known_stressors or
                 row[0] == habitat_resilience_header):
             if row[0] == habitat_resilience_header:
-                row[0] = 'RESILIENCE'  # Shorten for convenience
-            current_stressor = row[0]
+                row[0] = _RESILIENCE_STRESSOR  # Shorten for convenience
+
+            # Lowercase stressors to match expectations for how the info table
+            # is being parsed.
+            current_stressor = row[0].lower()
             current_stressor_header_row = row_index
             continue  # can skip this row
 
@@ -1923,7 +1921,9 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
             'e/c': row[criteria_col],
         }
         for habitat, habitat_col_indices in habitat_columns.items():
-            stressor_habitat_data['habitat'] = habitat
+            # Lowercase habitats to match expectations for how the info table
+            # is being parsed.
+            stressor_habitat_data['habitat'] = habitat.lower()
             for col_index in habitat_col_indices:
                 # attribute is rating, dq or weight
                 attribute_name = table[current_stressor_header_row][col_index]
@@ -1958,6 +1958,11 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
         records, columns=['habitat', 'stressor', 'criterion', 'rating', 'dq',
                           'weight', 'e/c'])
     overlap_df.to_csv(target_composite_csv_path, index=False)
+
+    # Lowercase habitats and stressors to match expectations for how the
+    # info table is being parsed.
+    known_habitats = {habitat.lower() for habitat in known_habitats}
+    known_stressors = {stressor.lower() for stressor in known_stressors}
 
     return (known_habitats, known_stressors)
 
