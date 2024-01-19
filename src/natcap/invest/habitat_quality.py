@@ -6,6 +6,7 @@ import os
 
 import numpy
 from osgeo import gdal
+import pandas
 import pygeoprocessing
 import taskgraph
 
@@ -25,9 +26,6 @@ MISSING_SENSITIVITY_TABLE_THREATS_MSG = gettext(
 MISSING_COLUMN_MSG = gettext(
     "The column '{column_name}' was not found in the Threat Data table for "
     "the corresponding input LULC scenario.")
-MISSING_THREAT_RASTER_MSG = gettext(
-    "A threat raster for threats: {threat_list} was not found or it "
-    "could not be opened by GDAL.")
 DUPLICATE_PATHS_MSG = gettext("Threat paths must be unique. Duplicates: ")
 
 MODEL_SPEC = {
@@ -416,17 +414,7 @@ def execute(args):
             for threat, row in threat_df.iterrows():
                 LOGGER.debug(f"Validating path for threat: {threat}")
                 threat_table_path_col = _THREAT_SCENARIO_MAP[lulc_key]
-
-                threat_validate_result = _validate_threat_path(
-                    row[threat_table_path_col], lulc_key)
-                if threat_validate_result == 'error':
-                    raise ValueError(
-                        'There was an Error locating a threat raster from '
-                        'the path in CSV for column: '
-                        f'{_THREAT_SCENARIO_MAP[lulc_key]} and threat: '
-                        f'{threat}.')
-
-                threat_path = threat_validate_result
+                threat_path = row[threat_table_path_col]
 
                 threat_path_dict['threat' + lulc_key][threat] = threat_path
                 # save threat paths in a list for alignment and resize
@@ -575,6 +563,7 @@ def execute(args):
 
     # for each land cover raster provided compute habitat quality
     for lulc_key, lulc_path in lulc_path_dict.items():
+        print(lulc_key, lulc_path)
         LOGGER.info(f'Calculating habitat quality for landuse: {lulc_path}')
 
         threat_decay_task_list = []
@@ -608,6 +597,7 @@ def execute(args):
         exit_landcover = False
 
         # adjust each threat/threat raster for distance, weight, and access
+        print(threat_df)
         for threat, row in threat_df.iterrows():
             LOGGER.debug(
                 f'Calculating threat: {threat}.\nThreat data: {row}')
@@ -1024,45 +1014,6 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
         target_path=target_path)
 
 
-def _validate_threat_path(threat_path, lulc_key):
-    """Check ``threat_path`` is a valid raster file against ``lulc_key``.
-
-    Check to see that the path is a valid raster and if not use ``lulc_key``
-    to determine how to handle the non valid raster.
-
-    Args:
-        threat_path (str): path on disk for a possible raster file.
-        lulc_key (str): an string indicating which land cover this threat
-            path is associated with. Can be: '_b' | '_c' | '_f'
-
-    Returns:
-        If ``threat_path`` is a valid raster file then,
-            return ``threat_path``.
-        If ``threat_path`` is not valid then,
-            return ``None`` if ``lulc_key`` == '_b'
-            return 'error` otherwise
-    """
-    # Checking threat path exists to control custom error messages
-    # for user readability.
-    try:
-        threat_gis_type = pygeoprocessing.get_gis_type(threat_path)
-        if threat_gis_type != pygeoprocessing.RASTER_TYPE:
-            # Raise a value error with custom message to help users
-            # debug threat raster issues
-            if lulc_key != '_b':
-                return "error"
-            # it's OK to have no threat raster w/ baseline scenario
-            else:
-                return None
-        else:
-            return threat_path
-    except ValueError:
-        if lulc_key != '_b':
-            return "error"
-        else:
-            return None
-
-
 @validation.invest_validator
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to ``execute``'s contract.
@@ -1130,18 +1081,7 @@ def validate(args, limit_to=None):
                         bad_threat_columns.append(threat_table_path_col)
                         break
 
-                    # Threat path from threat CSV is relative to CSV
                     threat_path = row[threat_table_path_col]
-
-                    threat_validate_result = _validate_threat_path(
-                        threat_path, lulc_key)
-                    if threat_validate_result == 'error':
-                        bad_threat_paths.append(
-                            (threat, threat_table_path_col))
-                        continue
-
-                    threat_path = threat_validate_result
-
                     if threat_path:
                         # check for duplicate absolute threat path names that
                         # cause errors when trying to write aligned versions
@@ -1155,13 +1095,6 @@ def validate(args, limit_to=None):
             validation_warnings.append((
                 ['threats_table_path'],
                 MISSING_COLUMN_MSG.format(column_name=bad_threat_columns[0])))
-
-        if bad_threat_paths:
-            validation_warnings.append((
-                ['threats_table_path'],
-                MISSING_THREAT_RASTER_MSG.format(threat_list=bad_threat_paths)
-            ))
-            invalid_keys.add('threats_table_path')
 
         if duplicate_paths:
             validation_warnings.append((

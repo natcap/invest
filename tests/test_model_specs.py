@@ -312,7 +312,7 @@ class ValidateModelSpecs(unittest.TestCase):
                     self.assertIsInstance(arg['expression'], str)
                     attrs.remove('expression')
 
-            elif arg['type'] == 'raster':
+            elif arg['type'] in {'raster', 'raster_or_vector'}:
                 # raster type should have a bands property that maps each band
                 # index to a nested type dictionary describing the band's data
                 self.assertIn('bands', arg)
@@ -322,7 +322,7 @@ class ValidateModelSpecs(unittest.TestCase):
                     self.validate_args(
                         arg['bands'][band],
                         f'{name}.bands.{band}',
-                        parent_type=t)
+                        parent_type=arg['type'])
                 attrs.remove('bands')
 
                 # may optionally have a 'projected' attribute that says
@@ -340,7 +340,7 @@ class ValidateModelSpecs(unittest.TestCase):
                         arg['projection_units'], pint.Unit)
                     attrs.remove('projection_units')
 
-            elif arg['type'] == 'vector':
+            elif arg['type'] in {'vector', 'raster_or_vector'}:
                 # vector type should have:
                 # - a fields property that maps each field header to a nested
                 #   type dictionary describing the data in that field
@@ -352,7 +352,7 @@ class ValidateModelSpecs(unittest.TestCase):
                     self.validate_args(
                         arg['fields'][field],
                         f'{name}.fields.{field}',
-                        parent_type=t)
+                        parent_type=arg['type'])
 
                 self.assertIn('geometries', arg)
                 self.assertIsInstance(arg['geometries'], set)
@@ -396,7 +396,7 @@ class ValidateModelSpecs(unittest.TestCase):
                         self.validate_args(
                             headers[header],
                             f'{name}.{direction}.{header}',
-                            parent_type=t)
+                            parent_type=arg['type'])
 
                 if 'index_col' in arg:
                     self.assertIn(arg['index_col'], arg['columns'])
@@ -416,7 +416,7 @@ class ValidateModelSpecs(unittest.TestCase):
                     self.validate_args(
                         arg['contents'][path],
                         f'{name}.contents.{path}',
-                        parent_type=t)
+                        parent_type=arg['type'])
                 attrs.remove('contents')
 
                 # may optionally have a 'permissions' attribute, which is a

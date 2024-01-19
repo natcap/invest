@@ -100,7 +100,7 @@ def make_threats_raster(
     if threat_values is None:
         threat_values = [1, 1]
 
-    for time_index, suffix in enumerate(['_c', '_f']):
+    for time_index, suffix in enumerate(['_b', '_c', '_f']):
         for (i, threat), value in zip(enumerate(threat_names), threat_values):
             threat_array = numpy.zeros((side_length, side_length), dtype=dtype)
             raster_path = os.path.join(folder_path, threat + suffix + '.tif')
@@ -914,53 +914,6 @@ class HabitatQualityTests(unittest.TestCase):
             self.fail("HQ failed when using threat data CSV missing FUT_PATH"
                       f" column. \n {str(e)}")
 
-    def test_habitat_quality_bad_rasters(self):
-        """Habitat Quality: raise error on threats that aren't real rasters."""
-        from natcap.invest import habitat_quality
-
-        args = {
-            'half_saturation_constant': '0.5',
-            'workspace_dir': self.workspace_dir,
-            'n_workers': -1,
-        }
-
-        args['sensitivity_table_path'] = os.path.join(
-            args['workspace_dir'], 'sensitivity_samp.csv')
-        make_sensitivity_samp_csv(args['sensitivity_table_path'])
-
-        args['lulc_cur_path'] = os.path.join(
-            args['workspace_dir'], 'lc_samp_cur_b.tif')
-
-        lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
-        lulc_array[50:, :] = 2
-        make_raster_from_array(lulc_array, args['lulc_cur_path'])
-
-        # Make an empty threat raster in the workspace folder.
-        make_threats_raster(
-            args['workspace_dir'], make_empty_raster=True)
-
-        args['threats_table_path'] = os.path.join(
-            args['workspace_dir'], 'threats_samp.csv')
-
-        # create the threat CSV table
-        with open(args['threats_table_path'], 'w') as open_table:
-            open_table.write(
-                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
-            open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
-            open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
-                'threat_2_f.tif\n')
-
-        with self.assertRaises(ValueError) as cm:
-            habitat_quality.execute(args)
-
-        actual_message = str(cm.exception)
-        self.assertIn(
-            'There was an Error locating a threat raster from '
-            'the path in CSV for column: cur_path and threat: threat_1',
-            actual_message)
-
     def test_habitat_quality_lulc_current_only(self):
         """Habitat Quality: on missing base and future LULC rasters."""
         from natcap.invest import habitat_quality
@@ -1086,9 +1039,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '0.04,0.7,threat_1,linear,threat_1_b.tif,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '0.07,1.0,threat_2,exponential,threat_2_b.tif,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -1373,7 +1326,6 @@ class HabitatQualityTests(unittest.TestCase):
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
         # intentialy do not make the threat rasters
-
         args['threats_table_path'] = os.path.join(
             args['workspace_dir'], 'threats_samp.csv')
 
@@ -1388,16 +1340,8 @@ class HabitatQualityTests(unittest.TestCase):
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
-        self.assertTrue(
-            validate_result,
-            "expected failed validations instead didn't get any.")
-        self.assertEqual(
-            habitat_quality.MISSING_THREAT_RASTER_MSG.format(
-                threat_list=[
-                    ('threat_1', 'cur_path'),
-                    ('threat_2', 'cur_path'),
-                    ('threat_1', 'fut_path'),
-                    ('threat_2', 'fut_path')]),
+        self.assertIn(
+            'File not found',
             validate_result[0][1])
 
     def test_habitat_quality_missing_cur_threat_path(self):
@@ -1647,6 +1591,8 @@ class HabitatQualityTests(unittest.TestCase):
         args['threats_table_path'] = os.path.join(
             args['workspace_dir'], 'threats_samp.csv')
 
+        print(os.listdir(args['workspace_dir']))
+
         with open(args['threats_table_path'], 'w') as open_table:
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
@@ -1710,13 +1656,9 @@ class HabitatQualityTests(unittest.TestCase):
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
-        self.assertTrue(
-            validate_result,
-            "expected failed validations instead didn't get any.")
-        self.assertEqual(
-            habitat_quality.MISSING_THREAT_RASTER_MSG.format(
-                threat_list=[('threat_1', 'cur_path')]),
-            validate_result[0][1], validate_result[0][1])
+        self.assertIn(
+            f'"{self.workspace_dir}/threat_1_cur.tif": File not found',
+            validate_result[0][1])
 
     def test_habitat_quality_validate_duplicate_threat_path(self):
         """Habitat Quality: test validate for duplicate threat paths."""
