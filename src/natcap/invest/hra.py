@@ -1785,6 +1785,8 @@ def _parse_info_table(info_table_path):
     except ValueError as err:
         if 'Index has duplicate keys' in str(err):
             raise ValueError("Habitat and stressor names may not overlap.")
+        else:
+            raise err
 
     table = table.rename(columns={'stressor buffer (meters)': 'buffer'})
 
