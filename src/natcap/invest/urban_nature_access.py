@@ -974,7 +974,7 @@ def execute(args):
             kernel_func = pygeoprocessing.kernels.exponential_decay_kernel
             kernel_kwargs = dict(
                 target_kernel_path=kernel_path,
-                max_distance=math.ceil(expected_distance) * 2 + 1,
+                max_distance=math.ceil(search_radius_in_pixels) * 2 + 1,
                 expected_distance=search_radius_in_pixels,
                 normalize=False)
         elif decay_function in [KERNEL_LABEL_GAUSSIAN, KERNEL_LABEL_DENSITY]:
