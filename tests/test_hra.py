@@ -1260,7 +1260,7 @@ class HRAModelTests(unittest.TestCase):
                     array, 255, (10, -10), (ORIGIN[0] - 50, ORIGIN[1] - 50),
                     SRS_WKT, full_path)
 
-        archive_path = '/Users/emily/Documents/hrad_dat.tar.gz'#os.path.join(self.workspace_dir, 'datstack.tar.gz')
+        archive_path = os.path.join(self.workspace_dir, 'datstack.tar.gz')
         datastack.build_datastack_archive(
             args, 'natcap.invest.hra', archive_path)
 

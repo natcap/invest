@@ -52,7 +52,7 @@ predictor_table_columns = {
                    "characters or less).")
     },
     "path": {
-        "type": "raster_or_vector",
+        "type": {"raster", "vector"},
         "about": gettext("A spatial file to use as a predictor."),
         "bands": {1: {"type": "number", "units": u.none}},
         "fields": {},

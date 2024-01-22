@@ -648,7 +648,7 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
         for col in matching_cols:
             try:
                 # frozenset needed to make the set hashable.  A frozenset and set with the same members are equal.
-                if col_spec['type'] in {'csv', 'directory', 'file', 'raster', 'vector', 'raster_or_vector'}:
+                if col_spec['type'] in {'csv', 'directory', 'file', 'raster', 'vector', frozenset({'raster', 'vector'})}:
                     df[col] = df[col].apply(
                         lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), csv_path))
                     df[col] = df[col].astype(pandas.StringDtype())
@@ -669,12 +669,15 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
                     f'Value(s) in the "{col}" column could not be interpreted '
                     f'as {col_spec["type"]}s. Original error: {err}')
 
-            if col_spec['type'] in {'csv', 'directory', 'file', 'raster', 'vector', 'raster_or_vector'}:
+            col_type = col_spec['type']
+            if isinstance(col_type, set):
+                col_type = frozenset(col_type)
+            if col_type in {'csv', 'directory', 'file', 'raster', 'vector', frozenset({'raster', 'vector'})}:
                 # recursively validate the files within the column
                 def check_value(value):
                     if pandas.isna(value):
                         return
-                    err_msg = _VALIDATION_FUNCS[col_spec['type']](value, **col_spec)
+                    err_msg = _VALIDATION_FUNCS[col_type](value, **col_spec)
                     if err_msg:
                         raise ValueError(
                             f'Error in {axis} "{col}", value "{value}": {err_msg}')
@@ -838,6 +841,8 @@ def timeout(func, *args, timeout=5, **kwargs):
     message_queue = queue.Queue()
 
     def wrapper_func():
+        print(func)
+        print(args, kwargs)
         message_queue.put(func(*args, **kwargs))
 
     thread = threading.Thread(target=wrapper_func)
@@ -903,7 +908,7 @@ _VALIDATION_FUNCS = {
     'option_string': check_option_string,
     'raster': functools.partial(timeout, check_raster),
     'vector': functools.partial(timeout, check_vector),
-    'raster_or_vector': functools.partial(timeout, check_raster_or_vector),
+    frozenset({'raster', 'vector'}): functools.partial(timeout, check_raster_or_vector),
     'other': None,  # Up to the user to define their validate()
 }
 
@@ -1041,7 +1046,10 @@ def validate(args, spec, spatial_overlap_opts=None):
             LOGGER.debug(f'Provided key {key} does not exist in MODEL_SPEC')
             continue
 
-        type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
+        param_type = parameter_spec['type']
+        if isinstance(param_type, set):
+            param_type = frozenset(param_type)
+        type_validation_func = _VALIDATION_FUNCS[param_type]
 
         if type_validation_func is None:
             # Validation for 'other' type must be performed by the user.
@@ -1182,6 +1190,8 @@ def invest_validator(validate_func):
                 # need to validate it.
                 if args_value not in ('', None):
                     input_type = args_key_spec['type']
+                    if isinstance(input_type, set):
+                        input_type = frozenset(input_type)
                     validator_func = _VALIDATION_FUNCS[input_type]
                     error_msg = validator_func(args_value, **args_key_spec)
 

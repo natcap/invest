@@ -314,8 +314,13 @@ def build_datastack_archive(args, model_name, datastack_path):
             if 'columns' in args_spec[key]:
                 for col_name, col_definition in (
                         args_spec[key]['columns'].items()):
-                    if col_definition['type'] in [
-                            'raster', 'vector', 'raster_or_vector']:
+                    # Type attribute may be a string (one type) or set
+                    # (multiple types allowed), so always convert to a set for
+                    # easier comparison.
+                    col_types = col_definition['type']
+                    if isinstance(col_types, str):
+                        col_types = set([col_types])
+                    if col_types.intersection(spatial_types):
                         spatial_columns.append(col_name)
             LOGGER.debug(f'Detected spatial columns: {spatial_columns}')
 

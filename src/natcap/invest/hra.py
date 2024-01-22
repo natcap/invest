@@ -70,7 +70,7 @@ MODEL_SPEC = {
                         "names must match the habitat and stressor names in "
                         "the Criteria Scores Table.")},
                 "path": {
-                    "type": "raster_or_vector",
+                    "type": {"raster", "vector"},
                     "bands": {1: {
                         "type": "number",
                         "units": u.none,
