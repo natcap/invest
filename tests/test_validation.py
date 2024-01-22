@@ -1194,13 +1194,13 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 'path': {'type': 'file'}
             })
         self.assertEqual(
-            f'{self.workspace_dir}/foo.txt',
+            f'{self.workspace_dir}{os.sep}foo.txt',
             df['path'][0])
         self.assertEqual(
-            f'{self.workspace_dir}/foo/bar.txt',
+            f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
             df['path'][1])
         self.assertEqual(
-            f'{self.workspace_dir}/foo.txt',
+            f'{self.workspace_dir}{os.sep}foo.txt',
             df['path'][2])
         # empty values are returned as empty strings
         self.assertTrue(pandas.isna(df['path'][3]))
