@@ -841,8 +841,6 @@ def timeout(func, *args, timeout=5, **kwargs):
     message_queue = queue.Queue()
 
     def wrapper_func():
-        print(func)
-        print(args, kwargs)
         message_queue.put(func(*args, **kwargs))
 
     thread = threading.Thread(target=wrapper_func)
