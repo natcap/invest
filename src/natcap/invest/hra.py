@@ -80,7 +80,7 @@ MODEL_SPEC = {
                             "values besides 0 or 1 will be treated as 0.")
                     }},
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec_utils.ALL_GEOMS,
                     "about": gettext(
                         "Map of where the habitat or stressor exists. For "
                         "rasters, a pixel value of 1 indicates presence of "
