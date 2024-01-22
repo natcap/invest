@@ -35,9 +35,13 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* Urban Nature Access
+    * Fixed a ``NameError`` that occurred when running the model using
+      search radii defined per population group with an exponential search
+      kernel. https://github.com/natcap/invest/issues/1502
 
 3.14.1 (2023-12-18)
 -------------------
