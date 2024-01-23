@@ -350,8 +350,9 @@ MODEL_SPEC = {
                                 "The average urban nature supply/demand "
                                 "balance available per person within this "
                                 "administrative unit. If no people reside "
-                                "within this administrative unit, this value "
-                                "will be NaN.")
+                                "within this administrative unit, this field "
+                                "will have no value (NaN, NULL or None, "
+                                "depending on your GIS software).")
                         },
                         "Pund_adm": {
                             "type": "number",

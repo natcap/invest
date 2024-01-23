@@ -937,6 +937,25 @@ class UNATests(unittest.TestCase):
 
         urban_nature_access.execute(args)
 
+        summary_vector = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output',
+                         'admin_boundaries_suffix.gpkg'))
+        summary_layer = summary_vector.GetLayer()
+        self.assertEqual(summary_layer.GetFeatureCount(), 1)
+        summary_feature = summary_layer.GetFeature(1)
+
+        expected_field_values = {
+            'adm_unit_id': 0,
+            'Pund_adm': 0,
+            'Povr_adm': 0,
+            'SUP_DEMadm_cap': None,  # OGR converts NaN to None.
+        }
+        self.assertEqual(
+            set(defn.GetName() for defn in summary_layer.schema),
+            set(expected_field_values.keys()))
+        for fieldname, expected_value in expected_field_values.items():
+            self.assertAlmostEqual(
+                expected_value, summary_feature.GetField(fieldname))
 
     def test_urban_nature_proportion(self):
         """UNA: Run the model with urban nature proportion."""
