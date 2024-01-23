@@ -2057,12 +2057,13 @@ def _supply_demand_vector_for_single_raster_modes(
         }
 
         # Handle the case where an administrative unit might overlap no people
-        try:
-            stats['SUP_DEMadm_cap'] = (
+        if population_stats[fid]['sum'] == 0:
+            per_capita_supply = float('nan')
+        else:
+            per_capita_supply = (
                 urban_nature_budget_stats[fid]['sum'] /
                 population_stats[fid]['sum'])
-        except ZeroDivisionError:
-            stats['SUP_DEMadm_cap'] = float('nan')
+        stats['SUP_DEMadm_cap'] = per_capita_supply
 
         for pop_group_field in pop_group_fields:
             group = group_names[pop_group_field]
