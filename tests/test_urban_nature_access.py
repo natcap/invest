@@ -839,6 +839,29 @@ class UNATests(unittest.TestCase):
             layer = None
             vector = None
 
+    def test_write_vector_for_single_raster_modes(self):
+        """UNA: create a summary vector for single-raster summary stats."""
+
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+
+        # Overwrite all population pixels with 0
+        try:
+            raster = gdal.Open(args['population_raster_path'], gdal.GA_Update)
+            band = raster.GetRasterBand(1)
+            array = band.ReadAsArray()
+            array.fill(0.0)
+            band.WriteArray(array)
+        finally:
+            raster = band = None
+
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = 1000
+
+        urban_nature_access.execute(args)
+
+
     def test_urban_nature_proportion(self):
         """UNA: Run the model with urban nature proportion."""
         from natcap.invest import urban_nature_access
