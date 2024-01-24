@@ -139,6 +139,14 @@ MODEL_SPEC = {
                 "watershed. Pixels with 1 are drainages and are treated like "
                 "streams. Pixels with 0 are not drainages."),
             "name": gettext("drainages")
+        },
+        "routing_algorithm": {
+            "type": "option_string",
+            "options": ["D8", "MFD"],
+            "name": gettext("routing algorithm"),
+            "about": gettext(
+                "Routing algorithm used to determine the flow of water "
+                "across the landscape.")
         }
     },
     "outputs": {
@@ -678,8 +686,19 @@ def execute(args):
         dependent_task_list=[slope_task],
         task_name='threshold slope')
 
+    if args['routing_algorithm'] == 'D8':
+        flow_dir_func = pygeoprocessing.routing.flow_dir_d8
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_d8
+        dist_to_channel_func = pygeoprocessing.routing.distance_to_channel_d8
+    elif args['routing_algorithm'] == 'MFD':
+        flow_dir_func = pygeoprocessing.routing.flow_dir_mfd
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_mfd
+        dist_to_channel_func = pygeoprocessing.routing.distance_to_channel_mfd
+    else:
+        raise ValueError('Invalid routing algorithm')
+
     flow_dir_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_dir_mfd,
+        func=flow_dir_func,
         args=(
             (f_reg['pit_filled_dem_path'], 1),
             f_reg['flow_direction_path']),
@@ -688,7 +707,7 @@ def execute(args):
         task_name='flow direction calculation')
 
     flow_accumulation_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_accumulation_mfd,
+        func=flow_accum_func,
         args=(
             (f_reg['flow_direction_path'], 1),
             f_reg['flow_accumulation_path']),
@@ -708,17 +727,29 @@ def execute(args):
             flow_accumulation_task, slope_task],
         task_name='ls factor calculation')
 
-    stream_task = task_graph.add_task(
-        func=pygeoprocessing.routing.extract_streams_mfd,
-        args=(
-            (f_reg['flow_accumulation_path'], 1),
-            (f_reg['flow_direction_path'], 1),
-            float(args['threshold_flow_accumulation']),
-            f_reg['stream_path']),
-        kwargs={'trace_threshold_proportion': 0.7},
-        target_path_list=[f_reg['stream_path']],
-        dependent_task_list=[flow_accumulation_task],
-        task_name='extract streams')
+    if args['routing_algorithm'] == 'D8':
+        stream_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_streams_d8,
+            args=(
+                (f_reg['flow_accumulation_path'], 1),
+                float(args['threshold_flow_accumulation']),
+                f_reg['stream_path']),
+            kwargs={'trace_threshold_proportion': 0.7},
+            target_path_list=[f_reg['stream_path']],
+            dependent_task_list=[flow_accumulation_task],
+            task_name='extract streams')
+    else:
+        stream_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_streams_mfd,
+            args=(
+                (f_reg['flow_accumulation_path'], 1),
+                (f_reg['flow_direction_path'], 1),
+                float(args['threshold_flow_accumulation']),
+                f_reg['stream_path']),
+            kwargs={'trace_threshold_proportion': 0.7},
+            target_path_list=[f_reg['stream_path']],
+            dependent_task_list=[flow_accumulation_task],
+            task_name='extract streams')
 
     if drainage_present:
         drainage_task = task_graph.add_task(
@@ -796,7 +827,9 @@ def execute(args):
             args=(
                 f_reg['flow_direction_path'], factor_path,
                 f_reg['flow_accumulation_path'],
-                accumulation_path, out_bar_path),
+                accumulation_path,
+                args['routing_algorithm'],
+                out_bar_path),
             target_path_list=[accumulation_path, out_bar_path],
             dependent_task_list=[
                 factor_task, flow_accumulation_task, flow_dir_task],
@@ -826,7 +859,7 @@ def execute(args):
         task_name='calculate inverse ws factor')
 
     d_dn_task = task_graph.add_task(
-        func=pygeoprocessing.routing.distance_to_channel_mfd,
+        func=dist_to_channel_func,
         args=(
             (f_reg['flow_direction_path'], 1),
             (drainage_raster_path_task[0], 1),
@@ -979,37 +1012,36 @@ def inverse_ws_op(w_factor, s_factor): return 1 / (w_factor * s_factor)
 
 
 def _calculate_what_drains_to_stream(
-        flow_dir_mfd_path, dist_to_channel_mfd_path, target_mask_path):
+        flow_dir_path, dist_to_channel_path, target_mask_path):
     """Create a mask indicating regions that do or do not drain to a stream.
 
-    This is useful because ``pygeoprocessing.distance_to_stream_mfd`` may leave
+    This is useful because distance-to-stream algorithms may leave
     some unexpected regions as nodata if they do not drain to a stream.  This
     may be confusing behavior, so this mask is intended to locate what drains
     to a stream and what does not. A pixel doesn't drain to a stream if it has
     a defined flow direction but undefined distance to stream.
 
     Args:
-        flow_dir_mfd_path (string): The path to an MFD flow direction raster.
+        flow_dir_path (string): The path to a D8 or MFD flow direction raster.
             This raster must have a nodata value defined.
-        dist_to_channel_mfd_path (string): The path to an MFD
-            distance-to-channel raster.  This raster must have a nodata value
-            defined.
+        dist_to_channel_path (string): The path to a distance-to-channel
+            raster.  This raster must have a nodata value defined.
         target_mask_path (string): The path to where the mask raster should be
             written.
 
     Returns:
         ``None``
     """
-    flow_dir_mfd_nodata = pygeoprocessing.get_raster_info(
-        flow_dir_mfd_path)['nodata'][0]
+    flow_dir_nodata = pygeoprocessing.get_raster_info(
+        flow_dir_path)['nodata'][0]
     dist_to_channel_nodata = pygeoprocessing.get_raster_info(
-        dist_to_channel_mfd_path)['nodata'][0]
+        dist_to_channel_path)['nodata'][0]
 
-    def _what_drains_to_stream(flow_dir_mfd, dist_to_channel):
+    def _what_drains_to_stream(flow_dir, dist_to_channel):
         """Determine which pixels do and do not drain to a stream.
 
         Args:
-            flow_dir_mfd (numpy.array): A numpy array of MFD flow direction
+            flow_dir (numpy.array): A numpy array of flow direction
                 values.
             dist_to_channel (numpy.array): A numpy array of calculated
                 distances to the nearest channel.
@@ -1017,17 +1049,17 @@ def _calculate_what_drains_to_stream(
         Returns:
             A ``numpy.array`` of dtype ``numpy.uint8`` with pixels where:
 
-                * ``255`` where ``flow_dir_mfd`` is nodata (and thus
+                * ``255`` where ``flow_dir`` is nodata (and thus
                   ``dist_to_channel`` is also nodata).
-                * ``0`` where ``flow_dir_mfd`` has data and ``dist_to_channel``
+                * ``0`` where ``flow_dir`` has data and ``dist_to_channel``
                   does not
-                * ``1`` where ``flow_dir_mfd`` has data, and
+                * ``1`` where ``flow_dir`` has data, and
                   ``dist_to_channel`` also has data.
         """
         drains_to_stream = numpy.full(
-            flow_dir_mfd.shape, _BYTE_NODATA, dtype=numpy.uint8)
+            flow_dir.shape, _BYTE_NODATA, dtype=numpy.uint8)
         valid_flow_dir = ~pygeoprocessing.array_equals_nodata(
-            flow_dir_mfd, flow_dir_mfd_nodata)
+            flow_dir, flow_dir_nodata)
         valid_dist_to_channel = (
             ~pygeoprocessing.array_equals_nodata(
                 dist_to_channel, dist_to_channel_nodata) &
@@ -1041,7 +1073,7 @@ def _calculate_what_drains_to_stream(
         return drains_to_stream
 
     pygeoprocessing.raster_calculator(
-        [(flow_dir_mfd_path, 1), (dist_to_channel_mfd_path, 1)],
+        [(flow_dir_path, 1), (dist_to_channel_path, 1)],
         _what_drains_to_stream, target_mask_path, gdal.GDT_Byte, _BYTE_NODATA)
 
 
@@ -1335,18 +1367,19 @@ def _calculate_cp(lulc_to_cp, lulc_path, cp_factor_path):
 
 def _calculate_bar_factor(
         flow_direction_path, factor_path, flow_accumulation_path,
-        accumulation_path, out_bar_path):
+        accumulation_path, routing_algorithm, out_bar_path):
     """Route user defined source across DEM.
 
     Used for calculating S and W bar in the SDR operation.
 
     Args:
-        dem_path (string): path to DEM raster
+        flow_direction_path (string): path to flow direction path (in radians)
         factor_path (string): path to arbitrary factor raster
         flow_accumulation_path (string): path to flow accumulation raster
-        flow_direction_path (string): path to flow direction path (in radians)
         accumulation_path (string): path to a raster that can be used to
             save the accumulation of the factor.  Temporary file.
+        routing_algorithm (string). Which flow accumulation routing
+            algorithm to use, 'D8' or 'MFD'.
         out_bar_path (string): path to output raster that is the result of
             the factor accumulation raster divided by the flow accumulation
             raster.
@@ -1355,10 +1388,16 @@ def _calculate_bar_factor(
         None.
 
     """
-    LOGGER.debug("doing flow accumulation mfd on %s", factor_path)
+    LOGGER.debug("doing flow accumulation on %s", factor_path)
+    if routing_algorithm == 'D8':
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_d8
+    elif routing_algorithm == 'MFD':
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_mfd
+    else:
+        raise ValueError('Invalid routing algorithm')
     # manually setting compression to DEFLATE because we got some LZW
     # errors when testing with large data.
-    pygeoprocessing.routing.flow_accumulation_mfd(
+    flow_accum_func(
         (flow_direction_path, 1), accumulation_path,
         weight_raster_path_band=(factor_path, 1),
         raster_driver_creation_tuple=('GTIFF', [

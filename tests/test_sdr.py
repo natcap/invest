@@ -70,6 +70,7 @@ class SDRTests(unittest.TestCase):
             'watersheds_path': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
             'workspace_dir': workspace_dir,
             'n_workers': -1,
+            'routing_algorithm': 'MFD'
         }
         return args
 
@@ -111,7 +112,7 @@ class SDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = {}
         validation_warnings = sdr.validate(args, limit_to=None)
-        self.assertEqual(len(validation_warnings[0][0]), 12)
+        self.assertEqual(len(validation_warnings[0][0]), 13)
 
     def test_sdr_validation_key_no_value(self):
         """SDR test validation that's missing a value on a key."""

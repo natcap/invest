@@ -286,7 +286,7 @@ const UI_SPEC = {
       ['dem_path', 'erosivity_path', 'erodibility_path'],
       ['lulc_path', 'biophysical_table_path'],
       ['watersheds_path', 'drainage_path'],
-      ['threshold_flow_accumulation', 'k_param', 'sdr_max', 'ic_0_param', 'l_max'],
+      ['routing_algorithm', 'threshold_flow_accumulation', 'k_param', 'sdr_max', 'ic_0_param', 'l_max'],
     ],
   },
   seasonal_water_yield: {
