@@ -1977,6 +1977,7 @@ class TestValidationFromSpec(unittest.TestCase):
 
 class TestExpressionNameRewrite(unittest.TestCase):
     def test_rewrite(self):
+        """Validation: test expression name rewriting."""
         from natcap.invest import validation
 
         target_key = "search_radius_mode"
@@ -1998,6 +1999,7 @@ class TestExpressionNameRewrite(unittest.TestCase):
         self.assertEqual(eval_result, False)
 
     def test_rewrite_at_end_of_expression(self):
+        """Validation: Test varname rewriting at the end of an expression."""
         from natcap.invest import validation
 
         target_key = "search_radius_mode"
