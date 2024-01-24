@@ -45,6 +45,9 @@ Unreleased Changes
     * Fixed an issue where Urban Nature Access would crash if an administrative
       boundary geometry did not overlap any people in the population raster.
       https://github.com/natcap/invest/issues/1503
+    * Fixed an issue where validation was failing to catch missing values in
+      the uniform search radius args key when using uniform search radii.
+      https://github.com/natcap/invest/issues/1509
 
 3.14.1 (2023-12-18)
 -------------------
