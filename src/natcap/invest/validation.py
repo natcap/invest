@@ -672,7 +672,7 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
             col_type = col_spec['type']
             if isinstance(col_type, set):
                 col_type = frozenset(col_type)
-            if col_type in {'csv', 'directory', 'file', 'raster', 'vector', frozenset({'raster', 'vector'})}:
+            if col_type in {'raster', 'vector', frozenset({'raster', 'vector'})}:
                 # recursively validate the files within the column
                 def check_value(value):
                     if pandas.isna(value):
