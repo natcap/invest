@@ -347,9 +347,12 @@ MODEL_SPEC = {
                             "type": "number",
                             "units": u.m**2/u.person,
                             "about": (
-                                "The averge urban nature supply/demand "
+                                "The average urban nature supply/demand "
                                 "balance available per person within this "
-                                "administrative unit.")
+                                "administrative unit. If no people reside "
+                                "within this administrative unit, this field "
+                                "will have no value (NaN, NULL or None, "
+                                "depending on your GIS software).")
                         },
                         "Pund_adm": {
                             "type": "number",
@@ -974,7 +977,7 @@ def execute(args):
             kernel_func = pygeoprocessing.kernels.exponential_decay_kernel
             kernel_kwargs = dict(
                 target_kernel_path=kernel_path,
-                max_distance=math.ceil(expected_distance) * 2 + 1,
+                max_distance=math.ceil(search_radius_in_pixels) * 2 + 1,
                 expected_distance=search_radius_in_pixels,
                 normalize=False)
         elif decay_function in [KERNEL_LABEL_GAUSSIAN, KERNEL_LABEL_DENSITY]:
@@ -2050,12 +2053,19 @@ def _supply_demand_vector_for_single_raster_modes(
     stats_by_feature = {}
     for fid in urban_nature_budget_stats.keys():
         stats = {
-            'SUP_DEMadm_cap': (
-                urban_nature_budget_stats[fid]['sum'] /
-                population_stats[fid]['sum']),
             'Pund_adm': undersupplied_stats[fid]['sum'],
             'Povr_adm': oversupplied_stats[fid]['sum'],
         }
+
+        # Handle the case where an administrative unit might overlap no people
+        if population_stats[fid]['sum'] == 0:
+            per_capita_supply = float('nan')
+        else:
+            per_capita_supply = (
+                urban_nature_budget_stats[fid]['sum'] /
+                population_stats[fid]['sum'])
+        stats['SUP_DEMadm_cap'] = per_capita_supply
+
         for pop_group_field in pop_group_fields:
             group = group_names[pop_group_field]
             group_proportion = pop_proportions_by_fid[fid][group]
