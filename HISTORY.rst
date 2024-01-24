@@ -42,6 +42,9 @@ Unreleased Changes
     * Fixed a ``NameError`` that occurred when running the model using
       search radii defined per population group with an exponential search
       kernel. https://github.com/natcap/invest/issues/1502
+    * Fixed an issue where Urban Nature Access would crash if an administrative
+      boundary geometry did not overlap any people in the population raster.
+      https://github.com/natcap/invest/issues/1503
 
 3.14.1 (2023-12-18)
 -------------------

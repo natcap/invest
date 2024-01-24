@@ -915,6 +915,48 @@ class UNATests(unittest.TestCase):
             layer = None
             vector = None
 
+    def test_write_vector_for_single_raster_modes(self):
+        """UNA: create a summary vector for single-raster summary stats."""
+
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+
+        # Overwrite all population pixels with 0
+        try:
+            raster = gdal.Open(args['population_raster_path'], gdal.GA_Update)
+            band = raster.GetRasterBand(1)
+            array = band.ReadAsArray()
+            array.fill(0.0)
+            band.WriteArray(array)
+        finally:
+            raster = band = None
+
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = 1000
+
+        urban_nature_access.execute(args)
+
+        summary_vector = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output',
+                         'admin_boundaries_suffix.gpkg'))
+        summary_layer = summary_vector.GetLayer()
+        self.assertEqual(summary_layer.GetFeatureCount(), 1)
+        summary_feature = summary_layer.GetFeature(1)
+
+        expected_field_values = {
+            'adm_unit_id': 0,
+            'Pund_adm': 0,
+            'Povr_adm': 0,
+            'SUP_DEMadm_cap': None,  # OGR converts NaN to None.
+        }
+        self.assertEqual(
+            set(defn.GetName() for defn in summary_layer.schema),
+            set(expected_field_values.keys()))
+        for fieldname, expected_value in expected_field_values.items():
+            self.assertAlmostEqual(
+                expected_value, summary_feature.GetField(fieldname))
+
     def test_urban_nature_proportion(self):
         """UNA: Run the model with urban nature proportion."""
         from natcap.invest import urban_nature_access
