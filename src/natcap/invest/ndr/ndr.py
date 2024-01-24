@@ -162,6 +162,14 @@ MODEL_SPEC = {
                 "reached through subsurface flow. This characterizes the "
                 "retention due to biochemical degradation in soils. Required "
                 "if Calculate Nitrogen is selected.")
+        },
+        "routing_algorithm": {
+            "type": "option_string",
+            "options": ["D8", "MFD"],
+            "name": gettext("routing algorithm"),
+            "about": gettext(
+                "Routing algorithm used to determine the flow of water "
+                "across the landscape.")
         }
     },
     "outputs": {
@@ -668,8 +676,19 @@ def execute(args):
         target_path_list=[f_reg['filled_dem_path']],
         task_name='fill pits')
 
+    if args['routing_algorithm'] == 'D8':
+        flow_dir_func = pygeoprocessing.routing.flow_dir_d8
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_d8
+        dist_to_channel_func = pygeoprocessing.routing.distance_to_channel_d8
+    elif args['routing_algorithm'] == 'MFD':
+        flow_dir_func = pygeoprocessing.routing.flow_dir_mfd
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_mfd
+        dist_to_channel_func = pygeoprocessing.routing.distance_to_channel_mfd
+    else:
+        raise ValueError('Invalid routing algorithm')
+
     flow_dir_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_dir_mfd,
+        func=flow_dir_func,
         args=(
             (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
         kwargs={'working_dir': intermediate_output_dir},
@@ -678,7 +697,7 @@ def execute(args):
         task_name='flow dir')
 
     flow_accum_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_accumulation_mfd,
+        func=flow_accum_func,
         args=(
             (f_reg['flow_direction_path'], 1),
             f_reg['flow_accumulation_path']),
@@ -686,16 +705,27 @@ def execute(args):
         dependent_task_list=[flow_dir_task],
         task_name='flow accum')
 
-    stream_extraction_task = task_graph.add_task(
-        func=pygeoprocessing.routing.extract_streams_mfd,
-        args=(
-            (f_reg['flow_accumulation_path'], 1),
-            (f_reg['flow_direction_path'], 1),
-            float(args['threshold_flow_accumulation']),
-            f_reg['stream_path']),
-        target_path_list=[f_reg['stream_path']],
-        dependent_task_list=[flow_accum_task],
-        task_name='stream extraction')
+    if args['routing_algorithm'] == 'D8':
+        stream_extraction_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_streams_d8,
+            args=(
+                (f_reg['flow_accumulation_path'], 1),
+                float(args['threshold_flow_accumulation']),
+                f_reg['stream_path']),
+            target_path_list=[f_reg['stream_path']],
+            dependent_task_list=[flow_accum_task],
+            task_name='stream extraction')
+    else:
+        stream_extraction_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_streams_mfd,
+            args=(
+                (f_reg['flow_accumulation_path'], 1),
+                (f_reg['flow_direction_path'], 1),
+                float(args['threshold_flow_accumulation']),
+                f_reg['stream_path']),
+            target_path_list=[f_reg['stream_path']],
+            dependent_task_list=[flow_accum_task],
+            task_name='stream extraction')
 
     calculate_slope_task = task_graph.add_task(
         func=pygeoprocessing.calculate_slope,
@@ -723,7 +753,7 @@ def execute(args):
         task_name='runoff proxy mean')
 
     s_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_accumulation_mfd,
+        func=flow_accum_func,
         args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
         kwargs={
             'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
@@ -763,7 +793,7 @@ def execute(args):
         task_name='s inv')
 
     d_dn_task = task_graph.add_task(
-        func=pygeoprocessing.routing.distance_to_channel_mfd,
+        func=dist_to_channel_func,
         args=(
             (f_reg['flow_direction_path'], 1),
             (f_reg['stream_path'], 1),
@@ -775,7 +805,7 @@ def execute(args):
         task_name='d dn')
 
     dist_to_channel_task = task_graph.add_task(
-        func=pygeoprocessing.routing.distance_to_channel_mfd,
+        func=dist_to_channel_func,
         args=(
             (f_reg['flow_direction_path'], 1),
             (f_reg['stream_path'], 1),

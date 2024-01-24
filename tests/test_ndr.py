@@ -47,6 +47,7 @@ class NDRTests(unittest.TestCase):
             'watersheds_path':
             os.path.join(REGRESSION_DATA, 'input', 'watersheds.shp'),
             'workspace_dir': workspace_dir,
+            'routing_algorithm': 'MFD'
         }
         return args.copy()
 
@@ -361,6 +362,7 @@ class NDRTests(unittest.TestCase):
             'k_param',
             'watersheds_path',
             'subsurface_eff_n',
+            'routing_algorithm'
         ]
         self.assertEqual(set(invalid_args), set(expected_missing_args))
 

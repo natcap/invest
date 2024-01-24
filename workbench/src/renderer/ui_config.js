@@ -202,7 +202,7 @@ const UI_SPEC = {
       ['dem_path', 'lulc_path', 'runoff_proxy_path', 'watersheds_path', 'biophysical_table_path'],
       ['calc_p'],
       ['calc_n', 'subsurface_critical_length_n', 'subsurface_eff_n'],
-      ['threshold_flow_accumulation', 'k_param'],
+      ['routing_algorithm', 'threshold_flow_accumulation', 'k_param'],
     ],
     enabledFunctions: {
       subsurface_critical_length_n: isSufficient.bind(null, 'calc_n'),
