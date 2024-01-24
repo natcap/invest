@@ -92,7 +92,7 @@ MODEL_SPEC = {
                     'type': 'number',
                     'units': u.meter,
                     'required':
-                        f'search_radius_mode == "{RADIUS_OPT_URBAN_NATURE}"',
+                        f'search_radius_mode.value == "{RADIUS_OPT_URBAN_NATURE}"',
                     'expression': 'value >= 0',
                     'about': (
                         'The distance within which a LULC type is relevant '
@@ -125,7 +125,7 @@ MODEL_SPEC = {
                 "pop_[POP_GROUP]": {
                     "type": "ratio",
                     "required": (
-                        f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
+                        f"(search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}') "
                         "or aggregate_by_pop_group"),
                     "about": gettext(
                         "The proportion of the population within each "
@@ -248,7 +248,7 @@ MODEL_SPEC = {
             'name': 'uniform search radius',
             'units': u.m,
             'expression': 'value > 0',
-            'required': f'search_radius_mode == "{RADIUS_OPT_UNIFORM}"',
+            'required': f'search_radius_mode.value == "{RADIUS_OPT_UNIFORM}"',
             'about': gettext(
                 'The search radius to use when running the model under a '
                 'uniform search radius. Required when running the model '
@@ -257,7 +257,7 @@ MODEL_SPEC = {
         'population_group_radii_table': {
             'name': 'population group radii table',
             'type': 'csv',
-            'required': f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
+            'required': f'search_radius_mode.value == "{RADIUS_OPT_POP_GROUP}"',
             'index_col': 'pop_group',
             'columns': {
                 "pop_group": {
@@ -273,7 +273,7 @@ MODEL_SPEC = {
                     'type': 'number',
                     'units': u.meter,
                     'required':
-                        f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
+                        f'search_radius_mode.value == "{RADIUS_OPT_POP_GROUP}"',
                     'expression': 'value >= 0',
                     'about': gettext(
                         "The search radius in meters to use "
@@ -379,7 +379,7 @@ MODEL_SPEC = {
                                 "group POP_GROUP within this administrative "
                                 "unit."),
                             "created_if": (
-                                f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
+                                f"(search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}') "
                                 "or aggregate_by_pop_group"),
                         },
                         "Pund_adm_[POP_GROUP]": {
@@ -391,7 +391,7 @@ MODEL_SPEC = {
                                 "administrative unit that are undersupplied "
                                 "with urban nature."),
                             "created_if": (
-                                f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
+                                f"(search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}') "
                                 "or aggregate_by_pop_group"),
                         },
                         "Povr_adm_[POP_GROUP]": {
@@ -403,7 +403,7 @@ MODEL_SPEC = {
                                 "administrative unit that is oversupplied "
                                 "with urban nature."),
                             "created_if": (
-                                f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
+                                f"(search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}') "
                                 "or aggregate_by_pop_group"),
                         },
                     },
@@ -418,7 +418,7 @@ MODEL_SPEC = {
                         "to the stated urban nature demand."),
                     "bands": {1: {"type": "number", "units": u.m**2/u.person}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}'",
                 },
 
                 # when RADIUS_OPT_UNIFORM
@@ -428,7 +428,7 @@ MODEL_SPEC = {
                         "radius, weighted by the selected decay function."),
                     "bands": {1: {"type": "number", "units": u.m**2}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_URBAN_NATURE}'",
                 },
 
                 # When RADIUS_OPT_URBAN_NATURE
@@ -439,7 +439,7 @@ MODEL_SPEC = {
                         "by the selected decay function."),
                     "bands": {1: {"type": "number", "units": u.m**2}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_URBAN_NATURE}'",
                 },
 
                 # When RADIUS_OPT_POP_GROUP
@@ -450,7 +450,7 @@ MODEL_SPEC = {
                         "selected decay function."),
                     "bands": {1: {"type": "number", "units": u.m**2}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}'",
                 },
             },
         },
@@ -492,8 +492,8 @@ MODEL_SPEC = {
                         "function."),
                     "bands": {1: {'type': 'number', 'units': u.count}},
                     "created_if": (
-                        f"search_radius_mode == '{RADIUS_OPT_UNIFORM}' or "
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'"),
+                        f"search_radius_mode.value == '{RADIUS_OPT_UNIFORM}' or "
+                        f"search_radius_mode.value == '{RADIUS_OPT_URBAN_NATURE}'"),
                 },
                 "urban_nature_area.tif": {
                     "about": gettext(
@@ -501,15 +501,15 @@ MODEL_SPEC = {
                         "represented in each pixel."),
                     "bands": {1: {"type": "number", "units": u.m**2}},
                     "created_if":
-                        (f"search_radius_mode == '{RADIUS_OPT_UNIFORM}' or "
-                         f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'"),
+                        (f"search_radius_mode.value == '{RADIUS_OPT_UNIFORM}' or "
+                         f"search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}'"),
                 },
                 "urban_nature_population_ratio.tif": {
                     "about": gettext(
                         "The calculated urban nature/population ratio."),
                     "bands": {1: {"type": "number", "units": u.m**2/u.person}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_UNIFORM}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_UNIFORM}'",
                 },
 
                 # When RADIUS_OPT_URBAN_NATURE
@@ -521,7 +521,7 @@ MODEL_SPEC = {
                         "land cover code LUCODE."),
                     "bands": {1: {"type": "number", "units": u.m**2}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_URBAN_NATURE}'",
                 },
                 "urban_nature_supply_percapita_lucode_[LUCODE].tif": {
                     "about": gettext(
@@ -529,7 +529,7 @@ MODEL_SPEC = {
                         "land use land cover code LUCODE"),
                     "bands": {1: {"type": "number", "units": u.m**2/u.person}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_URBAN_NATURE}'",
                 },
                 "urban_nature_population_ratio_lucode_[LUCODE].tif": {
                     "about": gettext(
@@ -538,7 +538,7 @@ MODEL_SPEC = {
                         "land cover code LUCODE."),
                     "bands": {1: {"type": "number", "units": u.m**2/u.person}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_URBAN_NATURE}'",
                 },
 
                 # When RADIUS_OPT_POP_GROUP
@@ -549,7 +549,7 @@ MODEL_SPEC = {
                         "POP_GROUP."),
                     "bands": {1: {"type": "number", "units": u.count}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}'",
                 },
                 "proportion_of_population_in_[POP_GROUP].tif": {
                     "about": gettext(
@@ -558,7 +558,7 @@ MODEL_SPEC = {
                         "POP_GROUP."),
                     "bands": {1: {"type": "number", "units": u.none}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}'",
                 },
                 "distance_weighted_population_in_[POP_GROUP].tif": {
                     "about": gettext(
@@ -568,7 +568,7 @@ MODEL_SPEC = {
                         "decay function."),
                     "bands": {1: {"type": "number", "units": u.people}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}'",
                 },
                 "distance_weighted_population_all_groups.tif": {
                     "about": gettext(
@@ -576,7 +576,7 @@ MODEL_SPEC = {
                         "decay function."),
                     "bands": {1: {"type": "number", "units": u.people}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}'",
                 },
                 "urban_nature_supply_percapita_to_[POP_GROUP].tif": {
                     "about": gettext(
@@ -584,7 +584,7 @@ MODEL_SPEC = {
                         "group POP_GROUP."),
                     "bands": {1: {"type": "number", "units": u.m**2/u.person}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}'",
                 },
                 "undersupplied_population_[POP_GROUP].tif": {
                     "about": gettext(
@@ -592,7 +592,7 @@ MODEL_SPEC = {
                         "are experiencing an urban nature deficit."),
                     "bands": {1: {"type": "number", "units": u.people}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}'",
                 },
                 "oversupplied_population_[POP_GROUP].tif": {
                     "about": gettext(
@@ -600,7 +600,7 @@ MODEL_SPEC = {
                         "are experiencing an urban nature surplus."),
                     "bands": {1: {"type": "number", "units": u.people}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                        f"search_radius_mode.value == '{RADIUS_OPT_POP_GROUP}'",
                 }
             }
         },

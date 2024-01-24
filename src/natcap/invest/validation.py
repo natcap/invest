@@ -3,12 +3,15 @@ import ast
 import functools
 import importlib
 import inspect
+import io
 import logging
 import os
 import pprint
 import queue
 import re
 import threading
+import token
+import tokenize
 import warnings
 
 import numpy
@@ -16,8 +19,8 @@ import pandas
 import pint
 import pygeoprocessing
 from osgeo import gdal
-from osgeo import osr
 from osgeo import ogr
+from osgeo import osr
 
 from . import gettext
 from . import spec_utils
@@ -61,6 +64,45 @@ MESSAGES = {
     'NEED_PERMISSION': gettext('You must have {permission} access to this file'),
     'WRONG_GEOM_TYPE': gettext('Geometry type must be one of {allowed}')
 }
+
+
+def _rewrite_name_dot_value(target_key, expression):
+    """Rewrite a ``name.value`` attribute as a single variable.
+
+    This function uses python's ``tokenize`` library to tokenize the expression
+    before checking for the target key and presence of a ``value`` attribute.
+    This eliminates false-positives with similarly-named variables.
+
+    Args:
+        target_key (string): The target symbol that we expect to have a
+            ``.value`` attribute.
+        expression (string): A string expression likely containing
+            ``{target_key}.value``
+
+    Returns:
+        A rewritten, valid python code string where ``{target_key}.value`` has
+        been rewritten as ``__{target_key}__value__``.
+    """
+    tokens = [t for t in tokenize.generate_tokens(
+        io.StringIO(expression).readline)]
+
+    replacement_name = f"__{target_key}__value__"
+
+    output_tokens = []
+    index = 0
+    while index < (len(tokens) - 2):
+        if all([tokens[index].string == target_key,
+                tokens[index+1].string == '.',
+                tokens[index+2].string == 'value']):
+            # Only the type and string value are required for untokenization
+            output_tokens.append((token.NAME, replacement_name))
+            index += 3  # skip the "." and "value" tokens.
+        else:
+            # We can just use the existing token if we're keeping it
+            output_tokens.append(tokens[index])
+            index += 1
+
+    return tokenize.untokenize(output_tokens)
 
 
 def _evaluate_expression(expression, variable_map):
@@ -670,8 +712,6 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
     return df
 
 
-
-
 def check_csv(filepath, **kwargs):
     """Validate a table.
 
@@ -980,9 +1020,36 @@ def validate(args, spec, spatial_overlap_opts=None):
     for key in conditionally_required_keys:
         # An input is conditionally required when the expression given
         # evaluates to True.
+        # We handle 2 cases of how the expression is written:
+        #    * Case 1: a logical expression of boolean operations on another
+        #      parameter.  Example: "not <arg_name>"
+        #      In this case, the <arg_name> symbol is interpreted as a bool.
+        #    * Case 2: a logical expression comparing the value of the
+        #      parameter against another known value.
+        #      Example: "<other_arg_name>.value == 'uniform radius'"
+        expression_values = {}
+        expression_with_value = spec[key]['required'][:]  # make a copy
+        for sufficient_key, is_sufficient in sufficient_inputs.items():
+            try:
+                args_value = args[sufficient_key]
+            except KeyError:
+                # Handle the case where a sufficient key (e.g. optional) is
+                # missing from args.
+                args_value = None
+
+            # If the expression contains a {key}.value pattern, rewrite the
+            # name to avoid dot-notation.
+            # Because sufficiency is a bool and bools are singletons, we cannot
+            # actually assign a .value attribute on a bool.
+            value_symbol = f'__{sufficient_key}__value__'
+            expression_with_value = _rewrite_name_dot_value(
+                sufficient_key, expression_with_value)
+            expression_values[value_symbol] = args_value
+            expression_values[sufficient_key] = is_sufficient
+
         is_conditionally_required = _evaluate_expression(
-            expression=spec[key]['required'],
-            variable_map=sufficient_inputs)
+            expression=expression_with_value,
+            variable_map=expression_values)
         if is_conditionally_required:
             if key not in args:
                 validation_warnings.append(([key], MESSAGES['MISSING_KEY']))

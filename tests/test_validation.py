@@ -1,5 +1,6 @@
 """Testing module for validation."""
 import codecs
+import collections
 import functools
 import os
 import platform
@@ -9,12 +10,14 @@ import tempfile
 import textwrap
 import time
 import unittest
-from unittest.mock import Mock
 import warnings
+from unittest.mock import Mock
 
 import numpy
-from osgeo import gdal, osr, ogr
 import pandas
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
 
 class SpatialOverlapTest(unittest.TestCase):
@@ -30,8 +33,8 @@ class SpatialOverlapTest(unittest.TestCase):
 
     def test_no_overlap(self):
         """Validation: verify lack of overlap."""
-        from natcap.invest import validation
         import pygeoprocessing
+        from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GTiff')
         filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
@@ -226,7 +229,8 @@ class ValidatorTest(unittest.TestCase):
 
     def test_n_workers(self):
         """Validation: validation error returned on invalid n_workers."""
-        from natcap.invest import spec_utils, validation
+        from natcap.invest import spec_utils
+        from natcap.invest import validation
 
         args_spec = {
             'n_workers': spec_utils.N_WORKERS,
@@ -427,7 +431,8 @@ class RasterValidation(unittest.TestCase):
 
     def test_raster_incorrect_units(self):
         """Validation: test when a raster projection has wrong units."""
-        from natcap.invest import spec_utils, validation
+        from natcap.invest import spec_utils
+        from natcap.invest import validation
 
         # Use EPSG:32066  # NAD27 / BLM 16N (in US Survey Feet)
         driver = gdal.GetDriverByName('GTiff')
@@ -508,7 +513,8 @@ class VectorValidation(unittest.TestCase):
 
     def test_vector_projected_in_m(self):
         """Validation: test that a vector's projection has expected units."""
-        from natcap.invest import spec_utils, validation
+        from natcap.invest import spec_utils
+        from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GPKG')
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
@@ -533,7 +539,8 @@ class VectorValidation(unittest.TestCase):
 
     def test_wrong_geom_type(self):
         """Validation: checks that the vector's geometry type is correct."""
-        from natcap.invest import spec_utils, validation
+        from natcap.invest import spec_utils
+        from natcap.invest import validation
         driver = gdal.GetDriverByName('GPKG')
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
         vector = driver.Create(filepath, 0, 0, 0, gdal.GDT_Unknown)
@@ -1966,3 +1973,49 @@ class TestValidationFromSpec(unittest.TestCase):
         patterns = validation.get_headers_to_validate(spec)
         # should only get the patterns that are static and always required
         self.assertEqual(sorted(patterns), ['a'])
+
+
+class TestExpressionNameRewrite(unittest.TestCase):
+    def test_rewrite(self):
+        from natcap.invest import validation
+
+        target_key = "search_radius_mode"
+        expression = (
+            'search_radius_mode.value == "uniform radius" '
+            'and not my_search_radius_mode')
+        result = validation._rewrite_name_dot_value(target_key, expression)
+
+        # The spacing is a little weird, but it should still evaluate.
+        self.assertEqual(result, (
+            '__search_radius_mode__value__ =="uniform radius"'
+            'and not my_search_radius_mode '))
+
+        # Make sure we can still evaluate the result if we simulate some
+        # objects for the local references.
+        eval_result = eval(result, __builtins__, {
+            "search_radius_mode": True,
+            "__search_radius_mode__value__": 1})
+        self.assertEqual(eval_result, False)
+
+    def test_rewrite_at_end_of_expression(self):
+        from natcap.invest import validation
+
+        target_key = "search_radius_mode"
+        expression = (
+            'my_search_radius_mode.value == "uniform radius" '
+            'and not search_radius_mode.value')
+        result = validation._rewrite_name_dot_value(target_key, expression)
+
+        # The spacing is a little weird, but it should still evaluate.
+        self.assertEqual(result, (
+            'my_search_radius_mode.value == "uniform radius" '
+            'and not__search_radius_mode__value__ '))
+
+        # Make sure we can still evaluate the result if we simulate some
+        # objects for the local references.
+        mode_obj_tpl = collections.namedtuple('mode_obj', ['value'])
+        mode_obj = mode_obj_tpl('foo')
+        eval_result = eval(result, __builtins__, {
+            "my_search_radius_mode": mode_obj,
+            "__search_radius_mode__value__": 1})
+        self.assertEqual(eval_result, False)
