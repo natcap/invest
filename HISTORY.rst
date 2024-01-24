@@ -38,6 +38,10 @@
 
 Unreleased Changes
 ------------------
+* General
+    * Validation now covers file paths contained in CSVs. CSV validation
+      will fail if the files listed in a CSV fail to validate.
+      https://github.com/natcap/invest/issues/327
 * Urban Nature Access
     * Fixed a ``NameError`` that occurred when running the model using
       search radii defined per population group with an exponential search
