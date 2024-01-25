@@ -360,7 +360,11 @@ MODEL_SPEC = {
                             "about": (
                                 "The total population within the "
                                 "administrative unit that is undersupplied "
-                                "with urban nature.")
+                                "with urban nature. If aggregating by "
+                                "population groups, this will be the sum "
+                                "of undersupplied populations across all "
+                                "population groups within this administrative "
+                                "unit.")
                         },
                         "Povr_adm": {
                             "type": "number",
@@ -368,7 +372,11 @@ MODEL_SPEC = {
                             "about": (
                                 "The total population within the "
                                 "administrative unit that is oversupplied "
-                                "with urban nature.")
+                                "with urban nature. If aggregating by "
+                                "population groups, this will be the sum "
+                                "of oversupplied populations across all "
+                                "population groups within this administrative "
+                                "unit.")
                         },
                         "SUP_DEMadm_cap_[POP_GROUP]": {
                             "type": "number",
@@ -1978,14 +1986,18 @@ def _supply_demand_vector_for_pop_groups(
                 feature_id]['sum']
             group_sup_dem_in_region = urban_nature_sup_dem_stats[
                 feature_id]['sum']
+            group_oversupply_in_region = oversupply_stats[feature_id]['sum']
+            group_undersupply_in_region = undersupply_stats[feature_id]['sum']
             stats_by_feature[feature_id][f'SUP_DEMadm_cap_{groupname}'] = (
                 group_sup_dem_in_region / group_population_in_region)
             stats_by_feature[feature_id][f'Pund_adm_{groupname}'] = (
-                undersupply_stats[feature_id]['sum'])
+                group_undersupply_in_region)
             stats_by_feature[feature_id][f'Povr_adm_{groupname}'] = (
-                oversupply_stats[feature_id]['sum'])
+                group_oversupply_in_region)
             sums['supply-demand'][feature_id] += group_sup_dem_in_region
             sums['population'][feature_id] += group_population_in_region
+            sums['oversupply'][feature_id] += group_oversupply_in_region
+            sums['undersupply'][feature_id] += group_undersupply_in_region
 
     for feature_id in feature_ids:
         stats_by_feature[feature_id]['SUP_DEMadm_cap'] = (
