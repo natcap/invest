@@ -45,6 +45,13 @@ Unreleased Changes
     * Fixed an issue where Urban Nature Access would crash if an administrative
       boundary geometry did not overlap any people in the population raster.
       https://github.com/natcap/invest/issues/1503
+    * Fixed an issue where the output administrative units vector's
+      ``Pund_adm`` and ``Povr_adm`` fields representing undersupplied and
+      oversupplied populations, respectively, had values of 0 when running the
+      model with search radii defined per population group.  The output
+      administrative units vector now has the correct values for these fields,
+      consistent with the user's guide chapter.
+      https://github.com/natcap/invest/issues/1512
 
 3.14.1 (2023-12-18)
 -------------------
