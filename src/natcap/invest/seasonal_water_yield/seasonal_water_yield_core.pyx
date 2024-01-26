@@ -369,6 +369,11 @@ cdef class _ManagedRaster:
             raster = None
 
 
+def is_local_high_point(int xi, int yi, _ManagedRaster flow_dir_raster):
+    ns = list(yield_upslope_neighbors(xi, yi, flow_dir_raster))
+    if ns:
+        return False
+    return True
 
 
 def yield_upslope_neighbors(int xi, int yi, _ManagedRaster flow_dir_raster):
@@ -410,7 +415,6 @@ def yield_downslope_neighbors(int xi, int yi, _ManagedRaster flow_dir_raster):
 
     for xj, yj, flow_ij in downslope_neighbor_tuples:
         p_ij = float(flow_ij) / flow_sum
-        print(float(flow_ij), flow_sum, p_ij)
         yield xj, yj, p_ij
 
 
@@ -460,17 +464,16 @@ cpdef calculate_local_recharge(
     """
     cdef int i_n, flow_dir_nodata, flow_dir_mfd
     cdef int peak_pixel
-    cdef long xs, ys, xs_root, ys_root, xoff, yoff
+    cdef long xs, ys, xs_root, ys_root
     cdef int flow_dir_s
     cdef long xi, yi, xj, yj
     cdef int flow_dir_j, p_ij_base
-    cdef long win_xsize, win_ysize
     cdef int n_dir
     cdef long raster_x_size, raster_y_size
     cdef double pet_m, p_m, qf_m, et0_m, aet_i, p_i, qf_i, l_i, l_avail_i
     cdef float qf_nodata, kc_nodata
 
-    cdef int j_neighbor_end_index, mfd_dir_sum
+    cdef int j_neighbor_end_index
     cdef float mfd_direction_array[8]
 
     cdef queue[pair[long, long]] work_queue
@@ -561,46 +564,22 @@ cpdef calculate_local_recharge(
 
     for offset_dict in pygeoprocessing.iterblocks(
             (flow_dir_mfd_path, 1), offset_only=True, largest_block=0):
-        win_xsize = offset_dict['win_xsize']
-        win_ysize = offset_dict['win_ysize']
-        xoff = offset_dict['xoff']
-        yoff = offset_dict['yoff']
 
         if ctime(NULL) - last_log_time > 5.0:
             last_log_time = ctime(NULL)
-            current_pixel = xoff + yoff * raster_x_size
+            current_pixel = offset_dict['xoff'] + offset_dict['yoff'] * raster_x_size
             LOGGER.info(
                 'peak point detection %.2f%% complete',
                 100.0 * current_pixel / <float>(
                     raster_x_size * raster_y_size))
 
         # search block for a peak pixel where no other pixel drains to it.
-        for ys in xrange(win_ysize):
-            ys_root = yoff+ys
-            for xs in xrange(win_xsize):
-                xs_root = xoff+xs
-                flow_dir_s = <int>flow_raster.get(xs_root, ys_root)
-                if flow_dir_s == flow_dir_nodata:
-                    continue
-                # search neighbors for downhill or nodata
-                peak_pixel = 1
-                for n_dir in xrange(8):
-                    # searching around the pattern:
-                    # 321
-                    # 4x0
-                    # 567
-                    xj = xs_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir]
-                    yj = ys_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir+1]
-                    if (xj < 0 or xj >= raster_x_size or
-                            yj < 0 or yj >= raster_y_size):
-                        continue
-                    flow_dir_j = <int>flow_raster.get(xj, yj)
-                    if (0xF & (flow_dir_j >> (
-                            4 * FLOW_DIR_REVERSE_DIRECTION[n_dir]))):
-                        # pixel flows inward, not a peak
-                        peak_pixel = 0
-                        break
-                if peak_pixel:
+        for ys in xrange(offset_dict['win_ysize']):
+            ys_root = offset_dict['yoff'] + ys
+            for xs in xrange(offset_dict['win_xsize']):
+                xs_root = offset_dict['xoff'] + xs
+
+                if is_local_high_point(xs_root, ys_root, flow_raster):
                     work_queue.push(
                         pair[long, long](xs_root, ys_root))
 
@@ -620,47 +599,22 @@ cpdef calculate_local_recharge(
                     # initialize to 0 so we indicate we haven't tracked any
                     # mfd values yet
                     j_neighbor_end_index = 0
-                    mfd_dir_sum = 0
-                    for n_dir in xrange(8):
-                        if not upslope_defined:
+                    l_sum_avail_i = 0
+                    for xj, yj, p_ij in yield_upslope_neighbors(xi, yi, flow_raster):
+                        # pixel flows inward, check upslope
+                        l_sum_avail_j = target_l_sum_avail_raster.get(xj, yj)
+                        if is_close(l_sum_avail_j, target_nodata):
+                            upslope_defined = 0
                             break
-                        # searching around the pattern:
-                        # 321
-                        # 4x0
-                        # 567
-                        xj = xi+NEIGHBOR_OFFSET_ARRAY[2*n_dir]
-                        yj = yi+NEIGHBOR_OFFSET_ARRAY[2*n_dir+1]
-                        if (xj < 0 or xj >= raster_x_size or
-                                yj < 0 or yj >= raster_y_size):
-                            continue
-                        p_ij_base = (<int>flow_raster.get(xj, yj) >> (
-                                4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])) & 0xF
-                        if p_ij_base:
-                            mfd_dir_sum += p_ij_base
-                            # pixel flows inward, check upslope
-                            l_sum_avail_j = target_l_sum_avail_raster.get(
-                                xj, yj)
-                            if is_close(l_sum_avail_j, target_nodata):
-                                upslope_defined = 0
-                                break
-                            l_avail_j = target_li_avail_raster.get(
-                                xj, yj)
-                            # A step of Equation 7
-                            mfd_direction_array[j_neighbor_end_index] = (
-                                l_sum_avail_j + l_avail_j) * p_ij_base
-                            j_neighbor_end_index += 1
+                        l_avail_j = target_li_avail_raster.get(xj, yj)
+                        # A step of Equation 7
+                        l_sum_avail_i += (l_sum_avail_j + l_avail_j) * p_ij
+                        j_neighbor_end_index += 1
                     # calculate l_sum_avail_i by summing all the valid
                     # directions then normalizing by the sum of the mfd
                     # direction weights (Equation 8)
                     if upslope_defined:
-                        l_sum_avail_i = 0.0
                         # Equation 7
-                        if j_neighbor_end_index > 0:
-                            # we can have no upslope, and then why would we
-                            # divide?
-                            for index in range(j_neighbor_end_index):
-                                l_sum_avail_i += mfd_direction_array[index]
-                            l_sum_avail_i /= <float>mfd_dir_sum
                         target_l_sum_avail_raster.set(xi, yi, l_sum_avail_i)
                     else:
                         # if not defined, we'll get it on another pass
@@ -723,16 +677,8 @@ cpdef calculate_local_recharge(
                     target_li_raster.set(xi, yi, l_i)
                     target_li_avail_raster.set(xi, yi, l_avail_i)
 
-                    flow_dir_mfd = <int>flow_raster.get(xi, yi)
-                    for i_n in range(8):
-                        if ((flow_dir_mfd >> (i_n * 4)) & 0xF) == 0:
-                            # no flow in that direction
-                            continue
-                        xi_n = xi+NEIGHBOR_OFFSET_ARRAY[2*i_n]
-                        yi_n = yi+NEIGHBOR_OFFSET_ARRAY[2*i_n+1]
-                        if (xi_n < 0 or xi_n >= raster_x_size or
-                                yi_n < 0 or yi_n >= raster_y_size):
-                            continue
+                    for xi_n, yi_n, _ in yield_downslope_neighbors(
+                            xi, yi, flow_raster):
                         work_queue.push(pair[long, long](xi_n, yi_n))
 
 
