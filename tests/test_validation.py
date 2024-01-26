@@ -1174,7 +1174,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
         from natcap.invest import validation
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
         # create files so that validation will pass
-        open(os.path.join(self.workspace_dir,'foo.txt'), 'w').close()
+        open(os.path.join(self.workspace_dir, 'foo.txt'), 'w').close()
         os.mkdir(os.path.join(self.workspace_dir, 'foo'))
         open(os.path.join(self.workspace_dir,'foo', 'bar.txt'), 'w').close()
         with open(csv_file, 'w') as file_obj:
