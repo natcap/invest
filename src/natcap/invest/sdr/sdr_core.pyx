@@ -259,14 +259,14 @@ cdef class _ManagedRaster:
                 (xi & (self.block_xmod))]
 
     cdef void _load_block(self, int block_index) except *:
-        cdef int block_xi = block_index % self.block_nx
-        cdef int block_yi = block_index // self.block_nx
+        cdef long block_xi = block_index % self.block_nx
+        cdef long block_yi = block_index // self.block_nx
 
         # we need the offsets to subtract from global indexes for cached array
-        cdef int xoff = block_xi << self.block_xbits
-        cdef int yoff = block_yi << self.block_ybits
+        cdef long xoff = block_xi << self.block_xbits
+        cdef long yoff = block_yi << self.block_ybits
 
-        cdef int xi_copy, yi_copy
+        cdef long xi_copy, yi_copy
         cdef numpy.ndarray[double, ndim=2] block_array
         cdef double *double_buffer
         cdef clist[BlockBufferPair] removed_value_list
@@ -275,8 +275,8 @@ cdef class _ManagedRaster:
 
         # initially the win size is the same as the block size unless
         # we're at the edge of a raster
-        cdef int win_xsize = self.block_xsize
-        cdef int win_ysize = self.block_ysize
+        cdef long win_xsize = self.block_xsize
+        cdef long win_ysize = self.block_ysize
 
         # load a new block
         if xoff+win_xsize > self.raster_x_size:
