@@ -258,7 +258,7 @@ cdef class _ManagedRaster:
                 ((yi & (self.block_ymod))<<self.block_xbits) +
                 (xi & (self.block_xmod))]
 
-    cdef void _load_block(self, int block_index) except *:
+    cdef void _load_block(self, long block_index) except *:
         cdef long block_xi = block_index % self.block_nx
         cdef long block_yi = block_index // self.block_nx
 
@@ -286,10 +286,16 @@ cdef class _ManagedRaster:
 
         raster = gdal.OpenEx(self.raster_path, gdal.OF_RASTER)
         raster_band = raster.GetRasterBand(self.band_id)
-        block_array = raster_band.ReadAsArray(
-            xoff=xoff, yoff=yoff, win_xsize=win_xsize,
-            win_ysize=win_ysize).astype(
-            numpy.float64)
+        try:
+            block_array = raster_band.ReadAsArray(
+                xoff=xoff, yoff=yoff, win_xsize=win_xsize,
+                win_ysize=win_ysize).astype(
+                numpy.float64)
+        except ValueError as error:
+            print("Attempted to use the following dimensions:")
+            print(f"  xoff={xoff}, yoff={yoff}, win_xsize={win_xsize}, win_ysize={win_ysize}")
+            print(f"  block_index={block_index}")
+            raise error
         raster_band = None
         raster = None
         double_buffer = <double*>PyMem_Malloc(
@@ -446,7 +452,7 @@ def calculate_sediment_deposition(
     cdef unsigned long flat_index
     cdef long seed_col = 0
     cdef long seed_row = 0
-    cdef long neighbor_row, neighbor_col
+    cdef long neighbor_row, neighbor_col, ds_neighbor_row, ds_neighbor_col
     cdef int flow_val, neighbor_flow_val, ds_neighbor_flow_val
     cdef int flow_weight, neighbor_flow_weight
     cdef float flow_sum, neighbor_flow_sum
