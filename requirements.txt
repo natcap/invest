@@ -18,7 +18,7 @@ Rtree>=0.8.2,!=0.9.1
 shapely>=2.0.0
 scipy>=1.9.0
 #pygeoprocessing>=2.4.2  # pip-only
-git+https://github.com/phargogh/pygeoprocessing.git@feature/366-eliminate-duplicate-rasterization-in-alignment#egg=pygeoprocessing
+git+https://github.com/phargogh/pygeoprocessing.git@feature/366-eliminate-duplicate-rasterization-in-alignment#egg=pygeoprocessing  # pip-only
 taskgraph>=0.11.0
 psutil>=5.6.6
 chardet>=3.0.4
