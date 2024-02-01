@@ -614,7 +614,6 @@ def execute(args):
         'mask_vector_path': args['watersheds_path'],
         'mask_raster_path': f_reg['watersheds_mask_path'],
     }
-    aligned_list.append(f_reg['watersheds_mask_path'])
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
@@ -626,7 +625,7 @@ def execute(args):
             'raster_align_index': 0,
             'vector_mask_options': vector_mask_options,
         },
-        target_path_list=aligned_list,
+        target_path_list=aligned_list + [f_reg['watersheds_mask_path']],
         task_name='align input rasters')
 
     mutual_mask_task = task_graph.add_task(
