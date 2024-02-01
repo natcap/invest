@@ -98,11 +98,22 @@ MODEL_SPEC = {
                 "Outlet Features. Otherwise, an invalid geometry will cause "
                 "the model to crash."),
             "name": gettext("skip invalid geometries")
+        },
+        "routing_algorithm": {
+            "type": "option_string",
+            "options": ["D8", "MFD"],
+            "name": gettext("routing algorithm"),
+            "about": gettext(
+                "Routing algorithm used to determine the flow of water "
+                "across the landscape.")
         }
     },
     "outputs": {
         "filled_dem.tif": spec_utils.FILLED_DEM,
-        "flow_direction.tif": spec_utils.FLOW_DIRECTION_D8,
+        "flow_direction.tif": {
+            "about": gettext("Flow direction raster, D8 or MFD"),
+            "bands": {1: {"type": "integer"}}
+        },
         "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
         "preprocessed_geometries.gpkg": {
             "about": (
@@ -127,7 +138,7 @@ MODEL_SPEC = {
             "about": (
                 "A vector defining the areas that are upstream from the "
                 "snapped outlet points, where upstream area is defined by the "
-                "D8 flow algorithm implementation in PyGeoprocessing."),
+                "D8 or MFD flow algorithm implementation in PyGeoprocessing."),
             "geometries": spec_utils.POLYGON,
             "fields": {}
         },
@@ -144,7 +155,7 @@ MODEL_SPEC = {
 _OUTPUT_FILES = {
     'preprocessed_geometries': 'preprocessed_geometries.gpkg',
     'filled_dem': 'filled_dem.tif',
-    'flow_dir_d8': 'flow_direction.tif',
+    'flow_dir': 'flow_direction.tif',
     'flow_accumulation': 'flow_accumulation.tif',
     'streams': 'streams.tif',
     'snapped_outlets': 'snapped_outlets.gpkg',
@@ -168,7 +179,7 @@ def execute(args):
         * ``snapped_outlets.gpkg`` - A GeoPackage with the points snapped
           to a nearby stream.
         * ``watersheds.gpkg`` - a GeoPackage of watersheds determined
-          by the D8 routing algorithm.
+          by the routing algorithm.
         * ``stream.tif`` - a GeoTiff representing detected streams based on
           the provided ``flow_threshold`` parameter.  Values of 1 are
           streams, values of 0 are not.
@@ -241,12 +252,23 @@ def execute(args):
         target_path_list=[file_registry['filled_dem']],
         task_name='fill_pits')
 
+    if args['routing_algorithm'] == 'D8':
+        flow_dir_func = pygeoprocessing.routing.flow_dir_d8
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_d8
+        delineate_watersheds_func = pygeoprocessing.routing.delineate_watersheds_d8
+    elif args['routing_algorithm'] == 'MFD':
+        flow_dir_func = pygeoprocessing.routing.flow_dir_mfd
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_mfd
+        delineate_watersheds_func = pygeoprocessing.routing.delineate_watersheds_mfd
+    else:
+        raise ValueError('Invalid routing algorithm')
+
     flow_dir_task = graph.add_task(
-        pygeoprocessing.routing.flow_dir_d8,
+        func=flow_dir_func,
         args=((file_registry['filled_dem'], 1),
-              file_registry['flow_dir_d8']),
+              file_registry['flow_dir']),
         kwargs={'working_dir': output_directory},
-        target_path_list=[file_registry['flow_dir_d8']],
+        target_path_list=[file_registry['flow_dir']],
         dependent_task_list=[fill_pits_task],
         task_name='flow_direction')
 
@@ -255,7 +277,7 @@ def execute(args):
         # user-provided geometries
         pour_points_task = graph.add_task(
             detect_pour_points,
-            args=((file_registry['flow_dir_d8'], 1),
+            args=((file_registry['flow_dir'], 1),
                   file_registry['pour_points']),
             dependent_task_list=[flow_dir_task],
             target_path_list=[file_registry['pour_points']],
@@ -278,8 +300,8 @@ def execute(args):
     delineation_dependent_tasks = [flow_dir_task, geometry_task]
     if 'snap_points' in args and args['snap_points']:
         flow_accumulation_task = graph.add_task(
-            pygeoprocessing.routing.flow_accumulation_d8,
-            args=((file_registry['flow_dir_d8'], 1),
+            func=flow_accum_func,
+            args=((file_registry['flow_dir'], 1),
                   file_registry['flow_accumulation']),
             target_path_list=[file_registry['flow_accumulation']],
             dependent_task_list=[flow_dir_task],
@@ -289,17 +311,32 @@ def execute(args):
         snap_distance = int(args['snap_distance'])
         flow_threshold = int(args['flow_threshold'])
 
-        streams_task = graph.add_task(
-            pygeoprocessing.routing.extract_streams_d8,
-            kwargs={
-                'flow_accum_raster_path_band':
-                    (file_registry['flow_accumulation'], 1),
-                'flow_threshold': flow_threshold,
-                'target_stream_raster_path': file_registry['streams'],
-            },
-            target_path_list=[file_registry['streams']],
-            dependent_task_list=[flow_accumulation_task],
-            task_name='extract streams')
+        if args['routing_algorithm'] == 'D8':
+            streams_task = task_graph.add_task(
+                func=pygeoprocessing.routing.extract_streams_d8,
+                kwargs={
+                    'flow_accum_raster_path_band':
+                        (file_registry['flow_accumulation'], 1),
+                    'flow_threshold': flow_threshold,
+                    'target_stream_raster_path': file_registry['streams'],
+                },
+                target_path_list=[file_registry['streams']],
+                dependent_task_list=[flow_accumulation_task],
+                task_name='extract streams')
+        else:
+            streams_task = task_graph.add_task(
+                func=pygeoprocessing.routing.extract_streams_mfd,
+                kwargs={
+                    'flow_accum_raster_path_band':
+                        (file_registry['flow_accumulation'], 1),
+                    'flow_dir_mfd_path_band':
+                        (file_registry['flow_dir'], 1),
+                    'flow_threshold': flow_threshold,
+                    'target_stream_raster_path': file_registry['streams'],
+                },
+                target_path_list=[file_registry['streams']],
+                dependent_task_list=[flow_accumulation_task],
+                task_name='extract streams')
 
         snapped_outflow_points_task = graph.add_task(
             snap_points_to_nearest_stream,
@@ -315,8 +352,8 @@ def execute(args):
         outlet_vector_path = file_registry['snapped_outlets']
 
     _ = graph.add_task(
-        pygeoprocessing.routing.delineate_watersheds_d8,
-        args=((file_registry['flow_dir_d8'], 1),
+        func=delineate_watersheds_func,
+        args=((file_registry['flow_dir'], 1),
               outlet_vector_path,
               file_registry['watersheds']),
         kwargs={'working_dir': output_directory,
