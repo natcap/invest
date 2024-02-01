@@ -343,6 +343,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
+            'routing_algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(args['workspace_dir'],
@@ -404,6 +405,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
+            'routing_algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(args['workspace_dir'],
@@ -504,6 +506,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
+            'routing_algorithm': 'MFD'
         }
 
         biophysical_csv_path = os.path.join(args['workspace_dir'],
@@ -563,6 +566,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             'results_suffix': '',
             'threshold_flow_accumulation': '50',
             'workspace_dir': workspace_dir,
+            'routing_algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(workspace_dir, 'watershed.shp')
@@ -1215,6 +1219,7 @@ class SWYValidationTests(unittest.TestCase):
             'precip_dir',
             'threshold_flow_accumulation',
             'user_defined_local_recharge',
+            'routing_algorithm'
         ]
 
     def tearDown(self):
