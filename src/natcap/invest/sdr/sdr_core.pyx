@@ -449,14 +449,14 @@ def calculate_sediment_deposition(
     flow_dir_info = pygeoprocessing.get_raster_info(mfd_flow_direction_path)
     n_cols, n_rows = flow_dir_info['raster_size']
     cdef int mfd_nodata = 0
-    cdef stack[int] processing_stack
+    cdef stack[long] processing_stack
     cdef float sdr_nodata = pygeoprocessing.get_raster_info(
         sdr_path)['nodata'][0]
     cdef float e_prime_nodata = pygeoprocessing.get_raster_info(
         e_prime_path)['nodata'][0]
     cdef long col_index, row_index, win_xsize, win_ysize, xoff, yoff
     cdef long global_col, global_row, j, k
-    cdef unsigned long flat_index
+    cdef long flat_index
     cdef long seed_col = 0
     cdef long seed_row = 0
     cdef long neighbor_row, neighbor_col, ds_neighbor_row, ds_neighbor_col
