@@ -471,6 +471,7 @@ _INTERMEDIATE_BASE_FILES = {
     'aligned_erodibility_path': 'aligned_erodibility.tif',
     'aligned_erosivity_path': 'aligned_erosivity.tif',
     'aligned_lulc_path': 'aligned_lulc.tif',
+    'watersheds_mask_path': 'watersheds_mask.tif',
     'mask_path': 'mask.tif',
     'masked_dem_path': 'masked_dem.tif',
     'masked_drainage_path': 'masked_drainage.tif',
@@ -609,7 +610,11 @@ def execute(args):
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
     target_sr_wkt = dem_raster_info['projection_wkt']
-    vector_mask_options = {'mask_vector_path': args['watersheds_path']}
+    vector_mask_options = {
+        'mask_vector_path': args['watersheds_path'],
+        'mask_raster_path': f_reg['watersheds_mask_path'],
+    }
+    aligned_list.append(f_reg['watersheds_mask_path'])
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
