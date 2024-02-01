@@ -245,14 +245,19 @@ cdef class _ManagedRaster:
             if dirty_itr == self.dirty_blocks.end():
                 self.dirty_blocks.insert(block_index)
 
-    cdef inline double get(self, long xi, long yi):
+    cdef inline double get(self, long xi, long yi) except *:
         """Return the value of the pixel at `xi,yi`."""
         cdef int block_xi = xi >> self.block_xbits
         cdef int block_yi = yi >> self.block_ybits
         # this is the flat index for the block
         cdef int block_index = block_yi * self.block_nx + block_xi
         if not self.lru_cache.exist(block_index):
-            self._load_block(block_index)
+            try:
+                self._load_block(block_index)
+            except ValueError as error:
+                print(f".get() failed")
+                print(f"    xi={xi}, yi={yi}, block_xi={block_xi}, block_yi={block_yi}, block_index={block_index}")
+                raise error
         return self.lru_cache.get(
             block_index)[
                 ((yi & (self.block_ymod))<<self.block_xbits) +
