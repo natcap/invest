@@ -293,6 +293,8 @@ cdef class _ManagedRaster:
                 numpy.float64)
         except ValueError as error:
             print("Attempted to use the following dimensions:")
+            print(f"  self.block_nx={self.block_nx}, self.block_ny={self.block_ny}")
+            print(f"  block_xi={block_xi}, block_yi={block_yi}")
             print(f"  xoff={xoff}, yoff={yoff}, win_xsize={win_xsize}, win_ysize={win_ysize}")
             print(f"  block_index={block_index}")
             raise error
