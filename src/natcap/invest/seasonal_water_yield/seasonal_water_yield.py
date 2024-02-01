@@ -276,6 +276,14 @@ MODEL_SPEC = {
                 "Table of alpha values for each month. "
                 "Required if Use Monthly Alpha Table is selected."),
             "name": gettext("monthly alpha table")
+        },
+        "routing_algorithm": {
+            "type": "option_string",
+            "options": ["D8", "MFD"],
+            "name": gettext("routing algorithm"),
+            "about": gettext(
+                "Routing algorithm used to determine the flow of water "
+                "across the landscape.")
         }
     },
     "outputs": {
@@ -391,7 +399,7 @@ MODEL_SPEC = {
                         "units": u.millimeter
                     }}
                 },
-                "flow_dir_mfd.tif": {
+                "flow_dir.tif": {
                     "about": gettext(
                         "Map of multiple flow direction. Values are encoded in "
                         "a binary format and should not be used directly."),
@@ -490,7 +498,7 @@ _OUTPUT_BASE_FILES = {
 _INTERMEDIATE_BASE_FILES = {
     'aet_path': 'aet.tif',
     'aetm_path_list': ['aetm_%d.tif' % (x+1) for x in range(N_MONTHS)],
-    'flow_dir_mfd_path': 'flow_dir_mfd.tif',
+    'flow_dir_path': 'flow_dir.tif',
     'qfm_path_list': ['qf_%d.tif' % (x+1) for x in range(N_MONTHS)],
     'stream_path': 'stream.tif',
     'si_path': 'Si.tif',
@@ -715,35 +723,55 @@ def execute(args):
         dependent_task_list=[align_task],
         task_name='fill dem pits')
 
+    if args['routing_algorithm'] == 'D8':
+        flow_dir_func = pygeoprocessing.routing.flow_dir_d8
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_d8
+    elif args['routing_algorithm'] == 'MFD':
+        flow_dir_func = pygeoprocessing.routing.flow_dir_mfd
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_mfd
+    else:
+        raise ValueError('Invalid routing algorithm')
+
     flow_dir_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_dir_mfd,
+        func=flow_dir_func,
         args=(
             (file_registry['dem_pit_filled_path'], 1),
-            file_registry['flow_dir_mfd_path']),
+            file_registry['flow_dir_path']),
         kwargs={'working_dir': intermediate_output_dir},
-        target_path_list=[file_registry['flow_dir_mfd_path']],
+        target_path_list=[file_registry['flow_dir_path']],
         dependent_task_list=[fill_pit_task],
-        task_name='flow dir mfd')
+        task_name='flow dir')
 
     flow_accum_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_accumulation_mfd,
+        func=flow_accum_func,
         args=(
-            (file_registry['flow_dir_mfd_path'], 1),
+            (file_registry['flow_dir_path'], 1),
             file_registry['flow_accum_path']),
         target_path_list=[file_registry['flow_accum_path']],
         dependent_task_list=[flow_dir_task],
         task_name='flow accum task')
 
-    stream_threshold_task = task_graph.add_task(
-        func=pygeoprocessing.routing.extract_streams_mfd,
-        args=(
-            (file_registry['flow_accum_path'], 1),
-            (file_registry['flow_dir_mfd_path'], 1),
-            threshold_flow_accumulation,
-            file_registry['stream_path']),
-        target_path_list=[file_registry['stream_path']],
-        dependent_task_list=[flow_accum_task],
-        task_name='stream threshold')
+    if args['routing_algorithm'] == 'D8':
+        stream_threshold_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_streams_d8,
+            args=(
+                (file_registry['flow_accum_path'], 1),
+                threshold_flow_accumulation,
+                file_registry['stream_path']),
+            target_path_list=[file_registry['stream_path']],
+            dependent_task_list=[flow_accum_task],
+            task_name='stream threshold')
+    else:
+        stream_threshold_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_streams_mfd,
+            args=(
+                (file_registry['flow_accum_path'], 1),
+                (file_registry['flow_dir_path'], 1),
+                threshold_flow_accumulation,
+                file_registry['stream_path']),
+            target_path_list=[file_registry['stream_path']],
+            dependent_task_list=[flow_accum_task],
+            task_name='stream threshold')
 
     LOGGER.info('quick flow')
     if args['user_defined_local_recharge']:
@@ -876,7 +904,7 @@ def execute(args):
                 file_registry['precip_path_aligned_list'],
                 file_registry['et0_path_aligned_list'],
                 file_registry['qfm_path_list'],
-                file_registry['flow_dir_mfd_path'],
+                file_registry['flow_dir_path'],
                 file_registry['kc_path_list'],
                 alpha_month_map,
                 beta_i, gamma, file_registry['stream_path'],
@@ -922,9 +950,9 @@ def execute(args):
 
     LOGGER.info('calculate L_sum')  # Eq. [12]
     l_sum_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_accumulation_mfd,
+        func=flow_accum_func,
         args=(
-            (file_registry['flow_dir_mfd_path'], 1),
+            (file_registry['flow_dir_path'], 1),
             file_registry['l_sum_path']),
         kwargs={'weight_raster_path_band': (file_registry['l_path'], 1)},
         target_path_list=[file_registry['l_sum_path']],
@@ -940,7 +968,7 @@ def execute(args):
     b_sum_task = task_graph.add_task(
         func=seasonal_water_yield_core.route_baseflow_sum,
         args=(
-            file_registry['flow_dir_mfd_path'],
+            file_registry['flow_dir_path'],
             file_registry['l_path'],
             file_registry['l_avail_path'],
             file_registry['l_sum_path'],
