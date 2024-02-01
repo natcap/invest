@@ -294,7 +294,7 @@ const UI_SPEC = {
       ['workspace_dir', 'results_suffix'],
       ['lulc_raster_path', 'biophysical_table_path'],
       ['dem_raster_path', 'aoi_path'],
-      ['threshold_flow_accumulation', 'beta_i', 'gamma'],
+      ['routing_algorithm', 'threshold_flow_accumulation', 'beta_i', 'gamma'],
       ['user_defined_local_recharge', 'l_path', 'et0_dir', 'precip_dir', 'soil_group_path'],
       ['monthly_alpha', 'alpha_m', 'monthly_alpha_path'],
       ['user_defined_climate_zones', 'rain_events_table_path', 'climate_zone_table_path', 'climate_zone_raster_path'],
