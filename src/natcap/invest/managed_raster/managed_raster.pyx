@@ -18,16 +18,10 @@ from libcpp.set cimport set as cset
 from libcpp.list cimport list as clist
 from libcpp.stack cimport stack
 cimport libc.math as cmath
+
 # this ctype is used to store the block ID and the block buffer as one object
 # inside Managed Raster
 ctypedef pair[int, double*] BlockBufferPair
-
-# cmath is supposed to have M_SQRT2, but tests have been failing recently
-# due to a missing symbol.
-cdef double SQRT2 = cmath.sqrt(2)
-cdef double PI = 3.141592653589793238462643383279502884
-# This module creates rasters with a memory xy block size of 2**BLOCK_BITS
-cdef int BLOCK_BITS = 8
 # Number of raster blocks to hold in memory at once per Managed Raster
 cdef int MANAGED_RASTER_N_BLOCKS = 2**6
 
