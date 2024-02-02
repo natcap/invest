@@ -19,6 +19,7 @@ from osgeo import ogr
 
 from .. import gettext
 from .. import spec_utils
+from .. import urban_nature_access
 from .. import utils
 from .. import validation
 from ..model_metadata import MODEL_METADATA
@@ -1495,18 +1496,26 @@ def _generate_report(
     target_layer = target_vector.GetLayer()
     target_layer.SyncToDisk()
 
+    # It's worth it to check if the geometries don't significantly overlap.
+    # On large rasters, this can save a TON of time rasterizing even a
+    # relatively simple vector.
+    geometries_might_overlap = urban_nature_access._geometries_overlap(
+        watershed_results_sdr_path)
+    fields_and_rasters = [
+        ('usle_tot', usle_path), ('sed_export', sed_export_path),
+        ('sed_dep', sed_deposition_path), ('avoid_exp', avoided_export_path),
+        ('avoid_eros', avoided_erosion_path)]
+
+    # Using the list option for raster path bands so that we can reduce
+    # rasterizations, which are costly on large datasets.
+    zonal_stats_results = pygeoprocessing.zonal_statistics(
+        [(raster_path, 1) for (_, raster_path) in fields_and_rasters],
+        watershed_results_sdr_path,
+        polygons_might_overlap=geometries_might_overlap)
+
     field_summaries = {
-        'usle_tot': pygeoprocessing.zonal_statistics(
-            (usle_path, 1), watershed_results_sdr_path),
-        'sed_export': pygeoprocessing.zonal_statistics(
-            (sed_export_path, 1), watershed_results_sdr_path),
-        'sed_dep': pygeoprocessing.zonal_statistics(
-            (sed_deposition_path, 1), watershed_results_sdr_path),
-        'avoid_exp': pygeoprocessing.zonal_statistics(
-            (avoided_export_path, 1), watershed_results_sdr_path),
-        'avoid_eros': pygeoprocessing.zonal_statistics(
-            (avoided_erosion_path, 1), watershed_results_sdr_path),
-    }
+        field: stats for ((field, _), stats) in
+        zip(fields_and_rasters, zonal_stats_results)}
 
     for field_name in field_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
