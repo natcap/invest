@@ -1,0 +1,150 @@
+
+# calculate_sediment_deposition
+stack = []
+for block in raster:
+    for pixel i in block:
+        if pixel is a local high point and hasn't been calculated:
+            stack.push(pixel)
+
+        while stack:
+            f_j_weighted_sum = 0
+            for each of i's neighbors j:
+                f_j = neighbor value
+                if j flows into i:
+                    p_val = proportion of flow from j to i
+                    f_j_weighted_sum += p_val * f_j
+
+            downslope_sdr_weighted_sum = 0
+            for each of i's neighbors j:
+                if i flows into j:
+                    p_j = proportion of flow from i to j
+                    downslope_sdr_weighted_sum += sdr_j * p_j
+
+                    if all upslope neighbors of j are done:
+                        stack.push(j)
+        
+        if sdr_i == 1:
+            dr_i = 1
+        else:
+            dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
+        t_i = dr_i * f_j_weighted_sum  
+        f_i = (1 - dr_i) * f_j_weighted_sum + e_prime_i
+
+
+# ndr_eff_calculation
+
+stack = []
+for block in raster:
+    for pixel i in block:
+        if i is an outlet:
+            stack.push(i)
+
+    while stack:
+        i = stack.pop()
+        if stream_i == 1:
+            eff_i = 0
+        elif (crit_len_i == nodata or
+              max_eff_i == nodata or
+              flow_dir_i == 0):
+            eff_i = nodata
+        else:
+            eff_i = 0
+            for each of i's neighbors j:
+                if eff_j = 0:
+                    intermediate_retention = max_eff_i * (1 - step_factor)
+                elif max_eff_i > eff_j:
+                    intermediate_retention = eff_j * step_factor + max_eff_i * (1 - step_factor)
+                else:
+                    intermediate_retention = eff_j
+                eff_i += intermediate_retention * outflow_weight
+
+        for each of i's neighbors j:
+            if all of j's downslope neighbors are done:
+                stack.push(j)
+
+
+# swy calculate_local_recharge
+queue = []
+for block in raster:
+    for pixel i in block:
+        if i is a local high point:
+            queue.push(i)
+
+        while stack:
+            i = queue.pop()
+            i_inflow_sum = 0
+            for each of i's neighbors j:
+                if j flows into i:
+                    i_inflow_sum += flow from j to i
+                    if l_sum_avail_j is defined:
+                        mfd_array[j] = (l_sum_avail_i + l_avail_i) * flow from j to i
+
+            if all of i's upslope neighbors are defined:
+                l_sum_avail_i = sum(mfd_array)
+            else:
+                continue
+
+            calculate aet_i, p_i, qf_i
+            l_i = p_i - qf_i - aet_i
+            l_avail_i = min(gamma*l_i, l_i)
+
+            for each of i's neighbors j:
+                if i flows into j:
+                    queue.push(j)
+
+# swy route_baseflow_sum
+# flow_dir, l, l_avail, l_sum, stream -> b, b_sum
+stack = []
+for block in raster:
+    for pixel i in block:
+        if i doesn't flow into any stream pixel:
+            stack.push(i)
+
+        while stack:
+            i = stack.pop()
+            if i already visited:
+                continue
+
+            b_sum_i = 0
+            downslope_defined = True
+            for each of i's neighbors j:
+                if i flows into j:
+                    p_ij_base = flow from i to j
+
+                    if stream_j:
+                        b_sum_i += p_ij_base
+                    else:
+                        if b_sum_j is undefined:
+                            downslope_defined = False
+                            break
+
+                        if l_sum_j != 0 and (l_sum_j - l_j) != 0:
+                            b_sum_i += p_ij_base * (
+                                (1-l_avail_j / l_sum_j)*(
+                                    b_sum_j / (l_sum_j - l_j)))
+                        else:
+                            b_sum_i += p_ij_base
+
+            if not downslope_defined:
+                continue
+
+            b_sum_i = l_sum_i * b_sum_i
+
+            if l_sum_i == 0:
+                b_i = 0
+            else:
+                b_i = max(b_sum_i * l_i / l_sum_i, 0)
+
+            for each of i's neighbors j:
+                if j flows into i:
+                    stack.push(j)
+
+
+
+
+
+
+
+
+
+
