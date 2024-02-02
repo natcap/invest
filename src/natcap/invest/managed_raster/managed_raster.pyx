@@ -306,4 +306,3 @@ cdef class _ManagedRaster:
         if self.write_mode:
             raster_band = None
             raster = None
-

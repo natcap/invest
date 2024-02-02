@@ -41,7 +41,7 @@ from libcpp.queue cimport queue
 from libc cimport math
 cimport numpy
 cimport cython
-from natcap.invest.managed_raster.managed_raster cimport _ManagedRaster
+from ..managed_raster.managed_raster cimport _ManagedRaster
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())

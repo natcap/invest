@@ -18,7 +18,7 @@ from libcpp.pair cimport pair
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
 from libc.time cimport time as ctime
-from natcap.invest.managed_raster.managed_raster cimport _ManagedRaster
+from ..managed_raster.managed_raster cimport _ManagedRaster
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t

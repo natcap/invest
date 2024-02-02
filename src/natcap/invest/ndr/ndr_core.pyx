@@ -13,7 +13,7 @@ from osgeo import gdal
 
 from libcpp.stack cimport stack
 from libc.math cimport exp
-from natcap.invest.managed_raster.managed_raster cimport _ManagedRaster
+from ..managed_raster.managed_raster cimport _ManagedRaster
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
