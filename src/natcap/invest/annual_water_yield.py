@@ -376,61 +376,61 @@ MODEL_SPEC = {
                             }
                         }
                     }
+                }
+            }
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "clipped_lulc.tif": {
+                    "about": "Aligned and clipped copy of LULC input.",
+                    "bands": {1: {"type": "integer"}}
                 },
-                "intermediate": {
-                    "type": "directory",
-                    "contents": {
-                        "clipped_lulc.tif": {
-                            "about": "Aligned and clipped copy of LULC input.",
-                            "bands": {1: {"type": "integer"}}
-                        },
-                        "depth_to_root_rest_layer.tif": {
-                            "about": (
-                                "Aligned and clipped copy of root restricting "
-                                "layer depth input."),
-                            "bands": {
-                                1: {"type": "number", "units": u.millimeter}
-                            }
-                        },
-                        "eto.tif": {
-                            "about": "Aligned and clipped copy of ET0 input.",
-                            "bands": {
-                                1: {"type": "number", "units": u.millimeter}
-                            }
-                        },
-                        "kc_raster.tif": {
-                            "about": "Map of KC values.",
-                            "bands": {
-                                1: {"type": "number", "units": u.none}
-                            }
-                        },
-                        "pawc.tif": {
-                            "about": "Aligned and clipped copy of PAWC input.",
-                            "bands": {1: {"type": "ratio"}},
-                        },
-                        "pet.tif": {
-                            "about": "Map of potential evapotranspiration.",
-                            "bands": {
-                                1: {"type": "number", "units": u.millimeter}
-                            }
-                        },
-                        "precip.tif": {
-                            "about": "Aligned and clipped copy of precipitation input.",
-                            "bands": {
-                                1: {"type": "number", "units": u.millimeter}
-                            }
-                        },
-                        "root_depth.tif": {
-                            "about": "Map of root depth.",
-                            "bands": {
-                                1: {"type": "number", "units": u.millimeter}
-                            }
-                        },
-                        "veg.tif": {
-                            "about": "Map of vegetated state.",
-                            "bands": {1: {"type": "integer"}},
-                        }
+                "depth_to_root_rest_layer.tif": {
+                    "about": (
+                        "Aligned and clipped copy of root restricting "
+                        "layer depth input."),
+                    "bands": {
+                        1: {"type": "number", "units": u.millimeter}
                     }
+                },
+                "eto.tif": {
+                    "about": "Aligned and clipped copy of ET0 input.",
+                    "bands": {
+                        1: {"type": "number", "units": u.millimeter}
+                    }
+                },
+                "kc_raster.tif": {
+                    "about": "Map of KC values.",
+                    "bands": {
+                        1: {"type": "number", "units": u.none}
+                    }
+                },
+                "pawc.tif": {
+                    "about": "Aligned and clipped copy of PAWC input.",
+                    "bands": {1: {"type": "ratio"}},
+                },
+                "pet.tif": {
+                    "about": "Map of potential evapotranspiration.",
+                    "bands": {
+                        1: {"type": "number", "units": u.millimeter}
+                    }
+                },
+                "precip.tif": {
+                    "about": "Aligned and clipped copy of precipitation input.",
+                    "bands": {
+                        1: {"type": "number", "units": u.millimeter}
+                    }
+                },
+                "root_depth.tif": {
+                    "about": "Map of root depth.",
+                    "bands": {
+                        1: {"type": "number", "units": u.millimeter}
+                    }
+                },
+                "veg.tif": {
+                    "about": "Map of vegetated state.",
+                    "bands": {1: {"type": "integer"}},
                 }
             }
         },
