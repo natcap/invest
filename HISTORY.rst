@@ -52,6 +52,12 @@ Unreleased Changes
       administrative units vector now has the correct values for these fields,
       consistent with the user's guide chapter.
       https://github.com/natcap/invest/issues/1512
+* SDR
+    * Fixed an issue encountered in the sediment deposition function where
+      rasters with more than 2^32 pixels would raise a cryptic error relating
+      to negative dimensions. https://github.com/natcap/invest/issues/1431
+    * Optimized the creation of the summary vector by minimizing the number of
+      times the target vector needs to be rasterized.
 
 3.14.1 (2023-12-18)
 -------------------
