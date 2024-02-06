@@ -245,33 +245,28 @@ cdef class _ManagedRaster:
             if dirty_itr == self.dirty_blocks.end():
                 self.dirty_blocks.insert(block_index)
 
-    cdef inline double get(self, long xi, long yi) except *:
+    cdef inline double get(self, long xi, long yi):
         """Return the value of the pixel at `xi,yi`."""
         cdef int block_xi = xi >> self.block_xbits
         cdef int block_yi = yi >> self.block_ybits
         # this is the flat index for the block
         cdef int block_index = block_yi * self.block_nx + block_xi
         if not self.lru_cache.exist(block_index):
-            try:
-                self._load_block(block_index)
-            except ValueError as error:
-                print(f".get() failed")
-                print(f"    xi={xi}, yi={yi}, block_xi={block_xi}, block_yi={block_yi}, block_index={block_index}")
-                raise error
+            self._load_block(block_index)
         return self.lru_cache.get(
             block_index)[
                 ((yi & (self.block_ymod))<<self.block_xbits) +
                 (xi & (self.block_xmod))]
 
-    cdef void _load_block(self, long block_index) except *:
-        cdef long block_xi = block_index % self.block_nx
-        cdef long block_yi = block_index // self.block_nx
+    cdef void _load_block(self, int block_index) except *:
+        cdef int block_xi = block_index % self.block_nx
+        cdef int block_yi = block_index // self.block_nx
 
         # we need the offsets to subtract from global indexes for cached array
-        cdef long xoff = block_xi << self.block_xbits
-        cdef long yoff = block_yi << self.block_ybits
+        cdef int xoff = block_xi << self.block_xbits
+        cdef int yoff = block_yi << self.block_ybits
 
-        cdef long xi_copy, yi_copy
+        cdef int xi_copy, yi_copy
         cdef numpy.ndarray[double, ndim=2] block_array
         cdef double *double_buffer
         cdef clist[BlockBufferPair] removed_value_list
@@ -280,8 +275,8 @@ cdef class _ManagedRaster:
 
         # initially the win size is the same as the block size unless
         # we're at the edge of a raster
-        cdef long win_xsize = self.block_xsize
-        cdef long win_ysize = self.block_ysize
+        cdef int win_xsize = self.block_xsize
+        cdef int win_ysize = self.block_ysize
 
         # load a new block
         if xoff+win_xsize > self.raster_x_size:
@@ -291,18 +286,10 @@ cdef class _ManagedRaster:
 
         raster = gdal.OpenEx(self.raster_path, gdal.OF_RASTER)
         raster_band = raster.GetRasterBand(self.band_id)
-        try:
-            block_array = raster_band.ReadAsArray(
-                xoff=xoff, yoff=yoff, win_xsize=win_xsize,
-                win_ysize=win_ysize).astype(
-                numpy.float64)
-        except ValueError as error:
-            print("Attempted to use the following dimensions:")
-            print(f"  self.block_nx={self.block_nx}, self.block_ny={self.block_ny}")
-            print(f"  block_xi={block_xi}, block_yi={block_yi}")
-            print(f"  xoff={xoff}, yoff={yoff}, win_xsize={win_xsize}, win_ysize={win_ysize}")
-            print(f"  block_index={block_index}")
-            raise error
+        block_array = raster_band.ReadAsArray(
+            xoff=xoff, yoff=yoff, win_xsize=win_xsize,
+            win_ysize=win_ysize).astype(
+            numpy.float64)
         raster_band = None
         raster = None
         double_buffer = <double*>PyMem_Malloc(
