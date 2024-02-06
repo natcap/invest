@@ -52,6 +52,9 @@ Unreleased Changes
       administrative units vector now has the correct values for these fields,
       consistent with the user's guide chapter.
       https://github.com/natcap/invest/issues/1512
+    * Fixed an issue where certain nodata values were not being handled
+      correctly, leading to pixel values of +/- infinity in the urban nature
+      balance output raster.  https://github.com/natcap/invest/issues/1519
 
 3.14.1 (2023-12-18)
 -------------------
