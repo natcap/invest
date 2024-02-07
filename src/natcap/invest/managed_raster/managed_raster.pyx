@@ -300,3 +300,22 @@ cdef class _ManagedRaster:
         if self.write_mode:
             raster_band = None
             raster = None
+
+
+cdef class ManagedFlowDirRaster(_ManagedRaster):
+
+    def __cinit__(self, raster_path, band_id, write_mode, flow_dir_type):
+        super().__init__(raster_path, band_id, write_mode)
+        flow_dir_type = flow_dir_type.lower()
+        if flow_dir_type not in {'mfd', 'd8'}:
+            raise ValueError('Invalid flow direction type provided')
+        self.flow_dir_type = flow_dir_type
+
+
+
+
+
+
+
+
+
