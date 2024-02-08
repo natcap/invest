@@ -12,71 +12,13 @@ from osgeo import gdal
 
 from libc.time cimport time as ctime
 from libcpp.stack cimport stack
-from ..managed_raster.managed_raster cimport _ManagedRaster
+from ..managed_raster.managed_raster cimport _ManagedRaster, ManagedFlowDirRaster
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
     time_t time(time_t*)
 
 LOGGER = logging.getLogger(__name__)
-
-
-# These offsets are for the neighbor rows and columns according to the
-# ordering: 3 2 1
-#           4 x 0
-#           5 6 7
-cdef int *ROW_OFFSETS = [0, -1, -1, -1,  0,  1, 1, 1]
-cdef int *COL_OFFSETS = [1,  1,  0, -1, -1, -1, 0, 1]
-cdef int* FLOW_DIR_REVERSE_DIRECTION = [4, 5, 6, 7, 0, 1, 2, 3]
-
-
-def is_local_high_point(int xi, int yi, _ManagedRaster flow_dir_raster):
-    ns = list(yield_upslope_neighbors(xi, yi, flow_dir_raster))
-    if ns:
-        return False
-    return True
-
-
-def yield_upslope_neighbors(int xi, int yi, _ManagedRaster flow_dir_raster):
-
-    upslope_neighbor_tuples = []
-    for n_dir in xrange(8):
-        xj = xi + COL_OFFSETS[n_dir]
-        yj = yi + ROW_OFFSETS[n_dir]
-        if (xj < 0 or xj >= flow_dir_raster.raster_x_size or
-                yj < 0 or yj >= flow_dir_raster.raster_y_size):
-            continue
-        flow_dir_j = <int>flow_dir_raster.get(xj, yj)
-        flow_dir_j_sum = sum(((flow_dir_j >> (n * 4)) & 0xF) for n in range(8))
-        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])))
-        if flow_ji:
-            upslope_neighbor_tuples.append(
-                (n_dir, xj, yj, float(flow_ji) / float(flow_dir_j_sum)))
-
-    for n, xj, yj, p_ji in upslope_neighbor_tuples:
-        yield n, xj, yj, p_ji
-
-
-def yield_downslope_neighbors(int xi, int yi, _ManagedRaster flow_dir_raster):
-    flow_dir = <int>flow_dir_raster.get(xi, yi)
-    flow_sum = 0
-    downslope_neighbor_tuples = []
-    for n_dir in xrange(8):
-        # flows in this direction
-        xj = xi + COL_OFFSETS[n_dir]
-        yj = yi + ROW_OFFSETS[n_dir]
-        if (xj < 0 or xj >= flow_dir_raster.raster_x_size or
-                yj < 0 or yj >= flow_dir_raster.raster_y_size):
-            continue
-        flow_ij = (flow_dir >> (n_dir * 4)) & 0xF
-        flow_sum += flow_ij
-        if flow_ij:
-            downslope_neighbor_tuples.append((n_dir, xj, yj, flow_ij))
-
-    for j, xj, yj, flow_ij in downslope_neighbor_tuples:
-        p_ij = float(flow_ij) / float(flow_sum)
-        yield j, xj, yj, p_ij
-
 
 
 def calculate_sediment_deposition(
@@ -142,8 +84,8 @@ def calculate_sediment_deposition(
         mfd_flow_direction_path, f_path,
         gdal.GDT_Float32, [target_nodata])
 
-    cdef _ManagedRaster mfd_flow_direction_raster = _ManagedRaster(
-        mfd_flow_direction_path, 1, False)
+    cdef ManagedFlowDirRaster mfd_flow_direction_raster = ManagedFlowDirRaster(
+        mfd_flow_direction_path, 1, False, 'mfd')
     cdef _ManagedRaster e_prime_raster = _ManagedRaster(
         e_prime_path, 1, False)
     cdef _ManagedRaster sdr_raster = _ManagedRaster(sdr_path, 1, False)
@@ -194,7 +136,7 @@ def calculate_sediment_deposition(
             for col_index in range(offset_dict['win_xsize']):
                 xs = offset_dict['xoff'] + col_index
 
-                seed_pixel = is_local_high_point(xs, ys, mfd_flow_direction_raster)
+                seed_pixel = mfd_flow_direction_raster.is_local_high_point(xs, ys)
 
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack
@@ -216,8 +158,9 @@ def calculate_sediment_deposition(
                     # the weighted sum of flux flowing onto this pixel from
                     # all neighbors
                     f_j_weighted_sum = 0
-                    for _, neighbor_col, neighbor_row, p_val in yield_upslope_neighbors(
-                            global_col, global_row, mfd_flow_direction_raster):
+                    for _, neighbor_col, neighbor_row, p_val in (
+                            mfd_flow_direction_raster.yield_upslope_neighbors(
+                                global_col, global_row)):
 
                         f_j = f_raster.get(neighbor_col, neighbor_row)
                         if f_j == target_nodata:
@@ -232,8 +175,9 @@ def calculate_sediment_deposition(
                     # neighbor
                     # (sum over k ∈ K of SDR_k * p(i,k) in the equation above)
                     downslope_sdr_weighted_sum = 0
-                    for j, neighbor_col, neighbor_row, p_j in yield_downslope_neighbors(
-                            global_col, global_row, mfd_flow_direction_raster):
+                    for j, neighbor_col, neighbor_row, p_j in (
+                            mfd_flow_direction_raster.yield_downslope_neighbors(
+                                global_col, global_row)):
                         sdr_j = sdr_raster.get(neighbor_col, neighbor_row)
                         if sdr_j == sdr_nodata:
                             continue
@@ -253,8 +197,9 @@ def calculate_sediment_deposition(
                         # completed
                         upslope_neighbors_processed = 1
                         # iterate over each neighbor-of-neighbor
-                        for k, ds_neighbor_col, ds_neighbor_row, flow in yield_upslope_neighbors(
-                                neighbor_col, neighbor_row, mfd_flow_direction_raster):
+                        for k, ds_neighbor_col, ds_neighbor_row, flow in (
+                                mfd_flow_direction_raster.yield_upslope_neighbors(
+                                    neighbor_col, neighbor_row)):
                             # no need to push the one we're currently
                             # calculating back onto the stack
                             if inflow_offsets[k] == j:

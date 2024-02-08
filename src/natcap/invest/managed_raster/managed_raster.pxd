@@ -37,3 +37,8 @@ cdef class _ManagedRaster:
     cdef inline void set(_ManagedRaster self, long xi, long yi, double value)
     cdef inline double get(_ManagedRaster self, long xi, long yi)
     cdef void _load_block(_ManagedRaster self, int block_index) except *
+
+
+cdef class ManagedFlowDirRaster(_ManagedRaster):
+    cdef int foo
+

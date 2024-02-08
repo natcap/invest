@@ -25,12 +25,20 @@ ctypedef pair[int, double*] BlockBufferPair
 # Number of raster blocks to hold in memory at once per Managed Raster
 cdef int MANAGED_RASTER_N_BLOCKS = 2**6
 
+# These offsets are for the neighbor rows and columns according to the
+# ordering: 3 2 1
+#           4 x 0
+#           5 6 7
+cdef int *ROW_OFFSETS = [0, -1, -1, -1,  0,  1, 1, 1]
+cdef int *COL_OFFSETS = [1,  1,  0, -1, -1, -1, 0, 1]
+cdef int* FLOW_DIR_REVERSE_DIRECTION = [4, 5, 6, 7, 0, 1, 2, 3]
+
 # a class to allow fast random per-pixel access to a raster for both setting
 # and reading pixels.  Copied from src/pygeoprocessing/routing/routing.pyx,
 # revision 891288683889237cfd3a3d0a1f09483c23489fca.
 cdef class _ManagedRaster:
 
-    def __cinit__(self, raster_path, band_id, write_mode):
+    def __cinit__(self, raster_path, band_id, write_mode, *args):
         """Create new instance of Managed Raster.
 
         Args:
@@ -304,17 +312,60 @@ cdef class _ManagedRaster:
 
 cdef class ManagedFlowDirRaster(_ManagedRaster):
 
-    def __cinit__(self, raster_path, band_id, write_mode, flow_dir_type):
-        super().__init__(raster_path, band_id, write_mode)
-        flow_dir_type = flow_dir_type.lower()
-        if flow_dir_type not in {'mfd', 'd8'}:
-            raise ValueError('Invalid flow direction type provided')
-        self.flow_dir_type = flow_dir_type
+    def __init__(self, raster_path, band_id, write_mode, flow_dir_type):
+        pass
+        # flow_dir_type = flow_dir_type.lower()
+        # if flow_dir_type not in {'mfd', 'd8'}:
+        #     raise ValueError('Invalid flow direction type provided')
+        # self.flow_dir_type = flow_dir_type
 
 
+    def is_local_high_point(self, int xi, int yi):
+        ns = list(self.yield_upslope_neighbors(xi, yi))
+        if ns:
+            return False
+        return True
 
 
+    def yield_upslope_neighbors(self, int xi, int yi):
 
+        upslope_neighbor_tuples = []
+        for n_dir in xrange(8):
+            xj = xi + COL_OFFSETS[n_dir]
+            yj = yi + ROW_OFFSETS[n_dir]
+            if (xj < 0 or xj >= self.raster_x_size or
+                    yj < 0 or yj >= self.raster_y_size):
+                continue
+            flow_dir_j = <int>self.get(xj, yj)
+            flow_dir_j_sum = sum(((flow_dir_j >> (n * 4)) & 0xF) for n in range(8))
+            flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])))
+            if flow_ji:
+                upslope_neighbor_tuples.append(
+                    (n_dir, xj, yj, float(flow_ji) / float(flow_dir_j_sum)))
+
+        for n, xj, yj, p_ji in upslope_neighbor_tuples:
+            yield n, xj, yj, p_ji
+
+
+    def yield_downslope_neighbors(self, int xi, int yi):
+        flow_dir = <int>self.get(xi, yi)
+        flow_sum = 0
+        downslope_neighbor_tuples = []
+        for n_dir in xrange(8):
+            # flows in this direction
+            xj = xi + COL_OFFSETS[n_dir]
+            yj = yi + ROW_OFFSETS[n_dir]
+            if (xj < 0 or xj >= self.raster_x_size or
+                    yj < 0 or yj >= self.raster_y_size):
+                continue
+            flow_ij = (flow_dir >> (n_dir * 4)) & 0xF
+            flow_sum += flow_ij
+            if flow_ij:
+                downslope_neighbor_tuples.append((n_dir, xj, yj, flow_ij))
+
+        for j, xj, yj, flow_ij in downslope_neighbor_tuples:
+            p_ij = float(flow_ij) / float(flow_sum)
+            yield j, xj, yj, p_ij
 
 
 
