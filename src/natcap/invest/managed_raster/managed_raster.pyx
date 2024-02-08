@@ -347,7 +347,7 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             yield n, xj, yj, p_ji
 
 
-    def yield_downslope_neighbors(self, int xi, int yi):
+    def yield_downslope_neighbors(self, int xi, int yi, skip_oob=True):
         flow_dir = <int>self.get(xi, yi)
         flow_sum = 0
         downslope_neighbor_tuples = []
@@ -355,7 +355,7 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             # flows in this direction
             xj = xi + COL_OFFSETS[n_dir]
             yj = yi + ROW_OFFSETS[n_dir]
-            if (xj < 0 or xj >= self.raster_x_size or
+            if skip_oob and (xj < 0 or xj >= self.raster_x_size or
                     yj < 0 or yj >= self.raster_y_size):
                 continue
             flow_ij = (flow_dir >> (n_dir * 4)) & 0xF
