@@ -217,14 +217,19 @@ class UNATests(unittest.TestCase):
             [nodata, 100.5],
             [75, 100]], dtype=numpy.float32)
         urban_nature_demand = 50
+        supply_path = os.path.join(self.workspace_dir, 'supply.path')
+        target_path = os.path.join(self.workspace_dir, 'target.path')
 
-        population = numpy.array([
-            [50, 100],
-            [40.75, nodata]], dtype=numpy.float32)
+        pygeoprocessing.numpy_array_to_raster(
+            urban_nature_supply_percapita, nodata, _DEFAULT_PIXEL_SIZE,
+            _DEFAULT_ORIGIN, _DEFAULT_SRS.ExportToWkt(), supply_path)
 
-        urban_nature_budget = (
-            urban_nature_access._urban_nature_balance_percapita_op(
-                urban_nature_supply_percapita, urban_nature_demand))
+        urban_nature_access._calculate_urban_nature_balance_percapita(
+            supply_path, urban_nature_demand, target_path)
+
+        urban_nature_budget = pygeoprocessing.raster_to_numpy_array(
+            target_path)
+
         expected_urban_nature_budget = numpy.array([
             [nodata, 50.5],
             [25, 50]], dtype=numpy.float32)
