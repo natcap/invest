@@ -18,7 +18,7 @@ from libcpp.pair cimport pair
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
 from libc.time cimport time as ctime
-from ..managed_raster.managed_raster cimport _ManagedRaster
+from ..managed_raster.managed_raster cimport _ManagedRaster, ManagedFlowDirRaster
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -30,75 +30,6 @@ cdef int is_close(double x, double y):
 LOGGER = logging.getLogger(__name__)
 
 cdef int N_MONTHS = 12
-
-# used to loop over neighbors and offset the x/y values as defined below
-#  321
-#  4x0
-#  567
-cdef int* NEIGHBOR_OFFSET_ARRAY = [
-    1, 0,  # 0
-    1, -1,  # 1
-    0, -1,  # 2
-    -1, -1,  # 3
-    -1, 0,  # 4
-    -1, 1,  # 5
-    0, 1,  # 6
-    1, 1  # 7
-    ]
-
-# index into this array with a direction and get the index for the reverse
-# direction. Useful for determining the direction a neighbor flows into a
-# cell.
-cdef int* FLOW_DIR_REVERSE_DIRECTION = [4, 5, 6, 7, 0, 1, 2, 3]
-
-
-def is_local_high_point(int xi, int yi, _ManagedRaster flow_dir_raster):
-    ns = list(yield_upslope_neighbors(xi, yi, flow_dir_raster))
-    if ns:
-        return False
-    return True
-
-
-def yield_upslope_neighbors(int xi, int yi, _ManagedRaster flow_dir_raster):
-
-    upslope_neighbor_tuples = []
-    flow_sum = 0.0
-    for n_dir in xrange(8):
-        xj = xi + NEIGHBOR_OFFSET_ARRAY[2 * n_dir]
-        yj = yi + NEIGHBOR_OFFSET_ARRAY[2 * n_dir + 1]
-        if (xj < 0 or xj >= flow_dir_raster.raster_x_size or
-                yj < 0 or yj >= flow_dir_raster.raster_y_size):
-            continue
-        flow_dir_j = <int>flow_dir_raster.get(xj, yj)
-        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])))
-        if flow_ji:
-            upslope_neighbor_tuples.append((xj, yj, flow_ji))
-            flow_sum += flow_ji
-
-    for xj, yj, flow_ji in upslope_neighbor_tuples:
-        p_ji = float(flow_ji) / flow_sum
-        yield xj, yj, p_ji
-
-
-def yield_downslope_neighbors(int xi, int yi, _ManagedRaster flow_dir_raster):
-    flow_dir = <int>flow_dir_raster.get(xi, yi)
-    flow_sum = 0.0
-    downslope_neighbor_tuples = []
-    for n_dir in xrange(8):
-        flow_ij = (flow_dir >> (n_dir * 4)) & 0xF
-        flow_sum += flow_ij
-        if flow_ij:
-            # flows in this direction
-            xj = xi + NEIGHBOR_OFFSET_ARRAY[2 * n_dir]
-            yj = yi + NEIGHBOR_OFFSET_ARRAY[2 * n_dir + 1]
-            if (xj < 0 or xj >= flow_dir_raster.raster_x_size or
-                    yj < 0 or yj >= flow_dir_raster.raster_y_size):
-                continue
-            downslope_neighbor_tuples.append((xj, yj, flow_ij))
-
-    for xj, yj, flow_ij in downslope_neighbor_tuples:
-        p_ij = float(flow_ij) / flow_sum
-        yield xj, yj, p_ij
 
 
 cpdef calculate_local_recharge(
@@ -175,7 +106,8 @@ cpdef calculate_local_recharge(
     flow_dir_raster_info = pygeoprocessing.get_raster_info(flow_dir_mfd_path)
     flow_dir_nodata = flow_dir_raster_info['nodata'][0]
     raster_x_size, raster_y_size = flow_dir_raster_info['raster_size']
-    cdef _ManagedRaster flow_raster = _ManagedRaster(flow_dir_mfd_path, 1, 0)
+    cdef ManagedFlowDirRaster flow_raster = ManagedFlowDirRaster(
+        flow_dir_mfd_path, 1, 0, 'mfd')
 
     # make sure that user input nodata values are defined
     # set to -1 if not defined
@@ -262,7 +194,7 @@ cpdef calculate_local_recharge(
             for xs in xrange(offset_dict['win_xsize']):
                 xs_root = offset_dict['xoff'] + xs
 
-                if is_local_high_point(xs_root, ys_root, flow_raster):
+                if flow_raster.is_local_high_point(xs_root, ys_root):
                     work_queue.push(
                         pair[long, long](xs_root, ys_root))
 
@@ -283,7 +215,7 @@ cpdef calculate_local_recharge(
                     # mfd values yet
                     j_neighbor_end_index = 0
                     l_sum_avail_i = 0
-                    for xj, yj, p_ij in yield_upslope_neighbors(xi, yi, flow_raster):
+                    for _, xj, yj, p_ij in flow_raster.yield_upslope_neighbors(xi, yi):
                         # pixel flows inward, check upslope
                         l_sum_avail_j = target_l_sum_avail_raster.get(xj, yj)
                         if is_close(l_sum_avail_j, target_nodata):
@@ -360,8 +292,8 @@ cpdef calculate_local_recharge(
                     target_li_raster.set(xi, yi, l_i)
                     target_li_avail_raster.set(xi, yi, l_avail_i)
 
-                    for xi_n, yi_n, _ in yield_downslope_neighbors(
-                            xi, yi, flow_raster):
+                    for _, xi_n, yi_n, _ in flow_raster.yield_downslope_neighbors(
+                            xi, yi):
                         work_queue.push(pair[long, long](xi_n, yi_n))
 
 
@@ -427,8 +359,8 @@ def route_baseflow_sum(
     cdef _ManagedRaster l_raster = _ManagedRaster(l_path, 1, 0)
     cdef _ManagedRaster l_avail_raster = _ManagedRaster(l_avail_path, 1, 0)
     cdef _ManagedRaster l_sum_raster = _ManagedRaster(l_sum_path, 1, 0)
-    cdef _ManagedRaster flow_dir_mfd_raster = _ManagedRaster(
-        flow_dir_mfd_path, 1, 0)
+    cdef ManagedFlowDirRaster flow_dir_mfd_raster = ManagedFlowDirRaster(
+        flow_dir_mfd_path, 1, 0, 'mfd')
 
     cdef _ManagedRaster stream_raster = _ManagedRaster(stream_path, 1, 0)
 
@@ -446,8 +378,8 @@ def route_baseflow_sum(
                     current_pixel += 1
                     continue
                 outlet = 1
-                for xj, yj, p_ij in yield_downslope_neighbors(
-                        xs_root, ys_root, flow_dir_mfd_raster):
+                for _, xj, yj, p_ij in flow_dir_mfd_raster.yield_downslope_neighbors(
+                        xs_root, ys_root):
                     stream_val = <int>stream_raster.get(xj, yj)
                     if stream_val != stream_nodata:
                         outlet = 0
@@ -474,7 +406,7 @@ def route_baseflow_sum(
                     b_sum_i = 0.0
                     downslope_defined = 1
 
-                    for xj, yj, p_ij in yield_downslope_neighbors(xi, yi, flow_dir_mfd_raster):
+                    for _, xj, yj, p_ij in flow_dir_mfd_raster.yield_downslope_neighbors(xi, yi):
                         stream_val = <int>stream_raster.get(xj, yj)
 
                         if stream_val:
@@ -508,5 +440,5 @@ def route_baseflow_sum(
                     target_b_raster.set(xi, yi, b_i)
                     current_pixel += 1
 
-                    for xj, yj, _ in yield_upslope_neighbors(xi, yi, flow_dir_mfd_raster):
+                    for _, xj, yj, _ in flow_dir_mfd_raster.yield_upslope_neighbors(xi, yi):
                         work_stack.push(pair[long, long](xj, yj))
