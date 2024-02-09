@@ -213,7 +213,7 @@ def ndr_eff_calculation(
                     raise Exception("got to a cell that has no outflow!")
             # search upslope to see if we need to push a cell on the stack
             # for i in range(8):
-            for _, neighbor_col, neighbor_row, _ in (
+            for i, neighbor_col, neighbor_row, _ in (
                     mfd_flow_direction_raster.yield_upslope_neighbors(
                         global_col, global_row)):
 
