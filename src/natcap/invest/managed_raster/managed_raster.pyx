@@ -1,4 +1,4 @@
-# cython: profile=False
+# cython: profile=True
 # cython: language_level=3
 # distutils: language = c++
 import os
@@ -314,20 +314,42 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
 
     def __init__(self, raster_path, band_id, write_mode, flow_dir_type):
         pass
-        # flow_dir_type = flow_dir_type.lower()
-        # if flow_dir_type not in {'mfd', 'd8'}:
-        #     raise ValueError('Invalid flow direction type provided')
-        # self.flow_dir_type = flow_dir_type
 
+    cdef bint is_local_high_point(self, long xi, long yi):
+        """Check if a given pixel is a local high point.
 
-    def is_local_high_point(self, int xi, int yi):
+        Args:
+            xi (int): x coordinate of the pixel to consider
+            yi (int): y coordinate of the pixel to consider
+
+        Returns:
+            True if the pixel is a local high point, i.e. it has no
+            upslope neighbors; False otherwise.
+        """
         ns = list(self.yield_upslope_neighbors(xi, yi))
         if ns:
             return False
         return True
 
+    def yield_upslope_neighbors(self, long xi, long yi):
+        """Yield upslope neighbors of a given pixel.
 
-    def yield_upslope_neighbors(self, int xi, int yi):
+        Args:
+            xi (int): x coordinate of the pixel i to consider
+            yi (int): y coordinate of the pixel i to consider
+            skip_oob (bool): if True, do not yield neighbors that fall
+                outside the raster bounds.
+
+        Yields:
+            (j, xj, yj, p_ij) tuples representing neighboring pixels, where
+            j is the index 0-7 of the neighbor,
+            xj is the x coordinate of pixel j in raster space,
+            yj is the y coordinate of pixel j in raster space, and
+            p_ij is the proportion of flow from pixel j that flows into pixel i
+        """
+        cdef int n_dir, flow_dir_j
+        cdef long xj, yj
+        cdef float flow_ji, flow_dir_j_sum
 
         upslope_neighbor_tuples = []
         for n_dir in xrange(8):
@@ -341,13 +363,31 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])))
             if flow_ji:
                 upslope_neighbor_tuples.append(
-                    (n_dir, xj, yj, float(flow_ji) / float(flow_dir_j_sum)))
+                    (n_dir, xj, yj, flow_ji / flow_dir_j_sum))
 
-        for n, xj, yj, p_ji in upslope_neighbor_tuples:
-            yield n, xj, yj, p_ji
+        for n_dir, xj, yj, p_ji in upslope_neighbor_tuples:
+            yield n_dir, xj, yj, p_ji
 
+    def yield_downslope_neighbors(self, long xi, long yi, bint skip_oob=True):
+        """Yield downslope neighbors of a given pixel.
 
-    def yield_downslope_neighbors(self, int xi, int yi, skip_oob=True):
+        Args:
+            xi (int): x coordinate of the pixel i to consider
+            yi (int): y coordinate of the pixel i to consider
+            skip_oob (bool): if True, do not yield neighbors that fall
+                outside the raster bounds.
+
+        Yields:
+            (j, xj, yj, p_ij) tuples representing neighboring pixels, where
+            j is the index 0-7 of the neighbor,
+            xj is the x coordinate of pixel j in raster space,
+            yj is the y coordinate of pixel j in raster space, and
+            p_ij is the proportion of flow from pixel i that flows into pixel j
+        """
+        cdef int flow_dir, n_dir
+        cdef long xj, yj
+        cdef float flow_ij, flow_sum, p_ij
+
         flow_dir = <int>self.get(xi, yi)
         flow_sum = 0
         downslope_neighbor_tuples = []
@@ -364,9 +404,5 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
                 downslope_neighbor_tuples.append((n_dir, xj, yj, flow_ij))
 
         for j, xj, yj, flow_ij in downslope_neighbor_tuples:
-            p_ij = float(flow_ij) / float(flow_sum)
+            p_ij = flow_ij / flow_sum
             yield j, xj, yj, p_ij
-
-
-
-

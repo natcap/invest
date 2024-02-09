@@ -40,5 +40,6 @@ cdef class _ManagedRaster:
 
 
 cdef class ManagedFlowDirRaster(_ManagedRaster):
-    cdef int foo
+
+    cdef bint is_local_high_point(self, long xi, long yi)
 
