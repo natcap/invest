@@ -94,7 +94,7 @@ def ndr_eff_calculation(
         return result
 
     # convert mfd raster to binary mfd
-    # each value is an 8-digit binary number 00000000
+    # each value is an 8-digit binary number
     # where 1 indicates that the pixel drains in that direction
     # and 0 indicates that it does not drain in that direction
     pygeoprocessing.raster_calculator(
@@ -109,7 +109,7 @@ def ndr_eff_calculation(
     cdef unsigned long flat_index
     cdef long outflow_weight, flow_dir
     cdef long ds_col, ds_row, i
-    cdef float current_step_factor, step_size, crit_len, outflow_weight_sum
+    cdef float current_step_factor, step_size, crit_len
     cdef long neighbor_row, neighbor_col
     cdef int neighbor_outflow_dir, neighbor_outflow_dir_mask, neighbor_process_flow_dir
     cdef int outflow_dirs, dir_mask
@@ -210,11 +210,10 @@ def ndr_eff_calculation(
                     effective_retention_raster.set(
                         global_col, global_row, working_retention_eff)
                 else:
-                    LOGGER.error('outflow_weight_sum %s', outflow_weight_sum)
                     raise Exception("got to a cell that has no outflow!")
             # search upslope to see if we need to push a cell on the stack
             # for i in range(8):
-            for i, neighbor_col, neighbor_row, _ in (
+            for _, neighbor_col, neighbor_row, _ in (
                     mfd_flow_direction_raster.yield_upslope_neighbors(
                         global_col, global_row)):
 

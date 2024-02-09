@@ -136,12 +136,10 @@ def calculate_sediment_deposition(
             for col_index in range(offset_dict['win_xsize']):
                 xs = offset_dict['xoff'] + col_index
 
-                seed_pixel = mfd_flow_direction_raster.is_local_high_point(xs, ys)
-
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack
-                if seed_pixel and sediment_deposition_raster.get(
-                        xs, ys) == target_nodata:
+                if (mfd_flow_direction_raster.is_local_high_point(xs, ys) and
+                        sediment_deposition_raster.get(xs, ys) == target_nodata):
                     processing_stack.push(ys * n_cols + xs)
 
                 while processing_stack.size() > 0:
