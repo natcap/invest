@@ -38,7 +38,7 @@ cdef int* FLOW_DIR_REVERSE_DIRECTION = [4, 5, 6, 7, 0, 1, 2, 3]
 # revision 891288683889237cfd3a3d0a1f09483c23489fca.
 cdef class _ManagedRaster:
 
-    def __cinit__(self, raster_path, band_id, write_mode, *args):
+    def __cinit__(self, raster_path, band_id, write_mode):
         """Create new instance of Managed Raster.
 
         Args:
@@ -311,9 +311,6 @@ cdef class _ManagedRaster:
 
 
 cdef class ManagedFlowDirRaster(_ManagedRaster):
-
-    def __init__(self, raster_path, band_id, write_mode, flow_dir_type):
-        pass
 
     cdef bint is_local_high_point(self, long xi, long yi):
         """Check if a given pixel is a local high point.

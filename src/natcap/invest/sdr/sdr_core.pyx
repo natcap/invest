@@ -85,7 +85,7 @@ def calculate_sediment_deposition(
         gdal.GDT_Float32, [target_nodata])
 
     cdef ManagedFlowDirRaster mfd_flow_direction_raster = ManagedFlowDirRaster(
-        mfd_flow_direction_path, 1, False, 'mfd')
+        mfd_flow_direction_path, 1, False)
     cdef _ManagedRaster e_prime_raster = _ManagedRaster(
         e_prime_path, 1, False)
     cdef _ManagedRaster sdr_raster = _ManagedRaster(sdr_path, 1, False)
@@ -197,7 +197,7 @@ def calculate_sediment_deposition(
                         # completed
                         upslope_neighbors_processed = 1
                         # iterate over each neighbor-of-neighbor
-                        for k, ds_neighbor_col, ds_neighbor_row, flow in (
+                        for k, ds_neighbor_col, ds_neighbor_row, _ in (
                                 mfd_flow_direction_raster.yield_upslope_neighbors(
                                     neighbor_col, neighbor_row)):
                             # no need to push the one we're currently

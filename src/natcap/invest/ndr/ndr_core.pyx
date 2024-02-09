@@ -61,8 +61,6 @@ def ndr_eff_calculation(
         dir=os.path.dirname(effective_retention_path))
     os.close(fp)
 
-    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
-    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
     cdef long n_cols, n_rows
@@ -86,7 +84,7 @@ def ndr_eff_calculation(
     cdef _ManagedRaster effective_retention_raster = _ManagedRaster(
         effective_retention_path, 1, True)
     cdef ManagedFlowDirRaster mfd_flow_direction_raster = ManagedFlowDirRaster(
-        mfd_flow_direction_path, 1, False, 'mfd')
+        mfd_flow_direction_path, 1, False)
 
     # create direction raster in bytes
     def _mfd_to_flow_dir_op(mfd_array):
@@ -127,8 +125,9 @@ def ndr_eff_calculation(
                 should_seed = 0
                 # see if this pixel drains to nodata or the edge, if so it's
                 # a drain
-                for i, neighbor_col, neighbor_row, _ in mfd_flow_direction_raster.yield_downslope_neighbors(
-                        global_col, global_row, skip_oob=False):
+                for i, neighbor_col, neighbor_row, _ in (
+                        mfd_flow_direction_raster.yield_downslope_neighbors(
+                            global_col, global_row, skip_oob=False)):
                     dir_mask = 1 << i
                     if (neighbor_col < 0 or neighbor_col >= n_cols or
                         neighbor_row < 0 or neighbor_row >= n_rows or
@@ -168,8 +167,9 @@ def ndr_eff_calculation(
             else:
                 working_retention_eff = 0.0
                 has_outflow = False
-                for i, ds_col, ds_row, p in mfd_flow_direction_raster.yield_downslope_neighbors(
-                        global_col, global_row, skip_oob=False):
+                for i, ds_col, ds_row, p_ij in (
+                        mfd_flow_direction_raster.yield_downslope_neighbors(
+                            global_col, global_row, skip_oob=False)):
                     has_outflow = True
                     if (ds_col < 0 or ds_col >= n_cols or
                         ds_row < 0 or ds_row >= n_rows):
@@ -204,7 +204,7 @@ def ndr_eff_calculation(
                     else:
                         intermediate_retention = neighbor_effective_retention
 
-                    working_retention_eff += intermediate_retention * p
+                    working_retention_eff += intermediate_retention * p_ij
 
                 if has_outflow:
                     effective_retention_raster.set(
@@ -214,8 +214,9 @@ def ndr_eff_calculation(
                     raise Exception("got to a cell that has no outflow!")
             # search upslope to see if we need to push a cell on the stack
             # for i in range(8):
-            for i, neighbor_col, neighbor_row, _ in mfd_flow_direction_raster.yield_upslope_neighbors(
-                    global_col, global_row):
+            for i, neighbor_col, neighbor_row, _ in (
+                    mfd_flow_direction_raster.yield_upslope_neighbors(
+                        global_col, global_row)):
 
                 neighbor_outflow_dir = inflow_offsets[i]
                 neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir
