@@ -55,6 +55,12 @@ Unreleased Changes
     * Fixed an issue where certain nodata values were not being handled
       correctly, leading to pixel values of +/- infinity in the urban nature
       balance output raster.  https://github.com/natcap/invest/issues/1519
+* SDR
+    * Fixed an issue encountered in the sediment deposition function where
+      rasters with more than 2^32 pixels would raise a cryptic error relating
+      to negative dimensions. https://github.com/natcap/invest/issues/1431
+    * Optimized the creation of the summary vector by minimizing the number of
+      times the target vector needs to be rasterized.
 
 3.14.1 (2023-12-18)
 -------------------
