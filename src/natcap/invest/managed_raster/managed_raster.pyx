@@ -334,14 +334,12 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
         Args:
             xi (int): x coordinate of the pixel i to consider
             yi (int): y coordinate of the pixel i to consider
-            skip_oob (bool): if True, do not yield neighbors that fall
-                outside the raster bounds.
 
         Yields:
             (j, xj, yj, p_ij) tuples representing neighboring pixels, where
             j is the index 0-7 of the neighbor,
-            xj is the x coordinate of pixel j in raster space,
-            yj is the y coordinate of pixel j in raster space, and
+            xj is the x coordinate of pixel j in pixel space,
+            yj is the y coordinate of pixel j in pixel space, and
             p_ij is the proportion of flow from pixel j that flows into pixel i
         """
         cdef int n_dir, flow_dir_j
