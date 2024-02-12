@@ -354,8 +354,6 @@ def route_baseflow_sum(
     current_pixel = 0
     for offset_dict in pygeoprocessing.iterblocks(
             (flow_dir_mfd_path, 1), offset_only=True, largest_block=0):
-
-        # search block for a peak pixel where no other pixel drains to it.
         for ys in xrange(offset_dict['win_ysize']):
             ys_root = offset_dict['yoff'] + ys
             for xs in xrange(offset_dict['win_xsize']):
