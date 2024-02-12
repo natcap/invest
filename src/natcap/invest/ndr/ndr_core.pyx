@@ -24,9 +24,6 @@ LOGGER = logging.getLogger(__name__)
 # Within a stream, the effective retention is 0
 cdef int STREAM_EFFECTIVE_RETENTION = 0
 
-cdef int is_close(double x, double y):
-    return abs(x-y) <= (1e-8+1e-05*abs(y))
-
 def ndr_eff_calculation(
         mfd_flow_direction_path, stream_path, retention_eff_lulc_path,
         crit_len_path, effective_retention_path):
@@ -158,8 +155,8 @@ def ndr_eff_calculation(
             if stream_raster.get(global_col, global_row) == 1:
                 # if it's a stream effective retention is 0.
                 effective_retention_raster.set(global_col, global_row, STREAM_EFFECTIVE_RETENTION)
-            elif (is_close(crit_len, crit_len_nodata) or
-                  is_close(retention_eff_lulc, retention_eff_nodata) or
+            elif (numpy.isclose(crit_len, crit_len_nodata) or
+                  numpy.isclose(retention_eff_lulc, retention_eff_nodata) or
                   flow_dir == 0):
                 # if it's nodata, effective retention is nodata.
                 effective_retention_raster.set(

@@ -24,9 +24,6 @@ cdef extern from "time.h" nogil:
     ctypedef int time_t
     time_t time(time_t*)
 
-cdef int is_close(double x, double y):
-    return abs(x-y) <= (1e-8+1e-05*abs(y))
-
 LOGGER = logging.getLogger(__name__)
 
 cdef int N_MONTHS = 12
@@ -203,7 +200,7 @@ cpdef calculate_local_recharge(
                     work_queue.pop()
 
                     l_sum_avail_i = target_l_sum_avail_raster.get(xi, yi)
-                    if not is_close(l_sum_avail_i, target_nodata):
+                    if not numpy.isclose(l_sum_avail_i, target_nodata):
                         # already defined
                         continue
 
@@ -216,7 +213,7 @@ cpdef calculate_local_recharge(
                     for _, xj, yj, p_ij in flow_raster.yield_upslope_neighbors(xi, yi):
                         # pixel flows inward, check upslope
                         l_sum_avail_j = target_l_sum_avail_raster.get(xj, yj)
-                        if is_close(l_sum_avail_j, target_nodata):
+                        if numpy.isclose(l_sum_avail_j, target_nodata):
                             upslope_defined = 0
                             break
                         l_avail_j = target_li_avail_raster.get(xj, yj)
@@ -252,13 +249,13 @@ cpdef calculate_local_recharge(
                         kc_nodata = kc_m_nodata_list[m_index]
 
                         p_m = precip_m_raster.get(xi, yi)
-                        if not is_close(p_m, precip_nodata):
+                        if not numpy.isclose(p_m, precip_nodata):
                             p_i += p_m
                         else:
                             p_m = 0
 
                         qf_m = qf_m_raster.get(xi, yi)
-                        if not is_close(qf_m, qf_nodata):
+                        if not numpy.isclose(qf_m, qf_nodata):
                             qf_i += qf_m
                         else:
                             qf_m = 0
@@ -267,8 +264,8 @@ cpdef calculate_local_recharge(
                         pet_m = 0
                         et0_m = et0_m_raster.get(xi, yi)
                         if not (
-                                is_close(kc_m, kc_nodata) or
-                                is_close(et0_m, et0_nodata)):
+                                numpy.isclose(kc_m, kc_nodata) or
+                                numpy.isclose(et0_m, et0_nodata)):
                             # Equation 6
                             pet_m = kc_m * et0_m
 
@@ -364,7 +361,7 @@ def route_baseflow_sum(
             for xs in xrange(offset_dict['win_xsize']):
                 xs_root = offset_dict['xoff'] + xs
                 flow_dir_s = <int>flow_dir_mfd_raster.get(xs_root, ys_root)
-                if flow_dir_s == flow_dir_nodata:
+                if numpy.isclose(flow_dir_s, flow_dir_nodata):
                     current_pixel += 1
                     continue
 
@@ -386,7 +383,7 @@ def route_baseflow_sum(
                     yi = work_stack.top().second
                     work_stack.pop()
                     b_sum_i = target_b_sum_raster.get(xi, yi)
-                    if not is_close(b_sum_i, target_nodata):
+                    if not numpy.isclose(b_sum_i, target_nodata):
                         continue
 
                     if ctime(NULL) - last_log_time > 5.0:
@@ -404,7 +401,7 @@ def route_baseflow_sum(
                             b_sum_i += p_ij
                         else:
                             b_sum_j = target_b_sum_raster.get(xj, yj)
-                            if is_close(b_sum_j, target_nodata):
+                            if numpy.isclose(b_sum_j, target_nodata):
                                 downslope_defined = 0
                                 break
                             l_j = l_raster.get(xj, yj)
