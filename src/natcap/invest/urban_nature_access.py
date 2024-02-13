@@ -360,7 +360,11 @@ MODEL_SPEC = {
                             "about": (
                                 "The total population within the "
                                 "administrative unit that is undersupplied "
-                                "with urban nature.")
+                                "with urban nature. If aggregating by "
+                                "population groups, this will be the sum "
+                                "of undersupplied populations across all "
+                                "population groups within this administrative "
+                                "unit.")
                         },
                         "Povr_adm": {
                             "type": "number",
@@ -368,7 +372,11 @@ MODEL_SPEC = {
                             "about": (
                                 "The total population within the "
                                 "administrative unit that is oversupplied "
-                                "with urban nature.")
+                                "with urban nature. If aggregating by "
+                                "population groups, this will be the sum "
+                                "of oversupplied populations across all "
+                                "population groups within this administrative "
+                                "unit.")
                         },
                         "SUP_DEMadm_cap_[POP_GROUP]": {
                             "type": "number",
@@ -1320,20 +1328,15 @@ def execute(args):
                 output_dir,
                 f'urban_nature_balance_percapita_{pop_group}{suffix}.tif')
             per_cap_urban_nature_balance_pop_group_task = graph.add_task(
-                pygeoprocessing.raster_calculator,
+                _calculate_urban_nature_balance_percapita,
                 kwargs={
-                    'base_raster_path_band_const_list': [
-                        (urban_nature_supply_percapita_to_group_path, 1),
-                        (float(args['urban_nature_demand']), 'raw')
-                    ],
-                    'local_op': _urban_nature_balance_percapita_op,
-                    'target_raster_path':
-                        per_cap_urban_nature_balance_pop_group_path,
-                    'datatype_target': gdal.GDT_Float32,
-                    'nodata_target': FLOAT32_NODATA
-                },
+                    'urban_nature_supply_path':
+                        urban_nature_supply_percapita_to_group_path,
+                    'urban_nature_demand': float(args['urban_nature_demand']),
+                    'target_path':
+                        per_cap_urban_nature_balance_pop_group_path},
                 task_name=(
-                    f'Calculate per-capita urban nature balance - {pop_group}'),
+                    f'Calculate per-capita urban nature balance-{pop_group}'),
                 target_path_list=[
                     per_cap_urban_nature_balance_pop_group_path],
                 dependent_task_list=[
@@ -1411,20 +1414,17 @@ def execute(args):
             ])
 
         per_capita_urban_nature_balance_task = graph.add_task(
-            pygeoprocessing.raster_calculator,
+            _calculate_urban_nature_balance_percapita,
             kwargs={
-                'base_raster_path_band_const_list': [
-                    (file_registry['urban_nature_supply_percapita'], 1),
-                    (float(args['urban_nature_demand']), 'raw')
-                ],
-                'local_op': _urban_nature_balance_percapita_op,
-                'target_raster_path':
-                    file_registry['urban_nature_balance_percapita'],
-                'datatype_target': gdal.GDT_Float32,
-                'nodata_target': FLOAT32_NODATA
-            },
-            task_name='Calculate per-capita urban nature balance',
-            target_path_list=[file_registry['urban_nature_balance_percapita']],
+                'urban_nature_supply_path':
+                    file_registry['urban_nature_supply_percapita'],
+                'urban_nature_demand': float(args['urban_nature_demand']),
+                'target_path':
+                    file_registry['urban_nature_balance_percapita']},
+            task_name=(
+                'Calculate per-capita urban nature balance}'),
+            target_path_list=[
+                file_registry['urban_nature_balance_percapita']],
             dependent_task_list=[
                 urban_nature_supply_percapita_task,
             ])
@@ -1471,20 +1471,17 @@ def execute(args):
                                       RADIUS_OPT_URBAN_NATURE):
         # This is "SUP_DEMi_cap" from the user's guide
         per_capita_urban_nature_balance_task = graph.add_task(
-            pygeoprocessing.raster_calculator,
+            _calculate_urban_nature_balance_percapita,
             kwargs={
-                'base_raster_path_band_const_list': [
-                    (file_registry['urban_nature_supply_percapita'], 1),
-                    (float(args['urban_nature_demand']), 'raw')
-                ],
-                'local_op': _urban_nature_balance_percapita_op,
-                'target_raster_path':
-                    file_registry['urban_nature_balance_percapita'],
-                'datatype_target': gdal.GDT_Float32,
-                'nodata_target': FLOAT32_NODATA
-            },
-            task_name='Calculate per-capita urban nature balance',
-            target_path_list=[file_registry['urban_nature_balance_percapita']],
+                'urban_nature_supply_path':
+                    file_registry['urban_nature_supply_percapita'],
+                'urban_nature_demand': float(args['urban_nature_demand']),
+                'target_path':
+                    file_registry['urban_nature_balance_percapita']},
+            task_name=(
+                'Calculate per-capita urban nature balance'),
+            target_path_list=[
+                file_registry['urban_nature_balance_percapita']],
             dependent_task_list=[
                 urban_nature_supply_percapita_task,
             ])
@@ -1978,14 +1975,18 @@ def _supply_demand_vector_for_pop_groups(
                 feature_id]['sum']
             group_sup_dem_in_region = urban_nature_sup_dem_stats[
                 feature_id]['sum']
+            group_oversupply_in_region = oversupply_stats[feature_id]['sum']
+            group_undersupply_in_region = undersupply_stats[feature_id]['sum']
             stats_by_feature[feature_id][f'SUP_DEMadm_cap_{groupname}'] = (
                 group_sup_dem_in_region / group_population_in_region)
             stats_by_feature[feature_id][f'Pund_adm_{groupname}'] = (
-                undersupply_stats[feature_id]['sum'])
+                group_undersupply_in_region)
             stats_by_feature[feature_id][f'Povr_adm_{groupname}'] = (
-                oversupply_stats[feature_id]['sum'])
+                group_oversupply_in_region)
             sums['supply-demand'][feature_id] += group_sup_dem_in_region
             sums['population'][feature_id] += group_population_in_region
+            sums['oversupply'][feature_id] += group_oversupply_in_region
+            sums['undersupply'][feature_id] += group_undersupply_in_region
 
     for feature_id in feature_ids:
         stats_by_feature[feature_id]['SUP_DEMadm_cap'] = (
@@ -2124,28 +2125,44 @@ def _write_supply_demand_vector(source_aoi_vector_path, feature_attrs,
     target_vector = None
 
 
-def _urban_nature_balance_percapita_op(urban_nature_supply, urban_nature_demand):
-    """Calculate the per-capita urban nature balance.
+def _calculate_urban_nature_balance_percapita(
+        urban_nature_supply_path, urban_nature_demand, target_path):
+    supply_nodata = pygeoprocessing.get_raster_info(
+        urban_nature_supply_path)['nodata'][0]
 
-    This is the amount of urban nature that each pixel has above (positive
-    values) or below (negative values) the user-defined ``urban_nature_demand``
-    value.
+    def _urban_nature_balance_percapita_op(urban_nature_supply,
+                                           urban_nature_demand):
+        """Calculate the per-capita urban nature balance.
 
-    Args:
-        urban_nature_supply (numpy.array): The supply of urban nature available to
-            each person in the population.  This is ``Ai`` in the User's Guide.
-            This matrix must have ``FLOAT32_NODATA`` as its nodata value.
-        urban_nature_demand (float): The policy-defined urban nature requirement,
-            in square meters per person.
+        This is the amount of urban nature that each pixel has above (positive
+        values) or below (negative values) the user-defined
+        ``urban_nature_demand`` value.
 
-    Returns:
-        A ``numpy.array`` of the calculated urban nature budget.
-    """
-    balance = numpy.full(
-        urban_nature_supply.shape, FLOAT32_NODATA, dtype=numpy.float32)
-    valid_pixels = ~numpy.isclose(urban_nature_supply, FLOAT32_NODATA)
-    balance[valid_pixels] = urban_nature_supply[valid_pixels] - urban_nature_demand
-    return balance
+        Args:
+            urban_nature_supply (numpy.array): The supply of urban nature
+                available to each person in the population.  This is ``Ai`` in
+                the User's Guide.
+            urban_nature_demand (float): The policy-defined urban nature
+            requirement, in square meters per person.
+
+        Returns:
+            A ``numpy.array`` of the calculated urban nature budget.
+        """
+        balance = numpy.full(
+            urban_nature_supply.shape, FLOAT32_NODATA, dtype=numpy.float32)
+        valid_pixels = ~pygeoprocessing.array_equals_nodata(
+            urban_nature_supply, supply_nodata)
+        balance[valid_pixels] = (
+            urban_nature_supply[valid_pixels] - urban_nature_demand)
+        return balance
+
+    pygeoprocessing.raster_calculator(
+        base_raster_path_band_const_list=[
+            (urban_nature_supply_path, 1), (urban_nature_demand, 'raw')],
+        local_op=_urban_nature_balance_percapita_op,
+        target_raster_path=target_path,
+        datatype_target=gdal.GDT_Float32,
+        nodata_target=FLOAT32_NODATA)
 
 
 def _urban_nature_balance_totalpop_op(urban_nature_balance, population):
