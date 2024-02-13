@@ -13,7 +13,9 @@ from osgeo import gdal
 
 from libcpp.stack cimport stack
 from libc.math cimport exp
-from ..managed_raster.managed_raster cimport _ManagedRaster, ManagedFlowDirRaster
+from ..managed_raster.managed_raster cimport _ManagedRaster
+from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
+from ..managed_raster.managed_raster cimport is_close
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -154,8 +156,8 @@ def ndr_eff_calculation(
             if stream_raster.get(global_col, global_row) == 1:
                 # if it's a stream effective retention is 0.
                 effective_retention_raster.set(global_col, global_row, STREAM_EFFECTIVE_RETENTION)
-            elif (numpy.isclose(crit_len, crit_len_nodata) or
-                  numpy.isclose(retention_eff_lulc, retention_eff_nodata) or
+            elif (is_close(crit_len, crit_len_nodata) or
+                  is_close(retention_eff_lulc, retention_eff_nodata) or
                   flow_dir == 0):
                 # if it's nodata, effective retention is nodata.
                 effective_retention_raster.set(

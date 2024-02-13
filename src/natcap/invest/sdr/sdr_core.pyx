@@ -14,7 +14,7 @@ from libc.time cimport time as ctime
 from libcpp.stack cimport stack
 from ..managed_raster.managed_raster cimport _ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
-from ..managed_raster.managed_raster cimport NeighborTuple
+from ..managed_raster.managed_raster cimport is_close
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -141,7 +141,7 @@ def calculate_sediment_deposition(
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack
                 if (mfd_flow_direction_raster.is_local_high_point(xs, ys) and
-                        sediment_deposition_raster.get(xs, ys) == target_nodata):
+                        is_close(sediment_deposition_raster.get(xs, ys), target_nodata)):
                     processing_stack.push(ys * n_cols + xs)
 
                 while processing_stack.size() > 0:
@@ -163,7 +163,7 @@ def calculate_sediment_deposition(
                                 global_col, global_row)):
 
                         f_j = f_raster.get(neighbor.x, neighbor.y)
-                        if f_j == target_nodata:
+                        if is_close(f_j, target_nodata):
                             continue
 
                         # add the neighbor's flux value, weighted by the
@@ -179,7 +179,7 @@ def calculate_sediment_deposition(
                             mfd_flow_direction_raster.yield_downslope_neighbors(
                                 global_col, global_row)):
                         sdr_j = sdr_raster.get(neighbor.x, neighbor.y)
-                        if sdr_j == sdr_nodata:
+                        if is_close(sdr_j, sdr_nodata):
                             continue
                         if sdr_j == 0:
                             # this means it's a stream, for SDR deposition
@@ -206,9 +206,10 @@ def calculate_sediment_deposition(
                             if (inflow_offsets[neighbor_of_neighbor.direction] ==
                                     neighbor.direction):
                                 continue
-                            if sediment_deposition_raster.get(
-                                    neighbor_of_neighbor.x, neighbor_of_neighbor.y
-                                    ) == target_nodata:
+                            if is_close(
+                                    sediment_deposition_raster.get(
+                                        neighbor_of_neighbor.x, neighbor_of_neighbor.y
+                                    ), target_nodata):
                                 upslope_neighbors_processed = 0
                                 break
                         # if all upslope neighbors of neighbor j are
@@ -219,10 +220,10 @@ def calculate_sediment_deposition(
 
                     # nodata pixels should propagate to the results
                     sdr_i = sdr_raster.get(global_col, global_row)
-                    if sdr_i == sdr_nodata:
+                    if is_close(sdr_i, sdr_nodata):
                         continue
                     e_prime_i = e_prime_raster.get(global_col, global_row)
-                    if e_prime_i == e_prime_nodata:
+                    if is_close(e_prime_i, e_prime_nodata):
                         continue
 
                     # This condition reflects property A in the user's guide.

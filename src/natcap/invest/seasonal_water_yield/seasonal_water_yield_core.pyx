@@ -18,7 +18,9 @@ from libcpp.pair cimport pair
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
 from libc.time cimport time as ctime
-from ..managed_raster.managed_raster cimport _ManagedRaster, ManagedFlowDirRaster
+from ..managed_raster.managed_raster cimport _ManagedRaster
+from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
+from ..managed_raster.managed_raster cimport is_close
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -200,7 +202,7 @@ cpdef calculate_local_recharge(
                     work_queue.pop()
 
                     l_sum_avail_i = target_l_sum_avail_raster.get(xi, yi)
-                    if not numpy.isclose(l_sum_avail_i, target_nodata):
+                    if not is_close(l_sum_avail_i, target_nodata):
                         # already defined
                         continue
 
@@ -214,7 +216,7 @@ cpdef calculate_local_recharge(
                         # pixel flows inward, check upslope
                         l_sum_avail_j = target_l_sum_avail_raster.get(
                             neighbor.x, neighbor.y)
-                        if numpy.isclose(l_sum_avail_j, target_nodata):
+                        if is_close(l_sum_avail_j, target_nodata):
                             upslope_defined = 0
                             break
                         l_avail_j = target_li_avail_raster.get(
@@ -252,13 +254,13 @@ cpdef calculate_local_recharge(
                         kc_nodata = kc_m_nodata_list[m_index]
 
                         p_m = precip_m_raster.get(xi, yi)
-                        if not numpy.isclose(p_m, precip_nodata):
+                        if not is_close(p_m, precip_nodata):
                             p_i += p_m
                         else:
                             p_m = 0
 
                         qf_m = qf_m_raster.get(xi, yi)
-                        if not numpy.isclose(qf_m, qf_nodata):
+                        if not is_close(qf_m, qf_nodata):
                             qf_i += qf_m
                         else:
                             qf_m = 0
@@ -267,8 +269,8 @@ cpdef calculate_local_recharge(
                         pet_m = 0
                         et0_m = et0_m_raster.get(xi, yi)
                         if not (
-                                numpy.isclose(kc_m, kc_nodata) or
-                                numpy.isclose(et0_m, et0_nodata)):
+                                is_close(kc_m, kc_nodata) or
+                                is_close(et0_m, et0_nodata)):
                             # Equation 6
                             pet_m = kc_m * et0_m
 
@@ -361,7 +363,7 @@ def route_baseflow_sum(
             for xs in xrange(offset_dict['win_xsize']):
                 xs_root = offset_dict['xoff'] + xs
                 flow_dir_s = <int>flow_dir_mfd_raster.get(xs_root, ys_root)
-                if numpy.isclose(flow_dir_s, flow_dir_nodata):
+                if is_close(flow_dir_s, flow_dir_nodata):
                     current_pixel += 1
                     continue
 
@@ -383,7 +385,7 @@ def route_baseflow_sum(
                     yi = work_stack.top().second
                     work_stack.pop()
                     b_sum_i = target_b_sum_raster.get(xi, yi)
-                    if not numpy.isclose(b_sum_i, target_nodata):
+                    if not is_close(b_sum_i, target_nodata):
                         continue
 
                     if ctime(NULL) - last_log_time > 5.0:
@@ -401,7 +403,7 @@ def route_baseflow_sum(
                             b_sum_i += neighbor.flow_proportion
                         else:
                             b_sum_j = target_b_sum_raster.get(neighbor.x, neighbor.y)
-                            if numpy.isclose(b_sum_j, target_nodata):
+                            if is_close(b_sum_j, target_nodata):
                                 downslope_defined = 0
                                 break
                             l_j = l_raster.get(neighbor.x, neighbor.y)
