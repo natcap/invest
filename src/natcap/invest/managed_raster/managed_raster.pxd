@@ -4,6 +4,15 @@
 from libcpp.list cimport list as clist
 from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
+from libcpp.vector cimport vector
+
+cdef struct s_neighborTuple:
+    int direction
+    int x
+    int y
+    float flow_proportion
+
+ctypedef s_neighborTuple NeighborTuple
 
 # this is a least recently used cache written in C++ in an external file,
 # exposing here so _ManagedRaster can use it
@@ -41,5 +50,12 @@ cdef class _ManagedRaster:
 
 cdef class ManagedFlowDirRaster(_ManagedRaster):
 
-    cdef bint is_local_high_point(self, long xi, long yi)
+    cdef bint is_local_high_point(ManagedFlowDirRaster self, long xi, long yi)
 
+    cdef vector[NeighborTuple] yield_upslope_neighbors(ManagedFlowDirRaster self, long xi, long yi)
+
+    cdef vector[NeighborTuple] yield_downslope_neighbors(ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=*)
+
+
+cdef inline int is_close(double x, double y):
+    return abs(x-y) <= (1e-8+1e-05*abs(y))

@@ -122,16 +122,15 @@ def ndr_eff_calculation(
                 should_seed = 0
                 # see if this pixel drains to nodata or the edge, if so it's
                 # a drain
-                for i, neighbor_col, neighbor_row, _ in (
+                for neighbor in (
                         mfd_flow_direction_raster.yield_downslope_neighbors(
                             global_col, global_row, skip_oob=False)):
-                    dir_mask = 1 << i
-                    if (neighbor_col < 0 or neighbor_col >= n_cols or
-                        neighbor_row < 0 or neighbor_row >= n_rows or
+                    if (neighbor.x < 0 or neighbor.x >= n_cols or
+                        neighbor.y < 0 or neighbor.y >= n_rows or
                         to_process_flow_directions_raster.get(
-                            neighbor_col, neighbor_row) == 0):
+                            neighbor.x, neighbor.y) == 0):
                         should_seed = 1
-                        outflow_dirs &= ~dir_mask
+                        outflow_dirs &= ~(1 << neighbor.direction)
 
                 if should_seed:
                     # mark all outflow directions processed
@@ -164,15 +163,14 @@ def ndr_eff_calculation(
             else:
                 working_retention_eff = 0.0
                 has_outflow = False
-                for i, ds_col, ds_row, p_ij in (
-                        mfd_flow_direction_raster.yield_downslope_neighbors(
-                            global_col, global_row, skip_oob=False)):
+                for neighbor in mfd_flow_direction_raster.yield_downslope_neighbors(
+                        global_col, global_row, skip_oob=False):
                     has_outflow = True
-                    if (ds_col < 0 or ds_col >= n_cols or
-                        ds_row < 0 or ds_row >= n_rows):
+                    if (neighbor.x < 0 or neighbor.x >= n_cols or
+                        neighbor.y < 0 or neighbor.y >= n_rows):
                         continue
 
-                    if i % 2 == 1:
+                    if neighbor.direction % 2 == 1:
                         step_size = <float>(cell_size * 1.41421356237)
                     else:
                         step_size = cell_size
@@ -184,7 +182,8 @@ def ndr_eff_calculation(
                         current_step_factor = 0.0
 
                     neighbor_effective_retention = (
-                        effective_retention_raster.get(ds_col, ds_row))
+                        effective_retention_raster.get(
+                            neighbor.x, neighbor.y))
 
                     # Case 1: downslope neighbor is a stream pixel
                     if neighbor_effective_retention == STREAM_EFFECTIVE_RETENTION:
@@ -201,7 +200,8 @@ def ndr_eff_calculation(
                     else:
                         intermediate_retention = neighbor_effective_retention
 
-                    working_retention_eff += intermediate_retention * p_ij
+                    working_retention_eff += (
+                        intermediate_retention * neighbor.flow_proportion)
 
                 if has_outflow:
                     effective_retention_raster.set(
@@ -210,15 +210,13 @@ def ndr_eff_calculation(
                     raise Exception("got to a cell that has no outflow!")
             # search upslope to see if we need to push a cell on the stack
             # for i in range(8):
-            for i, neighbor_col, neighbor_row, _ in (
-                    mfd_flow_direction_raster.yield_upslope_neighbors(
-                        global_col, global_row)):
-
-                neighbor_outflow_dir = inflow_offsets[i]
+            for neighbor in mfd_flow_direction_raster.yield_upslope_neighbors(
+                    global_col, global_row):
+                neighbor_outflow_dir = inflow_offsets[neighbor.direction]
                 neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir
                 neighbor_process_flow_dir = <int>(
                     to_process_flow_directions_raster.get(
-                        neighbor_col, neighbor_row))
+                        neighbor.x, neighbor.y))
                 if neighbor_process_flow_dir == 0:
                     # skip, due to loop invariant this must be a nodata pixel
                     continue
@@ -228,11 +226,11 @@ def ndr_eff_calculation(
                 # mask out the outflow dir that this iteration processed
                 neighbor_process_flow_dir &= ~neighbor_outflow_dir_mask
                 to_process_flow_directions_raster.set(
-                    neighbor_col, neighbor_row, neighbor_process_flow_dir)
+                    neighbor.x, neighbor.y, neighbor_process_flow_dir)
                 if neighbor_process_flow_dir == 0:
                     # if 0 then all downslope have been processed,
                     # push on stack, otherwise another downslope pixel will
                     # pick it up
-                    processing_stack.push(neighbor_row * n_cols + neighbor_col)
+                    processing_stack.push(neighbor.y * n_cols + neighbor.x)
     to_process_flow_directions_raster.close()
     os.remove(to_process_flow_directions_path)

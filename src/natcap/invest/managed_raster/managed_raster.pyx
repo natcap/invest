@@ -17,6 +17,8 @@ from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
 from libcpp.list cimport list as clist
 from libcpp.stack cimport stack
+from libcpp.vector cimport vector
+
 cimport libc.math as cmath
 
 # this ctype is used to store the block ID and the block buffer as one object
@@ -328,7 +330,9 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             return False
         return True
 
-    def yield_upslope_neighbors(self, long xi, long yi):
+    @cython.cdivision(True)
+    cdef vector[NeighborTuple] yield_upslope_neighbors(
+            ManagedFlowDirRaster self, long xi, long yi):
         """Yield upslope neighbors of a given pixel.
 
         Args:
@@ -342,11 +346,13 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             yj is the y coordinate of pixel j in pixel space, and
             p_ij is the proportion of flow from pixel j that flows into pixel i
         """
-        cdef int n_dir, flow_dir_j
+        cdef int n_dir, flow_dir_j, idx
         cdef long xj, yj
         cdef float flow_ji, flow_dir_j_sum
 
-        upslope_neighbor_tuples = []
+        cdef NeighborTuple n
+        cdef vector[NeighborTuple] upslope_neighbor_tuples
+
         for n_dir in xrange(8):
             xj = xi + COL_OFFSETS[n_dir]
             yj = yi + ROW_OFFSETS[n_dir]
@@ -354,16 +360,23 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
                     yj < 0 or yj >= self.raster_y_size):
                 continue
             flow_dir_j = <int>self.get(xj, yj)
-            flow_dir_j_sum = sum(((flow_dir_j >> (n * 4)) & 0xF) for n in range(8))
             flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])))
+
             if flow_ji:
-                upslope_neighbor_tuples.append(
-                    (n_dir, xj, yj, flow_ji / flow_dir_j_sum))
+                flow_dir_j_sum = 0
+                for idx in range(8):
+                    flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF
+                n.direction = n_dir
+                n.x = xj
+                n.y = yj
+                n.flow_proportion = flow_ji / flow_dir_j_sum
+                upslope_neighbor_tuples.push_back(n)
 
-        for n_dir, xj, yj, p_ji in upslope_neighbor_tuples:
-            yield n_dir, xj, yj, p_ji
+        return upslope_neighbor_tuples
 
-    def yield_downslope_neighbors(self, long xi, long yi, bint skip_oob=True):
+    @cython.cdivision(True)
+    cdef vector[NeighborTuple] yield_downslope_neighbors(
+            ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=True):
         """Yield downslope neighbors of a given pixel.
 
         Args:
@@ -379,13 +392,17 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             yj is the y coordinate of pixel j in raster space, and
             p_ij is the proportion of flow from pixel i that flows into pixel j
         """
-        cdef int flow_dir, n_dir
+        cdef int n_dir
         cdef long xj, yj
-        cdef float flow_ij, flow_sum, p_ij
+        cdef float flow_ij
 
-        flow_dir = <int>self.get(xi, yi)
-        flow_sum = 0
-        downslope_neighbor_tuples = []
+        cdef NeighborTuple n
+        cdef vector[NeighborTuple] downslope_neighbor_tuples
+
+        cdef int flow_dir = <int>self.get(xi, yi)
+        cdef float flow_sum = 0
+
+        cdef int i = 0
         for n_dir in xrange(8):
             # flows in this direction
             xj = xi + COL_OFFSETS[n_dir]
@@ -396,8 +413,15 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             flow_ij = (flow_dir >> (n_dir * 4)) & 0xF
             flow_sum += flow_ij
             if flow_ij:
-                downslope_neighbor_tuples.append((n_dir, xj, yj, flow_ij))
+                n.direction = n_dir
+                n.x = xj
+                n.y = yj
+                n.flow_proportion = flow_ij
+                downslope_neighbor_tuples.push_back(n)
+                i += 1
 
-        for j, xj, yj, flow_ij in downslope_neighbor_tuples:
-            p_ij = flow_ij / flow_sum
-            yield j, xj, yj, p_ij
+        for j in range(i):
+            downslope_neighbor_tuples[j].flow_proportion = (
+                downslope_neighbor_tuples[j].flow_proportion / flow_sum)
+
+        return downslope_neighbor_tuples

@@ -12,7 +12,9 @@ from osgeo import gdal
 
 from libc.time cimport time as ctime
 from libcpp.stack cimport stack
-from ..managed_raster.managed_raster cimport _ManagedRaster, ManagedFlowDirRaster
+from ..managed_raster.managed_raster cimport _ManagedRaster
+from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
+from ..managed_raster.managed_raster cimport NeighborTuple
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -114,7 +116,7 @@ def calculate_sediment_deposition(
     cdef long col_index, row_index
     cdef long global_col, global_row, j, k
     cdef unsigned long flat_index
-    cdef long neighbor_row, neighbor_col
+    cdef long neighbor_row, neighbor_col, xs, ys
     cdef int flow_val, neighbor_flow_val, ds_neighbor_flow_val
     cdef int flow_weight, neighbor_flow_weight
     cdef float flow_sum, neighbor_flow_sum
@@ -139,9 +141,7 @@ def calculate_sediment_deposition(
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack
                 if (mfd_flow_direction_raster.is_local_high_point(xs, ys) and
-                        numpy.isclose(
-                            sediment_deposition_raster.get(xs, ys),
-                            target_nodata)):
+                        sediment_deposition_raster.get(xs, ys) == target_nodata):
                     processing_stack.push(ys * n_cols + xs)
 
                 while processing_stack.size() > 0:
@@ -158,28 +158,28 @@ def calculate_sediment_deposition(
                     # the weighted sum of flux flowing onto this pixel from
                     # all neighbors
                     f_j_weighted_sum = 0
-                    for _, neighbor_col, neighbor_row, p_val in (
+                    for neighbor in (
                             mfd_flow_direction_raster.yield_upslope_neighbors(
                                 global_col, global_row)):
 
-                        f_j = f_raster.get(neighbor_col, neighbor_row)
-                        if numpy.isclose(f_j, target_nodata):
+                        f_j = f_raster.get(neighbor.x, neighbor.y)
+                        if f_j == target_nodata:
                             continue
 
                         # add the neighbor's flux value, weighted by the
                         # flow proportion
-                        f_j_weighted_sum += p_val * f_j
+                        f_j_weighted_sum += neighbor.flow_proportion * f_j
 
                     # calculate sum of SDR values of immediate downslope
                     # neighbors, weighted by proportion of flow into each
                     # neighbor
                     # (sum over k ∈ K of SDR_k * p(i,k) in the equation above)
                     downslope_sdr_weighted_sum = 0
-                    for j, neighbor_col, neighbor_row, p_j in (
+                    for neighbor in (
                             mfd_flow_direction_raster.yield_downslope_neighbors(
                                 global_col, global_row)):
-                        sdr_j = sdr_raster.get(neighbor_col, neighbor_row)
-                        if numpy.isclose(sdr_j, sdr_nodata):
+                        sdr_j = sdr_raster.get(neighbor.x, neighbor.y)
+                        if sdr_j == sdr_nodata:
                             continue
                         if sdr_j == 0:
                             # this means it's a stream, for SDR deposition
@@ -187,7 +187,8 @@ def calculate_sediment_deposition(
                             # is the last step on which to retain sediment
                             sdr_j = 1
 
-                        downslope_sdr_weighted_sum += sdr_j * p_j
+                        downslope_sdr_weighted_sum += (
+                            sdr_j * neighbor.flow_proportion)
 
                         # check if we can add neighbor j to the stack yet
                         #
@@ -197,32 +198,31 @@ def calculate_sediment_deposition(
                         # completed
                         upslope_neighbors_processed = 1
                         # iterate over each neighbor-of-neighbor
-                        for k, ds_neighbor_col, ds_neighbor_row, _ in (
+                        for neighbor_of_neighbor in (
                                 mfd_flow_direction_raster.yield_upslope_neighbors(
-                                    neighbor_col, neighbor_row)):
+                                    neighbor.x, neighbor.y)):
                             # no need to push the one we're currently
                             # calculating back onto the stack
-                            if inflow_offsets[k] == j:
+                            if (inflow_offsets[neighbor_of_neighbor.direction] ==
+                                    neighbor.direction):
                                 continue
-                            if numpy.isclose(
-                                sediment_deposition_raster.get(
-                                    ds_neighbor_col, ds_neighbor_row),
-                                    target_nodata):
+                            if sediment_deposition_raster.get(
+                                    neighbor_of_neighbor.x, neighbor_of_neighbor.y
+                                    ) == target_nodata:
                                 upslope_neighbors_processed = 0
                                 break
                         # if all upslope neighbors of neighbor j are
                         # processed, we can push j onto the stack.
                         if upslope_neighbors_processed:
                             processing_stack.push(
-                                neighbor_row * n_cols +
-                                neighbor_col)
+                                neighbor.y * n_cols + neighbor.x)
 
                     # nodata pixels should propagate to the results
                     sdr_i = sdr_raster.get(global_col, global_row)
-                    if numpy.isclose(sdr_i, sdr_nodata):
+                    if sdr_i == sdr_nodata:
                         continue
                     e_prime_i = e_prime_raster.get(global_col, global_row)
-                    if numpy.isclose(e_prime_i, e_prime_nodata):
+                    if e_prime_i == e_prime_nodata:
                         continue
 
                     # This condition reflects property A in the user's guide.
