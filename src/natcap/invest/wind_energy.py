@@ -131,7 +131,7 @@ MODEL_SPEC = {
             "type": "vector",
             "fields": {},
             "geometries": {"POLYGON", "MULTIPOLYGON"},
-            "required": "min_distance and max_distance and valuation_container",
+            "required": "min_distance or max_distance or valuation_container",
             "about": gettext(
                 "Map of the coastlines of landmasses in the area of interest. "
                 "Required if the Minimum Distance and Maximum Distance inputs "
