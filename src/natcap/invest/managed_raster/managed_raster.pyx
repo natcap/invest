@@ -352,7 +352,7 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
         cdef NeighborTuple n
         cdef vector[NeighborTuple] upslope_neighbor_tuples
 
-        for n_dir in xrange(8):
+        for n_dir in range(8):
             xj = xi + COL_OFFSETS[n_dir]
             yj = yi + ROW_OFFSETS[n_dir]
             if (xj < 0 or xj >= self.raster_x_size or
@@ -403,7 +403,7 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
         cdef float flow_sum = 0
 
         cdef int i = 0
-        for n_dir in xrange(8):
+        for n_dir in range(8):
             # flows in this direction
             xj = xi + COL_OFFSETS[n_dir]
             yj = yi + ROW_OFFSETS[n_dir]
