@@ -7,27 +7,24 @@ import shutil
 import tempfile
 
 import numpy
-from scipy import integrate
-
-import shapely.wkb
-import shapely.wkt
+import pygeoprocessing
 import shapely.ops
 import shapely.prepared
-from shapely import speedups
-
+import shapely.wkb
+import shapely.wkt
+import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+from scipy import integrate
+from shapely import speedups
 
-import pygeoprocessing
-import taskgraph
-from . import utils
+from . import gettext
 from . import spec_utils
-from .unit_registry import u
+from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
-
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 speedups.enable()
@@ -117,7 +114,7 @@ MODEL_SPEC = {
             **spec_utils.AOI,
             "projected": True,
             "projection_units": u.meter,
-            "required": "valuation_container & grid_points_path",
+            "required": "valuation_container and grid_points_path",
             "about": gettext(
                 "Map of the area(s) of interest over which to run the model "
                 "and aggregate valuation results. Required if Run Valuation "
