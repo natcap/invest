@@ -48,6 +48,22 @@ Unreleased Changes
     * Fixed an issue where validation was failing to catch missing values in
       the uniform search radius args key when using uniform search radii.
       https://github.com/natcap/invest/issues/1509
+    * Fixed an issue where the output administrative units vector's
+      ``Pund_adm`` and ``Povr_adm`` fields representing undersupplied and
+      oversupplied populations, respectively, had values of 0 when running the
+      model with search radii defined per population group.  The output
+      administrative units vector now has the correct values for these fields,
+      consistent with the user's guide chapter.
+      https://github.com/natcap/invest/issues/1512
+    * Fixed an issue where certain nodata values were not being handled
+      correctly, leading to pixel values of +/- infinity in the urban nature
+      balance output raster.  https://github.com/natcap/invest/issues/1519
+* SDR
+    * Fixed an issue encountered in the sediment deposition function where
+      rasters with more than 2^32 pixels would raise a cryptic error relating
+      to negative dimensions. https://github.com/natcap/invest/issues/1431
+    * Optimized the creation of the summary vector by minimizing the number of
+      times the target vector needs to be rasterized.
 
 3.14.1 (2023-12-18)
 -------------------
