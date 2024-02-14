@@ -159,7 +159,7 @@ def calculate_sediment_deposition(
                     # all neighbors
                     f_j_weighted_sum = 0
                     for neighbor in (
-                            mfd_flow_direction_raster.yield_upslope_neighbors(
+                            mfd_flow_direction_raster.get_upslope_neighbors(
                                 global_col, global_row)):
 
                         f_j = f_raster.get(neighbor.x, neighbor.y)
@@ -176,7 +176,7 @@ def calculate_sediment_deposition(
                     # (sum over k ∈ K of SDR_k * p(i,k) in the equation above)
                     downslope_sdr_weighted_sum = 0
                     for neighbor in (
-                            mfd_flow_direction_raster.yield_downslope_neighbors(
+                            mfd_flow_direction_raster.get_downslope_neighbors(
                                 global_col, global_row)):
                         sdr_j = sdr_raster.get(neighbor.x, neighbor.y)
                         if is_close(sdr_j, sdr_nodata):
@@ -199,7 +199,7 @@ def calculate_sediment_deposition(
                         upslope_neighbors_processed = 1
                         # iterate over each neighbor-of-neighbor
                         for neighbor_of_neighbor in (
-                                mfd_flow_direction_raster.yield_upslope_neighbors(
+                                mfd_flow_direction_raster.get_upslope_neighbors(
                                     neighbor.x, neighbor.y)):
                             # no need to push the one we're currently
                             # calculating back onto the stack

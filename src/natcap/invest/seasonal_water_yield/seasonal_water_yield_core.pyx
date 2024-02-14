@@ -212,7 +212,7 @@ cpdef calculate_local_recharge(
                     # initialize to 0 so we indicate we haven't tracked any
                     # mfd values yet
                     l_sum_avail_i = 0
-                    for neighbor in flow_raster.yield_upslope_neighbors(xi, yi):
+                    for neighbor in flow_raster.get_upslope_neighbors(xi, yi):
                         # pixel flows inward, check upslope
                         l_sum_avail_j = target_l_sum_avail_raster.get(
                             neighbor.x, neighbor.y)
@@ -288,7 +288,7 @@ cpdef calculate_local_recharge(
                     target_li_raster.set(xi, yi, l_i)
                     target_li_avail_raster.set(xi, yi, l_avail_i)
 
-                    for neighbor in flow_raster.yield_downslope_neighbors(xi, yi):
+                    for neighbor in flow_raster.get_downslope_neighbors(xi, yi):
                         work_queue.push(pair[long, long](neighbor.x, neighbor.y))
 
 
@@ -370,7 +370,7 @@ def route_baseflow_sum(
                 # search for a pixel that has no downslope neighbors,
                 # or whose downslope neighbors all have nodata in the stream raster (?)
                 outlet = 1
-                for neighbor in flow_dir_mfd_raster.yield_downslope_neighbors(
+                for neighbor in flow_dir_mfd_raster.get_downslope_neighbors(
                         xs_root, ys_root):
                     stream_val = <int>stream_raster.get(neighbor.x, neighbor.y)
                     if stream_val != stream_nodata:
@@ -397,7 +397,7 @@ def route_baseflow_sum(
 
                     b_sum_i = 0.0
                     downslope_defined = 1
-                    for neighbor in flow_dir_mfd_raster.yield_downslope_neighbors(xi, yi):
+                    for neighbor in flow_dir_mfd_raster.get_downslope_neighbors(xi, yi):
                         stream_val = <int>stream_raster.get(neighbor.x, neighbor.y)
                         if stream_val:
                             b_sum_i += neighbor.flow_proportion
@@ -433,5 +433,5 @@ def route_baseflow_sum(
                     target_b_sum_raster.set(xi, yi, b_sum_i)
 
                     current_pixel += 1
-                    for neighbor in flow_dir_mfd_raster.yield_upslope_neighbors(xi, yi):
+                    for neighbor in flow_dir_mfd_raster.get_upslope_neighbors(xi, yi):
                         work_stack.push(pair[long, long](neighbor.x, neighbor.y))

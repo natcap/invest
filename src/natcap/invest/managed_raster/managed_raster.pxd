@@ -52,9 +52,9 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
 
     cdef bint is_local_high_point(ManagedFlowDirRaster self, long xi, long yi)
 
-    cdef vector[NeighborTuple] yield_upslope_neighbors(ManagedFlowDirRaster self, long xi, long yi)
+    cdef vector[NeighborTuple] get_upslope_neighbors(ManagedFlowDirRaster self, long xi, long yi)
 
-    cdef vector[NeighborTuple] yield_downslope_neighbors(ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=*)
+    cdef vector[NeighborTuple] get_downslope_neighbors(ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=*)
 
 
 cdef inline int is_close(double x, double y):

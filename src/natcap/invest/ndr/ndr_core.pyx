@@ -125,7 +125,7 @@ def ndr_eff_calculation(
                 # see if this pixel drains to nodata or the edge, if so it's
                 # a drain
                 for neighbor in (
-                        mfd_flow_direction_raster.yield_downslope_neighbors(
+                        mfd_flow_direction_raster.get_downslope_neighbors(
                             global_col, global_row, skip_oob=False)):
                     if (neighbor.x < 0 or neighbor.x >= n_cols or
                         neighbor.y < 0 or neighbor.y >= n_rows or
@@ -165,7 +165,7 @@ def ndr_eff_calculation(
             else:
                 working_retention_eff = 0.0
                 has_outflow = False
-                for neighbor in mfd_flow_direction_raster.yield_downslope_neighbors(
+                for neighbor in mfd_flow_direction_raster.get_downslope_neighbors(
                         global_col, global_row, skip_oob=False):
                     has_outflow = True
                     if (neighbor.x < 0 or neighbor.x >= n_cols or
@@ -212,7 +212,7 @@ def ndr_eff_calculation(
                     raise Exception("got to a cell that has no outflow!")
             # search upslope to see if we need to push a cell on the stack
             # for i in range(8):
-            for neighbor in mfd_flow_direction_raster.yield_upslope_neighbors(
+            for neighbor in mfd_flow_direction_raster.get_upslope_neighbors(
                     global_col, global_row):
                 neighbor_outflow_dir = inflow_offsets[neighbor.direction]
                 neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir
