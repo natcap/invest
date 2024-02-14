@@ -846,9 +846,6 @@ def get_headers_to_validate(spec):
     """
     headers = []
     for key, val in spec.items():
-        # for now only check headers that are always required
-        # assume that any conditionally-required headers are validated by the
-        # model's validate function
         # if 'required' isn't a key, it defaults to True
         if ('required' not in val) or (val['required'] is True):
             # brackets are a special character for our args spec syntax
