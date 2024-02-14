@@ -1,5 +1,6 @@
 """Common validation utilities for InVEST models."""
 import ast
+import copy
 import functools
 import importlib
 import inspect
@@ -962,8 +963,7 @@ def validate(args, spec, spatial_overlap_opts=None):
     # An input is conditionally required when the expression given is
     # truthy.
     expression_values = {
-        input_key: args.get(input_key, False) for input_key in spec.keys()
-        if input_key in sufficient_inputs}
+        input_key: args.get(input_key, False) for input_key in spec.keys()}
     excluded_keys = set()
     for key in conditionally_required_keys:
         is_conditionally_required = _evaluate_expression(
@@ -990,24 +990,27 @@ def validate(args, spec, spatial_overlap_opts=None):
         # Extra args that don't exist in the MODEL_SPEC are okay
         # we don't need to try to validate them
         try:
-            parameter_spec = spec[key]
+            # Using deepcopy to make sure we don't modify the original spec
+            parameter_spec = copy.deepcopy(spec[key])
         except KeyError:
             LOGGER.debug(f'Provided key {key} does not exist in MODEL_SPEC')
             continue
 
         # rewrite parameter_spec for any nested, conditional validity
-        rewrite_keys = None
+        axis_keys = None
         if parameter_spec['type'] == 'csv':
-            rewrite_keys = ['columns', 'rows']
+            axis_keys = ['columns', 'rows']
         elif parameter_spec['type'] == 'vector':
-            rewrite_keys = ['fields']
+            axis_keys = ['fields']
 
-        if rewrite_keys:
-            for nested_key in rewrite_keys:
-                for nested_key, nested_spec in parameter_spec[nested_key].items():
+        if axis_keys:
+            for axis_key in axis_keys:
+                if axis_key not in parameter_spec:
+                    continue
+                for nested_key, nested_spec in parameter_spec[axis_key].items():
                     if ('required' in nested_spec
                             and isinstance(nested_spec['required'], str)):
-                        parameter_spec[nested_key][nested_key]['required'] = (
+                        parameter_spec[axis_key][nested_key]['required'] = (
                             _evaluate_expression(
                                 nested_spec['required'], expression_values))
 

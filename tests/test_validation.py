@@ -1973,3 +1973,6 @@ class TestValidationFromSpec(unittest.TestCase):
         patterns = validation.get_headers_to_validate(spec)
         # should only get the patterns that are static and always required
         self.assertEqual(sorted(patterns), ['a'])
+
+# TODO: assert that the target SPEC isn't altered
+# TODO: assert this works with vectors and CSVs
