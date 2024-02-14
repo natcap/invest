@@ -995,6 +995,22 @@ def validate(args, spec, spatial_overlap_opts=None):
             LOGGER.debug(f'Provided key {key} does not exist in MODEL_SPEC')
             continue
 
+        # rewrite parameter_spec for any nested, conditional validity
+        rewrite_keys = None
+        if parameter_spec['type'] == 'csv':
+            rewrite_keys = ['columns', 'rows']
+        elif parameter_spec['type'] == 'vector':
+            rewrite_keys = ['fields']
+
+        if rewrite_keys:
+            for nested_key in rewrite_keys:
+                for nested_key, nested_spec in parameter_spec[nested_key].items():
+                    if ('required' in nested_spec
+                            and isinstance(nested_spec['required'], str)):
+                        parameter_spec[nested_key][nested_key]['required'] = (
+                            _evaluate_expression(
+                                nested_spec['required'], expression_values))
+
         type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
 
         if type_validation_func is None:
