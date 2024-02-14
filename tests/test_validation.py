@@ -1765,6 +1765,71 @@ class TestValidationFromSpec(unittest.TestCase):
         validation_warnings = validation.validate(args, spec)
         self.assertEqual(validation_warnings, [])
 
+    def test_conditionally_required_csv_rows(self):
+        """Validation: conditionally required csv rows."""
+        from natcap.invest import validation
+        spec = {
+            "some_number": {
+                "name": "A number",
+                "about": "About the number",
+                "type": "number",
+                "required": True,
+                "expression": "value > 0.5",
+            },
+            "csv": {
+                "name": "A table",
+                "about": "About the table",
+                "type": "csv",
+                "required": True,
+                "rows": {
+                    "field_a": {
+                        "type": "ratio",
+                        "required": True,
+                    },
+                    "field_b": {
+                        "type": "ratio",
+                        "required": "some_number == 2",
+                    }
+                }
+            }
+        }
+        # Create a CSV file with only field_a
+        csv_path = os.path.join(self.workspace_dir, 'table1.csv')
+        with open(csv_path, 'w') as csv_file:
+            csv_file.write(textwrap.dedent(
+                """"field_a",1"""))
+        args = {
+            'some_number': 1,
+            'csv': csv_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(validation_warnings, [])
+
+        # trigger validation warning when some_number == 2
+        args = {
+            'some_number': 2,
+            'csv': csv_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(
+            validation_warnings,
+            [(['csv'], validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='row', header_name='field_b'))])
+
+        # Create a CSV file with both field_a and field_b
+        csv_path = os.path.join(self.workspace_dir, 'table2.csv')
+        with open(csv_path, 'w') as csv_file:
+            csv_file.write(textwrap.dedent(
+                """\
+                "field_a",1
+                "field_b",2"""))
+        args = {
+            'some_number': 2,  # field_b is present, no validation warning now
+            'csv': csv_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(validation_warnings, [])
+
     def test_validation_exception(self):
         """Validation: Verify error when an unexpected exception occurs."""
         from natcap.invest import validation
@@ -2113,6 +2178,3 @@ class TestValidationFromSpec(unittest.TestCase):
         patterns = validation.get_headers_to_validate(spec)
         # should only get the patterns that are static and always required
         self.assertEqual(sorted(patterns), ['a'])
-
-# TODO: assert that the target SPEC isn't altered
-# TODO: assert this works with vectors and CSVs
