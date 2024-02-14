@@ -9,6 +9,12 @@ import {
   ipcMain
 } from 'electron';
 
+import {
+  createPythonFlaskProcess,
+  getFlaskIsReady,
+  shutdownPythonProcess
+} from './createPythonFlaskProcess';
+import findInvestBinaries from './findInvestBinaries';
 import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
@@ -72,6 +78,8 @@ export const createWindow = async () => {
   });
   splashScreen.loadURL(path.join(BASE_URL, 'splash.html'));
 
+  const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
+  settingsStore.set('investExe', investExe);
   setupDialogs();
   setupCheckFilePermissions();
   setupCheckFirstRun();

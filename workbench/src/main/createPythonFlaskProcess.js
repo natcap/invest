@@ -54,19 +54,31 @@ export async function getFlaskIsReady(port, i = 0, retries = 41) {
  * @returns {ChildProcess} - a reference to the subprocess.
  */
 export async function createPythonFlaskProcess(modelName) {
-  const micromambaPath = 'mamba'//settingsStore.get('micromamba_path');
   console.log(modelName);
-  const modelEnvPath = settingsStore.get(`models.${modelName}.env`);
   const port = await getFreePort();
   console.log(port);
-  console.log(micromambaPath);
-  console.log(['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port]);
-  const pythonServerProcess = spawn(
-    '"' + micromambaPath + '"',
-    ['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port],
-    { shell: true } // necessary in dev mode & relying on a conda env
-  );
-  settingsStore.set(`models.${modelName}.port`, port);
+
+  if (settingsStore.get(`models.${modelName}.type`) == 'core') {
+    const investExe = settingsStore.get('investExe');
+    const pythonServerProcess = spawn(
+      investExe,
+      ['--debug', 'serve', '--port', port],
+      { shell: true } // necessary in dev mode & relying on a conda env
+    );
+
+  } else {
+    const micromambaPath = 'mamba'//settingsStore.get('micromamba_path');
+    const modelEnvPath = settingsStore.get(`models.${modelName}.env`);
+    console.log(micromambaPath);
+    console.log(['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port]);
+    const pythonServerProcess = spawn(
+      '"' + micromambaPath + '"',
+      ['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port],
+      { shell: true } // necessary in dev mode & relying on a conda env
+    );
+    settingsStore.set(`models.${modelName}.port`, port);
+
+  }
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
   pythonServerProcess.stdout.on('data', (data) => {
