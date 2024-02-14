@@ -1884,7 +1884,7 @@ class TestValidationFromSpec(unittest.TestCase):
         vector_srs.ImportFromEPSG(32731)  # UTM 31N
         layer = vector.CreateLayer('layer', vector_srs, ogr.wkbPoint)
         new_feature = ogr.Feature(layer.GetLayerDefn())
-        new_feature.SetGeometry(ogr.CreateGeometryFromWkt('POINT 1 1'))
+        new_feature.SetGeometry(ogr.CreateGeometryFromWkt('POINT (1 1)'))
 
         new_feature = None
         layer = None
