@@ -1625,6 +1625,79 @@ class TestValidationFromSpec(unittest.TestCase):
                 option_list=spec['string_a']['options']))],
             validation.validate(args, spec))
 
+    def test_conditionally_required_vector_fields(self):
+        """Validation: conditionally required vector fields."""
+        from natcap.invest import spec_utils
+        from natcap.invest import validation
+        spec = {
+            "some_number": {
+                "name": "A number",
+                "about": "About the number",
+                "type": "number",
+                "required": True,
+                "expression": "value > 0.5",
+            },
+            "vector": {
+                "name": "A vector",
+                "about": "About the vector",
+                "type": "vector",
+                "required": True,
+                "geometries": spec_utils.POINTS,
+                "fields": {
+                    "field_a": {
+                        "type": "ratio",
+                        "required": True,
+                    },
+                    "field_b": {
+                        "type": "ratio",
+                        "required": "some_number == 2",
+                    }
+                }
+            }
+        }
+
+        def _create_vector(filepath, fields=[]):
+            gpkg_driver = gdal.GetDriverByName('GPKG')
+            vector = gpkg_driver.Create(filepath, 0, 0, 0,
+                                        gdal.GDT_Unknown)
+            vector_srs = osr.SpatialReference()
+            vector_srs.ImportFromEPSG(4326)  # WGS84
+            layer = vector.CreateLayer('layer', vector_srs, ogr.wkbPoint)
+            for fieldname in fields:
+                layer.CreateField(ogr.FieldDefn(fieldname, ogr.OFTReal))
+            new_feature = ogr.Feature(layer.GetLayerDefn())
+            new_feature.SetGeometry(ogr.CreateGeometryFromWkt('POINT (1 1)'))
+            layer = None
+            vector = None
+
+        vector_path = os.path.join(self.workspace_dir, 'vector1.gpkg')
+        _create_vector(vector_path, ['field_a'])
+        args = {
+            'some_number': 1,
+            'vector': vector_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(validation_warnings, [])
+
+        args = {
+            'some_number': 2,  # trigger validation warning
+            'vector': vector_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(
+            validation_warnings,
+            [(['vector'], validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='field', header_name='field_b'))])
+
+        vector_path = os.path.join(self.workspace_dir, 'vector2.gpkg')
+        _create_vector(vector_path, ['field_a', 'field_b'])
+        args = {
+            'some_number': 2,  # field_b is present, no validation warning now
+            'vector': vector_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(validation_warnings, [])
+
     def test_validation_exception(self):
         """Validation: Verify error when an unexpected exception occurs."""
         from natcap.invest import validation
