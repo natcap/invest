@@ -131,7 +131,7 @@ MODEL_SPEC = {
             "type": "vector",
             "fields": {},
             "geometries": {"POLYGON", "MULTIPOLYGON"},
-            "required": "min_distance | max_distance | valuation_container",
+            "required": "min_distance and max_distance and valuation_container",
             "about": gettext(
                 "Map of the coastlines of landmasses in the area of interest. "
                 "Required if the Minimum Distance and Maximum Distance inputs "
@@ -350,7 +350,7 @@ MODEL_SPEC = {
                     "about": gettext("Longitude of the connection point.")
                 }
             },
-            "required": "valuation_container & (not avg_grid_distance)",
+            "required": "valuation_container and (not avg_grid_distance)",
             "about": gettext(
                 "Table of grid and land connection points to which cables "
                 "will connect. Required if Run Valuation is selected and "
@@ -361,7 +361,7 @@ MODEL_SPEC = {
             "expression": "value > 0",
             "type": "number",
             "units": u.kilometer,
-            "required": "valuation_container & (not grid_points_path)",
+            "required": "valuation_container and (not grid_points_path)",
             "about": gettext(
                 "Average distance to the onshore grid from coastal cable "
                 "landing points. Required if Run Valuation is selected and "
@@ -396,7 +396,7 @@ MODEL_SPEC = {
                     "about": gettext("Price of energy for each year.")
                 }
             },
-            "required": "valuation_container & price_table",
+            "required": "valuation_container and price_table",
             "about": gettext(
                 "Table of yearly prices for wind energy. There must be a row "
                 "for each year in the lifespan given in the 'time_period' "
@@ -407,7 +407,7 @@ MODEL_SPEC = {
         "wind_price": {
             "type": "number",
             "units": u.currency/u.kilowatt_hour,
-            "required": "valuation_container & (not price_table)",
+            "required": "valuation_container and (not price_table)",
             "about": gettext(
                 "The initial price of wind energy, at the first year in the "
                 "wind energy farm lifespan. Required if Run Valuation is "
@@ -416,7 +416,7 @@ MODEL_SPEC = {
         },
         "rate_change": {
             "type": "ratio",
-            "required": "valuation_container & (not price_table)",
+            "required": "valuation_container and (not price_table)",
             "about": gettext(
                 "The annual rate of change in the price of wind energy. "
                 "Required if Run Valuation is selected and Use Price Table "
