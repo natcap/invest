@@ -988,63 +988,31 @@ def validate(args, spec, spatial_overlap_opts=None):
         try:
             sufficient_inputs[key] = bool(args[key])
         except KeyError:
-            # input is insufficient if it's missing from args
+            # input is definitely insufficient if it's missing from args
             sufficient_inputs[key] = False
+
+        if sufficient_inputs[key] is False:
             insufficient_keys.add(key)
 
     # Step 3: evaluate whether conditionally required keys are required.
     # We also want to keep track of keys that are not required due to their
     # conditional requirement expression evaluating to False.
     excluded_keys = set()
-
-        # Any other input type must be sufficient because it is in args and
-        # has a value.
-        else:
-            sufficient_inputs[key] = True
-
-    # step 3: evaluate required status of conditionally required keys
-    # keep track of keys that are explicity not required due to
-    # their condition being false
-    excluded_keys = set()
     for key in conditionally_required_keys:
-        # An input is conditionally required when the expression given
-        # evaluates to True.
-        # We handle 2 cases of how the expression is written:
-        #    * Case 1: a logical expression of boolean operations on another
-        #      parameter.  Example: "not <arg_name>"
-        #      In this case, the <arg_name> symbol is interpreted as a bool.
-        #    * Case 2: a logical expression comparing the value of the
-        #      parameter against another known value.
-        #      Example: "<other_arg_name>.value == 'uniform radius'"
-        expression_values = {}
-        expression_with_value = spec[key]['required'][:]  # make a copy
-        for sufficient_key, is_sufficient in sufficient_inputs.items():
-            try:
-                args_value = args[sufficient_key]
-            except KeyError:
-                # Handle the case where a sufficient key (e.g. optional) is
-                # missing from args.
-                args_value = None
-
-            # If the expression contains a {key}.value pattern, rewrite the
-            # name to avoid dot-notation.
-            # Because sufficiency is a bool and bools are singletons, we cannot
-            # actually assign a .value attribute on a bool.
-            value_symbol = f'__{sufficient_key}__value__'
-            expression_with_value = _rewrite_name_dot_value(
-                sufficient_key, expression_with_value)
-            expression_values[value_symbol] = args_value
-            expression_values[sufficient_key] = is_sufficient
+        # An input is conditionally required when the expression given is
+        # truthy.
+        expression_values = {
+            input_key: args.get(input_key, False) for input_key in spec.keys()
+            if input_key in sufficient_inputs}
 
         is_conditionally_required = _evaluate_expression(
-            expression=expression_with_value,
+            expression=f'bool({spec[key]["required"]})',
             variable_map=expression_values)
         if is_conditionally_required:
             if key not in args:
                 validation_warnings.append(([key], MESSAGES['MISSING_KEY']))
-            else:
-                if args[key] in ('', None):
-                    validation_warnings.append(([key], MESSAGES['MISSING_VALUE']))
+            elif args[key] in ('', None):
+                validation_warnings.append(([key], MESSAGES['MISSING_VALUE']))
         else:
             excluded_keys.add(key)
 
