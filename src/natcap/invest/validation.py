@@ -970,43 +970,27 @@ def validate(args, spec, spatial_overlap_opts=None):
             conditionally_required_keys.add(key)
 
     if missing_keys:
-        validation_warnings.append((sorted(missing_keys), MESSAGES['MISSING_KEY']))
+        validation_warnings.append(
+            (sorted(missing_keys), MESSAGES['MISSING_KEY']))
 
     if keys_with_no_value:
-        validation_warnings.append((sorted(keys_with_no_value), MESSAGES['MISSING_VALUE']))
+        validation_warnings.append(
+            (sorted(keys_with_no_value), MESSAGES['MISSING_VALUE']))
 
     # step 2: evaluate sufficiency of keys/inputs
     # Sufficiency: An input is sufficient when its key is present in args and
-    # it has a value.  A sufficient input need not be valid.  Sufficiency is
-    # used by the conditional requirement phase (step 3 in this function) to
-    # determine whether a conditionally required input is required.
-    # The only special case about sufficiency is with boolean values.
-    # A boolean value absent from args is insufficient.  A boolean input that
-    # is present in args but False is in sufficient.  A boolean input that is
-    # present in args and True is sufficient.
+    # has a truthy value.  If the input is missing from args or is falsy, it is
+    # insufficient.
     insufficient_keys = missing_keys.union(keys_with_no_value)
-    sufficient_inputs = {}
-    for key, parameter_spec in spec.items():
-        # If the key isn't present, no need to validate.
-        # If it's required and isn't present, we wouldn't have gotten to this
-        # point in the function.
-        if key not in args:
-            sufficient_inputs[key] = False
-            insufficient_keys.add(key)
-            continue
+    sufficient_inputs = {
+        key: bool(args.get(key, False)) for key in spec.keys()}
+    insufficient_keys = insufficient_keys.union(set(
+        key for key in sufficient_inputs if not sufficient_inputs[key]))
 
-        # If the value is empty and it isn't required, then we don't need to
-        # validate it.
-        if args[key] in ('', None):
-            sufficient_inputs[key] = False
-            insufficient_keys.add(key)
-            continue
-
-        # Boolean values are special in that their T/F state is equivalent
-        # to their satisfaction.  If a checkbox is checked, it is
-        # considered satisfied.
-        if spec[key]['type'] == 'boolean':
-            sufficient_inputs[key] = args[key]
+    # Step 3: evaluate whether conditionally required keys are required.
+    # We also want to keep track of keys that are not required due to their
+    # conditional requirement expression evaluating to False.
+    excluded_keys = set()
 
         # Any other input type must be sufficient because it is in args and
         # has a value.
