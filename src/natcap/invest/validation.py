@@ -982,10 +982,15 @@ def validate(args, spec, spatial_overlap_opts=None):
     # has a truthy value.  If the input is missing from args or is falsy, it is
     # insufficient.
     insufficient_keys = missing_keys.union(keys_with_no_value)
-    sufficient_inputs = {
-        key: bool(args.get(key, False)) for key in spec.keys()}
-    insufficient_keys = insufficient_keys.union(set(
-        key for key in sufficient_inputs if not sufficient_inputs[key]))
+    sufficient_inputs = {}
+    insufficient_keys = set()
+    for key in spec.keys():
+        try:
+            sufficient_inputs[key] = bool(args[key])
+        except KeyError:
+            # input is insufficient if it's missing from args
+            sufficient_inputs[key] = False
+            insufficient_keys.add(key)
 
     # Step 3: evaluate whether conditionally required keys are required.
     # We also want to keep track of keys that are not required due to their
