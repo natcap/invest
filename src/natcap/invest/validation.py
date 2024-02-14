@@ -66,45 +66,6 @@ MESSAGES = {
 }
 
 
-def _rewrite_name_dot_value(target_key, expression):
-    """Rewrite a ``name.value`` attribute as a single variable.
-
-    This function uses python's ``tokenize`` library to tokenize the expression
-    before checking for the target key and presence of a ``value`` attribute.
-    This eliminates false-positives with similarly-named variables.
-
-    Args:
-        target_key (string): The target symbol that we expect to have a
-            ``.value`` attribute.
-        expression (string): A string expression likely containing
-            ``{target_key}.value``
-
-    Returns:
-        A rewritten, valid python code string where ``{target_key}.value`` has
-        been rewritten as ``__{target_key}__value__``.
-    """
-    tokens = [t for t in tokenize.generate_tokens(
-        io.StringIO(expression).readline)]
-
-    replacement_name = f"__{target_key}__value__"
-
-    output_tokens = []
-    index = 0
-    while index < (len(tokens) - 2):
-        if all([tokens[index].string == target_key,
-                tokens[index+1].string == '.',
-                tokens[index+2].string == 'value']):
-            # Only the type and string value are required for untokenization
-            output_tokens.append((token.NAME, replacement_name))
-            index += 3  # skip the "." and "value" tokens.
-        else:
-            # We can just use the existing token if we're keeping it
-            output_tokens.append(tokens[index])
-            index += 1
-
-    return tokenize.untokenize(output_tokens)
-
-
 def _evaluate_expression(expression, variable_map):
     """Evaluate a python expression.
 
