@@ -958,14 +958,14 @@ def validate(args, spec, spatial_overlap_opts=None):
     # Step 3: evaluate whether conditionally required keys are required.
     # We also want to keep track of keys that are not required due to their
     # conditional requirement expression evaluating to False.
+    #
+    # An input is conditionally required when the expression given is
+    # truthy.
+    expression_values = {
+        input_key: args.get(input_key, False) for input_key in spec.keys()
+        if input_key in sufficient_inputs}
     excluded_keys = set()
     for key in conditionally_required_keys:
-        # An input is conditionally required when the expression given is
-        # truthy.
-        expression_values = {
-            input_key: args.get(input_key, False) for input_key in spec.keys()
-            if input_key in sufficient_inputs}
-
         is_conditionally_required = _evaluate_expression(
             expression=f'bool({spec[key]["required"]})',
             variable_map=expression_values)
