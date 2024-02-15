@@ -57,29 +57,31 @@ export async function createPythonFlaskProcess(modelName) {
   console.log(modelName);
   const port = await getFreePort();
   console.log(port);
+  let pythonServerProcess;
 
   if (settingsStore.get(`models.${modelName}.type`) == 'core') {
+    console.log('create core process')
     const investExe = settingsStore.get('investExe');
-    const pythonServerProcess = spawn(
+    pythonServerProcess = spawn(
       investExe,
       ['--debug', 'serve', '--port', port],
       { shell: true } // necessary in dev mode & relying on a conda env
     );
 
   } else {
+    console.log('create plugin process')
     const micromambaPath = 'mamba'//settingsStore.get('micromamba_path');
     const modelEnvPath = settingsStore.get(`models.${modelName}.env`);
     console.log(micromambaPath);
     console.log(['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port]);
-    const pythonServerProcess = spawn(
+    pythonServerProcess = spawn(
       '"' + micromambaPath + '"',
       ['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port],
       { shell: true } // necessary in dev mode & relying on a conda env
     );
-    settingsStore.set(`models.${modelName}.port`, port);
 
   }
-
+  settingsStore.set(`models.${modelName}.port`, port);
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
   pythonServerProcess.stdout.on('data', (data) => {
     logger.debug(`${data}`);
