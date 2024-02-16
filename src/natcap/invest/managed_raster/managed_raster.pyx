@@ -413,6 +413,7 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             flow_ij = (flow_dir >> (n_dir * 4)) & 0xF
             flow_sum += flow_ij
             if flow_ij:
+                n = NeighborTuple()
                 n.direction = n_dir
                 n.x = xj
                 n.y = yj
