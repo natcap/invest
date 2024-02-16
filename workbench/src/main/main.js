@@ -10,8 +10,6 @@ import {
 } from 'electron';
 
 import {
-  createPythonFlaskProcess,
-  getFlaskIsReady,
   shutdownPythonProcess
 } from './createPythonFlaskProcess';
 import findInvestBinaries from './findInvestBinaries';
@@ -197,6 +195,13 @@ export function main() {
     if (shuttingDown) { return; }
     event.preventDefault();
     shuttingDown = true;
+    Object.keys(settingsStore.get('models')).forEach((model) => {
+      if (settingsStore.get(`models.${model}.pid`)) {
+        shutdownPythonProcess(settingsStore.get(`models.${model}.pid`));
+        settingsStore.set(`models.${model}.pid`, '')
+        settingsStore.set(`models.${model}.port`, '')
+      }
+    })
     removeIpcMainListeners();
     app.quit();
   });

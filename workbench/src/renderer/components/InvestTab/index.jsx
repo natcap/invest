@@ -61,6 +61,7 @@ class InvestTab extends React.Component {
       uiSpec: null,
       userTerminated: false,
       executeClicked: false,
+      tabStatus: '',
     };
 
     this.investExecute = this.investExecute.bind(this);
@@ -73,18 +74,27 @@ class InvestTab extends React.Component {
   async componentDidMount() {
     const { job } = this.props;
     // start up the server for this model
-    await ipcRenderer.invoke(
+    const pid = await ipcRenderer.invoke(
       ipcMainChannels.INVEST_SERVE,
       job.modelRunName
     );
-    const {
-      modelSpec, argsSpec, uiSpec,
-    } = await investGetSpec(job.modelRunName);
-    this.setState({
-      modelSpec: modelSpec,
-      argsSpec: argsSpec,
-      uiSpec: uiSpec,
-    }, () => { this.switchTabs('setup'); });
+    if (pid === undefined) {
+      this.setState({ tabStatus: 'failed' });
+      return;
+    }
+    try {
+      const {
+        modelSpec, argsSpec, uiSpec,
+      } = await investGetSpec(job.modelRunName);
+      this.setState({
+        modelSpec: modelSpec,
+        argsSpec: argsSpec,
+        uiSpec: uiSpec,
+      }, () => { this.switchTabs('setup'); });
+    } catch (error) {
+      this.setState({ tabStatus: 'failed' });
+      return;
+    }
     const { tabID } = this.props;
     ipcRenderer.on(`invest-logging-${tabID}`, this.investLogfileCallback);
     ipcRenderer.on(`invest-exit-${tabID}`, this.investExitCallback);
@@ -195,6 +205,7 @@ class InvestTab extends React.Component {
       argsSpec,
       uiSpec,
       executeClicked,
+      tabStatus
     } = this.state;
     const {
       status,
@@ -204,6 +215,14 @@ class InvestTab extends React.Component {
     } = this.props.job;
 
     const { tabID, t } = this.props;
+
+    if (tabStatus === 'failed') {
+      return (
+        <div className="invest-tab-loading">
+          {t('Failed to launch plugin')}
+        </div>
+      );
+    }
 
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {

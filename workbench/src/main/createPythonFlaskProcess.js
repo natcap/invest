@@ -82,6 +82,7 @@ export async function createPythonFlaskProcess(modelName) {
 
   }
   settingsStore.set(`models.${modelName}.port`, port);
+  settingsStore.set(`models.${modelName}.pid`, pythonServerProcess.pid);
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
   pythonServerProcess.stdout.on('data', (data) => {
     logger.debug(`${data}`);
@@ -109,7 +110,7 @@ export async function createPythonFlaskProcess(modelName) {
 
   await getFlaskIsReady(port);
   logger.info('flask is ready');
-  return pythonServerProcess;
+  return pythonServerProcess.pid;
 }
 
 /**
@@ -118,13 +119,13 @@ export async function createPythonFlaskProcess(modelName) {
  * @param {ChildProcess} subprocess - such as created by child_process.spawn
  * @returns {Promise}
  */
-export async function shutdownPythonProcess(subprocess) {
+export async function shutdownPythonProcess(pid) {
   // builtin kill() method on a nodejs ChildProcess doesn't work on windows.
   try {
     if (process.platform !== 'win32') {
-      subprocess.kill();
+      // the '-' prefix on pid sends signal to children as well
+      process.kill(-pid, 'SIGTERM');
     } else {
-      const { pid } = subprocess;
       execSync(`taskkill /pid ${pid} /t /f`);
     }
   } catch (error) {

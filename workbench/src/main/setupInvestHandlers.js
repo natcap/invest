@@ -35,11 +35,17 @@ const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 export function setupInvestRunHandlers() {
   const runningJobs = {};
   console.log('setup invest handlers');
+  let pid;
 
   ipcMain.handle(
     ipcMainChannels.INVEST_SERVE,
     async (event, modelName) => {
-      await createPythonFlaskProcess(modelName);
+      try {
+        pid = await createPythonFlaskProcess(modelName);
+        return pid;
+      } catch (error) {
+        return undefined;
+      }
     }
   );
 
