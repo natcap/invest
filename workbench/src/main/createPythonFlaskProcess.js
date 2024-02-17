@@ -26,7 +26,6 @@ async function getFreePort() {
  * @returns { Promise } resolves text indicating success.
  */
 export async function getFlaskIsReady(port, i = 0, retries = 41) {
-  console.log('port:', port);
   try {
     await fetch(`${HOSTNAME}:${port}/api/ready`, {
       method: 'get',
@@ -54,35 +53,41 @@ export async function getFlaskIsReady(port, i = 0, retries = 41) {
  * @returns {ChildProcess} - a reference to the subprocess.
  */
 export async function createPythonFlaskProcess(modelName) {
-  console.log(modelName);
   const port = await getFreePort();
-  console.log(port);
   let pythonServerProcess;
+  let path;
 
   if (settingsStore.get(`models.${modelName}.type`) == 'core') {
-    console.log('create core process')
+    const core_pid = settingsStore.get('core.pid');
+    if (core_pid) {
+      logger.debug(
+        `invest core server process (PID ${core_pid}) already running on port ${settingsStore.get('core.port')}`);
+      return core_pid;
+    }
+
+    logger.debug('creating invest core server process')
     const investExe = settingsStore.get('investExe');
+    path = investExe;
     pythonServerProcess = spawn(
       investExe,
       ['--debug', 'serve', '--port', port],
       { shell: true } // necessary in dev mode & relying on a conda env
     );
-
+    settingsStore.set(`core.port`, port);
+    settingsStore.set(`core.pid`, pythonServerProcess.pid);
   } else {
-    console.log('create plugin process')
+    logger.debug('creating invest plugin server process')
     const micromambaPath = 'mamba'//settingsStore.get('micromamba_path');
     const modelEnvPath = settingsStore.get(`models.${modelName}.env`);
-    console.log(micromambaPath);
-    console.log(['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port]);
+    path = modelEnvPath;
     pythonServerProcess = spawn(
       '"' + micromambaPath + '"',
       ['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port],
       { shell: true } // necessary in dev mode & relying on a conda env
     );
-
+    settingsStore.set(`models.${modelName}.port`, port);
+    settingsStore.set(`models.${modelName}.pid`, pythonServerProcess.pid);
   }
-  settingsStore.set(`models.${modelName}.port`, port);
-  settingsStore.set(`models.${modelName}.pid`, pythonServerProcess.pid);
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
   pythonServerProcess.stdout.on('data', (data) => {
     logger.debug(`${data}`);
@@ -93,7 +98,7 @@ export async function createPythonFlaskProcess(modelName) {
   pythonServerProcess.on('error', (err) => {
     logger.error(err.stack);
     logger.error(
-      `The invest flask app in ${modelEnvPath} crashed or failed to start
+      `The invest flask app at ${path} crashed or failed to start
        so this application must be restarted`
     );
     throw err;

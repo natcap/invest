@@ -34,18 +34,13 @@ const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 
 export function setupInvestRunHandlers() {
   const runningJobs = {};
-  console.log('setup invest handlers');
   let pid;
 
   ipcMain.handle(
     ipcMainChannels.INVEST_SERVE,
     async (event, modelName) => {
-      try {
-        pid = await createPythonFlaskProcess(modelName);
-        return pid;
-      } catch (error) {
-        return undefined;
-      }
+      pid = await createPythonFlaskProcess(modelName);
+      return pid;
     }
   );
 
@@ -113,8 +108,6 @@ export function setupInvestRunHandlers() {
       // counter-intuitive, but w/ true: invest terminates when this shell terminates
       spawnOptions.detached = true;
     }
-    console.log(micromambaPath);
-    console.log(cmdArgs);
     const investRun = spawn(micromambaPath, cmdArgs, spawnOptions);
 
     // There's no general way to know that a spawned process started,

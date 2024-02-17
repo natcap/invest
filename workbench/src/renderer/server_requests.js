@@ -8,6 +8,20 @@ const PREFIX = 'api';
 const CORE_PORT = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
 
 
+async function getPort(modelName) {
+  let port;
+  const type = await ipcRenderer.invoke(
+    ipcMainChannels.GET_SETTING, `models.${modelName}.type`);
+  if (type === 'core') {
+    port = await ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, 'core.port');
+  } else {
+    port = await ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, `models.${modelName}.port`);
+  }
+  return port;
+}
+
 // The Flask server sends UTF-8 encoded responses by default
 // response.text() always decodes the response using UTF-8
 // https://developer.mozilla.org/en-US/docs/Web/API/Body/text
@@ -22,8 +36,7 @@ const CORE_PORT = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.po
  * @returns {Promise} resolves object
  */
 export async function getSpec(modelName) {
-  const port = await ipcRenderer.invoke(
-    ipcMainChannels.GET_SETTING, `models.${modelName}.port`);
+  const port = await getPort(modelName);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/getspec?language=${LANGUAGE}`, {
       method: 'post',
@@ -37,8 +50,7 @@ export async function getSpec(modelName) {
 
 export async function fetchArgsEnabled(payload) {
   console.log(payload);
-  const port = await ipcRenderer.invoke(
-    ipcMainChannels.GET_SETTING, `models.${payload.modelId}.port`);
+  const port = await getPort(modelName);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/args_enabled`, {
       method: 'post',
@@ -67,8 +79,7 @@ export async function fetchArgsEnabled(payload) {
  */
 export async function fetchValidation(payload) {
   console.log(payload);
-  const port = await ipcRenderer.invoke(
-    ipcMainChannels.GET_SETTING, `models.${payload.modelId}.port`);
+  const port = await getPort(modelName);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/validate?language=${LANGUAGE}`, {
       method: 'post',

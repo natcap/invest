@@ -92,6 +92,7 @@ class InvestTab extends React.Component {
         uiSpec: uiSpec,
       }, () => { this.switchTabs('setup'); });
     } catch (error) {
+      console.log(error);
       this.setState({ tabStatus: 'failed' });
       return;
     }
