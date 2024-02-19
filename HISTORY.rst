@@ -38,6 +38,9 @@
 
 Unreleased Changes
 ------------------
+* Annual Water Yield
+    * Added the results_suffix to a few intermediate files where it was
+      missing. https://github.com/natcap/invest/issues/1517
 * Urban Nature Access
     * Fixed a ``NameError`` that occurred when running the model using
       search radii defined per population group with an exponential search
