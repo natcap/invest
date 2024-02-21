@@ -966,6 +966,8 @@ def validate(args, spec, spatial_overlap_opts=None):
             axis_keys = ['columns', 'rows']
         elif parameter_spec['type'] == 'vector':
             axis_keys = ['fields']
+        elif parameter_spec['type'] == 'directory':
+            axis_keys = ['contents']
 
         if axis_keys:
             for axis_key in axis_keys:

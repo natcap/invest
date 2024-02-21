@@ -1857,6 +1857,61 @@ class TestValidationFromSpec(unittest.TestCase):
             validation_warnings,
             [(['number_a'], validation.MESSAGES['UNEXPECTED_ERROR'])])
 
+    def test_conditionally_required_directory_contents(self):
+        """Validation: conditionally required directory contents."""
+        from natcap.invest import validation
+        spec = {
+            "some_number": {
+                "name": "A number",
+                "about": "About the number",
+                "type": "number",
+                "required": True,
+                "expression": "value > 0.5",
+            },
+            "directory": {
+                "name": "A folder",
+                "about": "About the folder",
+                "type": "directory",
+                "required": True,
+                "contents": {
+                    "file.1": {
+                        "type": "csv",
+                        "required": True,
+                    },
+                    "file.2": {
+                        "type": "csv",
+                        "required": "some_number == 2",
+                    }
+                }
+            }
+        }
+        path_1 = os.path.join(self.workspace_dir, 'file.1')
+        with open(path_1, 'w') as my_file:
+            my_file.write('col1,col2')
+        args = {
+            'some_number': 1,
+            'directory': self.workspace_dir,
+        }
+        self.assertEqual([], validation.validate(args, spec))
+
+        path_2 = os.path.join(self.workspace_dir, 'file.2')
+        with open(path_2, 'w') as my_file:
+            my_file.write('col1,col2')
+        args = {
+            'some_number': 2,
+            'directory': self.workspace_dir,
+        }
+        self.assertEqual([], validation.validate(args, spec))
+
+        os.remove(path_2)
+        self.assertFalse(os.path.exists(path_2))
+        args = {
+            'some_number': 2,
+            'directory': self.workspace_dir,
+        }
+        # TODO: directory contents are not actually validated right now
+        self.assertEqual([], validation.validate(args, spec))
+
     def test_validation_other(self):
         """Validation: verify no error when 'other' type."""
         from natcap.invest import validation
