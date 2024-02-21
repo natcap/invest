@@ -4,15 +4,12 @@ import copy
 import functools
 import importlib
 import inspect
-import io
 import logging
 import os
 import pprint
 import queue
 import re
 import threading
-import token
-import tokenize
 import warnings
 
 import numpy
@@ -35,15 +32,19 @@ LOGGER = logging.getLogger(__name__)
 MESSAGES = {
     'MISSING_KEY': gettext('Key is missing from the args dict'),
     'MISSING_VALUE': gettext('Input is required but has no value'),
-    'MATCHED_NO_HEADERS': gettext('Expected the {header} "{header_name}" but did '
-                            'not find it'),
-    'PATTERN_MATCHED_NONE': gettext('Expected to find at least one {header} matching '
-                                    'the pattern "{header_name}" but found none'),
-    'DUPLICATE_HEADER': gettext('Expected the {header} "{header_name}" only once '
-                                'but found it {number} times'),
-    'NOT_A_NUMBER': gettext('Value "{value}" could not be interpreted as a number'),
-    'WRONG_PROJECTION_UNIT': gettext('Layer must be projected in this unit: '
-                               '"{unit_a}" but found this unit: "{unit_b}"'),
+    'MATCHED_NO_HEADERS': gettext(
+        'Expected the {header} "{header_name}" but did not find it'),
+    'PATTERN_MATCHED_NONE': gettext(
+        'Expected to find at least one {header} matching '
+        'the pattern "{header_name}" but found none'),
+    'DUPLICATE_HEADER': gettext(
+        'Expected the {header} "{header_name}" only once '
+        'but found it {number} times'),
+    'NOT_A_NUMBER': gettext(
+        'Value "{value}" could not be interpreted as a number'),
+    'WRONG_PROJECTION_UNIT': gettext(
+        'Layer must be projected in this unit: '
+        '"{unit_a}" but found this unit: "{unit_b}"'),
     'UNEXPECTED_ERROR': gettext('An unexpected error occurred in validation'),
     'DIR_NOT_FOUND': gettext('Directory not found'),
     'NOT_A_DIR': gettext('Path must be a directory'),
@@ -53,16 +54,19 @@ MESSAGES = {
     'NOT_GDAL_RASTER': gettext('File could not be opened as a GDAL raster'),
     'OVR_FILE': gettext('File found to be an overview ".ovr" file.'),
     'NOT_GDAL_VECTOR': gettext('File could not be opened as a GDAL vector'),
-    'REGEXP_MISMATCH': gettext("Value did not match expected pattern {regexp}"),
+    'REGEXP_MISMATCH': gettext(
+        "Value did not match expected pattern {regexp}"),
     'INVALID_OPTION': gettext("Value must be one of: {option_list}"),
     'INVALID_VALUE': gettext('Value does not meet condition {condition}'),
     'NOT_WITHIN_RANGE': gettext('Value {value} is not in the range {range}'),
     'NOT_AN_INTEGER': gettext('Value "{value}" does not represent an integer'),
     'NOT_BOOLEAN': gettext("Value must be either True or False, not {value}"),
     'NO_PROJECTION': gettext('Spatial file {filepath} has no projection'),
-    'BBOX_NOT_INTERSECT': gettext('Not all of the spatial layers overlap each '
+    'BBOX_NOT_INTERSECT': gettext(
+        'Not all of the spatial layers overlap each '
         'other. All bounding boxes must intersect: {bboxes}'),
-    'NEED_PERMISSION': gettext('You must have {permission} access to this file'),
+    'NEED_PERMISSION': gettext(
+        'You must have {permission} access to this file'),
     'WRONG_GEOM_TYPE': gettext('Geometry type must be one of {allowed}')
 }
 
@@ -376,7 +380,8 @@ def check_vector(filepath, geometries, fields=None, projected=False,
     gdal.PopErrorHandler()
 
     geom_map = {
-        'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM, ogr.wkbPoint25D],
+        'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM,
+                  ogr.wkbPoint25D],
         'LINESTRING': [ogr.wkbLineString, ogr.wkbLineStringM,
                        ogr.wkbLineStringZM, ogr.wkbLineString25D],
         'POLYGON': [ogr.wkbPolygon, ogr.wkbPolygonM,
@@ -384,7 +389,8 @@ def check_vector(filepath, geometries, fields=None, projected=False,
         'MULTIPOINT': [ogr.wkbMultiPoint, ogr.wkbMultiPointM,
                        ogr.wkbMultiPointZM, ogr.wkbMultiPoint25D],
         'MULTILINESTRING': [ogr.wkbMultiLineString, ogr.wkbMultiLineStringM,
-                            ogr.wkbMultiLineStringZM, ogr.wkbMultiLineString25D],
+                            ogr.wkbMultiLineStringZM,
+                            ogr.wkbMultiLineString25D],
         'MULTIPOLYGON': [ogr.wkbMultiPolygon, ogr.wkbMultiPolygonM,
                          ogr.wkbMultiPolygonZM, ogr.wkbMultiPolygon25D]
     }
@@ -396,11 +402,11 @@ def check_vector(filepath, geometries, fields=None, projected=False,
     if gdal_dataset is None:
         return MESSAGES['NOT_GDAL_VECTOR']
 
-    # NOTE: this only checks the layer geometry type, not the types of the actual
-    # geometries (layer.GetGeometryTypes()). This is probably equivalent in most
-    # cases, and it's more efficient than checking every geometry, but we might
-    # need to change this in the future if it becomes a problem. Currently not
-    # supporting ogr.wkbUnknown which allows mixed types.
+    # NOTE: this only checks the layer geometry type, not the types of the
+    # actual geometries (layer.GetGeometryTypes()). This is probably equivalent
+    # in most cases, and it's more efficient than checking every geometry, but
+    # we might need to change this in the future if it becomes a problem.
+    # Currently not supporting ogr.wkbUnknown which allows mixed types.
     layer = gdal_dataset.GetLayer()
     if layer.GetGeomType() not in allowed_geom_types:
         return MESSAGES['WRONG_GEOM_TYPE'].format(allowed=geometries)
@@ -576,7 +582,8 @@ def check_boolean(value, **kwargs):
         return MESSAGES['NOT_BOOLEAN'].format(value=value)
 
 
-def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
+def get_validated_dataframe(
+        csv_path, columns=None, rows=None, index_col=None,
         read_csv_kwargs={}, **kwargs):
     """Read a CSV into a dataframe that is guaranteed to match the spec."""
 
@@ -596,7 +603,8 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
 
     if rows:
         # swap rows and column
-        df = df.set_index(df.columns[0]).rename_axis(None, axis=0).T.reset_index(drop=True)
+        df = df.set_index(df.columns[0]).rename_axis(
+            None, axis=0).T.reset_index(drop=True)
 
     spec = columns if columns else rows
 
@@ -659,7 +667,7 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
             header_name=expected,
             number=count)
 
-     # set the index column, if specified
+    # set the index column, if specified
     if index_col is not None:
         index_col = index_col.lower()
         try:
@@ -818,9 +826,10 @@ def timeout(func, *args, timeout=5, **kwargs):
     thread.join(timeout=timeout)
     if thread.is_alive():
         # first arg to `check_csv`, `check_raster`, `check_vector` is the path
-        warnings.warn(f'Validation of file {args[0]} timed out. If this file '
-                      'is stored in a file streaming service, it may be taking a long '
-                      'time to download. Try storing it locally instead.')
+        warnings.warn(
+            f'Validation of file {args[0]} timed out. If this file '
+            'is stored in a file streaming service, it may be taking a long '
+            'time to download. Try storing it locally instead.')
         return None
 
     else:
@@ -1116,8 +1125,9 @@ def invest_validator(validate_func):
         try:
             model_module = importlib.import_module(validate_func.__module__)
         except Exception:
-            LOGGER.warning('Unable to import module %s: assuming no MODEL_SPEC.',
-                           validate_func.__module__)
+            LOGGER.warning(
+                'Unable to import module %s: assuming no MODEL_SPEC.',
+                validate_func.__module__)
             model_module = None
 
         # If the module has an MODEL_SPEC defined, validate against that.
