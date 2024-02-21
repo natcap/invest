@@ -913,29 +913,30 @@ def validate(args, spec, spatial_overlap_opts=None):
     """
     validation_warnings = []
 
-    # step 1: check absolute requirement
+    # Phase 1: Check whether an input is required and has a value
     missing_keys = set()
     keys_with_no_value = set()
-    conditionally_required_keys = set()
+    expression_values = {
+        input_key: args.get(input_key, False) for input_key in spec.keys()}
     for key, parameter_spec in spec.items():
         # Default required to True since this is the most common
         try:
             required = parameter_spec['required']
         except KeyError:
             required = True
-        if required is True:  # Might be an args key, can't rely on truthiness
+
+        if isinstance(required, str):
+            required = _evaluate_expression(
+                expression=f'bool({spec[key]["required"]})',
+                variable_map=expression_values)
+
+        # At this point, required is only True or False.
+        if required:
             if key not in args:
                 missing_keys.add(key)
             else:
                 if args[key] in ('', None):
                     keys_with_no_value.add(key)
-
-        # If ``required`` is a string, it must represent an expression of
-        # conditional requirement based on the satisfaction of various args
-        # keys.  We can only evaluate this later, after all other validation
-        # happens, so add this args key to a set for later.
-        elif isinstance(required, str):
-            conditionally_required_keys.add(key)
 
     if missing_keys:
         validation_warnings.append(
@@ -945,53 +946,11 @@ def validate(args, spec, spatial_overlap_opts=None):
         validation_warnings.append(
             (sorted(keys_with_no_value), MESSAGES['MISSING_VALUE']))
 
-    # step 2: evaluate sufficiency of keys/inputs
-    # Sufficiency: An input is sufficient when its key is present in args and
-    # has a truthy value.  If the input is missing from args or is falsy, it is
-    # insufficient.
-    sufficient_inputs = {}
-    insufficient_keys = set()
-    for key in spec.keys():
-        try:
-            sufficient_inputs[key] = bool(args[key])
-        except KeyError:
-            # input is definitely insufficient if it's missing from args
-            sufficient_inputs[key] = False
-
-        if sufficient_inputs[key] is False:
-            insufficient_keys.add(key)
-
-    # Step 3: evaluate whether conditionally required keys are required.
-    # We also want to keep track of keys that are not required due to their
-    # conditional requirement expression evaluating to False.
-    #
-    # An input is conditionally required when the expression given is
-    # truthy.
-    expression_values = {
-        input_key: args.get(input_key, False) for input_key in spec.keys()}
-    excluded_keys = set()
-    for key in conditionally_required_keys:
-        is_conditionally_required = _evaluate_expression(
-            expression=f'bool({spec[key]["required"]})',
-            variable_map=expression_values)
-        if is_conditionally_required:
-            if key not in args:
-                validation_warnings.append(([key], MESSAGES['MISSING_KEY']))
-            elif args[key] in ('', None):
-                validation_warnings.append(([key], MESSAGES['MISSING_VALUE']))
-        else:
-            excluded_keys.add(key)
-
-    # step 4: validate keys, but not conditionally excluded ones.
-    # Making a distinction between keys which are optional (required=False),
-    # and keys which are conditionally not required
-    # (required="condition that evaluates to False")
-    # We want to do validation on optional keys, like `n_workers`,
-    # but not on conditionally excluded keys, like fields that are greyed out
-    # because a checkbox is unchecked.
+    # Phase 2: Check whether any input with a value validates with its
+    # type-specific check function.
     invalid_keys = set()
-    sufficient_keys = set(args.keys()).difference(insufficient_keys)
-    for key in sufficient_keys.difference(excluded_keys):
+    insufficient_keys = (missing_keys | keys_with_no_value)
+    for key in set(args.keys()) - insufficient_keys:
         # Extra args that don't exist in the MODEL_SPEC are okay
         # we don't need to try to validate them
         try:
@@ -1037,7 +996,7 @@ def validate(args, spec, spatial_overlap_opts=None):
                 key, args[key])
             validation_warnings.append(([key], MESSAGES['UNEXPECTED_ERROR']))
 
-    # step 5: check spatial overlap if applicable
+    # Phase 3: Check spatial overlap if applicable
     if spatial_overlap_opts:
         spatial_keys = set(spatial_overlap_opts['spatial_keys'])
 

@@ -1420,8 +1420,7 @@ class TestValidationFromSpec(unittest.TestCase):
         }
         validation_warnings = validation.validate(args, spec)
         self.assertEqual(sorted(validation_warnings), [
-            (['number_c'], validation.MESSAGES['MISSING_KEY']),
-            (['number_d'], validation.MESSAGES['MISSING_KEY']),
+            (['number_c', 'number_d'], validation.MESSAGES['MISSING_KEY']),
         ])
 
         args = {
@@ -1507,12 +1506,10 @@ class TestValidationFromSpec(unittest.TestCase):
             }
         }
 
-        # because condition = True, it shouldn't matter that the
-        # csv_b parameter wouldn't pass validation
         args = {
             "condition": True,
             "csv_a": csv_a_path,
-            "csv_b": 'x' + csv_b_path  # introduce a typo
+            # csv_b is absent, which is okay because it's not required
         }
 
         validation_warnings = validation.validate(args, spec)
