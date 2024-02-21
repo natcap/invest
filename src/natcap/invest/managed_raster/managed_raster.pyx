@@ -26,13 +26,19 @@ ctypedef pair[int, double*] BlockBufferPair
 # Number of raster blocks to hold in memory at once per Managed Raster
 cdef int MANAGED_RASTER_N_BLOCKS = 2**6
 
-# These offsets are for the neighbor rows and columns according to the
-# ordering: 3 2 1
-#           4 x 0
-#           5 6 7
+# given the pixel neighbor numbering system
+#  3 2 1
+#  4 x 0
+#  5 6 7
+# These offsets are for the neighbor rows and columns
 cdef int *ROW_OFFSETS = [0, -1, -1, -1,  0,  1, 1, 1]
 cdef int *COL_OFFSETS = [1,  1,  0, -1, -1, -1, 0, 1]
-cdef int* FLOW_DIR_REVERSE_DIRECTION = [4, 5, 6, 7, 0, 1, 2, 3]
+cdef int *FLOW_DIR_REVERSE_DIRECTION = [4, 5, 6, 7, 0, 1, 2, 3]
+
+# if a pixel `x` has a neighbor `n` in position `i`,
+# then `n`'s neighbor in position `inflow_offsets[i]`
+# is the original pixel `x`
+cdef int *INFLOW_OFFSETS = [4, 5, 6, 7, 0, 1, 2, 3]
 
 # a class to allow fast random per-pixel access to a raster for both setting
 # and reading pixels.  Copied from src/pygeoprocessing/routing/routing.pyx,

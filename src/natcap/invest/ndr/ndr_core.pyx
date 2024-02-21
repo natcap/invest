@@ -16,6 +16,7 @@ from libc.math cimport exp
 from ..managed_raster.managed_raster cimport _ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport is_close
+from ..managed_raster.managed_raster cimport INFLOW_OFFSETS
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -60,8 +61,6 @@ def ndr_eff_calculation(
         dir=os.path.dirname(effective_retention_path))
     os.close(fp)
 
-    cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
-
     cdef long n_cols, n_rows
     flow_dir_info = pygeoprocessing.get_raster_info(mfd_flow_direction_path)
     n_cols, n_rows = flow_dir_info['raster_size']
@@ -103,7 +102,7 @@ def ndr_eff_calculation(
     cdef _ManagedRaster to_process_flow_directions_raster = _ManagedRaster(
         to_process_flow_directions_path, 1, True)
 
-    cdef long col_index, row_index
+    cdef long col_index, row_index, win_xsize, win_ysize, xoff, yoff
     cdef long global_col, global_row
     cdef unsigned long flat_index
     cdef long outflow_weight, flow_dir
@@ -115,10 +114,15 @@ def ndr_eff_calculation(
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
-        for row_index in range(offset_dict['win_ysize']):
-            global_row = offset_dict['yoff'] + row_index
-            for col_index in range(offset_dict['win_xsize']):
-                global_col = offset_dict['xoff'] + col_index
+        # use cython variables to avoid python overhead of dict values
+        win_xsize = offset_dict['win_xsize']
+        win_ysize = offset_dict['win_ysize']
+        xoff = offset_dict['xoff']
+        yoff = offset_dict['yoff']
+        for row_index in range(win_ysize):
+            global_row = yoff + row_index
+            for col_index in range(win_xsize):
+                global_col = xoff + col_index
                 outflow_dirs = <int>to_process_flow_directions_raster.get(
                     global_col, global_row)
                 should_seed = 0
@@ -214,7 +218,7 @@ def ndr_eff_calculation(
             # for i in range(8):
             for neighbor in mfd_flow_direction_raster.get_upslope_neighbors(
                     global_col, global_row):
-                neighbor_outflow_dir = inflow_offsets[neighbor.direction]
+                neighbor_outflow_dir = INFLOW_OFFSETS[neighbor.direction]
                 neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir
                 neighbor_process_flow_dir = <int>(
                     to_process_flow_directions_raster.get(

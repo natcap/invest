@@ -15,6 +15,7 @@ from libcpp.stack cimport stack
 from ..managed_raster.managed_raster cimport _ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport is_close
+from ..managed_raster.managed_raster cimport INFLOW_OFFSETS
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -95,15 +96,6 @@ def calculate_sediment_deposition(
     cdef _ManagedRaster sediment_deposition_raster = _ManagedRaster(
         target_sediment_deposition_path, 1, True)
 
-    # given the pixel neighbor numbering system
-    #  3 2 1
-    #  4 x 0
-    #  5 6 7
-    # if a pixel `x` has a neighbor `n` in position `i`,
-    # then `n`'s neighbor in position `inflow_offsets[i]`
-    # is the original pixel `x`
-    cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
-
     cdef long n_cols, n_rows
     flow_dir_info = pygeoprocessing.get_raster_info(mfd_flow_direction_path)
     n_cols, n_rows = flow_dir_info['raster_size']
@@ -113,7 +105,7 @@ def calculate_sediment_deposition(
         sdr_path)['nodata'][0]
     cdef float e_prime_nodata = pygeoprocessing.get_raster_info(
         e_prime_path)['nodata'][0]
-    cdef long col_index, row_index
+    cdef long col_index, row_index, win_xsize, win_ysize, xoff, yoff
     cdef long global_col, global_row, j, k
     cdef unsigned long flat_index
     cdef long neighbor_row, neighbor_col, xs, ys
@@ -124,19 +116,24 @@ def calculate_sediment_deposition(
     cdef float p_j, p_val
     cdef unsigned long n_pixels_processed = 0
     cdef time_t last_log_time = ctime(NULL)
+    cdef float f_j_weighted_sum
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
-
+        # use cython variables to avoid python overhead of dict values
+        win_xsize = offset_dict['win_xsize']
+        win_ysize = offset_dict['win_ysize']
+        xoff = offset_dict['xoff']
+        yoff = offset_dict['yoff']
         if ctime(NULL) - last_log_time > 5.0:
             last_log_time = ctime(NULL)
             LOGGER.info('Sediment deposition %.2f%% complete', 100 * (
                 n_pixels_processed / float(n_cols * n_rows)))
 
-        for row_index in range(offset_dict['win_ysize']):
-            ys = offset_dict['yoff'] + row_index
-            for col_index in range(offset_dict['win_xsize']):
-                xs = offset_dict['xoff'] + col_index
+        for row_index in range(win_ysize):
+            ys = yoff + row_index
+            for col_index in range(win_xsize):
+                xs = xoff + col_index
 
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack
@@ -203,7 +200,7 @@ def calculate_sediment_deposition(
                                     neighbor.x, neighbor.y)):
                             # no need to push the one we're currently
                             # calculating back onto the stack
-                            if (inflow_offsets[neighbor_of_neighbor.direction] ==
+                            if (INFLOW_OFFSETS[neighbor_of_neighbor.direction] ==
                                     neighbor.direction):
                                 continue
                             if is_close(
@@ -259,7 +256,7 @@ def calculate_sediment_deposition(
 
                     sediment_deposition_raster.set(global_col, global_row, t_i)
                     f_raster.set(global_col, global_row, f_i)
-        n_pixels_processed += offset_dict['win_xsize'] * offset_dict['win_ysize']
+        n_pixels_processed += win_xsize * win_ysize
 
     LOGGER.info('Sediment deposition 100% complete')
     sediment_deposition_raster.close()

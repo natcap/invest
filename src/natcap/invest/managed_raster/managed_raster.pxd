@@ -1,4 +1,3 @@
-# cython: profile=False
 # cython: language_level=3
 # distutils: language = c++
 from libcpp.list cimport list as clist
@@ -56,6 +55,15 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
 
     cdef vector[NeighborTuple] get_downslope_neighbors(ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=*)
 
+
+# These offsets are for the neighbor rows and columns according to the
+# ordering: 3 2 1
+#           4 x 0
+#           5 6 7
+cdef int *ROW_OFFSETS
+cdef int *COL_OFFSETS
+cdef int *FLOW_DIR_REVERSE_DIRECTION
+cdef int *INFLOW_OFFSETS
 
 cdef inline int is_close(double x, double y):
     return abs(x-y) <= (1e-8+1e-05*abs(y))

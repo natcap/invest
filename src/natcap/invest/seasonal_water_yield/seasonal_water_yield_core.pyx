@@ -77,12 +77,12 @@ cpdef calculate_local_recharge(
     """
     cdef int i_n, flow_dir_nodata, flow_dir_mfd
     cdef int peak_pixel
-    cdef long xs, ys, xs_root, ys_root
+    cdef long xs, ys, xs_root, ys_root, xoff, yoff
     cdef int flow_dir_s
     cdef long xi, yi, xj, yj
     cdef int flow_dir_j, p_ij_base
     cdef int n_dir
-    cdef long raster_x_size, raster_y_size
+    cdef long raster_x_size, raster_y_size, win_xsize, win_ysize
     cdef double pet_m, p_m, qf_m, et0_m, aet_i, p_i, qf_i, l_i, l_avail_i
     cdef float qf_nodata, kc_nodata
 
@@ -177,20 +177,24 @@ cpdef calculate_local_recharge(
 
     for offset_dict in pygeoprocessing.iterblocks(
             (flow_dir_mfd_path, 1), offset_only=True, largest_block=0):
-
+        # use cython variables to avoid python overhead of dict values
+        win_xsize = offset_dict['win_xsize']
+        win_ysize = offset_dict['win_ysize']
+        xoff = offset_dict['xoff']
+        yoff = offset_dict['yoff']
         if ctime(NULL) - last_log_time > 5.0:
             last_log_time = ctime(NULL)
-            current_pixel = offset_dict['xoff'] + offset_dict['yoff'] * raster_x_size
+            current_pixel = xoff + yoff * raster_x_size
             LOGGER.info(
                 'peak point detection %.2f%% complete',
                 100.0 * current_pixel / <float>(
                     raster_x_size * raster_y_size))
 
         # search block for a peak pixel where no other pixel drains to it.
-        for ys in xrange(offset_dict['win_ysize']):
-            ys_root = offset_dict['yoff'] + ys
-            for xs in xrange(offset_dict['win_xsize']):
-                xs_root = offset_dict['xoff'] + xs
+        for ys in xrange(win_ysize):
+            ys_root = yoff + ys
+            for xs in xrange(win_xsize):
+                xs_root = xoff + xs
 
                 if flow_raster.is_local_high_point(xs_root, ys_root):
                     work_queue.push(
@@ -325,9 +329,9 @@ def route_baseflow_sum(
     cdef float p_ij
     cdef int flow_dir_i, p_ij_base
     cdef int flow_dir_nodata
-    cdef long raster_x_size, raster_y_size, xs_root, ys_root
+    cdef long raster_x_size, raster_y_size, xs_root, ys_root, xoff, yoff
     cdef int n_dir
-    cdef int xs, ys, flow_dir_s
+    cdef int xs, ys, flow_dir_s, win_xsize, win_ysize
     cdef int stream_nodata
     cdef stack[pair[long, long]] work_stack
 
@@ -358,10 +362,15 @@ def route_baseflow_sum(
     current_pixel = 0
     for offset_dict in pygeoprocessing.iterblocks(
             (flow_dir_mfd_path, 1), offset_only=True, largest_block=0):
-        for ys in xrange(offset_dict['win_ysize']):
-            ys_root = offset_dict['yoff'] + ys
-            for xs in xrange(offset_dict['win_xsize']):
-                xs_root = offset_dict['xoff'] + xs
+        # use cython variables to avoid python overhead of dict values
+        win_xsize = offset_dict['win_xsize']
+        win_ysize = offset_dict['win_ysize']
+        xoff = offset_dict['xoff']
+        yoff = offset_dict['yoff']
+        for ys in xrange(win_ysize):
+            ys_root = yoff + ys
+            for xs in xrange(win_xsize):
+                xs_root = xoff + xs
                 flow_dir_s = <int>flow_dir_mfd_raster.get(xs_root, ys_root)
                 if is_close(flow_dir_s, flow_dir_nodata):
                     current_pixel += 1
