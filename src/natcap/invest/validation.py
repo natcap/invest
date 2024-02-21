@@ -949,7 +949,6 @@ def validate(args, spec, spatial_overlap_opts=None):
     # Sufficiency: An input is sufficient when its key is present in args and
     # has a truthy value.  If the input is missing from args or is falsy, it is
     # insufficient.
-    insufficient_keys = missing_keys.union(keys_with_no_value)
     sufficient_inputs = {}
     insufficient_keys = set()
     for key in spec.keys():
