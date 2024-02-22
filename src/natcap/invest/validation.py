@@ -926,9 +926,9 @@ def validate(args, spec, spatial_overlap_opts=None):
             required = True
 
         if isinstance(required, str):
-            required = _evaluate_expression(
-                expression=f'bool({spec[key]["required"]})',
-                variable_map=expression_values)
+            required = bool(_evaluate_expression(
+                expression=f'{spec[key]["required"]}',
+                variable_map=expression_values))
 
         # At this point, required is only True or False.
         if required:
@@ -977,8 +977,8 @@ def validate(args, spec, spatial_overlap_opts=None):
                     if ('required' in nested_spec
                             and isinstance(nested_spec['required'], str)):
                         parameter_spec[axis_key][nested_key]['required'] = (
-                            _evaluate_expression(
-                                nested_spec['required'], expression_values))
+                            bool(_evaluate_expression(
+                                nested_spec['required'], expression_values)))
 
         type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
 
