@@ -915,9 +915,10 @@ def validate(args, spec, spatial_overlap_opts=None):
 
     # Phase 1: Check whether an input is required and has a value
     missing_keys = set()
-    keys_with_no_value = set()
+    required_keys_with_no_value = set()
     expression_values = {
         input_key: args.get(input_key, False) for input_key in spec.keys()}
+    keys_with_falsey_values = set()
     for key, parameter_spec in spec.items():
         # Default required to True since this is the most common
         try:
@@ -936,20 +937,24 @@ def validate(args, spec, spatial_overlap_opts=None):
                 missing_keys.add(key)
             else:
                 if args[key] in ('', None):
-                    keys_with_no_value.add(key)
+                    required_keys_with_no_value.add(key)
+        elif not expression_values[key]:
+            # Don't validate falsey values or missing (None, "") values.
+            keys_with_falsey_values.add(key)
 
     if missing_keys:
         validation_warnings.append(
             (sorted(missing_keys), MESSAGES['MISSING_KEY']))
 
-    if keys_with_no_value:
+    if required_keys_with_no_value:
         validation_warnings.append(
-            (sorted(keys_with_no_value), MESSAGES['MISSING_VALUE']))
+            (sorted(required_keys_with_no_value), MESSAGES['MISSING_VALUE']))
 
     # Phase 2: Check whether any input with a value validates with its
     # type-specific check function.
     invalid_keys = set()
-    insufficient_keys = (missing_keys | keys_with_no_value)
+    insufficient_keys = (
+        missing_keys | required_keys_with_no_value | keys_with_falsey_values)
     for key in set(args.keys()) - insufficient_keys:
         # Extra args that don't exist in the MODEL_SPEC are okay
         # we don't need to try to validate them
