@@ -18,8 +18,6 @@ from libcpp.list cimport list as clist
 from libcpp.stack cimport stack
 from libcpp.vector cimport vector
 
-cimport libc.math as cmath
-
 # this ctype is used to store the block ID and the block buffer as one object
 # inside Managed Raster
 ctypedef pair[int, double*] BlockBufferPair
@@ -330,9 +328,7 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             True if the pixel is a local high point, i.e. it has no
             upslope neighbors; False otherwise.
         """
-        if self.get_upslope_neighbors(xi, yi).size() > 0:
-            return False
-        return True
+        return self.get_upslope_neighbors(xi, yi).size() == 0
 
     @cython.cdivision(True)
     cdef vector[NeighborTuple] get_upslope_neighbors(

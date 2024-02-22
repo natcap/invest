@@ -4,6 +4,7 @@ from libcpp.list cimport list as clist
 from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
 from libcpp.vector cimport vector
+from libc.math cimport isnan
 
 cdef struct s_neighborTuple:
     int direction
@@ -66,4 +67,6 @@ cdef int *FLOW_DIR_REVERSE_DIRECTION
 cdef int *INFLOW_OFFSETS
 
 cdef inline int is_close(double x, double y):
-    return abs(x-y) <= (1e-8+1e-05*abs(y))
+    if isnan(x) and isnan(y):
+        return 1
+    return abs(x - y) <= (1e-8 + 1e-05 * abs(y))
