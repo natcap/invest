@@ -36,6 +36,10 @@ def build_model_list_table(locale_code):
     into columns, but are not separated by a delimiter.  This table
     is intended to be printed to stdout.
 
+    Args:
+        locale_code (str): Language code to pass to gettext. The model names
+            will be returned in this language.
+
     Returns:
         A string representation of the formatted table.
     """
@@ -73,6 +77,10 @@ def build_model_list_json(locale_code):
     and the values are another dict containing the internal name
     of the model and the aliases recognized by the CLI.
 
+    Args:
+        locale_code (str): Language code to pass to gettext. The model names
+            will be returned in this language.
+
     Returns:
         A string representation of the JSON object.
 
@@ -96,6 +104,16 @@ def build_model_list_json(locale_code):
 
 
 def export_to_python(target_filepath, model_id, args_dict=None):
+    """Generate a python script that executes a model.
+
+    Args:
+        target_filepath (str): path to generate the python file
+        model_id (str): ID of the model to generate the script for
+        args_dict (dict): If provided, prefill these arg values in the script
+
+    Returns:
+        None
+    """
     script_template = textwrap.dedent("""\
     # coding=UTF-8
     # -----------------------------------------------

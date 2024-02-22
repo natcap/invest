@@ -124,14 +124,11 @@ def get_args_enabled():
     """
     payload = request.get_json()
     LOGGER.debug(payload)
-
     model_spec = importlib.import_module(
         name=payload['model_module']).MODEL_SPEC
     results = validation.args_enabled(json.loads(payload['args']), model_spec)
     LOGGER.debug(results)
-    print(results)
     return json.dumps(results)
-
 
 
 @app.route(f'/{PREFIX}/colnames', methods=['POST'])

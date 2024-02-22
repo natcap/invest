@@ -110,7 +110,6 @@ class SetupTab extends React.Component {
     this.updateArgTouched = this.updateArgTouched.bind(this);
     this.updateArgValues = this.updateArgValues.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
-    this.callUISpecFunctions = this.callUISpecFunctions.bind(this);
     this.browseForDatastack = this.browseForDatastack.bind(this);
     this.loadParametersFromFile = this.loadParametersFromFile.bind(this);
     this.triggerScrollEvent = this.triggerScrollEvent.bind(this);
@@ -175,42 +174,6 @@ class SetupTab extends React.Component {
     this.setState((prevState, props) => ({
       scrollEventCount: prevState.updateEvent + 1
     }));
-  }
-
-
-  async getArgsEnabled() {
-
-  }
-  /**
-   * Call functions from the UI spec to determine the enabled/disabled
-   * state and dropdown options for each input, if applicable.
-   *
-   * @returns {undefined}
-   */
-  async callUISpecFunctions() {
-    const { enabledFunctions, dropdownFunctions } = this.props.uiSpec;
-
-    if (enabledFunctions) {
-      // this model has some fields that are conditionally enabled
-      const { argsEnabled } = this.state;
-      Object.keys(enabledFunctions).forEach((key) => {
-        argsEnabled[key] = enabledFunctions[key](this.state);
-      });
-      if (this._isMounted) {
-        this.setState({ argsEnabled: argsEnabled });
-      }
-    }
-
-    if (dropdownFunctions) {
-      // this model has a dropdown that's dynamically populated
-      const { argsDropdownOptions } = this.state;
-      await Promise.all(Object.keys(dropdownFunctions).map(async (key) => {
-        argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
-      }));
-      if (this._isMounted) {
-        this.setState({ argsDropdownOptions: argsDropdownOptions });
-      }
-    }
   }
 
   /** Save the current invest arguments to a python script via datastack.py API.

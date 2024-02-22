@@ -3,21 +3,26 @@ import pkgutil
 
 import natcap.invest
 
-
 def is_invest_model(module):
+    """Check if a python module is an invest model.
+
+    Args:
+        module (module): python module to check
+
+    Returns:
+        True if the module has a ``MODEL_SPEC`` dictionary attribute and
+        ``execute`` and ``validate`` functions, False otherwise
+    """
     return (
         hasattr(module, "execute") and callable(module.execute) and
         hasattr(module, "validate") and callable(module.validate) and
         # could also validate model spec structure
         hasattr(module, "MODEL_SPEC") and isinstance(module.MODEL_SPEC, dict))
 
-
 # pyname: importable name e.g. natcap.invest.carbon, natcap.invest.sdr.sdr
 # model id: identifier e.g. coastal_blue_carbon
 # model name: title e.g. Coastal Blue Carbon
-
 # Build up an index mapping aliases to model_name.
-
 pyname_to_module = {}
 for _, name, ispkg in pkgutil.iter_modules(natcap.invest.__path__):
     if name in {'__main__', 'cli', 'ui_server'}:
