@@ -11,8 +11,8 @@ import {
 } from 'react-icons/md';
 import { withTranslation } from 'react-i18next';
 
-import sampledataRegistry from './sampledata_registry.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
+import { getSpec } from '../../server_requests';
 
 const { ipcRenderer } = window.Workbench.electron;
 const { logger } = window.Workbench;
@@ -21,6 +21,24 @@ const { logger } = window.Workbench;
 // associated with a production build of the Workbench does not exist.
 const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.13.0/data';
 const DEFAULT_FILESIZE = 0;
+
+/** Get an invest model's MODEL_SPEC when a model button is clicked.
+
+ *
+ * @param {string} modelName - as in a model name appearing in `invest list`
+ * @returns {object} destructures to:
+ *   { modelSpec, argsSpec, uiSpec }
+ */
+async function investGetSpec(modelName) {
+  const spec = await getSpec(modelName);
+  if (spec) {
+    const { args, ui_spec, ...modelSpec } = spec;
+    return { modelSpec: modelSpec, argsSpec: args, uiSpec: ui_spec };
+  } else {
+    logger.error(`no args spec found for ${modelName}`);
+  }
+  return undefined;
+}
 
 /** Render a dialog with a form for configuring global invest settings */
 class DataDownloadModal extends React.Component {
@@ -45,7 +63,16 @@ class DataDownloadModal extends React.Component {
   }
 
   async componentDidMount() {
-    const registry = JSON.parse(JSON.stringify(sampledataRegistry));
+
+    const { investList } = this.props;
+    const registry = {};
+    for (const modelName of Object.keys(investList)) {
+      let spec = await investGetSpec(investList[modelName].model_name)
+      if (spec.uiSpec.sampledata) {
+        registry[modelName] = spec.uiSpec.sampledata;
+      }
+    }
+
     const tokenURL = await ipcRenderer.invoke(ipcMainChannels.CHECK_STORAGE_TOKEN);
     const baseURL = tokenURL || BASE_URL;
     let filesizes;
@@ -282,6 +309,11 @@ class DataDownloadModal extends React.Component {
 DataDownloadModal.propTypes = {
   show: PropTypes.bool.isRequired,
   closeModal: PropTypes.func.isRequired,
+  investList: PropTypes.objectOf(
+    PropTypes.shape({
+      model_name: PropTypes.string,
+    }),
+  ).isRequired,
 };
 
 export default withTranslation()(DataDownloadModal);

@@ -19,6 +19,7 @@ import {
   archiveDatastack,
   fetchDatastackFromFile,
   fetchValidation,
+  fetchArgsEnabled,
   saveToPython,
   writeParametersToFile
 } from '../../server_requests';
@@ -85,6 +86,7 @@ class SetupTab extends React.Component {
     super(props);
     this._isMounted = false;
     this.validationTimer = null;
+    this.enabledTimer = null;
 
     this.state = {
       argsValues: null,
@@ -103,6 +105,8 @@ class SetupTab extends React.Component {
     this.wrapInvestExecute = this.wrapInvestExecute.bind(this);
     this.investValidate = this.investValidate.bind(this);
     this.debouncedValidate = this.debouncedValidate.bind(this);
+    this.investArgsEnabled = this.investArgsEnabled.bind(this);
+    this.debouncedArgsEnabled = this.debouncedArgsEnabled.bind(this);
     this.updateArgTouched = this.updateArgTouched.bind(this);
     this.updateArgValues = this.updateArgValues.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
@@ -150,13 +154,14 @@ class SetupTab extends React.Component {
       argsDropdownOptions: argsDropdownOptions,
     }, () => {
       this.investValidate();
-      this.callUISpecFunctions();
+      this.investArgsEnabled();
     });
   }
 
   componentWillUnmount() {
     this._isMounted = false;
     clearTimeout(this.validationTimer);
+    clearTimeout(this.enabledTimer);
   }
 
   /**
@@ -172,6 +177,10 @@ class SetupTab extends React.Component {
     }));
   }
 
+
+  async getArgsEnabled() {
+
+  }
   /**
    * Call functions from the UI spec to determine the enabled/disabled
    * state and dropdown options for each input, if applicable.
@@ -366,7 +375,7 @@ class SetupTab extends React.Component {
       argsValues: argsValues,
     }, () => {
       this.debouncedValidate();
-      this.callUISpecFunctions();
+      this.debouncedArgsEnabled();
     });
   }
 
@@ -386,8 +395,42 @@ class SetupTab extends React.Component {
       argsDropdownOptions: argsDropdownOptions,
     }, () => {
       this.investValidate();
-      this.callUISpecFunctions();
+      this.investArgsEnabled();
     });
+  }
+
+  /** Get a debounced version of investArgsEnabled.
+   *
+   * The original function will not be called until after the
+   * debounced version stops being invoked for 200 milliseconds.
+   *
+   * @returns {undefined}
+   */
+  debouncedArgsEnabled() {
+    if (this.enabledTimer) {
+      clearTimeout(this.enabledTimer);
+    }
+    // we want validation to be very responsive,
+    // but also to wait for a pause in data entry.
+    this.enabledTimer = setTimeout(this.investArgsEnabled, 200);
+  }
+
+  /** Validate an arguments dictionary using the InVEST model's validate function.
+   *
+   * @returns {undefined}
+   */
+  async investArgsEnabled() {
+    const { pyModuleName } = this.props;
+    const { argsValues } = this.state;
+
+    if (this._isMounted) {
+      this.setState({
+        argsEnabled: await fetchArgsEnabled({
+          model_module: pyModuleName,
+          args: JSON.stringify(argsDictFromObject(argsValues)),
+        })
+      });
+    }
   }
 
   /** Get a debounced version of investValidate.

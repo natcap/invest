@@ -21,7 +21,6 @@ from . import utils
 from . import spec_utils
 from .unit_registry import u
 from . import validation
-from .model_metadata import MODEL_METADATA
 from . import gettext
 
 
@@ -132,9 +131,27 @@ CAPTURED_WEM_FIELDS = {
 }
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["wave_energy"].model_title,
-    "pyname": MODEL_METADATA["wave_energy"].pyname,
-    "userguide": MODEL_METADATA["wave_energy"].userguide,
+    "model_id": "wave_energy",
+    "model_name": gettext("Wave Energy Production"),
+    "pyname": "natcap.invest.wave_energy",
+    "userguide": "wave_energy.html",
+    "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['wave_base_data_path', 'analysis_area', 'aoi_path', 'dem_path'],
+            ['machine_perf_path', 'machine_param_path'],
+            ['valuation_container', 'land_gridPts_path', 'machine_econ_path', 'number_of_machines'],
+        ],
+        "hidden": ["n_workers"],
+        "forum_tag": 'wave-energy',
+        "sampledata": {
+            "filename": "WaveEnergy.zip",
+            "note": "(required to run model)"
+            # "filename": "Base_Data.zip",
+            # "note": "(required for Wind & Wave Energy)"
+        }
+    },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -324,6 +341,7 @@ MODEL_SPEC = {
             "type": "csv",
             "columns": LAND_GRID_POINT_FIELDS,
             "required": "valuation_container",
+            "allowed": "valuation_container",
             "about": gettext(
                 "A table of data for each connection point. Required if "
                 "Run Valuation is selected."),
@@ -355,6 +373,7 @@ MODEL_SPEC = {
                 }
             },
             "required": "valuation_container",
+            "allowed": "valuation_container",
             "about": gettext(
                 "Table of economic parameters for the wave energy machine. "
                 "Required if Run Valuation is selected."),
@@ -365,6 +384,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.none,
             "required": "valuation_container",
+            "allowed": "valuation_container",
             "about": gettext(
                 "Number of wave machines to model. Required if Run Valuation "
                 "is selected."),

@@ -1168,3 +1168,31 @@ def invest_validator(validate_func):
         return warnings_
 
     return _wrapped_validate_func
+
+
+def args_enabled(args, spec):
+
+
+    enabled = {}
+    sufficient_inputs = {}
+    for key in spec['args'].keys():
+        if key not in args or args[key] == '':
+            sufficient_inputs[key] = None
+        else:
+            sufficient_inputs[key] = args[key]
+
+    print(sufficient_inputs)
+    for key, arg_spec in spec['args'].items():
+
+        if 'allowed' in arg_spec:
+            print(key, arg_spec['allowed'])
+            enabled[key] = _evaluate_expression(
+                arg_spec['allowed'], sufficient_inputs)
+        else:
+            enabled[key] = True
+
+    return enabled
+
+
+
+
