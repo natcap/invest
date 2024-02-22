@@ -391,61 +391,61 @@ MODEL_SPEC = {
                             }
                         }
                     }
+                }
+            }
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "clipped_lulc.tif": {
+                    "about": "Aligned and clipped copy of LULC input.",
+                    "bands": {1: {"type": "integer"}}
                 },
-                "intermediate": {
-                    "type": "directory",
-                    "contents": {
-                        "clipped_lulc.tif": {
-                            "about": "Aligned and clipped copy of LULC input.",
-                            "bands": {1: {"type": "integer"}}
-                        },
-                        "depth_to_root_rest_layer.tif": {
-                            "about": (
-                                "Aligned and clipped copy of root restricting "
-                                "layer depth input."),
-                            "bands": {
-                                1: {"type": "number", "units": u.millimeter}
-                            }
-                        },
-                        "eto.tif": {
-                            "about": "Aligned and clipped copy of ET0 input.",
-                            "bands": {
-                                1: {"type": "number", "units": u.millimeter}
-                            }
-                        },
-                        "kc_raster.tif": {
-                            "about": "Map of KC values.",
-                            "bands": {
-                                1: {"type": "number", "units": u.none}
-                            }
-                        },
-                        "pawc.tif": {
-                            "about": "Aligned and clipped copy of PAWC input.",
-                            "bands": {1: {"type": "ratio"}},
-                        },
-                        "pet.tif": {
-                            "about": "Map of potential evapotranspiration.",
-                            "bands": {
-                                1: {"type": "number", "units": u.millimeter}
-                            }
-                        },
-                        "precip.tif": {
-                            "about": "Aligned and clipped copy of precipitation input.",
-                            "bands": {
-                                1: {"type": "number", "units": u.millimeter}
-                            }
-                        },
-                        "root_depth.tif": {
-                            "about": "Map of root depth.",
-                            "bands": {
-                                1: {"type": "number", "units": u.millimeter}
-                            }
-                        },
-                        "veg.tif": {
-                            "about": "Map of vegetated state.",
-                            "bands": {1: {"type": "integer"}},
-                        }
+                "depth_to_root_rest_layer.tif": {
+                    "about": (
+                        "Aligned and clipped copy of root restricting "
+                        "layer depth input."),
+                    "bands": {
+                        1: {"type": "number", "units": u.millimeter}
                     }
+                },
+                "eto.tif": {
+                    "about": "Aligned and clipped copy of ET0 input.",
+                    "bands": {
+                        1: {"type": "number", "units": u.millimeter}
+                    }
+                },
+                "kc_raster.tif": {
+                    "about": "Map of KC values.",
+                    "bands": {
+                        1: {"type": "number", "units": u.none}
+                    }
+                },
+                "pawc.tif": {
+                    "about": "Aligned and clipped copy of PAWC input.",
+                    "bands": {1: {"type": "ratio"}},
+                },
+                "pet.tif": {
+                    "about": "Map of potential evapotranspiration.",
+                    "bands": {
+                        1: {"type": "number", "units": u.millimeter}
+                    }
+                },
+                "precip.tif": {
+                    "about": "Aligned and clipped copy of precipitation input.",
+                    "bands": {
+                        1: {"type": "number", "units": u.millimeter}
+                    }
+                },
+                "root_depth.tif": {
+                    "about": "Map of root depth.",
+                    "bands": {
+                        1: {"type": "number", "units": u.millimeter}
+                    }
+                },
+                "veg.tif": {
+                    "about": "Map of vegetated state.",
+                    "bands": {1: {"type": "integer"}},
                 }
             }
         },
@@ -591,8 +591,12 @@ def execute(args):
     wyield_path = os.path.join(
         per_pixel_output_dir, f'wyield{file_suffix}.tif')
     aet_path = os.path.join(per_pixel_output_dir, f'aet{file_suffix}.tif')
-
     demand_path = os.path.join(intermediate_dir, f'demand{file_suffix}.tif')
+    veg_raster_path = os.path.join(intermediate_dir, f'veg{file_suffix}.tif')
+    root_raster_path = os.path.join(
+        intermediate_dir, f'root_depth{file_suffix}.tif')
+    kc_raster_path = os.path.join(
+        intermediate_dir, f'kc_raster{file_suffix}.tif')
 
     watersheds_path = args['watersheds_path']
     watershed_results_vector_path = os.path.join(
@@ -709,39 +713,35 @@ def execute(args):
         'table_name': 'Biophysical'}
     # Create Kc raster from table values to use in future calculations
     LOGGER.info("Reclassifying temp_Kc raster")
-    tmp_Kc_raster_path = os.path.join(intermediate_dir, 'kc_raster.tif')
     create_Kc_raster_task = graph.add_task(
         func=utils.reclassify_raster,
-        args=((clipped_lulc_path, 1), Kc_dict, tmp_Kc_raster_path,
+        args=((clipped_lulc_path, 1), Kc_dict, kc_raster_path,
               gdal.GDT_Float32, nodata_dict['out_nodata'],
               reclass_error_details),
-        target_path_list=[tmp_Kc_raster_path],
+        target_path_list=[kc_raster_path],
         dependent_task_list=[align_raster_stack_task],
         task_name='create_Kc_raster')
 
     # Create root raster from table values to use in future calculations
     LOGGER.info("Reclassifying tmp_root raster")
-    tmp_root_raster_path = os.path.join(
-        intermediate_dir, 'root_depth.tif')
     create_root_raster_task = graph.add_task(
         func=utils.reclassify_raster,
-        args=((clipped_lulc_path, 1), root_dict, tmp_root_raster_path,
+        args=((clipped_lulc_path, 1), root_dict, root_raster_path,
               gdal.GDT_Float32, nodata_dict['out_nodata'],
               reclass_error_details),
-        target_path_list=[tmp_root_raster_path],
+        target_path_list=[root_raster_path],
         dependent_task_list=[align_raster_stack_task],
         task_name='create_root_raster')
 
     # Create veg raster from table values to use in future calculations
     # of determining which AET equation to use
     LOGGER.info("Reclassifying tmp_veg raster")
-    tmp_veg_raster_path = os.path.join(intermediate_dir, 'veg.tif')
     create_veg_raster_task = graph.add_task(
         func=utils.reclassify_raster,
-        args=((clipped_lulc_path, 1), vegetated_dict, tmp_veg_raster_path,
+        args=((clipped_lulc_path, 1), vegetated_dict, veg_raster_path,
               gdal.GDT_Float32, nodata_dict['out_nodata'],
               reclass_error_details),
-        target_path_list=[tmp_veg_raster_path],
+        target_path_list=[veg_raster_path],
         dependent_task_list=[align_raster_stack_task],
         task_name='create_veg_raster')
 
@@ -752,7 +752,7 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=numpy.multiply,  # PET = ET0 * KC
-            rasters=[eto_path, tmp_Kc_raster_path],
+            rasters=[eto_path, kc_raster_path],
             target_path=tmp_pet_path,
             target_nodata=nodata_dict['out_nodata']),
         target_path_list=[tmp_pet_path],
@@ -762,8 +762,8 @@ def execute(args):
 
     # List of rasters to pass into the vectorized fractp operation
     raster_list = [
-        tmp_Kc_raster_path, eto_path, precip_path, tmp_root_raster_path,
-        depth_to_root_rest_layer_path, pawc_path, tmp_veg_raster_path]
+        kc_raster_path, eto_path, precip_path, root_raster_path,
+        depth_to_root_rest_layer_path, pawc_path, veg_raster_path]
 
     LOGGER.debug('Performing fractp operation')
     calculate_fractp_task = graph.add_task(

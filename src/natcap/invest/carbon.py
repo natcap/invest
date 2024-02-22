@@ -20,7 +20,7 @@ from . import gettext
 LOGGER = logging.getLogger(__name__)
 
 CARBON_OUTPUTS = {
-    f"c_{scenario}_{pool}.tif": {
+    f"c_{pool}_{scenario}.tif": {
         "about": (
             f"Raster of {pool_name} carbon values in the {scenario_name} "
             "scenario, mapped from the Carbon Pools table to the LULC."),
@@ -276,7 +276,7 @@ MODEL_SPEC = {
             }},
             "created_if": "lulc_redd_path"
         },
-        "intermediate": {
+        "intermediate_outputs": {
             "type": "directory",
             "contents": {
                 **CARBON_OUTPUTS

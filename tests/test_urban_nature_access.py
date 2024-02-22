@@ -217,14 +217,19 @@ class UNATests(unittest.TestCase):
             [nodata, 100.5],
             [75, 100]], dtype=numpy.float32)
         urban_nature_demand = 50
+        supply_path = os.path.join(self.workspace_dir, 'supply.path')
+        target_path = os.path.join(self.workspace_dir, 'target.path')
 
-        population = numpy.array([
-            [50, 100],
-            [40.75, nodata]], dtype=numpy.float32)
+        pygeoprocessing.numpy_array_to_raster(
+            urban_nature_supply_percapita, nodata, _DEFAULT_PIXEL_SIZE,
+            _DEFAULT_ORIGIN, _DEFAULT_SRS.ExportToWkt(), supply_path)
 
-        urban_nature_budget = (
-            urban_nature_access._urban_nature_balance_percapita_op(
-                urban_nature_supply_percapita, urban_nature_demand))
+        urban_nature_access._calculate_urban_nature_balance_percapita(
+            supply_path, urban_nature_demand, target_path)
+
+        urban_nature_budget = pygeoprocessing.raster_to_numpy_array(
+            target_path)
+
         expected_urban_nature_budget = numpy.array([
             [nodata, 50.5],
             [25, 50]], dtype=numpy.float32)
@@ -569,10 +574,10 @@ class UNATests(unittest.TestCase):
             'pop_female': attributes[0]['pop_female'],
             'pop_male': attributes[0]['pop_male'],
             'adm_unit_id': 0,
-            'Pund_adm': 0,
+            'Pund_adm': 3991.8271484375,
             'Pund_adm_female': 2235.423095703125,
             'Pund_adm_male': 1756.404052734375,
-            'Povr_adm': 0,
+            'Povr_adm': 1084.1727294921875,
             'Povr_adm_female': 607.13671875,
             'Povr_adm_male': 477.0360107421875,
             'SUP_DEMadm_cap': -17.907799109781322,
@@ -593,6 +598,82 @@ class UNATests(unittest.TestCase):
         self._assert_urban_nature(os.path.join(
             output_dir, 'accessible_urban_nature_to_pop_female.tif'),
             6221004.412597656, 1171.7352294921875, 11898.0712890625)
+
+    def test_radii_by_pop_group_exponential_kernal(self):
+        """UNA: Regression test defining radii by population group.
+
+        Issue for this bug: https://github.com/natcap/invest/issues/1502
+        """
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+        args['decay_function'] = urban_nature_access.KERNEL_LABEL_EXPONENTIAL
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_POP_GROUP
+        args['population_group_radii_table'] = os.path.join(
+            self.workspace_dir, 'pop_group_radii.csv')
+        del args['results_suffix']
+
+        with open(args['population_group_radii_table'], 'w') as pop_grp_table:
+            pop_grp_table.write(
+                textwrap.dedent("""\
+                    pop_group,search_radius_m
+                    pop_female,100
+                    pop_male,100"""))
+
+        admin_geom = [
+            shapely.geometry.box(
+                *pygeoprocessing.get_raster_info(
+                    args['lulc_raster_path'])['bounding_box'])]
+        fields = {
+            'pop_female': ogr.OFTReal,
+            'pop_male': ogr.OFTReal,
+        }
+        attributes = [
+            {'pop_female': 0.56, 'pop_male': 0.44}
+        ]
+        pygeoprocessing.shapely_geometry_to_vector(
+            admin_geom, args['admin_boundaries_vector_path'],
+            pygeoprocessing.get_raster_info(
+                args['population_raster_path'])['projection_wkt'],
+            'GeoJSON', fields, attributes)
+
+        urban_nature_access.execute(args)
+
+        summary_vector = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output',
+                         'admin_boundaries.gpkg'))
+        summary_layer = summary_vector.GetLayer()
+        self.assertEqual(summary_layer.GetFeatureCount(), 1)
+        summary_feature = summary_layer.GetFeature(1)
+
+        expected_field_values = {
+            'pop_female': attributes[0]['pop_female'],
+            'pop_male': attributes[0]['pop_male'],
+            'adm_unit_id': 0,
+            'Pund_adm': 4801.7900390625,
+            'Pund_adm_female': 2689.00244140625,
+            'Pund_adm_male': 2112.78759765625,
+            'Povr_adm': 274.2098693847656,
+            'Povr_adm_female': 153.55752563476562,
+            'Povr_adm_male': 120.65234375,
+            'SUP_DEMadm_cap': -17.907799109781322,
+            'SUP_DEMadm_cap_female': -17.90779830090304,
+            'SUP_DEMadm_cap_male': -17.907800139262825,
+        }
+        self.assertEqual(
+            set(defn.GetName() for defn in summary_layer.schema),
+            set(expected_field_values.keys()))
+        for fieldname, expected_value in expected_field_values.items():
+            self.assertAlmostEqual(
+                expected_value, summary_feature.GetField(fieldname))
+
+        output_dir = os.path.join(args['workspace_dir'], 'output')
+        self._assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_to_pop_male.tif'),
+            17812884.000976562, 7740.4287109375, 25977.67578125)
+        self._assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_to_pop_female.tif'),
+            17812884.000976562, 7740.4287109375, 25977.67578125)
 
     def test_modes_same_radii_same_results(self):
         """UNA: all modes have same results when consistent radii.
@@ -838,6 +919,48 @@ class UNATests(unittest.TestCase):
             feature = None
             layer = None
             vector = None
+
+    def test_write_vector_for_single_raster_modes(self):
+        """UNA: create a summary vector for single-raster summary stats."""
+
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+
+        # Overwrite all population pixels with 0
+        try:
+            raster = gdal.Open(args['population_raster_path'], gdal.GA_Update)
+            band = raster.GetRasterBand(1)
+            array = band.ReadAsArray()
+            array.fill(0.0)
+            band.WriteArray(array)
+        finally:
+            raster = band = None
+
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = 1000
+
+        urban_nature_access.execute(args)
+
+        summary_vector = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output',
+                         'admin_boundaries_suffix.gpkg'))
+        summary_layer = summary_vector.GetLayer()
+        self.assertEqual(summary_layer.GetFeatureCount(), 1)
+        summary_feature = summary_layer.GetFeature(1)
+
+        expected_field_values = {
+            'adm_unit_id': 0,
+            'Pund_adm': 0,
+            'Povr_adm': 0,
+            'SUP_DEMadm_cap': None,  # OGR converts NaN to None.
+        }
+        self.assertEqual(
+            set(defn.GetName() for defn in summary_layer.schema),
+            set(expected_field_values.keys()))
+        for fieldname, expected_value in expected_field_values.items():
+            self.assertAlmostEqual(
+                expected_value, summary_feature.GetField(fieldname))
 
     def test_urban_nature_proportion(self):
         """UNA: Run the model with urban nature proportion."""

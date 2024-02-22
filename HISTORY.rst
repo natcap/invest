@@ -35,9 +35,35 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* Annual Water Yield
+    * Added the results_suffix to a few intermediate files where it was
+      missing. https://github.com/natcap/invest/issues/1517
+* Urban Nature Access
+    * Fixed a ``NameError`` that occurred when running the model using
+      search radii defined per population group with an exponential search
+      kernel. https://github.com/natcap/invest/issues/1502
+    * Fixed an issue where Urban Nature Access would crash if an administrative
+      boundary geometry did not overlap any people in the population raster.
+      https://github.com/natcap/invest/issues/1503
+    * Fixed an issue where the output administrative units vector's
+      ``Pund_adm`` and ``Povr_adm`` fields representing undersupplied and
+      oversupplied populations, respectively, had values of 0 when running the
+      model with search radii defined per population group.  The output
+      administrative units vector now has the correct values for these fields,
+      consistent with the user's guide chapter.
+      https://github.com/natcap/invest/issues/1512
+    * Fixed an issue where certain nodata values were not being handled
+      correctly, leading to pixel values of +/- infinity in the urban nature
+      balance output raster.  https://github.com/natcap/invest/issues/1519
+* SDR
+    * Fixed an issue encountered in the sediment deposition function where
+      rasters with more than 2^32 pixels would raise a cryptic error relating
+      to negative dimensions. https://github.com/natcap/invest/issues/1431
+    * Optimized the creation of the summary vector by minimizing the number of
+      times the target vector needs to be rasterized.
 
 3.14.1 (2023-12-18)
 -------------------
