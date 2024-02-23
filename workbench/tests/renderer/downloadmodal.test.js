@@ -9,8 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { ipcRenderer, BrowserWindow } from 'electron';
 import DataDownloadModal from '../../src/renderer/components/DataDownloadModal';
 import DownloadProgressBar from '../../src/renderer/components/DownloadProgressBar';
-import sampledata_registry from '../../src/renderer/components/DataDownloadModal/sampledata_registry.json';
-import { getInvestModelNames } from '../../src/renderer/server_requests';
+import { getInvestModelNames, getSpec } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
 import setupDownloadHandlers from '../../src/main/setupDownloadHandlers';
 import { removeIpcMainListeners } from '../../src/main/main';
@@ -18,12 +17,15 @@ import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 
 jest.mock('../../src/renderer/server_requests');
 
-const nModels = Object.keys(sampledata_registry).length;
-const modelName = Object.keys(sampledata_registry)[0];
-
 describe('Sample Data Download Form', () => {
   beforeEach(() => {
-    getInvestModelNames.mockResolvedValue({});
+    getInvestModelNames.mockResolvedValue({'Carbon': {}});
+    getSpec.mockResolvedValue({
+      model_name: 'carbon',
+      ui_spec: {
+        sampledata: { filename: 'foo.zip' }
+      }
+    });
   });
 
   test('Modal displays immediately on user`s first run', async () => {
@@ -57,12 +59,12 @@ describe('Sample Data Download Form', () => {
         show={true}
         closeModal={() => {}}
         storeDownloadDir={() => {}}
+        investList={{'Carbon': {}}}
       />
     );
 
     // All checked initially
     const allCheckBoxes = await findAllByRole('checkbox');
-    expect(allCheckBoxes).toHaveLength(nModels + 1); // +1 for Select All
     allCheckBoxes.forEach((box) => {
       expect(box).toBeChecked();
     });
@@ -84,36 +86,12 @@ describe('Sample Data Download Form', () => {
     });
 
     // Toggle one off & on
-    const modelCheckbox = getByLabelText(new RegExp(modelName));
+    const modelCheckbox = getByLabelText(new RegExp('Carbon'));
     await userEvent.click(modelCheckbox);
     expect(modelCheckbox).not.toBeChecked();
     expect(selectAllCheckbox).not.toBeChecked();
     await userEvent.click(modelCheckbox);
     expect(modelCheckbox).toBeChecked();
-  });
-
-  test('Checkbox list matches the sampledata registry', async () => {
-    const {
-      getByLabelText,
-      findAllByRole,
-    } = render(
-      <DataDownloadModal
-        show={true}
-        closeModal={() => {}}
-        storeDownloadDir={() => {}}
-      />
-    );
-
-    const allCheckBoxes = await findAllByRole('checkbox');
-    expect(allCheckBoxes).toHaveLength(nModels + 1); // +1 for Select All
-
-    // Each checkbox is labeled by the model's name
-    Object.keys(sampledata_registry).forEach((modelName) => {
-      // some names have trailing parentheticals that trip up the query.
-      const pattern = modelName.split('(')[0];
-      const modelCheckbox = getByLabelText(new RegExp(pattern));
-      expect(modelCheckbox).toBeChecked();
-    });
   });
 });
 
@@ -164,7 +142,13 @@ describe('DownloadProgressBar', () => {
 describe('Integration tests with main process', () => {
   beforeEach(async () => {
     setupDownloadHandlers(new BrowserWindow());
-    getInvestModelNames.mockResolvedValue({});
+    getInvestModelNames.mockResolvedValue({'Carbon': {}});
+    getSpec.mockResolvedValue({
+      model_name: 'carbon',
+      ui_spec: {
+        sampledata: { filename: 'foo.zip' }
+      }
+    });
   });
 
   afterEach(async () => {
