@@ -75,6 +75,28 @@ def get_invest_getspec():
     return spec_utils.serialize_args_spec(model_module.MODEL_SPEC)
 
 
+@app.route(f'/{PREFIX}/dynamic_dropdowns', methods=['POST'])
+def get_dynamic_dropdown_options():
+    """Gets the list of dynamically populated dropdown options.
+
+    Body (JSON string):
+        model_module: string (e.g. natcap.invest.carbon)
+        args: JSON string of InVEST model args keys and values
+
+    Returns:
+        A JSON string.
+    """
+
+    payload = request.get_json()
+    LOGGER.debug(payload)
+    results = {}
+    model_module = importlib.import_module(name=payload['model_module'])
+    for arg_key, fn in model_module.MODEL_SPEC['ui_spec']['dropdown_functions'].items():
+        results[arg_key] = fn(json.loads(payload['args']))
+    LOGGER.debug(results)
+    return json.dumps(results)
+
+
 @app.route(f'/{PREFIX}/validate', methods=['POST'])
 def get_invest_validate():
     """Gets the return value of an InVEST model's validate function.
@@ -130,38 +152,6 @@ def get_args_enabled():
     results = validation.args_enabled(json.loads(payload['args']), model_spec)
     LOGGER.debug(results)
     return json.dumps(results)
-
-
-@app.route(f'/{PREFIX}/colnames', methods=['POST'])
-def get_vector_colnames():
-    """Get a list of column names from a vector.
-    This is used to fill in dropdown menu options in a couple models.
-
-    Body (JSON string):
-        vector_path (string): path to a vector file
-
-    Returns:
-        a JSON string.
-    """
-    payload = request.get_json()
-    LOGGER.debug(payload)
-    vector_path = payload['vector_path']
-    # a lot of times the path will be empty so don't even try to open it
-    if vector_path:
-        try:
-            vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
-            colnames = [defn.GetName() for defn in vector.GetLayer().schema]
-            LOGGER.debug(colnames)
-            return json.dumps(colnames)
-        except Exception as e:
-            LOGGER.exception(
-                f'Could not read column names from {vector_path}. ERROR: {e}')
-    else:
-        LOGGER.error('Empty vector path.')
-    # 422 Unprocessable Entity: the server understands the content type
-    # of the request entity, and the syntax of the request entity is
-    # correct, but it was unable to process the contained instructions.
-    return json.dumps([]), 422
 
 
 @app.route(f'/{PREFIX}/post_datastack_file', methods=['POST'])

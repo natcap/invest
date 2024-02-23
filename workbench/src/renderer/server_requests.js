@@ -41,6 +41,20 @@ export async function getSpec(payload) {
   );
 }
 
+
+export async function getDynamicDropdowns(payload) {
+  return (
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/dynamic_dropdowns`, {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
+}
+
+
 export async function fetchArgsEnabled(payload) {
   return (
     window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/args_enabled`, {
@@ -100,24 +114,6 @@ export function fetchDatastackFromFile(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
-  );
-}
-
-/**
- * Get a list of the column names of a vector file.
- *
- * @param {string} payload - path to file
- * @returns {Promise} resolves array
- */
-export function getVectorColumnNames(payload) {
-  return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/colnames`, {
-      method: 'post',
-      body: JSON.stringify({ vector_path: payload }),
-      headers: { 'Content-Type': 'application/json' },
-    })
-      .then((response) => response.json())
-      .catch((error) => logger.error(error.stack))
   );
 }
 

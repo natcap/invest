@@ -20,6 +20,7 @@ import {
   fetchDatastackFromFile,
   fetchValidation,
   fetchArgsEnabled,
+  getDynamicDropdowns,
   saveToPython,
   writeParametersToFile
 } from '../../server_requests';
@@ -113,6 +114,7 @@ class SetupTab extends React.Component {
     this.browseForDatastack = this.browseForDatastack.bind(this);
     this.loadParametersFromFile = this.loadParametersFromFile.bind(this);
     this.triggerScrollEvent = this.triggerScrollEvent.bind(this);
+    this.callDropdownFunctions = this.callDropdownFunctions.bind(this);
   }
 
   componentDidMount() {
@@ -332,6 +334,7 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgValues(key, value) {
+    const { uiSpec } = this.props;
     const { argsValues } = this.state;
     argsValues[key].value = value;
     this.setState({
@@ -339,6 +342,9 @@ class SetupTab extends React.Component {
     }, () => {
       this.debouncedValidate();
       this.debouncedArgsEnabled();
+      if (uiSpec.dropdown_functions) {
+        this.callDropdownFunctions();
+      }
     });
   }
 
@@ -394,6 +400,24 @@ class SetupTab extends React.Component {
         })
       });
     }
+  }
+
+  /** Call endpoint to get dynamically populated dropdown options.
+   *
+   * @returns {undefined}
+   */
+  async callDropdownFunctions() {
+    const { pyModuleName } = this.props;
+    const { argsValues, argsDropdownOptions } = this.state;
+    const payload = {
+      model_module: pyModuleName,
+      args: JSON.stringify(argsDictFromObject(argsValues)),
+    };
+    const results = await getDynamicDropdowns(payload);
+    Object.keys(results).forEach((argkey) => {
+      argsDropdownOptions[argkey] = results[argkey];
+    });
+    this.setState({ argsDropdownOptions: argsDropdownOptions });
   }
 
   /** Get a debounced version of investValidate.
@@ -608,8 +632,6 @@ SetupTab.propTypes = {
   ).isRequired,
   uiSpec: PropTypes.shape({
     order: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.string)).isRequired,
-    enabledFunctions: PropTypes.objectOf(PropTypes.func),
-    dropdownFunctions: PropTypes.objectOf(PropTypes.func),
   }).isRequired,
   argsInitValues: PropTypes.objectOf(PropTypes.oneOfType(
     [PropTypes.string, PropTypes.bool, PropTypes.number])),
