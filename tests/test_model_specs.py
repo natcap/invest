@@ -69,10 +69,11 @@ class ValidateModelSpecs(unittest.TestCase):
 
                 self.assertIsInstance(model.MODEL_SPEC['ui_spec'], dict)
                 self.assertEqual(set(model.MODEL_SPEC['ui_spec'].keys()),
-                                 {'order', 'hidden'})
+                                 {'order', 'hidden', 'sampledata', 'forum_tag'})
                 self.assertIsInstance(model.MODEL_SPEC['ui_spec']['order'], list)
                 self.assertIsInstance(model.MODEL_SPEC['ui_spec']['hidden'], list)
-
+                self.assertIsInstance(model.MODEL_SPEC['ui_spec']['sampledata'], dict)
+                self.assertIsInstance(model.MODEL_SPEC['ui_spec']['forum_tag'], str)
                 found_keys = set()
                 for group in model.MODEL_SPEC['ui_spec']['order']:
                     self.assertIsInstance(group, list)

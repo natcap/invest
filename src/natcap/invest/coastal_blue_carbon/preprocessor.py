@@ -32,6 +32,9 @@ MODEL_SPEC = {
             ['lulc_lookup_table_path', 'landcover_snapshot_csv']
         ],
         "hidden": ["n_workers"],
+        "sampledata": {
+            "filename": "CoastalBlueCarbon.zip"
+        },
         "forum_tag": 'blue-carbon'
     },
     "args": {

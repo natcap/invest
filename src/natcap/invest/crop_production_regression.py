@@ -77,6 +77,10 @@ MODEL_SPEC = {
             ['model_data_path', 'landcover_raster_path', 'landcover_to_crop_table_path', 'fertilization_rate_table_path', 'aggregate_polygon_path'],
         ],
         "hidden": ["n_workers"],
+        "sampledata": {
+            "filename": "CropProduction.zip",
+            "note": "(required to run model)"
+        },
         "forum_tag": 'crop-production'
     },
     "args_with_spatial_overlap": {
