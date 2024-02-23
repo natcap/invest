@@ -14,7 +14,8 @@ import {
   saveToPython,
   writeParametersToFile,
   fetchValidation,
-  fetchDatastackFromFile
+  fetchDatastackFromFile,
+  fetchArgsEnabled
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import setupDialogs from '../../src/main/setupDialogs';
@@ -23,24 +24,12 @@ import setupOpenLocalHtml from '../../src/main/setupOpenLocalHtml';
 import { removeIpcMainListeners } from '../../src/main/main';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 
-// It's quite a pain to dynamically mock a const from a module,
-// here we do it by importing as another object, then
-// we can overwrite the object we want to mock later
-// https://stackoverflow.com/questions/42977961/how-to-mock-an-exported-const-in-jest
-import * as uiConfig from '../../src/renderer/ui_config';
-
 jest.mock('../../src/renderer/server_requests');
 
 const DEFAULT_JOB = new InvestJob({
   modelRunName: 'carbon',
   modelHumanName: 'Carbon Model',
 });
-
-function mockUISpec(spec) {
-  return {
-    [DEFAULT_JOB.modelRunName]: { order: [Object.keys(spec.args)] }
-  };
-}
 
 function renderInvestTab(job = DEFAULT_JOB) {
   const tabID = crypto.randomBytes(4).toString('hex');
@@ -56,18 +45,16 @@ function renderInvestTab(job = DEFAULT_JOB) {
   return utils;
 }
 
-// Because we mock UI_SPEC without using jest's API
-// we alse need to a reset it without jest's API.
-const { UI_SPEC } = uiConfig;
-afterEach(() => {
-  uiConfig.UI_SPEC = UI_SPEC;
-});
-
 describe('Run status Alert renders with status from a recent run', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
     userguide: 'foo.html',
+    ui_spec: {
+      order: [['workspace']],
+      sampledata: {},
+      forum_tag: 'foo'
+    },
     args: {
       workspace: {
         name: 'Workspace',
@@ -80,7 +67,7 @@ describe('Run status Alert renders with status from a recent run', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    uiConfig.UI_SPEC = mockUISpec(spec);
+    fetchArgsEnabled.mockResolvedValue({ workspace: true });
     setupDialogs();
   });
 
@@ -129,6 +116,11 @@ describe('Sidebar Buttons', () => {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
     userguide: 'foo.html',
+    ui_spec: {
+      order: [['workspace', 'port']],
+      sampledata: {},
+      forum_tag: 'foo'
+    },
     args: {
       workspace: {
         name: 'Workspace',
@@ -145,7 +137,7 @@ describe('Sidebar Buttons', () => {
   beforeEach(async () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    uiConfig.UI_SPEC = mockUISpec(spec);
+    fetchArgsEnabled.mockResolvedValue({ workspace: true, port: true });
     setupOpenExternalUrl();
     setupOpenLocalHtml();
   });
@@ -395,6 +387,11 @@ describe('InVEST Run Button', () => {
     pyname: 'natcap.invest.bar',
     model_name: 'Bar Model',
     userguide: 'bar.html',
+    ui_spec: {
+      order: [['a', 'b', 'c']],
+      sampledata: {},
+      forum_tag: 'foo'
+    },
     args: {
       a: {
         name: 'abar',
@@ -413,7 +410,7 @@ describe('InVEST Run Button', () => {
 
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
-    uiConfig.UI_SPEC = mockUISpec(spec);
+    fetchArgsEnabled.mockResolvedValue({ a: true, b: true, c: true });
   });
 
   test('Changing inputs trigger validation & enable/disable Run', async () => {
