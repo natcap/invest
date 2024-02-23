@@ -11,7 +11,7 @@ import natcap.invest
 from natcap.invest import cli
 from natcap.invest import datastack
 from natcap.invest import set_locale
-from natcap.invest.models import model_id_to_pyname, model_id_to_spec
+from natcap.invest import models
 from natcap.invest import spec_utils
 from natcap.invest import usage
 from natcap.invest import validation
@@ -27,7 +27,8 @@ CORS(app, resources={
 })
 
 PYNAME_TO_MODEL_ID_MAP = {
-    pyname: model_id for model_id, pyname in model_id_to_pyname.items()
+    pyname: model_id for model_id, pyname
+    in models.model_id_to_pyname.items()
 }
 
 
@@ -67,7 +68,7 @@ def get_invest_getspec():
     """
     set_locale(request.args.get('language', 'en'))
     target_model = request.get_json()
-    target_module = model_id_to_pyname[target_model]
+    target_module = models.model_id_to_pyname[target_model]
     importlib.reload(natcap.invest.spec_utils)
     model_module = importlib.reload(
         importlib.import_module(name=target_module))
@@ -181,7 +182,7 @@ def post_datastack_file():
         'args': stack_info.args,
         'module_name': stack_info.model_name,
         'model_run_name': model_id,
-        'model_human_name': model_id_to_spec[model_id]['model_name'],
+        'model_human_name': models.model_id_to_spec[model_id]['model_name'],
         'invest_version': stack_info.invest_version
     }
     return json.dumps(result_dict)

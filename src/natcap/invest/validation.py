@@ -1175,18 +1175,20 @@ def args_enabled(args, spec):
 
     Args:
         args (dict): Dict mapping arg keys to user-provided values
-        spec (dict): arg spec from MODEL_SPEC['args']
+        spec (dict): MODEL_SPEC dictionary
 
     Returns:
         Dictionary mapping each arg key to a boolean value - True if the
         arg field should be enabled, False otherwise
     """
+    enabled = {}
     expression_values = {
-        arg_key: args.get(arg_key, False) for arg_key in spec.keys()}
+        arg_key: args.get(arg_key, False) for arg_key in spec['args'].keys()}
+    print(expression_values)
     for key, arg_spec in spec['args'].items():
         if 'allowed' in arg_spec:
-            enabled[key] = _evaluate_expression(
-                arg_spec['allowed'], expression_values)
+            enabled[key] = bool(_evaluate_expression(
+                arg_spec['allowed'], expression_values))
         else:
             enabled[key] = True
     return enabled
