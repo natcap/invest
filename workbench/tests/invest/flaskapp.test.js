@@ -171,7 +171,7 @@ expect.extend({
 describe('Build each model UI from MODEL_SPEC', () => {
 
   test('test building each model setup tab', async () => {
-    models = await server_requests.getInvestModelNames();
+    const models = await server_requests.getInvestModelNames();
 
     Object.keys(models).forEach(async (model) => {
       const argsSpec = await server_requests.getSpec(model);
@@ -201,7 +201,7 @@ describe('Build each model UI from MODEL_SPEC', () => {
 describe('Check Forum links for each model', () => {
 
   test('test each forum link', async () => {
-    models = await server_requests.getInvestModelNames();
+    const models = await server_requests.getInvestModelNames();
 
     Object.keys(models).forEach(async (model) => {
       const argsSpec = await server_requests.getSpec(model);
