@@ -38,6 +38,28 @@
 
 Unreleased Changes
 ------------------
+* General
+    * We have updated validation in several ways that will improve the
+      developer experience of working with InVEST models, and we hope will also
+      improve the user experience:
+
+      * Symbols in conditional requirement expressions now represent the values
+        of parameters instead of whether the value of the parameter is
+        sufficient.  If a symbol is not present in ``args`` as a key, the
+        symbol will have a value of ``False``.  This allows for value-based
+        comparisons, which is useful in models that have overlapping modes of
+        operation. https://github.com/natcap/invest/issues/1509
+      * Vector fields, CSV rows/columns and the 1st level of directory
+        contents may now all be conditionally required based on a python
+        expression.
+      * Under certain circumstances, validation may return more warnings than
+        before. This specifically applies to model inputs that have conditional
+        requirement expressions where their expression evaluates to ``False``,
+        and the user has provided a value for this parameter.  Previous
+        versions of InVEST would skip these parameters' type-specific
+        validation. Now, these parameters will be validated with their
+        type-specific validation checks.
+
 * Urban Nature Access
     * Fixed a ``NameError`` that occurred when running the model using
       search radii defined per population group with an exponential search
