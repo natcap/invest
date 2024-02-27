@@ -524,6 +524,7 @@ describe('Misc form validation stuff', () => {
     fetchValidation.mockImplementation(
       (payload) => payload
     );
+    fetchArgsEnabled.mockResolvedValue({ a: true, b: true, c: true });
 
     renderSetupFromSpec(spec);
     await waitFor(() => {
@@ -591,6 +592,7 @@ describe('Misc form validation stuff', () => {
 });
 
 describe('Form drag-and-drop', () => {
+
   test('Dragover of a datastack/logfile updates all inputs', async () => {
     const spec = {
       pyname: `natcap.invest.${MODULE}`,
@@ -611,6 +613,9 @@ describe('Form drag-and-drop', () => {
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
+    fetchArgsEnabled.mockResolvedValue({
+      arg1: true, arg2: true
+    });
 
     const mockDatastack = {
       module_name: spec.pyname,
@@ -675,6 +680,9 @@ describe('Form drag-and-drop', () => {
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
+    fetchArgsEnabled.mockResolvedValue({
+      arg1: true, arg2: true
+    });
 
     const mockDatastack = {
       module_name: spec.pyname,
@@ -739,6 +747,9 @@ describe('Form drag-and-drop', () => {
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
+    fetchArgsEnabled.mockResolvedValue({
+      arg1: true, arg2: true
+    });
 
     const { findByTestId } = renderSetupFromSpec(spec);
     const setupForm = await findByTestId('setup-form');

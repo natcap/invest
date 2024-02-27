@@ -168,63 +168,79 @@ expect.extend({
   },
 });
 
-describe('Build each model UI from MODEL_SPEC', () => {
+describe('Test building model UIs and forum links', () => {
 
-  test('test building each model setup tab', async () => {
-    const models = await server_requests.getInvestModelNames();
+  const models =  [
+    'annual_water_yield',
+    'carbon',
+    'coastal_blue_carbon',
+    'coastal_blue_carbon_preprocessor',
+    'coastal_vulnerability',
+    'crop_production_percentile',
+    'crop_production_regression',
+    'delineateit',
+    'forest_carbon_edge_effect',
+    'habitat_quality',
+    'habitat_risk_assessment',
+    'ndr',
+    'pollination',
+    'recreation',
+    'routedem',
+    'scenario_generator_proximity',
+    'scenic_quality',
+    'sdr',
+    'seasonal_water_yield',
+    'stormwater',
+    'urban_cooling_model',
+    'urban_flood_risk_mitigation',
+    'urban_nature_access',
+    'wave_energy',
+    'wind_energy'
+  ];
 
-    Object.keys(models).forEach(async (model) => {
-      const argsSpec = await server_requests.getSpec(model);
-
-      const { findByRole } = render(
-        <SetupTab
-          pyModuleName={argsSpec.pyname}
-          modelName={argsSpec.model_name}
-          argsSpec={argsSpec.args}
-          userguide={argsSpec.userguide}
-          uiSpec={argsSpec.uiSpec}
-          argsInitValues={undefined}
-          investExecute={() => {}}
-          nWorkers="-1"
-          sidebarSetupElementId="foo"
-          sidebarFooterElementId="foo"
-          executeClicked={false}
-          switchTabs={() => {}}
-        />
-      );
-      expect(await findByRole('textbox', { name: /workspace/i }))
-        .toBeInTheDocument();
-    });
+  test.each(models)('test building each model setup tab', async (model) => {
+    const argsSpec = await server_requests.getSpec(model);
+    const { findByRole } = render(
+      <SetupTab
+        pyModuleName={argsSpec.pyname}
+        modelName={argsSpec.model_name}
+        argsSpec={argsSpec.args}
+        userguide={argsSpec.userguide}
+        uiSpec={argsSpec.ui_spec}
+        argsInitValues={undefined}
+        investExecute={() => {}}
+        nWorkers="-1"
+        sidebarSetupElementId="foo"
+        sidebarFooterElementId="foo"
+        executeClicked={false}
+        switchTabs={() => {}}
+      />
+    );
+    expect(await findByRole('textbox', { name: /workspace/i }))
+      .toBeInTheDocument();
   });
-});
 
-describe('Check Forum links for each model', () => {
-
-  test('test each forum link', async () => {
-    const models = await server_requests.getInvestModelNames();
-
-    Object.keys(models).forEach(async (model) => {
-      const argsSpec = await server_requests.getSpec(model);
-
-      const { findByRole } = render(
-        <ResourcesLinks
-          moduleName={model}
-          docs={argsSpec.userguide}
-        />
-      );
-      const link = await findByRole('link', { name: /frequently asked questions/i });
-      const address = link.getAttribute('href');
-      // If a model has no tag, the link defaults to the forum homepage,
-      // This will pass the urlStatus check, but we want to know if that happened,
-      // so check url text first,
-      expect(address).toContain('/tag/');
-      const options = {
-        method: 'HEAD',
-        host: url.parse(address).host,
-        path: url.parse(address).pathname,
-      };
-      const status = await getUrlStatus(options);
-      expect(status).toBeStatus200(address);
-    });
+  test.each(models)('test each forum link', async (model) => {
+    const argsSpec = await server_requests.getSpec(model);
+    const { findByRole } = render(
+      <ResourcesLinks
+        moduleName={model}
+        docs={argsSpec.userguide}
+        forumTagName={argsSpec.ui_spec.forum_tag}
+      />
+    );
+    const link = await findByRole('link', { name: /frequently asked questions/i });
+    const address = link.getAttribute('href');
+    // If a model has no tag, the link defaults to the forum homepage,
+    // This will pass the urlStatus check, but we want to know if that happened,
+    // so check url text first,
+    expect(address).toContain('/tag/');
+    const options = {
+      method: 'HEAD',
+      host: url.parse(address).host,
+      path: url.parse(address).pathname,
+    };
+    const status = await getUrlStatus(options);
+    expect(status).toBeStatus200(address);
   });
 });
