@@ -18,6 +18,55 @@ from libcpp.list cimport list as clist
 from libcpp.stack cimport stack
 from libcpp.vector cimport vector
 
+
+cdef route(flow_dir_path, seed_fn, route_fn):
+    """
+    Args:
+        seed_fn (callable): function that accepts an (x, y) coordinate
+            and returns a bool indicating if the pixel is a seed
+        route_fn (callable): function that accepts an (x, y) coordinate
+            and performs whatever routing operation is needed on that pixel.
+
+    Returns:
+        None
+    """
+
+    cdef long win_xsize, win_ysize, xoff, yoff
+    cdef long col_index, row_index, global_col, global_row
+    cdef stack[long] processing_stack
+    cdef long n_cols, n_rows
+
+    flow_dir_info = pygeoprocessing.get_raster_info(flow_dir_path)
+    n_cols, n_rows = flow_dir_info['raster_size']
+
+    for offset_dict in pygeoprocessing.iterblocks(
+            (flow_dir_path, 1), offset_only=True, largest_block=0):
+        # use cython variables to avoid python overhead of dict values
+        win_xsize = offset_dict['win_xsize']
+        win_ysize = offset_dict['win_ysize']
+        xoff = offset_dict['xoff']
+        yoff = offset_dict['yoff']
+        for row_index in range(win_ysize):
+            global_row = yoff + row_index
+            for col_index in range(win_xsize):
+                global_col = xoff + col_index
+
+                if seed_fn(global_col, global_row):
+                    processing_stack.push(global_row * n_cols + global_col)
+
+        while processing_stack.size() > 0:
+            # loop invariant, we don't push a cell on the stack that
+            # hasn't already been set for processing.
+            flat_index = processing_stack.top()
+            processing_stack.pop()
+            global_row = flat_index / n_cols
+            global_col = flat_index % n_cols
+
+            to_push = route_fn(global_col, global_row)
+            for index in to_push:
+                processing_stack.push(index)
+
+
 # this ctype is used to store the block ID and the block buffer as one object
 # inside Managed Raster
 ctypedef pair[int, double*] BlockBufferPair

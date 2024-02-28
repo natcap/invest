@@ -42,6 +42,7 @@ cdef class _ManagedRaster:
     cdef bytes raster_path
     cdef int band_id
     cdef int closed
+    cdef float nodata
 
     cdef inline void set(_ManagedRaster self, long xi, long yi, double value)
     cdef inline double get(_ManagedRaster self, long xi, long yi)
@@ -70,3 +71,5 @@ cdef inline int is_close(double x, double y):
     if isnan(x) and isnan(y):
         return 1
     return abs(x - y) <= (1e-8 + 1e-05 * abs(y))
+
+cdef route(flow_dir_path, seed_fn, route_fn)
