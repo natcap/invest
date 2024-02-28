@@ -41,7 +41,15 @@ export async function getSpec(payload) {
   );
 }
 
-
+/**
+ * Get the dynamically determined dropdown options for a given model.
+ *
+ * @param {object} payload {
+ *   model_module: string (e.g. natcap.invest.carbon)
+ *   args: JSON string of InVEST model args keys and values
+ * }
+ * @returns {Promise} resolves object
+ */
 export async function getDynamicDropdowns(payload) {
   return (
     window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/dynamic_dropdowns`, {
@@ -54,7 +62,15 @@ export async function getDynamicDropdowns(payload) {
   );
 }
 
-
+/**
+ * Get the enabled/disabled status of arg inputs.
+ *
+ * @param {object} payload {
+ *   model_module: string (e.g. natcap.invest.carbon)
+ *   args: JSON string of InVEST model args keys and values
+ * }
+ * @returns {Promise} resolves object
+ */
 export async function fetchArgsEnabled(payload) {
   return (
     window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/args_enabled`, {

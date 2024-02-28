@@ -379,12 +379,12 @@ class SetupTab extends React.Component {
     if (this.enabledTimer) {
       clearTimeout(this.enabledTimer);
     }
-    // we want validation to be very responsive,
+    // we want this check to be very responsive,
     // but also to wait for a pause in data entry.
     this.enabledTimer = setTimeout(this.investArgsEnabled, 200);
   }
 
-  /** Validate an arguments dictionary using the InVEST model's validate function.
+  /** Set the enabled/disabled status of args.
    *
    * @returns {undefined}
    */

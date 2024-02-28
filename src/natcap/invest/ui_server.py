@@ -86,7 +86,6 @@ def get_dynamic_dropdown_options():
     Returns:
         A JSON string.
     """
-
     payload = request.get_json()
     LOGGER.debug(payload)
     results = {}

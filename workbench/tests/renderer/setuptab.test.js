@@ -51,9 +51,9 @@ function baseArgsSpec(type) {
   }
   return spec;
 }
-const ARGS_ENABLED = {}
+const BASE_ARGS_ENABLED = {}
 Object.keys(BASE_MODEL_SPEC.args).forEach((arg) => {
-  ARGS_ENABLED[arg] = true;
+  BASE_ARGS_ENABLED[arg] = true;
 });
 
 /**
@@ -93,7 +93,7 @@ describe('Arguments form input types', () => {
     fetchValidation.mockResolvedValue(
       [[Object.keys(BASE_MODEL_SPEC.args), VALIDATION_MESSAGE]]
     );
-    fetchArgsEnabled.mockResolvedValue(ARGS_ENABLED);
+    fetchArgsEnabled.mockResolvedValue(BASE_ARGS_ENABLED);
   });
 
   test.each([
@@ -194,7 +194,7 @@ describe('Arguments form interactions', () => {
     fetchValidation.mockResolvedValue(
       [[Object.keys(BASE_MODEL_SPEC.args), VALIDATION_MESSAGE]]
     );
-    fetchArgsEnabled.mockResolvedValue(ARGS_ENABLED);
+    fetchArgsEnabled.mockResolvedValue(BASE_ARGS_ENABLED);
     setupOpenExternalUrl();
   });
 
@@ -592,7 +592,6 @@ describe('Misc form validation stuff', () => {
 });
 
 describe('Form drag-and-drop', () => {
-
   test('Dragover of a datastack/logfile updates all inputs', async () => {
     const spec = {
       pyname: `natcap.invest.${MODULE}`,

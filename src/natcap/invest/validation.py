@@ -1184,7 +1184,6 @@ def args_enabled(args, spec):
     enabled = {}
     expression_values = {
         arg_key: args.get(arg_key, False) for arg_key in spec['args'].keys()}
-    print(expression_values)
     for key, arg_spec in spec['args'].items():
         if 'allowed' in arg_spec:
             enabled[key] = bool(_evaluate_expression(
