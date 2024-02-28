@@ -1,4 +1,3 @@
-# cython: profile=False
 # cython: language_level=3
 # distutils: language = c++
 import os
@@ -17,13 +16,27 @@ from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
 from libcpp.list cimport list as clist
 from libcpp.stack cimport stack
-cimport libc.math as cmath
+from libcpp.vector cimport vector
 
 # this ctype is used to store the block ID and the block buffer as one object
 # inside Managed Raster
 ctypedef pair[int, double*] BlockBufferPair
 # Number of raster blocks to hold in memory at once per Managed Raster
 cdef int MANAGED_RASTER_N_BLOCKS = 2**6
+
+# given the pixel neighbor numbering system
+#  3 2 1
+#  4 x 0
+#  5 6 7
+# These offsets are for the neighbor rows and columns
+cdef int *ROW_OFFSETS = [0, -1, -1, -1,  0,  1, 1, 1]
+cdef int *COL_OFFSETS = [1,  1,  0, -1, -1, -1, 0, 1]
+cdef int *FLOW_DIR_REVERSE_DIRECTION = [4, 5, 6, 7, 0, 1, 2, 3]
+
+# if a pixel `x` has a neighbor `n` in position `i`,
+# then `n`'s neighbor in position `inflow_offsets[i]`
+# is the original pixel `x`
+cdef int *INFLOW_OFFSETS = [4, 5, 6, 7, 0, 1, 2, 3]
 
 # a class to allow fast random per-pixel access to a raster for both setting
 # and reading pixels.  Copied from src/pygeoprocessing/routing/routing.pyx,
@@ -300,3 +313,118 @@ cdef class _ManagedRaster:
         if self.write_mode:
             raster_band = None
             raster = None
+
+
+cdef class ManagedFlowDirRaster(_ManagedRaster):
+
+    cdef bint is_local_high_point(self, long xi, long yi):
+        """Check if a given pixel is a local high point.
+
+        Args:
+            xi (int): x coord in pixel space of the pixel to consider
+            yi (int): y coord in pixel space of the pixel to consider
+
+        Returns:
+            True if the pixel is a local high point, i.e. it has no
+            upslope neighbors; False otherwise.
+        """
+        return self.get_upslope_neighbors(xi, yi).size() == 0
+
+    @cython.cdivision(True)
+    cdef vector[NeighborTuple] get_upslope_neighbors(
+            ManagedFlowDirRaster self, long xi, long yi):
+        """Return upslope neighbors of a given pixel.
+
+        Args:
+            xi (int): x coord in pixel space of the pixel to consider
+            yi (int): y coord in pixel space of the pixel to consider
+
+        Returns:
+            libcpp.vector of NeighborTuples. Each NeighborTuple has
+            the attributes ``direction`` (integer flow direction 0-7
+            of the neighbor relative to the original pixel), ``x``
+            and ``y`` (integer coordinates of the neighbor in pixel
+            space), and ``flow_proportion`` (fraction of the flow
+            from the neighbor that flows to the original pixel).
+        """
+        cdef int n_dir, flow_dir_j, idx
+        cdef long xj, yj
+        cdef float flow_ji, flow_dir_j_sum
+
+        cdef NeighborTuple n
+        cdef vector[NeighborTuple] upslope_neighbor_tuples
+
+        for n_dir in range(8):
+            xj = xi + COL_OFFSETS[n_dir]
+            yj = yi + ROW_OFFSETS[n_dir]
+            if (xj < 0 or xj >= self.raster_x_size or
+                    yj < 0 or yj >= self.raster_y_size):
+                continue
+            flow_dir_j = <int>self.get(xj, yj)
+            flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])))
+
+            if flow_ji:
+                flow_dir_j_sum = 0
+                for idx in range(8):
+                    flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF
+                n.direction = n_dir
+                n.x = xj
+                n.y = yj
+                n.flow_proportion = flow_ji / flow_dir_j_sum
+                upslope_neighbor_tuples.push_back(n)
+
+        return upslope_neighbor_tuples
+
+    @cython.cdivision(True)
+    cdef vector[NeighborTuple] get_downslope_neighbors(
+            ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=True):
+        """Return downslope neighbors of a given pixel.
+
+        Args:
+            xi (int): x coord in pixel space of the pixel to consider
+            yi (int): y coord in pixel space of the pixel to consider
+            skip_oob (bool): if True, do not return neighbors that fall
+                outside the raster bounds.
+
+        Returns:
+            libcpp.vector of NeighborTuples. Each NeighborTuple has
+            the attributes ``direction`` (integer flow direction 0-7
+            of the neighbor relative to the original pixel), ``x``
+            and ``y`` (integer coordinates of the neighbor in pixel
+            space), and ``flow_proportion`` (fraction of the flow
+            from the neighbor that flows to the original pixel).
+        """
+        cdef int n_dir
+        cdef long xj, yj
+        cdef float flow_ij
+
+        cdef NeighborTuple n
+        cdef vector[NeighborTuple] downslope_neighbor_tuples
+
+        cdef int flow_dir = <int>self.get(xi, yi)
+        cdef float flow_sum = 0
+
+        cdef int i = 0
+        for n_dir in range(8):
+            # flows in this direction
+            xj = xi + COL_OFFSETS[n_dir]
+            yj = yi + ROW_OFFSETS[n_dir]
+            if skip_oob and (xj < 0 or xj >= self.raster_x_size or
+                    yj < 0 or yj >= self.raster_y_size):
+                continue
+            flow_ij = (flow_dir >> (n_dir * 4)) & 0xF
+            flow_sum += flow_ij
+            if flow_ij:
+                n = NeighborTuple()
+                n.direction = n_dir
+                n.x = xj
+                n.y = yj
+                n.flow_proportion = flow_ij
+                downslope_neighbor_tuples.push_back(n)
+                i += 1
+
+        for j in range(i):
+            downslope_neighbor_tuples[j].flow_proportion = (
+                downslope_neighbor_tuples[j].flow_proportion / flow_sum)
+
+        return downslope_neighbor_tuples
