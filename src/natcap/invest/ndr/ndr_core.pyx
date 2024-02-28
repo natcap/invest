@@ -62,27 +62,23 @@ def ndr_eff_calculation(
         dir=os.path.dirname(effective_retention_path))
     os.close(fp)
 
-    cdef long n_cols, n_rows
-    flow_dir_info = pygeoprocessing.get_raster_info(mfd_flow_direction_path)
-    n_cols, n_rows = flow_dir_info['raster_size']
-
-    stream_info = pygeoprocessing.get_raster_info(stream_path)
-    # cell sizes must be square, so no reason to test at this point.
-    cdef float cell_size = abs(stream_info['pixel_size'][0])
-
     cdef _ManagedRaster stream_raster = _ManagedRaster(stream_path, 1, False)
     cdef _ManagedRaster crit_len_raster = _ManagedRaster(
         crit_len_path, 1, False)
-    cdef float crit_len_nodata = pygeoprocessing.get_raster_info(
-        crit_len_path)['nodata'][0]
     cdef _ManagedRaster retention_eff_lulc_raster = _ManagedRaster(
         retention_eff_lulc_path, 1, False)
-    cdef float retention_eff_nodata = pygeoprocessing.get_raster_info(
-        retention_eff_lulc_path)['nodata'][0]
     cdef _ManagedRaster effective_retention_raster = _ManagedRaster(
         effective_retention_path, 1, True)
     cdef ManagedFlowDirRaster mfd_flow_direction_raster = ManagedFlowDirRaster(
         mfd_flow_direction_path, 1, False)
+
+    cdef float retention_eff_nodata = pygeoprocessing.get_raster_info(
+        retention_eff_lulc_path)['nodata'][0]
+    cdef float crit_len_nodata = pygeoprocessing.get_raster_info(
+        crit_len_path)['nodata'][0]
+    # cell sizes must be square, so no reason to test at this point.
+    cdef float cell_size = abs(pygeoprocessing.get_raster_info(
+        stream_path)['pixel_size'][0])
 
     # create direction raster in bytes
     def _mfd_to_flow_dir_op(mfd_array):
@@ -102,40 +98,55 @@ def ndr_eff_calculation(
     cdef _ManagedRaster to_process_flow_directions_raster = _ManagedRaster(
         to_process_flow_directions_path, 1, True)
 
-    cdef long flow_dir
-    cdef long ds_col, ds_row, i
-    cdef float current_step_factor, step_size, crit_len
-    cdef long neighbor_row, neighbor_col
-    cdef int neighbor_outflow_dir, neighbor_outflow_dir_mask, neighbor_process_flow_dir
-    cdef int outflow_dirs, dir_mask
-
     def ndr_seed_fn(col, row):
-        should_seed = False
-        outflow_dirs = <int>to_process_flow_directions_raster.get(col, row)
+        """Determine if a given pixel can be a seed pixel.
+
+        To be a seed pixel, it must drain to nodata or off the edge of the raster.
+
+        Args:
+            col (int): column index of the pixel in raster space
+            row (int): row index of the pixel in raster space
+
+        Returns:
+            True if the pixel qualifies as a seed pixel, False otherwise
+        """
+        cdef bint should_seed = False
+        cdef int outflow_dirs = <int>to_process_flow_directions_raster.get(col, row)
         # see if this pixel drains to nodata or the edge, if so it's
         # a drain
         for neighbor in (
                 mfd_flow_direction_raster.get_downslope_neighbors(
                     col, row, skip_oob=False)):
-            if (neighbor.x < 0 or neighbor.x >= n_cols or
-                neighbor.y < 0 or neighbor.y >= n_rows or
+            if (neighbor.x < 0 or neighbor.x >= mfd_flow_direction_raster.raster_x_size or
+                neighbor.y < 0 or neighbor.y >= mfd_flow_direction_raster.raster_y_size or
                 to_process_flow_directions_raster.get(
                     neighbor.x, neighbor.y) == 0):
                 should_seed = True
                 outflow_dirs &= ~(1 << neighbor.direction)
-
         if should_seed:
             # mark all outflow directions processed
             to_process_flow_directions_raster.set(
                 col, row, outflow_dirs)
-
         return should_seed
 
     def ndr_route_fn(col, row):
+        """Perform routed operations for NDR.
+
+        Args:
+            col (int): column index of the pixel in raster space
+            row (int): row index of the pixel in raster space
+
+        Returns:
+            list of integer indexes of pixels to push onto the stack.
+            Flat indexes are used.
+        """
         to_push = []
-        crit_len = <float>crit_len_raster.get(col, row)
-        retention_eff_lulc = retention_eff_lulc_raster.get(col, row)
-        flow_dir = <int>mfd_flow_direction_raster.get(col, row)
+        cdef int neighbor_outflow_dir, neighbor_outflow_dir_mask, neighbor_process_flow_dir
+        cdef float current_step_factor, step_size
+        cdef float working_retention_eff
+        cdef float crit_len = <float>crit_len_raster.get(col, row)
+        cdef float retention_eff_lulc = retention_eff_lulc_raster.get(col, row)
+        cdef int flow_dir = <int>mfd_flow_direction_raster.get(col, row)
         if stream_raster.get(col, row) == 1:
             # if it's a stream effective retention is 0.
             effective_retention_raster.set(col, row, STREAM_EFFECTIVE_RETENTION)
@@ -151,8 +162,8 @@ def ndr_eff_calculation(
             for neighbor in mfd_flow_direction_raster.get_downslope_neighbors(
                     col, row, skip_oob=False):
                 has_outflow = True
-                if (neighbor.x < 0 or neighbor.x >= n_cols or
-                    neighbor.y < 0 or neighbor.y >= n_rows):
+                if (neighbor.x < 0 or neighbor.x >= mfd_flow_direction_raster.raster_x_size or
+                    neighbor.y < 0 or neighbor.y >= mfd_flow_direction_raster.raster_y_size):
                     continue
 
                 if neighbor.direction % 2 == 1:
@@ -215,7 +226,7 @@ def ndr_eff_calculation(
                 # if 0 then all downslope have been processed,
                 # push on stack, otherwise another downslope pixel will
                 # pick it up
-                to_push.append(neighbor.y * n_cols + neighbor.x)
+                to_push.append(neighbor.y * mfd_flow_direction_raster.raster_x_size + neighbor.x)
         return to_push
 
 
