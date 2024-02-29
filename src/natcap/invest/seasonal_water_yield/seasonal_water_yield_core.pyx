@@ -21,6 +21,7 @@ from libc.time cimport time as ctime
 from ..managed_raster.managed_raster cimport _ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport is_close
+from ..managed_raster.managed_raster cimport route
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -317,29 +318,7 @@ def route_baseflow_sum(
     Returns:
         None.
     """
-
-    # used for time-delayed logging
-    cdef time_t last_log_time
-    last_log_time = ctime(NULL)
-
     cdef float target_nodata = -1e32
-    cdef int stream_val, outlet
-    cdef float b_i, b_sum_i, l_j, l_avail_j, l_sum_j
-    cdef long xi, yi, xj, yj
-    cdef float p_ij
-    cdef int flow_dir_i, p_ij_base
-    cdef int flow_dir_nodata
-    cdef long raster_x_size, raster_y_size, xs_root, ys_root, xoff, yoff
-    cdef int n_dir
-    cdef int xs, ys, flow_dir_s, win_xsize, win_ysize
-    cdef int stream_nodata
-    cdef stack[pair[long, long]] work_stack
-
-    # we know the PyGeoprocessing MFD raster flow dir type is a 32 bit int.
-    flow_dir_raster_info = pygeoprocessing.get_raster_info(flow_dir_mfd_path)
-    flow_dir_nodata = flow_dir_raster_info['nodata'][0]
-    raster_x_size, raster_y_size = flow_dir_raster_info['raster_size']
-    stream_nodata = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
 
     pygeoprocessing.new_raster_from_base(
         flow_dir_mfd_path, target_b_sum_path, gdal.GDT_Float32,
@@ -359,88 +338,81 @@ def route_baseflow_sum(
         flow_dir_mfd_path, 1, 0)
     cdef _ManagedRaster stream_raster = _ManagedRaster(stream_path, 1, 0)
 
-    current_pixel = 0
-    for offset_dict in pygeoprocessing.iterblocks(
-            (flow_dir_mfd_path, 1), offset_only=True, largest_block=0):
-        # use cython variables to avoid python overhead of dict values
-        win_xsize = offset_dict['win_xsize']
-        win_ysize = offset_dict['win_ysize']
-        xoff = offset_dict['xoff']
-        yoff = offset_dict['yoff']
-        for ys in xrange(win_ysize):
-            ys_root = yoff + ys
-            for xs in xrange(win_xsize):
-                xs_root = xoff + xs
-                flow_dir_s = <int>flow_dir_mfd_raster.get(xs_root, ys_root)
-                if is_close(flow_dir_s, flow_dir_nodata):
-                    current_pixel += 1
-                    continue
 
-                # search for a pixel that has no downslope neighbors,
-                # or whose downslope neighbors all have nodata in the stream raster (?)
-                outlet = 1
-                for neighbor in flow_dir_mfd_raster.get_downslope_neighbors(
-                        xs_root, ys_root):
-                    stream_val = <int>stream_raster.get(neighbor.x, neighbor.y)
-                    if stream_val != stream_nodata:
-                        outlet = 0
-                        break
-                if not outlet:
-                    continue
-                work_stack.push(pair[long, long](xs_root, ys_root))
+    def seed_fn(int x, int y):
+        """Determine whether the pixel at (x, y) is a seed pixel.
 
-                while work_stack.size() > 0:
-                    xi = work_stack.top().first
-                    yi = work_stack.top().second
-                    work_stack.pop()
-                    b_sum_i = target_b_sum_raster.get(xi, yi)
-                    if not is_close(b_sum_i, target_nodata):
-                        continue
+        Args:
+            x (int): x coordinate of the pixel
+            y (int): y coordinate of the pixel
 
-                    if ctime(NULL) - last_log_time > 5.0:
-                        last_log_time = ctime(NULL)
-                        LOGGER.info(
-                            'route base flow %.2f%% complete',
-                            100.0 * current_pixel / <float>(
-                                raster_x_size * raster_y_size))
+        Returns:
+            True if the pixel qualifies as a seed pixel, False otherwise
+        """
+        cdef int stream_val
+        cdef int flow_dir_s = <int>flow_dir_mfd_raster.get(x, y)
+        if is_close(flow_dir_s, flow_dir_mfd_raster.nodata):
+            return False
 
-                    b_sum_i = 0.0
-                    downslope_defined = 1
-                    for neighbor in flow_dir_mfd_raster.get_downslope_neighbors(xi, yi):
-                        stream_val = <int>stream_raster.get(neighbor.x, neighbor.y)
-                        if stream_val:
-                            b_sum_i += neighbor.flow_proportion
-                        else:
-                            b_sum_j = target_b_sum_raster.get(neighbor.x, neighbor.y)
-                            if is_close(b_sum_j, target_nodata):
-                                downslope_defined = 0
-                                break
-                            l_j = l_raster.get(neighbor.x, neighbor.y)
-                            l_avail_j = l_avail_raster.get(neighbor.x, neighbor.y)
-                            l_sum_j = l_sum_raster.get(neighbor.x, neighbor.y)
+        # search for a pixel that has no downslope neighbors,
+        # or whose downslope neighbors all have nodata in the stream raster (?)
+        for neighbor in flow_dir_mfd_raster.get_downslope_neighbors(x, y):
+            stream_val = <int>stream_raster.get(neighbor.x, neighbor.y)
+            if stream_val != stream_raster.nodata:
+                return False
+        return True
 
-                            if l_sum_j != 0 and (l_sum_j - l_j) != 0:
-                                b_sum_i += p_ij * (
-                                    (1 - l_avail_j / l_sum_j) * (
-                                        b_sum_j / (l_sum_j - l_j)))
-                            else:
-                                b_sum_i += neighbor.flow_proportion
 
-                    if not downslope_defined:
-                        continue
+    def route_fn(xi, yi):
+        cdef int stream_val
+        cdef float b_i, b_sum_i, l_j, l_avail_j, l_sum_j
 
-                    l_i = l_raster.get(xi, yi)
-                    l_sum_i = l_sum_raster.get(xi, yi)
-                    b_sum_i = l_sum_i * b_sum_i
+        to_push = []
+        b_sum_i = target_b_sum_raster.get(xi, yi)
+        if not is_close(b_sum_i, target_nodata):
+            return []
 
-                    if l_sum_i != 0:
-                        b_i = max(b_sum_i * l_i / l_sum_i, 0.0)
-                    else:
-                        b_i = 0.0
+        b_sum_i = 0.0
+        downslope_defined = 1
+        for neighbor in flow_dir_mfd_raster.get_downslope_neighbors(xi, yi):
+            stream_val = <int>stream_raster.get(neighbor.x, neighbor.y)
+            if stream_val:
+                b_sum_i += neighbor.flow_proportion
+            else:
+                b_sum_j = target_b_sum_raster.get(neighbor.x, neighbor.y)
+                if is_close(b_sum_j, target_nodata):
+                    downslope_defined = 0
+                    break
+                l_j = l_raster.get(neighbor.x, neighbor.y)
+                l_avail_j = l_avail_raster.get(neighbor.x, neighbor.y)
+                l_sum_j = l_sum_raster.get(neighbor.x, neighbor.y)
 
-                    target_b_raster.set(xi, yi, b_i)
-                    target_b_sum_raster.set(xi, yi, b_sum_i)
+                if l_sum_j != 0 and (l_sum_j - l_j) != 0:
+                    b_sum_i += neighbor.flow_proportion * (
+                        (1 - l_avail_j / l_sum_j) * (
+                            b_sum_j / (l_sum_j - l_j)))
+                else:
+                    b_sum_i += neighbor.flow_proportion
 
-                    current_pixel += 1
-                    for neighbor in flow_dir_mfd_raster.get_upslope_neighbors(xi, yi):
-                        work_stack.push(pair[long, long](neighbor.x, neighbor.y))
+        if not downslope_defined:
+            return []
+
+        l_i = l_raster.get(xi, yi)
+        l_sum_i = l_sum_raster.get(xi, yi)
+        b_sum_i = l_sum_i * b_sum_i
+
+        if l_sum_i != 0:
+            b_i = max(b_sum_i * l_i / l_sum_i, 0.0)
+        else:
+            b_i = 0.0
+
+        target_b_raster.set(xi, yi, b_i)
+        target_b_sum_raster.set(xi, yi, b_sum_i)
+
+        for neighbor in flow_dir_mfd_raster.get_upslope_neighbors(xi, yi):
+            to_push.append(neighbor.y * flow_dir_mfd_raster.raster_x_size + neighbor.x)
+
+        return to_push
+
+    route(flow_dir_mfd_path, seed_fn, route_fn)
+
