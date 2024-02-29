@@ -72,10 +72,6 @@ def ndr_eff_calculation(
     cdef ManagedFlowDirRaster mfd_flow_direction_raster = ManagedFlowDirRaster(
         mfd_flow_direction_path, 1, False)
 
-    cdef float retention_eff_nodata = pygeoprocessing.get_raster_info(
-        retention_eff_lulc_path)['nodata'][0]
-    cdef float crit_len_nodata = pygeoprocessing.get_raster_info(
-        crit_len_path)['nodata'][0]
     # cell sizes must be square, so no reason to test at this point.
     cdef float cell_size = abs(pygeoprocessing.get_raster_info(
         stream_path)['pixel_size'][0])
@@ -150,8 +146,8 @@ def ndr_eff_calculation(
         if stream_raster.get(col, row) == 1:
             # if it's a stream effective retention is 0.
             effective_retention_raster.set(col, row, STREAM_EFFECTIVE_RETENTION)
-        elif (is_close(crit_len, crit_len_nodata) or
-              is_close(retention_eff_lulc, retention_eff_nodata) or
+        elif (is_close(crit_len, crit_len_raster.nodata) or
+              is_close(retention_eff_lulc, retention_eff_lulc_raster.nodata) or
               flow_dir == 0):
             # if it's nodata, effective retention is nodata.
             effective_retention_raster.set(

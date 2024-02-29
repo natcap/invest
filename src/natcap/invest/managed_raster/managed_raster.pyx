@@ -110,8 +110,9 @@ cdef class _ManagedRaster:
         raster_info = pygeoprocessing.get_raster_info(raster_path)
         self.raster_x_size, self.raster_y_size = raster_info['raster_size']
         self.block_xsize, self.block_ysize = raster_info['block_size']
-        self.block_xmod = self.block_xsize-1
-        self.block_ymod = self.block_ysize-1
+        self.block_xmod = self.block_xsize - 1
+        self.block_ymod = self.block_ysize - 1
+        self.nodata = raster_info['nodata'][band_id - 1]
 
         if not (1 <= band_id <= raster_info['n_bands']):
             err_msg = (

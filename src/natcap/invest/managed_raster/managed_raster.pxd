@@ -42,7 +42,7 @@ cdef class _ManagedRaster:
     cdef bytes raster_path
     cdef int band_id
     cdef int closed
-    cdef float nodata
+    cdef object nodata
 
     cdef inline void set(_ManagedRaster self, long xi, long yi, double value)
     cdef inline double get(_ManagedRaster self, long xi, long yi)
