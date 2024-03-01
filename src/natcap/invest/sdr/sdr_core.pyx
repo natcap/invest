@@ -13,7 +13,7 @@ from osgeo import gdal
 from libc.time cimport time as ctime
 from libcpp.stack cimport stack
 from libcpp.vector cimport vector
-from ..managed_raster.managed_raster cimport _ManagedRaster
+from ..managed_raster.managed_raster cimport ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport is_close
 from ..managed_raster.managed_raster cimport INFLOW_OFFSETS
@@ -27,7 +27,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 cdef bint sed_dep_seed_fn(int x, int y, ManagedFlowDirRaster flow_dir_raster,
-        _ManagedRaster sediment_deposition_raster):
+        ManagedRaster sediment_deposition_raster):
     """Determine if a given pixel can be a seed pixel.
 
     To be a seed pixel, it must be a local high point and have data in
@@ -49,8 +49,8 @@ cdef bint sed_dep_seed_fn(int x, int y, ManagedFlowDirRaster flow_dir_raster,
 
 cdef route_sed_dep(int x, int y,
         ManagedFlowDirRaster mfd_flow_direction_raster,
-        _ManagedRaster e_prime_raster, _ManagedRaster f_raster,
-        _ManagedRaster sdr_raster, _ManagedRaster sediment_deposition_raster):
+        ManagedRaster e_prime_raster, ManagedRaster f_raster,
+        ManagedRaster sdr_raster, ManagedRaster sediment_deposition_raster):
     """Perform routed operations for SDR.
 
     Args:
@@ -131,45 +131,42 @@ cdef route_sed_dep(int x, int y,
 
     # nodata pixels should propagate to the results
     sdr_i = sdr_raster.get(x, y)
-    if is_close(sdr_i, sdr_raster.nodata):
-        return next_pixels
     e_prime_i = e_prime_raster.get(x, y)
-    if is_close(e_prime_i, e_prime_raster.nodata):
-        return next_pixels
+    if not (is_close(sdr_i, sdr_raster.nodata) or
+            is_close(e_prime_i, e_prime_raster.nodata)):
+        # This condition reflects property A in the user's guide.
+        if downslope_sdr_weighted_sum < sdr_i:
+            # i think this happens because of our low resolution
+            # flow direction, it's okay to zero out.
+            downslope_sdr_weighted_sum = sdr_i
 
-    # This condition reflects property A in the user's guide.
-    if downslope_sdr_weighted_sum < sdr_i:
-        # i think this happens because of our low resolution
-        # flow direction, it's okay to zero out.
-        downslope_sdr_weighted_sum = sdr_i
+        # these correspond to the full equations for
+        # dr_i, t_i, and f_i given in the docstring
+        if sdr_i == 1:
+            # This reflects property B in the user's guide and is
+            # an edge case to avoid division-by-zero.
+            dr_i = 1
+        else:
+            dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
 
-    # these correspond to the full equations for
-    # dr_i, t_i, and f_i given in the docstring
-    if sdr_i == 1:
-        # This reflects property B in the user's guide and is
-        # an edge case to avoid division-by-zero.
-        dr_i = 1
-    else:
-        dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
+        # Lisa's modified equations
+        t_i = dr_i * f_j_weighted_sum  # deposition, a.k.a trapped sediment
+        f_i = (1 - dr_i) * f_j_weighted_sum + e_prime_i  # flux
 
-    # Lisa's modified equations
-    t_i = dr_i * f_j_weighted_sum  # deposition, a.k.a trapped sediment
-    f_i = (1 - dr_i) * f_j_weighted_sum + e_prime_i  # flux
+        # On large flow paths, it's possible for dr_i, f_i and t_i
+        # to have very small negative values that are numerically
+        # equivalent to 0. These negative values were raising
+        # questions on the forums and it's easier to clamp the
+        # values here than to explain IEEE 754.
+        if dr_i < 0:
+            dr_i = 0
+        if t_i < 0:
+            t_i = 0
+        if f_i < 0:
+            f_i = 0
+        sediment_deposition_raster.set(x, y, t_i)
+        f_raster.set(x, y, f_i)
 
-    # On large flow paths, it's possible for dr_i, f_i and t_i
-    # to have very small negative values that are numerically
-    # equivalent to 0. These negative values were raising
-    # questions on the forums and it's easier to clamp the
-    # values here than to explain IEEE 754.
-    if dr_i < 0:
-        dr_i = 0
-    if t_i < 0:
-        t_i = 0
-    if f_i < 0:
-        f_i = 0
-
-    sediment_deposition_raster.set(x, y, t_i)
-    f_raster.set(x, y, f_i)
     return next_pixels
 
 def calculate_sediment_deposition(
@@ -237,11 +234,11 @@ def calculate_sediment_deposition(
 
     cdef ManagedFlowDirRaster mfd_flow_direction_raster = ManagedFlowDirRaster(
         mfd_flow_direction_path, 1, False)
-    cdef _ManagedRaster e_prime_raster = _ManagedRaster(
+    cdef ManagedRaster e_prime_raster = ManagedRaster(
         e_prime_path, 1, False)
-    cdef _ManagedRaster sdr_raster = _ManagedRaster(sdr_path, 1, False)
-    cdef _ManagedRaster f_raster = _ManagedRaster(f_path, 1, True)
-    cdef _ManagedRaster sediment_deposition_raster = _ManagedRaster(
+    cdef ManagedRaster sdr_raster = ManagedRaster(sdr_path, 1, False)
+    cdef ManagedRaster f_raster = ManagedRaster(f_path, 1, True)
+    cdef ManagedRaster sediment_deposition_raster = ManagedRaster(
         target_sediment_deposition_path, 1, True)
 
     route(

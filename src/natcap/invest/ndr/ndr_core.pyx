@@ -9,7 +9,7 @@ cimport cython
 from osgeo import gdal
 
 from libc.math cimport exp
-from ..managed_raster.managed_raster cimport _ManagedRaster
+from ..managed_raster.managed_raster cimport ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport is_close
 from ..managed_raster.managed_raster cimport INFLOW_OFFSETS
@@ -21,7 +21,7 @@ cdef float EFFECTIVE_RETENTION_NODATA = -1.0
 
 
 cdef bint ndr_seed_fn(int x, int y,
-        _ManagedRaster to_process_flow_directions_raster,
+        ManagedRaster to_process_flow_directions_raster,
         ManagedFlowDirRaster mfd_flow_direction_raster):
     """Determine if a given pixel can be a seed pixel.
 
@@ -55,10 +55,10 @@ cdef bint ndr_seed_fn(int x, int y,
 
 
 def ndr_route_fn(int x, int y, ManagedFlowDirRaster mfd_flow_direction_raster,
-        _ManagedRaster to_process_flow_directions_raster,
-        _ManagedRaster stream_raster, _ManagedRaster crit_len_raster,
-        _ManagedRaster effective_retention_raster,
-        _ManagedRaster retention_eff_lulc_raster):
+        ManagedRaster to_process_flow_directions_raster,
+        ManagedRaster stream_raster, ManagedRaster crit_len_raster,
+        ManagedRaster effective_retention_raster,
+        ManagedRaster retention_eff_lulc_raster):
     """Perform routed operations for NDR.
 
     Args:
@@ -165,24 +165,24 @@ def ndr_eff_calculation(
         crit_len_path, effective_retention_path):
     """Calculate flow downhill effective_retention to the channel.
 
-        Args:
-            mfd_flow_direction_path (string): a path to a raster with
-                pygeoprocessing.routing MFD flow direction values.
-            stream_path (string): a path to a raster where 1 indicates a
-                stream all other values ignored must be same dimensions and
-                projection as mfd_flow_direction_path.
-            retention_eff_lulc_path (string): a path to a raster indicating
-                the maximum retention efficiency that the landcover on that
-                pixel can accumulate.
-            crit_len_path (string): a path to a raster indicating the critical
-                length of the retention efficiency that the landcover on this
-                pixel.
-            effective_retention_path (string): path to a raster that is
-                created by this call that contains a per-pixel effective
-                sediment retention to the stream.
+    Args:
+        mfd_flow_direction_path (string): a path to a raster with
+            pygeoprocessing.routing MFD flow direction values.
+        stream_path (string): a path to a raster where 1 indicates a
+            stream all other values ignored must be same dimensions and
+            projection as mfd_flow_direction_path.
+        retention_eff_lulc_path (string): a path to a raster indicating
+            the maximum retention efficiency that the landcover on that
+            pixel can accumulate.
+        crit_len_path (string): a path to a raster indicating the critical
+            length of the retention efficiency that the landcover on this
+            pixel.
+        effective_retention_path (string): path to a raster that is
+            created by this call that contains a per-pixel effective
+            sediment retention to the stream.
 
-        Returns:
-            None.
+    Returns:
+        None.
 
     """
     pygeoprocessing.new_raster_from_base(
@@ -193,12 +193,12 @@ def ndr_eff_calculation(
         dir=os.path.dirname(effective_retention_path))
     os.close(fp)
 
-    cdef _ManagedRaster stream_raster = _ManagedRaster(stream_path, 1, False)
-    cdef _ManagedRaster crit_len_raster = _ManagedRaster(
+    cdef ManagedRaster stream_raster = ManagedRaster(stream_path, 1, False)
+    cdef ManagedRaster crit_len_raster = ManagedRaster(
         crit_len_path, 1, False)
-    cdef _ManagedRaster retention_eff_lulc_raster = _ManagedRaster(
+    cdef ManagedRaster retention_eff_lulc_raster = ManagedRaster(
         retention_eff_lulc_path, 1, False)
-    cdef _ManagedRaster effective_retention_raster = _ManagedRaster(
+    cdef ManagedRaster effective_retention_raster = ManagedRaster(
         effective_retention_path, 1, True)
     cdef ManagedFlowDirRaster mfd_flow_direction_raster = ManagedFlowDirRaster(
         mfd_flow_direction_path, 1, False)
@@ -217,7 +217,7 @@ def ndr_eff_calculation(
     pygeoprocessing.raster_calculator(
         [(mfd_flow_direction_path, 1)], _mfd_to_flow_dir_op,
         to_process_flow_directions_path, gdal.GDT_Byte, None)
-    cdef _ManagedRaster to_process_flow_directions_raster = _ManagedRaster(
+    cdef ManagedRaster to_process_flow_directions_raster = ManagedRaster(
         to_process_flow_directions_path, 1, True)
 
     route(

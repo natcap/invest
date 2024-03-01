@@ -18,7 +18,7 @@ from libcpp.pair cimport pair
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
 from libc.time cimport time as ctime
-from ..managed_raster.managed_raster cimport _ManagedRaster
+from ..managed_raster.managed_raster cimport ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport is_close
 from ..managed_raster.managed_raster cimport route
@@ -40,11 +40,11 @@ def local_recharge_seed_fn(x, y, ManagedFlowDirRaster flow_raster):
 def local_recharge_route_fn(x, y, ManagedFlowDirRaster flow_raster, alpha_month_map,
         beta_i, gamma,
         et0_m_raster_list, precip_m_raster_list, qf_m_raster_list, kc_m_raster_list,
-        _ManagedRaster target_li_raster, _ManagedRaster target_li_avail_raster,
-        _ManagedRaster target_l_sum_avail_raster, _ManagedRaster target_aet_raster,
-        _ManagedRaster target_pi_raster):
+        ManagedRaster target_li_raster, ManagedRaster target_li_avail_raster,
+        ManagedRaster target_l_sum_avail_raster, ManagedRaster target_aet_raster,
+        ManagedRaster target_pi_raster):
     cdef double pet_m, p_m, qf_m, et0_m, aet_i, p_i, qf_i, l_i, l_avail_i
-    cdef _ManagedRaster et0_m_raster, qf_m_raster, kc_m_raster
+    cdef ManagedRaster et0_m_raster, qf_m_raster, kc_m_raster
     cdef numpy.ndarray[numpy.npy_float32, ndim=1] alpha_month_array = (
         numpy.array(
             [alpha[1] for alpha in sorted(alpha_month_map.items())],
@@ -90,13 +90,13 @@ def local_recharge_route_fn(x, y, ManagedFlowDirRaster flow_raster, alpha_month_
 
     for m_index in range(12):
         precip_m_raster = (
-            <_ManagedRaster?>precip_m_raster_list[m_index])
+            <ManagedRaster?>precip_m_raster_list[m_index])
         qf_m_raster = (
-            <_ManagedRaster?>qf_m_raster_list[m_index])
+            <ManagedRaster?>qf_m_raster_list[m_index])
         et0_m_raster = (
-            <_ManagedRaster?>et0_m_raster_list[m_index])
+            <ManagedRaster?>et0_m_raster_list[m_index])
         kc_m_raster = (
-            <_ManagedRaster?>kc_m_raster_list[m_index])
+            <ManagedRaster?>kc_m_raster_list[m_index])
 
         p_m = precip_m_raster.get(x, y)
         if not is_close(p_m, precip_m_raster.nodata):
@@ -192,55 +192,55 @@ def calculate_local_recharge(
     # always be non-negative
     et0_m_raster_list = []
     for et0_path in et0_path_list:
-        et0_m_raster = _ManagedRaster(et0_path, 1, 0)
+        et0_m_raster = ManagedRaster(et0_path, 1, 0)
         et0_m_raster_list.append(et0_m_raster)
         if et0_m_raster.nodata is None:
             et0_m_raster.nodata = -1
 
     precip_m_raster_list = []
     for precip_m_path in precip_path_list:
-        precip_m_raster = _ManagedRaster(precip_m_path, 1, 0)
+        precip_m_raster = ManagedRaster(precip_m_path, 1, 0)
         precip_m_raster_list.append(precip_m_raster)
         if precip_m_raster.nodata is None:
             precip_m_raster.nodata = -1
 
     qf_m_raster_list = []
     for qf_m_path in qf_m_path_list:
-        qf_m_raster_list.append(_ManagedRaster(qf_m_path, 1, 0))
+        qf_m_raster_list.append(ManagedRaster(qf_m_path, 1, 0))
 
     kc_m_raster_list = []
     for kc_m_path in kc_path_list:
-        kc_m_raster_list.append(_ManagedRaster(kc_m_path, 1, 0))
+        kc_m_raster_list.append(ManagedRaster(kc_m_path, 1, 0))
 
     TARGET_NODATA = -1e32
     pygeoprocessing.new_raster_from_base(
         flow_dir_mfd_path, target_li_path, gdal.GDT_Float32, [TARGET_NODATA],
         fill_value_list=[TARGET_NODATA])
-    cdef _ManagedRaster target_li_raster = _ManagedRaster(
+    cdef ManagedRaster target_li_raster = ManagedRaster(
         target_li_path, 1, 1)
 
     pygeoprocessing.new_raster_from_base(
         flow_dir_mfd_path, target_li_avail_path, gdal.GDT_Float32,
         [TARGET_NODATA], fill_value_list=[TARGET_NODATA])
-    cdef _ManagedRaster target_li_avail_raster = _ManagedRaster(
+    cdef ManagedRaster target_li_avail_raster = ManagedRaster(
         target_li_avail_path, 1, 1)
 
     pygeoprocessing.new_raster_from_base(
         flow_dir_mfd_path, target_l_sum_avail_path, gdal.GDT_Float32,
         [TARGET_NODATA], fill_value_list=[TARGET_NODATA])
-    cdef _ManagedRaster target_l_sum_avail_raster = _ManagedRaster(
+    cdef ManagedRaster target_l_sum_avail_raster = ManagedRaster(
         target_l_sum_avail_path, 1, 1)
 
     pygeoprocessing.new_raster_from_base(
         flow_dir_mfd_path, target_aet_path, gdal.GDT_Float32, [TARGET_NODATA],
         fill_value_list=[TARGET_NODATA])
-    cdef _ManagedRaster target_aet_raster = _ManagedRaster(
+    cdef ManagedRaster target_aet_raster = ManagedRaster(
         target_aet_path, 1, 1)
 
     pygeoprocessing.new_raster_from_base(
         flow_dir_mfd_path, target_pi_path, gdal.GDT_Float32, [TARGET_NODATA],
         fill_value_list=[TARGET_NODATA])
-    cdef _ManagedRaster target_pi_raster = _ManagedRaster(
+    cdef ManagedRaster target_pi_raster = ManagedRaster(
         target_pi_path, 1, 1)
 
     route(
@@ -256,7 +256,7 @@ def calculate_local_recharge(
 
 
 def baseflow_seed_fn(int x, int y, ManagedFlowDirRaster flow_dir_mfd_raster,
-        _ManagedRaster stream_raster):
+        ManagedRaster stream_raster):
     """Determine whether the pixel at (x, y) is a seed pixel.
 
     Args:
@@ -281,9 +281,9 @@ def baseflow_seed_fn(int x, int y, ManagedFlowDirRaster flow_dir_mfd_raster,
 
 
 def baseflow_route_fn(x, y, ManagedFlowDirRaster flow_dir_mfd_raster,
-        _ManagedRaster l_raster, _ManagedRaster l_avail_raster,
-        _ManagedRaster l_sum_raster, _ManagedRaster stream_raster,
-        _ManagedRaster target_b_raster, _ManagedRaster target_b_sum_raster):
+        ManagedRaster l_raster, ManagedRaster l_avail_raster,
+        ManagedRaster l_sum_raster, ManagedRaster stream_raster,
+        ManagedRaster target_b_raster, ManagedRaster target_b_sum_raster):
     cdef int stream_val
     cdef float b_i, l_j, l_avail_j, l_sum_j
     cdef float b_sum_i = target_b_sum_raster.get(x, y)
@@ -361,16 +361,16 @@ def route_baseflow_sum(
         flow_dir_mfd_path, target_b_path, gdal.GDT_Float32,
         [TARGET_NODATA], fill_value_list=[TARGET_NODATA])
 
-    cdef _ManagedRaster target_b_sum_raster = _ManagedRaster(
+    cdef ManagedRaster target_b_sum_raster = ManagedRaster(
         target_b_sum_path, 1, 1)
-    cdef _ManagedRaster target_b_raster = _ManagedRaster(
+    cdef ManagedRaster target_b_raster = ManagedRaster(
         target_b_path, 1, 1)
-    cdef _ManagedRaster l_raster = _ManagedRaster(l_path, 1, 0)
-    cdef _ManagedRaster l_avail_raster = _ManagedRaster(l_avail_path, 1, 0)
-    cdef _ManagedRaster l_sum_raster = _ManagedRaster(l_sum_path, 1, 0)
+    cdef ManagedRaster l_raster = ManagedRaster(l_path, 1, 0)
+    cdef ManagedRaster l_avail_raster = ManagedRaster(l_avail_path, 1, 0)
+    cdef ManagedRaster l_sum_raster = ManagedRaster(l_sum_path, 1, 0)
     cdef ManagedFlowDirRaster flow_dir_mfd_raster = ManagedFlowDirRaster(
         flow_dir_mfd_path, 1, 0)
-    cdef _ManagedRaster stream_raster = _ManagedRaster(stream_path, 1, 0)
+    cdef ManagedRaster stream_raster = ManagedRaster(stream_path, 1, 0)
 
     route(
         flow_dir_path=flow_dir_mfd_path,

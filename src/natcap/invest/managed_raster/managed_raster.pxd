@@ -15,7 +15,7 @@ cdef struct s_neighborTuple:
 ctypedef s_neighborTuple NeighborTuple
 
 # this is a least recently used cache written in C++ in an external file,
-# exposing here so _ManagedRaster can use it
+# exposing here so ManagedRaster can use it
 cdef extern from "LRUCache.h" nogil:
     cdef cppclass LRUCache[KEY_T, VAL_T]:
         LRUCache(int)
@@ -25,7 +25,7 @@ cdef extern from "LRUCache.h" nogil:
         bint exist(KEY_T &)
         VAL_T get(KEY_T &)
 
-cdef class _ManagedRaster:
+cdef class ManagedRaster:
     cdef LRUCache[int, double*]* lru_cache
     cdef cset[int] dirty_blocks
     cdef int block_xsize
@@ -46,12 +46,12 @@ cdef class _ManagedRaster:
     cdef int closed
     cdef object nodata
 
-    cdef inline void set(_ManagedRaster self, long xi, long yi, double value)
-    cdef inline double get(_ManagedRaster self, long xi, long yi)
-    cdef void _load_block(_ManagedRaster self, int block_index) except *
+    cdef inline void set(ManagedRaster self, long xi, long yi, double value)
+    cdef inline double get(ManagedRaster self, long xi, long yi)
+    cdef void _load_block(ManagedRaster self, int block_index) except *
 
 
-cdef class ManagedFlowDirRaster(_ManagedRaster):
+cdef class ManagedFlowDirRaster(ManagedRaster):
 
     cdef bint is_local_high_point(ManagedFlowDirRaster self, long xi, long yi)
 

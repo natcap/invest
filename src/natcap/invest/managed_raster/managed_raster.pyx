@@ -19,7 +19,7 @@ from libcpp.stack cimport stack
 from libcpp.vector cimport vector
 
 
-cdef route(flow_dir_path, seed_fn, route_fn, seed_fn_args, route_fn_args):
+cdef route(str flow_dir_path, seed_fn, route_fn, seed_fn_args, route_fn_args):
     """
     Args:
         seed_fn (callable): function that accepts an (x, y) coordinate
@@ -63,8 +63,8 @@ cdef route(flow_dir_path, seed_fn, route_fn, seed_fn_args, route_fn_args):
             global_row = flat_index / n_cols
             global_col = flat_index % n_cols
 
-            to_push = route_fn(global_col, global_row, *route_fn_args)
-            for index in to_push:
+            next_pixels = route_fn(global_col, global_row, *route_fn_args)
+            for index in next_pixels:
                 processing_stack.push(index)
 
 
@@ -91,7 +91,7 @@ cdef int *INFLOW_OFFSETS = [4, 5, 6, 7, 0, 1, 2, 3]
 # a class to allow fast random per-pixel access to a raster for both setting
 # and reading pixels.  Copied from src/pygeoprocessing/routing/routing.pyx,
 # revision 891288683889237cfd3a3d0a1f09483c23489fca.
-cdef class _ManagedRaster:
+cdef class ManagedRaster:
 
     def __cinit__(self, raster_path, band_id, write_mode):
         """Create new instance of Managed Raster.
@@ -154,7 +154,7 @@ cdef class _ManagedRaster:
         self.closed = 0
 
     def __dealloc__(self):
-        """Deallocate _ManagedRaster.
+        """Deallocate ManagedRaster.
 
         This operation manually frees memory from the LRUCache and writes any
         dirty memory blocks back to the raster if `self.write_mode` is True.
@@ -162,12 +162,12 @@ cdef class _ManagedRaster:
         self.close()
 
     def close(self):
-        """Close the _ManagedRaster and free up resources.
+        """Close the ManagedRaster and free up resources.
 
             This call writes any dirty blocks to disk, frees up the memory
             allocated as part of the cache, and frees all GDAL references.
 
-            Any subsequent calls to any other functions in _ManagedRaster will
+            Any subsequent calls to any other functions in ManagedRaster will
             have undefined behavior.
         """
         if self.closed:
@@ -367,7 +367,7 @@ cdef class _ManagedRaster:
             raster = None
 
 
-cdef class ManagedFlowDirRaster(_ManagedRaster):
+cdef class ManagedFlowDirRaster(ManagedRaster):
 
     cdef bint is_local_high_point(self, long xi, long yi):
         """Check if a given pixel is a local high point.
