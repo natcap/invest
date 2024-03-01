@@ -36,6 +36,8 @@ cdef class _ManagedRaster:
     cdef int block_ybits
     cdef long raster_x_size
     cdef long raster_y_size
+    cdef float pixel_x_size
+    cdef float pixel_y_size
     cdef int block_nx
     cdef int block_ny
     cdef int write_mode
@@ -72,4 +74,4 @@ cdef inline int is_close(double x, double y):
         return 1
     return abs(x - y) <= (1e-8 + 1e-05 * abs(y))
 
-cdef route(flow_dir_path, seed_fn, route_fn)
+cdef route(flow_dir_path, seed_fn, route_fn, seed_fn_args, route_fn_args)

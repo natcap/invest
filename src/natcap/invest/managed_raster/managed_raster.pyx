@@ -19,7 +19,7 @@ from libcpp.stack cimport stack
 from libcpp.vector cimport vector
 
 
-cdef route(flow_dir_path, seed_fn, route_fn):
+cdef route(flow_dir_path, seed_fn, route_fn, seed_fn_args, route_fn_args):
     """
     Args:
         seed_fn (callable): function that accepts an (x, y) coordinate
@@ -49,9 +49,10 @@ cdef route(flow_dir_path, seed_fn, route_fn):
         for row_index in range(win_ysize):
             global_row = yoff + row_index
             for col_index in range(win_xsize):
+
                 global_col = xoff + col_index
 
-                if seed_fn(global_col, global_row):
+                if seed_fn(global_col, global_row, *seed_fn_args):
                     processing_stack.push(global_row * n_cols + global_col)
 
         while processing_stack.size() > 0:
@@ -62,7 +63,7 @@ cdef route(flow_dir_path, seed_fn, route_fn):
             global_row = flat_index / n_cols
             global_col = flat_index % n_cols
 
-            to_push = route_fn(global_col, global_row)
+            to_push = route_fn(global_col, global_row, *route_fn_args)
             for index in to_push:
                 processing_stack.push(index)
 
@@ -112,6 +113,7 @@ cdef class _ManagedRaster:
         self.block_xsize, self.block_ysize = raster_info['block_size']
         self.block_xmod = self.block_xsize - 1
         self.block_ymod = self.block_ysize - 1
+        self.pixel_x_size, pixel_y_size = raster_info['pixel_size']
         self.nodata = raster_info['nodata'][band_id - 1]
 
         if not (1 <= band_id <= raster_info['n_bands']):

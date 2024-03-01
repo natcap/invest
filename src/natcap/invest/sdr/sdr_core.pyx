@@ -12,6 +12,7 @@ from osgeo import gdal
 
 from libc.time cimport time as ctime
 from libcpp.stack cimport stack
+from libcpp.vector cimport vector
 from ..managed_raster.managed_raster cimport _ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport is_close
@@ -24,6 +25,152 @@ cdef extern from "time.h" nogil:
 
 LOGGER = logging.getLogger(__name__)
 
+
+cdef bint sed_dep_seed_fn(int x, int y, ManagedFlowDirRaster flow_dir_raster,
+        _ManagedRaster sediment_deposition_raster):
+    """Determine if a given pixel can be a seed pixel.
+
+    To be a seed pixel, it must be a local high point and have data in
+    the sediment deposition raster.
+
+    Args:
+        x (int): column index of the pixel in raster space
+        y (int): row index of the pixel in raster space
+
+    Returns:
+        True if the pixel qualifies as a seed pixel, False otherwise
+    """
+    # if this can be a seed pixel and hasn't already been
+    # calculated, put it on the stack
+    return (flow_dir_raster.is_local_high_point(x, y) and
+            is_close(sediment_deposition_raster.get(x, y),
+                     sediment_deposition_raster.nodata))
+
+
+cdef route_sed_dep(int x, int y,
+        ManagedFlowDirRaster mfd_flow_direction_raster,
+        _ManagedRaster e_prime_raster, _ManagedRaster f_raster,
+        _ManagedRaster sdr_raster, _ManagedRaster sediment_deposition_raster):
+    """Perform routed operations for SDR.
+
+    Args:
+        x (int): column index of the pixel in raster space
+        y (int): row index of the pixel in raster space
+
+    Returns:
+        list of integer indexes of pixels to push onto the stack.
+        Flat indexes are used.
+    """
+    cdef float f_j_weighted_sum = 0
+    cdef float downslope_sdr_weighted_sum = 0
+    cdef float sdr_i, sdr_j, f_j
+    cdef bint upslope_neighbors_processed
+    cdef vector[long] next_pixels
+    # (sum over j ∈ J of f_j * p(i,j) in the equation for t_i)
+    # calculate the upslope f_j contribution to this pixel,
+    # the weighted sum of flux flowing onto this pixel from
+    # all neighbors
+    for neighbor in (
+            mfd_flow_direction_raster.get_upslope_neighbors(
+                x, y)):
+
+        f_j = f_raster.get(neighbor.x, neighbor.y)
+        if is_close(f_j, f_raster.nodata):
+            continue
+
+        # add the neighbor's flux value, weighted by the
+        # flow proportion
+        f_j_weighted_sum += neighbor.flow_proportion * f_j
+
+    # calculate sum of SDR values of immediate downslope
+    # neighbors, weighted by proportion of flow into each
+    # neighbor
+    # (sum over k ∈ K of SDR_k * p(i,k) in the equation above)
+    for neighbor in (
+            mfd_flow_direction_raster.get_downslope_neighbors(
+                x, y)):
+        sdr_j = sdr_raster.get(neighbor.x, neighbor.y)
+        if is_close(sdr_j, sdr_raster.nodata):
+            continue
+        if sdr_j == 0:
+            # this means it's a stream, for SDR deposition
+            # purposes, we set sdr to 1 to indicate this
+            # is the last step on which to retain sediment
+            sdr_j = 1
+
+        downslope_sdr_weighted_sum += (
+            sdr_j * neighbor.flow_proportion)
+
+        # check if we can add neighbor j to the stack yet
+        #
+        # if there is a downslope neighbor it
+        # couldn't have been pushed on the processing
+        # stack yet, because the upslope was just
+        # completed
+        upslope_neighbors_processed = True
+        # iterate over each neighbor-of-neighbor
+        for neighbor_of_neighbor in (
+                mfd_flow_direction_raster.get_upslope_neighbors(
+                    neighbor.x, neighbor.y)):
+            # no need to push the one we're currently
+            # calculating back onto the stack
+            if (INFLOW_OFFSETS[neighbor_of_neighbor.direction] ==
+                    neighbor.direction):
+                continue
+            if is_close(
+                    sediment_deposition_raster.get(
+                        neighbor_of_neighbor.x, neighbor_of_neighbor.y
+                    ), sediment_deposition_raster.nodata):
+                upslope_neighbors_processed = False
+                break
+        # if all upslope neighbors of neighbor j are
+        # processed, we can push j onto the stack.
+        if upslope_neighbors_processed:
+            next_pixels.push_back(
+                neighbor.y * mfd_flow_direction_raster.raster_x_size + neighbor.x)
+
+    # nodata pixels should propagate to the results
+    sdr_i = sdr_raster.get(x, y)
+    if is_close(sdr_i, sdr_raster.nodata):
+        return next_pixels
+    e_prime_i = e_prime_raster.get(x, y)
+    if is_close(e_prime_i, e_prime_raster.nodata):
+        return next_pixels
+
+    # This condition reflects property A in the user's guide.
+    if downslope_sdr_weighted_sum < sdr_i:
+        # i think this happens because of our low resolution
+        # flow direction, it's okay to zero out.
+        downslope_sdr_weighted_sum = sdr_i
+
+    # these correspond to the full equations for
+    # dr_i, t_i, and f_i given in the docstring
+    if sdr_i == 1:
+        # This reflects property B in the user's guide and is
+        # an edge case to avoid division-by-zero.
+        dr_i = 1
+    else:
+        dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
+
+    # Lisa's modified equations
+    t_i = dr_i * f_j_weighted_sum  # deposition, a.k.a trapped sediment
+    f_i = (1 - dr_i) * f_j_weighted_sum + e_prime_i  # flux
+
+    # On large flow paths, it's possible for dr_i, f_i and t_i
+    # to have very small negative values that are numerically
+    # equivalent to 0. These negative values were raising
+    # questions on the forums and it's easier to clamp the
+    # values here than to explain IEEE 754.
+    if dr_i < 0:
+        dr_i = 0
+    if t_i < 0:
+        t_i = 0
+    if f_i < 0:
+        f_i = 0
+
+    sediment_deposition_raster.set(x, y, t_i)
+    f_raster.set(x, y, f_i)
+    return next_pixels
 
 def calculate_sediment_deposition(
         mfd_flow_direction_path, e_prime_path, f_path, sdr_path,
@@ -97,146 +244,15 @@ def calculate_sediment_deposition(
     cdef _ManagedRaster sediment_deposition_raster = _ManagedRaster(
         target_sediment_deposition_path, 1, True)
 
-    def seed_fn(x, y):
-        """Determine if a given pixel can be a seed pixel.
-
-        To be a seed pixel, it must be a local high point and have data in
-        the sediment deposition raster.
-
-        Args:
-            x (int): column index of the pixel in raster space
-            y (int): row index of the pixel in raster space
-
-        Returns:
-            True if the pixel qualifies as a seed pixel, False otherwise
-        """
-        # if this can be a seed pixel and hasn't already been
-        # calculated, put it on the stack
-        return (mfd_flow_direction_raster.is_local_high_point(x, y) and
-                is_close(sediment_deposition_raster.get(x, y),
-                         sediment_deposition_raster.nodata))
-
-    def route_fn(x, y):
-        """Perform routed operations for SDR.
-
-        Args:
-            x (int): column index of the pixel in raster space
-            y (int): row index of the pixel in raster space
-
-        Returns:
-            list of integer indexes of pixels to push onto the stack.
-            Flat indexes are used.
-        """
-        cdef float f_j_weighted_sum
-        cdef float downslope_sdr_weighted_sum, sdr_i, sdr_j
-        # (sum over j ∈ J of f_j * p(i,j) in the equation for t_i)
-        # calculate the upslope f_j contribution to this pixel,
-        # the weighted sum of flux flowing onto this pixel from
-        # all neighbors
-        f_j_weighted_sum = 0
-        for neighbor in (
-                mfd_flow_direction_raster.get_upslope_neighbors(
-                    x, y)):
-
-            f_j = f_raster.get(neighbor.x, neighbor.y)
-            if is_close(f_j, f_raster.nodata):
-                continue
-
-            # add the neighbor's flux value, weighted by the
-            # flow proportion
-            f_j_weighted_sum += neighbor.flow_proportion * f_j
-
-        # calculate sum of SDR values of immediate downslope
-        # neighbors, weighted by proportion of flow into each
-        # neighbor
-        # (sum over k ∈ K of SDR_k * p(i,k) in the equation above)
-        downslope_sdr_weighted_sum = 0
-        to_push = []
-        for neighbor in (
-                mfd_flow_direction_raster.get_downslope_neighbors(
-                    x, y)):
-            sdr_j = sdr_raster.get(neighbor.x, neighbor.y)
-            if is_close(sdr_j, sdr_raster.nodata):
-                continue
-            if sdr_j == 0:
-                # this means it's a stream, for SDR deposition
-                # purposes, we set sdr to 1 to indicate this
-                # is the last step on which to retain sediment
-                sdr_j = 1
-
-            downslope_sdr_weighted_sum += (
-                sdr_j * neighbor.flow_proportion)
-
-            # check if we can add neighbor j to the stack yet
-            #
-            # if there is a downslope neighbor it
-            # couldn't have been pushed on the processing
-            # stack yet, because the upslope was just
-            # completed
-            upslope_neighbors_processed = 1
-            # iterate over each neighbor-of-neighbor
-            for neighbor_of_neighbor in (
-                    mfd_flow_direction_raster.get_upslope_neighbors(
-                        neighbor.x, neighbor.y)):
-                # no need to push the one we're currently
-                # calculating back onto the stack
-                if (INFLOW_OFFSETS[neighbor_of_neighbor.direction] ==
-                        neighbor.direction):
-                    continue
-                if is_close(
-                        sediment_deposition_raster.get(
-                            neighbor_of_neighbor.x, neighbor_of_neighbor.y
-                        ), sediment_deposition_raster.nodata):
-                    upslope_neighbors_processed = 0
-                    break
-            # if all upslope neighbors of neighbor j are
-            # processed, we can push j onto the stack.
-            if upslope_neighbors_processed:
-                to_push.append(
-                    neighbor.y * mfd_flow_direction_raster.raster_x_size + neighbor.x)
-
-        # nodata pixels should propagate to the results
-        sdr_i = sdr_raster.get(x, y)
-        if is_close(sdr_i, sdr_raster.nodata):
-            return to_push
-        e_prime_i = e_prime_raster.get(x, y)
-        if is_close(e_prime_i, e_prime_raster.nodata):
-            return to_push
-
-        # This condition reflects property A in the user's guide.
-        if downslope_sdr_weighted_sum < sdr_i:
-            # i think this happens because of our low resolution
-            # flow direction, it's okay to zero out.
-            downslope_sdr_weighted_sum = sdr_i
-
-        # these correspond to the full equations for
-        # dr_i, t_i, and f_i given in the docstring
-        if sdr_i == 1:
-            # This reflects property B in the user's guide and is
-            # an edge case to avoid division-by-zero.
-            dr_i = 1
-        else:
-            dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
-
-        # Lisa's modified equations
-        t_i = dr_i * f_j_weighted_sum  # deposition, a.k.a trapped sediment
-        f_i = (1 - dr_i) * f_j_weighted_sum + e_prime_i  # flux
-
-        # On large flow paths, it's possible for dr_i, f_i and t_i
-        # to have very small negative values that are numerically
-        # equivalent to 0. These negative values were raising
-        # questions on the forums and it's easier to clamp the
-        # values here than to explain IEEE 754.
-        if dr_i < 0:
-            dr_i = 0
-        if t_i < 0:
-            t_i = 0
-        if f_i < 0:
-            f_i = 0
-
-        sediment_deposition_raster.set(x, y, t_i)
-        f_raster.set(x, y, f_i)
-        return to_push
-
-    route(mfd_flow_direction_path, seed_fn, route_fn)
+    route(
+        flow_dir_path=mfd_flow_direction_path,
+        seed_fn=sed_dep_seed_fn,
+        route_fn=route_sed_dep,
+        seed_fn_args=[
+            mfd_flow_direction_raster,
+            sediment_deposition_raster],
+        route_fn_args=[
+            mfd_flow_direction_raster,
+            e_prime_raster, f_raster,
+            sdr_raster, sediment_deposition_raster])
     sediment_deposition_raster.close()
