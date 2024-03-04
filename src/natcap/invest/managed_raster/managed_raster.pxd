@@ -69,9 +69,9 @@ cdef int *COL_OFFSETS
 cdef int *FLOW_DIR_REVERSE_DIRECTION
 cdef int *INFLOW_OFFSETS
 
-cdef inline int is_close(double x, double y):
+cdef inline bint is_close(double x, double y):
     if isnan(x) and isnan(y):
         return 1
     return abs(x - y) <= (1e-8 + 1e-05 * abs(y))
 
-cdef route(flow_dir_path, seed_fn, route_fn, seed_fn_args, route_fn_args)
+cdef void route(flow_dir_path, seed_fn, route_fn, seed_fn_args, route_fn_args)

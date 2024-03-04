@@ -19,7 +19,8 @@ from libcpp.stack cimport stack
 from libcpp.vector cimport vector
 
 
-cdef route(str flow_dir_path, seed_fn, route_fn, seed_fn_args, route_fn_args):
+cdef void route(object flow_dir_path, function_type seed_fn,
+        function_type route_fn, object seed_fn_args, object route_fn_args):
     """
     Args:
         seed_fn (callable): function that accepts an (x, y) coordinate
@@ -31,10 +32,11 @@ cdef route(str flow_dir_path, seed_fn, route_fn, seed_fn_args, route_fn_args):
         None
     """
 
-    cdef long win_xsize, win_ysize, xoff, yoff
-    cdef long col_index, row_index, global_col, global_row
+    cdef long win_xsize, win_ysize, xoff, yoff, flat_index
+    cdef int col_index, row_index, global_col, global_row
     cdef stack[long] processing_stack
     cdef long n_cols, n_rows
+    cdef vector[long] next_pixels
 
     flow_dir_info = pygeoprocessing.get_raster_info(flow_dir_path)
     n_cols, n_rows = flow_dir_info['raster_size']
@@ -60,7 +62,7 @@ cdef route(str flow_dir_path, seed_fn, route_fn, seed_fn_args, route_fn_args):
             # hasn't already been set for processing.
             flat_index = processing_stack.top()
             processing_stack.pop()
-            global_row = flat_index / n_cols
+            global_row = flat_index // n_cols
             global_col = flat_index % n_cols
 
             next_pixels = route_fn(global_col, global_row, *route_fn_args)
@@ -467,11 +469,11 @@ cdef class ManagedFlowDirRaster(ManagedRaster):
             flow_ij = (flow_dir >> (n_dir * 4)) & 0xF
             flow_sum += flow_ij
             if flow_ij:
-                n = NeighborTuple()
-                n.direction = n_dir
-                n.x = xj
-                n.y = yj
-                n.flow_proportion = flow_ij
+                n = NeighborTuple(
+                    direction=n_dir,
+                    x=xj,
+                    y=yj,
+                    flow_proportion=flow_ij)
                 downslope_neighbor_tuples.push_back(n)
                 i += 1
 

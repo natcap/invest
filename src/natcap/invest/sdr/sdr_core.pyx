@@ -40,11 +40,12 @@ cdef bint sed_dep_seed_fn(int x, int y, ManagedFlowDirRaster flow_dir_raster,
     Returns:
         True if the pixel qualifies as a seed pixel, False otherwise
     """
+    cdef bint is_local_high_point = flow_dir_raster.is_local_high_point(x, y)
+    cdef bint is_undefined = is_close(sediment_deposition_raster.get(x, y),
+                                      sediment_deposition_raster.nodata)
     # if this can be a seed pixel and hasn't already been
     # calculated, put it on the stack
-    return (flow_dir_raster.is_local_high_point(x, y) and
-            is_close(sediment_deposition_raster.get(x, y),
-                     sediment_deposition_raster.nodata))
+    return is_local_high_point and is_undefined
 
 
 cdef route_sed_dep(int x, int y,
