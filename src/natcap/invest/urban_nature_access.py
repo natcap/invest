@@ -22,7 +22,6 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .ndr import ndr
 from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
