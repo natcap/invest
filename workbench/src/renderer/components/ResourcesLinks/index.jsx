@@ -37,7 +37,7 @@ function handleUGClick(event) {
  * e.g. https://community.naturalcapitalproject.org/tag/carbon
  */
 export default function ResourcesTab(props) {
-  const { docs, moduleName, forumTagName } = props;
+  const { docs, forumTagName } = props;
 
   let forumURL = FORUM_ROOT;
   if (forumTagName) {
@@ -72,10 +72,10 @@ export default function ResourcesTab(props) {
 }
 
 ResourcesTab.propTypes = {
-  moduleName: PropTypes.string,
+  forumTagName: PropTypes.string,
   docs: PropTypes.string,
 };
 ResourcesTab.defaultProps = {
-  moduleName: undefined,
+  forumTagName: undefined,
   docs: '',
 };
