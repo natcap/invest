@@ -115,6 +115,7 @@ class SetupTab extends React.Component {
     this.loadParametersFromFile = this.loadParametersFromFile.bind(this);
     this.triggerScrollEvent = this.triggerScrollEvent.bind(this);
     this.callDropdownFunctions = this.callDropdownFunctions.bind(this);
+    this.debouncedDropdownFunctions = this.debouncedDropdownFunctions.bind(this);
   }
 
   componentDidMount() {
@@ -397,9 +398,18 @@ class SetupTab extends React.Component {
         argsEnabled: await fetchArgsEnabled({
           model_module: pyModuleName,
           args: JSON.stringify(argsDictFromObject(argsValues)),
-        })
+        }),
       });
     }
+  }
+
+  debouncedDropdownFunctions() {
+    if (this.dropdownTimer) {
+      clearTimeout(this.dropdownTimer);
+    }
+    // we want this check to be very responsive,
+    // but also to wait for a pause in data entry.
+    this.dropdownTimer = setTimeout(this.callDropdownFunctions, 200);
   }
 
   /** Call endpoint to get dynamically populated dropdown options.

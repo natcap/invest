@@ -52,12 +52,12 @@ class InvestTab extends React.Component {
   async componentDidMount() {
     const { job } = this.props;
     const {
-      modelSpec, argsSpec, uiSpec,
+      args, ui_spec, ...modelSpec
     } = await getSpec(job.modelRunName);
     this.setState({
       modelSpec: modelSpec,
-      argsSpec: argsSpec,
-      uiSpec: uiSpec,
+      argsSpec: args,
+      uiSpec: ui_spec,
     }, () => { this.switchTabs('setup'); });
     const { tabID } = this.props;
     ipcRenderer.on(`invest-logging-${tabID}`, this.investLogfileCallback);

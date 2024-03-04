@@ -47,8 +47,8 @@ class DataDownloadModal extends React.Component {
     const registry = {};
     for (const modelName of Object.keys(investList)) {
       let spec = await getSpec(investList[modelName].model_name);
-      if (spec.uiSpec.sampledata) {
-        registry[modelName] = spec.uiSpec.sampledata;
+      if (spec.ui_spec.sampledata) {
+        registry[modelName] = spec.ui_spec.sampledata;
       }
     }
 
