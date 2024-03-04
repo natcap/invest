@@ -404,8 +404,7 @@ describe('UI spec functionality', () => {
   });
 
   test('expect dropdown options can be dynamic', async () => {
-    getDynamicDropdowns.mockResolvedValue({arg2: ['Field1']});
-    fetchArgsEnabled.mockResolvedValue
+    getDynamicDropdowns.mockResolvedValue({ arg2: ['Field1'] });
     const spec = {
       args: {
         arg1: {
@@ -421,9 +420,9 @@ describe('UI spec functionality', () => {
       ui_spec: {
         order: [['arg1', 'arg2']],
         dropdown_functions: {
-          arg2: 'function to retrieve arg1 column names'
-        }
-      }
+          arg2: 'function to retrieve arg1 column names',
+        },
+      },
     };
 
     const {
