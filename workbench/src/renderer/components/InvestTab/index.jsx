@@ -8,7 +8,7 @@ import Nav from 'react-bootstrap/Nav';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import {
-  MdKeyboardArrowRight,
+  MdKeyboardArrowRight
 } from 'react-icons/md';
 import { withTranslation } from 'react-i18next';
 
@@ -20,25 +20,6 @@ import { getSpec } from '../../server_requests';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
-const { logger } = window.Workbench;
-
-/** Get an invest model's MODEL_SPEC when a model button is clicked.
-
- *
- * @param {string} modelName - as in a model name appearing in `invest list`
- * @returns {object} destructures to:
- *   { modelSpec, argsSpec, uiSpec }
- */
-async function investGetSpec(modelName) {
-  const spec = await getSpec(modelName);
-  if (spec) {
-    const { args, ui_spec, ...modelSpec } = spec;
-    return { modelSpec: modelSpec, argsSpec: args, uiSpec: ui_spec };
-  } else {
-    logger.error(`no args spec found for ${modelName}`);
-  }
-  return undefined;
-}
 
 function handleOpenWorkspace(logfile) {
   ipcRenderer.send(ipcMainChannels.SHOW_ITEM_IN_FOLDER, logfile);
@@ -72,7 +53,7 @@ class InvestTab extends React.Component {
     const { job } = this.props;
     const {
       modelSpec, argsSpec, uiSpec,
-    } = await investGetSpec(job.modelRunName);
+    } = await getSpec(job.modelRunName);
     this.setState({
       modelSpec: modelSpec,
       argsSpec: argsSpec,

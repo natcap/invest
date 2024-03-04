@@ -6,9 +6,7 @@ import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import Alert from 'react-bootstrap/Alert';
 import Table from 'react-bootstrap/Table';
-import {
-  MdErrorOutline,
-} from 'react-icons/md';
+import { MdErrorOutline } from 'react-icons/md';
 import { withTranslation } from 'react-i18next';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
@@ -21,24 +19,6 @@ const { logger } = window.Workbench;
 // associated with a production build of the Workbench does not exist.
 const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.13.0/data';
 const DEFAULT_FILESIZE = 0;
-
-/** Get an invest model's MODEL_SPEC when a model button is clicked.
-
- *
- * @param {string} modelName - as in a model name appearing in `invest list`
- * @returns {object} destructures to:
- *   { modelSpec, argsSpec, uiSpec }
- */
-async function investGetSpec(modelName) {
-  const spec = await getSpec(modelName);
-  if (spec) {
-    const { args, ui_spec, ...modelSpec } = spec;
-    return { modelSpec: modelSpec, argsSpec: args, uiSpec: ui_spec };
-  } else {
-    logger.error(`no args spec found for ${modelName}`);
-  }
-  return undefined;
-}
 
 /** Render a dialog with a form for configuring global invest settings */
 class DataDownloadModal extends React.Component {
@@ -63,11 +43,10 @@ class DataDownloadModal extends React.Component {
   }
 
   async componentDidMount() {
-
     const { investList } = this.props;
     const registry = {};
     for (const modelName of Object.keys(investList)) {
-      let spec = await investGetSpec(investList[modelName].model_name)
+      let spec = await getSpec(investList[modelName].model_name);
       if (spec.uiSpec.sampledata) {
         registry[modelName] = spec.uiSpec.sampledata;
       }
