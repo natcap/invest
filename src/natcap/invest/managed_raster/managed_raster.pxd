@@ -15,7 +15,7 @@ cdef struct s_neighborTuple:
 ctypedef s_neighborTuple NeighborTuple
 
 # this is a least recently used cache written in C++ in an external file,
-# exposing here so _ManagedRaster can use it
+# exposing here so ManagedRaster can use it
 cdef extern from "LRUCache.h" nogil:
     cdef cppclass LRUCache[KEY_T, VAL_T]:
         LRUCache(int)
@@ -25,7 +25,7 @@ cdef extern from "LRUCache.h" nogil:
         bint exist(KEY_T &)
         VAL_T get(KEY_T &)
 
-cdef class _ManagedRaster:
+cdef class ManagedRaster:
     cdef LRUCache[int, double*]* lru_cache
     cdef cset[int] dirty_blocks
     cdef int block_xsize
@@ -36,19 +36,22 @@ cdef class _ManagedRaster:
     cdef int block_ybits
     cdef long raster_x_size
     cdef long raster_y_size
+    cdef float pixel_x_size
+    cdef float pixel_y_size
     cdef int block_nx
     cdef int block_ny
     cdef int write_mode
     cdef bytes raster_path
     cdef int band_id
     cdef int closed
+    cdef object nodata
 
-    cdef inline void set(_ManagedRaster self, long xi, long yi, double value)
-    cdef inline double get(_ManagedRaster self, long xi, long yi)
-    cdef void _load_block(_ManagedRaster self, int block_index) except *
+    cdef inline void set(ManagedRaster self, long xi, long yi, double value)
+    cdef inline double get(ManagedRaster self, long xi, long yi)
+    cdef void _load_block(ManagedRaster self, int block_index) except *
 
 
-cdef class ManagedFlowDirRaster(_ManagedRaster):
+cdef class ManagedFlowDirRaster(ManagedRaster):
 
     cdef bint is_local_high_point(ManagedFlowDirRaster self, long xi, long yi)
 
@@ -66,7 +69,9 @@ cdef int *COL_OFFSETS
 cdef int *FLOW_DIR_REVERSE_DIRECTION
 cdef int *INFLOW_OFFSETS
 
-cdef inline int is_close(double x, double y):
+cdef inline bint is_close(double x, double y):
     if isnan(x) and isnan(y):
         return 1
     return abs(x - y) <= (1e-8 + 1e-05 * abs(y))
+
+cdef void route(flow_dir_path, seed_fn, route_fn, seed_fn_args, route_fn_args)

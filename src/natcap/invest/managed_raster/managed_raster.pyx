@@ -18,6 +18,58 @@ from libcpp.list cimport list as clist
 from libcpp.stack cimport stack
 from libcpp.vector cimport vector
 
+
+cdef void route(object flow_dir_path, function_type seed_fn,
+        function_type route_fn, object seed_fn_args, object route_fn_args):
+    """
+    Args:
+        seed_fn (callable): function that accepts an (x, y) coordinate
+            and returns a bool indicating if the pixel is a seed
+        route_fn (callable): function that accepts an (x, y) coordinate
+            and performs whatever routing operation is needed on that pixel.
+
+    Returns:
+        None
+    """
+
+    cdef long win_xsize, win_ysize, xoff, yoff, flat_index
+    cdef int col_index, row_index, global_col, global_row
+    cdef stack[long] processing_stack
+    cdef long n_cols, n_rows
+    cdef vector[long] next_pixels
+
+    flow_dir_info = pygeoprocessing.get_raster_info(flow_dir_path)
+    n_cols, n_rows = flow_dir_info['raster_size']
+
+    for offset_dict in pygeoprocessing.iterblocks(
+            (flow_dir_path, 1), offset_only=True, largest_block=0):
+        # use cython variables to avoid python overhead of dict values
+        win_xsize = offset_dict['win_xsize']
+        win_ysize = offset_dict['win_ysize']
+        xoff = offset_dict['xoff']
+        yoff = offset_dict['yoff']
+        for row_index in range(win_ysize):
+            global_row = yoff + row_index
+            for col_index in range(win_xsize):
+
+                global_col = xoff + col_index
+
+                if seed_fn(global_col, global_row, *seed_fn_args):
+                    processing_stack.push(global_row * n_cols + global_col)
+
+        while processing_stack.size() > 0:
+            # loop invariant, we don't push a cell on the stack that
+            # hasn't already been set for processing.
+            flat_index = processing_stack.top()
+            processing_stack.pop()
+            global_row = flat_index // n_cols
+            global_col = flat_index % n_cols
+
+            next_pixels = route_fn(global_col, global_row, *route_fn_args)
+            for index in next_pixels:
+                processing_stack.push(index)
+
+
 # this ctype is used to store the block ID and the block buffer as one object
 # inside Managed Raster
 ctypedef pair[int, double*] BlockBufferPair
@@ -41,7 +93,7 @@ cdef int *INFLOW_OFFSETS = [4, 5, 6, 7, 0, 1, 2, 3]
 # a class to allow fast random per-pixel access to a raster for both setting
 # and reading pixels.  Copied from src/pygeoprocessing/routing/routing.pyx,
 # revision 891288683889237cfd3a3d0a1f09483c23489fca.
-cdef class _ManagedRaster:
+cdef class ManagedRaster:
 
     def __cinit__(self, raster_path, band_id, write_mode):
         """Create new instance of Managed Raster.
@@ -61,8 +113,10 @@ cdef class _ManagedRaster:
         raster_info = pygeoprocessing.get_raster_info(raster_path)
         self.raster_x_size, self.raster_y_size = raster_info['raster_size']
         self.block_xsize, self.block_ysize = raster_info['block_size']
-        self.block_xmod = self.block_xsize-1
-        self.block_ymod = self.block_ysize-1
+        self.block_xmod = self.block_xsize - 1
+        self.block_ymod = self.block_ysize - 1
+        self.pixel_x_size, pixel_y_size = raster_info['pixel_size']
+        self.nodata = raster_info['nodata'][band_id - 1]
 
         if not (1 <= band_id <= raster_info['n_bands']):
             err_msg = (
@@ -102,7 +156,7 @@ cdef class _ManagedRaster:
         self.closed = 0
 
     def __dealloc__(self):
-        """Deallocate _ManagedRaster.
+        """Deallocate ManagedRaster.
 
         This operation manually frees memory from the LRUCache and writes any
         dirty memory blocks back to the raster if `self.write_mode` is True.
@@ -110,12 +164,12 @@ cdef class _ManagedRaster:
         self.close()
 
     def close(self):
-        """Close the _ManagedRaster and free up resources.
+        """Close the ManagedRaster and free up resources.
 
             This call writes any dirty blocks to disk, frees up the memory
             allocated as part of the cache, and frees all GDAL references.
 
-            Any subsequent calls to any other functions in _ManagedRaster will
+            Any subsequent calls to any other functions in ManagedRaster will
             have undefined behavior.
         """
         if self.closed:
@@ -315,7 +369,7 @@ cdef class _ManagedRaster:
             raster = None
 
 
-cdef class ManagedFlowDirRaster(_ManagedRaster):
+cdef class ManagedFlowDirRaster(ManagedRaster):
 
     cdef bint is_local_high_point(self, long xi, long yi):
         """Check if a given pixel is a local high point.
@@ -415,11 +469,11 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             flow_ij = (flow_dir >> (n_dir * 4)) & 0xF
             flow_sum += flow_ij
             if flow_ij:
-                n = NeighborTuple()
-                n.direction = n_dir
-                n.x = xj
-                n.y = yj
-                n.flow_proportion = flow_ij
+                n = NeighborTuple(
+                    direction=n_dir,
+                    x=xj,
+                    y=yj,
+                    flow_proportion=flow_ij)
                 downslope_neighbor_tuples.push_back(n)
                 i += 1
 
