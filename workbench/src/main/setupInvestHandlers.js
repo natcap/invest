@@ -69,7 +69,6 @@ export function setupInvestRunHandlers() {
     const taskgraphLoggingLevel = settingsStore.get('taskgraphLoggingLevel');
     const language = settingsStore.get('language');
     const nWorkers = settingsStore.get('nWorkers');
-    const micromambaPath = 'mamba'//settingsStore.get('micromamba_path');
     const modelEnv = settingsStore.get(`models.${modelRunName}.env`);
 
     // Write a temporary datastack json for passing to invest CLI
@@ -91,19 +90,34 @@ export function setupInvestRunHandlers() {
     };
     await writeInvestParameters(payload);
 
-    const cmdArgs = [
-      'run',
-      '--no-capture-output',
-      `--prefix ${modelEnv}`,
-      'invest',
-      LOGLEVELMAP[loggingLevel],
-      TGLOGLEVELMAP[taskgraphLoggingLevel],
-      `--language "${language}"`,
-      'run',
-      modelRunName,
-      `-d "${datastackPath}"`,
-    ];
-    logger.debug(`set to run ${cmdArgs}`);
+    let cmd;
+    let cmdArgs;
+    if (settingsStore.get(`models.${modelRunName}.type`) == 'core') {
+      cmd = settingsStore.get('investExe');
+      cmdArgs = [
+        LOGLEVELMAP[loggingLevel],
+        TGLOGLEVELMAP[taskgraphLoggingLevel],
+        `--language "${language}"`,
+        'run',
+        modelRunName,
+        `-d "${datastackPath}"`]
+    } else {
+      cmd = 'mamba'//settingsStore.get('micromamba_path');
+      cmdArgs = [
+        'run',
+        '--no-capture-output',
+        `--prefix ${modelEnv}`,
+        'invest',
+        LOGLEVELMAP[loggingLevel],
+        TGLOGLEVELMAP[taskgraphLoggingLevel],
+        `--language "${language}"`,
+        'run',
+        modelRunName,
+        `-d "${datastackPath}"`,
+      ];
+    }
+
+    logger.debug(`about to run model with command: ${cmd} ${cmdArgs}`);
 
     // without shell, IOError when datastack.py loads json
     const spawnOptions = { shell: true };
@@ -111,7 +125,7 @@ export function setupInvestRunHandlers() {
       // counter-intuitive, but w/ true: invest terminates when this shell terminates
       spawnOptions.detached = true;
     }
-    const investRun = spawn(micromambaPath, cmdArgs, spawnOptions);
+    const investRun = spawn(cmd, cmdArgs, spawnOptions);
 
     // There's no general way to know that a spawned process started,
     // so this logic to listen once on stdout seems like the way.
