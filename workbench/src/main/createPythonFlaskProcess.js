@@ -57,13 +57,13 @@ export async function createPythonFlaskProcess(modelName) {
   let pythonServerProcess;
   let path;
 
-  if (settingsStore.get(`models.${modelName}.type`) == 'core') {
-    const core_pid = settingsStore.get('core.pid');
-    if (core_pid) {
-      logger.debug(
-        `invest core server process (PID ${core_pid}) already running on port ${settingsStore.get('core.port')}`);
-      return core_pid;
-    }
+  if (modelName == undefined) {
+    // const core_pid = settingsStore.get('core.pid');
+    // if (core_pid) {
+    //   logger.debug(
+    //     `invest core server process (PID ${core_pid}) already running on port ${settingsStore.get('core.port')}`);
+    //   return core_pid;
+    // }
 
     logger.debug('creating invest core server process')
     const investExe = settingsStore.get('investExe');

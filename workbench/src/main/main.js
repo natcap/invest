@@ -10,6 +10,7 @@ import {
 } from 'electron';
 
 import {
+  createPythonFlaskProcess,
   shutdownPythonProcess
 } from './createPythonFlaskProcess';
 import findInvestBinaries from './findInvestBinaries';
@@ -78,6 +79,7 @@ export const createWindow = async () => {
 
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   settingsStore.set('investExe', investExe);
+  await createPythonFlaskProcess();
   setupDialogs();
   setupCheckFilePermissions();
   setupCheckFirstRun();

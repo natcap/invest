@@ -39,6 +39,9 @@ export function setupInvestRunHandlers() {
   ipcMain.handle(
     ipcMainChannels.INVEST_SERVE,
     async (event, modelName) => {
+      if (settingsStore.get(`models.${modelName}.type`) == 'core') {
+        return settingsStore.get('core.pid');
+      }
       pid = await createPythonFlaskProcess(modelName);
       return pid;
     }
