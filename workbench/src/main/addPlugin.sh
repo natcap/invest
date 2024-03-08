@@ -10,6 +10,9 @@ echo $PLUGIN_URL
 echo $DOWNLOAD_DIR
 echo $CONFIG_PATH
 
+INVEST_ROOT_PATH=$(pwd)/..
+echo $INVEST_ROOT_PATH
+
 # Download the plugin from its remote git repo ################################
 mkdir -p "$DOWNLOAD_DIR"
 PLUGIN_REPO_NAME=$(basename $PLUGIN_URL .git)
@@ -47,11 +50,11 @@ print(toml_dict['tool']['natcap']['invest']['pyname'])
 # Create a conda env containing the plugin and its dependencies ###############
 ENV_NAME=natcap_plugin_$PLUGIN_ID
 eval "$(micromamba shell hook --shell bash)"
-micromamba create --yes --name $ENV_NAME pip gdal "python<3.12"
-echo "created env"
+# micromamba create --yes --name $ENV_NAME pip gdal "python<3.12"
+# echo "created env"
 micromamba activate $ENV_NAME
 echo "activated env"
-cd ~/invest
+cd $INVEST_ROOT_PATH
 pip install .
 pip install "git+$PLUGIN_URL"
 echo "installed plugin"

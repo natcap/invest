@@ -51,6 +51,7 @@ export default class App extends React.Component {
     this.saveJob = this.saveJob.bind(this);
     this.clearRecentJobs = this.clearRecentJobs.bind(this);
     this.showDownloadModal = this.showDownloadModal.bind(this);
+    this.updateInvestList = this.updateInvestList.bind(this);
   }
 
   /** Initialize the list of invest models, recent invest jobs, etc. */
@@ -175,6 +176,14 @@ export default class App extends React.Component {
     const recentJobs = await InvestJob.clearStore();
     this.setState({
       recentJobs: recentJobs,
+    });
+  }
+
+  async updateInvestList() {
+    const investList = await ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, 'models');
+    this.setState({
+      investList: investList,
     });
   }
 
@@ -351,6 +360,7 @@ export default class App extends React.Component {
                     openInvestModel={this.openInvestModel}
                     recentJobs={recentJobs}
                     batchUpdateArgs={this.batchUpdateArgs}
+                    updateInvestList={this.updateInvestList}
                   />
                 )
                 : <div />}

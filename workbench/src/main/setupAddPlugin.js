@@ -16,11 +16,10 @@ export default function setupAddPlugin() {
       const pluginsPath = path.join(app.getPath('userData'), 'plugins');
       const configPath = path.join(app.getPath('userData'), 'config.json');
       logger.info(pluginsPath);
-      const stdout = execSync(
+      execSync(
         `src/main/addPlugin.sh ${pluginURL} '${pluginsPath}' '${configPath}'`,
-        { encoding: 'utf-8' }
+        { encoding: 'utf-8', stdio: 'inherit' }
       );
-      logger.info(stdout);
     }
   );
 }

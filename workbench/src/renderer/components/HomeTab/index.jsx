@@ -27,36 +27,7 @@ const { ipcRenderer } = window.Workbench.electron;
 export default class HomeTab extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {
-      sortedModelIds: [],
-    };
     this.handleClick = this.handleClick.bind(this);
-  }
-
-  componentDidMount() {
-    const { investList } = this.props;
-    // sort the model list alphabetically, by the model title,
-    // and with special placement of CBC Preprocessor before CBC model.
-    console.log(this.props.investList);
-    const sortedModelIds = Object.keys(investList).sort(
-      (a, b) => {
-        if (investList[a].model_name > investList[b].model_name) {
-          return 1;
-        }
-        if (investList[b].model_name > investList[a].model_name) {
-          return -1;
-        }
-        return 0;
-      }
-    );
-    const cbcpElement = 'coastal_blue_carbon_preprocessor';
-    const cbcIdx = sortedModelIds.indexOf('coastal_blue_carbon');
-    const cbcpIdx = sortedModelIds.indexOf(cbcpElement);
-    if (cbcIdx > -1 && cbcpIdx > -1) {
-      sortedModelIds.splice(cbcpIdx, 1); // remove it
-      sortedModelIds.splice(cbcIdx, 0, cbcpElement); // insert it
-    }
-    this.setState({ sortedModelIds: sortedModelIds });
   }
 
   handleClick(value) {
@@ -69,12 +40,35 @@ export default class HomeTab extends React.Component {
   }
 
   render() {
-    const { recentJobs, investList, openInvestModel } = this.props;
-    const { sortedModelIds } = this.state;
+    const { recentJobs, investList, openInvestModel, updateInvestList } = this.props;
+
+    let sortedModelIds = {};
+    if (investList) {
+      // sort the model list alphabetically, by the model title,
+      // and with special placement of CBC Preprocessor before CBC model.
+      sortedModelIds = Object.keys(investList).sort(
+        (a, b) => {
+          if (investList[a].model_name > investList[b].model_name) {
+            return 1;
+          }
+          if (investList[b].model_name > investList[a].model_name) {
+            return -1;
+          }
+          return 0;
+        }
+      );
+      const cbcpElement = 'coastal_blue_carbon_preprocessor';
+      const cbcIdx = sortedModelIds.indexOf('coastal_blue_carbon');
+      const cbcpIdx = sortedModelIds.indexOf(cbcpElement);
+      if (cbcIdx > -1 && cbcpIdx > -1) {
+        sortedModelIds.splice(cbcpIdx, 1); // remove it
+        sortedModelIds.splice(cbcIdx, 0, cbcpElement); // insert it
+      }
+    }
+
     // A button in a table row for each model
     const investButtons = [];
     sortedModelIds.forEach((modelId) => {
-      console.log(modelId);
       const modelName = investList[modelId].model_name;
       investButtons.push(
         <ListGroup.Item
@@ -96,7 +90,9 @@ export default class HomeTab extends React.Component {
             {investButtons}
           </ListGroup>
         </Col>
-        <PluginModal />
+        <PluginModal
+          updateInvestList={updateInvestList}
+        />
         <Col className="recent-job-card-col">
           <RecentInvestJobs
             openInvestModel={openInvestModel}
@@ -226,12 +222,13 @@ RecentInvestJobs.propTypes = {
 
 
 function PluginModal(props) {
-  const [aboutShow, setAboutShow] = useState(false);
+  const { updateInvestList } = props;
+  const [showAddPluginModal, setShowAddPluginModal] = useState(false);
   const [url, setURL] = useState(undefined);
   const [loading, setLoading] = useState(false);
 
-  const handleAboutClose = () => setAboutShow(false);
-  const handleAboutOpen = () => setAboutShow(true);
+  const handleAboutClose = () => setShowAddPluginModal(false);
+  const handleAboutOpen = () => setShowAddPluginModal(true);
   const handleSubmit = (event) => {
     console.log('add plugin', url);
     setLoading(true);
@@ -239,7 +236,9 @@ function PluginModal(props) {
       ipcMainChannels.ADD_PLUGIN, url
     ).then((result) => {
       setLoading(false);
-      console.log(result)
+      setShowAddPluginModal(false);
+      console.log(result);
+      updateInvestList();
     })
   }
   const handleChange = (event) => {
@@ -255,7 +254,7 @@ function PluginModal(props) {
         {'Add a plugin'}
       </Button>
 
-      <Modal show={aboutShow} onHide={handleAboutClose}>
+      <Modal show={showAddPluginModal} onHide={handleAboutClose}>
         <Modal.Header>
           <Modal.Title>{t('Add a plugin')}</Modal.Title>
         </Modal.Header>

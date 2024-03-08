@@ -1,17 +1,14 @@
 # Initial setup for the core invest models
 # Assumes that micromamba is available
-set -e  # Exit the script immediately if any subshell has a nonzero exit code.
+set -ex  # Exit the script immediately if any subshell has a nonzero exit code.
 
 CONFIG_PATH=$1
-INVEST_EXE=$2
 
 invest list --json > tmp_models.json
 
 # Write core metadata to the workbench's config.json ##########################
 python -c "
-import importlib
 import json
-from natcap.invest.models import model_id_to_pyname
 
 with open('$CONFIG_PATH') as f:
     config = json.load(f)
@@ -30,9 +27,6 @@ for model_name, info in models.items():
         'model_name': model_name,
         'type': 'core',
     }
-    # if 'sampledata' in module.MODEL_SPEC['ui_spec']:
-    #     config['models'][model_id]['sampledata'] = module.MODEL_SPEC['ui_spec']['sampledata']
-
 
 print(config)
 

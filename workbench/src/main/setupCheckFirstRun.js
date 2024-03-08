@@ -28,11 +28,10 @@ export function checkFirstRun() {
     logger.info('first run');
     fs.writeFileSync(hasRunTokenPath, '');
     const configPath = path.join(app.getPath('userData'), 'config.json');
-    const stdout = execSync(
+    execSync(
       `src/main/coreSetup.sh '${configPath}'`,
       { encoding: 'utf-8', stdio: 'inherit' }
     );
-    logger.info(stdout);
   } catch (error) {
     logger.warn(`Unable to write first-run token: ${error}`);
   }
