@@ -163,7 +163,6 @@ def post_datastack_file():
     stack_type, stack_info = datastack.get_datastack_info(
         payload['filepath'], payload.get('extractPath', None))
     model_id = PYNAME_TO_MODEL_ID_MAP[stack_info.model_name]
-    model_name = PYNAME_TO_MODEL_NAME_MAP[stack_info.model_name]
     result_dict = {
         'type': stack_type,
         'args': stack_info.args,

@@ -20,8 +20,6 @@ echo "activated env"
 # pip install .
 
 # Write core metadata to the workbench's config.json ##########################
-ENV_PATH=$(mamba info | grep 'active env location' | awk 'NF>1{print $NF}')
-echo $ENV_PATH
 python -c "
 import importlib
 import json
@@ -40,7 +38,6 @@ for model_id, pyname in model_id_to_pyname.items():
     config['models'][model_id] = {
         'model_name': module.MODEL_SPEC['model_name'],
         'type': 'core',
-        'env': '$ENV_PATH'
     }
     if 'sampledata' in module.MODEL_SPEC['ui_spec']:
         config['models'][model_id]['sampledata'] = module.MODEL_SPEC['ui_spec']['sampledata']

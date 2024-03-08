@@ -56,14 +56,8 @@ export async function createPythonFlaskProcess(modelName) {
   const port = await getFreePort();
   let pythonServerProcess;
   let path;
-
+  console.log(modelName, settingsStore.get(`models.${modelName}`));
   if (modelName == undefined) {
-    // const core_pid = settingsStore.get('core.pid');
-    // if (core_pid) {
-    //   logger.debug(
-    //     `invest core server process (PID ${core_pid}) already running on port ${settingsStore.get('core.port')}`);
-    //   return core_pid;
-    // }
 
     logger.debug('creating invest core server process')
     const investExe = settingsStore.get('investExe');
@@ -75,11 +69,16 @@ export async function createPythonFlaskProcess(modelName) {
     );
     settingsStore.set(`core.port`, port);
     settingsStore.set(`core.pid`, pythonServerProcess.pid);
+  } else if (settingsStore.get(`models.${modelName}.type`) == 'core') {
+    logger.info('core model');
+    return settingsStore.get('core.pid');
   } else {
     logger.debug('creating invest plugin server process')
     const micromambaPath = 'mamba'//settingsStore.get('micromamba_path');
     const modelEnvPath = settingsStore.get(`models.${modelName}.env`);
     path = modelEnvPath;
+    logger.info('"' + micromambaPath + '"',
+      ['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port])
     pythonServerProcess = spawn(
       '"' + micromambaPath + '"',
       ['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port],
@@ -113,7 +112,7 @@ export async function createPythonFlaskProcess(modelName) {
     logger.debug('Flask process disconnected');
   });
 
-  await getFlaskIsReady(port);
+  await getFlaskIsReady(port, 0, 500);
   logger.info('flask is ready');
   return pythonServerProcess.pid;
 }

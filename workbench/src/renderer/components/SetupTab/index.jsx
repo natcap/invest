@@ -420,7 +420,7 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async investArgsEnabled() {
-    const { pyModuleName } = this.props;
+    const { pyModuleName, modelId } = this.props;
     const { argsValues } = this.state;
 
     if (this._isMounted) {

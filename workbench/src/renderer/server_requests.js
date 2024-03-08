@@ -50,7 +50,7 @@ export async function getSpec(modelName) {
 
 export async function fetchArgsEnabled(payload) {
   console.log(payload);
-  const port = await getPort(modelName);
+  const port = await getPort(payload.modelId);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/args_enabled`, {
       method: 'post',
@@ -79,7 +79,7 @@ export async function fetchArgsEnabled(payload) {
  */
 export async function fetchValidation(payload) {
   console.log(payload);
-  const port = await getPort(modelName);
+  const port = await getPort(payload.modelId);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/validate?language=${LANGUAGE}`, {
       method: 'post',
@@ -105,7 +105,7 @@ export async function fetchValidation(payload) {
  */
 export function fetchDatastackFromFile(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/post_datastack_file`, {
+    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/post_datastack_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -144,7 +144,7 @@ export function getVectorColumnNames(payload) {
  */
 export function saveToPython(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/save_to_python`, {
+    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/save_to_python`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -170,7 +170,7 @@ export function saveToPython(payload) {
  */
 export function archiveDatastack(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/build_datastack_archive`, {
+    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/build_datastack_archive`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },

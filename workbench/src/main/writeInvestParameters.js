@@ -8,7 +8,7 @@ const HOSTNAME = 'http://127.0.0.1';
 
 export default function writeParametersToFile(payload) {
   console.log(payload);
-  const port = settingsStore.get(`models.${payload.moduleName.slice(14)}.port`);
+  const port = settingsStore.get(`core.port`);
   return (
     fetch(`${HOSTNAME}:${port}/api/write_parameter_set_file`, {
       method: 'post',
