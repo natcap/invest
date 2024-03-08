@@ -3,21 +3,9 @@
 set -e  # Exit the script immediately if any subshell has a nonzero exit code.
 
 CONFIG_PATH=$1
-# curl -Ls https://micro.mamba.pm/api/micromamba/osx-64/latest | tar -xvj bin/micromamba
-# # export MAMBA_ROOT_PREFIX=/some/prefix  # optional, defaults to ~/micromamba
-# eval "$(./bin/micromamba shell hook -s posix)"
-# MICROMAMBA_PATH=$(realpath bin/micromamba)
-# MICROMAMBA_PATH=/Users/emily/mambaforge/envs/plugin/bin/mamba
-eval "$(micromamba shell hook --shell bash)"
+INVEST_EXE=$2
 
-# Create a conda env containing core invest and dependencies ##################
-ENV_NAME=natcap_core
-# micromamba create --yes --name $ENV_NAME pip gdal natcap.invest
-# echo "created env"
-micromamba activate $ENV_NAME
-echo "activated env"
-# cd /Users/emily/invest
-# pip install .
+invest list --json > tmp_models.json
 
 # Write core metadata to the workbench's config.json ##########################
 python -c "
@@ -33,14 +21,17 @@ config['micromamba_path'] = '$MICROMAMBA_PATH'
 if 'models' not in config:
     config['models'] = {}
 
-for model_id, pyname in model_id_to_pyname.items():
-    module = importlib.import_module(pyname)
+with open('tmp_models.json') as f:
+    models = json.load(f)
+
+for model_name, info in models.items():
+    model_id = info['model_name']
     config['models'][model_id] = {
-        'model_name': module.MODEL_SPEC['model_name'],
+        'model_name': model_name,
         'type': 'core',
     }
-    if 'sampledata' in module.MODEL_SPEC['ui_spec']:
-        config['models'][model_id]['sampledata'] = module.MODEL_SPEC['ui_spec']['sampledata']
+    # if 'sampledata' in module.MODEL_SPEC['ui_spec']:
+    #     config['models'][model_id]['sampledata'] = module.MODEL_SPEC['ui_spec']['sampledata']
 
 
 print(config)
@@ -48,5 +39,6 @@ print(config)
 with open('$CONFIG_PATH', 'w') as f:
     json.dump(config, f, indent=4)
 "
+rm tmp_models.json
 echo "done"
 
