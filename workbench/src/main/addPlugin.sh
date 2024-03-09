@@ -48,10 +48,10 @@ print(toml_dict['tool']['natcap']['invest']['pyname'])
 ")
 
 # Create a conda env containing the plugin and its dependencies ###############
-ENV_NAME=natcap_plugin_$PLUGIN_ID
+ENV_NAME=invest_plugin_$PLUGIN_ID
 eval "$(micromamba shell hook --shell bash)"
-# micromamba create --yes --name $ENV_NAME pip gdal "python<3.12"
-# echo "created env"
+micromamba create --yes --name $ENV_NAME pip gdal "python<3.12"
+echo "created env"
 micromamba activate $ENV_NAME
 echo "activated env"
 cd $INVEST_ROOT_PATH
