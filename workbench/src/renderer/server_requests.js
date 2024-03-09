@@ -49,7 +49,6 @@ export async function getSpec(modelName) {
 }
 
 export async function fetchArgsEnabled(payload) {
-  console.log(payload);
   const port = await getPort(payload.modelId);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/args_enabled`, {
@@ -78,7 +77,6 @@ export async function fetchArgsEnabled(payload) {
  * @returns {Promise} resolves array
  */
 export async function fetchValidation(payload) {
-  console.log(payload);
   const port = await getPort(payload.modelId);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/validate?language=${LANGUAGE}`, {

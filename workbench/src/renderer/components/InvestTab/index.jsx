@@ -32,7 +32,6 @@ const { logger } = window.Workbench;
  */
 async function investGetSpec(modelName) {
   const spec = await getSpec(modelName);
-  console.log(spec);
   if (spec) {
     const { args, ui_spec, ...modelSpec } = spec;
     return { modelSpec: modelSpec, argsSpec: args, uiSpec: ui_spec };
@@ -230,7 +229,7 @@ class InvestTab extends React.Component {
       return (
         <div className="invest-tab-loading">
           <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading...</span>
+            <span className="sr-only">Loading...</span>
           </Spinner>
           <br />
           {t('Starting up model...')}

@@ -270,7 +270,7 @@ function PluginModal(props) {
         </Modal.Header>
         {loading &&
           <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading...</span>
+            <span className="sr-only">Loading...</span>
           </Spinner>
         }
         <Modal.Body>

@@ -227,7 +227,6 @@ export default class App extends React.Component {
       let badge = <></>;
       const modelType = ipcRenderer.sendSync(
         ipcMainChannels.GET_SETTING, `models.${job.modelRunName}.type`)
-      console.log('model type:', modelType)
       if (modelType === 'plugin') {
         badge = <Badge className="mr-1" variant="secondary" >Plugin</Badge>
       }
