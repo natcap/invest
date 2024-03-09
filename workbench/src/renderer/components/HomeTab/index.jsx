@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import Form from 'react-bootstrap/Form';
+import Badge from 'react-bootstrap/Badge';
 import Button from 'react-bootstrap/Button';
 import Spinner from 'react-bootstrap/Spinner';
 import ListGroup from 'react-bootstrap/ListGroup';
@@ -73,12 +74,13 @@ export default class HomeTab extends React.Component {
       investButtons.push(
         <ListGroup.Item
           key={modelName}
-          className="invest-button"
-          title={modelName}
           action
           onClick={() => this.handleClick(modelId)}
         >
-          {modelName}
+          {
+            (investList[modelId].type === 'core' ? <></> : <Badge className="mr-1" variant="secondary">Plugin</Badge>)
+          }
+          <span className="invest-button">{modelName}</span>
         </ListGroup.Item>
       );
     });
@@ -140,6 +142,13 @@ function RecentInvestJobs(props) {
   const recentButtons = [];
   recentJobs.forEach((job) => {
     if (job && job.argsValues && job.modelHumanName) {
+      let badge = <></>;
+      const modelType = ipcRenderer.sendSync(
+        ipcMainChannels.GET_SETTING, `models.${job.modelRunName}.type`)
+      console.log('model type:', modelType)
+      if (modelType === 'plugin') {
+        badge = <Badge className="mr-1" variant="secondary" >Plugin</Badge>
+      }
       recentButtons.push(
         <Card
           className="text-left recent-job-card"
@@ -149,6 +158,7 @@ function RecentInvestJobs(props) {
         >
           <Card.Body>
             <Card.Header>
+              {badge}
               <span className="header-title">{job.modelHumanName}</span>
             </Card.Header>
             <Card.Title>

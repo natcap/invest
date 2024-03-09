@@ -76,6 +76,10 @@ export function setupSettingsHandlers() {
     (event, key) => settingsStore.get(key)
   );
 
+  ipcMain.on(ipcMainChannels.GET_SETTING, (event, key) => {
+    event.returnValue = settingsStore.get(key);
+  });
+
   ipcMain.on(
     ipcMainChannels.SET_SETTING,
     (event, key, value) => settingsStore.set(key, value)

@@ -53,7 +53,7 @@ export default {
       },
       sendSync: (channel, ...args) => {
         if (Object.values(ipcMainChannels).includes(channel)) {
-          ipcRenderer.sendSync(channel, ...args);
+          return ipcRenderer.sendSync(channel, ...args);
         }
       },
       on: (channel, func) => {

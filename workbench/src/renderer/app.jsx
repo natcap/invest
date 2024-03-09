@@ -2,6 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import i18n from 'i18next';
 
+import Badge from 'react-bootstrap/Badge';
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
@@ -58,7 +59,6 @@ export default class App extends React.Component {
   async componentDidMount() {
     const investList = await ipcRenderer.invoke(
       ipcMainChannels.GET_SETTING, 'models');
-    console.log(investList);
     const recentJobs = await InvestJob.getJobStore();
     this.setState({
       investList: investList,
@@ -224,6 +224,14 @@ export default class App extends React.Component {
         default:
           statusSymbol = '';
       }
+      let badge = <></>;
+      const modelType = ipcRenderer.sendSync(
+        ipcMainChannels.GET_SETTING, `models.${job.modelRunName}.type`)
+      console.log('model type:', modelType)
+      if (modelType === 'plugin') {
+        badge = <Badge className="mr-1" variant="secondary" >Plugin</Badge>
+      }
+
       investNavItems.push(
         <OverlayTrigger
           key={`${id}-tooltip`}
@@ -249,6 +257,7 @@ export default class App extends React.Component {
                 }
               }}
             >
+              {badge}
               {statusSymbol}
               {` ${job.modelHumanName}`}
             </Nav.Link>
