@@ -49,19 +49,22 @@ print(toml_dict['tool']['natcap']['invest']['pyname'])
 
 # Create a conda env containing the plugin and its dependencies ###############
 ENV_NAME=invest_plugin_$PLUGIN_ID
-eval "$(micromamba shell hook --shell bash)"
-micromamba create --yes --name $ENV_NAME pip gdal "python<3.12"
+
+echo "python <3.12" > tmp_env.txt
+echo "gdal <3.6" >> tmp_env.txt
+
+cat tmp_env.txt
+
+micromamba create --yes --name $ENV_NAME -f tmp_env.txt -c conda-forge
 echo "created env"
-micromamba activate $ENV_NAME
-echo "activated env"
+
 cd $INVEST_ROOT_PATH
-pip install .
-pip install "git+$PLUGIN_URL"
+micromamba run --name $ENV_NAME pip install .
+micromamba run --name $ENV_NAME pip install "git+$PLUGIN_URL"
 echo "installed plugin"
 
 # Write plugin metadata to the workbench's config.json ########################
-ENV_PATH=$(micromamba info | grep 'env location' | awk 'NF>1{print $NF}')
-micromamba info
+ENV_PATH=$(micromamba info --name $ENV_NAME | grep 'env location' | awk 'NF>1{print $NF}')
 echo $ENV_PATH
 python -c "
 import json
@@ -82,4 +85,3 @@ with open('$CONFIG_PATH', 'w') as f:
     json.dump(config, f, indent=4)
 "
 echo "done"
-
