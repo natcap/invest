@@ -105,7 +105,6 @@ export function setupInvestRunHandlers() {
       cmd = 'micromamba'//settingsStore.get('micromamba_path');
       cmdArgs = [
         'run',
-        '--no-capture-output',
         `--prefix ${modelEnv}`,
         'invest',
         LOGLEVELMAP[loggingLevel],
