@@ -52,8 +52,6 @@ describe('Run status Alert renders with status from a recent run', () => {
     userguide: 'foo.html',
     ui_spec: {
       order: [['workspace']],
-      sampledata: {},
-      forum_tag: 'foo'
     },
     args: {
       workspace: {
@@ -118,8 +116,6 @@ describe('Sidebar Buttons', () => {
     userguide: 'foo.html',
     ui_spec: {
       order: [['workspace', 'port']],
-      sampledata: {},
-      forum_tag: 'foo'
     },
     args: {
       workspace: {
@@ -389,8 +385,6 @@ describe('InVEST Run Button', () => {
     userguide: 'bar.html',
     ui_spec: {
       order: [['a', 'b', 'c']],
-      sampledata: {},
-      forum_tag: 'foo'
     },
     args: {
       a: {

@@ -226,7 +226,6 @@ describe('Test building model UIs and forum links', () => {
       <ResourcesLinks
         moduleName={model}
         docs={argsSpec.userguide}
-        forumTagName={argsSpec.ui_spec.forum_tag}
       />
     );
     const link = await findByRole('link', { name: /frequently asked questions/i });

@@ -43,11 +43,7 @@ MODEL_SPEC = {
             ['do_productivity_valuation', 'avg_rel_humidity'],
             ['cc_weight_shade', 'cc_weight_albedo', 'cc_weight_eti'],
         ],
-        "hidden": ["n_workers"],
-        "forum_tag": 'urban-cooling',
-        "sampledata": {
-            "filename": "UrbanCoolingModel.zip"
-        }
+        "hidden": ["n_workers"]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_raster_path", "ref_eto_raster_path",

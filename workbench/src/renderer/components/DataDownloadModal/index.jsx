@@ -6,11 +6,13 @@ import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import Alert from 'react-bootstrap/Alert';
 import Table from 'react-bootstrap/Table';
-import { MdErrorOutline } from 'react-icons/md';
+import {
+  MdErrorOutline,
+} from 'react-icons/md';
 import { withTranslation } from 'react-i18next';
 
+import sampledataRegistry from './sampledata_registry.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
-import { getSpec } from '../../server_requests';
 
 const { ipcRenderer } = window.Workbench.electron;
 const { logger } = window.Workbench;
@@ -43,15 +45,7 @@ class DataDownloadModal extends React.Component {
   }
 
   async componentDidMount() {
-    const { investList } = this.props;
-    const registry = {};
-    for (const modelName of Object.keys(investList)) {
-      let spec = await getSpec(investList[modelName].model_name);
-      if (spec.ui_spec.sampledata) {
-        registry[modelName] = spec.ui_spec.sampledata;
-      }
-    }
-
+    const registry = JSON.parse(JSON.stringify(sampledataRegistry));
     const tokenURL = await ipcRenderer.invoke(ipcMainChannels.CHECK_STORAGE_TOKEN);
     const baseURL = tokenURL || BASE_URL;
     let filesizes;
@@ -288,11 +282,6 @@ class DataDownloadModal extends React.Component {
 DataDownloadModal.propTypes = {
   show: PropTypes.bool.isRequired,
   closeModal: PropTypes.func.isRequired,
-  investList: PropTypes.objectOf(
-    PropTypes.shape({
-      model_name: PropTypes.string,
-    }),
-  ).isRequired,
 };
 
 export default withTranslation()(DataDownloadModal);

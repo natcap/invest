@@ -143,14 +143,7 @@ MODEL_SPEC = {
             ['machine_perf_path', 'machine_param_path'],
             ['valuation_container', 'land_gridPts_path', 'machine_econ_path', 'number_of_machines'],
         ],
-        "hidden": ["n_workers"],
-        "forum_tag": 'wave-energy',
-        "sampledata": {
-            "filename": "WaveEnergy.zip",
-            "note": "(required to run model)"
-            # "filename": "Base_Data.zip",
-            # "note": "(required for Wind & Wave Energy)"
-        }
+        "hidden": ["n_workers"]
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

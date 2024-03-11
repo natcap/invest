@@ -44,12 +44,7 @@ MODEL_SPEC = {
             ['compute_forest_edge_effects', 'tropical_forest_edge_carbon_model_vector_path', 'n_nearest_model_points', 'biomass_to_carbon_conversion_factor'],
             ['aoi_vector_path']
         ],
-        "hidden": ["n_workers"],
-        "forum_tag": 'carbon-edge-effects',
-        "sampledata": {
-            "filename": "forest_carbon_edge_effect.zip",
-            "note": "(required to run model)"
-        }
+        "hidden": ["n_workers"]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],

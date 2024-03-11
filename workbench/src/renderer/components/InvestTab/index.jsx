@@ -218,7 +218,6 @@ class InvestTab extends React.Component {
               <ResourcesLinks
                 moduleName={modelRunName}
                 docs={modelSpec.userguide}
-                forumTagName={uiSpec.forum_tag}
               />
             </div>
             <div

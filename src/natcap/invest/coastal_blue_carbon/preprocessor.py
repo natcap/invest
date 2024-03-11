@@ -31,11 +31,7 @@ MODEL_SPEC = {
             ['workspace_dir', 'results_suffix'],
             ['lulc_lookup_table_path', 'landcover_snapshot_csv']
         ],
-        "hidden": ["n_workers"],
-        "sampledata": {
-            "filename": "CoastalBlueCarbon.zip"
-        },
-        "forum_tag": 'blue-carbon'
+        "hidden": ["n_workers"]
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

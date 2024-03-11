@@ -53,7 +53,6 @@ const SAMPLE_SPEC = {
   },
   ui_spec: {
     order: [['workspace_dir', 'carbon_pools_path']],
-    sampledata: { filename: 'foo.zip' },
   },
 };
 
@@ -84,7 +83,7 @@ describe('Various ways to open and close InVEST models', () => {
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
     expect(setupTab.classList.contains('active')).toBeTruthy();
-    expect(getSpec).toHaveBeenCalledTimes(2);
+    expect(getSpec).toHaveBeenCalledTimes(1);
     const navTab = await findByRole('tab', { name: MOCK_MODEL_TITLE });
     await userEvent.hover(navTab);
     await findByRole('tooltip', { name: MOCK_MODEL_TITLE });
@@ -175,7 +174,7 @@ describe('Various ways to open and close InVEST models', () => {
     expect(homeTab.classList.contains('active')).toBeTruthy();
     // These are the calls that would have triggered if a file was selected
     expect(fetchDatastackFromFile).toHaveBeenCalledTimes(0);
-    expect(getSpec).toHaveBeenCalledTimes(1);
+    expect(getSpec).toHaveBeenCalledTimes(0);
   });
 
   test('Open three tabs and close them', async () => {

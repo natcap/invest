@@ -51,11 +51,7 @@ MODEL_SPEC = {
             ['population_raster_path', 'admin_boundaries_vector_path', 'population_group_radii_table', 'urban_nature_demand', 'aggregate_by_pop_group'],
             ['search_radius_mode', 'decay_function', 'search_radius']
         ],
-        "hidden": ["n_workers"],
-        "forum_tag": 'urban-nature-access',
-        "sampledata": {
-            "filename": "UrbanNatureAccess.zip"
-        }
+        "hidden": ["n_workers"]
     },
     'args_with_spatial_overlap': {
         'spatial_keys': [

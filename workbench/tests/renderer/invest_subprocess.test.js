@@ -49,7 +49,6 @@ describe('InVEST subprocess testing', () => {
     },
     ui_spec: {
       order: [['workspace_dir', 'results_suffix']],
-      sampledata: {},
     },
     model_name: 'EcoModel',
     pyname: 'natcap.invest.dot',
