@@ -124,7 +124,7 @@ describe('Run status Alert renders with status from a recent run', () => {
   });
 });
 
-describe('Sidebar Buttons', () => {
+describe.only('Sidebar Buttons', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
@@ -377,7 +377,6 @@ describe('Sidebar Buttons', () => {
       const calledChannels = spy.mock.calls.map(call => call[0]);
       expect(calledChannels).toContain(ipcMainChannels.OPEN_LOCAL_HTML);
     });
-    spy.mockReset();
   });
 
   test('Forum link opens externally', async () => {

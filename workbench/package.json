@@ -45,7 +45,7 @@
     ],
     "testEnvironment": "jsdom",
     "clearMocks": true,
-    "restoreMocks": false,
+    "restoreMocks": true,
     "resetModules": true
   },
   "keywords": [],
