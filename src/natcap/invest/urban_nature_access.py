@@ -289,8 +289,6 @@ MODEL_SPEC = {
                 'search_radius_m': {
                     'type': 'number',
                     'units': u.meter,
-                    'required':
-                        f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
                     'expression': 'value >= 0',
                     'about': gettext(
                         "The search radius in meters to use "
