@@ -1035,3 +1035,16 @@ class UNATests(unittest.TestCase):
         args['search_radius_mode'] = (
             urban_nature_access.RADIUS_OPT_URBAN_NATURE)
         self.assertEqual(urban_nature_access.validate(args), [])
+
+    def test_validate_uniform_search_radius(self):
+        """UNA: Search radius is required when using uniform search radii."""
+        from natcap.invest import urban_nature_access
+        from natcap.invest import validation
+
+        args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = ''
+
+        warnings = urban_nature_access.validate(args)
+        self.assertEqual(warnings, [(['search_radius'],
+                                     validation.MESSAGES['MISSING_VALUE'])])
