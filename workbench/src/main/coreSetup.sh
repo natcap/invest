@@ -35,4 +35,3 @@ with open('$CONFIG_PATH', 'w') as f:
 "
 rm tmp_models.json
 echo "done"
-

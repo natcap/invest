@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import upath from 'upath';
 import { execSync } from 'child_process';
 
 import {
@@ -27,7 +28,7 @@ export function checkFirstRun() {
     }
     logger.info('first run');
     fs.writeFileSync(hasRunTokenPath, '');
-    const configPath = path.join(app.getPath('userData'), 'config.json');
+    const configPath = upath.join(app.getPath('userData'), 'config.json');
     execSync(
       `src/main/coreSetup.sh '${configPath}'`,
       { encoding: 'utf-8', stdio: 'inherit' }

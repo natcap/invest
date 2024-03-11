@@ -1,4 +1,4 @@
-import path from 'path';
+import upath from 'upath';
 import { execSync } from 'child_process';
 import { app, ipcMain } from 'electron';
 
@@ -13,8 +13,8 @@ export default function setupAddPlugin() {
     (e, pluginURL) => {
       logger.info('adding plugin at', pluginURL);
       // store.set('language', languageCode);
-      const pluginsPath = path.join(app.getPath('userData'), 'plugins');
-      const configPath = path.join(app.getPath('userData'), 'config.json');
+      const pluginsPath = upath.join(app.getPath('userData'), 'plugins');
+      const configPath = upath.posix.join(app.getPath('userData'), 'config.json');
       logger.info(pluginsPath);
       execSync(
         `src/main/addPlugin.sh ${pluginURL} '${pluginsPath}' '${configPath}'`,
