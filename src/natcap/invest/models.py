@@ -24,24 +24,24 @@ def is_invest_model(module):
 # model name: title e.g. Coastal Blue Carbon
 # Build up an index mapping aliases to model_name.
 pyname_to_module = {}
-for _, name, ispkg in pkgutil.iter_modules(natcap.invest.__path__):
-    if name in {'__main__', 'cli', 'ui_server'}:
+for _, _name, _ispkg in pkgutil.iter_modules(natcap.invest.__path__):
+    if _name in {'__main__', 'cli', 'ui_server'}:
         continue  # avoid a circular import
-    module = importlib.import_module(f'natcap.invest.{name}')
-    if ispkg:
-        for _, sub_name, _ in pkgutil.iter_modules(module.__path__):
-            submodule = importlib.import_module(f'natcap.invest.{name}.{sub_name}')
-            if is_invest_model(submodule):
-                pyname_to_module[f'natcap.invest.{name}.{sub_name}'] = submodule
+    _module = importlib.import_module(f'natcap.invest.{_name}')
+    if _ispkg:
+        for _, _sub_name, _ in pkgutil.iter_modules(_module.__path__):
+            _submodule = importlib.import_module(f'natcap.invest.{_name}.{_sub_name}')
+            if is_invest_model(_submodule):
+                pyname_to_module[f'natcap.invest.{_name}.{_sub_name}'] = _submodule
     else:
-        if is_invest_model(module):
-            pyname_to_module[f'natcap.invest.{name}'] = module
+        if is_invest_model(_module):
+            pyname_to_module[f'natcap.invest.{_name}'] = _module
 
 model_id_to_pyname = {}
 model_id_to_spec = {}
 model_alias_to_id = {}
-for pyname, model in pyname_to_module.items():
-    model_id_to_pyname[model.MODEL_SPEC['model_id']] = pyname
-    model_id_to_spec[model.MODEL_SPEC['model_id']] = model.MODEL_SPEC
-    for alias in model.MODEL_SPEC['aliases']:
-        model_alias_to_id[alias] = model.MODEL_SPEC['model_id']
+for _pyname, _model in pyname_to_module.items():
+    model_id_to_pyname[_model.MODEL_SPEC['model_id']] = _pyname
+    model_id_to_spec[_model.MODEL_SPEC['model_id']] = _model.MODEL_SPEC
+    for _alias in _model.MODEL_SPEC['aliases']:
+        model_alias_to_id[_alias] = _model.MODEL_SPEC['model_id']
