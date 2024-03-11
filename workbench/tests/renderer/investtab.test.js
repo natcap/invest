@@ -227,7 +227,7 @@ describe('Sidebar Buttons', () => {
     const response = 'saved';
     archiveDatastack.mockImplementation(() => new Promise(
       (resolve) => {
-        setTimeout(() => resolve(response), 1000);
+        setTimeout(() => resolve(response), 500);
       }
     ));
     const mockDialogData = { canceled: false, filePath: 'data.tgz' };
@@ -377,7 +377,6 @@ describe('Sidebar Buttons', () => {
       const calledChannels = spy.mock.calls.map(call => call[0]);
       expect(calledChannels).toContain(ipcMainChannels.OPEN_LOCAL_HTML);
     });
-    spy.mockReset();
   });
 
   test('Forum link opens externally', async () => {
