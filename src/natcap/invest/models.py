@@ -31,10 +31,10 @@ for _, _name, _ispkg in pkgutil.iter_modules(natcap.invest.__path__):
     if _ispkg:
         for _, _sub_name, _ in pkgutil.iter_modules(_module.__path__):
             _submodule = importlib.import_module(f'natcap.invest.{_name}.{_sub_name}')
-            if is_invest_model(_submodule):
+            if is_invest_compliant_model(_submodule):
                 pyname_to_module[f'natcap.invest.{_name}.{_sub_name}'] = _submodule
     else:
-        if is_invest_model(_module):
+        if is_invest_compliant_model(_module):
             pyname_to_module[f'natcap.invest.{_name}'] = _module
 
 model_id_to_pyname = {}
