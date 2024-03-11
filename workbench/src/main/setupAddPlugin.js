@@ -17,7 +17,7 @@ export default function setupAddPlugin() {
       const configPath = upath.join(app.getPath('userData'), 'config.json');
       logger.info(pluginsPath);
       execSync(
-        `src/main/addPlugin.sh ${pluginURL} '${pluginsPath}' '${configPath}'`,
+        `bash src/main/addPlugin.sh ${pluginURL} '${pluginsPath}' '${configPath}'`,
         { encoding: 'utf-8', stdio: 'inherit' }
       );
     }

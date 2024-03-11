@@ -30,7 +30,7 @@ export function checkFirstRun() {
     fs.writeFileSync(hasRunTokenPath, '');
     const configPath = upath.join(app.getPath('userData'), 'config.json');
     execSync(
-      `src/main/coreSetup.sh '${configPath}'`,
+      `bash src/main/coreSetup.sh '${configPath}'`,
       { encoding: 'utf-8', stdio: 'inherit' }
     );
   } catch (error) {
