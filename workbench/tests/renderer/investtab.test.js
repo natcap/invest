@@ -227,7 +227,7 @@ describe('Sidebar Buttons', () => {
     const response = 'saved';
     archiveDatastack.mockImplementation(() => new Promise(
       (resolve) => {
-        setTimeout(() => resolve(response), 1000);
+        setTimeout(() => resolve(response), 500);
       }
     ));
     const mockDialogData = { canceled: false, filePath: 'data.tgz' };
