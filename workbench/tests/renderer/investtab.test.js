@@ -124,7 +124,7 @@ describe('Run status Alert renders with status from a recent run', () => {
   });
 });
 
-describe.only('Sidebar Buttons', () => {
+describe('Sidebar Buttons', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
