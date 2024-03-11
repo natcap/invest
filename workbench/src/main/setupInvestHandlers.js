@@ -102,7 +102,7 @@ export function setupInvestRunHandlers() {
         modelRunName,
         `-d "${datastackPath}"`]
     } else {
-      cmd = 'mamba'//settingsStore.get('micromamba_path');
+      cmd = 'micromamba'//settingsStore.get('micromamba_path');
       cmdArgs = [
         'run',
         '--no-capture-output',

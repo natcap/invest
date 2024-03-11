@@ -74,14 +74,16 @@ export async function createPythonFlaskProcess(modelName) {
     return settingsStore.get('core.pid');
   } else {
     logger.debug('creating invest plugin server process')
-    const micromambaPath = 'mamba'//settingsStore.get('micromamba_path');
+    const micromambaPath = 'micromamba'//settingsStore.get('micromamba_path');
     const modelEnvPath = settingsStore.get(`models.${modelName}.env`);
     path = modelEnvPath;
-    logger.info('"' + micromambaPath + '"',
-      ['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port])
+    const args = [
+      'run', '--prefix', `"${modelEnvPath}"`,
+      'invest', '--debug', 'serve', '--port', port]
+    logger.debug('spawning command:', micromambaPath, args);
     pythonServerProcess = spawn(
       '"' + micromambaPath + '"',
-      ['run', '--no-capture-output', '--prefix', `"${modelEnvPath}"`, 'invest', '--debug', 'serve', '--port', port],
+      args,
       { shell: true } // necessary in dev mode & relying on a conda env
     );
     settingsStore.set(`models.${modelName}.port`, port);

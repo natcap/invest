@@ -14,7 +14,7 @@ export default function setupAddPlugin() {
       logger.info('adding plugin at', pluginURL);
       // store.set('language', languageCode);
       const pluginsPath = upath.join(app.getPath('userData'), 'plugins');
-      const configPath = upath.posix.join(app.getPath('userData'), 'config.json');
+      const configPath = upath.join(app.getPath('userData'), 'config.json');
       logger.info(pluginsPath);
       execSync(
         `src/main/addPlugin.sh ${pluginURL} '${pluginsPath}' '${configPath}'`,
