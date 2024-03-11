@@ -3,7 +3,7 @@ import pkgutil
 
 import natcap.invest
 
-def is_invest_model(module):
+def is_invest_compliant_model(module):
     """Check if a python module is an invest model.
 
     Args:
