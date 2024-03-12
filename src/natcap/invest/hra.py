@@ -86,7 +86,7 @@ MODEL_SPEC = {
                         "rasters, a pixel value of 1 indicates presence of "
                         "the habitat or stressor. 0 (or any other value) "
                         "indicates absence of the habitat or stressor. For "
-                        "vectors, a polygon indicates an area where the "
+                        "vectors, a geometry indicates an area where the "
                         "habitat or stressor is present.")
                 },
                 "type": {
