@@ -5,26 +5,22 @@ import logging
 import os
 
 import numpy
-from osgeo import gdal
 import pygeoprocessing
 import taskgraph
+from osgeo import gdal
 
-from .model_metadata import MODEL_METADATA
+from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
+from .model_metadata import MODEL_METADATA
 from .unit_registry import u
-from . import gettext
-
 
 LOGGER = logging.getLogger(__name__)
 
 MISSING_SENSITIVITY_TABLE_THREATS_MSG = gettext(
     'Threats {threats} does not match any column in the sensitivity table. '
     'Sensitivity columns: {column_names}')  # (set of missing threats, set of found columns)
-MISSING_COLUMN_MSG = gettext(
-    "The column '{column_name}' was not found in the Threat Data table for "
-    "the corresponding input LULC scenario.")
 MISSING_THREAT_RASTER_MSG = gettext(
     "A threat raster for threats: {threat_list} was not found or it "
     "could not be opened by GDAL.")
@@ -1106,7 +1102,6 @@ def validate(args, limit_to=None):
         bad_threat_paths = []
         duplicate_paths = []
         threat_path_list = []
-        bad_threat_columns = []
         for lulc_key, lulc_arg in (('_c', 'lulc_cur_path'),
                                    ('_f', 'lulc_fut_path'),
                                    ('_b', 'lulc_bas_path')):
@@ -1116,9 +1111,6 @@ def validate(args, limit_to=None):
                 # threat_raster_folder
                 for threat, row in threat_df.iterrows():
                     threat_table_path_col = _THREAT_SCENARIO_MAP[lulc_key]
-                    if threat_table_path_col not in row:
-                        bad_threat_columns.append(threat_table_path_col)
-                        break
 
                     # Threat path from threat CSV is relative to CSV
                     threat_path = row[threat_table_path_col]
@@ -1140,11 +1132,6 @@ def validate(args, limit_to=None):
                         else:
                             duplicate_paths.append(
                                 os.path.basename(threat_path))
-
-        if bad_threat_columns:
-            validation_warnings.append((
-                ['threats_table_path'],
-                MISSING_COLUMN_MSG.format(column_name=bad_threat_columns[0])))
 
         if bad_threat_paths:
             validation_warnings.append((

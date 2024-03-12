@@ -1,15 +1,15 @@
 """Module for Regression Testing the InVEST Habitat Quality model."""
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
 
-from osgeo import gdal
-from osgeo import osr
-from osgeo import ogr
-from shapely.geometry import Polygon
 import numpy
 import pygeoprocessing
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
+from shapely.geometry import Polygon
 
 
 def make_raster_from_array(
@@ -1291,7 +1291,8 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_habitat_quality_validation_missing_sens_header(self):
         """Habitat Quality: test validation for sens threat header."""
-        from natcap.invest import habitat_quality, utils
+        from natcap.invest import habitat_quality
+        from natcap.invest import utils
 
         args = {
             'half_saturation_constant': '0.5',
@@ -1874,7 +1875,8 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_habitat_quality_argspec_missing_projection(self):
         """Habitat Quality: raise error on missing projection."""
-        from natcap.invest import habitat_quality, validation
+        from natcap.invest import habitat_quality
+        from natcap.invest import validation
 
         args = {
             'half_saturation_constant': '0.5',
@@ -1950,7 +1952,8 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_habitat_quality_argspec_missing_threat_header(self):
         """Habitat Quality: test validate for a threat header."""
-        from natcap.invest import habitat_quality, validation
+        from natcap.invest import habitat_quality
+        from natcap.invest import validation
 
         args = {
             'half_saturation_constant': '0.5',
@@ -2001,6 +2004,7 @@ class HabitatQualityTests(unittest.TestCase):
     def test_habitat_quality_validate_missing_base_column(self):
         """Habitat Quality: test validate for a missing base column."""
         from natcap.invest import habitat_quality
+        from natcap.invest import validation
 
         args = {
             'half_saturation_constant': '0.5',
@@ -2045,13 +2049,15 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
             ['threats_table_path'],
-            habitat_quality.MISSING_COLUMN_MSG.format(column_name='base_path')
+            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header="column", header_name="base_path")
         )]
         self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_validate_missing_fut_column(self):
         """Habitat Quality: test validate for a missing fut column."""
         from natcap.invest import habitat_quality
+        from natcap.invest import validation
 
         args = {
             'half_saturation_constant': '0.5',
@@ -2095,5 +2101,7 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
             ['threats_table_path'],
-            habitat_quality.MISSING_COLUMN_MSG.format(column_name='fut_path'))]
+            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='column', header_name='fut_path')
+        )]
         self.assertEqual(validate_result, expected)

@@ -217,14 +217,19 @@ class UNATests(unittest.TestCase):
             [nodata, 100.5],
             [75, 100]], dtype=numpy.float32)
         urban_nature_demand = 50
+        supply_path = os.path.join(self.workspace_dir, 'supply.path')
+        target_path = os.path.join(self.workspace_dir, 'target.path')
 
-        population = numpy.array([
-            [50, 100],
-            [40.75, nodata]], dtype=numpy.float32)
+        pygeoprocessing.numpy_array_to_raster(
+            urban_nature_supply_percapita, nodata, _DEFAULT_PIXEL_SIZE,
+            _DEFAULT_ORIGIN, _DEFAULT_SRS.ExportToWkt(), supply_path)
 
-        urban_nature_budget = (
-            urban_nature_access._urban_nature_balance_percapita_op(
-                urban_nature_supply_percapita, urban_nature_demand))
+        urban_nature_access._calculate_urban_nature_balance_percapita(
+            supply_path, urban_nature_demand, target_path)
+
+        urban_nature_budget = pygeoprocessing.raster_to_numpy_array(
+            target_path)
+
         expected_urban_nature_budget = numpy.array([
             [nodata, 50.5],
             [25, 50]], dtype=numpy.float32)
@@ -569,10 +574,10 @@ class UNATests(unittest.TestCase):
             'pop_female': attributes[0]['pop_female'],
             'pop_male': attributes[0]['pop_male'],
             'adm_unit_id': 0,
-            'Pund_adm': 0,
+            'Pund_adm': 3991.8271484375,
             'Pund_adm_female': 2235.423095703125,
             'Pund_adm_male': 1756.404052734375,
-            'Povr_adm': 0,
+            'Povr_adm': 1084.1727294921875,
             'Povr_adm_female': 607.13671875,
             'Povr_adm_male': 477.0360107421875,
             'SUP_DEMadm_cap': -17.907799109781322,
@@ -645,10 +650,10 @@ class UNATests(unittest.TestCase):
             'pop_female': attributes[0]['pop_female'],
             'pop_male': attributes[0]['pop_male'],
             'adm_unit_id': 0,
-            'Pund_adm': 0,
+            'Pund_adm': 4801.7900390625,
             'Pund_adm_female': 2689.00244140625,
             'Pund_adm_male': 2112.78759765625,
-            'Povr_adm': 0,
+            'Povr_adm': 274.2098693847656,
             'Povr_adm_female': 153.55752563476562,
             'Povr_adm_male': 120.65234375,
             'SUP_DEMadm_cap': -17.907799109781322,
@@ -1030,3 +1035,16 @@ class UNATests(unittest.TestCase):
         args['search_radius_mode'] = (
             urban_nature_access.RADIUS_OPT_URBAN_NATURE)
         self.assertEqual(urban_nature_access.validate(args), [])
+
+    def test_validate_uniform_search_radius(self):
+        """UNA: Search radius is required when using uniform search radii."""
+        from natcap.invest import urban_nature_access
+        from natcap.invest import validation
+
+        args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = ''
+
+        warnings = urban_nature_access.validate(args)
+        self.assertEqual(warnings, [(['search_radius'],
+                                     validation.MESSAGES['MISSING_VALUE'])])
