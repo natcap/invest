@@ -1349,8 +1349,8 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(df['row2'][1], 3)
         self.assertEqual(df['row2'].dtype, float)
 
-    def test_recursive_path_validation(self):
-        """validation: validate paths within csv columns"""
+    def test_csv_raster_validation_missing_file(self):
+        """validation: validate missing raster within csv column"""
         from natcap.invest import validation
 
         csv_path = os.path.join(self.workspace_dir, 'csv.csv')
@@ -1367,15 +1367,25 @@ class TestGetValidatedDataframe(unittest.TestCase):
                     'col1': {'type': 'number'},
                     'col2': {'type': 'raster'}
                 })
-        self.assertTrue('File not found' in str(cm.exception))
+        self.assertIn('File not found', str(cm.exception))
 
+
+    def test_csv_raster_validation_not_projected(self):
+        """validation: validate unprojected raster within csv column"""
+        from natcap.invest import validation
         # create a non-linear projected raster and validate it
         driver = gdal.GetDriverByName('GTiff')
+        csv_path = os.path.join(self.workspace_dir, 'csv.csv')
+        raster_path = os.path.join(self.workspace_dir, 'foo.tif')
         raster = driver.Create(raster_path, 3, 3, 1, gdal.GDT_Int32)
         wgs84_srs = osr.SpatialReference()
         wgs84_srs.ImportFromEPSG(4326)
         raster.SetProjection(wgs84_srs.ExportToWkt())
         raster = None
+
+        with open(csv_path, 'w') as file_obj:
+            file_obj.write('col1,col2\n')
+            file_obj.write(f'1,{raster_path}\n')
 
         with self.assertRaises(ValueError) as cm:
             validation.get_validated_dataframe(
@@ -1384,7 +1394,80 @@ class TestGetValidatedDataframe(unittest.TestCase):
                     'col1': {'type': 'number'},
                     'col2': {'type': 'raster', 'projected': True}
                 })
-        self.assertTrue('must be projected' in str(cm.exception))
+        self.assertIn('must be projected', str(cm.exception))
+
+    def test_csv_vector_validation_missing_field(self):
+        """validation: validate vector missing field in csv column"""
+        from natcap.invest import validation
+        import pygeoprocessing
+        from shapely.geometry import Point
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        projection_wkt = srs.ExportToWkt()
+        csv_path = os.path.join(self.workspace_dir, 'csv.csv')
+        vector_path = os.path.join(self.workspace_dir, 'test.gpkg')
+        pygeoprocessing.shapely_geometry_to_vector(
+            [Point(0.0, 0.0)], vector_path, projection_wkt, 'GPKG',
+            fields={'b': ogr.OFTInteger},
+            attribute_list=[{'b': 0}],
+            ogr_geom_type=ogr.wkbPoint)
+
+        with open(csv_path, 'w') as file_obj:
+            file_obj.write('col1,col2\n')
+            file_obj.write(f'1,{vector_path}\n')
+
+        with self.assertRaises(ValueError) as cm:
+            validation.get_validated_dataframe(
+                csv_path,
+                columns={
+                    'col1': {'type': 'number'},
+                    'col2': {
+                        'type': 'vector',
+                        'fields': {
+                            'a': {'type': 'integer'},
+                            'b': {'type': 'integer'}
+                        },
+                        'geometries': ['POINT']
+                    }
+                })
+        self.assertIn(
+            'Expected the field "a" but did not find it',
+            str(cm.exception))
+
+    def test_csv_raster_or_vector_validation(self):
+        """validation: validate vector in raster-or-vector csv column"""
+        from natcap.invest import validation
+        import pygeoprocessing
+        from shapely.geometry import Point
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        projection_wkt = srs.ExportToWkt()
+        csv_path = os.path.join(self.workspace_dir, 'csv.csv')
+        vector_path = os.path.join(self.workspace_dir, 'test.gpkg')
+        pygeoprocessing.shapely_geometry_to_vector(
+            [Point(0.0, 0.0)], vector_path, projection_wkt, 'GPKG',
+            ogr_geom_type=ogr.wkbPoint)
+
+        with open(csv_path, 'w') as file_obj:
+            file_obj.write('col1,col2\n')
+            file_obj.write(f'1,{vector_path}\n')
+
+        with self.assertRaises(ValueError) as cm:
+            validation.get_validated_dataframe(
+                csv_path,
+                columns={
+                    'col1': {'type': 'number'},
+                    'col2': {
+                        'type': {'raster', 'vector'},
+                        'fields': {},
+                        'geometries': ['POLYGON']
+                    }
+                })
+        self.assertIn(
+            "Geometry type must be one of ['POLYGON']",
+            str(cm.exception))
 
 
 class TestValidationFromSpec(unittest.TestCase):

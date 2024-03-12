@@ -1001,6 +1001,9 @@ def validate(args, spec, spatial_overlap_opts=None):
             LOGGER.debug(f'Provided key {key} does not exist in MODEL_SPEC')
             continue
 
+        param_type = parameter_spec['type']
+        if isinstance(param_type, set):
+            param_type = frozenset(param_type)
         # rewrite parameter_spec for any nested, conditional validity
         axis_keys = None
         if param_type == 'csv':
