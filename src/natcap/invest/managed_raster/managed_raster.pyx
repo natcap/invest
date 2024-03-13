@@ -317,7 +317,7 @@ cdef class _ManagedRaster:
 
 cdef class ManagedFlowDirRaster(_ManagedRaster):
 
-    cdef bint is_local_high_point(self, long xi, long yi) noexcept:
+    cdef bint is_local_high_point(self, long xi, long yi):
         """Check if a given pixel is a local high point.
 
         Args:
@@ -335,7 +335,7 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
 
     @cython.cdivision(True)
     cdef NeighborTuple* get_upslope_neighbors(
-            ManagedFlowDirRaster self, long xi, long yi) noexcept:
+            ManagedFlowDirRaster self, long xi, long yi):
         """Return upslope neighbors of a given pixel.
 
         Args:
@@ -388,7 +388,7 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
 
     @cython.cdivision(True)
     cdef NeighborTuple* get_downslope_neighbors(
-            ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=True) noexcept:
+            ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=True):
         """Return downslope neighbors of a given pixel.
 
         Args:

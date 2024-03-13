@@ -49,11 +49,11 @@ cdef class _ManagedRaster:
 
 cdef class ManagedFlowDirRaster(_ManagedRaster):
 
-    cdef bint is_local_high_point(ManagedFlowDirRaster self, long xi, long yi) noexcept
+    cdef bint is_local_high_point(ManagedFlowDirRaster self, long xi, long yi)
 
-    cdef NeighborTuple* get_upslope_neighbors(ManagedFlowDirRaster self, long xi, long yi) noexcept
+    cdef NeighborTuple* get_upslope_neighbors(ManagedFlowDirRaster self, long xi, long yi)
 
-    cdef NeighborTuple* get_downslope_neighbors(ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=*) noexcept
+    cdef NeighborTuple* get_downslope_neighbors(ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=*)
 
 
 # These offsets are for the neighbor rows and columns according to the
