@@ -12,11 +12,13 @@ cimport cython
 from osgeo import gdal
 
 from libcpp.stack cimport stack
+from libc.stdlib cimport free
 from libc.math cimport exp
 from ..managed_raster.managed_raster cimport _ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport is_close
 from ..managed_raster.managed_raster cimport INFLOW_OFFSETS
+from ..managed_raster.managed_raster cimport NeighborTuple
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -128,16 +130,20 @@ def ndr_eff_calculation(
                 should_seed = 0
                 # see if this pixel drains to nodata or the edge, if so it's
                 # a drain
-                for neighbor in (
-                        mfd_flow_direction_raster.get_downslope_neighbors(
-                            global_col, global_row, skip_oob=False)):
+                downslope_neighbors_array = (
+                    mfd_flow_direction_raster.get_downslope_neighbors(
+                        global_col, global_row, skip_oob=False))
+                length = sizeof(downslope_neighbors_array) /  sizeof(NeighborTuple)
+                for neighbor_idx in range(length):
+                    neighbor = downslope_neighbors_array[neighbor_idx]
+
                     if (neighbor.x < 0 or neighbor.x >= n_cols or
                         neighbor.y < 0 or neighbor.y >= n_rows or
                         to_process_flow_directions_raster.get(
                             neighbor.x, neighbor.y) == 0):
                         should_seed = 1
                         outflow_dirs &= ~(1 << neighbor.direction)
-
+                free(downslope_neighbors_array)
                 if should_seed:
                     # mark all outflow directions processed
                     to_process_flow_directions_raster.set(
@@ -169,8 +175,13 @@ def ndr_eff_calculation(
             else:
                 working_retention_eff = 0.0
                 has_outflow = False
-                for neighbor in mfd_flow_direction_raster.get_downslope_neighbors(
-                        global_col, global_row, skip_oob=False):
+                downslope_neighbors_array = (
+                    mfd_flow_direction_raster.get_downslope_neighbors(
+                        global_col, global_row, skip_oob=False))
+                length = sizeof(downslope_neighbors_array) /  sizeof(NeighborTuple)
+                for neighbor_idx in range(length):
+                    neighbor = downslope_neighbors_array[neighbor_idx]
+
                     has_outflow = True
                     if (neighbor.x < 0 or neighbor.x >= n_cols or
                         neighbor.y < 0 or neighbor.y >= n_rows):
@@ -209,15 +220,20 @@ def ndr_eff_calculation(
                     working_retention_eff += (
                         intermediate_retention * neighbor.flow_proportion)
 
+                free(downslope_neighbors_array)
                 if has_outflow:
                     effective_retention_raster.set(
                         global_col, global_row, working_retention_eff)
                 else:
                     raise Exception("got to a cell that has no outflow!")
             # search upslope to see if we need to push a cell on the stack
-            # for i in range(8):
-            for neighbor in mfd_flow_direction_raster.get_upslope_neighbors(
-                    global_col, global_row):
+            upslope_neighbors_array = (
+                mfd_flow_direction_raster.get_upslope_neighbors(
+                    global_col, global_row))
+            length = sizeof(upslope_neighbors_array) /  sizeof(NeighborTuple)
+            for neighbor_idx in range(length):
+                neighbor = upslope_neighbors_array[neighbor_idx]
+
                 neighbor_outflow_dir = INFLOW_OFFSETS[neighbor.direction]
                 neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir
                 neighbor_process_flow_dir = <int>(
@@ -238,5 +254,6 @@ def ndr_eff_calculation(
                     # push on stack, otherwise another downslope pixel will
                     # pick it up
                     processing_stack.push(neighbor.y * n_cols + neighbor.x)
+            free(upslope_neighbors_array)
     to_process_flow_directions_raster.close()
     os.remove(to_process_flow_directions_path)

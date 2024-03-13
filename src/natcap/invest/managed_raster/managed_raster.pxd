@@ -3,7 +3,6 @@
 from libcpp.list cimport list as clist
 from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
-from libcpp.vector cimport vector
 from libc.math cimport isnan
 
 cdef struct s_neighborTuple:
@@ -50,11 +49,11 @@ cdef class _ManagedRaster:
 
 cdef class ManagedFlowDirRaster(_ManagedRaster):
 
-    cdef bint is_local_high_point(ManagedFlowDirRaster self, long xi, long yi)
+    cdef bint is_local_high_point(ManagedFlowDirRaster self, long xi, long yi) noexcept
 
-    cdef vector[NeighborTuple] get_upslope_neighbors(ManagedFlowDirRaster self, long xi, long yi)
+    cdef NeighborTuple* get_upslope_neighbors(ManagedFlowDirRaster self, long xi, long yi) noexcept
 
-    cdef vector[NeighborTuple] get_downslope_neighbors(ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=*)
+    cdef NeighborTuple* get_downslope_neighbors(ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=*) noexcept
 
 
 # These offsets are for the neighbor rows and columns according to the

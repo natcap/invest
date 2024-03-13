@@ -16,7 +16,7 @@ from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
 from libcpp.list cimport list as clist
 from libcpp.stack cimport stack
-from libcpp.vector cimport vector
+from libc.stdlib cimport malloc, free
 
 # this ctype is used to store the block ID and the block buffer as one object
 # inside Managed Raster
@@ -317,7 +317,7 @@ cdef class _ManagedRaster:
 
 cdef class ManagedFlowDirRaster(_ManagedRaster):
 
-    cdef bint is_local_high_point(self, long xi, long yi):
+    cdef bint is_local_high_point(self, long xi, long yi) noexcept:
         """Check if a given pixel is a local high point.
 
         Args:
@@ -328,11 +328,14 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             True if the pixel is a local high point, i.e. it has no
             upslope neighbors; False otherwise.
         """
-        return self.get_upslope_neighbors(xi, yi).size() == 0
+        cdef NeighborTuple* upslope_neighbors = self.get_upslope_neighbors(xi, yi)
+        cdef int size = sizeof(upslope_neighbors)
+        free(upslope_neighbors)
+        return size == 0
 
     @cython.cdivision(True)
-    cdef vector[NeighborTuple] get_upslope_neighbors(
-            ManagedFlowDirRaster self, long xi, long yi):
+    cdef NeighborTuple* get_upslope_neighbors(
+            ManagedFlowDirRaster self, long xi, long yi) noexcept:
         """Return upslope neighbors of a given pixel.
 
         Args:
@@ -340,19 +343,21 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             yi (int): y coord in pixel space of the pixel to consider
 
         Returns:
-            libcpp.vector of NeighborTuples. Each NeighborTuple has
-            the attributes ``direction`` (integer flow direction 0-7
-            of the neighbor relative to the original pixel), ``x``
-            and ``y`` (integer coordinates of the neighbor in pixel
-            space), and ``flow_proportion`` (fraction of the flow
-            from the neighbor that flows to the original pixel).
+            C array of NeighborTuples. Each NeighborTuple has the attributes
+            ``direction`` (integer flow direction 0-7 of the neighbor relative
+            to the original pixel), ``x`` and ``y`` (integer coordinates of
+            the neighbor in pixel space), and ``flow_proportion`` (fraction of
+            the flow from the neighbor that flows to the original pixel).
+            Note that the returned array must be freed by the calling function.
         """
         cdef int n_dir, flow_dir_j, idx
         cdef long xj, yj
         cdef float flow_ji, flow_dir_j_sum
+        cdef int i = 0
 
         cdef NeighborTuple n
-        cdef vector[NeighborTuple] upslope_neighbor_tuples
+        cdef NeighborTuple *upslope_neighbor_tuples = <NeighborTuple *> malloc(
+            8 * sizeof(NeighborTuple))
 
         for n_dir in range(8):
             xj = xi + COL_OFFSETS[n_dir]
@@ -371,13 +376,19 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
                 n.x = xj
                 n.y = yj
                 n.flow_proportion = flow_ji / flow_dir_j_sum
-                upslope_neighbor_tuples.push_back(n)
+                upslope_neighbor_tuples[i] = n
+                i += 1
 
-        return upslope_neighbor_tuples
+        cdef NeighborTuple *upslope_neighbors = <NeighborTuple *> malloc(
+            i * sizeof(NeighborTuple))
+        for q in range(i):
+            upslope_neighbors[q] = upslope_neighbor_tuples[q]
+        free(upslope_neighbor_tuples)
+        return upslope_neighbors
 
     @cython.cdivision(True)
-    cdef vector[NeighborTuple] get_downslope_neighbors(
-            ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=True):
+    cdef NeighborTuple* get_downslope_neighbors(
+            ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=True) noexcept:
         """Return downslope neighbors of a given pixel.
 
         Args:
@@ -387,19 +398,20 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
                 outside the raster bounds.
 
         Returns:
-            libcpp.vector of NeighborTuples. Each NeighborTuple has
-            the attributes ``direction`` (integer flow direction 0-7
-            of the neighbor relative to the original pixel), ``x``
-            and ``y`` (integer coordinates of the neighbor in pixel
-            space), and ``flow_proportion`` (fraction of the flow
-            from the neighbor that flows to the original pixel).
+            C array of NeighborTuples. Each NeighborTuple has the attributes
+            ``direction`` (integer flow direction 0-7 of the neighbor relative
+            to the original pixel), ``x`` and ``y`` (integer coordinates of
+            the neighbor in pixel space), and ``flow_proportion`` (fraction of
+            the flow from the neighbor that flows to the original pixel).
+            Note that the returned array must be freed by the calling function.
         """
         cdef int n_dir
         cdef long xj, yj
         cdef float flow_ij
 
         cdef NeighborTuple n
-        cdef vector[NeighborTuple] downslope_neighbor_tuples
+        cdef NeighborTuple *downslope_neighbor_tuples = <NeighborTuple *> malloc(
+            8 * sizeof(NeighborTuple))
 
         cdef int flow_dir = <int>self.get(xi, yi)
         cdef float flow_sum = 0
@@ -420,11 +432,13 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
                 n.x = xj
                 n.y = yj
                 n.flow_proportion = flow_ij
-                downslope_neighbor_tuples.push_back(n)
                 i += 1
 
+        cdef NeighborTuple *downslope_neighbors = <NeighborTuple *> malloc(
+            i * sizeof(NeighborTuple))
         for j in range(i):
             downslope_neighbor_tuples[j].flow_proportion = (
                 downslope_neighbor_tuples[j].flow_proportion / flow_sum)
-
-        return downslope_neighbor_tuples
+            downslope_neighbors[j] = downslope_neighbor_tuples[j]
+        free(downslope_neighbor_tuples)
+        return downslope_neighbors

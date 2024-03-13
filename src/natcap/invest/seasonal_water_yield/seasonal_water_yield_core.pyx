@@ -16,11 +16,13 @@ from osgeo import osr
 
 from libcpp.pair cimport pair
 from libcpp.stack cimport stack
+from libc.stdlib cimport free
 from libcpp.queue cimport queue
 from libc.time cimport time as ctime
 from ..managed_raster.managed_raster cimport _ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport is_close
+from ..managed_raster.managed_raster cimport NeighborTuple
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -216,7 +218,11 @@ cpdef calculate_local_recharge(
                     # initialize to 0 so we indicate we haven't tracked any
                     # mfd values yet
                     l_sum_avail_i = 0
-                    for neighbor in flow_raster.get_upslope_neighbors(xi, yi):
+                    upslope_neighbors_array = flow_raster.get_upslope_neighbors(xi, yi)
+                    length = sizeof(upslope_neighbors_array) /  sizeof(NeighborTuple)
+                    for neighbor_idx in range(length):
+                        neighbor = upslope_neighbors_array[neighbor_idx]
+
                         # pixel flows inward, check upslope
                         l_sum_avail_j = target_l_sum_avail_raster.get(
                             neighbor.x, neighbor.y)
@@ -228,6 +234,7 @@ cpdef calculate_local_recharge(
                         # A step of Equation 7
                         l_sum_avail_i += (
                             l_sum_avail_j + l_avail_j) * neighbor.flow_proportion
+                    free(upslope_neighbors_array)
                     # calculate l_sum_avail_i by summing all the valid
                     # directions then normalizing by the sum of the mfd
                     # direction weights (Equation 8)
@@ -292,8 +299,13 @@ cpdef calculate_local_recharge(
                     target_li_raster.set(xi, yi, l_i)
                     target_li_avail_raster.set(xi, yi, l_avail_i)
 
-                    for neighbor in flow_raster.get_downslope_neighbors(xi, yi):
+                    downslope_neighbors_array = (
+                        flow_raster.get_downslope_neighbors(xi, yi))
+                    length = sizeof(downslope_neighbors_array) /  sizeof(NeighborTuple)
+                    for neighbor_idx in range(length):
+                        neighbor = downslope_neighbors_array[neighbor_idx]
                         work_queue.push(pair[long, long](neighbor.x, neighbor.y))
+                    free(downslope_neighbors_array)
 
 
 def route_baseflow_sum(
@@ -379,12 +391,17 @@ def route_baseflow_sum(
                 # search for a pixel that has no downslope neighbors,
                 # or whose downslope neighbors all have nodata in the stream raster (?)
                 outlet = 1
-                for neighbor in flow_dir_mfd_raster.get_downslope_neighbors(
-                        xs_root, ys_root):
+                downslope_neighbors_array = (
+                    flow_dir_mfd_raster.get_downslope_neighbors(xs_root, ys_root))
+                length = sizeof(downslope_neighbors_array) /  sizeof(NeighborTuple)
+                for neighbor_idx in range(length):
+                    neighbor = downslope_neighbors_array[neighbor_idx]
+
                     stream_val = <int>stream_raster.get(neighbor.x, neighbor.y)
                     if stream_val != stream_nodata:
                         outlet = 0
                         break
+                free(downslope_neighbors_array)
                 if not outlet:
                     continue
                 work_stack.push(pair[long, long](xs_root, ys_root))
@@ -406,7 +423,11 @@ def route_baseflow_sum(
 
                     b_sum_i = 0.0
                     downslope_defined = 1
-                    for neighbor in flow_dir_mfd_raster.get_downslope_neighbors(xi, yi):
+                    downslope_neighbors_array = (
+                        flow_dir_mfd_raster.get_downslope_neighbors(xi, yi))
+                    length = sizeof(downslope_neighbors_array) /  sizeof(NeighborTuple)
+                    for neighbor_idx in range(length):
+                        neighbor = downslope_neighbors_array[neighbor_idx]
                         stream_val = <int>stream_raster.get(neighbor.x, neighbor.y)
                         if stream_val:
                             b_sum_i += neighbor.flow_proportion
@@ -426,6 +447,7 @@ def route_baseflow_sum(
                             else:
                                 b_sum_i += neighbor.flow_proportion
 
+                    free(downslope_neighbors_array)
                     if not downslope_defined:
                         continue
 
@@ -442,5 +464,10 @@ def route_baseflow_sum(
                     target_b_sum_raster.set(xi, yi, b_sum_i)
 
                     current_pixel += 1
-                    for neighbor in flow_dir_mfd_raster.get_upslope_neighbors(xi, yi):
+                    upslope_neighbors_array = (
+                        flow_dir_mfd_raster.get_upslope_neighbors(xi, yi))
+                    length = sizeof(upslope_neighbors_array) /  sizeof(NeighborTuple)
+                    for neighbor_idx in range(length):
+                        neighbor = upslope_neighbors_array[neighbor_idx]
                         work_stack.push(pair[long, long](neighbor.x, neighbor.y))
+                    free(upslope_neighbors_array)
