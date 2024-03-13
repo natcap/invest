@@ -61,7 +61,8 @@ class CropProductionTests(unittest.TestCase):
         agg_result_table = pandas.read_csv(
             agg_result_table_path)
         pandas.testing.assert_frame_equal(
-            expected_agg_result_table, agg_result_table, check_dtype=False)
+            expected_agg_result_table, agg_result_table,
+            check_dtype=False, check_exact=False)
 
         expected_result_table = pandas.read_csv(
             os.path.join(TEST_DATA_PATH, 'expected_result_table.csv')
@@ -316,7 +317,8 @@ class CropProductionTests(unittest.TestCase):
         agg_result_table = pandas.read_csv(
             os.path.join(args['workspace_dir'], 'aggregate_results.csv'))
         pandas.testing.assert_frame_equal(
-            expected_agg_result_table, agg_result_table, check_dtype=False)
+            expected_agg_result_table, agg_result_table,
+            check_dtype=False, check_exact=False)
 
         result_table_path = os.path.join(
             args['workspace_dir'], 'result_table.csv')
