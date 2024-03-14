@@ -5,13 +5,17 @@ from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
 from libc.math cimport isnan
 
-cdef struct s_neighborTuple:
+cdef struct NeighborTuple:
     int direction
     int x
     int y
     float flow_proportion
+    bint null
 
-ctypedef s_neighborTuple NeighborTuple
+cdef struct NeighborArray:
+    NeighborTuple* values
+    int length
+
 
 # this is a least recently used cache written in C++ in an external file,
 # exposing here so _ManagedRaster can use it
@@ -49,11 +53,22 @@ cdef class _ManagedRaster:
 
 cdef class ManagedFlowDirRaster(_ManagedRaster):
 
-    cdef bint is_local_high_point(ManagedFlowDirRaster self, long xi, long yi)
+    cdef bint is_local_high_point(ManagedFlowDirRaster self, long xi, long yi) noexcept
 
-    cdef NeighborTuple* get_upslope_neighbors(ManagedFlowDirRaster self, long xi, long yi)
+    cdef NeighborArray get_upslope_neighbors(ManagedFlowDirRaster self, long xi, long yi) noexcept
 
-    cdef NeighborTuple* get_downslope_neighbors(ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=*)
+    cdef NeighborArray get_downslope_neighbors(ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=*) noexcept
+
+
+cdef class UpslopeNeighborIterator:
+
+    cdef int n_dir
+    cdef int x
+    cdef int y
+    cdef ManagedFlowDirRaster flow_dir_raster
+
+    cdef void begin(UpslopeNeighborIterator self, int x, int y)
+    cdef NeighborTuple getNext(UpslopeNeighborIterator self)
 
 
 # These offsets are for the neighbor rows and columns according to the

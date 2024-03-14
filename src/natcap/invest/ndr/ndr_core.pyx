@@ -133,10 +133,9 @@ def ndr_eff_calculation(
                 downslope_neighbors_array = (
                     mfd_flow_direction_raster.get_downslope_neighbors(
                         global_col, global_row, skip_oob=False))
-                length = sizeof(downslope_neighbors_array) /  sizeof(NeighborTuple)
-                for neighbor_idx in range(length):
+                for neighbor_idx in range(<int>(sizeof(downslope_neighbors_array) /
+                                                sizeof(NeighborTuple))):
                     neighbor = downslope_neighbors_array[neighbor_idx]
-
                     if (neighbor.x < 0 or neighbor.x >= n_cols or
                         neighbor.y < 0 or neighbor.y >= n_rows or
                         to_process_flow_directions_raster.get(
@@ -178,8 +177,8 @@ def ndr_eff_calculation(
                 downslope_neighbors_array = (
                     mfd_flow_direction_raster.get_downslope_neighbors(
                         global_col, global_row, skip_oob=False))
-                length = sizeof(downslope_neighbors_array) /  sizeof(NeighborTuple)
-                for neighbor_idx in range(length):
+                for neighbor_idx in range(<int>(sizeof(downslope_neighbors_array) /
+                                                sizeof(NeighborTuple))):
                     neighbor = downslope_neighbors_array[neighbor_idx]
 
                     has_outflow = True
@@ -230,8 +229,8 @@ def ndr_eff_calculation(
             upslope_neighbors_array = (
                 mfd_flow_direction_raster.get_upslope_neighbors(
                     global_col, global_row))
-            length = sizeof(upslope_neighbors_array) /  sizeof(NeighborTuple)
-            for neighbor_idx in range(length):
+            for neighbor_idx in range(<int>(sizeof(upslope_neighbors_array) /
+                                            sizeof(NeighborTuple))):
                 neighbor = upslope_neighbors_array[neighbor_idx]
 
                 neighbor_outflow_dir = INFLOW_OFFSETS[neighbor.direction]

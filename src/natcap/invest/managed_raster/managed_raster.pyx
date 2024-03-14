@@ -317,7 +317,7 @@ cdef class _ManagedRaster:
 
 cdef class ManagedFlowDirRaster(_ManagedRaster):
 
-    cdef bint is_local_high_point(self, long xi, long yi):
+    cdef bint is_local_high_point(self, long xi, long yi) noexcept:
         """Check if a given pixel is a local high point.
 
         Args:
@@ -328,14 +328,13 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             True if the pixel is a local high point, i.e. it has no
             upslope neighbors; False otherwise.
         """
-        cdef NeighborTuple* upslope_neighbors = self.get_upslope_neighbors(xi, yi)
-        cdef int size = sizeof(upslope_neighbors)
-        free(upslope_neighbors)
-        return size == 0
+        cdef NeighborArray upslope_neighbors = self.get_upslope_neighbors(xi, yi)
+        free(upslope_neighbors.values)
+        return upslope_neighbors.length == 0
 
     @cython.cdivision(True)
-    cdef NeighborTuple* get_upslope_neighbors(
-            ManagedFlowDirRaster self, long xi, long yi):
+    cdef NeighborArray get_upslope_neighbors(
+            ManagedFlowDirRaster self, long xi, long yi) noexcept:
         """Return upslope neighbors of a given pixel.
 
         Args:
@@ -354,6 +353,7 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
         cdef long xj, yj
         cdef float flow_ji, flow_dir_j_sum
         cdef int i = 0
+        cdef int mem_needed
 
         cdef NeighborTuple n
         cdef NeighborTuple *upslope_neighbor_tuples = <NeighborTuple *> malloc(
@@ -372,23 +372,20 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
                 flow_dir_j_sum = 0
                 for idx in range(8):
                     flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF
-                n.direction = n_dir
-                n.x = xj
-                n.y = yj
-                n.flow_proportion = flow_ji / flow_dir_j_sum
+                n = NeighborTuple(
+                    direction=n_dir,
+                    x=xj,
+                    y=yj,
+                    flow_proportion=flow_ji / flow_dir_j_sum,
+                    null=False)
                 upslope_neighbor_tuples[i] = n
                 i += 1
 
-        cdef NeighborTuple *upslope_neighbors = <NeighborTuple *> malloc(
-            i * sizeof(NeighborTuple))
-        for q in range(i):
-            upslope_neighbors[q] = upslope_neighbor_tuples[q]
-        free(upslope_neighbor_tuples)
-        return upslope_neighbors
+        return NeighborArray(upslope_neighbor_tuples, i)
 
     @cython.cdivision(True)
-    cdef NeighborTuple* get_downslope_neighbors(
-            ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=True):
+    cdef NeighborArray get_downslope_neighbors(
+            ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=True) noexcept:
         """Return downslope neighbors of a given pixel.
 
         Args:
@@ -427,18 +424,67 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             flow_ij = (flow_dir >> (n_dir * 4)) & 0xF
             flow_sum += flow_ij
             if flow_ij:
-                n = NeighborTuple()
-                n.direction = n_dir
-                n.x = xj
-                n.y = yj
-                n.flow_proportion = flow_ij
+                n = NeighborTuple(
+                    direction=n_dir,
+                    x=xj,
+                    y=yj,
+                    flow_proportion=flow_ij,
+                    null=False)
+                downslope_neighbor_tuples[i] = n
                 i += 1
 
-        cdef NeighborTuple *downslope_neighbors = <NeighborTuple *> malloc(
-            i * sizeof(NeighborTuple))
         for j in range(i):
             downslope_neighbor_tuples[j].flow_proportion = (
                 downslope_neighbor_tuples[j].flow_proportion / flow_sum)
-            downslope_neighbors[j] = downslope_neighbor_tuples[j]
-        free(downslope_neighbor_tuples)
-        return downslope_neighbors
+
+        return NeighborArray(downslope_neighbor_tuples, i)
+
+
+
+cdef class UpslopeNeighborIterator:
+
+    def __cinit__(self, ManagedFlowDirRaster flow_dir_raster):
+        self.flow_dir_raster = flow_dir_raster
+
+    cdef void begin(self, int x, int y):
+        self.n_dir = 0
+        self.x = x
+        self.y = y
+
+    cdef NeighborTuple getNext(self):
+        cdef int idx, old_n_dir
+        cdef int flow_dir_j
+        cdef float flow_ji, flow_dir_j_sum
+        cdef long xj, yj
+        cdef NeighborTuple n
+
+        if self.n_dir > 7:
+            return NeighborTuple(-1, -1, -1, -1, True)
+
+        xj = self.x + COL_OFFSETS[self.n_dir]
+        yj = self.y + ROW_OFFSETS[self.n_dir]
+        if (xj < 0 or xj >= self.flow_dir_raster.raster_x_size or
+                yj < 0 or yj >= self.flow_dir_raster.raster_y_size):
+            self.n_dir += 1
+            return self.getNext()
+
+        flow_dir_j = <int>self.flow_dir_raster.get(xj, yj)
+        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[self.n_dir])))
+
+        if flow_ji:
+            flow_dir_j_sum = 0
+            for idx in range(8):
+                flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF
+            old_n_dir = self.n_dir
+            self.n_dir += 1
+            return NeighborTuple(
+                direction=old_n_dir,
+                x=xj,
+                y=yj,
+                flow_proportion=flow_ji / flow_dir_j_sum,
+                null=False)
+
+        else:
+            self.n_dir += 1
+            return self.getNext()
+
