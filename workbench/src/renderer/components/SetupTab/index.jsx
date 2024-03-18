@@ -88,6 +88,7 @@ class SetupTab extends React.Component {
     this._isMounted = false;
     this.validationTimer = null;
     this.enabledTimer = null;
+    this.dropdownTimer = null;
 
     this.state = {
       argsValues: null,
@@ -164,6 +165,7 @@ class SetupTab extends React.Component {
     this._isMounted = false;
     clearTimeout(this.validationTimer);
     clearTimeout(this.enabledTimer);
+    clearTimeout(this.dropdownTimer);
   }
 
   /**
@@ -344,7 +346,7 @@ class SetupTab extends React.Component {
       this.debouncedValidate();
       this.debouncedArgsEnabled();
       if (uiSpec.dropdown_functions) {
-        this.callDropdownFunctions();
+        this.debouncedDropdownFunctions();
       }
     });
   }
