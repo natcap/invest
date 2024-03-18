@@ -32,8 +32,7 @@ MODEL_SPEC = {
             ['calculate_flow_accumulation'],
             ['calculate_stream_threshold', 'threshold_flow_accumulation', 'calculate_downslope_distance', 'calculate_stream_order', 'calculate_subwatersheds']
         ],
-        "hidden": ["n_workers"],
-        "forum_tag": 'routedem'
+        "hidden": ["n_workers"]
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
