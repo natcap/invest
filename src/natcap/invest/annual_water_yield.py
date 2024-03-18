@@ -14,7 +14,6 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -106,9 +105,21 @@ WATERSHED_OUTPUT_FIELDS = {
 }
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["annual_water_yield"].model_title,
-    "pyname": MODEL_METADATA["annual_water_yield"].pyname,
-    "userguide": MODEL_METADATA["annual_water_yield"].userguide,
+    "model_id": "annual_water_yield",
+    "model_name": gettext("Annual Water Yield"),
+    "pyname": "natcap.invest.annual_water_yield",
+    "userguide": "annual_water_yield.html",
+    "aliases": ("hwy", "awy"),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['precipitation_path', 'eto_path', 'depth_to_root_rest_layer_path', 'pawc_path'],
+            ['lulc_path', 'biophysical_table_path', 'seasonality_constant'],
+            ['watersheds_path', 'sub_watersheds_path'],
+            ['demand_table_path', 'valuation_table_path']
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path",
                          "depth_to_root_rest_layer_path",

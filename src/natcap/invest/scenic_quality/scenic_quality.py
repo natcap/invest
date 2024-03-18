@@ -20,7 +20,6 @@ from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -48,9 +47,19 @@ _INTERMEDIATE_BASE_FILES = {
 }
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["scenic_quality"].model_title,
-    "pyname": MODEL_METADATA["scenic_quality"].pyname,
-    "userguide": MODEL_METADATA["scenic_quality"].userguide,
+    "model_id": "scenic_quality",
+    "model_name": gettext("Scenic Quality"),
+    "pyname": "natcap.invest.scenic_quality.scenic_quality",
+    "userguide": "scenic_quality.html",
+    "aliases": ("sq",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['aoi_path', 'structure_path', 'dem_path', 'refraction'],
+            ['do_valuation', 'valuation_function', 'a_coef', 'b_coef', 'max_valuation_radius'],
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_path", "structure_path", "dem_path"],
         "different_projections_ok": True,
@@ -124,6 +133,7 @@ MODEL_SPEC = {
             "name": gettext("Valuation function"),
             "type": "option_string",
             "required": "do_valuation",
+            "allowed": "do_valuation",
             "options": {
                 "linear": {"display_name": gettext("linear: a + bx")},
                 "logarithmic": {"display_name": gettext(
@@ -140,6 +150,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.none,
             "required": "do_valuation",
+            "allowed": "do_valuation",
             "about": gettext("First coefficient ('a') used by the valuation function"),
         },
         "b_coef": {
@@ -147,6 +158,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.none,
             "required": "do_valuation",
+            "allowed": "do_valuation",
             "about": gettext("Second coefficient ('b') used by the valuation function"),
         },
         "max_valuation_radius": {
@@ -154,6 +166,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.meter,
             "required": False,
+            "allowed": "do_valuation",
             "expression": "value > 0",
             "about": gettext(
                 "Valuation will only be computed for cells that fall within "

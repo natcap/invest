@@ -17,15 +17,25 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["urban_flood_risk_mitigation"].model_title,
-    "pyname": MODEL_METADATA["urban_flood_risk_mitigation"].pyname,
-    "userguide": MODEL_METADATA["urban_flood_risk_mitigation"].userguide,
+    "model_id": "urban_flood_risk_mitigation",
+    "model_name": gettext("Urban Flood Risk Mitigation"),
+    "pyname": "natcap.invest.urban_flood_risk_mitigation",
+    "userguide": "urban_flood_mitigation.html",
+    "aliases": ("ufrm",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['aoi_watersheds_path', 'rainfall_depth'],
+            ['lulc_path', 'curve_number_table_path', 'soils_hydrological_group_raster_path'],
+            ['built_infrastructure_vector_path', 'infrastructure_damage_loss_table_path']
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_watersheds_path", "lulc_path",
                          "built_infrastructure_vector_path",

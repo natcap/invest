@@ -3,7 +3,7 @@ import re
 import unittest
 
 import pint
-from natcap.invest.model_metadata import MODEL_METADATA
+from natcap.invest.models import model_id_to_pyname
 
 valid_nested_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
@@ -48,14 +48,14 @@ class ValidateModelSpecs(unittest.TestCase):
     def test_model_specs_are_valid(self):
         """MODEL_SPEC: test each spec meets the expected pattern."""
 
-        required_keys = {'model_name', 'pyname', 'userguide', 'args', 'outputs'}
+        required_keys = {'model_id', 'model_name', 'pyname', 'userguide',
+                         'aliases', 'args', 'ui_spec', 'outputs'}
         optional_spatial_key = 'args_with_spatial_overlap'
-        for model_name, metadata in MODEL_METADATA.items():
-            # metadata is a collections.namedtuple, fields accessible by name
-            model = importlib.import_module(metadata.pyname)
+        for model_id, pyname in model_id_to_pyname.items():
+            model = importlib.import_module(pyname)
 
             # Validate top-level keys are correct
-            with self.subTest(metadata.pyname):
+            with self.subTest(pyname):
                 self.assertTrue(
                     required_keys.issubset(model.MODEL_SPEC),
                     ("Required key(s) missing from MODEL_SPEC: "
@@ -67,15 +67,34 @@ class ValidateModelSpecs(unittest.TestCase):
                         set(model.MODEL_SPEC[optional_spatial_key]).issubset(
                             {'spatial_keys', 'different_projections_ok'}))
 
+                self.assertIsInstance(model.MODEL_SPEC['ui_spec'], dict)
+                if 'dropdown_functions' in model.MODEL_SPEC['ui_spec']:
+                    self.assertIsInstance(
+                        model.MODEL_SPEC['ui_spec']['dropdown_functions'], dict)
+                self.assertIsInstance(model.MODEL_SPEC['ui_spec']['order'], list)
+                self.assertIsInstance(model.MODEL_SPEC['ui_spec']['hidden'], list)
+                found_keys = set()
+                for group in model.MODEL_SPEC['ui_spec']['order']:
+                    self.assertIsInstance(group, list)
+                    for key in group:
+                        self.assertIsInstance(key, str)
+                        self.assertNotIn(key, found_keys)
+                        found_keys.add(key)
+                for key in model.MODEL_SPEC['ui_spec']['hidden']:
+                    self.assertIsInstance(key, str)
+                    self.assertNotIn(key, found_keys)
+                    found_keys.add(key)
+                self.assertEqual(found_keys, set(model.MODEL_SPEC['args'].keys()))
+
             # validate that each arg meets the expected pattern
             # save up errors to report at the end
             for key, arg in model.MODEL_SPEC['args'].items():
                 # the top level should have 'name' and 'about' attrs
                 # but they aren't required at nested levels
-                self.validate_args(arg, f'{model_name}.args.{key}')
+                self.validate_args(arg, f'{model_id}.args.{key}')
 
             for key, spec in model.MODEL_SPEC['outputs'].items():
-                self.validate_output(spec, f'{model_name}.outputs.{key}')
+                self.validate_output(spec, f'{model_id}.outputs.{key}')
 
     def validate_output(self, spec, key, parent_type=None):
         """
@@ -453,6 +472,9 @@ class ValidateModelSpecs(unittest.TestCase):
                 self.assertTrue(isinstance(arg['required'], bool) or
                                 isinstance(arg['required'], str))
                 attrs.remove('required')
+            if 'allowed' in attrs:
+                self.assertIsInstance(arg['allowed'], str)
+                attrs.remove('allowed')
             if 'type' in attrs:
                 self.assertTrue(isinstance(arg['type'], str) or
                                 isinstance(arg['type'], set))
@@ -492,14 +514,14 @@ class ValidateModelSpecs(unittest.TestCase):
         """MODEL_SPEC: test each arg spec can serialize to JSON."""
         from natcap.invest import spec_utils
 
-        for model_name, metadata in MODEL_METADATA.items():
-            model = importlib.import_module(metadata.pyname)
+        for pyname in model_id_to_pyname.values():
+            model = importlib.import_module(pyname)
             try:
                 _ = spec_utils.serialize_args_spec(model.MODEL_SPEC)
             except TypeError as error:
                 self.fail(
                     f'Failed to avoid TypeError when serializing '
-                    f'{metadata.pyname}.MODEL_SPEC: \n'
+                    f'{pyname}.MODEL_SPEC: \n'
                     f'{error}')
 
 

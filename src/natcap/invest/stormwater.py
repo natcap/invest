@@ -15,7 +15,6 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -27,9 +26,20 @@ UINT16_NODATA = 65535
 NONINTEGER_SOILS_RASTER_MESSAGE = 'Soil group raster data type must be integer'
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["stormwater"].model_title,
-    "pyname": MODEL_METADATA["stormwater"].pyname,
-    "userguide": MODEL_METADATA["stormwater"].userguide,
+    "model_id": "stormwater",
+    "model_name": gettext("Urban Stormwater Retention"),
+    "pyname": "natcap.invest.stormwater",
+    "userguide": "stormwater.html",
+    "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['lulc_path', 'soil_group_path', 'precipitation_path', 'biophysical_table'],
+            ['adjust_retention_ratios', 'retention_radius', 'road_centerlines_path'],
+            ['aggregate_areas_path', 'replacement_cost'],
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path", "soil_group_path", "precipitation_path",
                          "road_centerlines_path", "aggregate_areas_path"],
@@ -114,6 +124,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.other,
             "required": "adjust_retention_ratios",
+            "allowed": "adjust_retention_ratios",
             "about": gettext(
                 "Radius around each pixel to adjust retention ratios. "
                 "Measured in raster coordinate system units. For the "
@@ -127,6 +138,7 @@ MODEL_SPEC = {
             "geometries": {"LINESTRING", "MULTILINESTRING"},
             "fields": {},
             "required": "adjust_retention_ratios",
+            "allowed": "adjust_retention_ratios",
             "about": gettext("Map of road centerlines"),
             "name": gettext("Road centerlines")
         },

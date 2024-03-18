@@ -20,7 +20,6 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -30,9 +29,20 @@ MISSING_CONVERT_OPTION_MSG = gettext(
     'must be selected')
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["scenario_generator_proximity"].model_title,
-    "pyname": MODEL_METADATA["scenario_generator_proximity"].pyname,
-    "userguide": MODEL_METADATA["scenario_generator_proximity"].userguide,
+    "model_id": "scenario_generator_proximity",
+    "model_name": gettext("Scenario Generator: Proximity Based"),
+    "pyname": "natcap.invest.scenario_gen_proximity",
+    "userguide": "scenario_gen_proximity.html",
+    "aliases": ("sgp",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['base_lulc_path', 'aoi_path'],
+            ['area_to_convert', 'focal_landcover_codes', 'convertible_landcover_codes', 'replacement_lucode'],
+            ['convert_farthest_from_edge', 'convert_nearest_to_edge', 'n_fragmentation_steps']
+        ],
+        "hidden": ["n_workers"]
+    },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

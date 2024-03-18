@@ -22,7 +22,6 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -30,9 +29,22 @@ TARGET_NODATA = -1
 _LOGGING_PERIOD = 5
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["urban_cooling_model"].model_title,
-    "pyname": MODEL_METADATA["urban_cooling_model"].pyname,
-    "userguide": MODEL_METADATA["urban_cooling_model"].userguide,
+    "model_id": "urban_cooling_model",
+    "model_name": gettext("Urban Cooling"),
+    "pyname": "natcap.invest.urban_cooling_model",
+    "userguide": "urban_cooling_model.html",
+    "aliases": ("ucm",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['lulc_raster_path', 'ref_eto_raster_path', 'aoi_vector_path', 'biophysical_table_path'],
+            ['t_ref', 'uhi_max', 't_air_average_radius', 'green_area_cooling_distance', 'cc_method'],
+            ['do_energy_valuation', 'building_vector_path', 'energy_consumption_table_path'],
+            ['do_productivity_valuation', 'avg_rel_humidity'],
+            ['cc_weight_shade', 'cc_weight_albedo', 'cc_weight_eti'],
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_raster_path", "ref_eto_raster_path",
                          "aoi_vector_path", "building_vector_path"],
@@ -149,6 +161,7 @@ MODEL_SPEC = {
             "name": gettext("average relative humidity"),
             "type": "percent",
             "required": "do_productivity_valuation",
+            "allowed": "do_productivity_valuation",
             "about": gettext(
                 "The average relative humidity over the time period of "
                 "interest. Required if Run Work Productivity Valuation is "
@@ -165,6 +178,7 @@ MODEL_SPEC = {
                         "match those in the Energy Consumption Table.")}},
             "geometries": spec_utils.POLYGONS,
             "required": "do_energy_valuation",
+            "allowed": "do_energy_valuation",
             "about": gettext(
                 "A map of built infrastructure footprints. Required if Run "
                 "Energy Savings Valuation is selected.")
@@ -199,6 +213,7 @@ MODEL_SPEC = {
                 }
             },
             "required": "do_energy_valuation",
+            "allowed": "do_energy_valuation",
             "about": gettext(
                 "A table of energy consumption data for each building type. "
                 "Required if Run Energy Savings Valuation is selected.")

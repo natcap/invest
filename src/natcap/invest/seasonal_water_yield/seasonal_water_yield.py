@@ -17,7 +17,6 @@ from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 from . import seasonal_water_yield_core
 
@@ -30,9 +29,23 @@ MONTH_ID_TO_LABEL = [
     'nov', 'dec']
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["seasonal_water_yield"].model_title,
-    "pyname": MODEL_METADATA["seasonal_water_yield"].pyname,
-    "userguide": MODEL_METADATA["seasonal_water_yield"].userguide,
+    "model_id": "seasonal_water_yield",
+    "model_name": gettext("Seasonal Water Yield"),
+    "pyname": "natcap.invest.seasonal_water_yield.seasonal_water_yield",
+    "userguide": "seasonal_water_yield.html",
+    "aliases": ("swy",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['lulc_raster_path', 'biophysical_table_path'],
+            ['dem_raster_path', 'aoi_path'],
+            ['threshold_flow_accumulation', 'beta_i', 'gamma'],
+            ['user_defined_local_recharge', 'l_path', 'et0_dir', 'precip_dir', 'soil_group_path'],
+            ['monthly_alpha', 'alpha_m', 'monthly_alpha_path'],
+            ['user_defined_climate_zones', 'rain_events_table_path', 'climate_zone_table_path', 'climate_zone_raster_path'],
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_raster_path", "lulc_raster_path",
                          "soil_group_path", "aoi_path", "l_path",
@@ -59,6 +72,7 @@ MODEL_SPEC = {
                 },
             },
             "required": "not user_defined_local_recharge",
+            "allowed": "not user_defined_local_recharge",
             "about": gettext(
                 "Directory containing maps of reference evapotranspiration "
                 "for each month. Only .tif files should be in this folder "
@@ -79,6 +93,7 @@ MODEL_SPEC = {
                 },
             },
             "required": "not user_defined_local_recharge",
+            "allowed": "not user_defined_local_recharge",
             "about": gettext(
                 "Directory containing maps of monthly precipitation for each "
                 "month. Only .tif files should be in this folder (no .tfw, "
@@ -99,7 +114,8 @@ MODEL_SPEC = {
         "soil_group_path": {
             **spec_utils.SOIL_GROUP,
             "projected": True,
-            "required": "not user_defined_local_recharge"
+            "required": "not user_defined_local_recharge",
+            "allowed": "not user_defined_local_recharge"
         },
         "aoi_path": {
             **spec_utils.AOI,
@@ -156,6 +172,7 @@ MODEL_SPEC = {
             "required": (
                 "(not user_defined_local_recharge) & (not "
                 "user_defined_climate_zones)"),
+            "allowed": "not user_defined_climate_zones",
             "about": gettext(
                 "A table containing the number of rain events for each month. "
                 "Required if neither User-Defined Local Recharge nor User-"
@@ -165,6 +182,7 @@ MODEL_SPEC = {
         "alpha_m": {
             "type": "freestyle_string",
             "required": "not monthly_alpha",
+            "allowed": "not monthly_alpha",
             "about": gettext(
                 "The proportion of upslope annual available local recharge "
                 "that is available in each month. Required if Use Monthly "
@@ -199,6 +217,7 @@ MODEL_SPEC = {
                 "units": u.millimeter
             }},
             "required": "user_defined_local_recharge",
+            "allowed": "user_defined_local_recharge",
             "projected": True,
             "about": gettext(
                 "Map of local recharge data. Required if User-Defined Local "
@@ -232,6 +251,7 @@ MODEL_SPEC = {
                         "for each month.")}
             },
             "required": "user_defined_climate_zones",
+            "allowed": "user_defined_climate_zones",
             "about": gettext(
                 "Table of monthly precipitation events for each climate zone. "
                 "Required if User-Defined Climate Zones is selected."),
@@ -241,6 +261,7 @@ MODEL_SPEC = {
             "type": "raster",
             "bands": {1: {"type": "integer"}},
             "required": "user_defined_climate_zones",
+            "allowed": "user_defined_climate_zones",
             "projected": True,
             "about": gettext(
                 "Map of climate zones. All values in this raster must have "
@@ -272,6 +293,7 @@ MODEL_SPEC = {
                 }
             },
             "required": "monthly_alpha",
+            "allowed": "monthly_alpha",
             "about": gettext(
                 "Table of alpha values for each month. "
                 "Required if Use Monthly Alpha Table is selected."),

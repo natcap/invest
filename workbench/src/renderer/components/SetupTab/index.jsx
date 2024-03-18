@@ -19,6 +19,8 @@ import {
   archiveDatastack,
   fetchDatastackFromFile,
   fetchValidation,
+  fetchArgsEnabled,
+  getDynamicDropdowns,
   saveToPython,
   writeParametersToFile
 } from '../../server_requests';
@@ -85,6 +87,8 @@ class SetupTab extends React.Component {
     super(props);
     this._isMounted = false;
     this.validationTimer = null;
+    this.enabledTimer = null;
+    this.dropdownTimer = null;
 
     this.state = {
       argsValues: null,
@@ -103,13 +107,16 @@ class SetupTab extends React.Component {
     this.wrapInvestExecute = this.wrapInvestExecute.bind(this);
     this.investValidate = this.investValidate.bind(this);
     this.debouncedValidate = this.debouncedValidate.bind(this);
+    this.investArgsEnabled = this.investArgsEnabled.bind(this);
+    this.debouncedArgsEnabled = this.debouncedArgsEnabled.bind(this);
     this.updateArgTouched = this.updateArgTouched.bind(this);
     this.updateArgValues = this.updateArgValues.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
-    this.callUISpecFunctions = this.callUISpecFunctions.bind(this);
     this.browseForDatastack = this.browseForDatastack.bind(this);
     this.loadParametersFromFile = this.loadParametersFromFile.bind(this);
     this.triggerScrollEvent = this.triggerScrollEvent.bind(this);
+    this.callDropdownFunctions = this.callDropdownFunctions.bind(this);
+    this.debouncedDropdownFunctions = this.debouncedDropdownFunctions.bind(this);
   }
 
   componentDidMount() {
@@ -150,13 +157,15 @@ class SetupTab extends React.Component {
       argsDropdownOptions: argsDropdownOptions,
     }, () => {
       this.investValidate();
-      this.callUISpecFunctions();
+      this.investArgsEnabled();
     });
   }
 
   componentWillUnmount() {
     this._isMounted = false;
     clearTimeout(this.validationTimer);
+    clearTimeout(this.enabledTimer);
+    clearTimeout(this.dropdownTimer);
   }
 
   /**
@@ -170,38 +179,6 @@ class SetupTab extends React.Component {
     this.setState((prevState, props) => ({
       scrollEventCount: prevState.updateEvent + 1
     }));
-  }
-
-  /**
-   * Call functions from the UI spec to determine the enabled/disabled
-   * state and dropdown options for each input, if applicable.
-   *
-   * @returns {undefined}
-   */
-  async callUISpecFunctions() {
-    const { enabledFunctions, dropdownFunctions } = this.props.uiSpec;
-
-    if (enabledFunctions) {
-      // this model has some fields that are conditionally enabled
-      const { argsEnabled } = this.state;
-      Object.keys(enabledFunctions).forEach((key) => {
-        argsEnabled[key] = enabledFunctions[key](this.state);
-      });
-      if (this._isMounted) {
-        this.setState({ argsEnabled: argsEnabled });
-      }
-    }
-
-    if (dropdownFunctions) {
-      // this model has a dropdown that's dynamically populated
-      const { argsDropdownOptions } = this.state;
-      await Promise.all(Object.keys(dropdownFunctions).map(async (key) => {
-        argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
-      }));
-      if (this._isMounted) {
-        this.setState({ argsDropdownOptions: argsDropdownOptions });
-      }
-    }
   }
 
   /** Save the current invest arguments to a python script via datastack.py API.
@@ -360,13 +337,17 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgValues(key, value) {
+    const { uiSpec } = this.props;
     const { argsValues } = this.state;
     argsValues[key].value = value;
     this.setState({
       argsValues: argsValues,
     }, () => {
       this.debouncedValidate();
-      this.callUISpecFunctions();
+      this.debouncedArgsEnabled();
+      if (uiSpec.dropdown_functions) {
+        this.debouncedDropdownFunctions();
+      }
     });
   }
 
@@ -386,8 +367,69 @@ class SetupTab extends React.Component {
       argsDropdownOptions: argsDropdownOptions,
     }, () => {
       this.investValidate();
-      this.callUISpecFunctions();
+      this.investArgsEnabled();
     });
+  }
+
+  /** Get a debounced version of investArgsEnabled.
+   *
+   * The original function will not be called until after the
+   * debounced version stops being invoked for 200 milliseconds.
+   *
+   * @returns {undefined}
+   */
+  debouncedArgsEnabled() {
+    if (this.enabledTimer) {
+      clearTimeout(this.enabledTimer);
+    }
+    // we want this check to be very responsive,
+    // but also to wait for a pause in data entry.
+    this.enabledTimer = setTimeout(this.investArgsEnabled, 200);
+  }
+
+  /** Set the enabled/disabled status of args.
+   *
+   * @returns {undefined}
+   */
+  async investArgsEnabled() {
+    const { pyModuleName } = this.props;
+    const { argsValues } = this.state;
+
+    if (this._isMounted) {
+      this.setState({
+        argsEnabled: await fetchArgsEnabled({
+          model_module: pyModuleName,
+          args: JSON.stringify(argsDictFromObject(argsValues)),
+        }),
+      });
+    }
+  }
+
+  debouncedDropdownFunctions() {
+    if (this.dropdownTimer) {
+      clearTimeout(this.dropdownTimer);
+    }
+    // we want this check to be very responsive,
+    // but also to wait for a pause in data entry.
+    this.dropdownTimer = setTimeout(this.callDropdownFunctions, 200);
+  }
+
+  /** Call endpoint to get dynamically populated dropdown options.
+   *
+   * @returns {undefined}
+   */
+  async callDropdownFunctions() {
+    const { pyModuleName } = this.props;
+    const { argsValues, argsDropdownOptions } = this.state;
+    const payload = {
+      model_module: pyModuleName,
+      args: JSON.stringify(argsDictFromObject(argsValues)),
+    };
+    const results = await getDynamicDropdowns(payload);
+    Object.keys(results).forEach((argkey) => {
+      argsDropdownOptions[argkey] = results[argkey];
+    });
+    this.setState({ argsDropdownOptions: argsDropdownOptions });
   }
 
   /** Get a debounced version of investValidate.
@@ -602,8 +644,6 @@ SetupTab.propTypes = {
   ).isRequired,
   uiSpec: PropTypes.shape({
     order: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.string)).isRequired,
-    enabledFunctions: PropTypes.objectOf(PropTypes.func),
-    dropdownFunctions: PropTypes.objectOf(PropTypes.func),
   }).isRequired,
   argsInitValues: PropTypes.objectOf(PropTypes.oneOfType(
     [PropTypes.string, PropTypes.bool, PropTypes.number])),

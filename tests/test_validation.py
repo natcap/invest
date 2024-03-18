@@ -1966,3 +1966,31 @@ class TestValidationFromSpec(unittest.TestCase):
         patterns = validation.get_headers_to_validate(spec)
         # should only get the patterns that are static and always required
         self.assertEqual(sorted(patterns), ['a'])
+
+
+class TestArgsEnabled(unittest.TestCase):
+
+    def test_args_enabled(self):
+        """Validation: test getting args enabled/disabled status."""
+        from natcap.invest import validation
+        spec = {'args': {
+            'a': {},
+            'b': {'allowed': 'a'},
+            'c': {'allowed': 'not a'},
+            'd': {'allowed': 'b <= 3'}
+        }}
+        args = {
+            'a': 'foo',
+            'b': 2,
+            'c': 'bar',
+            'd': None
+        }
+        self.assertEqual(
+            validation.args_enabled(args, spec),
+            {
+                'a': True,
+                'b': True,
+                'c': False,
+                'd': True
+            }
+        )

@@ -107,7 +107,6 @@ from .. import utils
 from .. import spec_utils
 from ..unit_registry import u
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from .. import gettext
 
 
@@ -161,9 +160,19 @@ INTERMEDIATE_DIR_NAME = 'intermediate'
 OUTPUT_DIR_NAME = 'output'
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["coastal_blue_carbon"].model_title,
-    "pyname": MODEL_METADATA["coastal_blue_carbon"].pyname,
-    "userguide": MODEL_METADATA["coastal_blue_carbon"].userguide,
+    "model_id": "coastal_blue_carbon",
+    "model_name": gettext("Coastal Blue Carbon"),
+    "pyname": "natcap.invest.coastal_blue_carbon.coastal_blue_carbon",
+    "userguide": "coastal_blue_carbon.html",
+    "aliases": ("cbc",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['landcover_snapshot_csv', 'biophysical_table_path', 'landcover_transitions_table', 'analysis_year'],
+            ['do_economic_analysis', 'use_price_table', 'price', 'inflation_rate', 'price_table_path', 'discount_rate'],
+        ],
+        "hidden": ["n_workers"]
+    },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -362,6 +371,7 @@ MODEL_SPEC = {
             "name": gettext("use price table"),
             "type": "boolean",
             "required": False,
+            "allowed": "do_economic_analysis",
             "about": gettext(
                 "Use a yearly price table, rather than an initial "
                 "price and interest rate, to indicate carbon value over time."),
@@ -371,6 +381,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.currency/u.megatonne,
             "required": "do_economic_analysis and (not use_price_table)",
+            "allowed": "do_economic_analysis and not use_price_table",
             "about": gettext(
                 "The price of CO2E at the baseline year. Required if Do "
                 "Valuation is selected and Use Price Table is not selected."),
@@ -379,6 +390,7 @@ MODEL_SPEC = {
             "name": gettext("interest rate"),
             "type": "percent",
             "required": "do_economic_analysis and (not use_price_table)",
+            "allowed": "do_economic_analysis and not use_price_table",
             "about": gettext(
                 "Annual increase in the price of CO2E. Required if Do "
                 "Valuation is selected and Use Price Table is not selected.")
@@ -387,6 +399,7 @@ MODEL_SPEC = {
             "name": gettext("price table"),
             "type": "csv",
             "required": "use_price_table",
+            "allowed": "use_price_table",
             "index_col": "year",
             "columns": {
                 "year": {
@@ -408,6 +421,7 @@ MODEL_SPEC = {
             "name": gettext("discount rate"),
             "type": "percent",
             "required": "do_economic_analysis",
+            "allowed": "do_economic_analysis",
             "about": gettext(
                 "Annual discount rate on the price of carbon. This is "
                 "compounded each year after the baseline year. "

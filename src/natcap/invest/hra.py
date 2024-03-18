@@ -21,7 +21,6 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -50,9 +49,23 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["habitat_risk_assessment"].model_title,
-    "pyname": MODEL_METADATA["habitat_risk_assessment"].pyname,
-    "userguide": MODEL_METADATA["habitat_risk_assessment"].userguide,
+    "model_id": "habitat_risk_assessment",
+    "model_name": gettext("Habitat Risk Assessment"),
+    "pyname": "natcap.invest.hra",
+    "userguide": "habitat_risk_assessment.html",
+    "aliases": ("hra",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['info_table_path', 'criteria_table_path'],
+            ['resolution', 'max_rating'],
+            ['risk_eq', 'decay_eq'],
+            ['aoi_vector_path'],
+            ['n_overlapping_stressors'],
+            ['visualize_outputs']
+        ],
+        "hidden": ["n_workers"]
+    },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

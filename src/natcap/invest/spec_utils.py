@@ -1,6 +1,7 @@
 import importlib
 import json
 import os
+import types
 
 import pint
 
@@ -274,6 +275,8 @@ def serialize_args_spec(spec):
         # We don't need to worry about deserializing back to a set/array
         # so casting to string is okay.
         elif isinstance(obj, set):
+            return str(obj)
+        elif isinstance(obj, types.FunctionType):
             return str(obj)
         raise TypeError(f'fallback serializer is missing for {type(obj)}')
 
