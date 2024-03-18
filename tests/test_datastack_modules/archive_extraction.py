@@ -14,7 +14,11 @@ MODEL_SPEC = {
             'type': 'csv',
             'columns': {
                 'ID': {'type': 'integer'},
-                'path': {'type': {'raster', 'vector'}},
+                'path': {
+                    'type': {'raster', 'vector'},
+                    'geometries': {'POINT', 'POLYGON'},
+                    'bands': {1: {'type': 'number'}}
+                }
             }
         }
     }

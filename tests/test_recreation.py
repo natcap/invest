@@ -636,17 +636,6 @@ class RecreationRegressionTests(unittest.TestCase):
         """Delete workspace."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_data_missing_in_predictors(self):
-        """Recreation can validate if predictor data missing."""
-        from natcap.invest.recreation import recmodel_client
-
-        response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
-        table_path = os.path.join(
-            SAMPLE_DATA, 'predictors_data_missing.csv')
-
-        self.assertIsNotNone(recmodel_client._validate_same_projection(
-                response_vector_path, table_path))
-
     def test_data_different_projection(self):
         """Recreation can validate if data in different projection."""
         from natcap.invest.recreation import recmodel_client
@@ -654,21 +643,21 @@ class RecreationRegressionTests(unittest.TestCase):
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
         table_path = os.path.join(
             SAMPLE_DATA, 'predictors_wrong_projection.csv')
-
-        self.assertIsNotNone(recmodel_client._validate_same_projection(
-                response_vector_path, table_path))
+        msg = recmodel_client._validate_same_projection(
+                response_vector_path, table_path)
+        self.assertIn('did not match the projection', msg)
 
     def test_different_tables(self):
         """Recreation can validate if scenario ids different than predictor."""
         from natcap.invest.recreation import recmodel_client
 
         base_table_path = os.path.join(
-            SAMPLE_DATA, 'predictors_data_missing.csv')
+            SAMPLE_DATA, 'predictors_all.csv')
         scenario_table_path = os.path.join(
-            SAMPLE_DATA, 'predictors_wrong_projection.csv')
-        self.assertIsNotNone(
-            recmodel_client._validate_same_ids_and_types(
-                base_table_path, scenario_table_path))
+            SAMPLE_DATA, 'predictors.csv')
+        msg = recmodel_client._validate_same_ids_and_types(
+                base_table_path, scenario_table_path)
+        self.assertIn('table pairs unequal', msg)
 
     def test_delay_op(self):
         """Recreation coverage of delay op function."""
