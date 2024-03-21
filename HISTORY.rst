@@ -68,6 +68,11 @@ Unreleased Changes
       raster. ``nan`` pixels will now be propertly ignored before calculating
       mean depths along fetch rays.
       https://github.com/natcap/invest/issues/1528
+* Seasonal Water Yield
+    * Fixed an issue where the monthly quickflow values were being summed over
+      a block area and not summed pixelwise. This caused the quickflow 
+      output ``QF.tif`` to have malformed values.
+      https://github.com/natcap/invest/issues/1541
 * Urban Nature Access
     * Fixed a ``NameError`` that occurred when running the model using
       search radii defined per population group with an exponential search
