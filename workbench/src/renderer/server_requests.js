@@ -7,7 +7,6 @@ const HOSTNAME = 'http://127.0.0.1';
 const PREFIX = 'api';
 const CORE_PORT = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
 
-
 async function getPort(modelName) {
   let port;
   const type = await ipcRenderer.invoke(
@@ -28,11 +27,10 @@ async function getPort(modelName) {
 // response.json() doesn't say but is presumably also UTF-8
 // https://developer.mozilla.org/en-US/docs/Web/API/Body/json
 
-
 /**
  * Get the MODEL_SPEC dict from an invest model as a JSON.
  *
- * @param {string} payload - model name as given by `invest list`
+ * @param {string} modelName - model name as given by `invest list`
  * @returns {Promise} resolves object
  */
 export async function getSpec(modelName) {
@@ -59,7 +57,7 @@ export async function getSpec(modelName) {
  */
 export async function getDynamicDropdowns(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/dynamic_dropdowns`, {
+    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/dynamic_dropdowns`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },

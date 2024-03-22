@@ -64,12 +64,12 @@ class InvestTab extends React.Component {
     }
     try {
       const {
-        modelSpec, argsSpec, uiSpec,
-      } = await investGetSpec(job.modelRunName);
+        args, ui_spec, ...model_spec
+      } = await getSpec(job.modelRunName);
       this.setState({
-        modelSpec: modelSpec,
-        argsSpec: argsSpec,
-        uiSpec: uiSpec,
+        modelSpec: model_spec,
+        argsSpec: args,
+        uiSpec: ui_spec,
       }, () => { this.switchTabs('setup'); });
     } catch (error) {
       console.log(error);
