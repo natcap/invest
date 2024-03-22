@@ -12,6 +12,7 @@ import {
   getSpec,
   fetchValidation,
   fetchDatastackFromFile,
+  fetchArgsEnabled,
   getSupportedLanguages
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
@@ -22,11 +23,6 @@ import {
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import { removeIpcMainListeners } from '../../src/main/main';
 import { mockUISpec } from './utils';
-// It's quite a pain to dynamically mock a const from a module,
-// here we do it by importing as another object, then
-// we can overwrite the object we want to mock later
-// https://stackoverflow.com/questions/42977961/how-to-mock-an-exported-const-in-jest
-import * as uiConfig from '../../src/renderer/ui_config';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -55,21 +51,19 @@ const SAMPLE_SPEC = {
       type: 'csv',
     },
   },
+  ui_spec: {
+    order: [['workspace_dir', 'carbon_pools_path']],
+  },
 };
-
-// Because we mock UI_SPEC without using jest's API
-// we also need to reset it without jest's API.
-const { UI_SPEC } = uiConfig;
-afterEach(() => {
-  uiConfig.UI_SPEC = UI_SPEC;
-});
 
 describe('Various ways to open and close InVEST models', () => {
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
-    uiConfig.UI_SPEC = mockUISpec(SAMPLE_SPEC, MOCK_MODEL_RUN_NAME);
+    fetchArgsEnabled.mockResolvedValue({
+      workspace_dir: true, carbon_pools_path: true
+    });
   });
 
   afterEach(async () => {

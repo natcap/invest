@@ -1147,28 +1147,23 @@ def invest_validator(validate_func):
 
 
 def args_enabled(args, spec):
+    """Get enabled/disabled status of arg fields given their values and spec.
 
+    Args:
+        args (dict): Dict mapping arg keys to user-provided values
+        spec (dict): MODEL_SPEC dictionary
 
+    Returns:
+        Dictionary mapping each arg key to a boolean value - True if the
+        arg field should be enabled, False otherwise
+    """
     enabled = {}
-    sufficient_inputs = {}
-    for key in spec['args'].keys():
-        if key not in args or args[key] == '':
-            sufficient_inputs[key] = None
-        else:
-            sufficient_inputs[key] = args[key]
-
-    print(sufficient_inputs)
+    expression_values = {
+        arg_key: args.get(arg_key, False) for arg_key in spec['args'].keys()}
     for key, arg_spec in spec['args'].items():
-
         if 'allowed' in arg_spec:
-            print(key, arg_spec['allowed'])
-            enabled[key] = _evaluate_expression(
-                arg_spec['allowed'], sufficient_inputs)
+            enabled[key] = bool(_evaluate_expression(
+                arg_spec['allowed'], expression_values))
         else:
             enabled[key] = True
-
     return enabled
-
-
-
-

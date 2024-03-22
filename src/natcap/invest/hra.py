@@ -64,11 +64,7 @@ MODEL_SPEC = {
             ['n_overlapping_stressors'],
             ['visualize_outputs']
         ],
-        "hidden": ["n_workers"],
-        "forum_tag": 'hra',
-        "sampledata": {
-            "filename": "HabitatRiskAssess.zip"
-        }
+        "hidden": ["n_workers"]
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

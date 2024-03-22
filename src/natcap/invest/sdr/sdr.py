@@ -41,11 +41,7 @@ MODEL_SPEC = {
             ['watersheds_path', 'drainage_path'],
             ['threshold_flow_accumulation', 'k_param', 'sdr_max', 'ic_0_param', 'l_max']
         ],
-        "hidden": ["n_workers"],
-        "forum_tag": 'sdr',
-        "sampledata": {
-            "filename": "SDR.zip"
-        }
+        "hidden": ["n_workers"]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",

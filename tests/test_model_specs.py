@@ -68,11 +68,11 @@ class ValidateModelSpecs(unittest.TestCase):
                             {'spatial_keys', 'different_projections_ok'}))
 
                 self.assertIsInstance(model.MODEL_SPEC['ui_spec'], dict)
-                self.assertEqual(set(model.MODEL_SPEC['ui_spec'].keys()),
-                                 {'order', 'hidden'})
+                if 'dropdown_functions' in model.MODEL_SPEC['ui_spec']:
+                    self.assertIsInstance(
+                        model.MODEL_SPEC['ui_spec']['dropdown_functions'], dict)
                 self.assertIsInstance(model.MODEL_SPEC['ui_spec']['order'], list)
                 self.assertIsInstance(model.MODEL_SPEC['ui_spec']['hidden'], list)
-
                 found_keys = set()
                 for group in model.MODEL_SPEC['ui_spec']['order']:
                     self.assertIsInstance(group, list)

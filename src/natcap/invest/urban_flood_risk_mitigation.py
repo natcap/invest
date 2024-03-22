@@ -34,11 +34,7 @@ MODEL_SPEC = {
             ['lulc_path', 'curve_number_table_path', 'soils_hydrological_group_raster_path'],
             ['built_infrastructure_vector_path', 'infrastructure_damage_loss_table_path']
         ],
-        "hidden": ["n_workers"],
-        "forum_tag": 'urban-flood',
-        "sampledata": {
-            "filename": "UrbanFloodMitigation.zip"
-        }
+        "hidden": ["n_workers"]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_watersheds_path", "lulc_path",

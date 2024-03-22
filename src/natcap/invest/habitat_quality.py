@@ -38,11 +38,7 @@ MODEL_SPEC = {
             ['lulc_cur_path', 'lulc_fut_path', 'lulc_bas_path'],
             ['threats_table_path', 'access_vector_path', 'sensitivity_table_path', 'half_saturation_constant'],
         ],
-        "hidden": ["n_workers"],
-        "forum_tag": 'habitat-quality',
-        "sampledata": {
-            "filename": "HabitatQuality.zip"
-        }
+        "hidden": ["n_workers"]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": [
