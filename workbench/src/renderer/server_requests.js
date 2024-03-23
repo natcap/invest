@@ -7,16 +7,21 @@ const HOSTNAME = 'http://127.0.0.1';
 const PREFIX = 'api';
 const CORE_PORT = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
 
+/**
+ * Get the port number running the server to use for the given model.
+ *
+ * Server must already be started. If the model is a core invest model, the core
+ * port is returned. If a plugin, the port for that plugin's server is returned.
+ * @param {string} modelName - model name as given by `invest list`
+ * @returns {Promise} resolves object
+ */
 async function getPort(modelName) {
   let port;
-  const type = await ipcRenderer.invoke(
-    ipcMainChannels.GET_SETTING, `models.${modelName}.type`);
+  const type = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `models.${modelName}.type`);
   if (type === 'core') {
-    port = await ipcRenderer.invoke(
-      ipcMainChannels.GET_SETTING, 'core.port');
+    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
   } else {
-    port = await ipcRenderer.invoke(
-      ipcMainChannels.GET_SETTING, `models.${modelName}.port`);
+    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `models.${modelName}.port`);
   }
   return port;
 }
@@ -225,12 +230,11 @@ export function writeParametersToFile(payload) {
  * @returns {Promise} resolves object
  */
 export async function getSupportedLanguages() {
-  return { en: 'English' };
-  // return (
-  //   window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/languages`, {
-  //     method: 'get',
-  //   })
-  //     .then((response) => response.json())
-  //     .catch((error) => logger.error(error.stack))
-  // );
+  return (
+    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/languages`, {
+      method: 'get',
+    })
+      .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
 }
