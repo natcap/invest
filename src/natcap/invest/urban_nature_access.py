@@ -1866,8 +1866,10 @@ def _reclassify_urban_nature_area(
             urban_nature_area = squared_pixel_area * urban_nature_proportion
         urban_nature_area_map[lucode] = urban_nature_area
 
-    lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
-    urban_nature_area_map[lulc_raster_info['nodata'][0]] = FLOAT32_NODATA
+    lulc_raster_nodata = pygeoprocessing.get_raster_info(
+        lulc_raster_path)['nodata'][0]
+    if lulc_raster_nodata is not None:
+        urban_nature_area_map[lulc_raster_nodata] = FLOAT32_NODATA
 
     utils.reclassify_raster(
         raster_path_band=(lulc_raster_path, 1),

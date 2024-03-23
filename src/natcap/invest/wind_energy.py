@@ -141,7 +141,7 @@ MODEL_SPEC = {
             "type": "vector",
             "fields": {},
             "geometries": {"POLYGON", "MULTIPOLYGON"},
-            "required": "min_distance or max_distance or valuation_container",
+            "required": "min_distance | max_distance | valuation_container",
             "allowed": "aoi_vector_path",
             "about": gettext(
                 "Map of the coastlines of landmasses in the area of interest. "
@@ -365,7 +365,7 @@ MODEL_SPEC = {
                     "about": gettext("Longitude of the connection point.")
                 }
             },
-            "required": "valuation_container and (not avg_grid_distance)",
+            "required": "valuation_container & (not avg_grid_distance)",
             "allowed": "valuation_container",
             "about": gettext(
                 "Table of grid and land connection points to which cables "
@@ -377,7 +377,7 @@ MODEL_SPEC = {
             "expression": "value > 0",
             "type": "number",
             "units": u.kilometer,
-            "required": "valuation_container and (not grid_points_path)",
+            "required": "valuation_container & (not grid_points_path)",
             "allowed": "valuation_container",
             "about": gettext(
                 "Average distance to the onshore grid from coastal cable "
@@ -436,7 +436,7 @@ MODEL_SPEC = {
         },
         "rate_change": {
             "type": "ratio",
-            "required": "valuation_container and (not price_table)",
+            "required": "valuation_container & (not price_table)",
             "allowed": "valuation_container and not price_table",
             "about": gettext(
                 "The annual rate of change in the price of wind energy. "
