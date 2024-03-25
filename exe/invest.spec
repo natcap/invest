@@ -9,7 +9,8 @@ from PyInstaller.compat import is_win, is_darwin
 # Global Variables
 current_dir = os.getcwd()  # assume we're building from the project root
 block_cipher = None
-exename = 'invest'
+invest_exename = 'invest'
+jupyter_exename = 'jupyter'
 conda_env = os.environ['CONDA_PREFIX']
 
 if is_win:
@@ -38,8 +39,14 @@ kwargs = {
 cli_file = os.path.join(current_dir, 'src', 'natcap', 'invest', 'cli.py')
 a = Analysis([cli_file], **kwargs)
 
+jupyter_cli_file = os.path.join(conda_env, 'Scripts', 'jupyter-script.py')
+b = Analysis([jupyter_cli_file], pathex=sys.path, excludes=None)
+
+MERGE((a, 'invest', 'invest'), (b, 'jupyter', 'jupyter'))
+
 # Compress pyc and pyo Files into ZlibArchive Objects
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+a_pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+b_pyz = PYZ(b.pure, b.zipped_data, cipher=block_cipher)
 
 # Create the executable file.
 if is_darwin:
@@ -73,12 +80,23 @@ elif is_win:
         (os.path.join('rtree', os.path.basename(name)), name, "BINARY") for name in
         glob.glob(os.path.join(conda_env, 'Library', 'bin', 'spatialindex*.dll'))]
     # .exe extension is required if we're on windows.
-    exename += '.exe'
+    invest_exename += '.exe'
+    jupyter_exename += '.exe'
 
-exe = EXE(
-    pyz,
+a_exe = EXE(
+    a_pyz,
     a.scripts,
-    name=exename,
+    name=invest_exename,
+    exclude_binaries=True,
+    debug=False,
+    strip=False,
+    upx=False,
+    console=True)
+
+b_exe = EXE(
+    b_pyz,
+    b.scripts,
+    name=jupyter_exename,
     exclude_binaries=True,
     debug=False,
     strip=False,
@@ -87,10 +105,14 @@ exe = EXE(
 
 # Collect Files into Distributable Folder/File
 dist = COLLECT(
-    exe,
+    a_exe,
     a.binaries,
     a.zipfiles,
     a.datas,
+    b_exe,
+    b.binaries,
+    b.zipfiles,
+    b.datas,
     name="invest",  # name of the output folder
     strip=False,
     upx=False)
