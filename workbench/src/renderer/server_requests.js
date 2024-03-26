@@ -1,6 +1,30 @@
+import { ipcMainChannels } from '../main/ipcMainChannels';
+
+const { logger, LANGUAGE } = window.Workbench;
+const { ipcRenderer } = window.Workbench.electron;
+
 const HOSTNAME = 'http://127.0.0.1';
-const { logger, PORT, LANGUAGE } = window.Workbench;
 const PREFIX = 'api';
+const CORE_PORT = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
+
+/**
+ * Get the port number running the server to use for the given model.
+ *
+ * Server must already be started. If the model is a core invest model, the core
+ * port is returned. If a plugin, the port for that plugin's server is returned.
+ * @param {string} modelName - model name as given by `invest list`
+ * @returns {Promise} resolves object
+ */
+async function getPort(modelName) {
+  let port;
+  const type = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `models.${modelName}.type`);
+  if (type === 'core') {
+    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
+  } else {
+    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `models.${modelName}.port`);
+  }
+  return port;
+}
 
 // The Flask server sends UTF-8 encoded responses by default
 // response.text() always decodes the response using UTF-8
@@ -9,31 +33,17 @@ const PREFIX = 'api';
 // https://developer.mozilla.org/en-US/docs/Web/API/Body/json
 
 /**
- * Get the list of invest model names that can be passed to getSpec.
- *
- * @returns {Promise} resolves object
- */
-export async function getInvestModelNames() {
-  return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/models?language=${LANGUAGE}`, {
-      method: 'get',
-    })
-      .then((response) => response.json())
-      .catch((error) => { logger.error(`${error.stack}`); })
-  );
-}
-
-/**
  * Get the MODEL_SPEC dict from an invest model as a JSON.
  *
- * @param {string} payload - model name as given by `invest list`
+ * @param {string} modelName - model name as given by `invest list`
  * @returns {Promise} resolves object
  */
-export async function getSpec(payload) {
+export async function getSpec(modelName) {
+  const port = await getPort(modelName);
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/getspec?language=${LANGUAGE}`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/getspec?language=${LANGUAGE}`, {
       method: 'post',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(modelName),
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
@@ -52,7 +62,7 @@ export async function getSpec(payload) {
  */
 export async function getDynamicDropdowns(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/dynamic_dropdowns`, {
+    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/dynamic_dropdowns`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -72,8 +82,9 @@ export async function getDynamicDropdowns(payload) {
  * @returns {Promise} resolves object
  */
 export async function fetchArgsEnabled(payload) {
+  const port = await getPort(payload.modelId);
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/args_enabled`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/args_enabled`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -99,8 +110,9 @@ export async function fetchArgsEnabled(payload) {
  * @returns {Promise} resolves array
  */
 export async function fetchValidation(payload) {
+  const port = await getPort(payload.modelId);
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/validate?language=${LANGUAGE}`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/validate?language=${LANGUAGE}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -124,7 +136,7 @@ export async function fetchValidation(payload) {
  */
 export function fetchDatastackFromFile(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/post_datastack_file`, {
+    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/post_datastack_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -145,7 +157,7 @@ export function fetchDatastackFromFile(payload) {
  */
 export function saveToPython(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/save_to_python`, {
+    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/save_to_python`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -171,7 +183,7 @@ export function saveToPython(payload) {
  */
 export function archiveDatastack(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/build_datastack_archive`, {
+    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/build_datastack_archive`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -198,7 +210,7 @@ export function archiveDatastack(payload) {
  */
 export function writeParametersToFile(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/write_parameter_set_file`, {
+    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/write_parameter_set_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -219,7 +231,7 @@ export function writeParametersToFile(payload) {
  */
 export async function getSupportedLanguages() {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/languages`, {
+    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/languages`, {
       method: 'get',
     })
       .then((response) => response.json())

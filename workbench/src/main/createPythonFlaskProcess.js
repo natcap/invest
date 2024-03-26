@@ -1,11 +1,50 @@
 import { spawn, execSync } from 'child_process';
-
+import http from 'http';
 import fetch from 'node-fetch';
 
 import { getLogger } from './logger';
+import { settingsStore } from './settingsStore';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const HOSTNAME = 'http://127.0.0.1';
+
+// https://stackoverflow.com/a/71178451
+async function getFreePort() {
+  return new Promise((res) => {
+    const srv = http.createServer();
+    srv.listen(0, () => {
+      const { port } = srv.address();
+      srv.close(() => res(port));
+    });
+  });
+}
+
+/** Find out if the Flask server is online, waiting until it is.
+ *
+ * @param {number} i - the number or previous tries
+ * @param {number} retries - number of recursive calls this function is allowed.
+ * @returns { Promise } resolves text indicating success.
+ */
+export async function getFlaskIsReady(port, i = 0, retries = 41) {
+  try {
+    await fetch(`${HOSTNAME}:${port}/api/ready`, {
+      method: 'get',
+    });
+  } catch (error) {
+    if (error.code === 'ECONNREFUSED') {
+      while (i < retries) {
+        i++;
+        // Try every X ms, usually takes a couple seconds to startup.
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        logger.debug(`retry # ${i}`);
+        return getFlaskIsReady(port, i, retries);
+      }
+      logger.error(`Not able to connect to server after ${retries} tries.`);
+    }
+    logger.error(error);
+    throw error;
+  }
+}
 
 /**
  * Spawn a child process running the Python Flask app.
@@ -13,13 +52,43 @@ const HOSTNAME = 'http://127.0.0.1';
  * @param  {string} investExe - path to executeable that launches flask app.
  * @returns {ChildProcess} - a reference to the subprocess.
  */
-export function createPythonFlaskProcess(investExe) {
-  const pythonServerProcess = spawn(
-    investExe,
-    ['--debug', 'serve', '--port', process.env.PORT],
-    { shell: true } // necessary in dev mode & relying on a conda env
-  );
+export async function createPythonFlaskProcess(modelName) {
+  const port = await getFreePort();
+  let pythonServerProcess;
+  let path;
+  console.log(modelName, settingsStore.get(`models.${modelName}`));
+  if (modelName == undefined) {
 
+    logger.debug('creating invest core server process')
+    const investExe = settingsStore.get('investExe');
+    path = investExe;
+    pythonServerProcess = spawn(
+      investExe,
+      ['--debug', 'serve', '--port', port],
+      { shell: true } // necessary in dev mode & relying on a conda env
+    );
+    settingsStore.set(`core.port`, port);
+    settingsStore.set(`core.pid`, pythonServerProcess.pid);
+  } else if (settingsStore.get(`models.${modelName}.type`) == 'core') {
+    logger.info('core model');
+    return settingsStore.get('core.pid');
+  } else {
+    logger.debug('creating invest plugin server process')
+    const micromambaPath = 'micromamba'//settingsStore.get('micromamba_path');
+    const modelEnvPath = settingsStore.get(`models.${modelName}.env`);
+    path = modelEnvPath;
+    const args = [
+      'run', '--prefix', `"${modelEnvPath}"`,
+      'invest', '--debug', 'serve', '--port', port]
+    logger.debug('spawning command:', micromambaPath, args);
+    pythonServerProcess = spawn(
+      '"' + micromambaPath + '"',
+      args,
+      { shell: true } // necessary in dev mode & relying on a conda env
+    );
+    settingsStore.set(`models.${modelName}.port`, port);
+    settingsStore.set(`models.${modelName}.pid`, pythonServerProcess.pid);
+  }
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
   pythonServerProcess.stdout.on('data', (data) => {
     logger.debug(`${data}`);
@@ -30,7 +99,7 @@ export function createPythonFlaskProcess(investExe) {
   pythonServerProcess.on('error', (err) => {
     logger.error(err.stack);
     logger.error(
-      `The flask app ${investExe} crashed or failed to start
+      `The invest flask app at ${path} crashed or failed to start
        so this application must be restarted`
     );
     throw err;
@@ -42,37 +111,12 @@ export function createPythonFlaskProcess(investExe) {
     logger.debug(`Flask process exited with code ${code}`);
   });
   pythonServerProcess.on('disconnect', () => {
-    logger.debug(`Flask process disconnected`);
+    logger.debug('Flask process disconnected');
   });
 
-  return pythonServerProcess;
-}
-
-/** Find out if the Flask server is online, waiting until it is.
- *
- * @param {number} i - the number or previous tries
- * @param {number} retries - number of recursive calls this function is allowed.
- * @returns { Promise } resolves text indicating success.
- */
-export async function getFlaskIsReady({ i = 0, retries = 41 } = {}) {
-  try {
-    await fetch(`${HOSTNAME}:${process.env.PORT}/api/ready`, {
-      method: 'get',
-    });
-  } catch (error) {
-    if (error.code === 'ECONNREFUSED') {
-      while (i < retries) {
-        i++;
-        // Try every X ms, usually takes a couple seconds to startup.
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        logger.debug(`retry # ${i}`);
-        return getFlaskIsReady({ i: i, retries: retries });
-      }
-      logger.error(`Not able to connect to server after ${retries} tries.`);
-    }
-    logger.error(error);
-    throw error;
-  }
+  await getFlaskIsReady(port, 0, 500);
+  logger.info('flask is ready');
+  return pythonServerProcess.pid;
 }
 
 /**
@@ -81,13 +125,13 @@ export async function getFlaskIsReady({ i = 0, retries = 41 } = {}) {
  * @param {ChildProcess} subprocess - such as created by child_process.spawn
  * @returns {Promise}
  */
-export async function shutdownPythonProcess(subprocess) {
+export async function shutdownPythonProcess(pid) {
   // builtin kill() method on a nodejs ChildProcess doesn't work on windows.
   try {
     if (process.platform !== 'win32') {
-      subprocess.kill();
+      // the '-' prefix on pid sends signal to children as well
+      process.kill(-pid, 'SIGTERM');
     } else {
-      const { pid } = subprocess;
       execSync(`taskkill /pid ${pid} /t /f`);
     }
   } catch (error) {

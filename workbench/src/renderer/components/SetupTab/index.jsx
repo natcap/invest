@@ -188,12 +188,12 @@ class SetupTab extends React.Component {
    */
   async savePythonScript(filepath) {
     const {
-      modelName,
+      modelId,
     } = this.props;
     const args = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: filepath,
-      modelname: modelName,
+      modelname: modelId,
       args: JSON.stringify(args),
     };
     const response = await saveToPython(payload);
@@ -392,12 +392,13 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async investArgsEnabled() {
-    const { pyModuleName } = this.props;
+    const { pyModuleName, modelId } = this.props;
     const { argsValues } = this.state;
 
     if (this._isMounted) {
       this.setState({
         argsEnabled: await fetchArgsEnabled({
+          modelId: modelId,
           model_module: pyModuleName,
           args: JSON.stringify(argsDictFromObject(argsValues)),
         }),
@@ -453,10 +454,11 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async investValidate() {
-    const { argsSpec, pyModuleName } = this.props;
+    const { argsSpec, pyModuleName, modelId } = this.props;
     const { argsValues, argsValidation, argsValid } = this.state;
     const keyset = new Set(Object.keys(argsSpec));
     const payload = {
+      modelId: modelId,
       model_module: pyModuleName,
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
@@ -527,7 +529,7 @@ class SetupTab extends React.Component {
         sidebarFooterElementId,
         executeClicked,
         uiSpec,
-        modelName,
+        modelId,
       } = this.props;
 
       const SaveAlerts = [];
@@ -602,7 +604,7 @@ class SetupTab extends React.Component {
               </Button>
             </OverlayTrigger>
             <SaveAsModal
-              modelName={modelName}
+              modelName={modelId}
               savePythonScript={this.savePythonScript}
               saveJsonFile={this.saveJsonFile}
               saveDatastack={this.saveDatastack}
@@ -635,7 +637,7 @@ export default withTranslation()(SetupTab);
 SetupTab.propTypes = {
   pyModuleName: PropTypes.string.isRequired,
   userguide: PropTypes.string.isRequired,
-  modelName: PropTypes.string.isRequired,
+  modelId: PropTypes.string.isRequired,
   argsSpec: PropTypes.objectOf(
     PropTypes.shape({
       name: PropTypes.string,

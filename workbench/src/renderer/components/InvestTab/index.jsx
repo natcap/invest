@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import Spinner from 'react-bootstrap/Spinner';
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
@@ -40,6 +41,7 @@ class InvestTab extends React.Component {
       uiSpec: null,
       userTerminated: false,
       executeClicked: false,
+      tabStatus: '',
     };
 
     this.investExecute = this.investExecute.bind(this);
@@ -51,14 +53,29 @@ class InvestTab extends React.Component {
 
   async componentDidMount() {
     const { job } = this.props;
-    const {
-      args, ui_spec, ...modelSpec
-    } = await getSpec(job.modelRunName);
-    this.setState({
-      modelSpec: modelSpec,
-      argsSpec: args,
-      uiSpec: ui_spec,
-    }, () => { this.switchTabs('setup'); });
+    // start up the server for this model
+    const pid = await ipcRenderer.invoke(
+      ipcMainChannels.INVEST_SERVE,
+      job.modelRunName
+    );
+    if (pid === undefined) {
+      this.setState({ tabStatus: 'failed' });
+      return;
+    }
+    try {
+      const {
+        args, ui_spec, ...model_spec
+      } = await getSpec(job.modelRunName);
+      this.setState({
+        modelSpec: model_spec,
+        argsSpec: args,
+        uiSpec: ui_spec,
+      }, () => { this.switchTabs('setup'); });
+    } catch (error) {
+      console.log(error);
+      this.setState({ tabStatus: 'failed' });
+      return;
+    }
     const { tabID } = this.props;
     ipcRenderer.on(`invest-logging-${tabID}`, this.investLogfileCallback);
     ipcRenderer.on(`invest-exit-${tabID}`, this.investExitCallback);
@@ -169,6 +186,7 @@ class InvestTab extends React.Component {
       argsSpec,
       uiSpec,
       executeClicked,
+      tabStatus
     } = this.state;
     const {
       status,
@@ -179,9 +197,25 @@ class InvestTab extends React.Component {
 
     const { tabID, t } = this.props;
 
+    if (tabStatus === 'failed') {
+      return (
+        <div className="invest-tab-loading">
+          {t('Failed to launch plugin')}
+        </div>
+      );
+    }
+
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
-      return (<div />);
+      return (
+        <div className="invest-tab-loading">
+          <Spinner animation="border" role="status">
+            <span className="sr-only">Loading...</span>
+          </Spinner>
+          <br />
+          {t('Starting up model...')}
+        </div>
+      );
     }
 
     const logDisabled = !logfile;
@@ -246,7 +280,7 @@ class InvestTab extends React.Component {
                 <SetupTab
                   pyModuleName={modelSpec.pyname}
                   userguide={modelSpec.userguide}
-                  modelName={modelRunName}
+                  modelId={modelRunName}
                   argsSpec={argsSpec}
                   uiSpec={uiSpec}
                   argsInitValues={argsValues}

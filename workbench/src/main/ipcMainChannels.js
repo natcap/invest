@@ -1,4 +1,5 @@
 export const ipcMainChannels = {
+  ADD_PLUGIN: 'add-plugin',
   CHANGE_LANGUAGE: 'change-language',
   CHECK_FILE_PERMISSIONS: 'check-file-permissions',
   CHECK_STORAGE_TOKEN: 'check-storage-token',
@@ -10,6 +11,7 @@ export const ipcMainChannels = {
   INVEST_KILL: 'invest-kill',
   INVEST_READ_LOG: 'invest-read-log',
   INVEST_RUN: 'invest-run',
+  INVEST_SERVE: 'invest-serve',
   INVEST_VERSION: 'invest-version',
   IS_FIRST_RUN: 'is-first-run',
   LOGGER: 'logger',
