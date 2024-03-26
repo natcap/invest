@@ -17,14 +17,9 @@ const { logger } = window.Workbench;
  * Render a button that loads args from a datastack, parameterset, or logfile.
  * Opens a native OS filesystem dialog to browse to a file.
  */
-class OpenButton extends React.Component {
-  constructor(props) {
-    super(props);
-    this.browseFile = this.browseFile.bind(this);
-  }
-
-  async browseFile() {
-    const { t } = this.props;
+function OpenButton({className, openInvestModel, batchUpdateArgs}) {
+  async function browseFile() {
+    const t = t;
     const data = await ipcRenderer.invoke(ipcMainChannels.SHOW_OPEN_DIALOG);
     if (!data.canceled) {
       let datastack;
@@ -45,12 +40,12 @@ class OpenButton extends React.Component {
         modelHumanName: datastack.model_human_name,
         argsValues: datastack.args,
       });
-      this.props.openInvestModel(job);
+      openInvestModel(job);
     }
   }
 
   render() {
-    const { t } = this.props;
+    const t = t;
     const tipText = t('Browse to a datastack (.json) or InVEST logfile (.txt)');
     return (
       <OverlayTrigger
@@ -59,7 +54,7 @@ class OpenButton extends React.Component {
         overlay={<Tooltip>{tipText}</Tooltip>}
       >
         <Button
-          className={this.props.className}
+          className={className}
           onClick={this.browseFile}
           variant="outline-dark"
         >
