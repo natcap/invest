@@ -12,7 +12,6 @@ export default function setupAddPlugin() {
     ipcMainChannels.ADD_PLUGIN,
     (e, pluginURL) => {
       logger.info('adding plugin at', pluginURL);
-      // store.set('language', languageCode);
       const pluginsPath = upath.join(app.getPath('userData'), 'plugins');
       const configPath = upath.join(app.getPath('userData'), 'config.json');
       logger.info(pluginsPath);

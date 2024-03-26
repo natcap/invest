@@ -28,7 +28,6 @@ import { dragOverHandlerNone } from './utils';
 const { ipcRenderer } = window.Workbench.electron;
 import { ipcMainChannels } from '../main/ipcMainChannels';
 
-
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
  */

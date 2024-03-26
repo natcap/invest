@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 
 import Form from 'react-bootstrap/Form';
@@ -12,7 +12,7 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Modal from 'react-bootstrap/Modal';
 import { useTranslation } from 'react-i18next';
-import { MdOutlineAdd } from "react-icons/md";
+import { MdOutlineAdd } from 'react-icons/md';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import OpenButton from '../OpenButton';
@@ -129,7 +129,7 @@ HomeTab.propTypes = {
  */
 function RecentInvestJobs(props) {
   const { recentJobs, openInvestModel } = props;
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const handleClick = (jobMetadata) => {
     try {
@@ -142,12 +142,10 @@ function RecentInvestJobs(props) {
   const recentButtons = [];
   recentJobs.forEach((job) => {
     if (job && job.argsValues && job.modelHumanName) {
-      let badge = <></>;
-      const modelType = ipcRenderer.sendSync(
-        ipcMainChannels.GET_SETTING, `models.${job.modelRunName}.type`)
-      console.log('model type:', modelType)
+      let badge;
+      const modelType = ipcRenderer.sendSync(ipcMainChannels.GET_SETTING, `models.${job.modelRunName}.type`);
       if (modelType === 'plugin') {
-        badge = <Badge className="mr-1" variant="secondary" >Plugin</Badge>
+        badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
       }
       recentButtons.push(
         <Card
@@ -210,9 +208,7 @@ function RecentInvestJobs(props) {
           </Col>
         </Row>
       </Container>
-      <React.Fragment>
-        {recentButtons}
-      </React.Fragment>
+      {recentButtons}
     </>
   );
 }
@@ -230,7 +226,6 @@ RecentInvestJobs.propTypes = {
   openInvestModel: PropTypes.func.isRequired,
 };
 
-
 function PluginModal(props) {
   const { updateInvestList } = props;
   const [showAddPluginModal, setShowAddPluginModal] = useState(false);
@@ -239,52 +234,49 @@ function PluginModal(props) {
 
   const handleAboutClose = () => setShowAddPluginModal(false);
   const handleAboutOpen = () => setShowAddPluginModal(true);
-  const handleSubmit = (event) => {
-    console.log('add plugin', url);
+  const handleSubmit = () => {
     setLoading(true);
-    ipcRenderer.invoke(
-      ipcMainChannels.ADD_PLUGIN, url
-    ).then((result) => {
+    ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, url).then(() => {
       setLoading(false);
       setShowAddPluginModal(false);
-      console.log(result);
       updateInvestList();
-    })
-  }
+    });
+  };
   const handleChange = (event) => {
     setURL(event.currentTarget.value);
-  }
+  };
 
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   return (
     <React.Fragment>
       <Button onClick={handleAboutOpen}>
         <MdOutlineAdd className="mr-1" />
-        {'Add a plugin'}
+        {t('Add a plugin')}
       </Button>
 
       <Modal show={showAddPluginModal} onHide={handleAboutClose}>
         <Modal.Header>
           <Modal.Title>{t('Add a plugin')}</Modal.Title>
         </Modal.Header>
-        {loading &&
+        {loading && (
           <Spinner animation="border" role="status">
             <span className="sr-only">Loading...</span>
           </Spinner>
-        }
+        )}
         <Modal.Body>
           <Form>
             <Form.Group className="mb-3" controlId="formBasicEmail">
               <Form.Label>Git URL</Form.Label>
               <Form.Control
                 type="text"
-                placeholder="Enter Git URL"
-                onChange={handleChange}/>
+                placeholder={t('Enter Git URL')}
+                onChange={handleChange}
+              />
             </Form.Group>
 
             <Button onClick={handleSubmit}>
-              Add
+              {t('Add')}
             </Button>
           </Form>
         </Modal.Body>
@@ -294,4 +286,5 @@ function PluginModal(props) {
 }
 
 PluginModal.propTypes = {
+  updateInvestList: PropTypes.func.isRequired,
 };

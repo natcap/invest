@@ -51,8 +51,7 @@ class DataDownloadModal extends React.Component {
     let filesizes;
     try {
       const response = await window.fetch(
-        `${baseURL}/registry.json`,
-        { signal: this.signal, method: 'get' }
+        `${baseURL}/registry.json`, { signal: this.signal, method: 'get' }
       );
       filesizes = await response.json();
     } catch (error) {
