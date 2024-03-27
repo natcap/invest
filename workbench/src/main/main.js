@@ -82,7 +82,7 @@ export const createWindow = async () => {
   });
   splashScreen.loadURL(path.join(BASE_URL, 'splash.html'));
 
-  const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
+  const [investExe, jupyterExe] = findInvestBinaries(ELECTRON_DEV_MODE);
   flaskSubprocess = createPythonFlaskProcess(investExe);
   setupDialogs();
   setupCheckFilePermissions();

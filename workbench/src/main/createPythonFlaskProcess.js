@@ -7,6 +7,47 @@ import { getLogger } from './logger';
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const HOSTNAME = 'http://127.0.0.1';
 
+
+function launchSubprocess(exe, args, opts) {
+  const subprocess = spawn(exe, args, opts);
+
+  logger.debug(`Started python process as PID ${subprocess.pid}`);
+  subprocess.stdout.on('data', (data) => {
+    logger.debug(`${data}`);
+  });
+  subprocess.stderr.on('data', (data) => {
+    logger.debug(`${data}`);
+  });
+  subprocess.on('error', (err) => {
+    logger.error(err.stack);
+    logger.error(
+      `${exe} crashed or failed to start
+       so this application must be restarted`
+    );
+    throw err;
+  });
+  subprocess.on('close', (code, signal) => {
+    logger.debug(`process closed with code ${code} and signal ${signal}`);
+  });
+  subprocess.on('exit', (code) => {
+    logger.debug(`process exited with code ${code}`);
+  });
+  subprocess.on('disconnect', () => {
+    logger.debug(`process disconnected`);
+  });
+
+  return subprocess;
+}
+
+export function createJupyterProcess(jupyterExe) {
+  const subprocess = launchSubprocess(
+    jupyterExe,
+    ['--no-browser', '--port', process.env.PORT],
+    { shell: true } // necessary in dev mode & relying on a conda env
+  );
+  return subprocess;
+}
+
 /**
  * Spawn a child process running the Python Flask app.
  *
@@ -14,38 +55,44 @@ const HOSTNAME = 'http://127.0.0.1';
  * @returns {ChildProcess} - a reference to the subprocess.
  */
 export function createPythonFlaskProcess(investExe) {
-  const pythonServerProcess = spawn(
+  const subprocess = launchSubprocess(
     investExe,
     ['--debug', 'serve', '--port', process.env.PORT],
     { shell: true } // necessary in dev mode & relying on a conda env
   );
+  return subprocess;
+  // const pythonServerProcess = spawn(
+  //   investExe,
+  //   ['--debug', 'serve', '--port', process.env.PORT],
+  //   { shell: true } // necessary in dev mode & relying on a conda env
+  // );
 
-  logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
-  pythonServerProcess.stdout.on('data', (data) => {
-    logger.debug(`${data}`);
-  });
-  pythonServerProcess.stderr.on('data', (data) => {
-    logger.debug(`${data}`);
-  });
-  pythonServerProcess.on('error', (err) => {
-    logger.error(err.stack);
-    logger.error(
-      `The flask app ${investExe} crashed or failed to start
-       so this application must be restarted`
-    );
-    throw err;
-  });
-  pythonServerProcess.on('close', (code, signal) => {
-    logger.debug(`Flask process closed with code ${code} and signal ${signal}`);
-  });
-  pythonServerProcess.on('exit', (code) => {
-    logger.debug(`Flask process exited with code ${code}`);
-  });
-  pythonServerProcess.on('disconnect', () => {
-    logger.debug(`Flask process disconnected`);
-  });
+  // logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
+  // pythonServerProcess.stdout.on('data', (data) => {
+  //   logger.debug(`${data}`);
+  // });
+  // pythonServerProcess.stderr.on('data', (data) => {
+  //   logger.debug(`${data}`);
+  // });
+  // pythonServerProcess.on('error', (err) => {
+  //   logger.error(err.stack);
+  //   logger.error(
+  //     `The flask app ${investExe} crashed or failed to start
+  //      so this application must be restarted`
+  //   );
+  //   throw err;
+  // });
+  // pythonServerProcess.on('close', (code, signal) => {
+  //   logger.debug(`Flask process closed with code ${code} and signal ${signal}`);
+  // });
+  // pythonServerProcess.on('exit', (code) => {
+  //   logger.debug(`Flask process exited with code ${code}`);
+  // });
+  // pythonServerProcess.on('disconnect', () => {
+  //   logger.debug(`Flask process disconnected`);
+  // });
 
-  return pythonServerProcess;
+  // return pythonServerProcess;
 }
 
 /** Find out if the Flask server is online, waiting until it is.

@@ -5,6 +5,11 @@ import { app, BrowserWindow } from 'electron'; // eslint-disable-line import/no-
 import setupContextMenu from './setupContextMenu';
 import BASE_URL from './baseUrl';
 import { getLogger } from './logger';
+import {
+  createJupyterProcess,
+  shutdownPythonProcess
+} from './createPythonFlaskProcess';
+import findInvestBinaries from './findInvestBinaries';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -106,6 +111,10 @@ export default function menuTemplate(parentWindow, isDevMode, i18n) {
           label: i18n.t('Report a problem'),
           click: () => openReportWindow(parentWindow, isDevMode),
         },
+        {
+          label: i18n.t('Open Notebook'),
+          click: () => openJupyterLab(parentWindow, isDevMode),
+        }
       ],
     },
   ];
@@ -132,6 +141,17 @@ function createWindow(parentWindow, isDevMode) {
     win.webContents.openDevTools();
   }
   return win;
+}
+
+function openJupyterLab(parentWindow, isDevMode) {
+  const [investExe, jupyterExe] = findInvestBinaries(isDevMode);
+  const subprocess = createJupyterProcess(jupyterExe);
+  const child = createWindow(parentWindow, isDevMode);
+  child.loadURL('http://localhost:8888/?token=abcdef');
+  child.on('close', async (event) => {
+    await shutdownPythonProcess(subprocess);
+  });
+  // TODO: what if entire app is quit instead of this window closing first
 }
 
 function openAboutWindow(parentWindow, isDevMode) {
