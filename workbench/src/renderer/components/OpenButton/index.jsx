@@ -32,11 +32,8 @@ class OpenButton extends React.Component {
         datastack = await fetchDatastackFromFile({ filepath: data.filePaths[0] });
       } catch (error) {
         logger.error(error);
-        alert(
-          t(
-            'No InVEST model data can be parsed from the file:\n {{filepath}}',
-            { filepath: data.filePaths[0] }
-          )
+        alert( // eslint-disable-line no-alert
+          `${t('No InVEST model data can be parsed from the file:')}\n${data.filePaths[0]}`
         );
         return;
       }

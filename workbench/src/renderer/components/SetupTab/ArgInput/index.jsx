@@ -73,6 +73,21 @@ FormLabel.propTypes = {
 
 function Feedback(props) {
   const { argkey, argtype, message } = props;
+  const { t } = useTranslation();
+  const argTypeDisplayNames = {
+    boolean: t('boolean'),
+    integer: t('integer'),
+    csv: t('csv'),
+    directory: t('directory'),
+    file: t('file'),
+    freestyle_string: t('freestyle_string'),
+    number: t('number'),
+    option_string: t('option_string'),
+    percent: t('percent'),
+    raster: t('raster'),
+    ratio: t('ratio'),
+    vector: t('vector'),
+  };
   return (
     // d-block class is needed because of a bootstrap bug
     // https://github.com/twbs/bootstrap/issues/29439
@@ -81,7 +96,7 @@ function Feedback(props) {
       type="invalid"
       id={`${argkey}-feedback`}
     >
-      {`${i18n.t(argtype)} : ${(message)}`}
+      {`${argTypeDisplayNames[argtype]} : ${(message)}`}
     </Form.Control.Feedback>
   );
 }
@@ -147,7 +162,23 @@ export default function ArgInput(props) {
   } = props;
   let { validationMessage } = props;
 
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+
+  // Some types benefit from more descriptive placeholder text.
+  const argTypeDisplayNames = {
+    boolean: t('boolean'),
+    integer: t('integer'),
+    csv: t('csv'),
+    directory: t('directory'),
+    file: t('file'),
+    freestyle_string: t('text'),
+    number: t('number'),
+    option_string: t('option_string'),
+    percent: t('percent: a number from 0 - 100'),
+    raster: t('raster'),
+    ratio: t('ratio: a decimal from 0 - 1'),
+    vector: t('vector'),
+  };
 
   // Occasionaly we want to force a scroll to the end of input fields
   // so that the most important part of a filepath is visible.
@@ -206,22 +237,6 @@ export default function ArgInput(props) {
     );
   }
 
-  // These types benefit from more descriptive placeholder text.
-  let placeholderText;
-  switch (argSpec.type) {
-    case 'freestyle_string':
-      placeholderText = t('text');
-      break;
-    case 'percent':
-      placeholderText = t('percent: a number from 0 - 100');
-      break;
-    case 'ratio':
-      placeholderText = t('ratio: a decimal from 0 - 1');
-      break;
-    default:
-      placeholderText = t(argSpec.type);
-  }
-
   let form;
   if (argSpec.type === 'boolean') {
     form = (
@@ -266,7 +281,7 @@ export default function ArgInput(props) {
           id={argkey}
           name={argkey}
           type="text"
-          placeholder={placeholderText}
+          placeholder={argTypeDisplayNames[argSpec.type]}
           value={value || ''} // empty string is handled better than `undefined`
           onChange={handleChange}
           onFocus={handleFocus}
