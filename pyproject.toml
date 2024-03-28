@@ -78,4 +78,4 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 # raise warnings to errors, except for deprecation warnings
-filterwarnings = ["error", "default::DeprecationWarning"]
+filterwarnings = ["error", "default::DeprecationWarning", "default::FutureWarning"]
