@@ -93,7 +93,7 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           python-version: ${{ matrix.python-version }}
-          requirements-files: requirements.txt requirements-dev.txt constraints-test.txt
+          requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
           requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
       - name: Download previous conda environment.yml
