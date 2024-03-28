@@ -1,0 +1,5 @@
+# This file contains package constraints needed to run the invest test suite
+
+# A gdal bug caused our test suite to fail, but this issue is unlikely to
+# occur with regular use of invest. https://github.com/OSGeo/gdal/issues/8497
+GDAL!=3.6.*,!=3.7.*
