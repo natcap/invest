@@ -134,7 +134,7 @@ function DataDownloadModal(props) {
     }
     setAllDataCheck(false);
     // setSelectedLinksArray(selectedLinksArray);
-    setModelCheckBoxState(modelCheckBoxState);
+    setModelCheckBoxState(modelCheckBoxDict);
   }
 
   function closeDialog() {
