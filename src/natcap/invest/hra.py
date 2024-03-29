@@ -70,7 +70,7 @@ MODEL_SPEC = {
                         "names must match the habitat and stressor names in "
                         "the Criteria Scores Table.")},
                 "path": {
-                    "type": {"vector", "raster"},
+                    "type": {"raster", "vector"},
                     "bands": {1: {
                         "type": "number",
                         "units": u.none,
@@ -80,13 +80,13 @@ MODEL_SPEC = {
                             "values besides 0 or 1 will be treated as 0.")
                     }},
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec_utils.ALL_GEOMS,
                     "about": gettext(
                         "Map of where the habitat or stressor exists. For "
                         "rasters, a pixel value of 1 indicates presence of "
                         "the habitat or stressor. 0 (or any other value) "
                         "indicates absence of the habitat or stressor. For "
-                        "vectors, a polygon indicates an area where the "
+                        "vectors, a geometry indicates an area where the "
                         "habitat or stressor is present.")
                 },
                 "type": {
@@ -1785,6 +1785,8 @@ def _parse_info_table(info_table_path):
     except ValueError as err:
         if 'Index has duplicate keys' in str(err):
             raise ValueError("Habitat and stressor names may not overlap.")
+        else:
+            raise err
 
     table = table.rename(columns={'stressor buffer (meters)': 'buffer'})
 

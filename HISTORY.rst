@@ -39,6 +39,9 @@
 Unreleased Changes
 ------------------
 * General
+    * Validation now covers file paths contained in CSVs. CSV validation
+      will fail if the files listed in a CSV fail to validate.
+      https://github.com/natcap/invest/issues/327
     * We have updated validation in several ways that will improve the
       developer experience of working with InVEST models, and we hope will also
       improve the user experience:
