@@ -23,35 +23,32 @@ const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.
 const DEFAULT_FILESIZE = 0;
 
 /** Render a dialog with a form for configuring global invest settings */
-class DataDownloadModal extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      allDataCheck: true,
-      allLinksArray: [],
-      selectedLinksArray: [],
-      modelCheckBoxState: {},
-      dataRegistry: null,
-      baseURL: BASE_URL,
-      alertPath: '',
-    };
+function DataDownloadModal(props) {
+  const [allDataCheck, setAllDataCheck] = React.useState(true);
+  const [allLinksArray, setAllLinksArray] = React.useState([]);
+  const [selectedLinksArray, setSelectedLinksArray] = React.useState([]);
+  const [modelCheckBoxState, setModelCheckBoxState] = React.useState({});
+  const [dataRegistry, setDataRegistry] = React.useState(null);
+  const [baseURL, setBaseURL] = React.useState(BASE_URL);
+  const [alertPath, setAlertPath] = React.useState('');
+  const controller = new AbortController();
+  const signal = controller.signal;
 
-    this.handleSubmit = this.handleSubmit.bind(this);
-    this.handleCheckAll = this.handleCheckAll.bind(this);
-    this.handleCheckList = this.handleCheckList.bind(this);
-    this.closeDialog = this.closeDialog.bind(this);
-    this.controller = new AbortController();
-    this.signal = this.controller.signal;
-  }
+  React.useEffect(() => {
+    componentMountFunc();
+    return () => {
+      controller.abort();
+    }
+  }, [])
 
-  async componentDidMount() {
+  async function componentMountFunc() {
     const registry = JSON.parse(JSON.stringify(sampledataRegistry));
     const tokenURL = await ipcRenderer.invoke(ipcMainChannels.CHECK_STORAGE_TOKEN);
     const baseURL = tokenURL || BASE_URL;
     let filesizes;
     try {
       const response = await window.fetch(
-        `${baseURL}/registry.json`, { signal: this.signal, method: 'get' }
+        `${baseURL}/registry.json`, { signal: signal, method: 'get' }
       );
       filesizes = await response.json();
     } catch (error) {
@@ -64,10 +61,10 @@ class DataDownloadModal extends React.Component {
     }
 
     const linksArray = [];
-    const modelCheckBoxState = {};
+    const modelCheckBoxDict = {};
     Object.entries(registry).forEach(([modelName, data]) => {
       linksArray.push(`${baseURL}/${data.filename}`);
-      modelCheckBoxState[modelName] = true;
+      modelCheckBoxDict[modelName] = true;
       try {
         registry[modelName].filesize = filesizes[data.filename];
       } catch {
@@ -75,20 +72,14 @@ class DataDownloadModal extends React.Component {
       }
     });
 
-    this.setState({
-      allLinksArray: linksArray,
-      selectedLinksArray: linksArray,
-      modelCheckBoxState: modelCheckBoxState,
-      dataRegistry: registry,
-      baseURL: baseURL,
-    });
+    setAllLinksArray(linksArray);
+    setSelectedLinksArray(linksArray);
+    setModelCheckBoxState(modelCheckBoxDict);
+    setDataRegistry(registry);
+    setBaseURL(baseURL);
   }
 
-  componentWillUnmount() {
-    this.controller.abort();
-  }
-
-  async handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     // even though the idea is to save files, here we just want to chooose
     // a directory, so must use OpenDialog.
@@ -101,24 +92,20 @@ class DataDownloadModal extends React.Component {
         ipcMainChannels.CHECK_FILE_PERMISSIONS, data.filePaths[0]
       );
       if (!writable) {
-        this.setState({ alertPath: data.filePaths[0] });
+        setAlertPath(data.filePaths[0]);
       } else {
-        this.setState({ alertPath: '' });
+        setAlertPath('');
         ipcRenderer.send(
           ipcMainChannels.DOWNLOAD_URL,
-          this.state.selectedLinksArray,
+          selectedLinksArray,
           data.filePaths[0]
         );
-        this.closeDialog();
+        closeDialog();
       }
     }
   }
 
-  handleCheckAll(event) {
-    const {
-      modelCheckBoxState,
-      allLinksArray,
-    } = this.state;
+  function handleCheckAll(event) {
     const newCheckList = Object.fromEntries(
       Object.entries(modelCheckBoxState).map(
         ([k, v]) => [k, event.currentTarget.checked]
@@ -130,153 +117,137 @@ class DataDownloadModal extends React.Component {
     } else {
       selectedLinks = [];
     }
-    this.setState({
-      allDataCheck: event.currentTarget.checked,
-      modelCheckBoxState: newCheckList,
-      selectedLinksArray: selectedLinks,
-    });
+    setAllDataCheck(event.currentTarget.checked);
+    setModelCheckBoxState(newCheckList);
+    setSelectedLinksArray(selectedLinks);
   }
 
-  handleCheckList(event, modelName) {
-    let {
-      selectedLinksArray,
-      modelCheckBoxState,
-      dataRegistry,
-      baseURL,
-    } = this.state;
+  function handleCheckList(event, modelName) {
+    const modelCheckBoxDict = modelCheckBoxState;
     const url = `${baseURL}/${dataRegistry[modelName].filename}`;
     if (event.currentTarget.checked) {
-      selectedLinksArray.push(url);
-      modelCheckBoxState[modelName] = true;
+      setSelectedLinksArray(selectedLinksArray => selectedLinksArray.push(url));
+      modelCheckBoxDict[modelName] = true;
     } else {
-      selectedLinksArray = selectedLinksArray.filter((val) => val !== url);
-      modelCheckBoxState[modelName] = false;
+      setSelectedLinksArray(selectedLinksArray => selectedLinksArray.filter((val) => val !== url));
+      modelCheckBoxDict[modelName] = false;
     }
-    this.setState({
-      allDataCheck: false,
-      selectedLinksArray: selectedLinksArray,
-      modelCheckBoxState: modelCheckBoxState,
+    setAllDataCheck(false);
+    // setSelectedLinksArray(selectedLinksArray);
+    setModelCheckBoxState(modelCheckBoxState);
+  }
+
+  function closeDialog() {
+    setAlertPath('');
+    props.closeModal();
+  }
+
+  const { t } = props;
+  // Don't render until registry is loaded, since it loads async
+  if (!dataRegistry) { return <div />; }
+
+  const downloadEnabled = Boolean(selectedLinksArray.length);
+  const DatasetCheckboxRows = [];
+  Object.keys(modelCheckBoxState)
+    .forEach((modelName) => {
+      const filesize = parseFloat(dataRegistry[modelName].filesize);
+      const filesizeStr = `${(filesize / 1000000).toFixed(2)} MB`;
+      const note = dataRegistry[modelName].note || '';
+      DatasetCheckboxRows.push(
+        <tr key={modelName}>
+          <td>
+            <Form.Check
+              className="pt-1"
+              id={modelName}
+            >
+              <Form.Check.Input
+                type="checkbox"
+                checked={modelCheckBoxState[modelName]}
+                onChange={(event) => handleCheckList(
+                  event, modelName
+                )}
+              />
+              <Form.Check.Label>
+                {modelName}
+              </Form.Check.Label>
+            </Form.Check>
+          </td>
+          <td><em>{note}</em></td>
+          <td>{filesizeStr}</td>
+        </tr>
+      );
     });
-  }
 
-  closeDialog() {
-    this.setState({ alertPath: '' });
-    this.props.closeModal();
-  }
-
-  render() {
-    const {
-      modelCheckBoxState,
-      selectedLinksArray,
-      dataRegistry,
-    } = this.state;
-    const { t } = this.props;
-    // Don't render until registry is loaded, since it loads async
-    if (!dataRegistry) { return <div />; }
-
-    const downloadEnabled = Boolean(selectedLinksArray.length);
-    const DatasetCheckboxRows = [];
-    Object.keys(modelCheckBoxState)
-      .forEach((modelName) => {
-        const filesize = parseFloat(dataRegistry[modelName].filesize);
-        const filesizeStr = `${(filesize / 1000000).toFixed(2)} MB`;
-        const note = dataRegistry[modelName].note || '';
-        DatasetCheckboxRows.push(
-          <tr key={modelName}>
-            <td>
-              <Form.Check
-                className="pt-1"
-                id={modelName}
-              >
-                <Form.Check.Input
-                  type="checkbox"
-                  checked={modelCheckBoxState[modelName]}
-                  onChange={(event) => this.handleCheckList(
-                    event, modelName
-                  )}
-                />
-                <Form.Check.Label>
-                  {modelName}
-                </Form.Check.Label>
-              </Form.Check>
-            </td>
-            <td><em>{note}</em></td>
-            <td>{filesizeStr}</td>
-          </tr>
-        );
-      });
-
-    return (
-      <Modal className="download-data-modal"
-        show={this.props.show}
-        onHide={this.closeDialog}
-        size="lg"
-      >
-        <Form>
-          <Modal.Header>
-            {
-              (this.state.alertPath)
-                ? (
-                  <Alert
-                    className="mb-0"
-                    variant="danger"
-                  >
-                    <MdErrorOutline
-                      size="2em"
-                      className="pr-1"
-                    />
-                    {t('Please choose a different folder. '
-                      + 'This application does not have permission to write to folder:')}
-                    <p className="mb-0"><em>{this.state.alertPath}</em></p>
-                  </Alert>
-                )
-                : <Modal.Title>{t("Download InVEST sample data")}</Modal.Title>
-            }
-          </Modal.Header>
-          <Modal.Body>
-            <Table
-              size="sm"
-              borderless
-              striped
-            >
-              <thead>
-                <tr>
-                  <th>
-                    <Form.Check
-                      type="checkbox"
-                      id="all-sampledata"
-                      checked={this.state.allDataCheck}
-                      onChange={this.handleCheckAll}
-                      name="all-sampledata"
-                      label="Select All"
-                    />
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="table-body">
-                {DatasetCheckboxRows}
-              </tbody>
-            </Table>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              variant="secondary"
-              onClick={this.closeDialog}
-            >
-              {t("Cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={this.handleSubmit}
-              disabled={!downloadEnabled}
-            >
-              {t("Download")}
-            </Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
-    );
-  }
+  return (
+    <Modal className="download-data-modal"
+      show={props.show}
+      onHide={closeDialog}
+      size="lg"
+    >
+      <Form>
+        <Modal.Header>
+          {
+            (alertPath)
+              ? (
+                <Alert
+                  className="mb-0"
+                  variant="danger"
+                >
+                  <MdErrorOutline
+                    size="2em"
+                    className="pr-1"
+                  />
+                  {t('Please choose a different folder. '
+                    + 'This application does not have permission to write to folder:')}
+                  <p className="mb-0"><em>{alertPath}</em></p>
+                </Alert>
+              )
+              : <Modal.Title>{t("Download InVEST sample data")}</Modal.Title>
+          }
+        </Modal.Header>
+        <Modal.Body>
+          <Table
+            size="sm"
+            borderless
+            striped
+          >
+            <thead>
+              <tr>
+                <th>
+                  <Form.Check
+                    type="checkbox"
+                    id="all-sampledata"
+                    checked={allDataCheck}
+                    onChange={handleCheckAll}
+                    name="all-sampledata"
+                    label="Select All"
+                  />
+                </th>
+              </tr>
+            </thead>
+            <tbody className="table-body">
+              {DatasetCheckboxRows}
+            </tbody>
+          </Table>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={closeDialog}
+          >
+            {t("Cancel")}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={!downloadEnabled}
+          >
+            {t("Download")}
+          </Button>
+        </Modal.Footer>
+      </Form>
+    </Modal>
+  );
 }
 
 DataDownloadModal.propTypes = {

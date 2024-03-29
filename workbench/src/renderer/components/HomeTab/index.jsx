@@ -17,19 +17,13 @@ const { logger } = window.Workbench;
  * Renders a table of buttons for each invest model and
  * a list of cards for each cached invest job.
  */
-export default class HomeTab extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      sortedModels: []
-    };
-    this.handleClick = this.handleClick.bind(this);
-  }
+export default function HomeTab(props) {
+  const [sortedModels, setSortedModels] = React.useState([]);
 
-  componentDidMount() {
+  React.useEffect(() => {
     // sort the model list alphabetically, by the model title,
     // and with special placement of CBC Preprocessor before CBC model.
-    const sortedModels = Object.keys(this.props.investList).sort();
+    const sortedModels = Object.keys(props.investList).sort();
     const cbcpElement = 'Coastal Blue Carbon Preprocessor';
     const cbcIdx = sortedModels.indexOf('Coastal Blue Carbon');
     const cbcpIdx = sortedModels.indexOf(cbcpElement);
@@ -37,13 +31,12 @@ export default class HomeTab extends React.Component {
       sortedModels.splice(cbcpIdx, 1); // remove it
       sortedModels.splice(cbcIdx, 0, cbcpElement); // insert it
     }
-    this.setState({
-      sortedModels: sortedModels
-    });
-  }
+    setSortedModels(sortedModels);
+    return () => {}
+  }, [])
 
-  handleClick(value) {
-    const { investList, openInvestModel } = this.props;
+  function handleClick(value) {
+    const { investList, openInvestModel } = props;
     const modelRunName = investList[value].model_name;
     const job = new InvestJob({
       modelRunName: modelRunName,
@@ -52,41 +45,38 @@ export default class HomeTab extends React.Component {
     openInvestModel(job);
   }
 
-  render() {
-    const { recentJobs } = this.props;
-    const { sortedModels } = this.state;
-    // A button in a table row for each model
-    const investButtons = [];
-    sortedModels.forEach((model) => {
-      investButtons.push(
-        <ListGroup.Item
-          key={model}
-          className="invest-button"
-          title={model}
-          action
-          onClick={() => this.handleClick(model)}
-        >
-          {model}
-        </ListGroup.Item>
-      );
-    });
-
-    return (
-      <Row>
-        <Col md={6} className="invest-list-container">
-          <ListGroup className="invest-list-group">
-            {investButtons}
-          </ListGroup>
-        </Col>
-        <Col className="recent-job-card-col">
-          <RecentInvestJobs
-            openInvestModel={this.props.openInvestModel}
-            recentJobs={recentJobs}
-          />
-        </Col>
-      </Row>
+  const { recentJobs } = props;
+  // A button in a table row for each model
+  const investButtons = [];
+  sortedModels.forEach((model) => {
+    investButtons.push(
+      <ListGroup.Item
+        key={model}
+        className="invest-button"
+        title={model}
+        action
+        onClick={() => handleClick(model)}
+      >
+        {model}
+      </ListGroup.Item>
     );
-  }
+  });
+
+  return (
+    <Row>
+      <Col md={6} className="invest-list-container">
+        <ListGroup className="invest-list-group">
+          {investButtons}
+        </ListGroup>
+      </Col>
+      <Col className="recent-job-card-col">
+        <RecentInvestJobs
+          openInvestModel={props.openInvestModel}
+          recentJobs={recentJobs}
+        />
+      </Col>
+    </Row>
+  );
 }
 
 HomeTab.propTypes = {
