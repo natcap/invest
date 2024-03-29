@@ -101,7 +101,7 @@ Unreleased Changes
     * Fixed an issue where an LULC raster without a nodata value would
       always raise in exception during reclassification.
       https://github.com/natcap/invest/issues/1539
-      
+ 
 
 3.14.1 (2023-12-18)
 -------------------
