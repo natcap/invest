@@ -633,10 +633,6 @@ def execute(args):
         # If the input is a vector, reproject to the AOI SRS and simplify.
         # Rasterization happens in the alignment step.
         elif gis_type == pygeoprocessing.VECTOR_TYPE:
-            # Habitats and stressors are rasterized with ALL_TOUCHED=TRUE
-            if name in habitats_info or name in stressors_info:
-                habitat_stressor_vectors.add(source_filepath)
-
             # Using Shapefile here because its driver appears to not raise a
             # warning if a MultiPolygon geometry is inserted into a Polygon
             # layer, which was happening on a real-world sample dataset while
@@ -679,6 +675,10 @@ def execute(args):
                 target_path_list=[target_simplified_vector],
                 dependent_task_list=[reprojected_vector_task]
             ))
+
+            # Habitats and stressors are rasterized with ALL_TOUCHED=TRUE
+            if name in habitats_info or name in stressors_info:
+                habitat_stressor_vectors.add(target_simplified_vector)
 
         # Later operations make use of the habitats rasters or the stressors
         # rasters, so it's useful to collect those here now.
@@ -1648,7 +1648,6 @@ def _simplify(source_vector_path, tolerance, target_vector_path,
     for source_feature in source_layer:
         target_feature = ogr.Feature(target_layer_defn)
         source_geom = source_feature.GetGeometryRef()
-
         simplified_geom = source_geom.SimplifyPreserveTopology(tolerance)
         if simplified_geom is not None:
             target_geom = simplified_geom
