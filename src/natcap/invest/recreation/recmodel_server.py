@@ -1,5 +1,6 @@
 """InVEST Recreation Server."""
 
+import functools
 import subprocess
 import os
 import multiprocessing
@@ -104,7 +105,7 @@ class RecModel(object):
 
     @_try_except_wrapper("RecModel construction exited while multiprocessing.")
     def __init__(
-            self, raw_csv_filename, min_year, max_year, cache_workspace,
+            self, raw_csv_file_list, min_year, max_year, cache_workspace,
             max_points_per_node=GLOBAL_MAX_POINTS_PER_NODE,
             max_depth=GLOBAL_DEPTH, dataset_name='flickr'):
         """Initialize RecModel object.
@@ -135,7 +136,7 @@ class RecModel(object):
                 "max_year is less than min_year, must be greater or "
                 "equal to")
         self.qt_pickle_filename = construct_userday_quadtree(
-            initial_bounding_box, raw_csv_filename, dataset_name, cache_workspace,
+            initial_bounding_box, raw_csv_file_list, dataset_name, cache_workspace,
             max_points_per_node, max_depth)
         self.cache_workspace = cache_workspace
         self.min_year = min_year
@@ -474,8 +475,8 @@ class RecModel(object):
         return out_aoi_pud_path, monthly_table_path, len(local_points)
 
 
-def _parse_input_csv(
-        block_offset_size_queue, csv_filepath, numpy_array_queue, dataset_name):
+def _parse_big_input_csv(
+        block_offset_size_queue, csv_filepath, numpy_array_queue, dataset_name='flickr'):
     """Parse CSV file lines to (datetime64[d], userhash, lat, lng) tuples.
 
     Args:
@@ -533,12 +534,70 @@ def _parse_input_csv(
     numpy_array_queue.put('STOP')
 
 
-def _file_len(file_path):
+def _parse_small_input_csv_list(
+        csv_file_list, numpy_array_queue, dataset_name='twitter'):
+    """Parse CSV file lines to (datetime64[d], userhash, lat, lng) tuples.
+
+    Args:
+
+        csv_file_list (string): path to csv file to parse from
+        numpy_array_queue (multiprocessing.Queue): output queue will have
+            paths to files that can be opened with numpy.load and contain
+            structured arrays of (datetime, userid, lat, lng) parsed from the
+            raw CSV file
+
+    Returns:
+        None
+    """
+    for csv_filepath in csv_file_list:
+        LOGGER.info(f'parsing {csv_filepath}')
+        csv_file = open(csv_filepath, 'r')
+        csv_file.readline()  # skip the csv header
+        chunk_string = csv_file.read()
+        csv_file.close()
+
+        # sample line:
+        # 8568090486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
+        # this pattern matches the above style of line and only parses valid
+        # dates to handle some cases where there are weird dates in the input
+        flickr_pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"  # pylint: disable=line-too-long
+        twittr_pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])),([^,]+),([^,]+)\n"  # pylint: disable=line-too-long
+        patterns = {
+            'flickr': flickr_pattern,
+            'twitter': twittr_pattern
+        }
+        result = numpy.fromregex(
+            StringIO(chunk_string), patterns[dataset_name],
+            [('user', 'S40'), ('date', 'datetime64[D]'), ('lat', 'f4'),
+             ('lng', 'f4')])
+
+        def md5hash(user_string):
+            """md5hash userid."""
+            return hashlib.md5(user_string).digest()[-4:]
+
+        md5hash_v = numpy.vectorize(md5hash, otypes=['S4'])
+        hashes = md5hash_v(result['user'])
+
+        user_day_lng_lat = numpy.empty(
+            hashes.size, dtype='datetime64[D],a4,f4,f4')
+        user_day_lng_lat['f0'] = result['date']
+        user_day_lng_lat['f1'] = hashes
+        user_day_lng_lat['f2'] = result['lng']
+        user_day_lng_lat['f3'] = result['lat']
+        # multiprocessing.Queue pickles the array. Pickling isn't perfect and
+        # it modifies the `datetime64` dtype metadata, causing a warning later.
+        # To avoid this we dump the array to a string before adding to queue.
+        numpy_array_queue.put(_numpy_dumps(user_day_lng_lat))
+        numpy_array_queue.put('STOP')
+
+
+def _file_len(file_path_list):
     """Count lines in file, return -1 if not supported."""
     # If wc isn't found, Popen raises an exception here:
+    cmdlist = ['wc', '-l'] + file_path_list
     try:
         wc_process = subprocess.Popen(
-            ['wc', '-l', file_path], stdout=subprocess.PIPE,
+            cmdlist, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
     except OSError as e:
         LOGGER.warning(repr(e))
@@ -547,11 +606,11 @@ def _file_len(file_path):
     if wc_process.returncode != 0:
         LOGGER.warning(err)
         return -1
-    return int(result.strip().split()[0])
+    return int(result.strip().split()[-2])
 
 
 def construct_userday_quadtree(
-        initial_bounding_box, raw_photo_csv_table, dataset_name, cache_dir,
+        initial_bounding_box, raw_csv_file_list, dataset_name, cache_dir,
         max_points_per_node, max_depth):
     """Construct a spatial quadtree for fast querying of userday points.
 
@@ -567,19 +626,20 @@ def construct_userday_quadtree(
     Returns:
         None
     """
-    LOGGER.info('hashing input file')
-    start_time = time.time()
-    LOGGER.info(raw_photo_csv_table)
-    csv_hash = _hashfile(raw_photo_csv_table, fast_hash=True)
-
+    # LOGGER.info('hashing input file')
+    # start_time = time.time()
+    # LOGGER.info(raw_photo_csv_table)
+    # csv_hash = _hashfile(raw_photo_csv_table, fast_hash=True)
+    csv_hash = 'foohash'
     ooc_qt_picklefilename = os.path.join(cache_dir, csv_hash + '.pickle')
     if os.path.isfile(ooc_qt_picklefilename):
         return ooc_qt_picklefilename
     else:
         LOGGER.info(
             '%s not found, constructing quadtree', ooc_qt_picklefilename)
+
         LOGGER.info('counting lines in input file')
-        total_lines = _file_len(raw_photo_csv_table)
+        total_lines = _file_len(raw_csv_file_list)
         LOGGER.info('%d lines', total_lines)
         ooc_qt = out_of_core_quadtree.OutOfCoreQuadTree(
             initial_bounding_box, max_points_per_node, max_depth,
@@ -588,46 +648,60 @@ def construct_userday_quadtree(
         n_parse_processes = multiprocessing.cpu_count() - 1
         if n_parse_processes < 1:
             n_parse_processes = 1
-        n_parse_processes = 1 # TODO: remove after debugging
-
-        block_offset_size_queue = multiprocessing.Queue(n_parse_processes * 2)
         numpy_array_queue = multiprocessing.Queue(n_parse_processes * 2)
+        populate_thread = None
 
-        LOGGER.info('starting parsing processes')
-        for _ in range(n_parse_processes):
-            parse_input_csv_process = multiprocessing.Process(
-                target=_parse_input_csv, args=(
-                    block_offset_size_queue, raw_photo_csv_table,
-                    numpy_array_queue, dataset_name))
-            parse_input_csv_process.deamon = True
-            parse_input_csv_process.start()
+        if len(raw_csv_file_list) > 1:
+            LOGGER.info('starting parsing processes by file')
+            if len(raw_csv_file_list) < n_parse_processes:
+                n_parse_processes = len(raw_csv_file_list)
+            for i in range(n_parse_processes):
+                csv_file_list = raw_csv_file_list[i::n_parse_processes]
+                parse_input_csv_process = multiprocessing.Process(
+                    target=_parse_small_input_csv_list,
+                    args=(csv_file_list, numpy_array_queue))
+                parse_input_csv_process.deamon = True
+                parse_input_csv_process.start()
+        else:
+            raw_photo_csv_table = raw_csv_file_list[0]
+            block_offset_size_queue = multiprocessing.Queue(n_parse_processes * 2)
 
-        # rush through file and determine reasonable offsets and blocks
-        def _populate_offset_queue(block_offset_size_queue):
-            csv_file = open(raw_photo_csv_table, 'rb')
-            csv_file.readline()  # skip the csv header
-            while True:
-                start = csv_file.tell()
-                csv_file.seek(BLOCKSIZE, 1)
-                line = csv_file.readline()  # skip to end of line
-                bounds = (start, csv_file.tell() - start)
-                block_offset_size_queue.put(bounds)
-                if not line:
-                    break
-            csv_file.close()
+            LOGGER.info('starting parsing processes by chunks')
             for _ in range(n_parse_processes):
-                block_offset_size_queue.put('STOP')
+                parse_input_csv_process = multiprocessing.Process(
+                    target=_parse_big_input_csv, args=(
+                        block_offset_size_queue, numpy_array_queue,
+                        raw_photo_csv_table))
+                parse_input_csv_process.deamon = True
+                parse_input_csv_process.start()
 
-        LOGGER.info('starting offset queue population thread')
-        populate_thread = threading.Thread(
-            target=_populate_offset_queue, args=(block_offset_size_queue,))
-        populate_thread.start()
+            # rush through file and determine reasonable offsets and blocks
+            def _populate_offset_queue(block_offset_size_queue):
+                csv_file = open(raw_photo_csv_table, 'rb')
+                csv_file.readline()  # skip the csv header
+                while True:
+                    start = csv_file.tell()
+                    csv_file.seek(BLOCKSIZE, 1)
+                    line = csv_file.readline()  # skip to end of line
+                    bounds = (start, csv_file.tell() - start)
+                    block_offset_size_queue.put(bounds)
+                    if not line:
+                        break
+                csv_file.close()
+                for _ in range(n_parse_processes):
+                    block_offset_size_queue.put('STOP')
+
+            LOGGER.info('starting offset queue population thread')
+            populate_thread = threading.Thread(
+                target=_populate_offset_queue, args=(block_offset_size_queue,))
+            populate_thread.start()
 
         LOGGER.info("add points to the quadtree as they are ready")
         last_time = time.time()
         start_time = last_time
         n_points = 0
 
+        LOGGER.info(f'process counter: {n_parse_processes}')
         while True:
             payload = numpy_array_queue.get()
             # if the item is a 'STOP' sentinel, don't load as an array
@@ -666,7 +740,8 @@ def construct_userday_quadtree(
         LOGGER.info("building quadtree shapefile overview")
         build_quadtree_shape(quad_tree_shapefile_name, ooc_qt, lat_lng_ref)
 
-    populate_thread.join()
+    if populate_thread:
+        populate_thread.join()
     parse_input_csv_process.join()
 
     LOGGER.info('took %f seconds', (time.time() - start_time))
