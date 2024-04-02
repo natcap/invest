@@ -8,7 +8,6 @@ import '@testing-library/jest-dom';
 
 import App from '../../src/renderer/app';
 import {
-  getInvestModelNames,
   getSpec,
   fetchValidation,
   fetchDatastackFromFile,
@@ -22,15 +21,15 @@ import {
 } from '../../src/main/settingsStore';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import { removeIpcMainListeners } from '../../src/main/main';
-import { mockUISpec } from './utils';
 
 jest.mock('../../src/renderer/server_requests');
 
 const MOCK_MODEL_TITLE = 'Carbon';
 const MOCK_MODEL_RUN_NAME = 'carbon';
 const MOCK_INVEST_LIST = {
-  [MOCK_MODEL_TITLE]: {
-    model_name: MOCK_MODEL_RUN_NAME,
+  carbon: {
+    model_name: MOCK_MODEL_TITLE,
+    type: 'core',
   },
 };
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
@@ -58,7 +57,21 @@ const SAMPLE_SPEC = {
 
 describe('Various ways to open and close InVEST models', () => {
   beforeEach(async () => {
-    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
+    ipcRenderer.invoke.mockImplementation((channel, setting) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        if (setting === 'models') {
+          return Promise.resolve(MOCK_INVEST_LIST);
+        }
+      } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+        return {
+          canceled: false,
+          filePaths: ['foo.json'],
+        };
+      } else if (channel === ipcMainChannels.INVEST_SERVE) {
+        return 0;
+      }
+      return Promise.resolve();
+    });
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
     fetchArgsEnabled.mockResolvedValue({
@@ -123,10 +136,6 @@ describe('Various ways to open and close InVEST models', () => {
   });
 
   test('Open File: Dialog callback renders SetupTab', async () => {
-    const mockDialogData = {
-      canceled: false,
-      filePaths: ['foo.json'],
-    };
     const mockDatastack = {
       args: {
         carbon_pools_path: 'Carbon/carbon_pools_willamette.csv',
@@ -135,7 +144,6 @@ describe('Various ways to open and close InVEST models', () => {
       model_run_name: 'carbon',
       model_human_name: 'Carbon',
     };
-    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
     const { findByText, findByLabelText, findByRole } = render(
@@ -157,11 +165,19 @@ describe('Various ways to open and close InVEST models', () => {
 
   test('Open File: Dialog callback is canceled', async () => {
     // Resembles callback data if the dialog was canceled
-    const mockDialogData = {
-      canceled: true,
-      filePaths: [],
-    };
-    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockImplementation((channel, setting) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        if (setting === 'models') {
+          return Promise.resolve(MOCK_INVEST_LIST);
+        }
+      } else if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+        return {
+          canceled: true,
+          filePaths: [],
+        };
+      }
+      return Promise.resolve();
+    });
 
     const { findByRole } = render(
       <App />
@@ -261,10 +277,6 @@ describe('Various ways to open and close InVEST models', () => {
 });
 
 describe('Display recently executed InVEST jobs on Home tab', () => {
-  beforeEach(() => {
-    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
-  });
-
   afterEach(async () => {
     await InvestJob.clearStore();
   });
@@ -411,7 +423,6 @@ describe('InVEST global settings: dialog interactions', () => {
   });
 
   beforeEach(async () => {
-    getInvestModelNames.mockResolvedValue({});
     getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
   });
 

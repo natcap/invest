@@ -63,9 +63,7 @@ export default class App extends React.Component {
       investList: investList,
       // filter out models that do not exist in current version of invest
       recentJobs: recentJobs.filter((job) => (
-        Object.values(investList)
-          .map((m) => m.model_name)
-          .includes(job.modelRunName)
+        Object.keys(investList).includes(job.modelRunName)
       )),
       showDownloadModal: this.props.isFirstRun,
     });
@@ -223,11 +221,12 @@ export default class App extends React.Component {
         default:
           statusSymbol = '';
       }
-      let badge = <></>;
-      const modelType = ipcRenderer.sendSync(
-        ipcMainChannels.GET_SETTING, `models.${job.modelRunName}.type`)
-      if (modelType === 'plugin') {
-        badge = <Badge className="mr-1" variant="secondary" >Plugin</Badge>
+      let badge;
+      if (investList) {
+        const modelType = investList[job.modelRunName].type;
+        if (modelType === 'plugin') {
+          badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
+        }
       }
 
       investNavItems.push(
