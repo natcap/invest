@@ -291,10 +291,12 @@ export default class App extends React.Component {
 
     return (
       <React.Fragment>
-        <DataDownloadModal
-          show={showDownloadModal}
-          closeModal={() => this.showDownloadModal(false)}
-        />
+        {showDownloadModal && (
+          <DataDownloadModal
+            show={showDownloadModal}
+            closeModal={() => this.showDownloadModal(false)}
+          />
+        )}
         <TabContainer activeKey={activeTab}>
           <Navbar
             onDragOver={dragOverHandlerNone}

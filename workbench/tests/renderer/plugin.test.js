@@ -55,27 +55,9 @@ describe('Add plugin modal', () => {
       }
       return Promise.resolve();
     });
-
-    const { findByText, findByLabelText } = render(<App />);
-
-    const addPluginButton = await findByText('Add a plugin');
-    userEvent.click(addPluginButton);
-
-    const urlField = await findByLabelText('Git URL');
-    await act(async () => {
-      userEvent.type(urlField, 'https://github.com/emlys/demo-invest-plugin.git', { delay: 0 });
-    });
-    const submitButton = await findByText('Add');
-    userEvent.click(submitButton);
-
-    await findByText('Loading...');
-    await waitFor(() => {
-      const calledChannels = spy.mock.calls.map((call) => call[0]);
-      expect(calledChannels).toContain(ipcMainChannels.ADD_PLUGIN);
-    });
-  });
-
-  test('Display a plugin in the list of models', async () => {
+    const {
+      findByText, findByLabelText, findByRole, queryByRole
+    } = render(<App />);
     ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.GET_SETTING) {
         if (setting === 'models') {
@@ -91,12 +73,27 @@ describe('Add plugin modal', () => {
           };
         }
       }
-      return undefined;
+      return Promise.resolve();
     });
-    const { findByRole } = render(<App />);
+
+    const addPluginButton = await findByText('Add a plugin');
+    userEvent.click(addPluginButton);
+
+    const urlField = await findByLabelText('Git URL');
+    await userEvent.type(urlField, 'fake url', { delay: 0 });
+    const submitButton = await findByText('Add');
+    userEvent.click(submitButton);
+
+    await findByText('Loading...');
+    const calledChannels = spy.mock.calls.map((call) => call[0]);
+    await waitFor(() => {
+      expect(calledChannels).toContain(ipcMainChannels.ADD_PLUGIN);
+    });
+    // expect the plugin dialog to have disappeared
+    await waitFor(() => expect(queryByRole('dialog')).toBeNull());
     const pluginButton = await findByRole('button', { name: /Foo/ });
     // assert that the 'plugin' badge is displayed
-    expect(within(pluginButton).getByText('Plugin')).toBeInTheDocument();
+    await waitFor(() => expect(within(pluginButton).getByText('Plugin')).toBeInTheDocument());
   });
 
   test('Open and run a plugin', async () => {
