@@ -116,8 +116,6 @@ LOGGER = logging.getLogger(__name__)
 INVALID_ANALYSIS_YEAR_MSG = gettext(
     "Analysis year {analysis_year} must be >= the latest snapshot year "
     "({latest_year})")
-INVALID_SNAPSHOT_RASTER_MSG = gettext(
-    "Raster for snapshot {snapshot_year} could not be validated.")
 INVALID_TRANSITION_VALUES_MSG = gettext(
     "The transition table expects values of {model_transitions} but found "
     "values of {transition_values}.")
@@ -2166,7 +2164,6 @@ def validate(args, limit_to=None):
     """
     validation_warnings = validation.validate(
         args, MODEL_SPEC['args'])
-
     sufficient_keys = validation.get_sufficient_keys(args)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 
@@ -2176,16 +2173,6 @@ def validate(args, limit_to=None):
             args['landcover_snapshot_csv'],
             **MODEL_SPEC['args']['landcover_snapshot_csv']
         )['raster_path'].to_dict()
-
-        for snapshot_year, snapshot_raster_path in snapshots.items():
-            raster_error_message = validation.check_raster(
-                snapshot_raster_path)
-            if raster_error_message:
-                validation_warnings.append((
-                    ['landcover_snapshot_csv'],
-                    INVALID_SNAPSHOT_RASTER_MSG.format(
-                        snapshot_year=snapshot_year
-                    ) + ' ' + raster_error_message))
 
         if ("analysis_year" not in invalid_keys
                 and "analysis_year" in sufficient_keys):

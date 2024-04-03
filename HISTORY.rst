@@ -39,6 +39,9 @@
 Unreleased Changes
 ------------------
 * General
+    * Validation now covers file paths contained in CSVs. CSV validation
+      will fail if the files listed in a CSV fail to validate.
+      https://github.com/natcap/invest/issues/327
     * We have updated validation in several ways that will improve the
       developer experience of working with InVEST models, and we hope will also
       improve the user experience:
@@ -59,7 +62,6 @@ Unreleased Changes
         versions of InVEST would skip these parameters' type-specific
         validation. Now, these parameters will be validated with their
         type-specific validation checks.
-
 * Annual Water Yield
     * Added the results_suffix to a few intermediate files where it was
       missing. https://github.com/natcap/invest/issues/1517
@@ -73,6 +75,17 @@ Unreleased Changes
       a block area and not summed pixelwise. This caused the quickflow 
       output ``QF.tif`` to have malformed values.
       https://github.com/natcap/invest/issues/1541
+* SDR
+    * Fixed an issue encountered in the sediment deposition function where
+      rasters with more than 2^32 pixels would raise a cryptic error relating
+      to negative dimensions. https://github.com/natcap/invest/issues/1431
+    * Optimized the creation of the summary vector by minimizing the number of
+      times the target vector needs to be rasterized.
+* Wind Energy
+    * Fixed a bug where some number inputs were not being properly cast to
+      ``float`` or ``int`` types. If the inputs happened to be passed as
+      a ``str`` this caused unintended side effects such as a concatenation
+      error. (https://github.com/natcap/invest/issues/1498)
 * Urban Nature Access
     * Fixed a ``NameError`` that occurred when running the model using
       search radii defined per population group with an exponential search
@@ -96,12 +109,6 @@ Unreleased Changes
     * Fixed an issue where an LULC raster without a nodata value would
       always raise in exception during reclassification.
       https://github.com/natcap/invest/issues/1539
-* SDR
-    * Fixed an issue encountered in the sediment deposition function where
-      rasters with more than 2^32 pixels would raise a cryptic error relating
-      to negative dimensions. https://github.com/natcap/invest/issues/1431
-    * Optimized the creation of the summary vector by minimizing the number of
-      times the target vector needs to be rasterized.
 
 3.14.1 (2023-12-18)
 -------------------

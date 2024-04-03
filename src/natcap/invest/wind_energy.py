@@ -1289,10 +1289,15 @@ def execute(args):
     levelized_raster_path = os.path.join(
         out_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
 
+    # Include foundation_cost, discount_rate, number_of_turbines with
+    # parameters_dict to pass for NPV calculation
+    for key in ['foundation_cost', 'discount_rate', 'number_of_turbines']:
+        parameters_dict[key] = float(args[key])
+
     task_graph.add_task(
         func=_calculate_npv_levelized_rasters,
         args=(harvested_masked_path, final_dist_raster_path, npv_raster_path,
-              levelized_raster_path, parameters_dict, args, price_list),
+              levelized_raster_path, parameters_dict, price_list),
         target_path_list=[npv_raster_path, levelized_raster_path],
         task_name='calculate_npv_levelized_rasters',
         dependent_task_list=[final_dist_task])
@@ -1321,7 +1326,7 @@ def execute(args):
 def _calculate_npv_levelized_rasters(
         base_harvested_raster_path, base_dist_raster_path,
         target_npv_raster_path, target_levelized_raster_path,
-        parameters_dict, args, price_list):
+        parameters_dict, price_list):
     """Calculate NPV and levelized rasters from harvested and dist rasters.
 
     Args:
@@ -1340,9 +1345,6 @@ def _calculate_npv_levelized_rasters(
 
         parameters_dict (dict): a dictionary of the turbine and biophysical
             global parameters.
-
-        args (dict): a dictionary that contains information on
-            ``foundation_cost``, ``discount_rate``, ``number_of_turbines``.
 
         price_list (list): a list of wind energy prices for a period of time.
 
@@ -1375,7 +1377,7 @@ def _calculate_npv_levelized_rasters(
     # The cost of infield cable in currency units per km
     infield_cost = parameters_dict['infield_cable_cost']
     # The cost of the foundation in currency units
-    foundation_cost = args['foundation_cost']
+    foundation_cost = parameters_dict['foundation_cost']
     # The cost of each turbine unit in currency units
     unit_cost = parameters_dict['turbine_cost']
     # The installation cost as a decimal
@@ -1385,7 +1387,7 @@ def _calculate_npv_levelized_rasters(
     # The operations and maintenance costs as a decimal factor of capex_arr
     op_maint_cost = parameters_dict['operation_maintenance_cost']
     # The discount rate as a decimal
-    discount_rate = args['discount_rate']
+    discount_rate = parameters_dict['discount_rate']
     # The cost to decommission the farm as a decimal factor of capex_arr
     decom = parameters_dict['decommission_cost']
     # The mega watt value for the turbines in MW
@@ -1401,16 +1403,15 @@ def _calculate_npv_levelized_rasters(
 
     # The total mega watt capacity of the wind farm where mega watt is the
     # turbines rated power
-    total_mega_watt = mega_watt * int(args['number_of_turbines'])
+    number_of_turbines = int(parameters_dict['number_of_turbines'])
+    total_mega_watt = mega_watt * number_of_turbines
 
     # Total infield cable cost
-    infield_cable_cost = infield_length * infield_cost * int(
-        args['number_of_turbines'])
+    infield_cable_cost = infield_length * infield_cost * number_of_turbines
     LOGGER.debug('infield_cable_cost : %s', infield_cable_cost)
 
     # Total foundation cost
-    total_foundation_cost = (foundation_cost + unit_cost) * int(
-        args['number_of_turbines'])
+    total_foundation_cost = (foundation_cost + unit_cost) * number_of_turbines
     LOGGER.debug('total_foundation_cost : %s', total_foundation_cost)
 
     # Nominal Capital Cost (CAP) minus the cost of cable which needs distances
