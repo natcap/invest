@@ -79,7 +79,6 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-
       # NOTE: It takes twice as long to save the sample data cache
       # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
       # Test data is way, way faster by contrast (on the order of a few
@@ -94,7 +93,7 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           python-version: ${{ matrix.python-version }}
-          requirements-files: requirements.txt requirements-dev.txt
+          requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
           requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
       - name: Download previous conda environment.yml

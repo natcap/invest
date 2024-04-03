@@ -2112,6 +2112,7 @@ class TestValidationFromSpec(unittest.TestCase):
         layer = vector.CreateLayer('layer', vector_srs, ogr.wkbPoint)
         new_feature = ogr.Feature(layer.GetLayerDefn())
         new_feature.SetGeometry(ogr.CreateGeometryFromWkt('POINT (1 1)'))
+        layer.CreateFeature(new_feature)
 
         new_feature = None
         layer = None

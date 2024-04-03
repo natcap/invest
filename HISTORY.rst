@@ -62,6 +62,9 @@ Unreleased Changes
         versions of InVEST would skip these parameters' type-specific
         validation. Now, these parameters will be validated with their
         type-specific validation checks.
+    * Add support for latest GDAL versions; remove test-specific constraint on
+      GDAL versions from invest requirements.
+      https://github.com/natcap/invest/issues/916
 * Annual Water Yield
     * Added the results_suffix to a few intermediate files where it was
       missing. https://github.com/natcap/invest/issues/1517
@@ -70,6 +73,9 @@ Unreleased Changes
       raster. ``nan`` pixels will now be propertly ignored before calculating
       mean depths along fetch rays.
       https://github.com/natcap/invest/issues/1528
+* HRA
+    * Fixed a bug where habitat and stressor vectors were not being rasterized
+      with the `ALL_TOUCHED=TRUE` setting.
 * SDR
     * Fixed an issue encountered in the sediment deposition function where
       rasters with more than 2^32 pixels would raise a cryptic error relating
