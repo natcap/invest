@@ -10,6 +10,7 @@ import {
 
 import { ipcMainChannels } from './ipcMainChannels';
 import { getLogger } from './logger';
+import { settingsStore } from './settingsStore';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -28,11 +29,12 @@ export function checkFirstRun() {
     }
     logger.info('first run');
     fs.writeFileSync(hasRunTokenPath, '');
-    const configPath = upath.join(app.getPath('userData'), 'config.json');
-    execSync(
-      `bash src/main/coreSetup.sh '${configPath}'`,
-      { encoding: 'utf-8', stdio: 'inherit' }
-    );
+    const investListJSON = JSON.parse(execSync('invest list --json'));
+    Object.keys(investListJSON).forEach((modelName) => {
+      const modelId = investListJSON[modelName].model_name;
+      settingsStore.set(`models.${modelId}.model_name`, modelName);
+      settingsStore.set(`models.${modelId}.type`, 'core');
+    });
   } catch (error) {
     logger.warn(`Unable to write first-run token: ${error}`);
   }
