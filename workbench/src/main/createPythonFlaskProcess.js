@@ -8,6 +8,8 @@ import { settingsStore } from './settingsStore';
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const HOSTNAME = 'http://127.0.0.1';
 
+const pidToSubprocess = {};
+
 // https://stackoverflow.com/a/71178451
 async function getFreePort() {
   return new Promise((res) => {
@@ -117,6 +119,7 @@ export async function createPythonFlaskProcess(modelName, _port = undefined) {
 
   await getFlaskIsReady(port, 0, 500);
   logger.info('flask is ready');
+  pidToSubprocess[pythonServerProcess.pid] = pythonServerProcess;
   return pythonServerProcess.pid;
 }
 
@@ -131,7 +134,7 @@ export async function shutdownPythonProcess(pid) {
   try {
     if (process.platform !== 'win32') {
       // the '-' prefix on pid sends signal to children as well
-      process.kill(-pid, 'SIGTERM');
+      pidToSubprocess[pid].kill();
     } else {
       execSync(`taskkill /pid ${pid} /t /f`);
     }
