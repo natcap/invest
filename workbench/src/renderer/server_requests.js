@@ -5,7 +5,7 @@ const { ipcRenderer } = window.Workbench.electron;
 
 const HOSTNAME = 'http://127.0.0.1';
 const PREFIX = 'api';
-const CORE_PORT = 5000;//await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
+const CORE_PORT = ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
 
 /**
  * Get the port number running the server to use for the given model.
@@ -24,6 +24,10 @@ async function getPort(modelName) {
     port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `models.${modelName}.port`);
   }
   return port;
+}
+
+async function getCorePort() {
+  return ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
 }
 
 // The Flask server sends UTF-8 encoded responses by default
@@ -61,8 +65,9 @@ export async function getSpec(modelName) {
  * @returns {Promise} resolves object
  */
 export async function getDynamicDropdowns(payload) {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/dynamic_dropdowns`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/dynamic_dropdowns`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -134,9 +139,10 @@ export async function fetchValidation(payload) {
  * @param {string} payload - path to file
  * @returns {Promise} resolves undefined
  */
-export function fetchDatastackFromFile(payload) {
+export async function fetchDatastackFromFile(payload) {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/post_datastack_file`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/post_datastack_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -155,9 +161,10 @@ export function fetchDatastackFromFile(payload) {
  * }
  * @returns {Promise} resolves undefined
  */
-export function saveToPython(payload) {
+export async function saveToPython(payload) {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/save_to_python`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/save_to_python`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -181,9 +188,10 @@ export function saveToPython(payload) {
  * }
  * @returns {Promise} resolves undefined
  */
-export function archiveDatastack(payload) {
+export async function archiveDatastack(payload) {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/build_datastack_archive`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/build_datastack_archive`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -208,9 +216,10 @@ export function archiveDatastack(payload) {
  * }
  * @returns {Promise} resolves undefined
  */
-export function writeParametersToFile(payload) {
+export async function writeParametersToFile(payload) {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/write_parameter_set_file`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/write_parameter_set_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -230,8 +239,9 @@ export function writeParametersToFile(payload) {
  * @returns {Promise} resolves object
  */
 export async function getSupportedLanguages() {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${CORE_PORT}/${PREFIX}/languages`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/languages`, {
       method: 'get',
     })
       .then((response) => response.json())

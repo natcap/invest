@@ -52,14 +52,15 @@ export async function getFlaskIsReady(port, i = 0, retries = 41) {
  * @param  {string} investExe - path to executeable that launches flask app.
  * @returns {ChildProcess} - a reference to the subprocess.
  */
-export async function createPythonFlaskProcess(modelName) {
-  const port = await getFreePort();
+export async function createPythonFlaskProcess(modelName, _port = undefined) {
+  let port = _port;
+  if (port === undefined) {
+    port = await getFreePort();
+  }
   let pythonServerProcess;
   let path;
-  console.log(modelName, settingsStore.get(`models.${modelName}`));
-  if (modelName == undefined) {
-
-    logger.debug('creating invest core server process')
+  if (modelName === undefined) {
+    logger.debug('creating invest core server process');
     const investExe = settingsStore.get('investExe');
     path = investExe;
     pythonServerProcess = spawn(
@@ -67,13 +68,13 @@ export async function createPythonFlaskProcess(modelName) {
       ['--debug', 'serve', '--port', port],
       { shell: true } // necessary in dev mode & relying on a conda env
     );
-    settingsStore.set(`core.port`, port);
-    settingsStore.set(`core.pid`, pythonServerProcess.pid);
-  } else if (settingsStore.get(`models.${modelName}.type`) == 'core') {
+    settingsStore.set('core.port', port);
+    settingsStore.set('core.pid', pythonServerProcess.pid);
+  } else if (settingsStore.get(`models.${modelName}.type`) === 'core') {
     logger.info('core model');
     return settingsStore.get('core.pid');
   } else {
-    logger.debug('creating invest plugin server process')
+    logger.debug('creating invest plugin server process');
     const micromambaPath = 'micromamba'//settingsStore.get('micromamba_path');
     const modelEnvPath = settingsStore.get(`models.${modelName}.env`);
     path = modelEnvPath;
