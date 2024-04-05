@@ -105,10 +105,16 @@ class RecModel(object):
 
     @_try_except_wrapper("RecModel construction exited while multiprocessing.")
     def __init__(
-            self, raw_csv_file_list, min_year, max_year, cache_workspace,
+            self, min_year, max_year, cache_workspace,
+            raw_csv_filename=None,
+            quadtree_pickle_filename=None,
             max_points_per_node=GLOBAL_MAX_POINTS_PER_NODE,
             max_depth=GLOBAL_DEPTH, dataset_name='flickr'):
         """Initialize RecModel object.
+
+        The object can be initialized either with a path to a CSV file
+        containing the raw point data with which to construct a quadtree,
+        or with a path to an existing quadtree in the cache_workspace.
 
         Args:
             raw_csv_filename (string): path to csv file that contains lines
@@ -135,9 +141,32 @@ class RecModel(object):
             raise ValueError(
                 "max_year is less than min_year, must be greater or "
                 "equal to")
-        self.qt_pickle_filename = construct_userday_quadtree(
-            initial_bounding_box, raw_csv_file_list, dataset_name, cache_workspace,
-            max_points_per_node, max_depth)
+
+        if raw_csv_filename:
+            LOGGER.info('hashing input file')
+            start_time = time.time()
+            LOGGER.info(raw_csv_filename)
+            csv_hash = _hashfile(raw_csv_filename, fast_hash=True)
+            ooc_qt_picklefilename = os.path.join(cache_dir, csv_hash + '.pickle')
+        elif quadtree_pickle_filename:
+            ooc_qt_picklefilename = os.path.join(cache_dir, quadtree_pickle_filename)
+        else:
+            raise ValueError(
+                'Both raw_csv_filename and quadtree_pickle_filename'
+                'are None. One of these kwargs must be given a value.')
+
+        if os.path.isfile(ooc_qt_picklefilename):
+            self.qt_pickle_filename = ooc_qt_picklefilename
+            LOGGER.info(
+                '%s quadtree already exists', ooc_qt_picklefilename)
+        else:
+            LOGGER.info(
+                '%s not found, constructing quadtree', ooc_qt_picklefilename)
+            if not os.path.exists(raw_csv_filename):
+                raise ValueError(f'{raw_csv_filename} does not exist.')
+            self.qt_pickle_filename = construct_userday_quadtree(
+                initial_bounding_box, [raw_csv_filename], dataset_name, cache_workspace,
+                max_points_per_node, max_depth)
         self.cache_workspace = cache_workspace
         self.min_year = min_year
         self.max_year = max_year
@@ -616,27 +645,16 @@ def construct_userday_quadtree(
 
     Args:
         initial_bounding_box (list of int):
-        raw_photo_csv_table ():
+        raw_csv_file_list (list): list of filepaths of point CSVs
         cache_dir (string): path to a directory that can be used to cache
             the quadtree files on disk
         max_points_per_node(int): maximum number of points to allow per node
-            of the quadree.  A larger amount will cause the quadtree to
+            of the quadtree.  A larger amount will cause the quadtree to
             subdivide.
 
     Returns:
-        None
+        String: filepath of pickle storing the quadtree
     """
-    # LOGGER.info('hashing input file')
-    # start_time = time.time()
-    # LOGGER.info(raw_photo_csv_table)
-    # csv_hash = _hashfile(raw_photo_csv_table, fast_hash=True)
-    csv_hash = 'foohash'
-    ooc_qt_picklefilename = os.path.join(cache_dir, csv_hash + '.pickle')
-    if os.path.isfile(ooc_qt_picklefilename):
-        return ooc_qt_picklefilename
-    else:
-        LOGGER.info(
-            '%s not found, constructing quadtree', ooc_qt_picklefilename)
 
         LOGGER.info('counting lines in input file')
         total_lines = _file_len(raw_csv_file_list)

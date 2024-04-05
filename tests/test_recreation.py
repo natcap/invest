@@ -584,6 +584,7 @@ class TestRecServer(unittest.TestCase):
             self.assertTrue(len(ws) == 0)
 
 
+# TODO: is this test redundant with one from above?
 class TestLocalRecServer(unittest.TestCase):
     """Tests using a local rec server."""
 
