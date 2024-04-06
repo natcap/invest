@@ -16,7 +16,6 @@ export default function setupAddPlugin() {
     (e, pluginURL) => {
       logger.info('adding plugin at', pluginURL);
       const pluginsDir = upath.join(app.getPath('userData'), 'plugins');
-      const investRootPath = `${__dirname}/../../..`;
 
       // Download the plugin from its remote git repo
       if (!fs.existsSync(pluginsDir)) {
@@ -38,7 +37,6 @@ export default function setupAddPlugin() {
       const envName = `invest_plugin_${pluginID}`;
       fs.writeFileSync('tmp_env.txt', 'python<3.12\ngdal<3.6');
       execSync(`micromamba create --yes --name ${envName} -f tmp_env.txt -c conda-forge`);
-      execSync(`micromamba run --name ${envName} pip install .`, { cwd: investRootPath, stdio: 'inherit' });
       execSync(`micromamba run --name ${envName} pip install "git+${pluginURL}"`, { stdio: 'inherit' });
 
       // Write plugin metadata to the workbench's config.json
