@@ -35,6 +35,9 @@ let APP_HAS_RUN_TOKEN_PATH;
 const rootDir = process.env.CI ? os.homedir() : os.tmpdir();
 const TMP_DIR = fs.mkdtempSync(path.join(rootDir, 'data-'));
 const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
+const TEST_PLUGIN_GIT_URL = 'https://github.com/emlys/demo-invest-plugin.git';
+const testRaster = path.join(__dirname, 'dem.tif');
+const TYPE_DELAY = 10;
 
 if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
@@ -181,19 +184,19 @@ test('Run a real invest model', async () => {
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-model-tab.png` });
 
   const argsForm = await page.waitForSelector('.args-form');
-  const typeDelay = 10;
+
   const workspace = await argsForm.waitForSelector(
     'aria/[name="Workspace"][role="textbox"]');
-  await workspace.type(TMP_DIR, { delay: typeDelay });
+  await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
   const aoi = await argsForm.waitForSelector(
     'aria/[name="Area Of Interest"][role="textbox"]');
-  await aoi.type(TMP_AOI_PATH, { delay: typeDelay });
+  await aoi.type(TMP_AOI_PATH, { delay: TYPE_DELAY });
   const startYear = await argsForm.waitForSelector(
     'aria/[name="Start Year"][role="textbox"]');
-  await startYear.type('2008', { delay: typeDelay });
+  await startYear.type('2008', { delay: TYPE_DELAY });
   const endYear = await argsForm.waitForSelector(
     'aria/[name="End Year"][role="textbox"]');
-  await endYear.type('2012', { delay: typeDelay });
+  await endYear.type('2012', { delay: TYPE_DELAY });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
 
   const sidebar = await page.waitForSelector('.invest-sidebar-col');
@@ -266,6 +269,64 @@ test('Check local userguide links', async () => {
     await closeTabBtn.click();
     await page.waitForTimeout(100); // allow for Home Tab to be visible again
   }
+});
+
+test('Install and run a plugin', async () => {
+  // On GHA MacOS, we seem to have to wait a long time for the browser
+  // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
+  let i = 0;
+  while (!BROWSER || !BROWSER.isConnected()) {
+    i++;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  console.log(`waited ${i} seconds for pptr to connect`);
+  // find the mainWindow's index.html, not the splashScreen's splash.html
+  const target = await BROWSER.waitForTarget(
+    (target) => target.url().endsWith('index.html')
+  );
+  const page = await target.page();
+  page.on('error', (err) => {
+    console.log(err);
+  });
+  await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
+  const downloadModal = await page.waitForSelector('.modal-dialog');
+  const downloadModalCancel = await downloadModal.waitForSelector(
+    'aria/[name="Cancel"][role="button"]'
+  );
+  await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
+  await downloadModalCancel.click();
+
+  const addPluginButton = await page.waitForSelector('div ::-p-text(Add a plugin)');
+  console.log(addPluginButton);
+  await addPluginButton.click();
+
+  console.log(await page.content());
+
+  const urlInputField = await page.waitForSelector('input[name=url]');
+  await urlInputField.type(TEST_PLUGIN_GIT_URL, { delay: TYPE_DELAY });
+  const submitButton = await page.waitForSelector('button[name=submit]');
+  await submitButton.click();
+
+  const pluginButton = await page.waitForSelector(
+    'aria/[name="PluginFoo Model"][role="button"]' // all text in the button
+  );
+  await pluginButton.click();
+
+  await page.waitForSelector('div ::-p-text(Starting up model...)');
+
+  const argsForm = await page.waitForSelector('.args-form');
+  const workspace = await argsForm.waitForSelector(
+    'aria/[name="Workspace"][role="textbox"]'
+  );
+  await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
+  const rasterInput = await argsForm.waitForSelector(
+    'aria/[name="Input Raster"][role="textbox"]'
+  );
+  await rasterInput.type(testRaster, { delay: TYPE_DELAY });
+  const numberInput = await argsForm.waitForSelector(
+    'aria/[name="Multiplication Factor"][role="textbox"]'
+  );
+  await numberInput.type('2', { delay: TYPE_DELAY });
 });
 
 const testWin = process.platform === 'win32' ? test : test.skip;

@@ -269,13 +269,17 @@ function PluginModal(props) {
             <Form.Group className="mb-3" controlId="formBasicEmail">
               <Form.Label>Git URL</Form.Label>
               <Form.Control
+                name="url"
                 type="text"
                 placeholder={t('Enter Git URL')}
                 onChange={handleChange}
               />
             </Form.Group>
 
-            <Button onClick={handleSubmit}>
+            <Button
+              name="submit"
+              onClick={handleSubmit}
+            >
               {t('Add')}
             </Button>
           </Form>
