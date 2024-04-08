@@ -184,16 +184,16 @@ class UnitTestRecServer(unittest.TestCase):
         with self.assertRaises(ValueError):
             # intentionally construct start year > end year
             recmodel_server.RecModel(
-                self.resampled_data_path,
-                2014, 2005, os.path.join(self.workspace_dir, 'server_cache'))
+                2014, 2005, os.path.join(self.workspace_dir, 'server_cache'),
+                raw_csv_filename=self.resampled_data_path)
 
     def test_local_aggregate_points(self):
         """Recreation test single threaded local AOI aggregate calculation."""
         from natcap.invest.recreation import recmodel_server
 
         recreation_server = recmodel_server.RecModel(
-            self.resampled_data_path, 2005, 2014,
-            os.path.join(self.workspace_dir, 'server_cache'))
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
+            raw_csv_filename=self.resampled_data_path)
 
         aoi_path = os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp')
 
@@ -245,8 +245,8 @@ class UnitTestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
 
         recreation_server = recmodel_server.RecModel(
-            self.resampled_data_path,
-            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
+            raw_csv_filename=self.resampled_data_path)
 
         date_range = (
             numpy.datetime64('2005-01-01'),
@@ -270,8 +270,8 @@ class UnitTestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
 
         recreation_server = recmodel_server.RecModel(
-            self.resampled_data_path,
-            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
+            raw_csv_filename=self.resampled_data_path)
 
         date_range = (
             numpy.datetime64('2005-01-01'),
@@ -319,13 +319,13 @@ class UnitTestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
 
         recreation_server = recmodel_server.RecModel(
-            self.resampled_data_path,
-            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
+            raw_csv_filename=self.resampled_data_path)
         recreation_server = None
         # This will not generate a new quadtree but instead load existing one
         recreation_server = recmodel_server.RecModel(
-            self.resampled_data_path,
-            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
+            raw_csv_filename=self.resampled_data_path)
 
         date_range = (
             numpy.datetime64('2005-01-01'),
@@ -392,8 +392,8 @@ class TestLocalRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
         self.workspace_dir = tempfile.mkdtemp()
         self.recreation_server = recmodel_server.RecModel(
-            os.path.join(SAMPLE_DATA, 'sample_data.csv'),
-            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
+            raw_csv_filename=os.path.join(SAMPLE_DATA, 'sample_data.csv'))
 
     def tearDown(self):
         """Delete workspace."""
