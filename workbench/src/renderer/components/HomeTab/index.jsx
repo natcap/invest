@@ -74,6 +74,7 @@ export default class HomeTab extends React.Component {
       investButtons.push(
         <ListGroup.Item
           key={modelName}
+          name={modelName}
           action
           onClick={() => this.handleClick(modelId)}
         >

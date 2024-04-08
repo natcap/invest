@@ -297,24 +297,19 @@ test('Install and run a plugin', async () => {
   await downloadModalCancel.click();
 
   const addPluginButton = await page.waitForSelector('div ::-p-text(Add a plugin)');
-  console.log(addPluginButton);
   await addPluginButton.click();
-
-  console.log(await page.content());
 
   const urlInputField = await page.waitForSelector('input[name=url]');
   await urlInputField.type(TEST_PLUGIN_GIT_URL, { delay: TYPE_DELAY });
   const submitButton = await page.waitForSelector('button[name=submit]');
   await submitButton.click();
 
-  const pluginButton = await page.waitForSelector(
-    'aria/[name="PluginFoo Model"][role="button"]' // all text in the button
-  );
-  await pluginButton.click();
+  const pluginButton = await page.waitForSelector("button[name='Foo Model']");
+  await pluginButton.evaluate(b => b.click());
 
   await page.waitForSelector('div ::-p-text(Starting up model...)');
 
-  const argsForm = await page.waitForSelector('.args-form');
+  const argsForm = await page.waitForSelector('.args-form', { timeout: 120000 });
   const workspace = await argsForm.waitForSelector(
     'aria/[name="Workspace"][role="textbox"]'
   );
@@ -327,6 +322,12 @@ test('Install and run a plugin', async () => {
     'aria/[name="Multiplication Factor"][role="textbox"]'
   );
   await numberInput.type('2', { delay: TYPE_DELAY });
+
+  const sidebar = await page.waitForSelector('.invest-sidebar-col');
+  const runButton = await sidebar.waitForSelector('.btn-primary:not([disabled])');
+  await runButton.click();
+  await page.waitForSelector('#invest-tab-tab-log.active');
+  await page.waitForSelector('div ::-p-text(Model Complete)');
 });
 
 const testWin = process.platform === 'win32' ? test : test.skip;
