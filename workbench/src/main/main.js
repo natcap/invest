@@ -91,7 +91,6 @@ export const createWindow = async () => {
   setupOpenExternalUrl();
   setupRendererLogger();
   setupAddPlugin();
-  console.log('finished setup handlers');
 
   const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';
   // Create the browser window.
@@ -109,7 +108,6 @@ export const createWindow = async () => {
       menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
     )
   );
-  console.log('made main window');
   mainWindow.loadURL(path.join(BASE_URL, 'index.html'));
 
   mainWindow.once('ready-to-show', () => {

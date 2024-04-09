@@ -27,7 +27,6 @@ export function checkFirstRun() {
     if (fs.existsSync(hasRunTokenPath)) {
       return false;
     }
-    logger.info('first run');
     fs.writeFileSync(hasRunTokenPath, '');
     const investListJSON = JSON.parse(execSync('invest list --json'));
     Object.keys(investListJSON).forEach((modelName) => {
