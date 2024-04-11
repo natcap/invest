@@ -396,10 +396,10 @@ jobs:
         env:
           GH_TOKEN: env.GITHUB_TOKEN
           DEBUG: electron-builder
-          CSC_LINK: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
+          #CSC_LINK: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+          #CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
         run: |
-          gsutil cp gs://stanford_cert/$CSC_LINK $CSC_LINK
+          #gsutil cp gs://stanford_cert/$CSC_LINK $CSC_LINK
           yarn run build
           yarn run dist
 
@@ -416,16 +416,16 @@ jobs:
           WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.dmg' | head -n 1)
           make WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
 
-      - name: Sign binaries (Windows)
-        if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
-        env:
-          CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-          CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
-        run: |
-          # figure out the path to signtool.exe (it keeps changing with SDK updates)
-          SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
-          WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.exe' | head -n 1)
-          make WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
+      #- name: Sign binaries (Windows)
+      #  if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
+      #  env:
+      #    CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+      #    CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
+      #  run: |
+      #    # figure out the path to signtool.exe (it keeps changing with SDK updates)
+      #    SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
+      #    WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.exe' | head -n 1)
+      #    make WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
