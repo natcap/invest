@@ -192,7 +192,7 @@ class UnitTestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
 
         recreation_server = recmodel_server.RecModel(
-            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
+            2005, 2014, os.path.join('.', 'server_cache'),
             raw_csv_filename=self.resampled_data_path)
 
         aoi_path = os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp')
@@ -211,10 +211,11 @@ class UnitTestRecServer(unittest.TestCase):
         # transfer zipped file to server
         date_range = (('2005-01-01'), ('2014-12-31'))
         out_vector_filename = 'test_aoi_for_subset_pud.shp'
+        print('calc photo userdays')
         zip_result, workspace_id = (
             recreation_server.calc_photo_user_days_in_aoi(
                 zip_file_binary, date_range, out_vector_filename))
-
+        print('calc photo userdays done')
         # unpack result
         result_zip_path = os.path.join(self.workspace_dir, 'pud_result.zip')
         with open(result_zip_path, 'wb') as file:
@@ -344,7 +345,7 @@ class UnitTestRecServer(unittest.TestCase):
         self.assertEqual(
             83.2, pud_poly_feature_queue.get()[1][0])
 
-    def test_parse_input_csv(self):
+    def test_parse_big_input_csv(self):
         """Recreation test parsing raw CSV."""
         from natcap.invest.recreation import recmodel_server
 
@@ -352,9 +353,9 @@ class UnitTestRecServer(unittest.TestCase):
         block_offset_size_queue.put((0, 2**10))
         block_offset_size_queue.put('STOP')
         numpy_array_queue = queue.Queue()
-        recmodel_server._parse_input_csv(
-            block_offset_size_queue, self.resampled_data_path,
-            numpy_array_queue)
+        recmodel_server._parse_big_input_csv(
+            block_offset_size_queue, numpy_array_queue,
+            self.resampled_data_path)
         val = recmodel_server._numpy_loads(numpy_array_queue.get())
         # we know what the first date is
         self.assertEqual(val[0][0], datetime.date(2013, 3, 16))

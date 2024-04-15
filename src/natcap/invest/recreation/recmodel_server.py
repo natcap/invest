@@ -144,20 +144,18 @@ class RecModel(object):
 
         if raw_csv_filename:
             LOGGER.info('hashing input file')
-            start_time = time.time()
             LOGGER.info(raw_csv_filename)
             csv_hash = _hashfile(raw_csv_filename, fast_hash=True)
-            ooc_qt_picklefilename = os.path.join(cache_dir, csv_hash + '.pickle')
-        elif quadtree_pickle_filename:
             ooc_qt_picklefilename = os.path.join(
-                cache_dir, quadtree_pickle_filename)
+                cache_workspace, csv_hash + '.pickle')
+        elif quadtree_pickle_filename:
+            ooc_qt_picklefilename = quadtree_pickle_filename
         else:
             raise ValueError(
                 'Both raw_csv_filename and quadtree_pickle_filename'
                 'are None. One of these kwargs must be given a value.')
 
         if os.path.isfile(ooc_qt_picklefilename):
-            self.qt_pickle_filename = ooc_qt_picklefilename
             LOGGER.info(
                 '%s quadtree already exists', ooc_qt_picklefilename)
         else:
@@ -165,9 +163,11 @@ class RecModel(object):
                 '%s not found, constructing quadtree', ooc_qt_picklefilename)
             if not os.path.exists(raw_csv_filename):
                 raise ValueError(f'{raw_csv_filename} does not exist.')
-            self.qt_pickle_filename = construct_userday_quadtree(
-                initial_bounding_box, [raw_csv_filename], dataset_name, cache_workspace,
+            construct_userday_quadtree(
+                initial_bounding_box, [raw_csv_filename], dataset_name,
+                cache_workspace, ooc_qt_picklefilename,
                 max_points_per_node, max_depth)
+        self.qt_pickle_filename = ooc_qt_picklefilename
         self.cache_workspace = cache_workspace
         self.min_year = min_year
         self.max_year = max_year
@@ -506,7 +506,7 @@ class RecModel(object):
 
 
 def _parse_big_input_csv(
-        block_offset_size_queue, csv_filepath, numpy_array_queue, dataset_name='flickr'):
+        block_offset_size_queue, numpy_array_queue, csv_filepath, dataset_name='flickr'):
     """Parse CSV file lines to (datetime64[d], userhash, lat, lng) tuples.
 
     Args:
@@ -641,7 +641,7 @@ def _file_len(file_path_list):
 
 def construct_userday_quadtree(
         initial_bounding_box, raw_csv_file_list, dataset_name, cache_dir,
-        max_points_per_node, max_depth):
+        ooc_qt_picklefilename, max_points_per_node, max_depth):
     """Construct a spatial quadtree for fast querying of userday points.
 
     Args:
@@ -654,117 +654,116 @@ def construct_userday_quadtree(
             subdivide.
 
     Returns:
-        String: filepath of pickle storing the quadtree
+        None
     """
+    LOGGER.info('counting lines in input file')
+    total_lines = _file_len(raw_csv_file_list)
+    LOGGER.info('%d lines', total_lines)
+    ooc_qt = out_of_core_quadtree.OutOfCoreQuadTree(
+        initial_bounding_box, max_points_per_node, max_depth,
+        cache_dir, pickle_filename=ooc_qt_picklefilename)
 
-        LOGGER.info('counting lines in input file')
-        total_lines = _file_len(raw_csv_file_list)
-        LOGGER.info('%d lines', total_lines)
-        ooc_qt = out_of_core_quadtree.OutOfCoreQuadTree(
-            initial_bounding_box, max_points_per_node, max_depth,
-            cache_dir, pickle_filename=ooc_qt_picklefilename)
+    n_parse_processes = multiprocessing.cpu_count() - 1
+    if n_parse_processes < 1:
+        n_parse_processes = 1
+    numpy_array_queue = multiprocessing.Queue(n_parse_processes * 2)
+    populate_thread = None
 
-        n_parse_processes = multiprocessing.cpu_count() - 1
-        if n_parse_processes < 1:
-            n_parse_processes = 1
-        numpy_array_queue = multiprocessing.Queue(n_parse_processes * 2)
-        populate_thread = None
+    if len(raw_csv_file_list) > 1:
+        LOGGER.info('starting parsing processes by file')
+        if len(raw_csv_file_list) < n_parse_processes:
+            n_parse_processes = len(raw_csv_file_list)
+        for i in range(n_parse_processes):
+            csv_file_list = raw_csv_file_list[i::n_parse_processes]
+            parse_input_csv_process = multiprocessing.Process(
+                target=_parse_small_input_csv_list,
+                args=(csv_file_list, numpy_array_queue))
+            parse_input_csv_process.deamon = True
+            parse_input_csv_process.start()
+    else:
+        raw_photo_csv_table = raw_csv_file_list[0]
+        block_offset_size_queue = multiprocessing.Queue(n_parse_processes * 2)
 
-        if len(raw_csv_file_list) > 1:
-            LOGGER.info('starting parsing processes by file')
-            if len(raw_csv_file_list) < n_parse_processes:
-                n_parse_processes = len(raw_csv_file_list)
-            for i in range(n_parse_processes):
-                csv_file_list = raw_csv_file_list[i::n_parse_processes]
-                parse_input_csv_process = multiprocessing.Process(
-                    target=_parse_small_input_csv_list,
-                    args=(csv_file_list, numpy_array_queue))
-                parse_input_csv_process.deamon = True
-                parse_input_csv_process.start()
-        else:
-            raw_photo_csv_table = raw_csv_file_list[0]
-            block_offset_size_queue = multiprocessing.Queue(n_parse_processes * 2)
+        LOGGER.info('starting parsing processes by chunks')
+        for _ in range(n_parse_processes):
+            parse_input_csv_process = multiprocessing.Process(
+                target=_parse_big_input_csv, args=(
+                    block_offset_size_queue, numpy_array_queue,
+                    raw_photo_csv_table))
+            parse_input_csv_process.deamon = True
+            parse_input_csv_process.start()
 
-            LOGGER.info('starting parsing processes by chunks')
-            for _ in range(n_parse_processes):
-                parse_input_csv_process = multiprocessing.Process(
-                    target=_parse_big_input_csv, args=(
-                        block_offset_size_queue, numpy_array_queue,
-                        raw_photo_csv_table))
-                parse_input_csv_process.deamon = True
-                parse_input_csv_process.start()
-
-            # rush through file and determine reasonable offsets and blocks
-            def _populate_offset_queue(block_offset_size_queue):
-                csv_file = open(raw_photo_csv_table, 'rb')
-                csv_file.readline()  # skip the csv header
-                while True:
-                    start = csv_file.tell()
-                    csv_file.seek(BLOCKSIZE, 1)
-                    line = csv_file.readline()  # skip to end of line
-                    bounds = (start, csv_file.tell() - start)
-                    block_offset_size_queue.put(bounds)
-                    if not line:
-                        break
-                csv_file.close()
-                for _ in range(n_parse_processes):
-                    block_offset_size_queue.put('STOP')
-
-            LOGGER.info('starting offset queue population thread')
-            populate_thread = threading.Thread(
-                target=_populate_offset_queue, args=(block_offset_size_queue,))
-            populate_thread.start()
-
-        LOGGER.info("add points to the quadtree as they are ready")
-        last_time = time.time()
-        start_time = last_time
-        n_points = 0
-
-        LOGGER.info(f'process counter: {n_parse_processes}')
-        while True:
-            payload = numpy_array_queue.get()
-            # if the item is a 'STOP' sentinel, don't load as an array
-            if payload == 'STOP':
-                n_parse_processes -= 1
-                if n_parse_processes == 0:
+        # rush through file and determine reasonable offsets and blocks
+        def _populate_offset_queue(block_offset_size_queue):
+            csv_file = open(raw_photo_csv_table, 'rb')
+            csv_file.readline()  # skip the csv header
+            while True:
+                start = csv_file.tell()
+                csv_file.seek(BLOCKSIZE, 1)
+                line = csv_file.readline()  # skip to end of line
+                bounds = (start, csv_file.tell() - start)
+                block_offset_size_queue.put(bounds)
+                if not line:
                     break
-                continue
-            else:
-                point_array = _numpy_loads(payload)
+            csv_file.close()
+            for _ in range(n_parse_processes):
+                block_offset_size_queue.put('STOP')
 
-            n_points += len(point_array)
-            ooc_qt.add_points(point_array, 0, point_array.size)
-            current_time = time.time()
-            time_elapsed = current_time - last_time
-            if time_elapsed > 5.0:
-                LOGGER.info(
-                    '%.2f%% complete, %d points skipped, %d nodes in qt in '
-                    'only %.2fs', n_points * 100.0 / total_lines,
-                    n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
-                    current_time-start_time)
-                last_time = time.time()
+        LOGGER.info('starting offset queue population thread')
+        populate_thread = threading.Thread(
+            target=_populate_offset_queue, args=(block_offset_size_queue,))
+        populate_thread.start()
 
-        # save quadtree to disk
-        ooc_qt.flush()
-        LOGGER.info(
-            '100.00%% complete, %d points skipped, %d nodes in qt in '
-            'only %.2fs', n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
-            time.time()-start_time)
+    LOGGER.info("add points to the quadtree as they are ready")
+    last_time = time.time()
+    start_time = last_time
+    n_points = 0
 
-        quad_tree_shapefile_name = os.path.join(
-            cache_dir, 'quad_tree_shape.shp')
+    LOGGER.info(f'process counter: {n_parse_processes}')
+    while True:
+        payload = numpy_array_queue.get()
+        # if the item is a 'STOP' sentinel, don't load as an array
+        if payload == 'STOP':
+            n_parse_processes -= 1
+            if n_parse_processes == 0:
+                break
+            continue
+        else:
+            point_array = _numpy_loads(payload)
 
-        lat_lng_ref = osr.SpatialReference()
-        lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
-        LOGGER.info("building quadtree shapefile overview")
-        build_quadtree_shape(quad_tree_shapefile_name, ooc_qt, lat_lng_ref)
+        n_points += len(point_array)
+        ooc_qt.add_points(point_array, 0, point_array.size)
+        current_time = time.time()
+        time_elapsed = current_time - last_time
+        if time_elapsed > 5.0:
+            LOGGER.info(
+                '%.2f%% complete, %d points skipped, %d nodes in qt in '
+                'only %.2fs', n_points * 100.0 / total_lines,
+                n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
+                current_time-start_time)
+            last_time = time.time()
+
+    # save quadtree to disk
+    ooc_qt.flush()
+    LOGGER.info(
+        '100.00%% complete, %d points skipped, %d nodes in qt in '
+        'only %.2fs', n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
+        time.time()-start_time)
+
+    quad_tree_shapefile_name = os.path.join(
+        cache_dir, 'quad_tree_shape.shp')
+
+    lat_lng_ref = osr.SpatialReference()
+    lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
+    LOGGER.info("building quadtree shapefile overview")
+    build_quadtree_shape(quad_tree_shapefile_name, ooc_qt, lat_lng_ref)
 
     if populate_thread:
         populate_thread.join()
     parse_input_csv_process.join()
 
     LOGGER.info('took %f seconds', (time.time() - start_time))
-    return ooc_qt_picklefilename
+    # return ooc_qt_picklefilename
 
 
 def build_quadtree_shape(
@@ -826,7 +825,6 @@ def _calc_poly_pud(
     aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
     if aoi_vector:
         aoi_layer = aoi_vector.GetLayer()
-
         for poly_id in iter(poly_test_queue.get, 'STOP'):
             try:
                 poly_feat = aoi_layer.GetFeature(poly_id)
@@ -841,12 +839,10 @@ def _calc_poly_pud(
                 # We often get weird corrupt data, this lets us tolerate it
                 LOGGER.warning('error parsing poly, skipping')
                 continue
-
             poly_points = local_qt.get_intersecting_points_in_polygon(
                 shapely_polygon)
             pud_set = set()
             pud_monthly_set = collections.defaultdict(set)
-
             for point_datetime, user_hash, _, _ in poly_points:
                 if date_range[0] <= point_datetime <= date_range[1]:
                     timetuple = point_datetime.tolist().timetuple()
@@ -870,7 +866,6 @@ def _calc_poly_pud(
                 monthly_pud_set = pud_monthly_set[str(month_id)]
                 pud_averages[month_id] = (
                     len(monthly_pud_set) / float(n_years))
-
             pud_poly_feature_queue.put((poly_id, pud_averages, pud_monthly_set))
     pud_poly_feature_queue.put('STOP')
     aoi_layer = None
@@ -896,12 +891,13 @@ def execute(args):
         'max_year': $MAX_YEAR,
         'min_year': $MIN_YEAR,
         'cache_workspace': $CACHE_WORKSPACE_PATH'};
-        
+
     natcap.invest.recreation.recmodel_server.execute(args)"
 
     Args:
         args['raw_csv_point_data_path'] (string): path to a csv file of the
             format
+        args['quadtree_pickle_filepath'] (string): path to existing quadtree index
         args['hostname'] (string): hostname to host Pyro server.
         args['port'] (int/or string representation of int): port number to host
             Pyro entry point.
@@ -917,11 +913,22 @@ def execute(args):
     if 'max_points_per_node' in args:
         max_points_per_node = args['max_points_per_node']
 
-    uri = daemon.register(
-        RecModel(args['raw_csv_point_data_path'], args['min_year'],
-                 args['max_year'], args['cache_workspace'],
-                 max_points_per_node=max_points_per_node),
-        'natcap.invest.recreation')
+    if args['raw_csv_point_data_path']:
+        uri = daemon.register(
+            RecModel(args['min_year'], args['max_year'], args['cache_workspace'],
+                     raw_csv_filename=args['raw_csv_point_data_path'],
+                     max_points_per_node=max_points_per_node),
+            'natcap.invest.recreation')
+    elif args['quadtree_pickle_filename']:
+        uri = daemon.register(
+            RecModel(args['min_year'], args['max_year'], args['cache_workspace'],
+                     quadtree_pickle_filename=args['quadtree_pickle_filename'],
+                     max_points_per_node=max_points_per_node),
+            'natcap.invest.recreation')
+    else:
+        raise ValueError(
+            'Either `raw_csv_point_data_path` or `quadtree_pickle_filename`'
+            'must be present in `args`')
     LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
     daemon.requestLoop()
 
