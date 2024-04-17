@@ -53,6 +53,8 @@ process.on('unhandledRejection', (err, promise) => {
 
 if (!process.env.PORT) {
   process.env.PORT = '56789';
+  process.env.JUPYTER_PORT = '54321';
+  process.env.JUPYTER_TOKEN = 'abcdef';
 }
 
 // Keep a global reference of the window object, if you don't, the window will
@@ -109,7 +111,7 @@ export const createWindow = async () => {
   });
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
-      menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
+      menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n, jupyterExe)
     )
   );
   mainWindow.loadURL(path.join(BASE_URL, 'index.html'));

@@ -7,15 +7,15 @@ import BASE_URL from './baseUrl';
 import { getLogger } from './logger';
 import {
   createJupyterProcess,
-  shutdownPythonProcess
+  shutdownPythonProcess,
+  getJupyterIsReady,
 } from './createPythonFlaskProcess';
-import findInvestBinaries from './findInvestBinaries';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 const isMac = process.platform === 'darwin';
 
-export default function menuTemplate(parentWindow, isDevMode, i18n) {
+export default function menuTemplate(parentWindow, isDevMode, i18n, jupyterExe) {
   // Much of this template comes straight from the docs
   // https://www.electronjs.org/docs/api/menu
   const template = [
@@ -113,7 +113,7 @@ export default function menuTemplate(parentWindow, isDevMode, i18n) {
         },
         {
           label: i18n.t('Open Notebook'),
-          click: () => openJupyterLab(parentWindow, isDevMode),
+          click: () => openJupyterLab(parentWindow, isDevMode, jupyterExe),
         }
       ],
     },
@@ -143,11 +143,13 @@ function createWindow(parentWindow, isDevMode) {
   return win;
 }
 
-function openJupyterLab(parentWindow, isDevMode) {
-  const [investExe, jupyterExe] = findInvestBinaries(isDevMode);
-  const subprocess = createJupyterProcess(jupyterExe);
+async function openJupyterLab(parentWindow, isDevMode, jupyterExe) {
+  let labDir = process.resourcesPath;
+  if (isDevMode) { labDir = 'resources/notebooks'; }
+  const subprocess = createJupyterProcess(jupyterExe, labDir);
   const child = createWindow(parentWindow, isDevMode);
-  child.loadURL('http://localhost:8888/?token=abcdef');
+  await getJupyterIsReady();
+  child.loadURL(`http://localhost:${process.env.JUPYTER_PORT}/?token=${process.env.JUPYTER_TOKEN}`);
   child.on('close', async (event) => {
     await shutdownPythonProcess(subprocess);
   });
