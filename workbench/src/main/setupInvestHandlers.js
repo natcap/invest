@@ -34,7 +34,6 @@ const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 
 export function setupInvestRunHandlers() {
   const runningJobs = {};
-  let pid;
 
   ipcMain.handle(
     ipcMainChannels.INVEST_SERVE,
@@ -42,7 +41,7 @@ export function setupInvestRunHandlers() {
       if (settingsStore.get(`models.${modelName}.type`) == 'core') {
         return settingsStore.get('core.pid');
       }
-      pid = await createPythonFlaskProcess(modelName);
+      const pid = await createPythonFlaskProcess(modelName);
       return pid;
     }
   );

@@ -12,11 +12,11 @@ const pidToSubprocess = {};
 
 // https://stackoverflow.com/a/71178451
 async function getFreePort() {
-  return new Promise((res) => {
+  return new Promise((resolve) => {
     const srv = http.createServer();
     srv.listen(0, () => {
       const { port } = srv.address();
-      srv.close(() => res(port));
+      srv.close(() => resolve(port));
     });
   });
 }

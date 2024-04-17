@@ -233,8 +233,8 @@ function PluginModal(props) {
   const [url, setURL] = useState(undefined);
   const [loading, setLoading] = useState(false);
 
-  const handleAboutClose = () => setShowAddPluginModal(false);
-  const handleAboutOpen = () => setShowAddPluginModal(true);
+  const handleModalClose = () => setShowAddPluginModal(false);
+  const handleModalOpen = () => setShowAddPluginModal(true);
   const handleSubmit = () => {
     setLoading(true);
     ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, url).then(() => {
@@ -251,12 +251,12 @@ function PluginModal(props) {
 
   return (
     <React.Fragment>
-      <Button onClick={handleAboutOpen}>
+      <Button onClick={handleModalOpen}>
         <MdOutlineAdd className="mr-1" />
         {t('Add a plugin')}
       </Button>
 
-      <Modal show={showAddPluginModal} onHide={handleAboutClose}>
+      <Modal show={showAddPluginModal} onHide={handleModalClose}>
         <Modal.Header>
           <Modal.Title>{t('Add a plugin')}</Modal.Title>
         </Modal.Header>
@@ -267,7 +267,7 @@ function PluginModal(props) {
         )}
         <Modal.Body>
           <Form>
-            <Form.Group className="mb-3" controlId="formBasicEmail">
+            <Form.Group className="mb-3">
               <Form.Label>Git URL</Form.Label>
               <Form.Control
                 name="url"
