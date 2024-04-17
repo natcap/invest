@@ -1,22 +1,18 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 
-import Form from 'react-bootstrap/Form';
 import Badge from 'react-bootstrap/Badge';
-import Button from 'react-bootstrap/Button';
-import Spinner from 'react-bootstrap/Spinner';
 import ListGroup from 'react-bootstrap/ListGroup';
 import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
-import Modal from 'react-bootstrap/Modal';
 import { useTranslation } from 'react-i18next';
-import { MdOutlineAdd } from 'react-icons/md';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
+import PluginModal from '../PluginModal';
 
 const { logger } = window.Workbench;
 const { ipcRenderer } = window.Workbench.electron;
@@ -225,71 +221,4 @@ RecentInvestJobs.propTypes = {
     })
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,
-};
-
-function PluginModal(props) {
-  const { updateInvestList } = props;
-  const [showAddPluginModal, setShowAddPluginModal] = useState(false);
-  const [url, setURL] = useState(undefined);
-  const [loading, setLoading] = useState(false);
-
-  const handleModalClose = () => setShowAddPluginModal(false);
-  const handleModalOpen = () => setShowAddPluginModal(true);
-  const handleSubmit = () => {
-    setLoading(true);
-    ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, url).then(() => {
-      setLoading(false);
-      setShowAddPluginModal(false);
-      updateInvestList();
-    });
-  };
-  const handleChange = (event) => {
-    setURL(event.currentTarget.value);
-  };
-
-  const { t } = useTranslation();
-
-  return (
-    <React.Fragment>
-      <Button onClick={handleModalOpen}>
-        <MdOutlineAdd className="mr-1" />
-        {t('Add a plugin')}
-      </Button>
-
-      <Modal show={showAddPluginModal} onHide={handleModalClose}>
-        <Modal.Header>
-          <Modal.Title>{t('Add a plugin')}</Modal.Title>
-        </Modal.Header>
-        {loading && (
-          <Spinner animation="border" role="status">
-            <span className="sr-only">Loading...</span>
-          </Spinner>
-        )}
-        <Modal.Body>
-          <Form>
-            <Form.Group className="mb-3">
-              <Form.Label>Git URL</Form.Label>
-              <Form.Control
-                name="url"
-                type="text"
-                placeholder={t('Enter Git URL')}
-                onChange={handleChange}
-              />
-            </Form.Group>
-
-            <Button
-              name="submit"
-              onClick={handleSubmit}
-            >
-              {t('Add')}
-            </Button>
-          </Form>
-        </Modal.Body>
-      </Modal>
-    </React.Fragment>
-  );
-}
-
-PluginModal.propTypes = {
-  updateInvestList: PropTypes.func.isRequired,
 };
