@@ -26,31 +26,6 @@ class EndpointFunctionTests(unittest.TestCase):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_get_vector_colnames(self):
-        """UI server: get_vector_colnames endpoint."""
-        test_client = ui_server.app.test_client()
-        # an empty path
-        response = test_client.post(
-            f'{ROUTE_PREFIX}/colnames', json={'vector_path': ''})
-        colnames = json.loads(response.get_data(as_text=True))
-        self.assertEqual(response.status_code, 422)
-        self.assertEqual(colnames, [])
-        # a vector with one column
-        path = os.path.join(
-            TEST_DATA_PATH, 'annual_water_yield', 'input',
-            'watersheds.shp')
-        response = test_client.post(
-            f'{ROUTE_PREFIX}/colnames', json={'vector_path': path})
-        colnames = json.loads(response.get_data(as_text=True))
-        self.assertEqual(colnames, ['ws_id'])
-        # a non-vector file
-        path = os.path.join(TEST_DATA_PATH, 'ndr', 'input', 'dem.tif')
-        response = test_client.post(
-            f'{ROUTE_PREFIX}/colnames', json={'vector_path': path})
-        colnames = json.loads(response.get_data(as_text=True))
-        self.assertEqual(response.status_code, 422)
-        self.assertEqual(colnames, [])
-
     def test_get_invest_models(self):
         """UI server: get_invest_models endpoint."""
         test_client = ui_server.app.test_client()
@@ -66,8 +41,8 @@ class EndpointFunctionTests(unittest.TestCase):
         spec = json.loads(response.get_data(as_text=True))
         self.assertEqual(
             set(spec),
-            {'model_name', 'pyname', 'userguide',
-             'args_with_spatial_overlap', 'args', 'outputs'})
+            {'model_id', 'model_name', 'pyname', 'userguide', 'aliases',
+             'ui_spec', 'args_with_spatial_overlap', 'args', 'outputs'})
 
     def test_get_invest_validate(self):
         """UI server: get_invest_validate endpoint."""

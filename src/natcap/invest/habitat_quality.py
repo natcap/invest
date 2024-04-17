@@ -13,7 +13,6 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -27,9 +26,19 @@ MISSING_THREAT_RASTER_MSG = gettext(
 DUPLICATE_PATHS_MSG = gettext("Threat paths must be unique. Duplicates: ")
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["habitat_quality"].model_title,
-    "pyname": MODEL_METADATA["habitat_quality"].pyname,
-    "userguide": MODEL_METADATA["habitat_quality"].userguide,
+    "model_id": "habitat_quality",
+    "model_name": gettext("Habitat Quality"),
+    "pyname": "natcap.invest.habitat_quality",
+    "userguide": "habitat_quality.html",
+    "aliases": ("hq",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['lulc_cur_path', 'lulc_fut_path', 'lulc_bas_path'],
+            ['threats_table_path', 'access_vector_path', 'sensitivity_table_path', 'half_saturation_constant'],
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "lulc_cur_path", "lulc_fut_path", "lulc_bas_path",

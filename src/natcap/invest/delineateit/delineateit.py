@@ -18,16 +18,25 @@ from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 from . import delineateit_core
 
 LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["delineateit"].model_title,
-    "pyname": MODEL_METADATA["delineateit"].pyname,
-    "userguide": MODEL_METADATA["delineateit"].userguide,
+    "model_id": "delineateit",
+    "model_name": gettext("DelineateIt"),
+    "pyname": "natcap.invest.delineateit.delineateit",
+    "userguide": "delineateit.html",
+    "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['dem_path', 'detect_pour_points', 'outlet_vector_path', 'skip_invalid_geometry'],
+            ['snap_points', 'flow_threshold', 'snap_distance'],
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "outlet_vector_path"],
         "different_projections_ok": True,
@@ -54,6 +63,7 @@ MODEL_SPEC = {
             "fields": {},
             "geometries": spec_utils.ALL_GEOMS,
             "required": "not detect_pour_points",
+            "allowed": "not detect_pour_points",
             "about": gettext(
                 "A map of watershed outlets from which to delineate the "
                 "watersheds. Required if Detect Pour Points is not checked."),
@@ -75,6 +85,7 @@ MODEL_SPEC = {
         "flow_threshold": {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "snap_points",
+            "allowed": "snap_points",
             "about": gettext(
                 spec_utils.THRESHOLD_FLOW_ACCUMULATION["about"] +
                 " Required if Snap Points is selected."),
@@ -84,6 +95,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.pixels,
             "required": "snap_points",
+            "allowed": "snap_points",
             "about": gettext(
                 "Maximum distance to relocate watershed outlet points in "
                 "order to snap them to a stream. Required if Snap Points "
@@ -93,6 +105,7 @@ MODEL_SPEC = {
         "skip_invalid_geometry": {
             "type": "boolean",
             "required": False,
+            "allowed": "not detect_pour_points",
             "about": gettext(
                 "Skip delineation for any invalid geometries found in the "
                 "Outlet Features. Otherwise, an invalid geometry will cause "

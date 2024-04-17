@@ -24,18 +24,10 @@ import {
   getInvestModelNames,
   getSpec,
   fetchValidation,
+  fetchArgsEnabled,
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 
-import { mockUISpec } from './utils';
-
-// It's quite a pain to dynamically mock a const from a module,
-// here we do it by importing as another object, then
-// we can overwrite the object we want to mock later
-// https://stackoverflow.com/questions/42977961/how-to-mock-an-exported-const-in-jest
-import * as uiConfig from '../../src/renderer/ui_config';
-
-const { UI_SPEC } = uiConfig; // save the original for unmocking in afterEach
 const MOCK_MODEL_TITLE = 'Carbon';
 
 jest.mock('node-fetch');
@@ -54,6 +46,9 @@ describe('InVEST subprocess testing', () => {
         name: 'Suffix',
         type: 'freestyle_string',
       },
+    },
+    ui_spec: {
+      order: [['workspace_dir', 'results_suffix']],
     },
     model_name: 'EcoModel',
     pyname: 'natcap.invest.dot',
@@ -113,10 +108,12 @@ describe('InVEST subprocess testing', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
+    fetchArgsEnabled.mockResolvedValue({
+      workspace_dir: true, results_suffix: true
+    });
     getInvestModelNames.mockResolvedValue(
       { Carbon: { model_name: modelName } }
     );
-    uiConfig.UI_SPEC = mockUISpec(spec, modelName);
     // mock the request to write the datastack file. Actually write it
     // because the app will clean it up when invest exits.
     writeInvestParameters.mockImplementation((payload) => {
@@ -127,7 +124,6 @@ describe('InVEST subprocess testing', () => {
 
   afterEach(async () => {
     await InvestJob.clearStore();
-    uiConfig.UI_SPEC = UI_SPEC;
   });
 
   test('exit without error - expect log display', async () => {

@@ -18,15 +18,24 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["pollination"].model_title,
-    "pyname": MODEL_METADATA["pollination"].pyname,
-    "userguide": MODEL_METADATA["pollination"].userguide,
+    "model_id": "pollination",
+    "model_name": gettext("Crop Pollination"),
+    "pyname": "natcap.invest.pollination",
+    "userguide": "croppollination.html",
+    "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['landcover_raster_path', 'landcover_biophysical_table_path'],
+            ['guild_table_path', 'farm_vector_path']
+        ],
+        "hidden": ["n_workers"]
+    },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

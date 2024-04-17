@@ -34,7 +34,6 @@ from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -98,9 +97,20 @@ predictor_table_columns = {
 
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["recreation"].model_title,
-    "pyname": MODEL_METADATA["recreation"].pyname,
-    "userguide": MODEL_METADATA["recreation"].userguide,
+    "model_id": "recreation",
+    "model_name": gettext("Visitation: Recreation and Tourism"),
+    "pyname": "natcap.invest.recreation.recmodel_client",
+    "userguide": "recreation.html",
+    "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['aoi_path', 'start_year', 'end_year'],
+            ['compute_regression', 'predictor_table_path', 'scenario_predictor_table_path'],
+            ['grid_aoi', 'grid_type', 'cell_size'],
+        ],
+        "hidden": ['n_workers', 'hostname', 'port']
+    },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -165,6 +175,7 @@ MODEL_SPEC = {
                 "hexagon": {"display_name": gettext("hexagon")}
             },
             "required": "grid_aoi",
+            "allowed": "grid_aoi",
             "about": gettext(
                 "The shape of grid cells to make within the AOI polygons. "
                 "Required if Grid AOI is selected."),
@@ -175,6 +186,7 @@ MODEL_SPEC = {
             "expression": "value > 0",
             "units": u.other,  # any unit of length is ok
             "required": "grid_aoi",
+            "allowed": "grid_aoi",
             "about": gettext(
                 "Size of grid cells to make, measured in the projection units "
                 "of the AOI. If the Grid Type is 'square', this is the length "
@@ -195,6 +207,7 @@ MODEL_SPEC = {
             "index_col": "id",
             "columns": predictor_table_columns,
             "required": "compute_regression",
+            "allowed": "compute_regression",
             "about": gettext(
                 "A table that maps predictor IDs to spatial files and their "
                 "predictor metric types. The file paths can be absolute or "
@@ -206,6 +219,7 @@ MODEL_SPEC = {
             "index_col": "id",
             "columns": predictor_table_columns,
             "required": False,
+            "allowed": "compute_regression",
             "about": gettext(
                 "A table of future or alternative scenario predictors. Maps "
                 "IDs to files and their types. The file paths can be absolute "

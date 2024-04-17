@@ -13,7 +13,6 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -67,9 +66,18 @@ NUTRIENTS = [
 ]
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["crop_production_regression"].model_title,
-    "pyname": MODEL_METADATA["crop_production_regression"].pyname,
-    "userguide": MODEL_METADATA["crop_production_regression"].userguide,
+    "model_id": "crop_production_regression",
+    "model_name": gettext("Crop Production: Regression"),
+    "pyname": "natcap.invest.crop_production_regression",
+    "userguide": "crop_production.html",
+    "aliases": ("cpr",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['model_data_path', 'landcover_raster_path', 'landcover_to_crop_table_path', 'fertilization_rate_table_path', 'aggregate_polygon_path'],
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["landcover_raster_path", "aggregate_polygon_path"],
         "different_projections_ok": True,

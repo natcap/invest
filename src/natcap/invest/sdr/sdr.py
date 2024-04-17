@@ -22,16 +22,27 @@ from .. import spec_utils
 from .. import urban_nature_access
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["sdr"].model_title,
-    "pyname": MODEL_METADATA["sdr"].pyname,
-    "userguide": MODEL_METADATA["sdr"].userguide,
+    "model_id": "sdr",
+    "model_name": gettext("Sediment Delivery Ratio"),
+    "pyname": "natcap.invest.sdr.sdr",
+    "userguide": "sdr.html",
+    "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['dem_path', 'erosivity_path', 'erodibility_path'],
+            ['lulc_path', 'biophysical_table_path'],
+            ['watersheds_path', 'drainage_path'],
+            ['threshold_flow_accumulation', 'k_param', 'sdr_max', 'ic_0_param', 'l_max']
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
                          "lulc_path", "drainage_path", "watersheds_path", ],

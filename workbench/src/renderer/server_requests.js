@@ -42,6 +42,54 @@ export async function getSpec(payload) {
 }
 
 /**
+ * Get the dynamically determined dropdown options for a given model.
+ *
+ * @param {object} payload {
+ *   model_module: string (e.g. natcap.invest.carbon)
+ *   args: JSON string of InVEST model args keys and values
+ * }
+ * @returns {Promise} resolves object
+ */
+export async function getDynamicDropdowns(payload) {
+  return (
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/dynamic_dropdowns`, {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
+}
+
+/**
+ * Get the enabled/disabled status of arg inputs.
+ *
+ * @param {object} payload {
+ *   model_module: string (e.g. natcap.invest.carbon)
+ *   args: JSON string of InVEST model args keys and values
+ * }
+ * @returns {Promise} resolves object
+ */
+export async function fetchArgsEnabled(payload) {
+  return (
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/args_enabled`, {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.json())
+      .catch((error) => {
+        logger.error(error.stack);
+        // In practice this function is debounced, so there's a case (tests)
+        // where it is not called until after the flask app was killed.
+        // So instead of letting it return undefined, return the expected type.
+        return [];
+      })
+  );
+}
+
+/**
  * Send invest arguments to a model's validate function.
  *
  * @param {object} payload {
@@ -82,24 +130,6 @@ export function fetchDatastackFromFile(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
-  );
-}
-
-/**
- * Get a list of the column names of a vector file.
- *
- * @param {string} payload - path to file
- * @returns {Promise} resolves array
- */
-export function getVectorColumnNames(payload) {
-  return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/colnames`, {
-      method: 'post',
-      body: JSON.stringify({ vector_path: payload }),
-      headers: { 'Content-Type': 'application/json' },
-    })
-      .then((response) => response.json())
-      .catch((error) => logger.error(error.stack))
   );
 }
 
