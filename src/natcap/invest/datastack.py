@@ -35,6 +35,7 @@ import warnings
 from osgeo import gdal
 
 from . import utils
+from . import validation
 
 try:
     from . import __version__
@@ -170,12 +171,15 @@ def format_args_dict(args_dict, model_name):
     return args_string
 
 
-def get_datastack_info(filepath):
+def get_datastack_info(filepath, extract_path=None):
     """Get information about a datastack.
 
     Args:
         filepath (string): The path to a file on disk that can be extracted as
             a datastack, parameter set, or logfile.
+        extract_path (str): Path to a directory to extract the datastack, if
+            provided as an archive. Will be overwritten if it already exists,
+            or created if it does not already exist.
 
     Returns:
         A 2-tuple.  The first item of the tuple is one of:
@@ -188,23 +192,18 @@ def get_datastack_info(filepath):
         parsed args, modelname and invest version that the file was built with.
     """
     if tarfile.is_tarfile(filepath):
+        if not extract_path:
+            raise ValueError('extract_path must be provided if using archive')
+        if os.path.isfile(extract_path):
+            os.remove(extract_path)
+        elif os.path.isdir(extract_path):
+            shutil.rmtree(extract_path)
+        os.mkdir(extract_path)
         # If it's a tarfile, we need to extract the parameters file to be able
         # to inspect the parameters and model details.
-        with tarfile.open(filepath) as archive:
-            try:
-                temp_directory = tempfile.mkdtemp()
-                archive.extract('./' + DATASTACK_PARAMETER_FILENAME,
-                                temp_directory)
-                return 'archive', extract_parameter_set(
-                    os.path.join(temp_directory, DATASTACK_PARAMETER_FILENAME))
-            finally:
-                try:
-                    shutil.rmtree(temp_directory)
-                except OSError:
-                    # If something happens and we can't remove temp_directory,
-                    # just log the exception and continue with program
-                    # execution.
-                    LOGGER.exception('Could not remove %s', temp_directory)
+        extract_datastack_archive(filepath, extract_path)
+        return 'archive', extract_parameter_set(
+            os.path.join(extract_path, DATASTACK_PARAMETER_FILENAME))
 
     try:
         return 'json', extract_parameter_set(filepath)
@@ -335,8 +334,8 @@ def build_datastack_archive(args, model_name, datastack_path):
                 contained_files_dir = os.path.join(
                     data_dir, f'{key}_csv_data')
 
-                dataframe = utils.read_csv_to_dataframe(
-                    source_path, args_spec[key])
+                dataframe = validation.get_validated_dataframe(
+                    source_path, **args_spec[key])
                 csv_source_dir = os.path.abspath(os.path.dirname(source_path))
                 for spatial_column_name in spatial_columns:
                     # Iterate through the spatial columns, identify the set of

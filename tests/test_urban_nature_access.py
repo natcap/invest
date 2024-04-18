@@ -169,132 +169,16 @@ class UNATests(unittest.TestCase):
                     population_array.sum(), resampled_population_array.sum(),
                     rtol=1e-3)
 
-    def test_dichotomous_decay_simple(self):
-        """UNA: Test dichotomous decay kernel on a simple case."""
+    def test_density_kernel(self):
+        """UNA: Test the density kernel."""
         from natcap.invest import urban_nature_access
 
-        expected_distance = 5
-        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
-
-        urban_nature_access._create_kernel_raster(
-            urban_nature_access._kernel_dichotomy, expected_distance,
-            kernel_filepath)
-
-        expected_array = numpy.array([
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]], dtype=numpy.uint8)
-
-        extracted_kernel_array = pygeoprocessing.raster_to_numpy_array(
-            kernel_filepath)
-        numpy.testing.assert_array_equal(
-            expected_array, extracted_kernel_array)
-
-    def test_dichotomous_decay_normalized(self):
-        """UNA: Test normalized dichotomous kernel."""
-        from natcap.invest import urban_nature_access
-
-        expected_distance = 5
-        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
-
-        urban_nature_access._create_kernel_raster(
-            urban_nature_access._kernel_dichotomy,
-            expected_distance, kernel_filepath, normalize=True)
-
-        expected_array = numpy.array([
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]], dtype=numpy.float32)
-        expected_array /= numpy.sum(expected_array)
-
-        extracted_kernel_array = pygeoprocessing.raster_to_numpy_array(
-            kernel_filepath)
-        numpy.testing.assert_allclose(
-            expected_array, extracted_kernel_array)
-
-    def test_dichotomous_decay_large(self):
-        """UNA: Test dichotomous decay on a very large pixel radius."""
-        from natcap.invest import urban_nature_access
-
-        # kernel with > 268 million pixels.  This is big enough to force my
-        # laptop to noticeably hang while swapping memory on an all in-memory
-        # implementation.
-        expected_distance = 2**13
-        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
-
-        urban_nature_access._create_kernel_raster(
-            urban_nature_access._kernel_dichotomy,
-            expected_distance, kernel_filepath)
-
-        expected_shape = (expected_distance*2+1, expected_distance*2+1)
-        expected_n_1_pixels = math.pi*expected_distance**2
-
-        kernel_info = pygeoprocessing.get_raster_info(kernel_filepath)
-        n_1_pixels = 0
-        for _, block in pygeoprocessing.iterblocks((kernel_filepath, 1)):
-            n_1_pixels += numpy.count_nonzero(block)
-
-        # 210828417 is only a slight overestimate from the area of the circle
-        # at this radius: math.pi*expected_distance**2 = 210828714.13315654
-        numpy.testing.assert_allclose(
-            n_1_pixels, expected_n_1_pixels, rtol=1e-5)
-        self.assertEqual(kernel_info['raster_size'], expected_shape)
-
-    def test_density_decay_simple(self):
-        """UNA: Test density decay."""
-        from natcap.invest import urban_nature_access
-
-        expected_distance = 200
-        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
-
-        urban_nature_access._create_kernel_raster(
-            urban_nature_access._kernel_density,
-            expected_distance, kernel_filepath)
-
-        expected_shape = (expected_distance*2+1,) * 2
-        kernel_info = pygeoprocessing.get_raster_info(kernel_filepath)
-        kernel_array = pygeoprocessing.raster_to_numpy_array(kernel_filepath)
-        self.assertEqual(kernel_info['raster_size'], expected_shape)
-        numpy.testing.assert_allclose(
-            47123.867,  # obtained from manual inspection
-            kernel_array.sum())
-        self.assertEqual(0.75, kernel_array.max())
-        self.assertEqual(0, kernel_array.min())
-
-    def test_density_decay_normalized(self):
-        """UNA: Test normalized density decay."""
-        from natcap.invest import urban_nature_access
-
-        expected_distance = 200
-        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
-
-        urban_nature_access._create_kernel_raster(
-            urban_nature_access._kernel_density,
-            expected_distance, kernel_filepath, normalize=True)
-
-        expected_shape = (expected_distance*2+1,) * 2
-        kernel_info = pygeoprocessing.get_raster_info(kernel_filepath)
-        kernel_array = pygeoprocessing.raster_to_numpy_array(kernel_filepath)
-        self.assertEqual(kernel_info['raster_size'], expected_shape)
-        numpy.testing.assert_allclose(1, kernel_array.sum())
-        self.assertAlmostEqual(1.5915502e-05, kernel_array.max())
-        self.assertEqual(0, kernel_array.min())
+        max_distance = 3
+        distance = numpy.array([0, 1, 2, 3, 4])
+        kernel = urban_nature_access._kernel_density(distance, max_distance)
+        # These regression values are calculated by hand
+        expected_array = numpy.array([.75, 2/3, 5/12, 0, 0])
+        numpy.testing.assert_allclose(expected_array, kernel)
 
     def test_power_kernel(self):
         """UNA: Test the power kernel."""
@@ -307,20 +191,6 @@ class UNATests(unittest.TestCase):
             distance, max_distance, beta)
         # These regression values are calculated by hand
         expected_array = numpy.array([1, 1, (1/32), (1/243), 0])
-        numpy.testing.assert_allclose(
-            expected_array, kernel)
-
-    def test_exponential_kernel(self):
-        """UNA: Test the exponential decay kernel."""
-        from natcap.invest import urban_nature_access
-
-        max_distance = 3
-        distance = numpy.array([0, 1, 2, 3, 4])
-        kernel = urban_nature_access._kernel_exponential(
-            distance, max_distance)
-        # Regression values are calculated by hand
-        expected_array = numpy.array(
-            [1, 0.71653134, 0.5134171, 0.36787945, 0])
         numpy.testing.assert_allclose(
             expected_array, kernel)
 
@@ -347,27 +217,24 @@ class UNATests(unittest.TestCase):
             [nodata, 100.5],
             [75, 100]], dtype=numpy.float32)
         urban_nature_demand = 50
+        supply_path = os.path.join(self.workspace_dir, 'supply.path')
+        target_path = os.path.join(self.workspace_dir, 'target.path')
 
-        population = numpy.array([
-            [50, 100],
-            [40.75, nodata]], dtype=numpy.float32)
+        pygeoprocessing.numpy_array_to_raster(
+            urban_nature_supply_percapita, nodata, _DEFAULT_PIXEL_SIZE,
+            _DEFAULT_ORIGIN, _DEFAULT_SRS.ExportToWkt(), supply_path)
 
-        urban_nature_budget = (
-            urban_nature_access._urban_nature_balance_percapita_op(
-                urban_nature_supply_percapita, urban_nature_demand))
+        urban_nature_access._calculate_urban_nature_balance_percapita(
+            supply_path, urban_nature_demand, target_path)
+
+        urban_nature_budget = pygeoprocessing.raster_to_numpy_array(
+            target_path)
+
         expected_urban_nature_budget = numpy.array([
             [nodata, 50.5],
             [25, 50]], dtype=numpy.float32)
         numpy.testing.assert_allclose(
             urban_nature_budget, expected_urban_nature_budget)
-
-        supply_demand = urban_nature_access._urban_nature_balance_totalpop_op(
-            urban_nature_budget, population)
-        expected_supply_demand = numpy.array([
-            [nodata, 100 * 50.5],
-            [25 * 40.75, nodata]], dtype=numpy.float32)
-        numpy.testing.assert_allclose(
-            supply_demand, expected_supply_demand)
 
     def test_reclassify_and_multpliy(self):
         """UNA: test reclassification/multiplication function."""
@@ -484,7 +351,7 @@ class UNATests(unittest.TestCase):
         accessible_urban_nature_array = pygeoprocessing.raster_to_numpy_array(
             os.path.join(args['workspace_dir'], 'output',
                          'accessible_urban_nature_suffix.tif'))
-        valid_mask = ~utils.array_equals_nodata(
+        valid_mask = ~pygeoprocessing.array_equals_nodata(
             accessible_urban_nature_array, urban_nature_access.FLOAT32_NODATA)
         valid_pixels = accessible_urban_nature_array[valid_mask]
         self.assertAlmostEqual(numpy.sum(valid_pixels), 6221004.41259766)
@@ -603,7 +470,7 @@ class UNATests(unittest.TestCase):
         def _read_and_sum_raster(path):
             array = pygeoprocessing.raster_to_numpy_array(path)
             nodata = pygeoprocessing.get_raster_info(path)['nodata'][0]
-            return numpy.sum(array[~utils.array_equals_nodata(array, nodata)])
+            return numpy.sum(array[~pygeoprocessing.array_equals_nodata(array, nodata)])
 
         intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
         for (supply_type, supply_field), fieldname in itertools.product(
@@ -652,7 +519,7 @@ class UNATests(unittest.TestCase):
 
         accessible_urban_nature_array = (
             pygeoprocessing.raster_to_numpy_array(path))
-        valid_mask = ~utils.array_equals_nodata(
+        valid_mask = ~pygeoprocessing.array_equals_nodata(
             accessible_urban_nature_array,
             urban_nature_access.FLOAT32_NODATA)
         valid_pixels = accessible_urban_nature_array[valid_mask]
@@ -707,14 +574,14 @@ class UNATests(unittest.TestCase):
             'pop_female': attributes[0]['pop_female'],
             'pop_male': attributes[0]['pop_male'],
             'adm_unit_id': 0,
-            'Pund_adm': 0,
+            'Pund_adm': 3991.8271484375,
             'Pund_adm_female': 2235.423095703125,
             'Pund_adm_male': 1756.404052734375,
-            'Povr_adm': 0,
+            'Povr_adm': 1084.1727294921875,
             'Povr_adm_female': 607.13671875,
             'Povr_adm_male': 477.0360107421875,
-            'SUP_DEMadm_cap': -17.90779987933412,
-            'SUP_DEMadm_cap_female': -17.907799675104435,
+            'SUP_DEMadm_cap': -17.907799109781322,
+            'SUP_DEMadm_cap_female': -17.90779830090304,
             'SUP_DEMadm_cap_male': -17.907800139262825,
         }
         self.assertEqual(
@@ -731,6 +598,82 @@ class UNATests(unittest.TestCase):
         self._assert_urban_nature(os.path.join(
             output_dir, 'accessible_urban_nature_to_pop_female.tif'),
             6221004.412597656, 1171.7352294921875, 11898.0712890625)
+
+    def test_radii_by_pop_group_exponential_kernal(self):
+        """UNA: Regression test defining radii by population group.
+
+        Issue for this bug: https://github.com/natcap/invest/issues/1502
+        """
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+        args['decay_function'] = urban_nature_access.KERNEL_LABEL_EXPONENTIAL
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_POP_GROUP
+        args['population_group_radii_table'] = os.path.join(
+            self.workspace_dir, 'pop_group_radii.csv')
+        del args['results_suffix']
+
+        with open(args['population_group_radii_table'], 'w') as pop_grp_table:
+            pop_grp_table.write(
+                textwrap.dedent("""\
+                    pop_group,search_radius_m
+                    pop_female,100
+                    pop_male,100"""))
+
+        admin_geom = [
+            shapely.geometry.box(
+                *pygeoprocessing.get_raster_info(
+                    args['lulc_raster_path'])['bounding_box'])]
+        fields = {
+            'pop_female': ogr.OFTReal,
+            'pop_male': ogr.OFTReal,
+        }
+        attributes = [
+            {'pop_female': 0.56, 'pop_male': 0.44}
+        ]
+        pygeoprocessing.shapely_geometry_to_vector(
+            admin_geom, args['admin_boundaries_vector_path'],
+            pygeoprocessing.get_raster_info(
+                args['population_raster_path'])['projection_wkt'],
+            'GeoJSON', fields, attributes)
+
+        urban_nature_access.execute(args)
+
+        summary_vector = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output',
+                         'admin_boundaries.gpkg'))
+        summary_layer = summary_vector.GetLayer()
+        self.assertEqual(summary_layer.GetFeatureCount(), 1)
+        summary_feature = summary_layer.GetFeature(1)
+
+        expected_field_values = {
+            'pop_female': attributes[0]['pop_female'],
+            'pop_male': attributes[0]['pop_male'],
+            'adm_unit_id': 0,
+            'Pund_adm': 4801.7900390625,
+            'Pund_adm_female': 2689.00244140625,
+            'Pund_adm_male': 2112.78759765625,
+            'Povr_adm': 274.2098693847656,
+            'Povr_adm_female': 153.55752563476562,
+            'Povr_adm_male': 120.65234375,
+            'SUP_DEMadm_cap': -17.907799109781322,
+            'SUP_DEMadm_cap_female': -17.90779830090304,
+            'SUP_DEMadm_cap_male': -17.907800139262825,
+        }
+        self.assertEqual(
+            set(defn.GetName() for defn in summary_layer.schema),
+            set(expected_field_values.keys()))
+        for fieldname, expected_value in expected_field_values.items():
+            self.assertAlmostEqual(
+                expected_value, summary_feature.GetField(fieldname))
+
+        output_dir = os.path.join(args['workspace_dir'], 'output')
+        self._assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_to_pop_male.tif'),
+            17812884.000976562, 7740.4287109375, 25977.67578125)
+        self._assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_to_pop_female.tif'),
+            17812884.000976562, 7740.4287109375, 25977.67578125)
 
     def test_modes_same_radii_same_results(self):
         """UNA: all modes have same results when consistent radii.
@@ -818,7 +761,7 @@ class UNATests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output',
                              f'urban_nature_demand_{suffix}.tif'))
             nodata = urban_nature_access.FLOAT32_NODATA
-            valid_pixels = ~utils.array_equals_nodata(population, nodata)
+            valid_pixels = ~pygeoprocessing.array_equals_nodata(population, nodata)
             numpy.testing.assert_allclose(
                 (population[valid_pixels].sum() *
                     float(args['urban_nature_demand'])),
@@ -977,6 +920,48 @@ class UNATests(unittest.TestCase):
             layer = None
             vector = None
 
+    def test_write_vector_for_single_raster_modes(self):
+        """UNA: create a summary vector for single-raster summary stats."""
+
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+
+        # Overwrite all population pixels with 0
+        try:
+            raster = gdal.Open(args['population_raster_path'], gdal.GA_Update)
+            band = raster.GetRasterBand(1)
+            array = band.ReadAsArray()
+            array.fill(0.0)
+            band.WriteArray(array)
+        finally:
+            raster = band = None
+
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = 1000
+
+        urban_nature_access.execute(args)
+
+        summary_vector = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output',
+                         'admin_boundaries_suffix.gpkg'))
+        summary_layer = summary_vector.GetLayer()
+        self.assertEqual(summary_layer.GetFeatureCount(), 1)
+        summary_feature = summary_layer.GetFeature(1)
+
+        expected_field_values = {
+            'adm_unit_id': 0,
+            'Pund_adm': 0,
+            'Povr_adm': 0,
+            'SUP_DEMadm_cap': None,  # OGR converts NaN to None.
+        }
+        self.assertEqual(
+            set(defn.GetName() for defn in summary_layer.schema),
+            set(expected_field_values.keys()))
+        for fieldname, expected_value in expected_field_values.items():
+            self.assertAlmostEqual(
+                expected_value, summary_feature.GetField(fieldname))
+
     def test_urban_nature_proportion(self):
         """UNA: Run the model with urban nature proportion."""
         from natcap.invest import urban_nature_access
@@ -1050,3 +1035,16 @@ class UNATests(unittest.TestCase):
         args['search_radius_mode'] = (
             urban_nature_access.RADIUS_OPT_URBAN_NATURE)
         self.assertEqual(urban_nature_access.validate(args), [])
+
+    def test_validate_uniform_search_radius(self):
+        """UNA: Search radius is required when using uniform search radii."""
+        from natcap.invest import urban_nature_access
+        from natcap.invest import validation
+
+        args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = ''
+
+        warnings = urban_nature_access.validate(args)
+        self.assertEqual(warnings, [(['search_radius'],
+                                     validation.MESSAGES['MISSING_VALUE'])])

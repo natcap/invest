@@ -116,8 +116,6 @@ LOGGER = logging.getLogger(__name__)
 INVALID_ANALYSIS_YEAR_MSG = gettext(
     "Analysis year {analysis_year} must be >= the latest snapshot year "
     "({latest_year})")
-INVALID_SNAPSHOT_RASTER_MSG = gettext(
-    "Raster for snapshot {snapshot_year} could not be validated.")
 INVALID_TRANSITION_VALUES_MSG = gettext(
     "The transition table expects values of {model_transitions} but found "
     "values of {transition_values}.")
@@ -570,9 +568,9 @@ def execute(args):
     task_graph, n_workers, intermediate_dir, output_dir, suffix = (
         _set_up_workspace(args))
 
-    snapshots = utils.read_csv_to_dataframe(
+    snapshots = validation.get_validated_dataframe(
         args['landcover_snapshot_csv'],
-        MODEL_SPEC['args']['landcover_snapshot_csv']
+        **MODEL_SPEC['args']['landcover_snapshot_csv']
     )['raster_path'].to_dict()
 
     # Phase 1: alignment and preparation of inputs
@@ -593,9 +591,9 @@ def execute(args):
 
     # We're assuming that the LULC initial variables and the carbon pool
     # transient table are combined into a single lookup table.
-    biophysical_df = utils.read_csv_to_dataframe(
+    biophysical_df = validation.get_validated_dataframe(
         args['biophysical_table_path'],
-        MODEL_SPEC['args']['biophysical_table_path'])
+        **MODEL_SPEC['args']['biophysical_table_path'])
 
     # LULC Classnames are critical to the transition mapping, so they must be
     # unique.  This check is here in ``execute`` because it's possible that
@@ -963,9 +961,9 @@ def execute(args):
     prices = None
     if args.get('do_economic_analysis', False):  # Do if truthy
         if args.get('use_price_table', False):
-            prices = utils.read_csv_to_dataframe(
+            prices = validation.get_validated_dataframe(
                 args['price_table_path'],
-                MODEL_SPEC['args']['price_table_path']
+                **MODEL_SPEC['args']['price_table_path']
             )['price'].to_dict()
         else:
             inflation_rate = float(args['inflation_rate']) * 0.01
@@ -1514,28 +1512,13 @@ def _calculate_npv(
                 prices_by_year[year] / (
                     (1 + discount_rate) ** years_since_baseline))
 
-        def _npv(*sequestration_matrices):
-            npv = numpy.empty(sequestration_matrices[0].shape,
-                              dtype=numpy.float32)
-            npv[:] = NODATA_FLOAT32_MIN
-
-            matrix_sum = numpy.zeros(npv.shape, dtype=numpy.float32)
-            valid_pixels = numpy.ones(npv.shape, dtype=bool)
-            for matrix in sequestration_matrices:
-                valid_pixels &= ~utils.array_equals_nodata(matrix, NODATA_FLOAT32_MIN)
-                matrix_sum[valid_pixels] += matrix[valid_pixels]
-
-            npv[valid_pixels] = (
-                matrix_sum[valid_pixels] * valuation_factor)
-            return npv
-
-        raster_path_band_tuples = [
-            (path, 1) for (year, path) in net_sequestration_rasters.items() if
-            year <= target_raster_year]
-
-        pygeoprocessing.raster_calculator(
-            raster_path_band_tuples, _npv, target_raster_path,
-            gdal.GDT_Float32, NODATA_FLOAT32_MIN)
+        pygeoprocessing.raster_map(
+            op=lambda *seq_arrays: numpy.sum(
+                seq_arrays, axis=0) * valuation_factor,
+            rasters=[
+                path for year, path in net_sequestration_rasters.items() if
+                year <= target_raster_year],
+            target_path=target_raster_path)
 
 
 def _calculate_stocks_after_baseline_period(
@@ -1562,32 +1545,10 @@ def _calculate_stocks_after_baseline_period(
         ``None``.
 
     """
-    # Both of these values are assumed to be defined from earlier in the
-    # model's execution.
-    baseline_nodata = pygeoprocessing.get_raster_info(
-        baseline_stock_raster_path)['nodata'][0]
-    accum_nodata = pygeoprocessing.get_raster_info(
-        yearly_accumulation_raster_path)['nodata'][0]
-
-    def _calculate_accumulation_over_years(baseline_matrix, accum_matrix):
-        target_matrix = numpy.empty(baseline_matrix.shape, dtype=numpy.float32)
-        target_matrix[:] = NODATA_FLOAT32_MIN
-
-        valid_pixels = (
-            ~utils.array_equals_nodata(baseline_matrix, baseline_nodata) &
-            ~utils.array_equals_nodata(accum_matrix, accum_nodata))
-
-        target_matrix[valid_pixels] = (
-            baseline_matrix[valid_pixels] + (
-                accum_matrix[valid_pixels] * n_years))
-
-        return target_matrix
-
-    pygeoprocessing.raster_calculator(
-        [(baseline_stock_raster_path, 1),
-         (yearly_accumulation_raster_path, 1)],
-        _calculate_accumulation_over_years, target_raster_path,
-        gdal.GDT_Float32, NODATA_FLOAT32_MIN)
+    pygeoprocessing.raster_map(
+        op=lambda baseline, accum: baseline + (accum * n_years),
+        rasters=[baseline_stock_raster_path, yearly_accumulation_raster_path],
+        target_path=target_raster_path)
 
 
 def _calculate_accumulation_over_time(
@@ -1615,9 +1576,9 @@ def _calculate_accumulation_over_time(
     target_matrix[:] = NODATA_FLOAT32_MIN
 
     valid_pixels = (
-        ~utils.array_equals_nodata(annual_biomass_matrix, NODATA_FLOAT32_MIN) &
-        ~utils.array_equals_nodata(annual_soil_matrix, NODATA_FLOAT32_MIN) &
-        ~utils.array_equals_nodata(annual_litter_matrix, NODATA_FLOAT32_MIN))
+        ~pygeoprocessing.array_equals_nodata(annual_biomass_matrix, NODATA_FLOAT32_MIN) &
+        ~pygeoprocessing.array_equals_nodata(annual_soil_matrix, NODATA_FLOAT32_MIN) &
+        ~pygeoprocessing.array_equals_nodata(annual_litter_matrix, NODATA_FLOAT32_MIN))
 
     target_matrix[valid_pixels] = (
         (annual_biomass_matrix[valid_pixels] +
@@ -1715,14 +1676,14 @@ def _track_disturbance(
             disturbance_magnitude_matrix.shape, dtype=numpy.float32)
         disturbed_carbon_volume[:] = NODATA_FLOAT32_MIN
         disturbed_carbon_volume[
-            ~utils.array_equals_nodata(disturbance_magnitude_matrix,
+            ~pygeoprocessing.array_equals_nodata(disturbance_magnitude_matrix,
                            NODATA_FLOAT32_MIN)] = 0.0
 
         if year_of_disturbance_band:
             known_transition_years_matrix = (
                 year_of_disturbance_band.ReadAsArray(**block_info))
             pixels_previously_disturbed = (
-                ~utils.array_equals_nodata(
+                ~pygeoprocessing.array_equals_nodata(
                     known_transition_years_matrix, NODATA_UINT16_MAX))
             year_last_disturbed[pixels_previously_disturbed] = (
                 known_transition_years_matrix[pixels_previously_disturbed])
@@ -1734,9 +1695,9 @@ def _track_disturbance(
 
         stock_matrix = stock_band.ReadAsArray(**block_info)
         pixels_changed_this_year = (
-            ~utils.array_equals_nodata(disturbance_magnitude_matrix, NODATA_FLOAT32_MIN) &
-            ~utils.array_equals_nodata(disturbance_magnitude_matrix, 0.0) &
-            ~utils.array_equals_nodata(stock_matrix, NODATA_FLOAT32_MIN)
+            ~pygeoprocessing.array_equals_nodata(disturbance_magnitude_matrix, NODATA_FLOAT32_MIN) &
+            ~pygeoprocessing.array_equals_nodata(disturbance_magnitude_matrix, 0.0) &
+            ~pygeoprocessing.array_equals_nodata(stock_matrix, NODATA_FLOAT32_MIN)
         )
 
         disturbed_carbon_volume[pixels_changed_this_year] = (
@@ -1801,7 +1762,7 @@ def _calculate_net_sequestration(
                                                dtype=bool)
         if accumulation_nodata is not None:
             valid_accumulation_pixels &= (
-                ~utils.array_equals_nodata(
+                ~pygeoprocessing.array_equals_nodata(
                     accumulation_matrix, accumulation_nodata))
         target_matrix[valid_accumulation_pixels] += (
             accumulation_matrix[valid_accumulation_pixels])
@@ -1809,7 +1770,7 @@ def _calculate_net_sequestration(
         valid_emissions_pixels = ~numpy.isclose(emissions_matrix, 0.0)
         if emissions_nodata is not None:
             valid_emissions_pixels &= (
-                ~utils.array_equals_nodata(emissions_matrix, emissions_nodata))
+                ~pygeoprocessing.array_equals_nodata(emissions_matrix, emissions_nodata))
 
         target_matrix[valid_emissions_pixels] = emissions_matrix[
             valid_emissions_pixels] * -1
@@ -1850,9 +1811,9 @@ def _calculate_emissions(
     zero_half_life = numpy.isclose(carbon_half_life_matrix, 0.0)
 
     valid_pixels = (
-        ~utils.array_equals_nodata(
+        ~pygeoprocessing.array_equals_nodata(
             carbon_disturbed_matrix, NODATA_FLOAT32_MIN) &
-        ~utils.array_equals_nodata(
+        ~pygeoprocessing.array_equals_nodata(
             year_of_last_disturbance_matrix, NODATA_UINT16_MAX) &
         ~zero_half_life)
 
@@ -1937,7 +1898,7 @@ def _sum_n_rasters(
             array = band.ReadAsArray(**block_info)
             valid_pixels = slice(None)
             if nodata is not None:
-                valid_pixels = ~utils.array_equals_nodata(array, nodata)
+                valid_pixels = ~pygeoprocessing.array_equals_nodata(array, nodata)
 
             sum_array[valid_pixels] += array[valid_pixels]
             pixels_touched[valid_pixels] = 1
@@ -1985,8 +1946,8 @@ def _read_transition_matrix(transition_csv_path, biophysical_df):
         landcover transition, and the second contains accumulation rates for
         the pool for the landcover transition.
     """
-    table = utils.read_csv_to_dataframe(
-        transition_csv_path, MODEL_SPEC['args']['landcover_transitions_table']
+    table = validation.get_validated_dataframe(
+        transition_csv_path, **MODEL_SPEC['args']['landcover_transitions_table']
     ).reset_index()
 
     lulc_class_to_lucode = {}
@@ -2130,11 +2091,11 @@ def _reclassify_accumulation_transition(
         valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
                                   dtype=bool)
         if from_nodata is not None:
-            valid_pixels &= ~utils.array_equals_nodata(
+            valid_pixels &= ~pygeoprocessing.array_equals_nodata(
                 landuse_transition_from_matrix, from_nodata)
 
         if to_nodata is not None:
-            valid_pixels &= ~utils.array_equals_nodata(
+            valid_pixels &= ~pygeoprocessing.array_equals_nodata(
                 landuse_transition_to_matrix, to_nodata)
 
         output_matrix[valid_pixels] = accumulation_rate_matrix[
@@ -2179,39 +2140,12 @@ def _reclassify_disturbance_magnitude(
         ``None``
 
     """
-    from_nodata = pygeoprocessing.get_raster_info(
-        landuse_transition_from_raster)['nodata'][0]
-    to_nodata = pygeoprocessing.get_raster_info(
-        landuse_transition_to_raster)['nodata'][0]
-
-    def _reclassify_disturbance(
-            landuse_transition_from_matrix, landuse_transition_to_matrix):
-        """Pygeoprocessing op to reclassify disturbances."""
-        output_matrix = numpy.empty(landuse_transition_from_matrix.shape,
-                                    dtype=numpy.float32)
-        output_matrix[:] = NODATA_FLOAT32_MIN
-
-        valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
-                                  dtype=bool)
-        if from_nodata is not None:
-            valid_pixels &= ~utils.array_equals_nodata(
-                landuse_transition_from_matrix, from_nodata)
-
-        if to_nodata is not None:
-            valid_pixels &= ~utils.array_equals_nodata(
-                landuse_transition_to_matrix, to_nodata)
-
-        disturbance_magnitude = disturbance_magnitude_matrix[
-            landuse_transition_from_matrix[valid_pixels],
-            landuse_transition_to_matrix[valid_pixels]].toarray().flatten()
-
-        output_matrix[valid_pixels] = disturbance_magnitude
-        return output_matrix
-
-    pygeoprocessing.raster_calculator(
-        [(landuse_transition_from_raster, 1),
-            (landuse_transition_to_raster, 1)], _reclassify_disturbance,
-        target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32_MIN)
+    pygeoprocessing.raster_map(
+        op=lambda _from, _to: (
+            disturbance_magnitude_matrix[_from, _to].toarray().flatten()),
+        rasters=[landuse_transition_from_raster, landuse_transition_to_raster],
+        target_path=target_raster_path,
+        target_dtype=numpy.float32)
 
 
 @validation.invest_validator
@@ -2230,26 +2164,15 @@ def validate(args, limit_to=None):
     """
     validation_warnings = validation.validate(
         args, MODEL_SPEC['args'])
-
     sufficient_keys = validation.get_sufficient_keys(args)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 
     if ("landcover_snapshot_csv" not in invalid_keys and
             "landcover_snapshot_csv" in sufficient_keys):
-        snapshots = utils.read_csv_to_dataframe(
+        snapshots = validation.get_validated_dataframe(
             args['landcover_snapshot_csv'],
-            MODEL_SPEC['args']['landcover_snapshot_csv']
+            **MODEL_SPEC['args']['landcover_snapshot_csv']
         )['raster_path'].to_dict()
-
-        for snapshot_year, snapshot_raster_path in snapshots.items():
-            raster_error_message = validation.check_raster(
-                snapshot_raster_path)
-            if raster_error_message:
-                validation_warnings.append((
-                    ['landcover_snapshot_csv'],
-                    INVALID_SNAPSHOT_RASTER_MSG.format(
-                        snapshot_year=snapshot_year
-                    ) + ' ' + raster_error_message))
 
         if ("analysis_year" not in invalid_keys
                 and "analysis_year" in sufficient_keys):
@@ -2268,8 +2191,8 @@ def validate(args, limit_to=None):
             transitions_spec['columns']['[LULC CODE]']['options'].keys())
         # lowercase options since utils call will lowercase table values
         transition_options = [x.lower() for x in transition_options]
-        transitions_df = utils.read_csv_to_dataframe(
-            args['landcover_transitions_table'], transitions_spec)
+        transitions_df = validation.get_validated_dataframe(
+            args['landcover_transitions_table'], **transitions_spec)
         transitions_mask = ~transitions_df.isin(transition_options) & ~transitions_df.isna()
         if transitions_mask.any(axis=None):
             transition_numpy_mask = transitions_mask.values

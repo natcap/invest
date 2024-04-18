@@ -26,13 +26,8 @@ from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-# Parameters to be used in dataframe and output stats CSV
-_HABITAT_HEADER = 'HABITAT'
-_STRESSOR_HEADER = 'STRESSOR'
-_TOTAL_REGION_NAME = 'Total Region'
-
-# Parameters for the spatially explicit criteria shapefiles
-_RATING_FIELD = 'rating'
+# RESILIENCE stressor shorthand to use when parsing tables
+_RESILIENCE_STRESSOR = 'resilience'
 
 # Target cell type or values for raster files.
 _TARGET_GDAL_TYPE_FLOAT32 = gdal.GDT_Float32
@@ -75,7 +70,7 @@ MODEL_SPEC = {
                         "names must match the habitat and stressor names in "
                         "the Criteria Scores Table.")},
                 "path": {
-                    "type": {"vector", "raster"},
+                    "type": {"raster", "vector"},
                     "bands": {1: {
                         "type": "number",
                         "units": u.none,
@@ -85,13 +80,13 @@ MODEL_SPEC = {
                             "values besides 0 or 1 will be treated as 0.")
                     }},
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec_utils.ALL_GEOMS,
                     "about": gettext(
                         "Map of where the habitat or stressor exists. For "
                         "rasters, a pixel value of 1 indicates presence of "
                         "the habitat or stressor. 0 (or any other value) "
                         "indicates absence of the habitat or stressor. For "
-                        "vectors, a polygon indicates an area where the "
+                        "vectors, a geometry indicates an area where the "
                         "habitat or stressor is present.")
                 },
                 "type": {
@@ -551,8 +546,7 @@ def execute(args):
                 f"  Missing from criteria table: {missing_from_criteria_table}"
             )
 
-    criteria_df = pandas.read_csv(composite_criteria_table_path,
-                                  index_col=False)
+    criteria_df = utils.read_csv_to_dataframe(composite_criteria_table_path)
     # Because criteria may be spatial, we need to prepare those spatial inputs
     # as well.
     spatial_criteria_attrs = {}
@@ -639,10 +633,6 @@ def execute(args):
         # If the input is a vector, reproject to the AOI SRS and simplify.
         # Rasterization happens in the alignment step.
         elif gis_type == pygeoprocessing.VECTOR_TYPE:
-            # Habitats and stressors are rasterized with ALL_TOUCHED=TRUE
-            if name in habitats_info or name in stressors_info:
-                habitat_stressor_vectors.add(source_filepath)
-
             # Using Shapefile here because its driver appears to not raise a
             # warning if a MultiPolygon geometry is inserted into a Polygon
             # layer, which was happening on a real-world sample dataset while
@@ -685,6 +675,10 @@ def execute(args):
                 target_path_list=[target_simplified_vector],
                 dependent_task_list=[reprojected_vector_task]
             ))
+
+            # Habitats and stressors are rasterized with ALL_TOUCHED=TRUE
+            if name in habitats_info or name in stressors_info:
+                habitat_stressor_vectors.add(target_simplified_vector)
 
         # Later operations make use of the habitats rasters or the stressors
         # rasters, so it's useful to collect those here now.
@@ -792,7 +786,7 @@ def execute(args):
                 if criteria_type == 'C':
                     local_resilience_df = criteria_df[
                         (criteria_df['habitat'] == habitat) &
-                        (criteria_df['stressor'] == 'RESILIENCE') &
+                        (criteria_df['stressor'] == _RESILIENCE_STRESSOR) &
                         (criteria_df['e/c'] == 'C')]
                     local_criteria_df = pandas.concat(
                         [local_criteria_df, local_resilience_df])
@@ -995,7 +989,7 @@ def execute(args):
     for habitat in habitats_info:
         resilience_criteria_df = criteria_df[
             (criteria_df['habitat'] == habitat) &
-            (criteria_df['stressor'] == 'RESILIENCE')]
+            (criteria_df['stressor'] == _RESILIENCE_STRESSOR)]
         criteria_attributes_list = []
         for attrs in resilience_criteria_df[
                 ['rating', 'weight', 'dq']].to_dict(orient='records'):
@@ -1654,7 +1648,6 @@ def _simplify(source_vector_path, tolerance, target_vector_path,
     for source_feature in source_layer:
         target_feature = ogr.Feature(target_layer_defn)
         source_geom = source_feature.GetGeometryRef()
-
         simplified_geom = source_geom.SimplifyPreserveTopology(tolerance)
         if simplified_geom is not None:
             target_geom = simplified_geom
@@ -1720,7 +1713,7 @@ def _prep_input_criterion_raster(
             source_rating_array.shape, _TARGET_NODATA_FLOAT32,
             dtype=numpy.float32)
         valid_mask = (
-             (~utils.array_equals_nodata(
+             (~pygeoprocessing.array_equals_nodata(
                  source_rating_array, source_nodata)) &
              (source_rating_array >= 0.0))
         target_rating_array[valid_mask] = source_rating_array[valid_mask]
@@ -1786,11 +1779,13 @@ def _parse_info_table(info_table_path):
     info_table_path = os.path.abspath(info_table_path)
 
     try:
-        table = utils.read_csv_to_dataframe(
-            info_table_path, MODEL_SPEC['args']['info_table_path'])
+        table = validation.get_validated_dataframe(
+            info_table_path, **MODEL_SPEC['args']['info_table_path'])
     except ValueError as err:
         if 'Index has duplicate keys' in str(err):
             raise ValueError("Habitat and stressor names may not overlap.")
+        else:
+            raise err
 
     table = table.rename(columns={'stressor buffer (meters)': 'buffer'})
 
@@ -1823,14 +1818,14 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
 
     Returns:
         criteria_habitats (set): A set of string names of habitats found in the
-            criteria table.
+            criteria table, lowercased.
         criteria_stressors (set): A set of string names of stressors found in
-            the criteria table.
+            the criteria table, lowercased.
     """
     # This function requires that the table is read as a numpy array, so it's
     # easiest to read the table directly.
-    table = pandas.read_csv(criteria_table_path, header=None, sep=None,
-                            engine='python').to_numpy()
+    table = utils.read_csv_to_dataframe(
+        criteria_table_path, header=None).to_numpy()
 
     # clean up any leading or trailing whitespace.
     for row_num in range(table.shape[0]):
@@ -1904,8 +1899,11 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
         if (row[0] in known_stressors or
                 row[0] == habitat_resilience_header):
             if row[0] == habitat_resilience_header:
-                row[0] = 'RESILIENCE'  # Shorten for convenience
-            current_stressor = row[0]
+                row[0] = _RESILIENCE_STRESSOR  # Shorten for convenience
+
+            # Lowercase stressors to match expectations for how the info table
+            # is being parsed.
+            current_stressor = row[0].lower()
             current_stressor_header_row = row_index
             continue  # can skip this row
 
@@ -1924,7 +1922,9 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
             'e/c': row[criteria_col],
         }
         for habitat, habitat_col_indices in habitat_columns.items():
-            stressor_habitat_data['habitat'] = habitat
+            # Lowercase habitats to match expectations for how the info table
+            # is being parsed.
+            stressor_habitat_data['habitat'] = habitat.lower()
             for col_index in habitat_col_indices:
                 # attribute is rating, dq or weight
                 attribute_name = table[current_stressor_header_row][col_index]
@@ -1959,6 +1959,11 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
         records, columns=['habitat', 'stressor', 'criterion', 'rating', 'dq',
                           'weight', 'e/c'])
     overlap_df.to_csv(target_composite_csv_path, index=False)
+
+    # Lowercase habitats and stressors to match expectations for how the
+    # info table is being parsed.
+    known_habitats = {habitat.lower() for habitat in known_habitats}
+    known_stressors = {stressor.lower() for stressor in known_stressors}
 
     return (known_habitats, known_stressors)
 
@@ -2047,7 +2052,7 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
         # distance and also valid in the source edt.
         pixels_within_buffer = (
             source_edt_block < buffer_distance_in_pixels)
-        nodata_pixels = utils.array_equals_nodata(
+        nodata_pixels = pygeoprocessing.array_equals_nodata(
             source_edt_block, edt_nodata)
         valid_pixels = ((~nodata_pixels) & pixels_within_buffer)
 
@@ -2154,7 +2159,7 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
                     # Any habitat pixels with a nodata rating (no rating
                     # specified by the user) should be
                     # interpreted as having a rating of 0.
-                    rating[utils.array_equals_nodata(
+                    rating[pygeoprocessing.array_equals_nodata(
                         rating, rating_nodata)] = 0
                 finally:
                     rating_band = None
@@ -2339,7 +2344,7 @@ def _sum_rasters(raster_path_list, target_nodata, target_datatype,
         pixels_have_valid_values = numpy.zeros(result.shape, dtype=bool)
         valid_pixel_count = numpy.zeros(result.shape, dtype=numpy.uint16)
         for array, nodata in zip(array_list, nodata_list):
-            non_nodata_pixels = ~utils.array_equals_nodata(array, nodata)
+            non_nodata_pixels = ~pygeoprocessing.array_equals_nodata(array, nodata)
             pixels_have_valid_values |= non_nodata_pixels
             valid_pixel_count += non_nodata_pixels
 
@@ -2379,8 +2384,8 @@ def _override_datastack_archive_criteria_table_path(
         the data dir.
     """
     args_key = 'criteria_table_path'
-    criteria_table_array = pandas.read_csv(
-        criteria_table_path, header=None, sep=None, engine='python').to_numpy()
+    criteria_table_array = utils.read_csv_to_dataframe(
+        criteria_table_path, header=None).to_numpy()
     contained_data_dir = os.path.join(data_dir, f'{args_key}_data')
 
     known_rating_cols = set()

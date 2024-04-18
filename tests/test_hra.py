@@ -192,8 +192,19 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.raster_to_numpy_array(decayed_edt_path))
 
     def test_info_table_parsing(self):
-        """HRA: check info table parsing."""
+        """HRA: check info table parsing w/ case sensitivity."""
         from natcap.invest import hra
+
+        corals_path = 'habitat/corals.shp'
+        oil_path = 'stressors/oil.shp'
+        transport_path = 'stressors/transport.shp'
+        geoms = [shapely.geometry.Point(ORIGIN).buffer(100)]
+        os.makedirs(os.path.join(self.workspace_dir, 'habitat'))
+        os.makedirs(os.path.join(self.workspace_dir, 'stressors'))
+        for path in [corals_path, oil_path, transport_path]:
+            pygeoprocessing.shapely_geometry_to_vector(
+                geoms, os.path.join(self.workspace_dir, path),
+                SRS_WKT, 'ESRI Shapefile')
 
         info_table_path = os.path.join(self.workspace_dir, 'info_table.csv')
         with open(info_table_path, 'w') as info_table:
@@ -202,13 +213,11 @@ class HRAUnitTests(unittest.TestCase):
                     # This leading backslash is important for dedent to parse
                     # the right number of leading spaces from the following
                     # rows.
-                    # The paths don't actually need to exist for this test -
-                    # this function is merely parsing the table contents.
-                    """\
+                    f"""\
                     NAME,PATH,TYPE,STRESSOR BUFFER (meters)
-                    corals,habitat/corals.shp,habitat,
-                    oil,stressors/oil.shp,stressor,1000
-                    transportation,stressors/transport.shp,stressor,100"""
+                    Corals,{corals_path},habitat,
+                    Oil,{oil_path},stressor,1000
+                    Transportation,{transport_path},stressor,100"""
                 ))
 
         habitats, stressors = hra._parse_info_table(info_table_path)
@@ -236,6 +245,19 @@ class HRAUnitTests(unittest.TestCase):
         """HRA: error when info table has overlapping habitats, stressors."""
         from natcap.invest import hra
 
+        corals_habitat_path = 'habitat/corals.shp'
+        oil_path = 'stressors/oil.shp'
+        corals_stressor_path = 'stressors/corals.shp'
+        transport_path = 'stressors/transport.shp'
+        geoms = [shapely.geometry.Point(ORIGIN).buffer(100)]
+        os.makedirs(os.path.join(self.workspace_dir, 'habitat'))
+        os.makedirs(os.path.join(self.workspace_dir, 'stressors'))
+        for path in [corals_habitat_path, oil_path,
+                corals_stressor_path, transport_path]:
+            pygeoprocessing.shapely_geometry_to_vector(
+                geoms, os.path.join(self.workspace_dir, path),
+                SRS_WKT, 'ESRI Shapefile')
+
         info_table_path = os.path.join(self.workspace_dir, 'info_table.csv')
         with open(info_table_path, 'w') as info_table:
             info_table.write(
@@ -245,12 +267,12 @@ class HRAUnitTests(unittest.TestCase):
                     # rows.
                     # The paths don't actually need to exist for this test -
                     # this function is merely parsing the table contents.
-                    """\
+                    f"""\
                     NAME,PATH,TYPE,STRESSOR BUFFER (meters)
-                    corals,habitat/corals.shp,habitat,
-                    oil,stressors/oil.shp,stressor,1000
-                    corals,stressors/corals.shp,stressor,1000
-                    transportation,stressors/transport.shp,stressor,100"""
+                    corals,{corals_habitat_path},habitat,
+                    oil,{oil_path},stressor,1000
+                    corals,{corals_stressor_path},stressor,1000
+                    transportation,{transport_path},stressor,100"""
                 ))
 
         with self.assertRaises(ValueError) as cm:
@@ -260,7 +282,7 @@ class HRAUnitTests(unittest.TestCase):
                       str(cm.exception))
 
     def test_criteria_table_parsing(self):
-        """HRA: check parsing of the criteria table."""
+        """HRA: check parsing of the criteria table w/ case sensitivity."""
         from natcap.invest import hra
 
         eelgrass_relpath = 'foo/eelgrass_connectivity.shp'
@@ -270,17 +292,17 @@ class HRAUnitTests(unittest.TestCase):
             criteria_table.write(
                 textwrap.dedent(
                     f"""\
-                    HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
+                    HABITAT NAME,Eelgrass,,,Hardbottom,,,CRITERIA TYPE
                     HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     recruitment rate,2,2,2,2,2,2,C
                     connectivity rate,{eelgrass_relpath},2,2,2,2,2,C
                     ,,,,,,,
                     HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
-                    oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    Oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     frequency of disturbance,2,2,3,2,2,3,C
                     management effectiveness,2,2,1,2,2,1,E
                     ,,,,,,,
-                    fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    Fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     frequency of disturbance,2,2,3,2,2,3,C
                     management effectiveness,2,2,1,2,2,1,E
                     """
@@ -309,10 +331,10 @@ class HRAUnitTests(unittest.TestCase):
             io.StringIO(textwrap.dedent(
                 f"""\
                 habitat,stressor,criterion,rating,dq,weight,e/c
-                eelgrass,RESILIENCE,recruitment rate,2,2,2,C
-                hardbottom,RESILIENCE,recruitment rate,2,2,2,C
-                eelgrass,RESILIENCE,connectivity rate,{eelgrass_abspath},2,2,C
-                hardbottom,RESILIENCE,connectivity rate,2,2,2,C
+                eelgrass,resilience,recruitment rate,2,2,2,C
+                hardbottom,resilience,recruitment rate,2,2,2,C
+                eelgrass,resilience,connectivity rate,{eelgrass_abspath},2,2,C
+                hardbottom,resilience,connectivity rate,2,2,2,C
                 eelgrass,oil,frequency of disturbance,2,2,3,C
                 hardbottom,oil,frequency of disturbance,2,2,3,C
                 eelgrass,oil,management effectiveness,2,2,1,E
@@ -325,6 +347,41 @@ class HRAUnitTests(unittest.TestCase):
         composite_dataframe = pandas.read_csv(target_composite_csv_path)
         pandas.testing.assert_frame_equal(
             expected_composite_dataframe, composite_dataframe)
+
+    def test_criteria_table_parsing_with_bom(self):
+        """HRA: criteria table - parse a BOM."""
+        from natcap.invest import hra
+
+        criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
+        with open(criteria_table_path, 'w', encoding='utf-8-sig') as criteria_table:
+            criteria_table.write(
+                textwrap.dedent(
+                    """\
+                    HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
+                    HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    recruitment rate,2,2,2,2,2,2,C
+                    connectivity rate,2,2,2,2,2,2,C
+                    ,,,,,,,
+                    HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
+                    oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
+                    ,,,,,,,
+                    fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
+                    """
+                ))
+
+        # Sanity check: make sure the file has the expected BOM
+        # Gotta use binary mode so that python doesn't silently strip the BOM
+        with open(criteria_table_path, 'rb') as criteria_table:
+            self.assertTrue(criteria_table.read().startswith(b"\xef\xbb\xbf"))
+
+        target_composite_csv_path = os.path.join(self.workspace_dir,
+                                                 'composite.csv')
+        hra._parse_criteria_table(criteria_table_path,
+                                  target_composite_csv_path)
 
     def test_criteria_table_file_not_found(self):
         """HRA: criteria table - spatial file not found."""
@@ -1293,14 +1350,16 @@ class HRAModelTests(unittest.TestCase):
         """HRA: check errors when habitats are mismatched."""
         from natcap.invest import hra
 
+        eelgrass_conn_path = os.path.join(
+            self.workspace_dir, 'eelgrass_connectivity.shp')
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
         with open(criteria_table_path, 'w') as criteria_table:
             criteria_table.write(textwrap.dedent(
-                """\
+                f"""\
                 HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
                 HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                 recruitment rate,2,2,2,2,2,2,C
-                connectivity rate,eelgrass_connectivity.shp,2,2,2,2,2,C
+                connectivity rate,{eelgrass_conn_path},2,2,2,2,2,C
                 ,,,,,,,
                 HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
                 oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
@@ -1313,20 +1372,26 @@ class HRAModelTests(unittest.TestCase):
                 """
             ))
 
-        eelgrass_path = os.path.join(
-            self.workspace_dir, 'eelgrass_connectivity.shp')
+        corals_path = 'habitat/corals.shp'
+        oil_path = 'stressors/oil.shp'
+        transport_path = 'stressors/transport.shp'
         geoms = [shapely.geometry.Point(ORIGIN).buffer(100)]
-        pygeoprocessing.shapely_geometry_to_vector(
-            geoms, eelgrass_path, SRS_WKT, 'ESRI Shapefile')
+        os.makedirs(os.path.join(self.workspace_dir, 'habitat'))
+        os.makedirs(os.path.join(self.workspace_dir, 'stressors'))
+        for path in [
+                eelgrass_conn_path, corals_path, oil_path, transport_path]:
+            pygeoprocessing.shapely_geometry_to_vector(
+                geoms, os.path.join(self.workspace_dir, path),
+                SRS_WKT, 'ESRI Shapefile')
 
         info_table_path = os.path.join(self.workspace_dir, 'info.csv')
         with open(info_table_path, 'w') as info_table:
             info_table.write(textwrap.dedent(
-                """\
+                f"""\
                 NAME,PATH,TYPE,STRESSOR BUFFER (meters)
-                corals,habitat/corals.shp,habitat,
-                oil,stressors/oil.shp,stressor,1000
-                transportation,stressors/transport.shp,stressor,100"""))
+                corals,{corals_path},habitat,
+                oil,{oil_path},stressor,1000
+                transportation,{transport_path},stressor,100"""))
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -1358,14 +1423,15 @@ class HRAModelTests(unittest.TestCase):
         """HRA: check stressor mismatch."""
         from natcap.invest import hra
 
+        eelgrass_conn_path = 'eelgrass_connectivity.shp'
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
         with open(criteria_table_path, 'w') as criteria_table:
             criteria_table.write(textwrap.dedent(
-                """\
+                f"""\
                 HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
                 HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                 recruitment rate,2,2,2,2,2,2,C
-                connectivity rate,eelgrass_connectivity.shp,2,2,2,2,2,C
+                connectivity rate,{eelgrass_conn_path},2,2,2,2,2,C
                 ,,,,,,,
                 HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
                 oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
@@ -1378,21 +1444,29 @@ class HRAModelTests(unittest.TestCase):
                 """
             ))
 
-        eelgrass_path = os.path.join(
-            self.workspace_dir, 'eelgrass_connectivity.shp')
+        eelgrass_path = 'habitat/eelgrass.shp'
+        hardbottom_path = 'habitat/hardbottom.shp'
+        oil_path = 'stressors/oil.shp'
+        transport_path = 'stressors/transport.shp'
         geoms = [shapely.geometry.Point(ORIGIN).buffer(100)]
-        pygeoprocessing.shapely_geometry_to_vector(
-            geoms, eelgrass_path, SRS_WKT, 'ESRI Shapefile')
+        os.makedirs(os.path.join(self.workspace_dir, 'habitat'))
+        os.makedirs(os.path.join(self.workspace_dir, 'stressors'))
+        for path in [
+                eelgrass_conn_path, eelgrass_path, hardbottom_path,
+                oil_path, transport_path]:
+            pygeoprocessing.shapely_geometry_to_vector(
+                geoms, os.path.join(self.workspace_dir, path),
+                SRS_WKT, 'ESRI Shapefile')
 
         info_table_path = os.path.join(self.workspace_dir, 'info.csv')
         with open(info_table_path, 'w') as info_table:
             info_table.write(textwrap.dedent(
-                """\
+                f"""\
                 NAME,PATH,TYPE,STRESSOR BUFFER (meters)
-                eelgrass,habitat/eelgrass.shp,habitat,
-                hardbottom,habitat/hardbottom.shp,habitat,
-                oil,stressors/oil.shp,stressor,1000
-                transportation,stressors/transport.shp,stressor,100"""))
+                eelgrass,{eelgrass_path},habitat,
+                hardbottom,{hardbottom_path},habitat,
+                oil,{oil_path},stressor,1000
+                transportation,{transport_path},stressor,100"""))
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -1413,7 +1487,6 @@ class HRAModelTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             hra.execute(args)
-
         self.assertIn('stressors', str(cm.exception))
         self.assertIn("Missing from info table: fishing",
                       str(cm.exception))

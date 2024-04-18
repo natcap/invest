@@ -239,7 +239,7 @@ class SDRTests(unittest.TestCase):
 
         expected_results = {
             'sed_export': 0.08896198869,
-            'usle_tot': 1.86480903625,
+            'usle_tot': 1.86480891705,
             'avoid_exp': 9203.955078125,
             'avoid_eros': 194212.28125,
         }
@@ -427,7 +427,8 @@ class SDRTests(unittest.TestCase):
                                  target_ls_factor_path)
 
         ls = pygeoprocessing.raster_to_numpy_array(target_ls_factor_path)
+        nodata = float(numpy.finfo(numpy.float32).max)
         expected_ls = numpy.array(
-            [[0.253996, 0.657229, 1.345856, 1.776729, 49.802994, -1]],
+            [[0.253996, 0.657229, 1.345856, 1.776729, 49.802994, nodata]],
             dtype=numpy.float32)
         numpy.testing.assert_allclose(ls, expected_ls, rtol=1e-6)

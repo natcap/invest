@@ -390,11 +390,11 @@ def ndr_eff_calculation(
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
-    cdef int n_cols, n_rows
+    cdef long n_cols, n_rows
     flow_dir_info = pygeoprocessing.get_raster_info(mfd_flow_direction_path)
     n_cols, n_rows = flow_dir_info['raster_size']
 
-    cdef stack[int] processing_stack
+    cdef stack[long] processing_stack
     stream_info = pygeoprocessing.get_raster_info(stream_path)
     # cell sizes must be square, so no reason to test at this point.
     cdef float cell_size = abs(stream_info['pixel_size'][0])
@@ -415,9 +415,9 @@ def ndr_eff_calculation(
 
     # create direction raster in bytes
     def _mfd_to_flow_dir_op(mfd_array):
-        result = numpy.zeros(mfd_array.shape, dtype=numpy.int8)
+        result = numpy.zeros(mfd_array.shape, dtype=numpy.uint8)
         for i in range(8):
-            result[:] |= (((mfd_array >> (i*4)) & 0xF) > 0) << i
+            result[:] |= ((((mfd_array >> (i*4)) & 0xF) > 0) << i).astype(numpy.uint8)
         return result
 
     pygeoprocessing.raster_calculator(
@@ -427,13 +427,14 @@ def ndr_eff_calculation(
     cdef _ManagedRaster to_process_flow_directions_raster = _ManagedRaster(
         to_process_flow_directions_path, 1, True)
 
-    cdef int col_index, row_index, win_xsize, win_ysize, xoff, yoff
-    cdef int global_col, global_row
-    cdef int flat_index, outflow_weight, outflow_weight_sum, flow_dir
-    cdef int ds_col, ds_row, i
+    cdef long col_index, row_index, win_xsize, win_ysize, xoff, yoff
+    cdef long global_col, global_row
+    cdef unsigned long flat_index
+    cdef long outflow_weight, outflow_weight_sum, flow_dir
+    cdef long ds_col, ds_row, i
     cdef float current_step_factor, step_size, crit_len
-    cdef int neighbor_row, neighbor_col, neighbor_outflow_dir
-    cdef int neighbor_outflow_dir_mask, neighbor_process_flow_dir
+    cdef long neighbor_row, neighbor_col
+    cdef int neighbor_outflow_dir, neighbor_outflow_dir_mask, neighbor_process_flow_dir
     cdef int outflow_dirs, dir_mask
 
     for offset_dict in pygeoprocessing.iterblocks(

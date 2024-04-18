@@ -39,7 +39,7 @@ jobs:
           PR_NUM=$(git log -1 --pretty=%B main | head -n1 | egrep -o '#[1-9][0-9]*' | sed 's|#||g')
 
           # Get the username of the person who opened up the last PR into `main`.
-          PR_USERNAME=$(hub pr show -f "%au" $PR_NUM)
+          PR_USERNAME=$(gh pr view --json author $PR_NUM | jq -j '.author.login')
           echo "Latest PR on main ($PR_NUM) was authored by $PR_USERNAME."
 
           if [ "$PR_USERNAME" = "github-actions" ]
@@ -70,13 +70,13 @@ jobs:
               # This PR will be assigned to $GITHUB_ACTOR, which should be
               # the person who merged the PR that caused this commit to be
               # created.  Others could of course be assigned later.
-              hub pull-request \
+              gh pr create \
                   --head $GITHUB_REPOSITORY:$SOURCE_BRANCH \
                   --base $GITHUB_REPOSITORY:$RELEASE_BRANCH \
                   --reviewer "$PR_USERNAME" \
-                  --assign "$PR_USERNAME" \
-                  --labels "auto" \
-                  --file $PR_BODY_FILE || ERRORSPRESENT=$(($ERRORSPRESENT | $?))
+                  --assignee "$PR_USERNAME" \
+                  --label "auto" \
+                  --body-file $PR_BODY_FILE || ERRORSPRESENT=$(($ERRORSPRESENT | $?))
           done
 
           if [[ $ERRORSPRESENT -gt 0 ]]

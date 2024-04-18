@@ -167,30 +167,6 @@ class WindEnergyUnitTests(unittest.TestCase):
             result_val = point_feat.GetField(field_index)
             numpy.testing.assert_allclose(result_val, exp_results[i])
 
-    def test_read_csv_wind_parameters(self):
-        """WindEnergy: testing 'read_csv_wind_parameter' function."""
-        from natcap.invest import wind_energy
-
-        csv_path = os.path.join(
-            SAMPLE_DATA,
-            'global_wind_energy_parameters.csv')
-
-        parameter_list = [
-            'air_density', 'exponent_power_curve', 'decommission_cost',
-            'operation_maintenance_cost', 'miscellaneous_capex_cost']
-
-        result = wind_energy._read_csv_wind_parameters(
-            csv_path, parameter_list)
-
-        expected_result = {
-            'air_density': 1.225,
-            'exponent_power_curve': 2,
-            'decommission_cost': 0.037,
-            'operation_maintenance_cost': .035,
-            'miscellaneous_capex_cost': .05
-        }
-        self.assertDictEqual(expected_result, result)
-
     def test_wind_data_to_point_vector(self):
         """WindEnergy: testing 'wind_data_to_point_vector' function."""
         from natcap.invest import wind_energy
@@ -362,13 +338,12 @@ class WindEnergyUnitTests(unittest.TestCase):
             'air_density_coefficient': 1.19E-04,
             'loss_parameter': 0.05,
             'turbine_cost': 10000,
-            'turbine_rated_pwr': 5
-            }
-        args = {
+            'turbine_rated_pwr': 5,
             'foundation_cost': 1000000,
             'discount_rate': 0.01,
             'number_of_turbines': 10
             }
+
         price_list = [0.10, 0.10, 0.10, 0.10, 0.10]
 
         srs = osr.SpatialReference()
@@ -405,7 +380,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         wind_energy._calculate_npv_levelized_rasters(
             base_harvest_path, base_distance_path,
             target_npv_raster_path, target_levelized_raster_path,
-            val_parameters_dict, args, price_list)
+            val_parameters_dict, price_list)
 
         # Compare the results that were "eye" tested.
         desired_npv_array = numpy.array(
@@ -452,8 +427,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
             'turbine_parameters_path': os.path.join(
                 SAMPLE_DATA, '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
+            'number_of_turbines': '80', # pass str to test casting
+            'min_depth': '3', # pass str to test casting
             'max_depth': 180,
             'n_workers': -1
         }
@@ -558,13 +533,13 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['max_distance'] = 200000
         args['valuation_container'] = True
         args['foundation_cost'] = 2000000
-        args['discount_rate'] = 0.07
+        args['discount_rate'] = '0.07' # pass str to test casting
         # Test that only grid points are provided in grid_points_path
         args['grid_points_path'] = os.path.join(
             SAMPLE_DATA, 'resampled_grid_pts.csv')
         args['price_table'] = False
         args['wind_price'] = 0.187
-        args['rate_change'] = 0.2
+        args['rate_change'] = '0.2' # pass str to test casting
 
         wind_energy.execute(args)
 

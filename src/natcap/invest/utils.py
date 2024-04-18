@@ -2,8 +2,8 @@
 import codecs
 import contextlib
 import logging
-import math
 import os
+import platform
 import re
 import shutil
 import tempfile
@@ -326,193 +326,6 @@ def make_suffix_string(args, suffix_key):
     return file_suffix
 
 
-def exponential_decay_kernel_raster(expected_distance, kernel_filepath,
-        normalize=True):
-    """Create a raster-based exponential decay kernel.
-
-    The raster created will be a tiled GeoTiff, with 256x256 memory blocks.
-
-    Args:
-        expected_distance (int or float): The distance (in pixels) of the
-            kernel's radius, the distance at which the value of the decay
-            function is equal to `1/e`.
-        kernel_filepath (string): The path to the file on disk where this
-            kernel should be stored.  If this file exists, it will be
-            overwritten.
-        normalize=True (bool): Whether to divide the kernel values by the sum
-            of all values in the kernel.
-
-    Returns:
-        None
-    """
-    max_distance = expected_distance * 5
-    kernel_size = int(numpy.round(max_distance * 2 + 1))
-
-    driver = gdal.GetDriverByName('GTiff')
-    kernel_dataset = driver.Create(
-        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Float32, options=[
-            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256'])
-
-    # Make some kind of geotransform, it doesn't matter what but
-    # will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
-    srs = osr.SpatialReference()
-    srs.SetWellKnownGeogCS('WGS84')
-    kernel_dataset.SetProjection(srs.ExportToWkt())
-
-    kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_band.SetNoDataValue(-9999)
-
-    cols_per_block, rows_per_block = kernel_band.GetBlockSize()
-
-    n_cols = kernel_dataset.RasterXSize
-    n_rows = kernel_dataset.RasterYSize
-
-    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
-    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-
-    integration = 0.0
-    for row_block_index in range(n_row_blocks):
-        row_offset = row_block_index * rows_per_block
-        row_block_width = n_rows - row_offset
-        if row_block_width > rows_per_block:
-            row_block_width = rows_per_block
-
-        for col_block_index in range(n_col_blocks):
-            col_offset = col_block_index * cols_per_block
-            col_block_width = n_cols - col_offset
-            if col_block_width > cols_per_block:
-                col_block_width = cols_per_block
-
-            # Numpy creates index rasters as ints by default, which sometimes
-            # creates problems on 32-bit builds when we try to add Int32
-            # matrices to float64 matrices.
-            row_indices, col_indices = numpy.indices((row_block_width,
-                                                      col_block_width),
-                                                     dtype=float)
-
-            row_indices += float(row_offset - max_distance)
-            col_indices += float(col_offset - max_distance)
-
-            kernel_index_distances = numpy.hypot(
-                row_indices, col_indices)
-            kernel = numpy.where(
-                kernel_index_distances > max_distance, 0.0,
-                numpy.exp(-kernel_index_distances / expected_distance))
-            integration += numpy.sum(kernel)
-
-            kernel_band.WriteArray(kernel, xoff=col_offset,
-                                   yoff=row_offset)
-
-    # Need to flush the kernel's cache to disk before opening up a new Dataset
-    # object in interblocks()
-    kernel_band.FlushCache()
-    kernel_dataset.FlushCache()
-    kernel_band = None
-    kernel_dataset = None
-
-    if normalize:
-        kernel_dataset = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
-        kernel_band = kernel_dataset.GetRasterBand(1)
-        for block_data in pygeoprocessing.iterblocks(
-                (kernel_filepath, 1), offset_only=True):
-            kernel_block = kernel_band.ReadAsArray(**block_data)
-            kernel_block /= integration
-            kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
-                                   yoff=block_data['yoff'])
-
-        kernel_band.FlushCache()
-        kernel_dataset.FlushCache()
-        kernel_band = None
-        kernel_dataset = None
-
-
-def gaussian_decay_kernel_raster(
-        sigma, kernel_filepath, n_std_dev=3.0, normalize=True):
-    """Create a raster-based gaussian decay kernel.
-
-    The raster will be a tiled GeoTIFF, with 256x256 memory blocks.
-
-    While the ``sigma`` parameter represents the width of a standard deviation
-    in pixels, the ``n_std_dev`` parameter defines how many standard deviations
-    should be included in the resulting kernel.  The resulting kernel raster
-    will be square in shape, with a width of ``(sigma * n_std_dev * 2) + 1``
-    pixels.
-
-    Args:
-        sigma (int or float): The distance (in pixels) of the standard
-            deviation from the center of the raster.
-        kernel_filepath (string): The path to the file on disk where this
-            kernel should be stored. If a file exists at this path, it will be
-            overwritten.
-        n_std_dev=3.0 (int or float): The number of times sigma should be
-            multiplied in order to get the pixel radius of the resulting
-            kernel.  The default of 3 standard deviations will cover 99.7% of
-            the area under the gaussian curve.
-        normalize=True (bool): Whether to divide the kernel values by the sum
-            of all values in the kernel.
-
-    Returns:
-        ``None``
-    """
-    # going 3.0 times out from the sigma gives you over 99% of area under
-    # the gaussian curve
-    max_distance = sigma * n_std_dev
-    kernel_size = int(numpy.round(max_distance * 2 + 1))
-
-    driver = gdal.GetDriverByName('GTiff')
-    kernel_dataset = driver.Create(
-        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Float32, options=[
-            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256'])
-
-    # Make some kind of geotransform, it doesn't matter what but
-    # will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
-    srs = osr.SpatialReference()
-    srs.SetWellKnownGeogCS('WGS84')
-    kernel_dataset.SetProjection(srs.ExportToWkt())
-
-    kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_nodata = -9999
-    kernel_band.SetNoDataValue(kernel_nodata)
-
-    col_index = numpy.array(range(kernel_size))
-    running_sum = 0.0
-    for row_index in range(kernel_size):
-        distance_kernel_row = numpy.sqrt(
-            (row_index - max_distance) ** 2 +
-            (col_index - max_distance) ** 2).reshape(1, kernel_size)
-        kernel = numpy.where(
-            distance_kernel_row > max_distance, 0.0,
-            (1 / (2.0 * numpy.pi * sigma ** 2) *
-             numpy.exp(-distance_kernel_row**2 / (2 * sigma ** 2))))
-        running_sum += numpy.sum(kernel)
-        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
-
-    kernel_dataset.FlushCache()
-    kernel_band = None
-    kernel_dataset = None
-
-    if normalize:
-        kernel_dataset = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
-        kernel_band = kernel_dataset.GetRasterBand(1)
-        for kernel_data, kernel_block in pygeoprocessing.iterblocks(
-                (kernel_filepath, 1)):
-            # divide by sum to normalize
-            kernel_block /= running_sum
-            kernel_band.WriteArray(
-                kernel_block, xoff=kernel_data['xoff'],
-                yoff=kernel_data['yoff'])
-
-        kernel_dataset.FlushCache()
-        kernel_band = None
-        kernel_dataset = None
-
-
 def build_file_registry(base_file_path_list, file_suffix):
     """Combine file suffixes with key names, base filenames, and directories.
 
@@ -592,130 +405,55 @@ def expand_path(path, base_path):
     """
     if not path:
         return None
+    if platform.system() in {'Darwin', 'Linux'} and '\\' in path:
+        path = path.replace('\\', '/')
     if os.path.isabs(path):
         return os.path.abspath(path)  # normalize path separators
     return os.path.abspath(os.path.join(os.path.dirname(base_path), path))
 
 
-def read_csv_to_dataframe(path, spec, **kwargs):
+def read_csv_to_dataframe(path, **kwargs):
     """Return a dataframe representation of the CSV.
 
-    Wrapper around ``pandas.read_csv`` that performs some common data cleaning
-    based on information in the arg spec.
-
-    Columns are filtered to just those that match a pattern in the spec.
-    Column names are lowercased and whitespace is stripped off. Empty rows are
-    dropped. Values in each column are processed and cast to an appropriate
-    dtype according to the type in the spec:
-
-    - Values in raster, vector, csv, file, and directory columns are cast to
-      str, whitespace stripped, and expanded as paths relative to the input path
-    - Values in freestyle_string and option_string columns are cast to str,
-      whitespace stripped, and converted to lowercase
-    - Values in number, ratio, and percent columns are cast to float
-    - Values in integer columns are cast to int
-    - Values in boolean columns are cast to bool
-
-    Empty or NA cells are returned as ``numpy.nan`` (for floats) or
-    ``pandas.NA`` (for all other types).
-
-    Also sets custom defaults for some kwargs passed to ``pandas.read_csv``,
-    which you can override with kwargs:
+    Wrapper around ``pandas.read_csv`` that performs some common data cleaning.
+    Column names are lowercased and whitespace is stripped off. Empty rows and
+    columns are dropped. Sets custom defaults for some kwargs passed to
+    ``pandas.read_csv``, which you can override with kwargs:
 
     - sep=None: lets the Python engine infer the separator
     - engine='python': The 'python' engine supports the sep=None option.
     - encoding='utf-8-sig': 'utf-8-sig' handles UTF-8 with or without BOM.
+    - index_col=False: force pandas not to index by any column, useful in
+        case of trailing separators
 
     Args:
         path (str): path to a CSV file
-        spec (dict): dictionary specifying the structure of the CSV table
         **kwargs: additional kwargs will be passed to ``pandas.read_csv``
 
     Returns:
         pandas.DataFrame with the contents of the given CSV
     """
-    # build up a list of regex patterns to match columns against columns from
-    # the table that match a pattern in this list (after stripping whitespace
-    # and lowercasing) will be included in the dataframe
-    patterns = []
-    for column in spec['columns']:
-        column = column.lower()
-        match = re.match(r'(.*)\[(.+)\](.*)', column)
-        if match:
-            # for column name patterns, convert it to a regex pattern
-            groups = match.groups()
-            patterns.append(f'{groups[0]}(.+){groups[2]}')
-        else:
-            # for regular column names, use the exact name as the pattern
-            patterns.append(column.replace('(', '\(').replace(')', '\)'))
-
     try:
-        # set index_col=False to force pandas not to index by any column
-        # this is useful in case of trailing separators
-        # we'll explicitly set the index column later on
         df = pandas.read_csv(
             path,
-            index_col=False,
-            usecols=lambda col: any(
-                re.fullmatch(pattern, col.strip().lower()) for pattern in patterns
-            ),
             **{
+                'index_col': False,
                 'sep': None,
                 'engine': 'python',
                 'encoding': 'utf-8-sig',
                 **kwargs
             })
     except UnicodeDecodeError as error:
-        LOGGER.error(
+        raise ValueError(
             f'The file {path} must be encoded as UTF-8 or ASCII')
-        raise error
+
+    # drop columns whose header is NA
+    df = df[[col for col in df.columns if not pandas.isna(col)]]
 
     # strip whitespace from column names and convert to lowercase
     # this won't work on integer types, which happens if you set header=None
     # however, there's little reason to use this function if there's no header
-    df.columns = df.columns.str.strip().str.lower()
-
-    # drop any empty rows
-    df = df.dropna(how="all")
-
-    available_cols = set(df.columns)
-
-    for col_spec, pattern in zip(spec['columns'].values(), patterns):
-        matching_cols = [c for c in available_cols if re.match(pattern, c)]
-        available_cols -= set(matching_cols)
-        for col in matching_cols:
-            try:
-                if col_spec['type'] in ['csv', 'directory', 'file', 'raster', 'vector', {'vector', 'raster'}]:
-                    df[col] = df[col].apply(
-                        lambda p: p if pandas.isna(p) else expand_path(str(p).strip(), path))
-                    df[col] = df[col].astype(pandas.StringDtype())
-                elif col_spec['type'] in {'freestyle_string', 'option_string'}:
-                    df[col] = df[col].apply(
-                        lambda s: s if pandas.isna(s) else str(s).strip().lower())
-                    df[col] = df[col].astype(pandas.StringDtype())
-                elif col_spec['type'] in {'number', 'percent', 'ratio'}:
-                    df[col] = df[col].astype(float)
-                elif col_spec['type'] == 'integer':
-                    df[col] = df[col].astype(pandas.Int64Dtype())
-                elif col_spec['type'] == 'boolean':
-                    df[col] = df[col].astype('boolean')
-            except ValueError as err:
-                raise ValueError(
-                    f'Value(s) in the "{col}" column of the table {path} '
-                    f'could not be interpreted as {col_spec["type"]}s. '
-                    f'Original error: {err}')
-
-     # set the index column, if specified
-    if 'index_col' in spec and spec['index_col'] is not None:
-        index_col = spec['index_col'].lower()
-        try:
-            df = df.set_index(index_col, verify_integrity=True)
-        except KeyError:
-            # If 'index_col' is not a column then KeyError is raised for using
-            # it as the index column
-            LOGGER.error(f"The column '{index_col}' could not be found "
-                         f"in the table {path}")
-            raise
+    df.columns = df.columns.astype(str).str.strip().str.lower()
 
     return df
 
@@ -1001,30 +739,6 @@ def reclassify_raster(
             f" {raster_name} raster but not the table are:"
             f" {err.missing_values}.")
         raise ValueError(error_message)
-
-
-def array_equals_nodata(array, nodata):
-    """Check for the presence of ``nodata`` values in ``array``.
-
-    The comparison supports ``numpy.nan`` and unset (``None``) nodata values.
-
-    Args:
-        array (numpy array): the array to mask for nodata values.
-        nodata (number): the nodata value to check for. Supports ``numpy.nan``.
-
-    Returns:
-        A boolean numpy array with values of 1 where ``array`` is equal to
-        ``nodata`` and 0 otherwise.
-    """
-    # If nodata is undefined, nothing matches nodata.
-    if nodata is None:
-        return numpy.zeros(array.shape, dtype=bool)
-
-    # comparing an integer array against numpy.nan works correctly and is
-    # faster than using numpy.isclose().
-    if numpy.issubdtype(array.dtype, numpy.integer):
-        return array == nodata
-    return numpy.isclose(array, nodata, equal_nan=True)
 
 
 def matches_format_string(test_string, format_string):

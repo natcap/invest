@@ -43,9 +43,6 @@ cdef int *ROW_OFFSETS = [0, -1, -1, -1,  0,  1, 1, 1]
 cdef int *COL_OFFSETS = [1,  1,  0, -1, -1, -1, 0, 1]
 
 
-cdef int is_close(double x, double y):
-    return abs(x-y) <= (1e-8+1e-05*abs(y))
-
 # this is a least recently used cache written in C++ in an external file,
 # exposing here so _ManagedRaster can use it
 cdef extern from "LRUCache.h" nogil:
@@ -435,20 +432,21 @@ def calculate_sediment_deposition(
     # is the original pixel `x`
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
-    cdef int n_cols, n_rows
+    cdef long n_cols, n_rows
     flow_dir_info = pygeoprocessing.get_raster_info(mfd_flow_direction_path)
     n_cols, n_rows = flow_dir_info['raster_size']
     cdef int mfd_nodata = 0
-    cdef stack[int] processing_stack
+    cdef stack[long] processing_stack
     cdef float sdr_nodata = pygeoprocessing.get_raster_info(
         sdr_path)['nodata'][0]
     cdef float e_prime_nodata = pygeoprocessing.get_raster_info(
         e_prime_path)['nodata'][0]
-    cdef int col_index, row_index, win_xsize, win_ysize, xoff, yoff
-    cdef int global_col, global_row, flat_index, j, k
-    cdef int seed_col = 0
-    cdef int seed_row = 0
-    cdef int neighbor_row, neighbor_col
+    cdef long col_index, row_index, win_xsize, win_ysize, xoff, yoff
+    cdef long global_col, global_row, j, k
+    cdef long flat_index
+    cdef long seed_col = 0
+    cdef long seed_row = 0
+    cdef long neighbor_row, neighbor_col, ds_neighbor_row, ds_neighbor_col
     cdef int flow_val, neighbor_flow_val, ds_neighbor_flow_val
     cdef int flow_weight, neighbor_flow_weight
     cdef float flow_sum, neighbor_flow_sum

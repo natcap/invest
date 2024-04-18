@@ -1,5 +1,6 @@
 """Common validation utilities for InVEST models."""
 import ast
+import copy
 import functools
 import importlib
 import inspect
@@ -16,6 +17,7 @@ import pandas
 import pint
 import pygeoprocessing
 from osgeo import gdal
+from osgeo import ogr
 from osgeo import osr
 
 from . import gettext
@@ -30,13 +32,19 @@ LOGGER = logging.getLogger(__name__)
 MESSAGES = {
     'MISSING_KEY': gettext('Key is missing from the args dict'),
     'MISSING_VALUE': gettext('Input is required but has no value'),
-    'MATCHED_NO_HEADERS': gettext('Expected the {header} "{header_name}" but did '
-                            'not find it'),
-    'DUPLICATE_HEADER': gettext('Expected the {header} "{header_name}" only once '
-                          'but found it {number} times'),
-    'NOT_A_NUMBER': gettext('Value "{value}" could not be interpreted as a number'),
-    'WRONG_PROJECTION_UNIT': gettext('Layer must be projected in this unit: '
-                               '"{unit_a}" but found this unit: "{unit_b}"'),
+    'MATCHED_NO_HEADERS': gettext(
+        'Expected the {header} "{header_name}" but did not find it'),
+    'PATTERN_MATCHED_NONE': gettext(
+        'Expected to find at least one {header} matching '
+        'the pattern "{header_name}" but found none'),
+    'DUPLICATE_HEADER': gettext(
+        'Expected the {header} "{header_name}" only once '
+        'but found it {number} times'),
+    'NOT_A_NUMBER': gettext(
+        'Value "{value}" could not be interpreted as a number'),
+    'WRONG_PROJECTION_UNIT': gettext(
+        'Layer must be projected in this unit: '
+        '"{unit_a}" but found this unit: "{unit_b}"'),
     'UNEXPECTED_ERROR': gettext('An unexpected error occurred in validation'),
     'DIR_NOT_FOUND': gettext('Directory not found'),
     'NOT_A_DIR': gettext('Path must be a directory'),
@@ -46,18 +54,20 @@ MESSAGES = {
     'NOT_GDAL_RASTER': gettext('File could not be opened as a GDAL raster'),
     'OVR_FILE': gettext('File found to be an overview ".ovr" file.'),
     'NOT_GDAL_VECTOR': gettext('File could not be opened as a GDAL vector'),
-    'NOT_CSV': gettext('File could not be opened as a CSV. File must be encoded as '
-                 'a UTF-8 CSV.'),
-    'REGEXP_MISMATCH': gettext("Value did not match expected pattern {regexp}"),
+    'REGEXP_MISMATCH': gettext(
+        "Value did not match expected pattern {regexp}"),
     'INVALID_OPTION': gettext("Value must be one of: {option_list}"),
     'INVALID_VALUE': gettext('Value does not meet condition {condition}'),
     'NOT_WITHIN_RANGE': gettext('Value {value} is not in the range {range}'),
     'NOT_AN_INTEGER': gettext('Value "{value}" does not represent an integer'),
     'NOT_BOOLEAN': gettext("Value must be either True or False, not {value}"),
     'NO_PROJECTION': gettext('Spatial file {filepath} has no projection'),
-    'BBOX_NOT_INTERSECT': gettext('Not all of the spatial layers overlap each '
+    'BBOX_NOT_INTERSECT': gettext(
+        'Not all of the spatial layers overlap each '
         'other. All bounding boxes must intersect: {bboxes}'),
-    'NEED_PERMISSION': gettext('You must have {permission} access to this file'),
+    'NEED_PERMISSION': gettext(
+        'You must have {permission} access to this file'),
+    'WRONG_GEOM_TYPE': gettext('Geometry type must be one of {allowed}')
 }
 
 
@@ -335,8 +345,8 @@ def load_fields_from_vector(filepath, layer_id=0):
     return fieldnames
 
 
-def check_vector(filepath, fields=None, projected=False, projection_units=None,
-                 **kwargs):
+def check_vector(filepath, geometries, fields=None, projected=False,
+                 projection_units=None, **kwargs):
     """Validate a GDAL vector on disk.
 
     Note:
@@ -346,6 +356,9 @@ def check_vector(filepath, fields=None, projected=False, projection_units=None,
     Args:
         filepath (string): The path to the vector on disk.  The file must exist
             and be readable.
+        geometries (set): Set of geometry type(s) that are allowed. Options are
+            'POINT', 'LINESTRING', 'POLYGON', 'MULTIPOINT', 'MULTILINESTRING',
+            and 'MULTIPOLYGON'.
         fields=None (dict): A dictionary spec of field names that the vector is
             expected to have. See the docstring of ``check_headers`` for
             details on validation rules.
@@ -366,11 +379,37 @@ def check_vector(filepath, fields=None, projected=False, projection_units=None,
     gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
     gdal.PopErrorHandler()
 
+    geom_map = {
+        'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM,
+                  ogr.wkbPoint25D],
+        'LINESTRING': [ogr.wkbLineString, ogr.wkbLineStringM,
+                       ogr.wkbLineStringZM, ogr.wkbLineString25D],
+        'POLYGON': [ogr.wkbPolygon, ogr.wkbPolygonM,
+                    ogr.wkbPolygonZM, ogr.wkbPolygon25D],
+        'MULTIPOINT': [ogr.wkbMultiPoint, ogr.wkbMultiPointM,
+                       ogr.wkbMultiPointZM, ogr.wkbMultiPoint25D],
+        'MULTILINESTRING': [ogr.wkbMultiLineString, ogr.wkbMultiLineStringM,
+                            ogr.wkbMultiLineStringZM,
+                            ogr.wkbMultiLineString25D],
+        'MULTIPOLYGON': [ogr.wkbMultiPolygon, ogr.wkbMultiPolygonM,
+                         ogr.wkbMultiPolygonZM, ogr.wkbMultiPolygon25D]
+    }
+
+    allowed_geom_types = []
+    for geom in geometries:
+        allowed_geom_types += geom_map[geom]
+
     if gdal_dataset is None:
         return MESSAGES['NOT_GDAL_VECTOR']
 
+    # NOTE: this only checks the layer geometry type, not the types of the
+    # actual geometries (layer.GetGeometryTypes()). This is probably equivalent
+    # in most cases, and it's more efficient than checking every geometry, but
+    # we might need to change this in the future if it becomes a problem.
+    # Currently not supporting ogr.wkbUnknown which allows mixed types.
     layer = gdal_dataset.GetLayer()
-    srs = layer.GetSpatialRef()
+    if layer.GetGeomType() not in allowed_geom_types:
+        return MESSAGES['WRONG_GEOM_TYPE'].format(allowed=geometries)
 
     if fields:
         field_patterns = get_headers_to_validate(fields)
@@ -380,8 +419,30 @@ def check_vector(filepath, fields=None, projected=False, projection_units=None,
         if required_field_warning:
             return required_field_warning
 
+    srs = layer.GetSpatialRef()
     projection_warning = _check_projection(srs, projected, projection_units)
     return projection_warning
+
+
+def check_raster_or_vector(filepath, **kwargs):
+    """Validate an input that may be a raster or vector.
+
+    Args:
+        filepath (string):  The path to the raster or vector.
+        **kwargs: kwargs of the raster and vector spec. Will be
+            passed to ``check_raster`` or ``check_vector``.
+
+    Returns:
+        A string error message if an error was found. ``None`` otherwise.
+    """
+    try:
+        gis_type = pygeoprocessing.get_gis_type(filepath)
+    except ValueError as err:
+        return str(err)
+    if gis_type == pygeoprocessing.RASTER_TYPE:
+        return check_raster(filepath, **kwargs)
+    else:
+        return check_vector(filepath, **kwargs)
 
 
 def check_freestyle_string(value, regexp=None, **kwargs):
@@ -542,19 +603,125 @@ def check_boolean(value, **kwargs):
         return MESSAGES['NOT_BOOLEAN'].format(value=value)
 
 
-def check_csv(filepath, rows=None, columns=None, **kwargs):
+def get_validated_dataframe(
+        csv_path, columns=None, rows=None, index_col=None,
+        read_csv_kwargs={}, **kwargs):
+    """Read a CSV into a dataframe that is guaranteed to match the spec."""
+
+    if not (columns or rows):
+        raise ValueError('One of columns or rows must be provided')
+
+    # build up a list of regex patterns to match columns against columns from
+    # the table that match a pattern in this list (after stripping whitespace
+    # and lowercasing) will be included in the dataframe
+    axis = 'column' if columns else 'row'
+
+    if rows:
+        read_csv_kwargs = read_csv_kwargs.copy()
+        read_csv_kwargs['header'] = None
+
+    df = utils.read_csv_to_dataframe(csv_path, **read_csv_kwargs)
+
+    if rows:
+        # swap rows and column
+        df = df.set_index(df.columns[0]).rename_axis(
+            None, axis=0).T.reset_index(drop=True)
+
+    spec = columns if columns else rows
+
+    patterns = []
+    for column in spec:
+        column = column.lower()
+        match = re.match(r'(.*)\[(.+)\](.*)', column)
+        if match:
+            # for column name patterns, convert it to a regex pattern
+            groups = match.groups()
+            patterns.append(f'{groups[0]}(.+){groups[2]}')
+        else:
+            # for regular column names, use the exact name as the pattern
+            patterns.append(column.replace('(', '\(').replace(')', '\)'))
+
+    # select only the columns that match a pattern
+    df = df[[col for col in df.columns if any(
+        re.fullmatch(pattern, col) for pattern in patterns)]]
+
+    # drop any empty rows
+    df = df.dropna(how="all").reset_index(drop=True)
+
+    available_cols = set(df.columns)
+
+    for (col_name, col_spec), pattern in zip(spec.items(), patterns):
+        matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
+        if col_spec.get('required', True) is True and '[' not in col_name and not matching_cols:
+            raise ValueError(MESSAGES['MATCHED_NO_HEADERS'].format(
+                header=axis,
+                header_name=col_name))
+        available_cols -= set(matching_cols)
+        for col in matching_cols:
+            try:
+                # frozenset needed to make the set hashable.  A frozenset and set with the same members are equal.
+                if col_spec['type'] in {'csv', 'directory', 'file', 'raster', 'vector', frozenset({'raster', 'vector'})}:
+                    df[col] = df[col].apply(
+                        lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), csv_path))
+                    df[col] = df[col].astype(pandas.StringDtype())
+                elif col_spec['type'] in {'freestyle_string', 'option_string'}:
+                    df[col] = df[col].apply(
+                        lambda s: s if pandas.isna(s) else str(s).strip().lower())
+                    df[col] = df[col].astype(pandas.StringDtype())
+                elif col_spec['type'] in {'number', 'percent', 'ratio'}:
+                    df[col] = df[col].astype(float)
+                elif col_spec['type'] == 'integer':
+                    df[col] = df[col].astype(pandas.Int64Dtype())
+                elif col_spec['type'] == 'boolean':
+                    df[col] = df[col].astype('boolean')
+                else:
+                    raise ValueError(f"Unknown type: {col_spec['type']}")
+            except Exception as err:
+                raise ValueError(
+                    f'Value(s) in the "{col}" column could not be interpreted '
+                    f'as {col_spec["type"]}s. Original error: {err}')
+
+            col_type = col_spec['type']
+            if isinstance(col_type, set):
+                col_type = frozenset(col_type)
+            if col_type in {'raster', 'vector', frozenset({'raster', 'vector'})}:
+                # recursively validate the files within the column
+                def check_value(value):
+                    if pandas.isna(value):
+                        return
+                    err_msg = _VALIDATION_FUNCS[col_type](value, **col_spec)
+                    if err_msg:
+                        raise ValueError(
+                            f'Error in {axis} "{col}", value "{value}": {err_msg}')
+                df[col].apply(check_value)
+
+    if any(df.columns.duplicated()):
+        duplicated_columns = df.columns[df.columns.duplicated]
+        return MESSAGES['DUPLICATE_HEADER'].format(
+            header=header_type,
+            header_name=expected,
+            number=count)
+
+    # set the index column, if specified
+    if index_col is not None:
+        index_col = index_col.lower()
+        try:
+            df = df.set_index(index_col, verify_integrity=True)
+        except KeyError:
+            # If 'index_col' is not a column then KeyError is raised for using
+            # it as the index column
+            LOGGER.error(f"The column '{index_col}' could not be found "
+                         f"in the table {csv_path}")
+            raise
+
+    return df
+
+
+def check_csv(filepath, **kwargs):
     """Validate a table.
 
     Args:
         filepath (string): The string filepath to the table.
-        rows (dict): A dictionary spec of row names that are expected to exist
-            in the first column of the table. See the docstring of
-            ``check_headers`` for details on validation rules. No more than one
-            of `rows` and `columns` should be defined.
-        columns (dict): A dictionary spec of column names that are expected to
-            exist in the first row of the table. See the docstring of
-            ``check_headers`` for details on validation rules. No more than one
-            of `rows` and `columns` should be defined.
 
     Returns:
         A string error message if an error was found. ``None`` otherwise.
@@ -563,28 +730,11 @@ def check_csv(filepath, rows=None, columns=None, **kwargs):
     file_warning = check_file(filepath, permissions='r')
     if file_warning:
         return file_warning
-
-    try:
-        # Check if the file encoding is UTF-8 BOM first
-        encoding = None
-        if utils.has_utf8_bom(filepath):
-            encoding = 'utf-8-sig'
-        # engine=python handles unknown characters by replacing them with a
-        # replacement character, instead of raising an error
-        # use sep=None, engine='python' to infer what the separator is
-        dataframe = pandas.read_csv(
-            filepath, sep=None, engine='python', encoding=encoding,
-            header=None)
-    except Exception:
-        return MESSAGES['NOT_CSV']
-
-    # assume that at most one of `rows` and `columns` is defined
-    if columns:
-        headers = [str(name).strip() for name in dataframe.iloc[0]]
-        return check_headers(get_headers_to_validate(columns), headers, 'column')
-    elif rows:
-        headers = [str(name).strip() for name in dataframe.iloc[:, 0]]
-        return check_headers(get_headers_to_validate(rows), headers, 'row')
+    if 'columns' in kwargs or 'rows' in kwargs:
+        try:
+            get_validated_dataframe(filepath, **kwargs)
+        except Exception as e:
+            return str(e)
 
 
 def check_headers(expected_headers, actual_headers, header_type='header'):
@@ -711,9 +861,10 @@ def timeout(func, *args, timeout=5, **kwargs):
     thread.join(timeout=timeout)
     if thread.is_alive():
         # first arg to `check_csv`, `check_raster`, `check_vector` is the path
-        warnings.warn(f'Validation of file {args[0]} timed out. If this file '
-                      'is stored in a file streaming service, it may be taking a long '
-                      'time to download. Try storing it locally instead.')
+        warnings.warn(
+            f'Validation of file {args[0]} timed out. If this file '
+            'is stored in a file streaming service, it may be taking a long '
+            'time to download. Try storing it locally instead.')
         return None
 
     else:
@@ -739,9 +890,6 @@ def get_headers_to_validate(spec):
     """
     headers = []
     for key, val in spec.items():
-        # for now only check headers that are always required
-        # assume that any conditionally-required headers are validated by the
-        # model's validate function
         # if 'required' isn't a key, it defaults to True
         if ('required' not in val) or (val['required'] is True):
             # brackets are a special character for our args spec syntax
@@ -768,6 +916,7 @@ _VALIDATION_FUNCS = {
     'option_string': check_option_string,
     'raster': functools.partial(timeout, check_raster),
     'vector': functools.partial(timeout, check_vector),
+    frozenset({'raster', 'vector'}): functools.partial(timeout, check_raster_or_vector),
     'other': None,  # Up to the user to define their validate()
 }
 
@@ -800,112 +949,82 @@ def validate(args, spec, spatial_overlap_opts=None):
     """
     validation_warnings = []
 
-    # step 1: check absolute requirement
+    # Phase 1: Check whether an input is required and has a value
     missing_keys = set()
-    keys_with_no_value = set()
-    conditionally_required_keys = set()
+    required_keys_with_no_value = set()
+    expression_values = {
+        input_key: args.get(input_key, False) for input_key in spec.keys()}
+    keys_with_falsey_values = set()
     for key, parameter_spec in spec.items():
         # Default required to True since this is the most common
         try:
             required = parameter_spec['required']
         except KeyError:
             required = True
-        if required is True:  # Might be an args key, can't rely on truthiness
+
+        if isinstance(required, str):
+            required = bool(_evaluate_expression(
+                expression=f'{spec[key]["required"]}',
+                variable_map=expression_values))
+
+        # At this point, required is only True or False.
+        if required:
             if key not in args:
                 missing_keys.add(key)
             else:
                 if args[key] in ('', None):
-                    keys_with_no_value.add(key)
-
-        # If ``required`` is a string, it must represent an expression of
-        # conditional requirement based on the satisfaction of various args
-        # keys.  We can only evaluate this later, after all other validation
-        # happens, so add this args key to a set for later.
-        elif isinstance(required, str):
-            conditionally_required_keys.add(key)
+                    required_keys_with_no_value.add(key)
+        elif not expression_values[key]:
+            # Don't validate falsey values or missing (None, "") values.
+            keys_with_falsey_values.add(key)
 
     if missing_keys:
-        validation_warnings.append((sorted(missing_keys), MESSAGES['MISSING_KEY']))
+        validation_warnings.append(
+            (sorted(missing_keys), MESSAGES['MISSING_KEY']))
 
-    if keys_with_no_value:
-        validation_warnings.append((sorted(keys_with_no_value), MESSAGES['MISSING_VALUE']))
+    if required_keys_with_no_value:
+        validation_warnings.append(
+            (sorted(required_keys_with_no_value), MESSAGES['MISSING_VALUE']))
 
-    # step 2: evaluate sufficiency of keys/inputs
-    # Sufficiency: An input is sufficient when its key is present in args and
-    # it has a value.  A sufficient input need not be valid.  Sufficiency is
-    # used by the conditional requirement phase (step 3 in this function) to
-    # determine whether a conditionally required input is required.
-    # The only special case about sufficiency is with boolean values.
-    # A boolean value absent from args is insufficient.  A boolean input that
-    # is present in args but False is in sufficient.  A boolean input that is
-    # present in args and True is sufficient.
-    insufficient_keys = missing_keys.union(keys_with_no_value)
-    sufficient_inputs = {}
-    for key, parameter_spec in spec.items():
-        # If the key isn't present, no need to validate.
-        # If it's required and isn't present, we wouldn't have gotten to this
-        # point in the function.
-        if key not in args:
-            sufficient_inputs[key] = False
-            insufficient_keys.add(key)
-            continue
-
-        # If the value is empty and it isn't required, then we don't need to
-        # validate it.
-        if args[key] in ('', None):
-            sufficient_inputs[key] = False
-            insufficient_keys.add(key)
-            continue
-
-        # Boolean values are special in that their T/F state is equivalent
-        # to their satisfaction.  If a checkbox is checked, it is
-        # considered satisfied.
-        if spec[key]['type'] == 'boolean':
-            sufficient_inputs[key] = args[key]
-
-        # Any other input type must be sufficient because it is in args and
-        # has a value.
-        else:
-            sufficient_inputs[key] = True
-
-    # step 3: evaluate required status of conditionally required keys
-    # keep track of keys that are explicity not required due to
-    # their condition being false
-    excluded_keys = set()
-    for key in conditionally_required_keys:
-        # An input is conditionally required when the expression given
-        # evaluates to True.
-        is_conditionally_required = _evaluate_expression(
-            expression=spec[key]['required'],
-            variable_map=sufficient_inputs)
-        if is_conditionally_required:
-            if key not in args:
-                validation_warnings.append(([key], MESSAGES['MISSING_KEY']))
-            else:
-                if args[key] in ('', None):
-                    validation_warnings.append(([key], MESSAGES['MISSING_VALUE']))
-        else:
-            excluded_keys.add(key)
-
-    # step 4: validate keys, but not conditionally excluded ones.
-    # Making a distinction between keys which are optional (required=False),
-    # and keys which are conditionally not required
-    # (required="condition that evaluates to False")
-    # We want to do validation on optional keys, like `n_workers`,
-    # but not on conditionally excluded keys, like fields that are greyed out
-    # because a checkbox is unchecked.
+    # Phase 2: Check whether any input with a value validates with its
+    # type-specific check function.
     invalid_keys = set()
-    sufficient_keys = set(args.keys()).difference(insufficient_keys)
-    for key in sufficient_keys.difference(excluded_keys):
+    insufficient_keys = (
+        missing_keys | required_keys_with_no_value | keys_with_falsey_values)
+    for key in set(args.keys()) - insufficient_keys:
         # Extra args that don't exist in the MODEL_SPEC are okay
         # we don't need to try to validate them
         try:
-            parameter_spec = spec[key]
+            # Using deepcopy to make sure we don't modify the original spec
+            parameter_spec = copy.deepcopy(spec[key])
         except KeyError:
             LOGGER.debug(f'Provided key {key} does not exist in MODEL_SPEC')
             continue
 
-        type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
+        param_type = parameter_spec['type']
+        if isinstance(param_type, set):
+            param_type = frozenset(param_type)
+        # rewrite parameter_spec for any nested, conditional validity
+        axis_keys = None
+        if param_type == 'csv':
+            axis_keys = ['columns', 'rows']
+        elif param_type == 'vector' or 'vector' in param_type:
+            axis_keys = ['fields']
+        elif param_type == 'directory':
+            axis_keys = ['contents']
+
+        if axis_keys:
+            for axis_key in axis_keys:
+                if axis_key not in parameter_spec:
+                    continue
+                for nested_key, nested_spec in parameter_spec[axis_key].items():
+                    if ('required' in nested_spec
+                            and isinstance(nested_spec['required'], str)):
+                        parameter_spec[axis_key][nested_key]['required'] = (
+                            bool(_evaluate_expression(
+                                nested_spec['required'], expression_values)))
+
+        type_validation_func = _VALIDATION_FUNCS[param_type]
 
         if type_validation_func is None:
             # Validation for 'other' type must be performed by the user.
@@ -923,7 +1042,7 @@ def validate(args, spec, spatial_overlap_opts=None):
                 key, args[key])
             validation_warnings.append(([key], MESSAGES['UNEXPECTED_ERROR']))
 
-    # step 5: check spatial overlap if applicable
+    # Phase 3: Check spatial overlap if applicable
     if spatial_overlap_opts:
         spatial_keys = set(spatial_overlap_opts['spatial_keys'])
 
@@ -1010,8 +1129,9 @@ def invest_validator(validate_func):
         try:
             model_module = importlib.import_module(validate_func.__module__)
         except Exception:
-            LOGGER.warning('Unable to import module %s: assuming no MODEL_SPEC.',
-                           validate_func.__module__)
+            LOGGER.warning(
+                'Unable to import module %s: assuming no MODEL_SPEC.',
+                validate_func.__module__)
             model_module = None
 
         # If the module has an MODEL_SPEC defined, validate against that.
@@ -1046,6 +1166,8 @@ def invest_validator(validate_func):
                 # need to validate it.
                 if args_value not in ('', None):
                     input_type = args_key_spec['type']
+                    if isinstance(input_type, set):
+                        input_type = frozenset(input_type)
                     validator_func = _VALIDATION_FUNCS[input_type]
                     error_msg = validator_func(args_value, **args_key_spec)
 

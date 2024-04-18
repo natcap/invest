@@ -13,6 +13,7 @@ import numpy
 import pandas
 import pygeoprocessing
 from natcap.invest import utils
+from natcap.invest import validation
 from osgeo import gdal
 from osgeo import osr
 
@@ -188,9 +189,9 @@ class TestPreprocessor(unittest.TestCase):
             lulc_csv.write('0,mangrove,True\n')
             lulc_csv.write('1,parking lot,False\n')
 
-        landcover_df = utils.read_csv_to_dataframe(
+        landcover_df = validation.get_validated_dataframe(
             landcover_table_path,
-            preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path'])
+            **preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path'])
         target_table_path = os.path.join(self.workspace_dir,
                                          'transition_table.csv')
 
@@ -204,9 +205,9 @@ class TestPreprocessor(unittest.TestCase):
                       str(context.exception))
 
         # Re-load the landcover table
-        landcover_df = utils.read_csv_to_dataframe(
+        landcover_df = validation.get_validated_dataframe(
             landcover_table_path,
-            preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path'])
+            **preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path'])
         preprocessor._create_transition_table(
             landcover_df, [filename_a, filename_b], target_table_path)
 
@@ -618,9 +619,9 @@ class TestCBC2(unittest.TestCase):
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
-        prior_snapshots = utils.read_csv_to_dataframe(
+        prior_snapshots = validation.get_validated_dataframe(
             args['landcover_snapshot_csv'],
-            coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
+            **coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
         )['raster_path'].to_dict()
         baseline_year = min(prior_snapshots.keys())
         baseline_raster = prior_snapshots[baseline_year]
@@ -796,9 +797,9 @@ class TestCBC2(unittest.TestCase):
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
-        prior_snapshots = utils.read_csv_to_dataframe(
+        prior_snapshots = validation.get_validated_dataframe(
             args['landcover_snapshot_csv'],
-            coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
+            **coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
         )['raster_path'].to_dict()
         baseline_year = min(prior_snapshots.keys())
         baseline_raster = prior_snapshots[baseline_year]
@@ -855,6 +856,20 @@ class TestCBC2(unittest.TestCase):
         self.assertEqual([], validation_warnings)
 
         # Now work through the extra validation warnings.
+        # test validation: invalid analysis year
+        prior_snapshots = validation.get_validated_dataframe(
+            args['landcover_snapshot_csv'],
+            **coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
+        )['raster_path'].to_dict()
+        baseline_year = min(prior_snapshots)
+        # analysis year must be >= the last transition year.
+        args['analysis_year'] = baseline_year
+        validation_warnings = coastal_blue_carbon.validate(args)
+        self.assertIn(
+            coastal_blue_carbon.INVALID_ANALYSIS_YEAR_MSG.format(
+                analysis_year=2000, latest_year=2020),
+            validation_warnings[0][1])
+
         # Create an invalid transitions table.
         invalid_raster_path = os.path.join(self.workspace_dir,
                                            'invalid_raster.tif')
@@ -862,20 +877,12 @@ class TestCBC2(unittest.TestCase):
             raster.write('not a raster')
 
         # Write over the landcover snapshot CSV
-        prior_snapshots = utils.read_csv_to_dataframe(
-            args['landcover_snapshot_csv'],
-            coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
-        )['raster_path'].to_dict()
-        baseline_year = min(prior_snapshots)
         with open(args['landcover_snapshot_csv'], 'w') as snapshot_table:
             snapshot_table.write('snapshot_year,raster_path\n')
             snapshot_table.write(
                 f'{baseline_year},{prior_snapshots[baseline_year]}\n')
             snapshot_table.write(
                 f"{baseline_year + 10},{invalid_raster_path}")
-
-        # analysis year must be >= the last transition year.
-        args['analysis_year'] = baseline_year
 
         # Write invalid entries to landcover transition table
         with open(args['landcover_transitions_table'], 'w') as transition_table:
@@ -886,22 +893,16 @@ class TestCBC2(unittest.TestCase):
         transition_options = [
                 'accum', 'high-impact-disturb', 'med-impact-disturb',
                 'low-impact-disturb', 'ncc']
-
         validation_warnings = coastal_blue_carbon.validate(args)
-        self.assertEqual(len(validation_warnings), 3)
+        self.assertEqual(len(validation_warnings), 2)
         self.assertIn(
-            coastal_blue_carbon.INVALID_SNAPSHOT_RASTER_MSG.format(
-                snapshot_year=baseline_year + 10),
+            'File could not be opened as a GDAL raster',
             validation_warnings[0][1])
-        self.assertIn(
-            coastal_blue_carbon.INVALID_ANALYSIS_YEAR_MSG.format(
-                analysis_year=2000, latest_year=2010),
-            validation_warnings[1][1])
         self.assertIn(
             coastal_blue_carbon.INVALID_TRANSITION_VALUES_MSG.format(
                 model_transitions=transition_options,
                 transition_values=['disturb', 'invalid']),
-            validation_warnings[2][1])
+            validation_warnings[1][1])
 
     def test_track_first_disturbance(self):
         """CBC: Track disturbances over time."""
