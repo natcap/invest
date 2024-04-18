@@ -144,7 +144,7 @@ function createWindow(parentWindow, isDevMode) {
 }
 
 async function openJupyterLab(parentWindow, isDevMode, jupyterExe) {
-  let labDir = process.resourcesPath;
+  let labDir = `${process.resourcesPath}/notebooks`;
   if (isDevMode) { labDir = 'resources/notebooks'; }
   const subprocess = createJupyterProcess(jupyterExe, labDir);
   const child = createWindow(parentWindow, isDevMode);

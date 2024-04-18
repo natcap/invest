@@ -39,6 +39,7 @@ function launchSubprocess(exe, args, opts) {
 }
 
 export function createJupyterProcess(jupyterExe, notebookDir) {
+  logger.debug(jupyterExe)
   const subprocess = launchSubprocess(
     jupyterExe,
     ['lab', '--notebook-dir', notebookDir, '--no-browser', '--port', process.env.JUPYTER_PORT],
