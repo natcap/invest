@@ -79,6 +79,7 @@ describe('Run status Alert renders with status from a recent run', () => {
     ['error', 'Error: see log for details'],
     ['canceled', 'Run Canceled'],
   ])('status message displays on %s', async (status, message) => {
+    // mock a defined value for ipcMainChannels.INVEST_SERVE so that the tab loads
     ipcRenderer.invoke.mockResolvedValueOnce('foo');
 
     const job = new InvestJob({
@@ -97,6 +98,7 @@ describe('Run status Alert renders with status from a recent run', () => {
   test.each([
     'success', 'error', 'canceled',
   ])('Open Workspace button is available on %s', async (status) => {
+    // mock a defined value for ipcMainChannels.INVEST_SERVE so that the tab loads
     ipcRenderer.invoke.mockResolvedValueOnce('foo');
     const job = new InvestJob({
       modelRunName: 'carbon',

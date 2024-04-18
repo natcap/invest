@@ -45,7 +45,6 @@ beforeAll(async () => {
   if (fs.existsSync(hasRunTokenPath)) {
     fs.unlinkSync(hasRunTokenPath);
   }
-  checkFirstRun();
   const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);
   settingsStore.set('investExe', investExe);
