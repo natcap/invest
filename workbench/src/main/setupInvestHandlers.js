@@ -32,9 +32,7 @@ const TGLOGLEVELMAP = {
 };
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 
-export function setupInvestRunHandlers() {
-  const runningJobs = {};
-
+export function setupInvestServeHandler() {
   ipcMain.handle(
     ipcMainChannels.INVEST_SERVE,
     async (event, modelName) => {
@@ -45,6 +43,10 @@ export function setupInvestRunHandlers() {
       return pid;
     }
   );
+}
+
+export function setupInvestRunHandlers() {
+  const runningJobs = {};
 
   ipcMain.on(ipcMainChannels.INVEST_KILL, (event, jobID) => {
     if (runningJobs[jobID]) {
