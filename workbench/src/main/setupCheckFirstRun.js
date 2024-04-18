@@ -28,12 +28,6 @@ export function checkFirstRun() {
       return false;
     }
     fs.writeFileSync(hasRunTokenPath, '');
-    const investListJSON = JSON.parse(execSync('invest list --json'));
-    Object.keys(investListJSON).forEach((modelName) => {
-      const modelId = investListJSON[modelName].model_name;
-      settingsStore.set(`models.${modelId}.model_name`, modelName);
-      settingsStore.set(`models.${modelId}.type`, 'core');
-    });
   } catch (error) {
     logger.warn(`Unable to write first-run token: ${error}`);
   }
