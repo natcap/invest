@@ -41,6 +41,7 @@ LOCAL_MAX_POINTS_PER_NODE = 50
 LOCAL_DEPTH = 8
 CSV_ROWS_PER_PARSE = 2 ** 10
 LOGGER_TIME_DELAY = 5.0
+INITIAL_BOUNDING_BOX = [-180, -90, 180, 90]
 
 Pyro4.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
 
@@ -136,7 +137,6 @@ class RecModel(object):
             None
 
         """
-        initial_bounding_box = [-180, -90, 180, 90]
         if max_year < min_year:
             raise ValueError(
                 "max_year is less than min_year, must be greater or "
@@ -164,7 +164,7 @@ class RecModel(object):
             if not os.path.exists(raw_csv_filename):
                 raise ValueError(f'{raw_csv_filename} does not exist.')
             construct_userday_quadtree(
-                initial_bounding_box, [raw_csv_filename], dataset_name,
+                INITIAL_BOUNDING_BOX, [raw_csv_filename], dataset_name,
                 cache_workspace, ooc_qt_picklefilename,
                 max_points_per_node, max_depth)
         self.qt_pickle_filename = ooc_qt_picklefilename
@@ -586,12 +586,14 @@ def _parse_small_input_csv_list(
         chunk_string = csv_file.read()
         csv_file.close()
 
-        # sample line:
+        # sample line from flickr:
         # 8568090486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
-        # this pattern matches the above style of line and only parses valid
+        # sample line from twitter:
+        # 1117195232,2023-01-01,-22.908,-43.1975
+        # patterns matche the above styles of lines and only parses valid
         # dates to handle some cases where there are weird dates in the input
         flickr_pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"  # pylint: disable=line-too-long
-        twittr_pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])),([^,]+),([^,]+)\n"  # pylint: disable=line-too-long
+        twittr_pattern = r"([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])),([^,]+),([^,]+)\n"  # pylint: disable=line-too-long
         patterns = {
             'flickr': flickr_pattern,
             'twitter': twittr_pattern
@@ -921,9 +923,9 @@ def execute(args):
             'natcap.invest.recreation')
     elif args['quadtree_pickle_filename']:
         uri = daemon.register(
-            RecModel(args['min_year'], args['max_year'], args['cache_workspace'],
-                     quadtree_pickle_filename=args['quadtree_pickle_filename'],
-                     max_points_per_node=max_points_per_node),
+            RecModel(args['min_year'], args['max_year'],
+                     args['cache_workspace'],
+                     quadtree_pickle_filename=args['quadtree_pickle_filename']),
             'natcap.invest.recreation')
     else:
         raise ValueError(

@@ -383,6 +383,91 @@ class UnitTestRecServer(unittest.TestCase):
             # assert that no warning was raised
             self.assertTrue(len(ws) == 0)
 
+    def test_construct_query_twitter_qt(self):
+        """Recreation test constructing and querying twitter quadtree."""
+        from natcap.invest.recreation import recmodel_server
+        import string
+        import random
+
+        # user,date,lat,lon
+        # 1117195232,2023-01-01,-22.908,-43.1975
+        # 54900515,2023-01-01,44.62804,10.60603
+        
+        def make_twitter_csv(target_filename):
+            dates = numpy.arange(
+                numpy.datetime64('2017-01-01'), numpy.datetime64('2017-12-31'))
+            lats = numpy.arange(-90.0, 90.0, 180/len(dates))
+            lons = numpy.arange(-180.0, 180.0, 360/len(dates))
+            users = [
+                ''.join(random.choices(string.digits, k=n))
+                for n in random.choices(range(7, 18), k=len(dates))
+            ]
+            pandas.DataFrame({
+                'user': users,
+                'date': dates,
+                'lat': lats,
+                'lon': lons
+            }, index=None).to_csv(target_filename, index=False)
+
+        raw_csv_file_list = [
+            os.path.join(self.workspace_dir, 'a.csv'),
+            os.path.join(self.workspace_dir, 'b.csv'),
+        ]
+        for filename in raw_csv_file_list:
+            make_twitter_csv(filename)
+
+        cache_dir = os.path.join(self.workspace_dir, 'cache')
+        ooc_qt_picklefilename = os.path.join(cache_dir, 'qt.pickle')
+
+        recmodel_server.construct_userday_quadtree(
+            recmodel_server.INITIAL_BOUNDING_BOX,
+            raw_csv_file_list, 'twitter',
+            cache_dir, ooc_qt_picklefilename,
+            recmodel_server.GLOBAL_MAX_POINTS_PER_NODE,
+            recmodel_server.GLOBAL_DEPTH)
+
+        min_year = 2016
+        max_year = 2018
+        server = recmodel_server.RecModel(
+            min_year, max_year, cache_dir,
+            quadtree_pickle_filename=ooc_qt_picklefilename)
+
+        temp_workspace = 'scratch'
+        aoi_path = os.path.join(temp_workspace, 'aoi.geojson')
+        target_filename = 'results.shp'  # model uses ESRI Shapefile driver
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)  # WGS84
+        wkt = srs.ExportToWkt()
+        polygon = shapely.geometry.box(-120, -60, 120, 60)
+        pygeoprocessing.shapely_geometry_to_vector(
+            [polygon], aoi_path, wkt, 'GeoJSON')
+
+        numpy_date_range = (
+            numpy.datetime64('2017-01-01'),
+            numpy.datetime64('2017-12-31'))
+        server._calc_aggregated_points_in_aoi(
+            aoi_path, temp_workspace, numpy_date_range, target_filename)
+
+        expected_result_table = pandas.DataFrame({
+           'poly_id': [0],
+           '2017-1': [0],
+           '2017-2': [0],
+           '2017-3': [58],
+           '2017-4': [60],
+           '2017-5': [62],
+           '2017-6': [60],
+           '2017-7': [62],
+           '2017-8': [62],
+           '2017-9': [60],
+           '2017-10': [62],
+           '2017-11': [0],
+           '2017-12': [0]
+        }, index=None)
+        result_table = pandas.read_csv(
+            os.path.join(temp_workspace, 'monthly_table.csv'))
+        pandas.testing.assert_frame_equal(
+            expected_result_table, result_table, check_dtype=False)
+
 
 # TODO: is this test redundant with one from above?
 class TestLocalRecServer(unittest.TestCase):
