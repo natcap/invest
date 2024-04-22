@@ -5,7 +5,6 @@ const { ipcRenderer } = window.Workbench.electron;
 
 const HOSTNAME = 'http://127.0.0.1';
 const PREFIX = 'api';
-const CORE_PORT = ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
 
 /**
  * Get the port number running the server to use for the given model.
