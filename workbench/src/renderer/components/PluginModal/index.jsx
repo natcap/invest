@@ -16,16 +16,21 @@ export default function PluginModal(props) {
   const { updateInvestList } = props;
   const [showAddPluginModal, setShowAddPluginModal] = useState(false);
   const [url, setURL] = useState(undefined);
+  const [err, setErr] = useState(undefined);
   const [loading, setLoading] = useState(false);
 
   const handleModalClose = () => setShowAddPluginModal(false);
   const handleModalOpen = () => setShowAddPluginModal(true);
   const handleSubmit = () => {
     setLoading(true);
-    ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, url).then(() => {
+    ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, url).then((err) => {
       setLoading(false);
-      setShowAddPluginModal(false);
       updateInvestList();
+      if (err) {
+        setErr(err);
+      } else {
+        setShowAddPluginModal(false);
+      }
     });
   };
   const handleChange = (event) => {
@@ -33,6 +38,39 @@ export default function PluginModal(props) {
   };
 
   const { t } = useTranslation();
+
+  let modalBody = (
+    <Modal.Body>
+      <Form>
+        <Form.Group className="mb-3">
+          <Form.Label htmlFor="url">Git URL</Form.Label>
+          <Form.Control
+            id="url"
+            name="url"
+            type="text"
+            placeholder={t('Enter Git URL')}
+            onChange={handleChange}
+          />
+        </Form.Group>
+
+        <Button
+          name="submit"
+          onClick={handleSubmit}
+        >
+          {t('Add')}
+        </Button>
+      </Form>
+    </Modal.Body>
+  );
+  if (err) {
+    modalBody = (
+      <Modal.Body>
+        <span>{t('Plugin installation failed')}</span>
+        <br /><br />
+        <span>{err.toString()}</span>
+      </Modal.Body>
+    )
+  }
 
   return (
     <React.Fragment>
@@ -50,27 +88,7 @@ export default function PluginModal(props) {
             <span className="sr-only">Loading...</span>
           </Spinner>
         )}
-        <Modal.Body>
-          <Form>
-            <Form.Group className="mb-3">
-              <Form.Label htmlFor="url">Git URL</Form.Label>
-              <Form.Control
-                id="url"
-                name="url"
-                type="text"
-                placeholder={t('Enter Git URL')}
-                onChange={handleChange}
-              />
-            </Form.Group>
-
-            <Button
-              name="submit"
-              onClick={handleSubmit}
-            >
-              {t('Add')}
-            </Button>
-          </Form>
-        </Modal.Body>
+        {modalBody}
       </Modal>
     </React.Fragment>
   );
