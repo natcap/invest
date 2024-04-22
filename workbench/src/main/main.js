@@ -80,6 +80,13 @@ export const createWindow = async () => {
 
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   settingsStore.set('investExe', investExe);
+  // No plugin server processes should persist between workbench sessions
+  // In case any were left behind, remove them
+  Object.keys(settingsStore.get('models')).forEach((model) => {
+    settingsStore.set(`models.${model}.pid`, '');
+    settingsStore.set(`models.${model}.port`, '');
+  });
+
   await createCoreServerProcess();
   setupDialogs();
   setupCheckFilePermissions();
@@ -203,16 +210,13 @@ export function main() {
     const pids = [];
     Object.keys(settingsStore.get('models')).forEach((model) => {
       const pid = settingsStore.get(`models.${model}.pid`);
-      if (pid !== undefined) {
-        pids.append(pid);
+      if (pid) {
+        pids.push(pid);
       }
-    });
-
-    await Promise.all(pids.forEach((pid) => shutdownPythonProcess(pid)));
-    pids.forEach((pid) => {
       settingsStore.set(`models.${model}.pid`, '');
       settingsStore.set(`models.${model}.port`, '');
     });
+    await Promise.all(pids.map((pid) => shutdownPythonProcess(pid)));
 
     removeIpcMainListeners();
     app.quit();

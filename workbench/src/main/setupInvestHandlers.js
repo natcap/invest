@@ -36,7 +36,6 @@ export function setupLaunchPluginServerHandler() {
   ipcMain.handle(
     ipcMainChannels.LAUNCH_PLUGIN_SERVER,
     async (event, pluginName) => {
-      console.log(pluginName);
       const pid = await createPluginServerProcess(pluginName);
       return pid;
     }

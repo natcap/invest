@@ -162,7 +162,7 @@ export async function shutdownPythonProcess(pid) {
   try {
     if (process.platform !== 'win32') {
       // the '-' prefix on pid sends signal to children as well
-      pidToSubprocess[pid].kill();
+      pidToSubprocess[pid.toString()].kill();
     } else {
       execSync(`taskkill /pid ${pid} /t /f`);
     }
