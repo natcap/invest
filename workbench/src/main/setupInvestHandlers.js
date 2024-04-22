@@ -13,7 +13,7 @@ import investUsageLogger from './investUsageLogger';
 import markupMessage from './investLogMarkup';
 import writeInvestParameters from './writeInvestParameters';
 import { settingsStore } from './settingsStore';
-import { createPythonFlaskProcess } from './createPythonFlaskProcess';
+import { createPluginServerProcess } from './createPythonFlaskProcess';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -32,14 +32,12 @@ const TGLOGLEVELMAP = {
 };
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 
-export function setupInvestServeHandler() {
+export function setupLaunchPluginServerHandler() {
   ipcMain.handle(
-    ipcMainChannels.INVEST_SERVE,
-    async (event, modelName) => {
-      if (settingsStore.get(`models.${modelName}.type`) == 'core') {
-        return settingsStore.get('core.pid');
-      }
-      const pid = await createPythonFlaskProcess(modelName);
+    ipcMainChannels.LAUNCH_PLUGIN_SERVER,
+    async (event, pluginName) => {
+      console.log(pluginName);
+      const pid = await createPluginServerProcess(pluginName);
       return pid;
     }
   );

@@ -10,7 +10,7 @@ import {
 } from 'electron';
 
 import {
-  createPythonFlaskProcess,
+  createCoreServerProcess,
   shutdownPythonProcess
 } from './createPythonFlaskProcess';
 import findInvestBinaries from './findInvestBinaries';
@@ -22,7 +22,7 @@ import { setupCheckFirstRun } from './setupCheckFirstRun';
 import { setupCheckStorageToken } from './setupCheckStorageToken';
 import {
   setupInvestRunHandlers,
-  setupInvestServeHandler,
+  setupLaunchPluginServerHandler,
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
 import setupAddPlugin from './setupAddPlugin';
@@ -80,7 +80,7 @@ export const createWindow = async () => {
 
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   settingsStore.set('investExe', investExe);
-  await createPythonFlaskProcess();
+  await createCoreServerProcess();
   setupDialogs();
   setupCheckFilePermissions();
   setupCheckFirstRun();
@@ -145,7 +145,7 @@ export const createWindow = async () => {
   setupContextMenu(mainWindow);
   setupDownloadHandlers(mainWindow);
   setupInvestRunHandlers();
-  setupInvestServeHandler();
+  setupLaunchPluginServerHandler();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
   if (ELECTRON_DEV_MODE) {
     // The timing of this is fussy due a chromium bug. It seems to only
@@ -197,16 +197,23 @@ export function main() {
     if (shuttingDown) { return; }
     event.preventDefault();
     shuttingDown = true;
-    shutdownPythonProcess(settingsStore.get('core.pid'));
+    await shutdownPythonProcess(settingsStore.get('core.pid'));
     settingsStore.set(`core.pid`, '');
     settingsStore.set(`core.port`, '');
+    const pids = [];
     Object.keys(settingsStore.get('models')).forEach((model) => {
-      if (settingsStore.get(`models.${model}.pid`)) {
-        shutdownPythonProcess(settingsStore.get(`models.${model}.pid`));
-        settingsStore.set(`models.${model}.pid`, '');
-        settingsStore.set(`models.${model}.port`, '');
+      const pid = settingsStore.get(`models.${model}.pid`);
+      if (pid !== undefined) {
+        pids.append(pid);
       }
-    })
+    });
+
+    await Promise.all(pids.forEach((pid) => shutdownPythonProcess(pid)));
+    pids.forEach((pid) => {
+      settingsStore.set(`models.${model}.pid`, '');
+      settingsStore.set(`models.${model}.port`, '');
+    });
+
     removeIpcMainListeners();
     app.quit();
   });

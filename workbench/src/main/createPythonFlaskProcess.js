@@ -48,51 +48,14 @@ export async function getFlaskIsReady(port, i = 0, retries = 41) {
   }
 }
 
+
 /**
- * Spawn a child process running the Python Flask app.
+ * Set up handlers for server process events.
  *
- * @param  {string} investExe - path to executeable that launches flask app.
- * @returns {ChildProcess} - a reference to the subprocess.
+ * @param  {ChildProcess} pythonServerProcess - server process instance.
+ * @returns {undefined}
  */
-export async function createPythonFlaskProcess(modelName, _port = undefined) {
-  let port = _port;
-  if (port === undefined) {
-    port = await getFreePort();
-  }
-  let pythonServerProcess;
-  let path;
-  if (modelName === undefined) {
-    logger.debug('creating invest core server process');
-    const investExe = settingsStore.get('investExe');
-    path = investExe;
-    pythonServerProcess = spawn(
-      investExe,
-      ['--debug', 'serve', '--port', port],
-      { shell: true } // necessary in dev mode & relying on a conda env
-    );
-    settingsStore.set('core.port', port);
-    settingsStore.set('core.pid', pythonServerProcess.pid);
-  } else if (settingsStore.get(`models.${modelName}.type`) === 'core') {
-    logger.info('core model');
-    return settingsStore.get('core.pid');
-  } else {
-    logger.debug('creating invest plugin server process');
-    const micromambaPath = 'micromamba'//settingsStore.get('micromamba_path');
-    const modelEnvPath = settingsStore.get(`models.${modelName}.env`);
-    path = modelEnvPath;
-    const args = [
-      'run', '--prefix', `"${modelEnvPath}"`,
-      'invest', '--debug', 'serve', '--port', port]
-    logger.debug('spawning command:', micromambaPath, args);
-    pythonServerProcess = spawn(
-      '"' + micromambaPath + '"',
-      args,
-      { shell: true } // necessary in dev mode & relying on a conda env
-    );
-    settingsStore.set(`models.${modelName}.port`, port);
-    settingsStore.set(`models.${modelName}.pid`, pythonServerProcess.pid);
-  }
-  logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
+export async function setupServerProcessHandlers(pythonServerProcess) {
   pythonServerProcess.stdout.on('data', (data) => {
     logger.debug(`${data}`);
   });
@@ -100,9 +63,10 @@ export async function createPythonFlaskProcess(modelName, _port = undefined) {
     logger.debug(`${data}`);
   });
   pythonServerProcess.on('error', (err) => {
+    logger.error(pythonServerProcess.spawnargs);
     logger.error(err.stack);
     logger.error(
-      `The invest flask app at ${path} crashed or failed to start
+      `The invest flask app crashed or failed to start
        so this application must be restarted`
     );
     throw err;
@@ -116,10 +80,74 @@ export async function createPythonFlaskProcess(modelName, _port = undefined) {
   pythonServerProcess.on('disconnect', () => {
     logger.debug('Flask process disconnected');
   });
+  pidToSubprocess[pythonServerProcess.pid] = pythonServerProcess;
+}
+
+
+/**
+ * Spawn a child process running the Python Flask app for core invest.
+ *
+ * @param  {integer} _port - if provided, port to launch server on. Otherwise,
+ *                         an available port is chosen.
+ * @returns { integer } - PID of the process that was launched
+ */
+export async function createCoreServerProcess(_port = undefined) {
+  let port = _port;
+  if (port === undefined) {
+    port = await getFreePort();
+  }
+  logger.debug('creating invest core server process');
+  const pythonServerProcess = spawn(
+    settingsStore.get('investExe'),
+    ['--debug', 'serve', '--port', port],
+    { shell: true } // necessary in dev mode & relying on a conda env
+  );
+  settingsStore.set('core.port', port);
+  settingsStore.set('core.pid', pythonServerProcess.pid);
+
+  logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
+
+  setupServerProcessHandlers(pythonServerProcess);
+  await getFlaskIsReady(port, 0, 500);
+  logger.info('flask is ready');
+  return pythonServerProcess.pid;
+}
+
+
+/**
+ * Spawn a child process running the Python Flask app for a plugin.
+ *
+ * @param  {integer} _port - if provided, port to launch server on. Otherwise,
+ *                         an available port is chosen.
+ * @returns { integer } - PID of the process that was launched
+ */
+export async function createPluginServerProcess(modelName, _port = undefined) {
+  let port = _port;
+  if (port === undefined) {
+    port = await getFreePort();
+  }
+
+  logger.debug('creating invest plugin server process');
+  const micromambaPath = 'micromamba'//settingsStore.get('micromamba_path');
+  const modelEnvPath = settingsStore.get(`models.${modelName}.env`);
+  const args = [
+    'run', '--prefix', `"${modelEnvPath}"`,
+    'invest', '--debug', 'serve', '--port', port]
+  logger.debug('spawning command:', micromambaPath, args);
+  const pythonServerProcess = spawn(
+    '"' + micromambaPath + '"',
+    args,
+    { shell: true } // necessary in dev mode & relying on a conda env
+  );
+  settingsStore.set(`models.${modelName}.port`, port);
+  settingsStore.set(`models.${modelName}.pid`, pythonServerProcess.pid);
+
+  logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
+
+  setupServerProcessHandlers(pythonServerProcess);
 
   await getFlaskIsReady(port, 0, 500);
   logger.info('flask is ready');
-  pidToSubprocess[pythonServerProcess.pid] = pythonServerProcess;
   return pythonServerProcess.pid;
 }
 

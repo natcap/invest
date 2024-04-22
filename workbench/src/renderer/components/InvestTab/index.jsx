@@ -53,14 +53,19 @@ class InvestTab extends React.Component {
 
   async componentDidMount() {
     const { job } = this.props;
-    // start up the server for this model
-    const pid = await ipcRenderer.invoke(
-      ipcMainChannels.INVEST_SERVE,
-      job.modelRunName
-    );
-    if (pid === undefined) {
-      this.setState({ tabStatus: 'failed' });
-      return;
+    // if it's a plugin, need to start up the server
+    // otherwise, the core invest server should already be running
+    const type = await ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, `models.${job.modelRunName}.type`);
+    if (type === 'plugin') {
+      const pid = await ipcRenderer.invoke(
+        ipcMainChannels.LAUNCH_PLUGIN_SERVER,
+        job.modelRunName
+      );
+      if (pid === undefined) {
+        this.setState({ tabStatus: 'failed' });
+        return;
+      }
     }
     try {
       const {
