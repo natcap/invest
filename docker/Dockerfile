@@ -21,7 +21,7 @@ COPY --from=build /invest/dist/*.whl /tmp/
 # The environment.yml file will be built during github actions.
 COPY --chown=$MAMBA_USER:$MAMBA_USER environment.yml /tmp/environment.yml
 RUN micromamba install -y -n base -c conda-forge python==${PYTHON_VERSION} && \
-RUN micromamba install -y -n base -c conda-forge -f /tmp/environment.yml && \
+        micromamba install -y -n base -c conda-forge -f /tmp/environment.yml && \
         micromamba clean --all --yes && \
         /opt/conda/bin/python -m pip install /tmp/*.whl && \
         /opt/conda/bin/python -m pip cache purge && \
