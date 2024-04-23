@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     recmodel_server.construct_userday_quadtree(
         recmodel_server.INITIAL_BOUNDING_BOX,
-        args.csv_files,
+        args.csv_file_list,
         'twitter',
         args.workspace,
         args.output_filename,
