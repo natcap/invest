@@ -21,7 +21,7 @@ TWEETS_DIR=/scratch/users/woodsp/invest/csv
 find $TWEETS_DIR -name '*.csv' | head -20 > ~/projects/rec-twitter/tweets_list.txt
 
 # invest repo already cloned into ~/invest
-cd invest
+cd ~/invest
 git checkout exp/REC-twitter
 
 set -x  # Be eXplicit about what's happening.
@@ -30,4 +30,4 @@ singularity run \
     docker://$CONTAINER python scripts/recreation_server/build_twitter_quadtree.py \
     --csv_file_list=~/projects/rec-twitter/tweets_list.txt \
     --workspace=$SCRATCH/quadtree_test \
-    --output-filename=twitter_test.pickle
+    --output_filename=twitter_test.pickle
