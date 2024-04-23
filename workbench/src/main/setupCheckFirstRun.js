@@ -1,16 +1,13 @@
 import fs from 'fs';
 import path from 'path';
-import upath from 'upath';
-import { execSync } from 'child_process';
 
 import {
   app,
-  ipcMain
+  ipcMain,
 } from 'electron';
 
 import { ipcMainChannels } from './ipcMainChannels';
 import { getLogger } from './logger';
-import { settingsStore } from './settingsStore';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
