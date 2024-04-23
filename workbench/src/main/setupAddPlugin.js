@@ -46,7 +46,7 @@ export default function setupAddPlugin() {
         const envInfo = execSync(`micromamba info --name ${envName}`).toString();
         const envPath = envInfo.split('env location : ')[1].split('\n')[0];
         settingsStore.set(
-          `models.${pluginID}`,
+          `plugins.${pluginID}`,
           {
             model_name: pluginName,
             pyname: pluginPyName,

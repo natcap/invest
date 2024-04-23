@@ -16,11 +16,11 @@ const PREFIX = 'api';
  */
 async function getPort(modelName) {
   let port;
-  const type = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `models.${modelName}.type`);
-  if (type === 'core') {
-    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
+  const plugins = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins');
+  if (Object.keys(plugins).includes(modelName)) {
+    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `plugins.${modelName}.port`);
   } else {
-    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `models.${modelName}.port`);
+    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
   }
   return port;
 }

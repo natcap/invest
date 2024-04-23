@@ -82,10 +82,13 @@ export const createWindow = async () => {
   settingsStore.set('investExe', investExe);
   // No plugin server processes should persist between workbench sessions
   // In case any were left behind, remove them
-  Object.keys(settingsStore.get('models')).forEach((model) => {
-    settingsStore.set(`models.${model}.pid`, '');
-    settingsStore.set(`models.${model}.port`, '');
-  });
+  const plugins = settingsStore.get('plugins');
+  if (plugins) {
+    Object.keys(plugins).forEach((model) => {
+      settingsStore.set(`plugins.${model}.pid`, '');
+      settingsStore.set(`plugins.${model}.port`, '');
+    });
+  }
 
   await createCoreServerProcess();
   setupDialogs();

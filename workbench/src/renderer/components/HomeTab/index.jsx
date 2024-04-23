@@ -65,8 +65,13 @@ export default class HomeTab extends React.Component {
 
     // A button in a table row for each model
     const investButtons = [];
-    sortedModelIds.forEach((modelId) => {
+    sortedModelIds.forEach(async (modelId) => {
       const modelName = investList[modelId].model_name;
+      let badge;
+      const plugins = ipcRenderer.sendSync(ipcMainChannels.GET_SETTING, 'plugins');
+      if (plugins && Object.keys(plugins).includes(modelId)) {
+        badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
+      }
       investButtons.push(
         <ListGroup.Item
           key={modelName}
@@ -74,9 +79,7 @@ export default class HomeTab extends React.Component {
           action
           onClick={() => this.handleClick(modelId)}
         >
-          {
-            (investList[modelId].type === 'core' ? <></> : <Badge className="mr-1" variant="secondary">Plugin</Badge>)
-          }
+          { badge }
           <span className="invest-button">{modelName}</span>
         </ListGroup.Item>
       );
@@ -137,11 +140,12 @@ function RecentInvestJobs(props) {
   };
 
   const recentButtons = [];
-  recentJobs.forEach((job) => {
+  recentJobs.forEach(async (job) => {
+    console.log(job);
     if (job && job.argsValues && job.modelHumanName) {
       let badge;
-      const modelType = ipcRenderer.sendSync(ipcMainChannels.GET_SETTING, `models.${job.modelRunName}.type`);
-      if (modelType === 'plugin') {
+      const plugins = ipcRenderer.sendSync(ipcMainChannels.GET_SETTING, 'plugins');
+      if (plugins && Object.keys(plugins).includes(job.modelRunName)) {
         badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
       }
       recentButtons.push(

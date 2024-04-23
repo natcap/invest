@@ -27,6 +27,7 @@ import { dragOverHandlerNone } from './utils';
 
 const { ipcRenderer } = window.Workbench.electron;
 import { ipcMainChannels } from '../main/ipcMainChannels';
+import { getInvestModelNames } from './server_requests';
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
@@ -56,11 +57,9 @@ export default class App extends React.Component {
 
   /** Initialize the list of invest models, recent invest jobs, etc. */
   async componentDidMount() {
-    const investList = await ipcRenderer.invoke(
-      ipcMainChannels.GET_SETTING, 'models');
+    this.updateInvestList();
     const recentJobs = await InvestJob.getJobStore();
     this.setState({
-      investList: investList,
       // filter out models that do not exist in current version of invest
       recentJobs: recentJobs.filter((job) => (
         Object.keys(investList).includes(job.modelRunName)
@@ -177,10 +176,19 @@ export default class App extends React.Component {
   }
 
   async updateInvestList() {
-    const investList = await ipcRenderer.invoke(
-      ipcMainChannels.GET_SETTING, 'models');
+    console.log('update invest list');
+    const coreModels = {};
+    const investList = await getInvestModelNames();
+    Object.keys(investList).forEach((modelName) => {
+      const modelId = investList[modelName].model_name;
+      coreModels[modelId] = { model_name: modelName };
+    });
+    const plugins = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins');
+    console.log(coreModels);
+    console.log(plugins);
+
     this.setState({
-      investList: investList,
+      investList: {...coreModels, ...plugins}
     });
   }
 
