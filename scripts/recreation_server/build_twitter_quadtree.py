@@ -31,9 +31,12 @@ if __name__ == '__main__':
         help='name for the pickle file quadtree index created in the workspace.')
     args = parser.parse_args()
 
+    with open(args.csv_file_list, 'r') as file:
+        csv_list = [line.rstrip() for line in file]
+
     recmodel_server.construct_userday_quadtree(
         recmodel_server.INITIAL_BOUNDING_BOX,
-        args.csv_file_list,
+        csv_list,
         'twitter',
         args.workspace,
         args.output_filename,
