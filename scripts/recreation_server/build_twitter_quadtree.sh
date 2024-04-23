@@ -1,12 +1,12 @@
 #!/bin/bash
 # ----------------SLURM Parameters----------------
-#SBATCH --partition normal
+#SBATCH --partition normal,hns
 #SBATCH --ntasks 1
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu=1G
 #SBATCH --nodes 1
 # Define how long the job will run d-hh:mm:ss
-#SBATCH --time 03:00:00
+#SBATCH --time 01:00:00
 # Get email notification when job finishes or fails
 #SBATCH --mail-user=dfisher5@stanford.edu
 #SBATCH --mail-type=END,FAIL
@@ -18,7 +18,7 @@
 
 CONTAINER=ghcr.io/davemfish/invest:exp.rec-twitter
 TWEETS_DIR=/scratch/users/woodsp/invest/csv
-find $TWEETS_DIR -name '*.csv' | head -100 > ~/projects/rec-twitter/tweets_list.txt
+find $TWEETS_DIR -name '*.csv' | head -20 > ~/projects/rec-twitter/tweets_list.txt
 
 # invest repo already cloned into ~/invest
 cd invest
