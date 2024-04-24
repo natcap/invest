@@ -3,7 +3,7 @@
 #SBATCH --partition normal,hns
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task=2
-#SBATCH --mem-per-cpu=100M
+#SBATCH --mem-per-cpu=1G
 #SBATCH --nodes 1
 # Define how long the job will run d-hh:mm:ss
 #SBATCH --time 00:10:00
