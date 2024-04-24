@@ -621,7 +621,7 @@ def _parse_small_input_csv_list(
         # it modifies the `datetime64` dtype metadata, causing a warning later.
         # To avoid this we dump the array to a string before adding to queue.
         numpy_array_queue.put(_numpy_dumps(user_day_lng_lat))
-        numpy_array_queue.put('STOP')
+    numpy_array_queue.put('STOP')
 
 
 def _file_len(file_path_list):
@@ -670,7 +670,7 @@ def construct_userday_quadtree(
     if n_workers is None:
         n_parse_processes = multiprocessing.cpu_count() - 1
     else:
-        n_parse_processes = n_workers
+        n_parse_processes = n_workers - 1
     if n_parse_processes < 1:
         n_parse_processes = 1
     numpy_array_queue = multiprocessing.Queue(n_parse_processes * 2)
