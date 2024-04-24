@@ -28,6 +28,6 @@ set -x  # Be eXplicit about what's happening.
 FAILED=0
 singularity run \
     docker://$CONTAINER python scripts/recreation_server/build_twitter_quadtree.py \
-    --csv_file_list=~/projects/rec-twitter/tweets_list.txt \
+    --csv_file_list=$HOME/projects/rec-twitter/tweets_list.txt \
     --workspace=$SCRATCH/quadtree_test \
     --output_filename=twitter_test.pickle
