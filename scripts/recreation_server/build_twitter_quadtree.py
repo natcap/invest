@@ -31,7 +31,7 @@ if __name__ == '__main__':
         '-o', '--output_filename', type=str,
         help='name for the pickle file quadtree index created in the workspace.')
     parser.add_argument(
-        '-c', '--n_cores', type=str,
+        '-c', '--n_cores', type=int,
         help='number of available cores for multiprocessing')
     args = parser.parse_args()
 
