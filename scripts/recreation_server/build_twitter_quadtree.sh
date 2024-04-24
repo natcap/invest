@@ -6,7 +6,7 @@
 #SBATCH --mem-per-cpu=1G
 #SBATCH --nodes 1
 # Define how long the job will run d-hh:mm:ss
-#SBATCH --time 01:00:00
+#SBATCH --time 00:30:00
 # Get email notification when job finishes or fails
 #SBATCH --mail-user=dfisher5@stanford.edu
 #SBATCH --mail-type=END,FAIL

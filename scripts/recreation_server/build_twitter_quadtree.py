@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import sys
 
 import natcap.invest.utils
@@ -34,11 +35,13 @@ if __name__ == '__main__':
     with open(args.csv_file_list, 'r') as file:
         csv_list = [line.rstrip() for line in file]
 
+    ooc_qt_pickle_filename = os.path.join(
+        args.workspace, args.output_filename)
     recmodel_server.construct_userday_quadtree(
         recmodel_server.INITIAL_BOUNDING_BOX,
         csv_list,
         'twitter',
         args.workspace,
-        args.output_filename,
+        ooc_qt_pickle_filename,
         recmodel_server.GLOBAL_MAX_POINTS_PER_NODE,
         recmodel_server.GLOBAL_DEPTH)

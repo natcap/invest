@@ -149,7 +149,8 @@ class RecModel(object):
             ooc_qt_picklefilename = os.path.join(
                 cache_workspace, csv_hash + '.pickle')
         elif quadtree_pickle_filename:
-            ooc_qt_picklefilename = quadtree_pickle_filename
+            ooc_qt_picklefilename = os.path.join(
+                cache_workspace, quadtree_pickle_filename)
         else:
             raise ValueError(
                 'Both raw_csv_filename and quadtree_pickle_filename'
