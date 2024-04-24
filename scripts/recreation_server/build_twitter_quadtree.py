@@ -30,6 +30,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '-o', '--output_filename', type=str,
         help='name for the pickle file quadtree index created in the workspace.')
+    parser.add_argument(
+        '-c', '--n_cores', type=str,
+        help='number of available cores for multiprocessing')
     args = parser.parse_args()
 
     with open(args.csv_file_list, 'r') as file:
@@ -44,4 +47,5 @@ if __name__ == '__main__':
         args.workspace,
         ooc_qt_pickle_filename,
         recmodel_server.GLOBAL_MAX_POINTS_PER_NODE,
-        recmodel_server.GLOBAL_DEPTH)
+        recmodel_server.GLOBAL_DEPTH,
+        n_workers=args.n_cores)

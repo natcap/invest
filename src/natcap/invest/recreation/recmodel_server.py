@@ -644,7 +644,7 @@ def _file_len(file_path_list):
 
 def construct_userday_quadtree(
         initial_bounding_box, raw_csv_file_list, dataset_name, cache_dir,
-        ooc_qt_picklefilename, max_points_per_node, max_depth):
+        ooc_qt_picklefilename, max_points_per_node, max_depth, n_workers=None):
     """Construct a spatial quadtree for fast querying of userday points.
 
     Args:
@@ -666,7 +666,10 @@ def construct_userday_quadtree(
         initial_bounding_box, max_points_per_node, max_depth,
         cache_dir, pickle_filename=ooc_qt_picklefilename)
 
-    n_parse_processes = multiprocessing.cpu_count() - 1
+    if n_workers is None:
+        n_parse_processes = multiprocessing.cpu_count() - 1
+    else:
+        n_parse_processes = n_workers
     if n_parse_processes < 1:
         n_parse_processes = 1
     numpy_array_queue = multiprocessing.Queue(n_parse_processes * 2)
