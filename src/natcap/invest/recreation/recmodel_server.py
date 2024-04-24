@@ -599,28 +599,30 @@ def _parse_small_input_csv_list(
             'flickr': flickr_pattern,
             'twitter': twittr_pattern
         }
-        result = numpy.fromregex(
-            StringIO(chunk_string), patterns[dataset_name],
-            [('user', 'S40'), ('date', 'datetime64[D]'), ('lat', 'f4'),
-             ('lng', 'f4')])
 
         def md5hash(user_string):
             """md5hash userid."""
             return hashlib.md5(user_string).digest()[-4:]
+        
+        if chunk_string:
+            result = numpy.fromregex(
+                StringIO(chunk_string), patterns[dataset_name],
+                [('user', 'S40'), ('date', 'datetime64[D]'), ('lat', 'f4'),
+                 ('lng', 'f4')])
 
-        md5hash_v = numpy.vectorize(md5hash, otypes=['S4'])
-        hashes = md5hash_v(result['user'])
+            md5hash_v = numpy.vectorize(md5hash, otypes=['S4'])
+            hashes = md5hash_v(result['user'])
 
-        user_day_lng_lat = numpy.empty(
-            hashes.size, dtype='datetime64[D],a4,f4,f4')
-        user_day_lng_lat['f0'] = result['date']
-        user_day_lng_lat['f1'] = hashes
-        user_day_lng_lat['f2'] = result['lng']
-        user_day_lng_lat['f3'] = result['lat']
-        # multiprocessing.Queue pickles the array. Pickling isn't perfect and
-        # it modifies the `datetime64` dtype metadata, causing a warning later.
-        # To avoid this we dump the array to a string before adding to queue.
-        numpy_array_queue.put(_numpy_dumps(user_day_lng_lat))
+            user_day_lng_lat = numpy.empty(
+                hashes.size, dtype='datetime64[D],a4,f4,f4')
+            user_day_lng_lat['f0'] = result['date']
+            user_day_lng_lat['f1'] = hashes
+            user_day_lng_lat['f2'] = result['lng']
+            user_day_lng_lat['f3'] = result['lat']
+            # multiprocessing.Queue pickles the array. Pickling isn't perfect and
+            # it modifies the `datetime64` dtype metadata, causing a warning later.
+            # To avoid this we dump the array to a string before adding to queue.
+            numpy_array_queue.put(_numpy_dumps(user_day_lng_lat))
     numpy_array_queue.put('STOP')
 
 
