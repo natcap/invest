@@ -644,7 +644,8 @@ def _file_len(file_path_list):
 
 def construct_userday_quadtree(
         initial_bounding_box, raw_csv_file_list, dataset_name, cache_dir,
-        ooc_qt_picklefilename, max_points_per_node, max_depth, n_workers=None):
+        ooc_qt_picklefilename, max_points_per_node, max_depth,
+        n_workers=None, build_shapefile=True):
     """Construct a spatial quadtree for fast querying of userday points.
 
     Args:
@@ -756,13 +757,14 @@ def construct_userday_quadtree(
         'only %.2fs', n_points - ooc_qt.n_points(), ooc_qt.n_nodes(),
         time.time()-start_time)
 
-    quad_tree_shapefile_name = os.path.join(
-        cache_dir, 'quad_tree_shape.shp')
+    if build_shapefile:
+        quad_tree_shapefile_name = os.path.join(
+            cache_dir, 'quad_tree_shape.shp')
 
-    lat_lng_ref = osr.SpatialReference()
-    lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
-    LOGGER.info("building quadtree shapefile overview")
-    build_quadtree_shape(quad_tree_shapefile_name, ooc_qt, lat_lng_ref)
+        lat_lng_ref = osr.SpatialReference()
+        lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
+        LOGGER.info("building quadtree shapefile overview")
+        build_quadtree_shape(quad_tree_shapefile_name, ooc_qt, lat_lng_ref)
 
     if populate_thread:
         populate_thread.join()
