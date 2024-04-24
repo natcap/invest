@@ -106,7 +106,24 @@ MODEL_SPEC = {
                         "are dissolved into the subsurface. By default, this "
                         "value should be set to 0, indicating that all "
                         "nutrients are delivered via surface flow. There is "
-                        "no equivalent of this for phosphorus.")}
+                        "no equivalent of this for phosphorus.")},
+                "nut_load_type": {
+                    "type": "option_string",
+                    "required": True,
+                    "options": {
+                        "application-rate": {
+                            "description": gettext(
+                                "Treat the load values as an application rate."
+                                "applied_nutrient * (1-retention_efficiency)")},
+                        "measured-runoff": {
+                            "description": gettext(
+                                "Treat the load values as measured runoff.")},
+                    },
+                    "about": gettext(
+                        "Whether the nutrient load in column "
+                        "load_[NUTRIENT] should be treated as an "
+                        "application rate or measured runoff. "
+                        "'application_rate' | 'measured_runoff'")},
             },
             "about": gettext(
                 "A table mapping each LULC class to its biophysical "
@@ -815,7 +832,9 @@ def execute(args):
             func=_calculate_load,
             args=(
                 f_reg['masked_lulc_path'],
-                biophysical_df[f'load_{nutrient}'],
+                biophysical_df[
+                    [f'load_{nutrient}', f'eff_{nutrient}',
+                     'nut_load_type']].to_dict('index'),
                 load_path),
             dependent_task_list=[align_raster_task, mask_lulc_task],
             target_path_list=[load_path],
@@ -1225,8 +1244,8 @@ def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
 
     Args:
         lulc_raster_path (string): path to integer landcover raster.
-        lucode_to_load (dict): a mapping of landcover IDs to per-area
-            nutrient load.
+        lucode_to_load (dict): a mapping of landcover IDs to nutrient load,
+            efficiency, and type.
         target_load_raster (string): path to target raster that will have
             total load per pixel.
 
@@ -1236,14 +1255,24 @@ def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
     """
     cell_area_ha = abs(numpy.prod(pygeoprocessing.get_raster_info(
         lulc_raster_path)['pixel_size'])) * 0.0001
-
+    # restructure the lookup dict to easier access load, eff, and type
+    # {lucode: [load, eff, type], ... }
+    lucode_to_values = {key: list(value.values()) for key, value in lucode_to_load.items()}
+    load_index = 0
+    eff_index = 1
+    type_index = 2
     def _map_load_op(lucode_array):
         """Convert unit load to total load & handle nodata."""
         result = numpy.empty(lucode_array.shape)
         for lucode in numpy.unique(lucode_array):
             try:
-                result[lucode_array == lucode] = (
-                    lucode_to_load[lucode] * cell_area_ha)
+                if lucode_to_values[type_index] == 'measured-runoff':
+                    result[lucode_array == lucode] = (
+                        lucode_to_values[lucode][load_index] * cell_area_ha)
+                elif lucode_to_values[type_index] == 'application-rate':
+                    result[lucode_array == lucode] = (
+                        lucode_to_values[lucode][load_index] * (
+                            1 - lucode_to_values[lucode][eff_index]) * cell_area_ha)
             except KeyError:
                 raise KeyError(
                     'lucode: %d is present in the landuse raster but '

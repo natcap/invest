@@ -70,6 +70,13 @@ Unreleased Changes
       raster. ``nan`` pixels will now be propertly ignored before calculating
       mean depths along fetch rays.
       https://github.com/natcap/invest/issues/1528
+* NDR
+    * Added a feature that allows the nutrient load to be entered as an
+      application rate or as an "extensive"/export measured value.
+      Previously the models biophysical table expected the ``load_[nutrient]``
+      column to be an "extensive"/export measured value. Now, a new
+      column, ``nut_load_type``, is required and expected values of either
+      ``application_rate`` or ``measured_runoff``.
 * SDR
     * Fixed an issue encountered in the sediment deposition function where
       rasters with more than 2^32 pixels would raise a cryptic error relating
