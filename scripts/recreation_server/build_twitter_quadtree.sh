@@ -2,8 +2,8 @@
 # ----------------SLURM Parameters----------------
 #SBATCH --partition normal,hns
 #SBATCH --ntasks 1
-#SBATCH --cpus-per-task=2
-#SBATCH --mem-per-cpu=1G
+#SBATCH --cpus-per-task=4
+#SBATCH --mem-per-cpu=200M
 #SBATCH --nodes 1
 # Define how long the job will run d-hh:mm:ss
 #SBATCH --time 00:10:00
@@ -18,7 +18,7 @@
 
 CONTAINER=ghcr.io/davemfish/invest:exp.rec-twitter
 TWEETS_DIR=/scratch/users/woodsp/invest/csv
-find $TWEETS_DIR -name '*.csv' | head -20 > ~/projects/rec-twitter/tweets_list.txt
+find $TWEETS_DIR -name '*.csv' | head -100 > ~/projects/rec-twitter/tweets_list.txt
 
 # invest repo already cloned into ~/invest
 cd ~/invest
@@ -31,4 +31,4 @@ singularity run \
     --csv_file_list=$HOME/projects/rec-twitter/tweets_list.txt \
     --workspace=$SCRATCH/quadtree_test \
     --output_filename=twitter_test.pickle \
-    --n_cores=2  # match --cpus-per-task value
+    --n_cores=4  # match --cpus-per-task value
