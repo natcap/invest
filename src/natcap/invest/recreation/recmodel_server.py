@@ -15,6 +15,7 @@ import collections
 import logging
 import psutil
 import queue
+import random
 from io import BytesIO, StringIO
 
 import Pyro4
@@ -626,11 +627,17 @@ def _parse_small_input_csv_list(
     numpy_array_queue.put('STOP')
 
 
-def _file_len(file_path_list):
+def _file_len(file_path_list, estimate=False):
     """Count lines in file, return -1 if not supported."""
-    # If wc isn't found, Popen raises an exception here:
-    cmdlist = ['wc', '-l'] + file_path_list
+    file_list = file_path_list
+    multiplier = 1
+    if estimate:
+        multiplier = 100
+        n = int(len(file_path_list) / multiplier)
+        file_list = random.sample(file_path_list, n)
+    cmdlist = ['wc', '-l'] + file_list
     try:
+        # If wc isn't found, Popen raises an exception here
         wc_process = subprocess.Popen(
             cmdlist, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
@@ -641,13 +648,13 @@ def _file_len(file_path_list):
     if wc_process.returncode != 0:
         LOGGER.warning(err)
         return -1
-    return int(result.strip().split()[-2])
+    return int(result.strip().split()[-2]) * multiplier
 
 
 def construct_userday_quadtree(
         initial_bounding_box, raw_csv_file_list, dataset_name, cache_dir,
         ooc_qt_picklefilename, max_points_per_node, max_depth,
-        n_workers=None, build_shapefile=True):
+        n_workers=None, build_shapefile=True, fast_point_count=False):
     """Construct a spatial quadtree for fast querying of userday points.
 
     Args:
@@ -663,7 +670,7 @@ def construct_userday_quadtree(
         None
     """
     LOGGER.info('counting lines in input file')
-    total_lines = _file_len(raw_csv_file_list)
+    total_lines = _file_len(raw_csv_file_list, estimate=fast_point_count)
     LOGGER.info('%d lines', total_lines)
     ooc_qt = out_of_core_quadtree.OutOfCoreQuadTree(
         initial_bounding_box, max_points_per_node, max_depth,

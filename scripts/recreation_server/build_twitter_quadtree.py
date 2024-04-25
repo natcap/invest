@@ -49,4 +49,5 @@ if __name__ == '__main__':
         recmodel_server.GLOBAL_MAX_POINTS_PER_NODE,
         recmodel_server.GLOBAL_DEPTH,
         n_workers=args.n_cores,
-        build_shapefile=False)
+        build_shapefile=False,
+        fast_point_count=True)

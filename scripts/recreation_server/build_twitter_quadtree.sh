@@ -3,7 +3,7 @@
 #SBATCH --partition normal,hns
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem-per-cpu=200M
+#SBATCH --mem-per-cpu=500M
 #SBATCH --nodes 1
 # Define how long the job will run d-hh:mm:ss
 #SBATCH --time 00:10:00
@@ -18,7 +18,7 @@
 
 CONTAINER=ghcr.io/davemfish/invest:exp.rec-twitter
 TWEETS_DIR=/scratch/users/woodsp/invest/csv
-find $TWEETS_DIR -name '*.csv' | head -100 > ~/projects/rec-twitter/tweets_list.txt
+find $TWEETS_DIR -name '*.csv' | head -1200 > ~/projects/rec-twitter/tweets_list.txt
 
 # invest repo already cloned into ~/invest
 cd ~/invest
