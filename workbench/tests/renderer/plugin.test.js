@@ -7,7 +7,12 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import App from '../../src/renderer/app';
-import { getSpec, fetchArgsEnabled, fetchValidation } from '../../src/renderer/server_requests';
+import {
+  getSpec,
+  getInvestModelNames,
+  fetchArgsEnabled,
+  fetchValidation
+} from '../../src/renderer/server_requests';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -39,33 +44,30 @@ describe('Add plugin modal', () => {
       input_path: true,
     });
     fetchValidation.mockResolvedValue([]);
+    getInvestModelNames.mockResolvedValue({});
   });
 
   test('Interface to add a plugin', async () => {
-    const spy = jest.spyOn(ipcRenderer, 'invoke').mockImplementation((channel, setting) => {
+    const {
+      findByText, findByLabelText, findByRole, queryByRole
+    } = render(<App />);
+    const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'models') {
-          return Promise.resolve({
-            carbon: {
-              model_name: 'Carbon',
-              type: 'core',
+        if (setting === 'plugins') {
+          return {
+            foo: {
+              model_name: 'Foo',
+              type: 'plugin',
             },
-          });
+          };
         }
       }
       return Promise.resolve();
     });
-    const {
-      findByText, findByLabelText, findByRole, queryByRole
-    } = render(<App />);
-    ipcRenderer.invoke.mockImplementation((channel, setting) => {
+    ipcRenderer.sendSync.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'models') {
+        if (setting === 'plugins') {
           return {
-            carbon: {
-              model_name: 'Carbon',
-              type: 'core',
-            },
             foo: {
               model_name: 'Foo',
               type: 'plugin',
@@ -99,20 +101,16 @@ describe('Add plugin modal', () => {
   test('Open and run a plugin', async () => {
     ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'models') {
+        if (setting === 'plugins') {
           return Promise.resolve({
-            carbon: {
-              model_name: 'Carbon',
-              type: 'core',
-            },
             foo: {
               model_name: 'Foo',
               type: 'plugin',
             },
           });
         }
-      } else if (channel === ipcMainChannels.INVEST_SERVE) {
-        return 0;
+      } else if (channel === ipcMainChannels.LAUNCH_PLUGIN_SERVER) {
+        return 1;
       }
       return Promise.resolve();
     });

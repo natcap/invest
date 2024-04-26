@@ -57,7 +57,7 @@ class InvestTab extends React.Component {
     // otherwise, the core invest server should already be running
     const plugins = await ipcRenderer.invoke(
       ipcMainChannels.GET_SETTING, 'plugins');
-    if (Object.keys(plugins).includes(job.modelRunName)) {
+    if (plugins && Object.keys(plugins).includes(job.modelRunName)) {
       // if plugin server is already running, don't re-launch
       // this will happen if we have >1 tab open with the same plugin
       let pid = await ipcRenderer.invoke(

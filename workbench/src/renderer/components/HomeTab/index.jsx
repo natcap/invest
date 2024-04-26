@@ -141,7 +141,6 @@ function RecentInvestJobs(props) {
 
   const recentButtons = [];
   recentJobs.forEach(async (job) => {
-    console.log(job);
     if (job && job.argsValues && job.modelHumanName) {
       let badge;
       const plugins = ipcRenderer.sendSync(ipcMainChannels.GET_SETTING, 'plugins');

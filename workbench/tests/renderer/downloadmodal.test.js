@@ -10,6 +10,7 @@ import { ipcRenderer, BrowserWindow } from 'electron';
 import DataDownloadModal from '../../src/renderer/components/DataDownloadModal';
 import DownloadProgressBar from '../../src/renderer/components/DownloadProgressBar';
 import sampledata_registry from '../../src/renderer/components/DataDownloadModal/sampledata_registry.json';
+import { getInvestModelNames } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
 import setupDownloadHandlers from '../../src/main/setupDownloadHandlers';
 import { removeIpcMainListeners } from '../../src/main/main';
@@ -21,6 +22,10 @@ const nModels = Object.keys(sampledata_registry).length;
 const modelName = Object.keys(sampledata_registry)[0];
 
 describe('Sample Data Download Form', () => {
+  beforeEach(() => {
+    getInvestModelNames.mockResolvedValue({});
+  });
+
   test('Modal displays immediately on user`s first run', async () => {
     const {
       findByText,
@@ -159,6 +164,7 @@ describe('DownloadProgressBar', () => {
 describe('Integration tests with main process', () => {
   beforeEach(async () => {
     setupDownloadHandlers(new BrowserWindow());
+    getInvestModelNames.mockResolvedValue({});
   });
 
   afterEach(async () => {

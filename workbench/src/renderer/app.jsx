@@ -63,7 +63,9 @@ export default class App extends React.Component {
     this.setState({
       // filter out models that do not exist in current version of invest
       recentJobs: recentJobs.filter((job) => (
-        Object.keys(investList).includes(job.modelRunName)
+        Object.values(investList)
+          .map((m) => m.model_name)
+          .includes(job.modelRunName)
       )),
       showDownloadModal: this.props.isFirstRun,
     });
@@ -177,7 +179,6 @@ export default class App extends React.Component {
   }
 
   async updateInvestList() {
-    console.log('update invest list');
     const coreModels = {};
     const investList = await getInvestModelNames();
     Object.keys(investList).forEach((modelName) => {
@@ -185,8 +186,6 @@ export default class App extends React.Component {
       coreModels[modelId] = { model_name: modelName };
     });
     const plugins = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins');
-    console.log(coreModels);
-    console.log(plugins);
 
     this.setState({
       investList: {...coreModels, ...plugins}

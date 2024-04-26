@@ -11,7 +11,6 @@ import {
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import fetch from 'node-fetch';
-import { ipcRenderer } from 'electron';
 
 import {
   setupInvestRunHandlers,
@@ -19,10 +18,10 @@ import {
 } from '../../src/main/setupInvestHandlers';
 import writeInvestParameters from '../../src/main/writeInvestParameters';
 import { removeIpcMainListeners } from '../../src/main/main';
-import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 
 import App from '../../src/renderer/app';
 import {
+  getInvestModelNames,
   getSpec,
   fetchValidation,
   fetchArgsEnabled,
@@ -100,21 +99,6 @@ describe('InVEST subprocess testing', () => {
       text: async () => 'foo',
     };
     fetch.mockResolvedValue(response);
-    ipcRenderer.invoke.mockImplementation((channel, setting) => {
-      if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'models') {
-          return {
-            carbon: {
-              model_name: MOCK_MODEL_TITLE,
-              type: 'core',
-            },
-          };
-        }
-      } else if (channel === ipcMainChannels.INVEST_SERVE) {
-        return 0;
-      }
-      return Promise.resolve();
-    });
   });
 
   afterAll(() => {
@@ -127,6 +111,9 @@ describe('InVEST subprocess testing', () => {
     fetchArgsEnabled.mockResolvedValue({
       workspace_dir: true, results_suffix: true
     });
+    getInvestModelNames.mockResolvedValue(
+      { Carbon: { model_name: modelName } }
+    );
     // mock the request to write the datastack file. Actually write it
     // because the app will clean it up when invest exits.
     writeInvestParameters.mockImplementation((payload) => {
