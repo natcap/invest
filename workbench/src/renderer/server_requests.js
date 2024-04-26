@@ -17,7 +17,7 @@ const PREFIX = 'api';
 async function getPort(modelName) {
   let port;
   const plugins = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins');
-  if (Object.keys(plugins).includes(modelName)) {
+  if (plugins && Object.keys(plugins).includes(modelName)) {
     port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `plugins.${modelName}.port`);
   } else {
     port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');

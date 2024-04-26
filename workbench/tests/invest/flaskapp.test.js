@@ -15,7 +15,7 @@ import { argsDictFromObject } from '../../src/renderer/utils';
 import SetupTab from '../../src/renderer/components/SetupTab';
 import ResourcesLinks from '../../src/renderer/components/ResourcesLinks';
 import {
-  createPythonFlaskProcess,
+  createCoreServerProcess,
   shutdownPythonProcess
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
@@ -48,7 +48,7 @@ beforeAll(async () => {
   const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);
   settingsStore.set('investExe', investExe);
-  flaskSubprocess = await createPythonFlaskProcess(undefined, CORE_PORT);
+  flaskSubprocess = await createCoreServerProcess(CORE_PORT);
 });
 
 afterAll(async () => {
