@@ -685,6 +685,7 @@ def construct_userday_quadtree(
     numpy_array_queue = multiprocessing.Queue(n_parse_processes * 2)
     populate_thread = None
 
+    parse_process_list = []
     if len(raw_csv_file_list) > 1:
         LOGGER.info('starting parsing processes by file')
         if len(raw_csv_file_list) < n_parse_processes:
@@ -696,6 +697,7 @@ def construct_userday_quadtree(
                 args=(csv_file_list, numpy_array_queue))
             parse_input_csv_process.deamon = True
             parse_input_csv_process.start()
+            parse_process_list.append(parse_input_csv_process)
     else:
         raw_photo_csv_table = raw_csv_file_list[0]
         block_offset_size_queue = multiprocessing.Queue(n_parse_processes * 2)
@@ -708,6 +710,7 @@ def construct_userday_quadtree(
                     raw_photo_csv_table))
             parse_input_csv_process.deamon = True
             parse_input_csv_process.start()
+            parse_process_list.append(parse_input_csv_process)
 
         # rush through file and determine reasonable offsets and blocks
         def _populate_offset_queue(block_offset_size_queue):
@@ -777,7 +780,8 @@ def construct_userday_quadtree(
 
     if populate_thread:
         populate_thread.join()
-    parse_input_csv_process.join()
+    for proc in parse_process_list:
+        proc.join()
 
     LOGGER.info('took %f seconds', (time.time() - start_time))
     # return ooc_qt_picklefilename
