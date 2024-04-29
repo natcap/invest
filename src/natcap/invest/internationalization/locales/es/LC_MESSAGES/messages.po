@@ -428,7 +428,7 @@ msgstr "Debe ser una geometría de punto o multipunto."
 # In all this there is some coding error I don´t get. The translation itself
 # is correct.
 #: src/natcap/invest/coastal_vulnerability.py:93
-#, python-format
+#, no-python-format
 msgid ""
 "Proportion of the highest 10% of wind speeds in the record of interest that blow "
 "in the direction of each sector."
@@ -437,7 +437,7 @@ msgstr ""
 "interés que soplan en la dirección de cada sector."
 
 #: src/natcap/invest/coastal_vulnerability.py:100
-#, python-format
+#, no-python-format
 msgid ""
 "Average of the highest 10% of wind speeds that blow in the direction of each "
 "sector."
@@ -446,7 +446,7 @@ msgstr ""
 "dirección de cada sector."
 
 #: src/natcap/invest/coastal_vulnerability.py:105
-#, python-format
+#, no-python-format
 msgid ""
 "Proportion of the highest 10% of wave power values on record that are in each "
 "sector."
@@ -455,7 +455,7 @@ msgstr ""
 "se encuentran en cada sector."
 
 #: src/natcap/invest/coastal_vulnerability.py:111
-#, python-format
+#, no-python-format
 msgid ""
 "Average of the highest 10% of wave power values on record in the direction of "
 "each sector."
@@ -464,7 +464,7 @@ msgstr ""
 "dirección de cada sector."
 
 #: src/natcap/invest/coastal_vulnerability.py:116
-#, fuzzy, python-format
+#, fuzzy, no-python-format
 msgid ""
 "Average of the highest 10% of wind speeds that are centered on each main sector "
 "direction X."
