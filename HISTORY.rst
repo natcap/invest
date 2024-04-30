@@ -76,6 +76,11 @@ Unreleased Changes
 * HRA
     * Fixed a bug where habitat and stressor vectors were not being rasterized
       with the `ALL_TOUCHED=TRUE` setting.
+* Scenic Quality
+    * Fixed an issue with viewshed calculations where some slight numerical
+      error was introduced on M1 Macs, but not on x86-based computers. This
+      numerical error was leading to slightly different visibility results.
+      https://github.com/natcap/invest/issues/1562
 * SDR
     * Fixed an issue encountered in the sediment deposition function where
       rasters with more than 2^32 pixels would raise a cryptic error relating
