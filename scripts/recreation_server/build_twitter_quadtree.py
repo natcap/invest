@@ -17,7 +17,7 @@ formatter = logging.Formatter(
     datefmt='%m/%d/%Y %H:%M:%S ')
 handler.setFormatter(formatter)
 filehandler.setFormatter(formatter)
-logging.basicConfig(level=logging.DEBUG, handlers=[handler, filehandler])
+logging.basicConfig(level=logging.INFO, handlers=[handler, filehandler])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
