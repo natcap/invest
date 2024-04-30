@@ -672,16 +672,21 @@ def construct_userday_quadtree(
     LOGGER.info('counting lines in input file')
     total_lines = _file_len(raw_csv_file_list, estimate=fast_point_count)
     LOGGER.info('%d lines', total_lines)
-    ooc_qt = out_of_core_quadtree.OutOfCoreQuadTree(
-        initial_bounding_box, max_points_per_node, max_depth,
-        cache_dir, pickle_filename=ooc_qt_picklefilename)
 
     if n_workers is None:
-        n_parse_processes = multiprocessing.cpu_count() - 1
-    else:
-        n_parse_processes = n_workers - 1
+        n_workers = multiprocessing.cpu_count()
+    n_flush_processes = int(n_workers / 2)
+    n_parse_processes = n_workers - n_flush_processes - 1
     if n_parse_processes < 1:
         n_parse_processes = 1
+    if n_flush_processes < 1:
+        n_flush_processes = 1
+
+    ooc_qt = out_of_core_quadtree.OutOfCoreQuadTree(
+        initial_bounding_box, max_points_per_node, max_depth,
+        cache_dir, pickle_filename=ooc_qt_picklefilename,
+        n_workers=n_flush_processes)
+
     numpy_array_queue = multiprocessing.Queue(n_parse_processes * 2)
     populate_thread = None
 

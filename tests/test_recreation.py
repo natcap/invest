@@ -140,6 +140,37 @@ class TestBufferedNumpyDiskMap(unittest.TestCase):
         with self.assertRaises(IOError):
             file_manager.read(1234)
 
+    def test_buffered_multiprocess_operation(self):
+        """Recreation test buffered file manager parallel flushes."""
+        from natcap.invest.recreation import buffered_numpy_disk_map
+        
+        array1 = numpy.array([1, 2, 3, 4])
+        array2 = numpy.array([-4, -1, -2, 4])
+        arraysize = array1.size * buffered_numpy_disk_map.BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE.itemsize
+        buffer_size = arraysize * 2  # will flush every 3rd append
+
+        file_manager = buffered_numpy_disk_map.BufferedNumpyDiskMap(
+            os.path.join(self.workspace_dir, 'test'), buffer_size, n_workers=2)
+
+        # Make sure multiple array IDs are in present in
+        # the cache to trigger multiprocess flush
+        file_manager.append(1234, array1)
+        file_manager.append(4321, array2)
+        file_manager.append(1234, array1)
+        file_manager.append(4321, array2)
+        file_manager.append(1234, array1)
+        file_manager.append(4321, array2)
+
+        numpy.testing.assert_equal(
+            file_manager.read(1234), numpy.tile(array1, 3))
+
+        numpy.testing.assert_equal(
+            file_manager.read(4321), numpy.tile(array2, 3))
+
+        file_manager.delete(1234)
+        with self.assertRaises(IOError):
+            file_manager.read(1234)
+
 
 class UnitTestRecServer(unittest.TestCase):
     """Tests for recmodel_server functions and the RecModel object."""
@@ -432,8 +463,7 @@ class UnitTestRecServer(unittest.TestCase):
             min_year, max_year, cache_dir,
             quadtree_pickle_filename=ooc_qt_picklefilename)
 
-        temp_workspace = 'scratch'
-        aoi_path = os.path.join(temp_workspace, 'aoi.geojson')
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
         target_filename = 'results.shp'  # model uses ESRI Shapefile driver
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(4326)  # WGS84
@@ -446,7 +476,7 @@ class UnitTestRecServer(unittest.TestCase):
             numpy.datetime64('2017-01-01'),
             numpy.datetime64('2017-12-31'))
         server._calc_aggregated_points_in_aoi(
-            aoi_path, temp_workspace, numpy_date_range, target_filename)
+            aoi_path, self.workspace_dir, numpy_date_range, target_filename)
 
         expected_result_table = pandas.DataFrame({
            'poly_id': [0],
@@ -464,7 +494,7 @@ class UnitTestRecServer(unittest.TestCase):
            '2017-12': [0]
         }, index=None)
         result_table = pandas.read_csv(
-            os.path.join(temp_workspace, 'monthly_table.csv'))
+            os.path.join(self.workspace_dir, 'monthly_table.csv'))
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
 

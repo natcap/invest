@@ -5,6 +5,7 @@ import time
 import collections
 import os
 import logging
+import multiprocessing
 import sqlite3
 
 import numpy
@@ -27,7 +28,7 @@ class BufferedNumpyDiskMap(object):
 
     _ARRAY_TUPLE_TYPE = numpy.dtype('datetime64[D],a4,f4,f4')
 
-    def __init__(self, manager_filename, max_bytes_to_buffer):
+    def __init__(self, manager_filename, max_bytes_to_buffer, n_workers=1):
         """Create file manager object.
 
         Args:
@@ -36,10 +37,13 @@ class BufferedNumpyDiskMap(object):
                 binary data as needed.
             max_bytes_to_buffer (int): number of bytes to hold in memory at
                 one time.
+            n_workers (int): if great than 1, number of child processes to
+                use during flushes to disk
 
         Returns:
             None
         """
+        self.n_workers = n_workers
         self.manager_filename = manager_filename
         self.manager_directory = os.path.dirname(manager_filename)
         utils.make_directories([self.manager_directory])
@@ -72,23 +76,16 @@ class BufferedNumpyDiskMap(object):
         if self.current_bytes_in_system > self.max_bytes_to_buffer:
             self.flush()
 
-    def flush(self):
-        """Method to flush data in memory to disk."""
-        start_time = time.time()
-        LOGGER.info(
-            'Flushing %d bytes in %d arrays', self.current_bytes_in_system,
-            len(self.array_cache))
-
+    def _write(self, array_id_list):
         db_connection = sqlite3.connect(
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
-
-        # get all the array data to append at once
+        LOGGER.debug(f'WRITE with list: {array_id_list}')
         insert_list = []
-
-        while len(self.array_cache) > 0:
-            array_id = next(iter(self.array_cache.keys()))
-            array_deque = self.array_cache.pop(array_id)
+        if not isinstance(array_id_list, list):
+            array_id_list = [array_id_list]
+        for array_id in array_id_list:
+            array_deque = self.array_cache[array_id]
             # try to get data if it's there
             db_cursor.execute(
                 """SELECT (array_path) FROM array_table
@@ -116,6 +113,33 @@ class BufferedNumpyDiskMap(object):
                 array_deque = None
                 numpy.save(array_path, array_data)
                 insert_list.append((array_id, array_path))
+        db_connection.close()
+        return insert_list
+
+    def flush(self):
+        """Method to flush data in memory to disk."""
+        start_time = time.time()
+        LOGGER.info(
+            'Flushing %d bytes in %d arrays', self.current_bytes_in_system,
+            len(self.array_cache))
+
+        array_id_list = list(self.array_cache)
+        n_workers = self.n_workers if self.n_workers <= len(array_id_list) else len(array_id_list)
+        LOGGER.debug('N_WORKERS for flush: {n_workers}')
+        if n_workers > 1:
+            with multiprocessing.Pool(processes=self.n_workers) as pool:
+                insert_list_of_lists = pool.map(self._write, array_id_list)
+                pool.close()
+                pool.join()
+            insert_list = [x for xs in insert_list_of_lists for x in xs]
+        else:
+            insert_list = self._write(array_id_list)
+        for array_id in array_id_list:
+            del self.array_cache[array_id]
+
+        db_connection = sqlite3.connect(
+            self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
+        db_cursor = db_connection.cursor()
         db_cursor.executemany(
             """INSERT INTO array_table
                 (array_id, array_path)

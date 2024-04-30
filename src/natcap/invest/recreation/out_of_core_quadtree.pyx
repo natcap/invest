@@ -38,7 +38,7 @@ class OutOfCoreQuadTree(object):
     def __init__(
             self, bounding_box, max_points_per_node, max_node_depth,
             quad_tree_storage_dir, node_depth=0, node_data_manager=None,
-            pickle_filename=None):
+            pickle_filename=None, n_workers=1):
         """Make a new quadtree node with a given initial_bounding_box range.
 
         Args:
@@ -68,7 +68,7 @@ class OutOfCoreQuadTree(object):
         if node_data_manager is None:
             self.node_data_manager = (
                 buffered_numpy_disk_map.BufferedNumpyDiskMap(
-                    pickle_filename+'.db', MAX_BYTES_TO_BUFFER))
+                    pickle_filename+'.db', MAX_BYTES_TO_BUFFER, n_workers=n_workers))
         else:
             self.node_data_manager = node_data_manager
 
