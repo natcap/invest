@@ -824,6 +824,8 @@ def viewshed(dem_raster_path_band,
             # So, this calculation would introduce error:
             #   z = (((previous_height-r_v)/slope_distance) * target_distance) + r_v
             # while the formlation below does not.
+            # For the script used for testing, see
+            #  https://gist.github.com/phargogh/c4264b37e7f0beed31661eacce53d14a
             #
             # Some of this may be related to the fact that x86 chips have
             # extended precision for FPU-based calculations while M1 ARM chips
