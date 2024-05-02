@@ -88,7 +88,8 @@ export function setupInvestRunHandlers() {
     await writeInvestParameters(payload);
     let cmd;
     let cmdArgs;
-    if (Object.keys(settingsStore.get('plugins')).includes(modelRunName)) {
+    const plugins = settingsStore.get('plugins');
+    if (plugins && Object.keys(plugins).includes(modelRunName)) {
       cmd = 'micromamba'//settingsStore.get('micromamba_path');
       cmdArgs = [
         'run',
