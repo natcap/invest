@@ -3,7 +3,7 @@ import fs from 'fs';
 import { tmpdir } from 'os';
 import toml from 'toml';
 import { execSync } from 'child_process';
-import { app, ipcMain } from 'electron';
+import { ipcMain } from 'electron';
 
 import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
@@ -22,8 +22,9 @@ export default function setupAddPlugin() {
         const tmpPluginDir = fs.mkdtempSync(upath.join(tmpdir(), 'natcap-invest-'));
         execSync(
           `git clone --depth 1 --no-checkout ${pluginURL} "${tmpPluginDir}"`,
-          { stdio: 'inherit' });
-        execSync(`git checkout HEAD pyproject.toml`, { cwd: tmpPluginDir, stdio: 'inherit' });
+          { stdio: 'inherit' }
+        );
+        execSync('git checkout HEAD pyproject.toml', { cwd: tmpPluginDir, stdio: 'inherit' });
 
         // Read in the plugin's pyproject.toml, then delete it
         const pyprojectTOML = toml.parse(fs.readFileSync(

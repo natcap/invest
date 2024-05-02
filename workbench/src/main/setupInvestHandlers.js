@@ -67,7 +67,6 @@ export function setupInvestRunHandlers() {
     const taskgraphLoggingLevel = settingsStore.get('taskgraphLoggingLevel');
     const language = settingsStore.get('language');
     const nWorkers = settingsStore.get('nWorkers');
-    const modelEnv = settingsStore.get(`models.${modelRunName}.env`);
 
     // Write a temporary datastack json for passing to invest CLI
     try {
@@ -87,23 +86,13 @@ export function setupInvestRunHandlers() {
       }),
     };
     await writeInvestParameters(payload);
-
     let cmd;
     let cmdArgs;
-    if (settingsStore.get(`models.${modelRunName}.type`) == 'core') {
-      cmd = settingsStore.get('investExe');
-      cmdArgs = [
-        LOGLEVELMAP[loggingLevel],
-        TGLOGLEVELMAP[taskgraphLoggingLevel],
-        `--language "${language}"`,
-        'run',
-        modelRunName,
-        `-d "${datastackPath}"`]
-    } else {
+    if (Object.keys(settingsStore.get('plugins')).includes(modelRunName)) {
       cmd = 'micromamba'//settingsStore.get('micromamba_path');
       cmdArgs = [
         'run',
-        `--prefix ${modelEnv}`,
+        `--prefix ${settingsStore.get(`plugins.${modelRunName}.env`)}`,
         'invest',
         LOGLEVELMAP[loggingLevel],
         TGLOGLEVELMAP[taskgraphLoggingLevel],
@@ -112,6 +101,15 @@ export function setupInvestRunHandlers() {
         modelRunName,
         `-d "${datastackPath}"`,
       ];
+    } else {
+      cmd = settingsStore.get('investExe');
+      cmdArgs = [
+        LOGLEVELMAP[loggingLevel],
+        TGLOGLEVELMAP[taskgraphLoggingLevel],
+        `--language "${language}"`,
+        'run',
+        modelRunName,
+        `-d "${datastackPath}"`];
     }
 
     logger.debug(`about to run model with command: ${cmd} ${cmdArgs}`);
