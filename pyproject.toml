@@ -79,4 +79,11 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 # raise warnings to errors, except for deprecation warnings
-filterwarnings = ["error", "default::DeprecationWarning", "default::FutureWarning"]
+filterwarnings = [
+    "error",
+    "default::DeprecationWarning",
+    "default::FutureWarning",
+    # don't error on a specific runtime warning coming from a shapely
+    # issue on M1: https://github.com/natcap/invest/issues/1562
+    "default:invalid value encountered in intersection:RuntimeWarning",
+]
