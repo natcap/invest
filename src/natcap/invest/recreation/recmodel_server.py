@@ -16,7 +16,7 @@ import logging
 import psutil
 import queue
 import random
-from io import BytesIO, StringIO
+from io import StringIO
 
 import Pyro4
 import numpy
@@ -32,6 +32,7 @@ from ... import invest
 from .. import utils
 from natcap.invest.recreation import out_of_core_quadtree
 from . import recmodel_client
+from ._utils import _numpy_dumps, _numpy_loads
 
 
 BLOCKSIZE = 2 ** 21
@@ -47,32 +48,6 @@ INITIAL_BOUNDING_BOX = [-180, -90, 180, 90]
 Pyro4.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
 
 LOGGER = logging.getLogger('natcap.invest.recreation.recmodel_server')
-
-
-def _numpy_dumps(numpy_array):
-    """Safely pickle numpy array to string.
-    Args:
-        numpy_array (numpy.ndarray): arbitrary numpy array.
-    Returns:
-        A string representation of the array that can be loaded using
-        `numpy_loads.
-    """
-    with BytesIO() as file_stream:
-        numpy.save(file_stream, numpy_array, allow_pickle=False)
-        return file_stream.getvalue()
-
-
-def _numpy_loads(queue_string):
-    """Safely unpickle string to numpy array.
-    
-    Args:
-        queue_string (str): binary string representing a pickled
-            numpy array.
-    Returns:
-        A numpy representation of ``binary_numpy_string``.
-    """
-    with BytesIO(queue_string) as file_stream:
-        return numpy.load(file_stream)
 
 
 def _try_except_wrapper(mesg):
@@ -620,9 +595,10 @@ def _parse_small_input_csv_list(
             user_day_lng_lat['f1'] = hashes
             user_day_lng_lat['f2'] = result['lng']
             user_day_lng_lat['f3'] = result['lat']
-            # multiprocessing.Queue pickles the array. Pickling isn't perfect and
-            # it modifies the `datetime64` dtype metadata, causing a warning later.
-            # To avoid this we dump the array to a string before adding to queue.
+            # multiprocessing.Queue pickles the array. Pickling isn't perfect
+            # and it modifies the `datetime64` dtype metadata, causing a
+            # UserWarning later, on save. To avoid this we dump the array
+            # to a string before adding to queue.
             numpy_array_queue.put(_numpy_dumps(user_day_lng_lat))
     numpy_array_queue.put('STOP')
 
@@ -673,9 +649,18 @@ def construct_userday_quadtree(
     total_lines = _file_len(raw_csv_file_list, estimate=fast_point_count)
     LOGGER.info('%d lines', total_lines)
 
+    # On a single CPU, flushing to disk is the main bottleneck.
+    # For large trees (i.e. twitter) more than 80% of wall-time
+    # is spent in the flush, while the main process is idle.
+    # Devoting 75% of CPUs to flush, setting 1 aside for the
+    # main process, leaving the rest for parsing input tables.
+    # When only 50% of CPUs devoted to flush, it is still a
+    # bottleneck and overall CPU efficiency according to SLURM
+    # is 25%, given 8 CPU. Many parser processes are idle most
+    # of the time also, as the numpy_array_queue is often full
     if n_workers is None:
         n_workers = multiprocessing.cpu_count()
-    n_flush_processes = int(n_workers / 2)
+    n_flush_processes = int(n_workers * 0.75)
     n_parse_processes = n_workers - n_flush_processes - 1
     if n_parse_processes < 1:
         n_parse_processes = 1

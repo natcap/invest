@@ -10,6 +10,7 @@ import sqlite3
 
 import numpy
 
+from ._utils import _numpy_dumps, _numpy_loads
 from .. import utils
 
 
@@ -70,7 +71,8 @@ class BufferedNumpyDiskMap(object):
         Returns:
             None
         """
-        self.array_cache[array_id].append(array_data.copy())
+        # self.array_cache[array_id].append(array_data.copy())
+        self.array_cache[array_id].append(_numpy_dumps(array_data))
         self.current_bytes_in_system += (
             array_data.size * BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE.itemsize)
         if self.current_bytes_in_system > self.max_bytes_to_buffer:
@@ -85,7 +87,7 @@ class BufferedNumpyDiskMap(object):
         if not isinstance(array_id_list, list):
             array_id_list = [array_id_list]
         for array_id in array_id_list:
-            array_deque = self.array_cache[array_id]
+            array_deque = collections.deque(_numpy_loads(x) for x in self.array_cache[array_id])
             # try to get data if it's there
             db_cursor.execute(
                 """SELECT (array_path) FROM array_table
@@ -124,13 +126,14 @@ class BufferedNumpyDiskMap(object):
             len(self.array_cache))
 
         array_id_list = list(self.array_cache)
+
         n_workers = self.n_workers if self.n_workers <= len(array_id_list) else len(array_id_list)
-        LOGGER.debug('N_WORKERS for flush: {n_workers}')
+        LOGGER.debug(f'N_WORKERS for flush: {n_workers}')
         if n_workers > 1:
             with multiprocessing.Pool(processes=self.n_workers) as pool:
                 insert_list_of_lists = pool.map(self._write, array_id_list)
-                pool.close()
-                pool.join()
+            pool.close()
+            pool.join()
             insert_list = [x for xs in insert_list_of_lists for x in xs]
         else:
             insert_list = self._write(array_id_list)
@@ -179,7 +182,7 @@ class BufferedNumpyDiskMap(object):
                 0, dtype=BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE)
 
         if len(self.array_cache[array_id]) > 0:
-            local_deque = collections.deque(self.array_cache[array_id])
+            local_deque = collections.deque(_numpy_loads(x) for x in self.array_cache[array_id])
             local_deque.append(array_data)
             array_data = numpy.concatenate(local_deque)
 
@@ -209,8 +212,7 @@ class BufferedNumpyDiskMap(object):
         db_connection.close()
 
         # delete the cache and update cache size
-        # The * 12 comes from the fact that the array is an 'a4 f4 f4'
         self.current_bytes_in_system -= (
-            sum([x.size for x in self.array_cache[array_id]]) *
+            sum([_numpy_loads(x).size for x in self.array_cache[array_id]]) *
             BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE.itemsize)
         del self.array_cache[array_id]
