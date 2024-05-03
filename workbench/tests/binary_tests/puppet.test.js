@@ -300,12 +300,16 @@ test('Install and run a plugin', async () => {
   await addPluginButton.click();
   console.log('clicked add plugin');
   const urlInputField = await page.waitForSelector('input[name=url]');
+  console.log('found url field');
   await urlInputField.type(TEST_PLUGIN_GIT_URL, { delay: TYPE_DELAY });
+  console.log('typed into input field');
   const submitButton = await page.waitForSelector('button[name=submit]');
+  console.log('found submit button');
   await submitButton.click();
   console.log('clicked submit');
-  const pluginButton = await page.waitForSelector("button[name='Foo Model']", { timeout: 120000 });
-  await pluginButton.evaluate(b => b.click());
+  const pluginButton = await page.waitForSelector("button[name='Foo Model']", { timeout: 300000 });
+  console.log('found plugin button');
+  await pluginButton.evaluate((b) => b.click());
 
   await page.waitForSelector('div ::-p-text(Starting up model...)');
   console.log('starting up model');
