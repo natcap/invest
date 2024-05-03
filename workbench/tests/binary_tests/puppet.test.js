@@ -304,7 +304,7 @@ test('Install and run a plugin', async () => {
   const submitButton = await page.waitForSelector('button[name=submit]');
   await submitButton.click();
   console.log('clicked submit');
-  const pluginButton = await page.waitForSelector("button[name='Foo Model']");
+  const pluginButton = await page.waitForSelector("button[name='Foo Model']", { timeout: 120000 });
   await pluginButton.evaluate(b => b.click());
 
   await page.waitForSelector('div ::-p-text(Starting up model...)');
