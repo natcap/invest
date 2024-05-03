@@ -208,18 +208,19 @@ export function main() {
     event.preventDefault();
     shuttingDown = true;
     await shutdownPythonProcess(settingsStore.get('core.pid'));
-    settingsStore.set(`core.pid`, '');
-    settingsStore.set(`core.port`, '');
-    const pids = [];
-    Object.keys(settingsStore.get('models')).forEach((model) => {
-      const pid = settingsStore.get(`models.${model}.pid`);
+    settingsStore.set('core.pid', '');
+    settingsStore.set('core.port', '');
+    const pluginServerPIDs = [];
+    const plugins = settingsStore.get('plugins') || {};
+    Object.keys(plugins).forEach((plugin) => {
+      const pid = settingsStore.get(`plugins.${plugin}.pid`);
       if (pid) {
-        pids.push(pid);
+        pluginServerPIDs.push(pid);
       }
-      settingsStore.set(`models.${model}.pid`, '');
-      settingsStore.set(`models.${model}.port`, '');
+      settingsStore.set(`plugins.${plugin}.pid`, '');
+      settingsStore.set(`plugins.${plugin}.port`, '');
     });
-    await Promise.all(pids.map((pid) => shutdownPythonProcess(pid)));
+    await Promise.all(pluginServerPIDs.map((pid) => shutdownPythonProcess(pid)));
 
     removeIpcMainListeners();
     app.quit();
