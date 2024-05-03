@@ -305,6 +305,8 @@ test('Install and run a plugin', async () => {
   console.log('typed into input field');
   const submitButton = await page.waitForSelector('button[name=submit]');
   console.log('found submit button');
+  console.log(submitButton);
+  await page.waitForTimeout(4000)
   await submitButton.click();
   console.log('clicked submit');
   const pluginButton = await page.waitForSelector("button[name='Foo Model']", { timeout: 300000 });
