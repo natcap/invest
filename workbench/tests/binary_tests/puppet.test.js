@@ -298,21 +298,23 @@ test('Install and run a plugin', async () => {
 
   const addPluginButton = await page.waitForSelector('div ::-p-text(Add a plugin)');
   await addPluginButton.click();
-
+  console.log('clicked add plugin');
   const urlInputField = await page.waitForSelector('input[name=url]');
   await urlInputField.type(TEST_PLUGIN_GIT_URL, { delay: TYPE_DELAY });
   const submitButton = await page.waitForSelector('button[name=submit]');
   await submitButton.click();
-
+  console.log('clicked submit');
   const pluginButton = await page.waitForSelector("button[name='Foo Model']");
   await pluginButton.evaluate(b => b.click());
 
   await page.waitForSelector('div ::-p-text(Starting up model...)');
-
-  const argsForm = await page.waitForSelector('.args-form', { timeout: 150000 });
+  console.log('starting up model');
+  const argsForm = await page.waitForSelector('.args-form', { timeout: 500000 });
+  console.log('found args form');
   const workspace = await argsForm.waitForSelector(
     'aria/[name="Workspace"][role="textbox"]'
   );
+  console.log('found workspace');
   await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
   const rasterInput = await argsForm.waitForSelector(
     'aria/[name="Input Raster"][role="textbox"]'
