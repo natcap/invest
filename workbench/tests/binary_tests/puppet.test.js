@@ -120,6 +120,7 @@ beforeEach(() => {
         BROWSER = await puppeteer.connect({
           browserURL: `http://127.0.0.1:${PORT}`,
           defaultViewport: null,
+          protocolTimeout: 300000,
         });
       } catch (e) {
         console.log(e);
@@ -306,7 +307,6 @@ test('Install and run a plugin', async () => {
   const submitButton = await page.waitForSelector('button[name=submit]');
   console.log('found submit button');
   console.log(submitButton);
-  await page.waitForTimeout(4000)
   await submitButton.click();
   console.log('clicked submit');
   const pluginButton = await page.waitForSelector("button[name='Foo Model']", { timeout: 300000 });
