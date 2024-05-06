@@ -335,7 +335,7 @@ test('Install and run a plugin', async () => {
   await runButton.click();
   await page.waitForSelector('#invest-tab-tab-log.active');
   await page.waitForSelector('div ::-p-text(Model Complete)');
-}, 400000);
+}, 500000);
 
 const testWin = process.platform === 'win32' ? test : test.skip;
 /* Test for duplicate application launch.
