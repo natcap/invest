@@ -1199,7 +1199,7 @@ class ExpandPathTests(unittest.TestCase):
         relative_to = os.path.join(self.workspace_dir, 'test.csv')
         expected_path = os.path.join(self.workspace_dir, "foo/bar.shp")
         path = utils.expand_path(rel_path, relative_to)
-        self.assertEquals(path, expected_path)
+        self.assertEqual(path, expected_path)
 
     @unittest.skipIf(platform.system() != 'Windows',
                      "Function behavior differs across systems.")
@@ -1213,7 +1213,7 @@ class ExpandPathTests(unittest.TestCase):
         relative_to = os.path.join(self.workspace_dir, 'test.csv')
         expected_path = os.path.join(self.workspace_dir, "foo\\bar.shp")
         path = utils.expand_path(rel_path, relative_to)
-        self.assertEquals(path, expected_path)
+        self.assertEqual(path, expected_path)
 
     def test_falsey(self):
         """Utils: test return None when falsey."""

@@ -71,7 +71,7 @@ MODEL_SPEC = {
                         "considered a green area.")},
                 "shade":  {
                     "type": "ratio",
-                    "required": "cc_method == factors",
+                    "required": "cc_method == 'factors'",
                     "about": gettext(
                         "The proportion of area in this LULC class that is "
                         "covered by tree canopy at least 2 meters high. "
@@ -79,7 +79,7 @@ MODEL_SPEC = {
                         "the Cooling Capacity Calculation Method.")},
                 "albedo": {
                     "type": "ratio",
-                    "required": "cc_method == factors",
+                    "required": "cc_method == 'factors'",
                     "about": gettext(
                         "The proportion of solar radiation that is directly "
                         "reflected by this LULC class. Required if the "
@@ -87,7 +87,7 @@ MODEL_SPEC = {
                         "Capacity Calculation Method.")},
                 "building_intensity": {
                     "type": "ratio",
-                    "required": "cc_method == intensity",
+                    "required": "cc_method == 'intensity'",
                     "about": gettext(
                         "The ratio of building floor area to footprint "
                         "area, with all values in this column normalized "

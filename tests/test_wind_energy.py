@@ -338,13 +338,12 @@ class WindEnergyUnitTests(unittest.TestCase):
             'air_density_coefficient': 1.19E-04,
             'loss_parameter': 0.05,
             'turbine_cost': 10000,
-            'turbine_rated_pwr': 5
-            }
-        args = {
+            'turbine_rated_pwr': 5,
             'foundation_cost': 1000000,
             'discount_rate': 0.01,
             'number_of_turbines': 10
             }
+
         price_list = [0.10, 0.10, 0.10, 0.10, 0.10]
 
         srs = osr.SpatialReference()
@@ -381,7 +380,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         wind_energy._calculate_npv_levelized_rasters(
             base_harvest_path, base_distance_path,
             target_npv_raster_path, target_levelized_raster_path,
-            val_parameters_dict, args, price_list)
+            val_parameters_dict, price_list)
 
         # Compare the results that were "eye" tested.
         desired_npv_array = numpy.array(
@@ -428,8 +427,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
             'turbine_parameters_path': os.path.join(
                 SAMPLE_DATA, '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
+            'number_of_turbines': '80', # pass str to test casting
+            'min_depth': '3', # pass str to test casting
             'max_depth': 180,
             'n_workers': -1
         }
@@ -534,13 +533,13 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['max_distance'] = 200000
         args['valuation_container'] = True
         args['foundation_cost'] = 2000000
-        args['discount_rate'] = 0.07
+        args['discount_rate'] = '0.07' # pass str to test casting
         # Test that only grid points are provided in grid_points_path
         args['grid_points_path'] = os.path.join(
             SAMPLE_DATA, 'resampled_grid_pts.csv')
         args['price_table'] = False
         args['wind_price'] = 0.187
-        args['rate_change'] = 0.2
+        args['rate_change'] = '0.2' # pass str to test casting
 
         wind_energy.execute(args)
 

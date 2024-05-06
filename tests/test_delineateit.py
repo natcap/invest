@@ -154,10 +154,9 @@ class DelineateItTests(unittest.TestCase):
         from natcap.invest.delineateit import delineateit
         missing_keys = {}
         validation_warnings = delineateit.validate(missing_keys)
-        self.assertEqual(len(validation_warnings), 2)
-        self.assertTrue('dem_path' in validation_warnings[0][0])
-        self.assertTrue('workspace_dir' in validation_warnings[0][0])
-        self.assertEqual(validation_warnings[1][0], ['outlet_vector_path'])
+        self.assertEqual(len(validation_warnings), 1)
+        self.assertEqual(['dem_path', 'outlet_vector_path', 'workspace_dir'],
+                         validation_warnings[0][0])
 
         missing_values_args = {
             'workspace_dir': '',

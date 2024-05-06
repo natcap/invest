@@ -1,5 +1,6 @@
 """Testing module for validation."""
 import codecs
+import collections
 import functools
 import os
 import platform
@@ -9,12 +10,14 @@ import tempfile
 import textwrap
 import time
 import unittest
-from unittest.mock import Mock
 import warnings
+from unittest.mock import Mock
 
 import numpy
-from osgeo import gdal, osr, ogr
 import pandas
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
 
 class SpatialOverlapTest(unittest.TestCase):
@@ -30,8 +33,8 @@ class SpatialOverlapTest(unittest.TestCase):
 
     def test_no_overlap(self):
         """Validation: verify lack of overlap."""
-        from natcap.invest import validation
         import pygeoprocessing
+        from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GTiff')
         filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
@@ -226,7 +229,8 @@ class ValidatorTest(unittest.TestCase):
 
     def test_n_workers(self):
         """Validation: validation error returned on invalid n_workers."""
-        from natcap.invest import spec_utils, validation
+        from natcap.invest import spec_utils
+        from natcap.invest import validation
 
         args_spec = {
             'n_workers': spec_utils.N_WORKERS,
@@ -427,7 +431,8 @@ class RasterValidation(unittest.TestCase):
 
     def test_raster_incorrect_units(self):
         """Validation: test when a raster projection has wrong units."""
-        from natcap.invest import spec_utils, validation
+        from natcap.invest import spec_utils
+        from natcap.invest import validation
 
         # Use EPSG:32066  # NAD27 / BLM 16N (in US Survey Feet)
         driver = gdal.GetDriverByName('GTiff')
@@ -508,7 +513,8 @@ class VectorValidation(unittest.TestCase):
 
     def test_vector_projected_in_m(self):
         """Validation: test that a vector's projection has expected units."""
-        from natcap.invest import spec_utils, validation
+        from natcap.invest import spec_utils
+        from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GPKG')
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
@@ -533,7 +539,8 @@ class VectorValidation(unittest.TestCase):
 
     def test_wrong_geom_type(self):
         """Validation: checks that the vector's geometry type is correct."""
-        from natcap.invest import spec_utils, validation
+        from natcap.invest import spec_utils
+        from natcap.invest import validation
         driver = gdal.GetDriverByName('GPKG')
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
         vector = driver.Create(filepath, 0, 0, 0, gdal.GDT_Unknown)
@@ -1091,7 +1098,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             csv_file,
             columns={
                 'id': {'type': 'integer'},
-                'header': {'type': 'integer', 'na_allowed': True}})
+                'header': {'type': 'integer'}})
         self.assertIsInstance(df['header'][0], numpy.int64)
         self.assertIsInstance(df['header'][1], numpy.int64)
         # empty values are returned as pandas.NA
@@ -1106,7 +1113,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 """\
                 h1,h2,h3
                 5,0.5,.4
-                -1,-.3,
+                -1,.3,
                 """
             ))
         df = validation.get_validated_dataframe(
@@ -1114,7 +1121,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             columns={
                 'h1': {'type': 'number'},
                 'h2': {'type': 'ratio'},
-                'h3': {'type': 'percent', 'na_allowed': True},
+                'h3': {'type': 'percent'},
             })
         self.assertEqual(df['h1'].dtype, float)
         self.assertEqual(df['h2'].dtype, float)
@@ -1138,7 +1145,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             csv_file,
             columns={
                 'h1': {'type': 'freestyle_string'},
-                'h2': {'type': 'option_string'},
+                'h2': {'type': 'option_string', 'options': ['a', 'b']},
                 'h3': {'type': 'freestyle_string'},
             })
         self.assertEqual(df['h1'][0], '1')
@@ -1163,7 +1170,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             csv_file,
             columns={
                 'index': {'type': 'freestyle_string'},
-                'h1': {'type': 'boolean', 'na_allowed': True}})
+                'h1': {'type': 'boolean'}})
         self.assertEqual(df['h1'][0], True)
         self.assertEqual(df['h1'][1], False)
         # empty values are returned as pandas.NA
@@ -1173,15 +1180,18 @@ class TestGetValidatedDataframe(unittest.TestCase):
         """validation: test values in path columns are expanded."""
         from natcap.invest import validation
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        # create files so that validation will pass
+        open(os.path.join(self.workspace_dir, 'foo.txt'), 'w').close()
+        os.mkdir(os.path.join(self.workspace_dir, 'foo'))
+        open(os.path.join(self.workspace_dir, 'foo', 'bar.txt'), 'w').close()
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
                 f"""\
                 bar,path
                 1,foo.txt
                 2,foo/bar.txt
-                3,foo\\bar.txt
-                4,{self.workspace_dir}/foo.txt
-                5,
+                3,{self.workspace_dir}/foo.txt
+                4,
                 """
             ))
         df = validation.get_validated_dataframe(
@@ -1196,23 +1206,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(
             f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
             df['path'][1])
-
-        # utils.expand_path() will convert Windows path separators to linux if
-        # we're on mac/linux
-        if platform.system() == 'Windows':
-            self.assertEqual(
-                f'{self.workspace_dir}{os.sep}foo\\bar.txt',
-                df['path'][2])
-        else:
-            self.assertEqual(
-                f'{self.workspace_dir}{os.sep}foo/bar.txt',
-                df['path'][2])
-
         self.assertEqual(
             f'{self.workspace_dir}{os.sep}foo.txt',
-            df['path'][3])
+            df['path'][2])
         # empty values are returned as empty strings
-        self.assertTrue(pandas.isna(df['path'][4]))
+        self.assertTrue(pandas.isna(df['path'][3]))
 
     def test_other_kwarg(self):
         """validation: any other kwarg should be passed to pandas.read_csv"""
@@ -1342,7 +1340,6 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 'row1': {'type': 'freestyle_string'},
                 'row2': {'type': 'number'},
             })
-        print(df)
         # header should have no leading / trailing whitespace
         self.assertEqual(list(df.columns), ['row1', 'row2'])
 
@@ -1351,6 +1348,126 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(df['row2'][0], 1)
         self.assertEqual(df['row2'][1], 3)
         self.assertEqual(df['row2'].dtype, float)
+
+    def test_csv_raster_validation_missing_file(self):
+        """validation: validate missing raster within csv column"""
+        from natcap.invest import validation
+
+        csv_path = os.path.join(self.workspace_dir, 'csv.csv')
+        raster_path = os.path.join(self.workspace_dir, 'foo.tif')
+
+        with open(csv_path, 'w') as file_obj:
+            file_obj.write('col1,col2\n')
+            file_obj.write(f'1,{raster_path}\n')
+
+        with self.assertRaises(ValueError) as cm:
+            validation.get_validated_dataframe(
+                csv_path,
+                columns={
+                    'col1': {'type': 'number'},
+                    'col2': {'type': 'raster'}
+                })
+        self.assertIn('File not found', str(cm.exception))
+
+
+    def test_csv_raster_validation_not_projected(self):
+        """validation: validate unprojected raster within csv column"""
+        from natcap.invest import validation
+        # create a non-linear projected raster and validate it
+        driver = gdal.GetDriverByName('GTiff')
+        csv_path = os.path.join(self.workspace_dir, 'csv.csv')
+        raster_path = os.path.join(self.workspace_dir, 'foo.tif')
+        raster = driver.Create(raster_path, 3, 3, 1, gdal.GDT_Int32)
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        raster.SetProjection(wgs84_srs.ExportToWkt())
+        raster = None
+
+        with open(csv_path, 'w') as file_obj:
+            file_obj.write('col1,col2\n')
+            file_obj.write(f'1,{raster_path}\n')
+
+        with self.assertRaises(ValueError) as cm:
+            validation.get_validated_dataframe(
+                csv_path,
+                columns={
+                    'col1': {'type': 'number'},
+                    'col2': {'type': 'raster', 'projected': True}
+                })
+        self.assertIn('must be projected', str(cm.exception))
+
+    def test_csv_vector_validation_missing_field(self):
+        """validation: validate vector missing field in csv column"""
+        from natcap.invest import validation
+        import pygeoprocessing
+        from shapely.geometry import Point
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        projection_wkt = srs.ExportToWkt()
+        csv_path = os.path.join(self.workspace_dir, 'csv.csv')
+        vector_path = os.path.join(self.workspace_dir, 'test.gpkg')
+        pygeoprocessing.shapely_geometry_to_vector(
+            [Point(0.0, 0.0)], vector_path, projection_wkt, 'GPKG',
+            fields={'b': ogr.OFTInteger},
+            attribute_list=[{'b': 0}],
+            ogr_geom_type=ogr.wkbPoint)
+
+        with open(csv_path, 'w') as file_obj:
+            file_obj.write('col1,col2\n')
+            file_obj.write(f'1,{vector_path}\n')
+
+        with self.assertRaises(ValueError) as cm:
+            validation.get_validated_dataframe(
+                csv_path,
+                columns={
+                    'col1': {'type': 'number'},
+                    'col2': {
+                        'type': 'vector',
+                        'fields': {
+                            'a': {'type': 'integer'},
+                            'b': {'type': 'integer'}
+                        },
+                        'geometries': ['POINT']
+                    }
+                })
+        self.assertIn(
+            'Expected the field "a" but did not find it',
+            str(cm.exception))
+
+    def test_csv_raster_or_vector_validation(self):
+        """validation: validate vector in raster-or-vector csv column"""
+        from natcap.invest import validation
+        import pygeoprocessing
+        from shapely.geometry import Point
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        projection_wkt = srs.ExportToWkt()
+        csv_path = os.path.join(self.workspace_dir, 'csv.csv')
+        vector_path = os.path.join(self.workspace_dir, 'test.gpkg')
+        pygeoprocessing.shapely_geometry_to_vector(
+            [Point(0.0, 0.0)], vector_path, projection_wkt, 'GPKG',
+            ogr_geom_type=ogr.wkbPoint)
+
+        with open(csv_path, 'w') as file_obj:
+            file_obj.write('col1,col2\n')
+            file_obj.write(f'1,{vector_path}\n')
+
+        with self.assertRaises(ValueError) as cm:
+            validation.get_validated_dataframe(
+                csv_path,
+                columns={
+                    'col1': {'type': 'number'},
+                    'col2': {
+                        'type': {'raster', 'vector'},
+                        'fields': {},
+                        'geometries': ['POLYGON']
+                    }
+                })
+        self.assertIn(
+            "Geometry type must be one of ['POLYGON']",
+            str(cm.exception))
 
 
 class TestValidationFromSpec(unittest.TestCase):
@@ -1413,8 +1530,7 @@ class TestValidationFromSpec(unittest.TestCase):
         }
         validation_warnings = validation.validate(args, spec)
         self.assertEqual(sorted(validation_warnings), [
-            (['number_c'], validation.MESSAGES['MISSING_KEY']),
-            (['number_d'], validation.MESSAGES['MISSING_KEY']),
+            (['number_c', 'number_d'], validation.MESSAGES['MISSING_KEY']),
         ])
 
         args = {
@@ -1500,12 +1616,10 @@ class TestValidationFromSpec(unittest.TestCase):
             }
         }
 
-        # because condition = True, it shouldn't matter that the
-        # csv_b parameter wouldn't pass validation
         args = {
             "condition": True,
             "csv_a": csv_a_path,
-            "csv_b": 'x' + csv_b_path  # introduce a typo
+            # csv_b is absent, which is okay because it's not required
         }
 
         validation_warnings = validation.validate(args, spec)
@@ -1618,6 +1732,211 @@ class TestValidationFromSpec(unittest.TestCase):
                 option_list=spec['string_a']['options']))],
             validation.validate(args, spec))
 
+    def test_conditionally_required_vector_fields(self):
+        """Validation: conditionally required vector fields."""
+        from natcap.invest import spec_utils
+        from natcap.invest import validation
+        spec = {
+            "some_number": {
+                "name": "A number",
+                "about": "About the number",
+                "type": "number",
+                "required": True,
+                "expression": "value > 0.5",
+            },
+            "vector": {
+                "name": "A vector",
+                "about": "About the vector",
+                "type": "vector",
+                "required": True,
+                "geometries": spec_utils.POINTS,
+                "fields": {
+                    "field_a": {
+                        "type": "ratio",
+                        "required": True,
+                    },
+                    "field_b": {
+                        "type": "ratio",
+                        "required": "some_number == 2",
+                    }
+                }
+            }
+        }
+
+        def _create_vector(filepath, fields=[]):
+            gpkg_driver = gdal.GetDriverByName('GPKG')
+            vector = gpkg_driver.Create(filepath, 0, 0, 0,
+                                        gdal.GDT_Unknown)
+            vector_srs = osr.SpatialReference()
+            vector_srs.ImportFromEPSG(4326)  # WGS84
+            layer = vector.CreateLayer('layer', vector_srs, ogr.wkbPoint)
+            for fieldname in fields:
+                layer.CreateField(ogr.FieldDefn(fieldname, ogr.OFTReal))
+            new_feature = ogr.Feature(layer.GetLayerDefn())
+            new_feature.SetGeometry(ogr.CreateGeometryFromWkt('POINT (1 1)'))
+            layer = None
+            vector = None
+
+        vector_path = os.path.join(self.workspace_dir, 'vector1.gpkg')
+        _create_vector(vector_path, ['field_a'])
+        args = {
+            'some_number': 1,
+            'vector': vector_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(validation_warnings, [])
+
+        args = {
+            'some_number': 2,  # trigger validation warning
+            'vector': vector_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(
+            validation_warnings,
+            [(['vector'], validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='field', header_name='field_b'))])
+
+        vector_path = os.path.join(self.workspace_dir, 'vector2.gpkg')
+        _create_vector(vector_path, ['field_a', 'field_b'])
+        args = {
+            'some_number': 2,  # field_b is present, no validation warning now
+            'vector': vector_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(validation_warnings, [])
+
+    def test_conditionally_required_csv_columns(self):
+        """Validation: conditionally required csv columns."""
+        from natcap.invest import validation
+        spec = {
+            "some_number": {
+                "name": "A number",
+                "about": "About the number",
+                "type": "number",
+                "required": True,
+                "expression": "value > 0.5",
+            },
+            "csv": {
+                "name": "A table",
+                "about": "About the table",
+                "type": "csv",
+                "required": True,
+                "columns": {
+                    "field_a": {
+                        "type": "ratio",
+                        "required": True,
+                    },
+                    "field_b": {
+                        "type": "ratio",
+                        "required": "some_number == 2",
+                    }
+                }
+            }
+        }
+        # Create a CSV file with only field_a
+        csv_path = os.path.join(self.workspace_dir, 'table1.csv')
+        with open(csv_path, 'w') as csv_file:
+            csv_file.write(textwrap.dedent(
+                """\
+                "field_a"
+                1"""))
+        args = {
+            'some_number': 1,
+            'csv': csv_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(validation_warnings, [])
+
+        # trigger validation warning when some_number == 2
+        args = {
+            'some_number': 2,
+            'csv': csv_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(
+            validation_warnings,
+            [(['csv'], validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='column', header_name='field_b'))])
+
+        # Create a CSV file with both field_a and field_b
+        csv_path = os.path.join(self.workspace_dir, 'table2.csv')
+        with open(csv_path, 'w') as csv_file:
+            csv_file.write(textwrap.dedent(
+                """\
+                "field_a","field_b"
+                1,2"""))
+        args = {
+            'some_number': 2,  # field_b is present, no validation warning now
+            'csv': csv_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(validation_warnings, [])
+
+    def test_conditionally_required_csv_rows(self):
+        """Validation: conditionally required csv rows."""
+        from natcap.invest import validation
+        spec = {
+            "some_number": {
+                "name": "A number",
+                "about": "About the number",
+                "type": "number",
+                "required": True,
+                "expression": "value > 0.5",
+            },
+            "csv": {
+                "name": "A table",
+                "about": "About the table",
+                "type": "csv",
+                "required": True,
+                "rows": {
+                    "field_a": {
+                        "type": "ratio",
+                        "required": True,
+                    },
+                    "field_b": {
+                        "type": "ratio",
+                        "required": "some_number == 2",
+                    }
+                }
+            }
+        }
+        # Create a CSV file with only field_a
+        csv_path = os.path.join(self.workspace_dir, 'table1.csv')
+        with open(csv_path, 'w') as csv_file:
+            csv_file.write(textwrap.dedent(
+                """"field_a",1"""))
+        args = {
+            'some_number': 1,
+            'csv': csv_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(validation_warnings, [])
+
+        # trigger validation warning when some_number == 2
+        args = {
+            'some_number': 2,
+            'csv': csv_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(
+            validation_warnings,
+            [(['csv'], validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='row', header_name='field_b'))])
+
+        # Create a CSV file with both field_a and field_b
+        csv_path = os.path.join(self.workspace_dir, 'table2.csv')
+        with open(csv_path, 'w') as csv_file:
+            csv_file.write(textwrap.dedent(
+                """\
+                "field_a",1
+                "field_b",2"""))
+        args = {
+            'some_number': 2,  # field_b is present, no validation warning now
+            'csv': csv_path,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEqual(validation_warnings, [])
+
     def test_validation_exception(self):
         """Validation: Verify error when an unexpected exception occurs."""
         from natcap.invest import validation
@@ -1647,6 +1966,61 @@ class TestValidationFromSpec(unittest.TestCase):
         self.assertEqual(
             validation_warnings,
             [(['number_a'], validation.MESSAGES['UNEXPECTED_ERROR'])])
+
+    def test_conditionally_required_directory_contents(self):
+        """Validation: conditionally required directory contents."""
+        from natcap.invest import validation
+        spec = {
+            "some_number": {
+                "name": "A number",
+                "about": "About the number",
+                "type": "number",
+                "required": True,
+                "expression": "value > 0.5",
+            },
+            "directory": {
+                "name": "A folder",
+                "about": "About the folder",
+                "type": "directory",
+                "required": True,
+                "contents": {
+                    "file.1": {
+                        "type": "csv",
+                        "required": True,
+                    },
+                    "file.2": {
+                        "type": "csv",
+                        "required": "some_number == 2",
+                    }
+                }
+            }
+        }
+        path_1 = os.path.join(self.workspace_dir, 'file.1')
+        with open(path_1, 'w') as my_file:
+            my_file.write('col1,col2')
+        args = {
+            'some_number': 1,
+            'directory': self.workspace_dir,
+        }
+        self.assertEqual([], validation.validate(args, spec))
+
+        path_2 = os.path.join(self.workspace_dir, 'file.2')
+        with open(path_2, 'w') as my_file:
+            my_file.write('col1,col2')
+        args = {
+            'some_number': 2,
+            'directory': self.workspace_dir,
+        }
+        self.assertEqual([], validation.validate(args, spec))
+
+        os.remove(path_2)
+        self.assertFalse(os.path.exists(path_2))
+        args = {
+            'some_number': 2,
+            'directory': self.workspace_dir,
+        }
+        # TODO: directory contents are not actually validated right now
+        self.assertEqual([], validation.validate(args, spec))
 
     def test_validation_other(self):
         """Validation: verify no error when 'other' type."""
@@ -1737,7 +2111,8 @@ class TestValidationFromSpec(unittest.TestCase):
         vector_srs.ImportFromEPSG(32731)  # UTM 31N
         layer = vector.CreateLayer('layer', vector_srs, ogr.wkbPoint)
         new_feature = ogr.Feature(layer.GetLayerDefn())
-        new_feature.SetGeometry(ogr.CreateGeometryFromWkt('POINT 1 1'))
+        new_feature.SetGeometry(ogr.CreateGeometryFromWkt('POINT (1 1)'))
+        layer.CreateFeature(new_feature)
 
         new_feature = None
         layer = None

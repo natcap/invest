@@ -38,6 +38,60 @@
 
 Unreleased Changes
 ------------------
+* General
+    * Validation now covers file paths contained in CSVs. CSV validation
+      will fail if the files listed in a CSV fail to validate.
+      https://github.com/natcap/invest/issues/327
+    * We have updated validation in several ways that will improve the
+      developer experience of working with InVEST models, and we hope will also
+      improve the user experience:
+
+      * Symbols in conditional requirement expressions now represent the values
+        of parameters instead of whether the value of the parameter is
+        sufficient.  If a symbol is not present in ``args`` as a key, the
+        symbol will have a value of ``False``.  This allows for value-based
+        comparisons, which is useful in models that have overlapping modes of
+        operation. https://github.com/natcap/invest/issues/1509
+      * Vector fields, CSV rows/columns and the 1st level of directory
+        contents may now all be conditionally required based on a python
+        expression.
+      * Under certain circumstances, validation may return more warnings than
+        before. This specifically applies to model inputs that have conditional
+        requirement expressions where their expression evaluates to ``False``,
+        and the user has provided a value for this parameter.  Previous
+        versions of InVEST would skip these parameters' type-specific
+        validation. Now, these parameters will be validated with their
+        type-specific validation checks.
+    * Add support for latest GDAL versions; remove test-specific constraint on
+      GDAL versions from invest requirements.
+      https://github.com/natcap/invest/issues/916
+* Annual Water Yield
+    * Added the results_suffix to a few intermediate files where it was
+      missing. https://github.com/natcap/invest/issues/1517
+* Coastal Vulnerability
+    * Fixed a bug in handling ``nan`` as the nodata value of the bathymetry
+      raster. ``nan`` pixels will now be propertly ignored before calculating
+      mean depths along fetch rays.
+      https://github.com/natcap/invest/issues/1528
+* HRA
+    * Fixed a bug where habitat and stressor vectors were not being rasterized
+      with the `ALL_TOUCHED=TRUE` setting.
+* Scenic Quality
+    * Fixed an issue with viewshed calculations where some slight numerical
+      error was introduced on M1 Macs, but not on x86-based computers. This
+      numerical error was leading to slightly different visibility results.
+      https://github.com/natcap/invest/issues/1562
+* SDR
+    * Fixed an issue encountered in the sediment deposition function where
+      rasters with more than 2^32 pixels would raise a cryptic error relating
+      to negative dimensions. https://github.com/natcap/invest/issues/1431
+    * Optimized the creation of the summary vector by minimizing the number of
+      times the target vector needs to be rasterized.
+* Wind Energy
+    * Fixed a bug where some number inputs were not being properly cast to
+      ``float`` or ``int`` types. If the inputs happened to be passed as
+      a ``str`` this caused unintended side effects such as a concatenation
+      error. (https://github.com/natcap/invest/issues/1498)
 * Urban Nature Access
     * Fixed a ``NameError`` that occurred when running the model using
       search radii defined per population group with an exponential search
@@ -45,6 +99,9 @@ Unreleased Changes
     * Fixed an issue where Urban Nature Access would crash if an administrative
       boundary geometry did not overlap any people in the population raster.
       https://github.com/natcap/invest/issues/1503
+    * Fixed an issue where validation was failing to catch missing values in
+      the uniform search radius args key when using uniform search radii.
+      https://github.com/natcap/invest/issues/1509
     * Fixed an issue where the output administrative units vector's
       ``Pund_adm`` and ``Povr_adm`` fields representing undersupplied and
       oversupplied populations, respectively, had values of 0 when running the
@@ -52,6 +109,12 @@ Unreleased Changes
       administrative units vector now has the correct values for these fields,
       consistent with the user's guide chapter.
       https://github.com/natcap/invest/issues/1512
+    * Fixed an issue where certain nodata values were not being handled
+      correctly, leading to pixel values of +/- infinity in the urban nature
+      balance output raster.  https://github.com/natcap/invest/issues/1519
+    * Fixed an issue where an LULC raster without a nodata value would
+      always raise in exception during reclassification.
+      https://github.com/natcap/invest/issues/1539
 
 3.14.1 (2023-12-18)
 -------------------

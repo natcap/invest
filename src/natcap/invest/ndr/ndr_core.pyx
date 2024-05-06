@@ -86,9 +86,9 @@ def ndr_eff_calculation(
 
     # create direction raster in bytes
     def _mfd_to_flow_dir_op(mfd_array):
-        result = numpy.zeros(mfd_array.shape, dtype=numpy.int8)
+        result = numpy.zeros(mfd_array.shape, dtype=numpy.uint8)
         for i in range(8):
-            result[:] |= (((mfd_array >> (i*4)) & 0xF) > 0) << i
+            result[:] |= ((((mfd_array >> (i*4)) & 0xF) > 0) << i).astype(numpy.uint8)
         return result
 
     # convert mfd raster to binary mfd
