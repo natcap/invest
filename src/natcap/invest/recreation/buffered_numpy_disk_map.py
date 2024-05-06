@@ -17,6 +17,21 @@ from .. import utils
 LOGGER = logging.getLogger(
     'natcap.invest.recmodel_server.buffered_numpy_disk_map')
 
+def _npy_append(filepath, array):
+    with open(filepath, 'rb+') as file:
+        version = numpy.lib.format.read_magic(file)
+        header = numpy.lib.format._read_array_header(file, version)
+        d = {
+            'shape': header[0],
+            'fortran_order': header[1],
+            'descr': numpy.lib.format.dtype_to_descr(header[2])
+        }
+        n = d['shape'][0] + array.size
+        d['shape'] = (n, )
+        file.seek(0, 2)  # go to end to append data
+        file.write(array)
+        file.seek(0, 0)  # go to start to re-write header
+        numpy.lib.format._write_array_header(file, d, version)
 
 class BufferedNumpyDiskMap(object):
     """Persistent object to append and read numpy arrays to unique keys.
@@ -94,11 +109,13 @@ class BufferedNumpyDiskMap(object):
                     where array_id=? LIMIT 1""", [array_id])
             array_path = db_cursor.fetchone()
             if array_path is not None:
-                # cache gets wiped at end so okay to use same deque
-                array_deque.append(numpy.load(array_path[0]))
-                array_data = numpy.concatenate(array_deque)
+                _npy_append(array_path[0], numpy.concatenate(array_deque))
                 array_deque = None
-                numpy.save(array_path[0], array_data)
+                # cache gets wiped at end so okay to use same deque
+                # array_deque.append(numpy.load(array_path[0]))
+                # array_data = numpy.concatenate(array_deque)
+                # array_deque = None
+                # numpy.save(array_path[0], array_data)
             else:
                 # otherwise directly write
                 # make a random filename and put it one directory deep named
