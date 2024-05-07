@@ -196,7 +196,6 @@ describe('createWindow', () => {
       ipcMainChannels.DOWNLOAD_URL,
       ipcMainChannels.GET_ELECTRON_PATHS,
       ipcMainChannels.GET_LANGUAGE,
-      ipcMainChannels.GET_SETTING,
       ipcMainChannels.INVEST_RUN,
       ipcMainChannels.INVEST_KILL,
       ipcMainChannels.INVEST_READ_LOG,

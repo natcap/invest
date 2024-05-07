@@ -183,12 +183,14 @@ export default class App extends React.Component {
     const investList = await getInvestModelNames();
     Object.keys(investList).forEach((modelName) => {
       const modelId = investList[modelName].model_name;
-      coreModels[modelId] = { model_name: modelName };
+      coreModels[modelId] = { model_name: modelName, type: 'core' };
     });
-    const plugins = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins');
-
+    const plugins = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins') || {};
+    Object.keys(plugins).forEach((plugin) => {
+      plugins[plugin].type = 'plugin';
+    });
     this.setState({
-      investList: {...coreModels, ...plugins}
+      investList: { ...coreModels, ...plugins },
     });
   }
 

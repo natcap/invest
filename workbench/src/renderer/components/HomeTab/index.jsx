@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import PropTypes from 'prop-types';
 
 import Badge from 'react-bootstrap/Badge';
@@ -68,8 +68,7 @@ export default class HomeTab extends React.Component {
     sortedModelIds.forEach(async (modelId) => {
       const modelName = investList[modelId].model_name;
       let badge;
-      const plugins = ipcRenderer.sendSync(ipcMainChannels.GET_SETTING, 'plugins');
-      if (plugins && Object.keys(plugins).includes(modelId)) {
+      if (investList[modelId].type === 'plugin') {
         badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
       }
       investButtons.push(
@@ -110,8 +109,10 @@ HomeTab.propTypes = {
   investList: PropTypes.objectOf(
     PropTypes.shape({
       model_name: PropTypes.string,
+      type: PropTypes.string,
     })
   ).isRequired,
+  updateInvestList: PropTypes.func.isRequired,
   openInvestModel: PropTypes.func.isRequired,
   recentJobs: PropTypes.arrayOf(
     PropTypes.shape({
@@ -131,6 +132,20 @@ function RecentInvestJobs(props) {
   const { recentJobs, openInvestModel } = props;
   const { t } = useTranslation();
 
+  useEffect(() => {
+    ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins').then(
+      (plugins) => {
+        recentJobs.forEach((job) => {
+          if (job && job.argsValues && job.modelHumanName) {
+            if (plugins && Object.keys(plugins).includes(job.modelRunName)) {
+              job.plugin = true;
+            }
+          }
+        });
+      }
+    );
+  }, [recentJobs]);
+
   const handleClick = (jobMetadata) => {
     try {
       openInvestModel(new InvestJob(jobMetadata));
@@ -143,8 +158,7 @@ function RecentInvestJobs(props) {
   recentJobs.forEach(async (job) => {
     if (job && job.argsValues && job.modelHumanName) {
       let badge;
-      const plugins = ipcRenderer.sendSync(ipcMainChannels.GET_SETTING, 'plugins');
-      if (plugins && Object.keys(plugins).includes(job.modelRunName)) {
+      if (job.plugin) {
         badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
       }
       recentButtons.push(

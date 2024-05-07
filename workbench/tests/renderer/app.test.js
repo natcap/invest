@@ -135,7 +135,12 @@ describe('Various ways to open and close InVEST models', () => {
       model_run_name: 'carbon',
       model_human_name: 'Carbon',
     };
-    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        return Promise.resolve();
+      }
+      return mockDialogData;
+    });
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
     const { findByText, findByLabelText, findByRole } = render(
@@ -161,7 +166,12 @@ describe('Various ways to open and close InVEST models', () => {
       canceled: true,
       filePaths: [],
     };
-    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        return Promise.resolve();
+      }
+      return mockDialogData;
+    });
 
     const { findByRole } = render(
       <App />

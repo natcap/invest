@@ -49,30 +49,17 @@ describe('Add plugin modal', () => {
 
   test('Interface to add a plugin', async () => {
     const {
-      findByText, findByLabelText, findByRole, queryByRole
+      findByText, findByLabelText, findByRole, queryByRole,
     } = render(<App />);
     const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.GET_SETTING) {
         if (setting === 'plugins') {
-          return {
+          return Promise.resolve({
             foo: {
               model_name: 'Foo',
               type: 'plugin',
             },
-          };
-        }
-      }
-      return Promise.resolve();
-    });
-    ipcRenderer.sendSync.mockImplementation((channel, setting) => {
-      if (channel === ipcMainChannels.GET_SETTING) {
-        if (setting === 'plugins') {
-          return {
-            foo: {
-              model_name: 'Foo',
-              type: 'plugin',
-            },
-          };
+          });
         }
       }
       return Promise.resolve();
