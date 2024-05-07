@@ -14,6 +14,13 @@ cdef struct s_neighborTuple:
 
 ctypedef s_neighborTuple NeighborTuple
 
+cdef class NeighborTupleClass:
+    cdef int direction
+    cdef int x
+    cdef int y
+    cdef float flow_proportion
+
+
 # this is a least recently used cache written in C++ in an external file,
 # exposing here so _ManagedRaster can use it
 cdef extern from "LRUCache.h" nogil:
@@ -46,6 +53,28 @@ cdef class _ManagedRaster:
     cdef inline void set(_ManagedRaster self, long xi, long yi, double value)
     cdef inline double get(_ManagedRaster self, long xi, long yi)
     cdef void _load_block(_ManagedRaster self, int block_index) except *
+
+cdef class DownslopeNeighborIterator:
+
+    cdef _ManagedRaster raster
+    cdef int col
+    cdef int row
+    cdef int n_dir
+    cdef int flow_dir
+    cdef int flow_dir_sum
+
+    cdef NeighborTupleClass next(DownslopeNeighborIterator self)
+
+
+cdef class UpslopeNeighborIterator:
+
+    cdef _ManagedRaster raster
+    cdef int col
+    cdef int row
+    cdef int n_dir
+    cdef int flow_dir
+
+    cdef NeighborTupleClass next(UpslopeNeighborIterator self)
 
 
 cdef class ManagedFlowDirRaster(_ManagedRaster):

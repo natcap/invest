@@ -13,13 +13,9 @@ from osgeo import gdal
 from libc.time cimport time as ctime
 from libcpp.stack cimport stack
 from ..managed_raster.managed_raster cimport _ManagedRaster
-from ..managed_raster.managed_raster cimport NeighborTupleClass
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport is_close
 from ..managed_raster.managed_raster cimport INFLOW_OFFSETS
-from ..managed_raster.managed_raster cimport DownslopeNeighborIterator
-from ..managed_raster.managed_raster cimport UpslopeNeighborIterator
-
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -104,18 +100,15 @@ def calculate_sediment_deposition(
     flow_dir_info = pygeoprocessing.get_raster_info(mfd_flow_direction_path)
     n_cols, n_rows = flow_dir_info['raster_size']
     cdef int mfd_nodata = 0
-    cdef stack[long] processing_stack
+    cdef stack[int] processing_stack
     cdef float sdr_nodata = pygeoprocessing.get_raster_info(
         sdr_path)['nodata'][0]
     cdef float e_prime_nodata = pygeoprocessing.get_raster_info(
         e_prime_path)['nodata'][0]
     cdef long col_index, row_index, win_xsize, win_ysize, xoff, yoff
     cdef long global_col, global_row, j, k
-    cdef long xs, ys
-    cdef long flat_index
-    cdef long seed_col = 0
-    cdef long seed_row = 0
-    cdef long neighbor_row, neighbor_col, ds_neighbor_row, ds_neighbor_col
+    cdef unsigned long flat_index
+    cdef long neighbor_row, neighbor_col, xs, ys
     cdef int flow_val, neighbor_flow_val, ds_neighbor_flow_val
     cdef int flow_weight, neighbor_flow_weight
     cdef float flow_sum, neighbor_flow_sum
@@ -124,7 +117,6 @@ def calculate_sediment_deposition(
     cdef unsigned long n_pixels_processed = 0
     cdef time_t last_log_time = ctime(NULL)
     cdef float f_j_weighted_sum
-    cdef NeighborTupleClass neighbor2
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
@@ -163,36 +155,29 @@ def calculate_sediment_deposition(
                     # the weighted sum of flux flowing onto this pixel from
                     # all neighbors
                     f_j_weighted_sum = 0
-                    up_iterator = UpslopeNeighborIterator(
-                        mfd_flow_direction_raster, global_col, global_row)
-                    neighbor = up_iterator.next()
-                    while neighbor.direction < 8:
+                    for neighbor in (
+                            mfd_flow_direction_raster.get_upslope_neighbors(
+                                global_col, global_row)):
 
                         f_j = f_raster.get(neighbor.x, neighbor.y)
                         if is_close(f_j, target_nodata):
-                            neighbor = up_iterator.next()
                             continue
 
                         # add the neighbor's flux value, weighted by the
                         # flow proportion
                         f_j_weighted_sum += neighbor.flow_proportion * f_j
-                        neighbor = up_iterator.next()
-
 
                     # calculate sum of SDR values of immediate downslope
                     # neighbors, weighted by proportion of flow into each
                     # neighbor
                     # (sum over k ∈ K of SDR_k * p(i,k) in the equation above)
                     downslope_sdr_weighted_sum = 0
-                    dn_iterator = DownslopeNeighborIterator(
-                        mfd_flow_direction_raster, global_col, global_row)
-
-                    neighbor2 = <NeighborTupleClass>dn_iterator.next()
-                    while neighbor2.direction < 8:
-
-                        sdr_j = sdr_raster.get(neighbor2.x, neighbor2.y)
+                    for neighbor in (
+                            mfd_flow_direction_raster.get_downslope_neighbors(
+                                global_col, global_row)):
+                        print(neighbor.direction, neighbor.x, neighbor.y, neighbor.flow_proportion)
+                        sdr_j = sdr_raster.get(neighbor.x, neighbor.y)
                         if is_close(sdr_j, sdr_nodata):
-                            neighbor2 = dn_iterator.next()
                             continue
                         if sdr_j == 0:
                             # this means it's a stream, for SDR deposition
@@ -201,7 +186,8 @@ def calculate_sediment_deposition(
                             sdr_j = 1
 
                         downslope_sdr_weighted_sum += (
-                            sdr_j * neighbor2.flow_proportion)
+                            sdr_j * neighbor.flow_proportion)
+
                         # check if we can add neighbor j to the stack yet
                         #
                         # if there is a downslope neighbor it
@@ -210,17 +196,13 @@ def calculate_sediment_deposition(
                         # completed
                         upslope_neighbors_processed = 1
                         # iterate over each neighbor-of-neighbor
-                        #
-                        up_iterator = UpslopeNeighborIterator(
-                            mfd_flow_direction_raster, neighbor2.x, neighbor2.y)
-                        neighbor_of_neighbor = up_iterator.next()
-                        while neighbor_of_neighbor.direction < 8:
-
+                        for neighbor_of_neighbor in (
+                                mfd_flow_direction_raster.get_upslope_neighbors(
+                                    neighbor.x, neighbor.y)):
                             # no need to push the one we're currently
                             # calculating back onto the stack
                             if (INFLOW_OFFSETS[neighbor_of_neighbor.direction] ==
-                                    neighbor2.direction):
-                                neighbor_of_neighbor = up_iterator.next()
+                                    neighbor.direction):
                                 continue
                             if is_close(
                                     sediment_deposition_raster.get(
@@ -228,14 +210,11 @@ def calculate_sediment_deposition(
                                     ), target_nodata):
                                 upslope_neighbors_processed = 0
                                 break
-                            neighbor_of_neighbor = up_iterator.next()
                         # if all upslope neighbors of neighbor j are
                         # processed, we can push j onto the stack.
                         if upslope_neighbors_processed:
                             processing_stack.push(
-                                neighbor2.y * n_cols + neighbor2.x)
-
-                        neighbor2 = dn_iterator.next()
+                                neighbor.y * n_cols + neighbor.x)
 
                     # nodata pixels should propagate to the results
                     sdr_i = sdr_raster.get(global_col, global_row)
@@ -244,9 +223,6 @@ def calculate_sediment_deposition(
                     e_prime_i = e_prime_raster.get(global_col, global_row)
                     if is_close(e_prime_i, e_prime_nodata):
                         continue
-
-                    if dn_iterator.flow_dir_sum:
-                        downslope_sdr_weighted_sum /= dn_iterator.flow_dir_sum
 
                     # This condition reflects property A in the user's guide.
                     if downslope_sdr_weighted_sum < sdr_i:

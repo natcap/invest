@@ -56,12 +56,13 @@ setup(
             language='c++'
         ) for package, module in [
             ('managed_raster', 'managed_raster'),
-            ('delineateit', 'delineateit_core'),
-            ('recreation', 'out_of_core_quadtree'),
-            ('scenic_quality', 'viewshed'),
-            ('ndr', 'ndr_core'),
+            # ('delineateit', 'delineateit_core'),
+            # ('recreation', 'out_of_core_quadtree'),
+            # ('scenic_quality', 'viewshed'),
+            # ('ndr', 'ndr_core'),
             ('sdr', 'sdr_core'),
-            ('seasonal_water_yield', 'seasonal_water_yield_core')
+            ('sdr', 'sdr_core_feature'),
+            # ('seasonal_water_yield', 'seasonal_water_yield_core')
         ]
     ],
     cmdclass={

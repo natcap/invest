@@ -315,6 +315,114 @@ cdef class _ManagedRaster:
             raster = None
 
 
+cdef class NeighborTupleClass():
+
+    def __cinit__(self, direction, x, y, flow_proportion):
+        self.direction = direction
+        self.x = x
+        self.y = y
+        self.flow_proportion = flow_proportion
+
+
+cdef class DownslopeNeighborIterator():
+
+    def __cinit__(self, managed_raster, x, y):
+        self.raster = managed_raster
+        self.col = x
+        self.row = y
+        self.n_dir = 0
+        self.flow_dir = <int>self.raster.get(self.col, self.row)
+        self.flow_dir_sum = 0
+
+
+    cdef NeighborTupleClass next(self):
+
+        cdef NeighborTupleClass n
+        cdef long xj, yj
+        cdef int flow_dir_j
+        cdef int flow_ji
+
+        if self.n_dir == 8:
+            n = NeighborTupleClass(
+                8, -1, -1, -1)
+            return n
+
+        xj = self.col + COL_OFFSETS[self.n_dir]
+        yj = self.row + ROW_OFFSETS[self.n_dir]
+
+        if (xj < 0 or xj >= self.raster.raster_x_size or
+                yj < 0 or yj >= self.raster.raster_y_size):
+            self.n_dir += 1
+            return self.next()
+
+        flow_ij = (self.flow_dir >> (self.n_dir * 4)) & 0xF
+        if flow_ij:
+            self.flow_dir_sum += flow_ij
+
+            n = NeighborTupleClass(
+                direction=self.n_dir,
+                x=xj,
+                y=yj,
+                flow_proportion=flow_ij)
+            self.n_dir += 1
+            return n
+        else:
+            self.n_dir += 1
+            return self.next()
+
+
+cdef class UpslopeNeighborIterator():
+
+    def __cinit__(self, managed_raster, x, y):
+        self.raster = managed_raster
+        self.col = x
+        self.row = y
+        self.n_dir = 0
+        self.flow_dir = <int>self.raster.get(self.col, self.row)
+
+
+    cdef NeighborTupleClass next(self):
+
+        cdef NeighborTupleClass n
+        cdef long xj, yj
+        cdef int flow_dir_j
+        cdef int flow_ji
+
+        if self.n_dir == 8:
+            n = NeighborTupleClass(
+                8, -1, -1, -1)
+            return n
+
+        xj = self.col + COL_OFFSETS[self.n_dir]
+        yj = self.row + ROW_OFFSETS[self.n_dir]
+
+        if (xj < 0 or xj >= self.raster.raster_x_size or
+                yj < 0 or yj >= self.raster.raster_y_size):
+            self.n_dir += 1
+            return self.next()
+
+        flow_dir_j = <int>self.raster.get(xj, yj)
+        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[self.n_dir])))
+
+        if flow_ji:
+            flow_dir_j_sum = 0
+            for idx in range(8):
+                flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF
+
+            n = NeighborTupleClass(
+                direction=self.n_dir,
+                x=xj,
+                y=yj,
+                flow_proportion=flow_ji / flow_dir_j_sum)
+            self.n_dir += 1
+            return n
+        else:
+            self.n_dir += 1
+            return self.next()
+
+
+
+
 cdef class ManagedFlowDirRaster(_ManagedRaster):
 
     cdef bint is_local_high_point(self, long xi, long yi):
@@ -374,6 +482,10 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
                 upslope_neighbor_tuples.push_back(n)
 
         return upslope_neighbor_tuples
+
+
+
+
 
     @cython.cdivision(True)
     cdef vector[NeighborTuple] get_downslope_neighbors(
