@@ -2,7 +2,7 @@ import os
 import platform
 import subprocess
 
-import Cython.Build
+from Cython.Build import cythonize
 import numpy
 from setuptools import setup
 from setuptools.command.build_py import build_py as _build_py
@@ -46,14 +46,14 @@ class build_py(_build_py):
 
 setup(
     install_requires=_REQUIREMENTS,
-    ext_modules=[
+    ext_modules=cythonize([
         Extension(
             name=f'natcap.invest.{package}.{module}',
             sources=[f'src/natcap/invest/{package}/{module}.pyx'],
-            include_dirs=[numpy.get_include()],
             extra_compile_args=compiler_and_linker_args,
             extra_link_args=compiler_and_linker_args,
-            language='c++'
+            language='c++',
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
         ) for package, module in [
             ('delineateit', 'delineateit_core'),
             ('recreation', 'out_of_core_quadtree'),
@@ -62,9 +62,9 @@ setup(
             ('sdr', 'sdr_core'),
             ('seasonal_water_yield', 'seasonal_water_yield_core')
         ]
-    ],
+    ], compiler_directives={'language_level': '3'}),
+    include_dirs=[numpy.get_include()],
     cmdclass={
-        'build_ext': Cython.Build.build_ext,
         'build_py': build_py
     }
 )
