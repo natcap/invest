@@ -95,6 +95,10 @@ Unreleased Changes
       to negative dimensions. https://github.com/natcap/invest/issues/1431
     * Optimized the creation of the summary vector by minimizing the number of
       times the target vector needs to be rasterized.
+* Seasonal Water Yield
+    * Fixed an issue with the precip directory units. Units for these input
+      rasters are now correctly stated as mm/month.
+      https://github.com/natcap/invest/issues/1571
 * Wind Energy
     * Fixed a bug where some number inputs were not being properly cast to
       ``float`` or ``int`` types. If the inputs happened to be passed as
