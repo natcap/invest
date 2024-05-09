@@ -65,6 +65,7 @@ Unreleased Changes
     * Add support for latest GDAL versions; remove test-specific constraint on
       GDAL versions from invest requirements.
       https://github.com/natcap/invest/issues/916
+    * Updated to Cython 3 (https://github.com/natcap/invest/issues/556)
 * Annual Water Yield
     * Added the results_suffix to a few intermediate files where it was
       missing. https://github.com/natcap/invest/issues/1517

@@ -45,7 +45,7 @@ invest = "natcap.invest.cli:main"
 # that we can provide a much easier build experience so long as GDAL is
 # available at runtime.
 requires = [
-    'setuptools>=61', 'wheel', 'setuptools_scm>=8.0', 'cython', 'babel',
+    'setuptools>=61', 'wheel', 'setuptools_scm>=8.0', 'cython>=3.0.0', 'babel',
     'oldest-supported-numpy'
 ]
 build-backend = "setuptools.build_meta"
