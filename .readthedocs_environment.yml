@@ -14,6 +14,6 @@ dependencies:
 - gdal>=3.4.2
 - pip
 - pip:
-  - -r --upgrade-strategy=only-if-needed requirements.txt
-  - -r --upgrade-strategy=only-if-needed requirements-dev.txt
-  - -r --upgrade-strategy=only-if-needed requirements-docs.txt
+  - --upgrade-strategy=only-if-needed -r requirements.txt
+  - --upgrade-strategy=only-if-needed -r requirements-dev.txt
+  - --upgrade-strategy=only-if-needed -r requirements-docs.txt
