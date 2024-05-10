@@ -265,7 +265,7 @@ class OutOfCoreQuadTree(object):
         return sum([self.nodes[index].n_nodes() for index in xrange(4)]) + 1
 
     def n_points(self):
-        """Return the number of nodes in the quadtree"""
+        """Return the number of points in the quadtree"""
         if self.is_leaf:
             return self.n_points_in_node
         return sum([self.nodes[index].n_points() for index in xrange(4)])
