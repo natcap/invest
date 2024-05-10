@@ -13,7 +13,3 @@ dependencies:
 - python=3.11
 - gdal>=3.4.2
 - pip
-- pip:
-  - --upgrade-strategy=only-if-needed -r requirements.txt
-  - --upgrade-strategy=only-if-needed -r requirements-dev.txt
-  - --upgrade-strategy=only-if-needed -r requirements-docs.txt
