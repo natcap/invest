@@ -70,6 +70,7 @@ export default class InvestJob {
    * @param {object} obj.argsValues - an invest "args dict" with initial values
    * @param {string} obj.logfile - path to an existing invest logfile
    * @param {string} obj.status - one of 'running'|'error'|'success'
+   * @param {string} obj.type - 'plugin' or 'core'
    */
   constructor(
     {
@@ -78,6 +79,7 @@ export default class InvestJob {
       argsValues,
       logfile,
       status,
+      type,
     }
   ) {
     if (!modelRunName || !modelHumanName) {
@@ -89,6 +91,7 @@ export default class InvestJob {
     this.argsValues = argsValues;
     this.logfile = logfile;
     this.status = status;
+    this.type = type;
     this.hash = null;
   }
 }

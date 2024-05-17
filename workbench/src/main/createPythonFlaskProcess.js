@@ -48,14 +48,12 @@ export async function getFlaskIsReady(port, i = 0, retries = 41) {
   }
 }
 
-
 /**
  * Set up handlers for server process events.
- *
  * @param  {ChildProcess} pythonServerProcess - server process instance.
  * @returns {undefined}
  */
-export async function setupServerProcessHandlers(pythonServerProcess) {
+export function setupServerProcessHandlers(pythonServerProcess) {
   pythonServerProcess.stdout.on('data', (data) => {
     logger.debug(`${data}`);
   });
@@ -83,7 +81,6 @@ export async function setupServerProcessHandlers(pythonServerProcess) {
   pidToSubprocess[pythonServerProcess.pid] = pythonServerProcess;
 }
 
-
 /**
  * Spawn a child process running the Python Flask app for core invest.
  *
@@ -110,13 +107,11 @@ export async function createCoreServerProcess(_port = undefined) {
   setupServerProcessHandlers(pythonServerProcess);
   await getFlaskIsReady(port, 0, 500);
   logger.info('flask is ready');
-  return pythonServerProcess.pid;
 }
-
 
 /**
  * Spawn a child process running the Python Flask app for a plugin.
- *
+ * @param {string} modelName - name of the plugin to launch
  * @param  {integer} _port - if provided, port to launch server on. Otherwise,
  *                         an available port is chosen.
  * @returns { integer } - PID of the process that was launched

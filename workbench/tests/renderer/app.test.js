@@ -99,6 +99,7 @@ describe('Various ways to open and close InVEST models', () => {
       modelHumanName: 'Carbon Sequestration',
       argsValues: argsValues,
       status: 'success',
+      type: 'core',
     });
     await InvestJob.saveJob(mockJob);
 
@@ -297,6 +298,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
         results_suffix: 'suffix',
       },
       status: 'error',
+      type: 'core',
     });
     const recentJobs = await InvestJob.saveJob(job2);
     const initialJobs = [job1, job2];
@@ -338,12 +340,14 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
         workspace_dir: 'dir',
       },
       status: 'success',
+      type: 'core',
     });
     const job2 = new InvestJob({
       // argsValues is missing
       modelRunName: MOCK_MODEL_RUN_NAME,
       modelHumanName: 'invest B',
       status: 'success',
+      type: 'core',
     });
     await InvestJob.saveJob(job1);
     await InvestJob.saveJob(job2);
@@ -362,6 +366,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
         workspace_dir: 'dir',
       },
       status: 'success',
+      type: 'core',
     });
     await InvestJob.saveJob(job1);
     const { findByText, queryByText } = render(<App />);
@@ -388,6 +393,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
         workspace_dir: 'work1',
       },
       status: 'success',
+      type: 'core',
     });
     const recentJobs = await InvestJob.saveJob(job1);
 

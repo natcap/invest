@@ -32,6 +32,7 @@ export default class HomeTab extends React.Component {
     const job = new InvestJob({
       modelRunName: value,
       modelHumanName: investList[value].model_name,
+      type: investList[value].type,
     });
     openInvestModel(job);
   }
@@ -65,7 +66,7 @@ export default class HomeTab extends React.Component {
 
     // A button in a table row for each model
     const investButtons = [];
-    sortedModelIds.forEach(async (modelId) => {
+    sortedModelIds.forEach((modelId) => {
       const modelName = investList[modelId].model_name;
       let badge;
       if (investList[modelId].type === 'plugin') {
@@ -132,20 +133,6 @@ function RecentInvestJobs(props) {
   const { recentJobs, openInvestModel } = props;
   const { t } = useTranslation();
 
-  useEffect(() => {
-    ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins').then(
-      (plugins) => {
-        recentJobs.forEach((job) => {
-          if (job && job.argsValues && job.modelHumanName) {
-            if (plugins && Object.keys(plugins).includes(job.modelRunName)) {
-              job.plugin = true;
-            }
-          }
-        });
-      }
-    );
-  }, [recentJobs]);
-
   const handleClick = (jobMetadata) => {
     try {
       openInvestModel(new InvestJob(jobMetadata));
@@ -155,10 +142,10 @@ function RecentInvestJobs(props) {
   };
 
   const recentButtons = [];
-  recentJobs.forEach(async (job) => {
+  recentJobs.forEach((job) => {
     if (job && job.argsValues && job.modelHumanName) {
       let badge;
-      if (job.plugin) {
+      if (job.type === 'plugin') {
         badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
       }
       recentButtons.push(

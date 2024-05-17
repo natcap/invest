@@ -23,11 +23,11 @@ export default function PluginModal(props) {
   const handleModalOpen = () => setShowAddPluginModal(true);
   const handleSubmit = () => {
     setLoading(true);
-    ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, url).then((err) => {
+    ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, url).then((addPluginErr) => {
       setLoading(false);
       updateInvestList();
-      if (err) {
-        setErr(err);
+      if (addPluginErr) {
+        setErr(addPluginErr);
       } else {
         setShowAddPluginModal(false);
       }
@@ -66,10 +66,11 @@ export default function PluginModal(props) {
     modalBody = (
       <Modal.Body>
         <span>{t('Plugin installation failed')}</span>
-        <br /><br />
+        <br />
+        <br />
         <span>{err.toString()}</span>
       </Modal.Body>
-    )
+    );
   }
 
   return (
