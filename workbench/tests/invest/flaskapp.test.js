@@ -48,11 +48,11 @@ beforeAll(async () => {
   const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);
   settingsStore.set('investExe', investExe);
-  flaskSubprocess = await createCoreServerProcess(CORE_PORT);
+  await createCoreServerProcess(CORE_PORT);
 });
 
 afterAll(async () => {
-  await shutdownPythonProcess(flaskSubprocess);
+  await shutdownPythonProcess(settingsStore.get('core.pid'));
 });
 
 describe('requests to flask endpoints', () => {
@@ -207,7 +207,7 @@ describe('Test building model UIs and forum links', () => {
     'urban_flood_risk_mitigation',
     'urban_nature_access',
     'wave_energy',
-    'wind_energy'
+    'wind_energy',
   ];
 
   test.each(models)('test building each model setup tab', async (model) => {

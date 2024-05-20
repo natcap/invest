@@ -148,8 +148,7 @@ export async function createPluginServerProcess(modelName, _port = undefined) {
 
 /**
  * Kill the process running the Flask app
- *
- * @param {ChildProcess} subprocess - such as created by child_process.spawn
+ * @param {number} pid - process ID of the child process to shut down
  * @returns {Promise}
  */
 export async function shutdownPythonProcess(pid) {
