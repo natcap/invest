@@ -100,7 +100,7 @@ Unreleased Changes
       rasters are now correctly stated as mm/month.
       https://github.com/natcap/invest/issues/1571
     * Fixed an issue where the monthly quickflow values were being summed over
-      a block area and not summed pixelwise. This caused the quickflow 
+      a block area and not summed pixelwise. This caused the quickflow
       output ``QF.tif`` to have malformed values.
       https://github.com/natcap/invest/issues/1541
 * Wind Energy
