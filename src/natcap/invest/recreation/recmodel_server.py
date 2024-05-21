@@ -118,15 +118,18 @@ class RecModel(object):
                 "max_year is less than min_year, must be greater or "
                 "equal to")
 
+        # local_cache = os.path.join(cache_workspace, 'local')
         if raw_csv_filename:
+            global_cache = os.path.join(cache_workspace, 'global')
             LOGGER.info('hashing input file')
             LOGGER.info(raw_csv_filename)
             csv_hash = _hashfile(raw_csv_filename, fast_hash=True)
             ooc_qt_picklefilename = os.path.join(
-                cache_workspace, csv_hash + '.pickle')
+                global_cache, csv_hash + '.pickle')
         elif quadtree_pickle_filename:
-            ooc_qt_picklefilename = os.path.join(
-                cache_workspace, quadtree_pickle_filename)
+            # ooc_qt_picklefilename = os.path.join(
+            #     global_cache, quadtree_pickle_filename)
+            ooc_qt_picklefilename = quadtree_pickle_filename
         else:
             raise ValueError(
                 'Both raw_csv_filename and quadtree_pickle_filename'
@@ -142,10 +145,10 @@ class RecModel(object):
                 raise ValueError(f'{raw_csv_filename} does not exist.')
             construct_userday_quadtree(
                 INITIAL_BOUNDING_BOX, [raw_csv_filename], dataset_name,
-                cache_workspace, ooc_qt_picklefilename,
+                global_cache, ooc_qt_picklefilename,
                 max_points_per_node, max_depth)
         self.qt_pickle_filename = ooc_qt_picklefilename
-        self.cache_workspace = cache_workspace
+        self.local_cache_workspace = os.path.join(cache_workspace, 'local')
         self.min_year = min_year
         self.max_year = max_year
 
@@ -172,7 +175,7 @@ class RecModel(object):
     def fetch_workspace_aoi(self, workspace_id):  # pylint: disable=no-self-use
         """Download the AOI of the workspace specified by workspace_id.
 
-        Searches self.cache_workspace for the workspace specified, zips the
+        Searches self.local_cache_workspace for the workspace specified, zips the
         contents, then returns the result as a binary string.
 
         Args:
@@ -183,7 +186,7 @@ class RecModel(object):
 
         """
         # make a random workspace name so we can work in parallel
-        workspace_path = os.path.join(self.cache_workspace, workspace_id)
+        workspace_path = os.path.join(self.local_cache_workspace, workspace_id)
         out_zip_file_path = os.path.join(
             workspace_path, str('server_in')+'.zip')
         with open(out_zip_file_path, 'rb') as out_zipfile:
@@ -211,7 +214,7 @@ class RecModel(object):
         """
         # make a random workspace name so we can work in parallel
         workspace_id = str(uuid.uuid4())
-        workspace_path = os.path.join(self.cache_workspace, workspace_id)
+        workspace_path = os.path.join(self.local_cache_workspace, workspace_id)
         os.makedirs(workspace_path)
 
         # decompress zip
@@ -924,7 +927,7 @@ def execute(args):
     if 'max_points_per_node' in args:
         max_points_per_node = args['max_points_per_node']
 
-    if args['raw_csv_point_data_path']:
+    if 'raw_csv_point_data_path' in args and args['raw_csv_point_data_path']:
         uri = daemon.register(
             RecModel(args['min_year'], args['max_year'], args['cache_workspace'],
                      raw_csv_filename=args['raw_csv_point_data_path'],
