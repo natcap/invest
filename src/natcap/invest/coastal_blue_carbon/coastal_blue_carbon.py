@@ -114,8 +114,10 @@ from .. import gettext
 LOGGER = logging.getLogger(__name__)
 
 INVALID_ANALYSIS_YEAR_MSG = gettext(
-    "Analysis year {analysis_year} must be >= the latest snapshot year "
+    "Analysis year ({analysis_year}) must be greater than the latest snapshot year "
     "({latest_year})")
+MISSING_ANALYSIS_YEAR_MSG = gettext(
+    "Analysis year is required if only one snapshot year is provided.")
 INVALID_TRANSITION_VALUES_MSG = gettext(
     "The transition table expects values of {model_transitions} but found "
     "values of {transition_values}.")
@@ -2174,9 +2176,14 @@ def validate(args, limit_to=None):
             **MODEL_SPEC['args']['landcover_snapshot_csv']
         )['raster_path'].to_dict()
 
+        snapshot_years = set(snapshots.keys())
+        if len(snapshot_years) == 1 and "analysis_year" not in sufficient_keys:
+            validation_warnings.append(
+                (['analysis_year'], MISSING_ANALYSIS_YEAR_MSG))
+
         if ("analysis_year" not in invalid_keys
                 and "analysis_year" in sufficient_keys):
-            if max(set(snapshots.keys())) > int(args['analysis_year']):
+            if max(snapshot_years) >= int(args['analysis_year']):
                 validation_warnings.append((
                     ['analysis_year'],
                     INVALID_ANALYSIS_YEAR_MSG.format(

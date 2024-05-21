@@ -10,13 +10,14 @@
 # scripts/convert-requirements-to-conda-yml.py as though it can only be found
 # on pip.
 
-Cython<3.0.0
 virtualenv>=12.0.1
 pytest
 pytest-subtests
 wheel>=0.27.0
 pypiwin32; sys_platform == 'win32'  # pip-only
-setuptools>=8.0,<60.7.0 # https://github.com/pyinstaller/pyinstaller/issues/6564
+
+# 60.7.0 exception because of https://github.com/pyinstaller/pyinstaller/issues/6564
+setuptools>=8.0,!=60.7.0
 PyInstaller>=4.10
 setuptools_scm>=6.4.0
 requests
