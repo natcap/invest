@@ -2,6 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import i18n from 'i18next';
 
+import Badge from 'react-bootstrap/Badge';
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
@@ -21,11 +22,12 @@ import InvestTab from './components/InvestTab';
 import SettingsModal from './components/SettingsModal';
 import DataDownloadModal from './components/DataDownloadModal';
 import DownloadProgressBar from './components/DownloadProgressBar';
-import { getInvestModelNames } from './server_requests';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 
 const { ipcRenderer } = window.Workbench.electron;
+import { ipcMainChannels } from '../main/ipcMainChannels';
+import { getInvestModelNames } from './server_requests';
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
@@ -50,18 +52,17 @@ export default class App extends React.Component {
     this.saveJob = this.saveJob.bind(this);
     this.clearRecentJobs = this.clearRecentJobs.bind(this);
     this.showDownloadModal = this.showDownloadModal.bind(this);
+    this.updateInvestList = this.updateInvestList.bind(this);
   }
 
   /** Initialize the list of invest models, recent invest jobs, etc. */
   async componentDidMount() {
-    const investList = await getInvestModelNames();
+    const investList = await this.updateInvestList();
     const recentJobs = await InvestJob.getJobStore();
     this.setState({
-      investList: investList,
       // filter out models that do not exist in current version of invest
       recentJobs: recentJobs.filter((job) => (
-        Object.values(investList)
-          .map((m) => m.model_name)
+        Object.keys(investList)
           .includes(job.modelRunName)
       )),
       showDownloadModal: this.props.isFirstRun,
@@ -175,6 +176,23 @@ export default class App extends React.Component {
     });
   }
 
+  async updateInvestList() {
+    const coreModels = {};
+    const investList = await getInvestModelNames();
+    Object.keys(investList).forEach((modelName) => {
+      const modelId = investList[modelName].model_name;
+      coreModels[modelId] = { model_name: modelName, type: 'core' };
+    });
+    const plugins = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins') || {};
+    Object.keys(plugins).forEach((plugin) => {
+      plugins[plugin].type = 'plugin';
+    });
+    this.setState({
+      investList: { ...coreModels, ...plugins },
+    });
+    return { ...coreModels, ...plugins };
+  }
+
   render() {
     const {
       investList,
@@ -212,6 +230,14 @@ export default class App extends React.Component {
         default:
           statusSymbol = '';
       }
+      let badge;
+      if (investList) {
+        const modelType = investList[job.modelRunName].type;
+        if (modelType === 'plugin') {
+          badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
+        }
+      }
+
       investNavItems.push(
         <OverlayTrigger
           key={`${id}-tooltip`}
@@ -237,6 +263,7 @@ export default class App extends React.Component {
                 }
               }}
             >
+              {badge}
               {statusSymbol}
               {` ${job.modelHumanName}`}
             </Nav.Link>
@@ -273,10 +300,12 @@ export default class App extends React.Component {
 
     return (
       <React.Fragment>
-        <DataDownloadModal
-          show={showDownloadModal}
-          closeModal={() => this.showDownloadModal(false)}
-        />
+        {showDownloadModal && (
+          <DataDownloadModal
+            show={showDownloadModal}
+            closeModal={() => this.showDownloadModal(false)}
+          />
+        )}
         <TabContainer activeKey={activeTab}>
           <Navbar
             onDragOver={dragOverHandlerNone}
@@ -343,6 +372,7 @@ export default class App extends React.Component {
                     openInvestModel={this.openInvestModel}
                     recentJobs={recentJobs}
                     batchUpdateArgs={this.batchUpdateArgs}
+                    updateInvestList={this.updateInvestList}
                   />
                 )
                 : <div />}

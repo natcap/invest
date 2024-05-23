@@ -1,9 +1,13 @@
 import importlib
 import re
+import subprocess
 import unittest
 
 import pint
 from natcap.invest.models import model_id_to_pyname
+
+PLUGIN_URL = 'git+https://github.com/emlys/demo-invest-plugin.git'
+PLUGIN_NAME = 'foo-model'
 
 valid_nested_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
@@ -547,6 +551,21 @@ class SpecUtilsTests(unittest.TestCase):
         from natcap.invest import spec_utils
         with self.assertRaises(TypeError):
             spec_utils.format_unit({})
+
+
+class PluginTests(unittest.TestCase):
+    """Tests for natcap.invest plugins."""
+
+    def tearDown(self):
+        subprocess.run(['pip', 'uninstall', '--yes', PLUGIN_NAME])
+
+    def test_plugin(self):
+        """natcap.invest locates plugin as a namespace package."""
+        from natcap.invest import models
+        self.assertNotIn('foo', models.model_id_to_spec.keys())
+        subprocess.run(['pip', 'install', '--no-deps', PLUGIN_URL])
+        models = importlib.reload(models)
+        self.assertIn('foo', models.model_id_to_spec.keys())
 
 
 if __name__ == '__main__':

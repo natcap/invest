@@ -323,6 +323,11 @@ exceed 100% of window.*/
 }
 
 /* InVEST Model Tab */
+.invest-tab-loading {
+  font-size: 2rem;
+  text-align: center;
+  margin-top: 2rem;
+}
 
 .invest-main-col {
    /* main col can grow & shrink, sidebar cannot. */
