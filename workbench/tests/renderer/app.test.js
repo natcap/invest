@@ -393,7 +393,8 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
         workspace_dir: 'work1',
       },
       status: 'success',
-      type: 'core',
+      // leave out the 'type' attribute to make sure it defaults to core
+      // for backwards compatibility
     });
     const recentJobs = await InvestJob.saveJob(job1);
 

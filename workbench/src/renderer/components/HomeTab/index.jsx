@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 
 import Badge from 'react-bootstrap/Badge';
@@ -9,13 +9,11 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import { useTranslation } from 'react-i18next';
 
-import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
 import PluginModal from '../PluginModal';
 
 const { logger } = window.Workbench;
-const { ipcRenderer } = window.Workbench.electron;
 
 /**
  * Renders a table of buttons for each invest model and

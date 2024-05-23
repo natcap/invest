@@ -155,7 +155,6 @@ export async function shutdownPythonProcess(pid) {
   // builtin kill() method on a nodejs ChildProcess doesn't work on windows.
   try {
     if (process.platform !== 'win32') {
-      // the '-' prefix on pid sends signal to children as well
       pidToSubprocess[pid.toString()].kill();
     } else {
       execSync(`taskkill /pid ${pid} /t /f`);
