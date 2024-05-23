@@ -1,5 +1,3 @@
-# coding=UTF-8
-# cython: language_level=2
 """
 Implements the Wang et al (2000) viewshed based on reference planes.
 
@@ -307,9 +305,9 @@ cdef class _ManagedRaster:
         self.block_xbits = numpy.log2(self.block_xsize)
         self.block_ybits = numpy.log2(self.block_ysize)
         self.block_nx = (
-            self.raster_x_size + (self.block_xsize) - 1) / self.block_xsize
+            self.raster_x_size + (self.block_xsize) - 1) // self.block_xsize
         self.block_ny = (
-            self.raster_y_size + (self.block_ysize) - 1) / self.block_ysize
+            self.raster_y_size + (self.block_ysize) - 1) // self.block_ysize
 
         self.lru_cache = new LRUCache[int, double*](MANAGED_RASTER_N_BLOCKS)
         self.raster_path = <bytes> raster_path
@@ -375,7 +373,7 @@ cdef class _ManagedRaster:
             if dirty_itr != self.dirty_blocks.end():
                 self.dirty_blocks.erase(dirty_itr)
                 block_xi = block_index % self.block_nx
-                block_yi = block_index / self.block_nx
+                block_yi = block_index // self.block_nx
 
                 # we need the offsets to subtract from global indexes for
                 # cached array
@@ -439,7 +437,7 @@ cdef class _ManagedRaster:
 
     cdef void _load_block(self, int block_index) except *:
         cdef int block_xi = block_index % self.block_nx
-        cdef int block_yi = block_index / self.block_nx
+        cdef int block_yi = block_index // self.block_nx
 
         # we need the offsets to subtract from global indexes for cached array
         cdef int xoff = block_xi << self.block_xbits
@@ -500,7 +498,7 @@ cdef class _ManagedRaster:
                     self.dirty_blocks.erase(dirty_itr)
 
                     block_xi = block_index % self.block_nx
-                    block_yi = block_index / self.block_nx
+                    block_yi = block_index // self.block_nx
 
                     xoff = block_xi << self.block_xbits
                     yoff = block_yi << self.block_ybits
@@ -815,23 +813,7 @@ def viewshed(dem_raster_path_band,
             if target_distance > max_visible_radius:
                 break
 
-            # This is a weird platform-specific workaround addressing
-            # https://github.com/natcap/invest/issues/1562
-            # On M1 macs, the all-in-one-line addition of _product and r_v
-            # would create small but noticeable numerical error.  Breaking the
-            # calculation onto two lines eliminates the numerical error.  This
-            # behavior is reproducible in C, outside of Cython on an M1 mac.
-            # So, this calculation would introduce error:
-            #   z = (((previous_height-r_v)/slope_distance) * target_distance) + r_v
-            # while the formlation below does not.
-            # For the script used for testing, see
-            #  https://gist.github.com/phargogh/c4264b37e7f0beed31661eacce53d14a
-            #
-            # Some of this may be related to the fact that x86 chips have
-            # extended precision for FPU-based calculations while M1 ARM chips
-            # do not.  Still, that doesn't explain why the error is introduced.
-            _product = (((previous_height-r_v)/slope_distance) * target_distance)
-            z = _product + r_v
+            z = (((previous_height-r_v)/slope_distance) * target_distance) + r_v
 
             # add on refractivity/curvature-of-earth calculations.
             adjustment = 0.0  # increase in required height due to curvature

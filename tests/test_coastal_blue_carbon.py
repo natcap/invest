@@ -1034,3 +1034,28 @@ class TestCBC2(unittest.TestCase):
                 expected_year_of_disturbance)
         finally:
             raster = None
+
+    def test_validate_required_analysis_year(self):
+        """CBC: analysis year validation (regression test for #1534)."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
+
+        args = TestCBC2._create_model_args(self.workspace_dir)
+        args['workspace_dir'] = self.workspace_dir
+        args['analysis_year'] = None
+        # truncate the CSV so that it has only one snapshot year
+        with open(args['landcover_snapshot_csv'], 'r') as file:
+            lines = file.readlines()
+        with open(args['landcover_snapshot_csv'], 'w') as file:
+            file.writelines(lines[:2])
+        validation_warnings = coastal_blue_carbon.validate(args)
+        self.assertEqual(
+            validation_warnings,
+            [(['analysis_year'], coastal_blue_carbon.MISSING_ANALYSIS_YEAR_MSG)])
+
+        args['analysis_year'] = 2000  # set analysis year equal to snapshot year
+        validation_warnings = coastal_blue_carbon.validate(args)
+        self.assertEqual(
+            validation_warnings,
+            [(['analysis_year'],
+                coastal_blue_carbon.INVALID_ANALYSIS_YEAR_MSG.format(
+                    analysis_year=2000, latest_year=2000))])
