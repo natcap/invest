@@ -109,7 +109,8 @@ class BufferedNumpyDiskMap(object):
                     where array_id=? LIMIT 1""", [array_id])
             array_path = db_cursor.fetchone()
             if array_path is not None:
-                _npy_append(array_path[0], numpy.concatenate(array_deque))
+                _npy_append(os.path.join(
+                    self.manager_directory, array_path[0]), numpy.concatenate(array_deque))
                 array_deque = None
                 # cache gets wiped at end so okay to use same deque
                 # array_deque.append(numpy.load(array_path[0]))
@@ -122,8 +123,9 @@ class BufferedNumpyDiskMap(object):
                 # off the last two characters in the filename
                 array_filename = uuid.uuid4().hex + '.npy'
                 # -6:-4 skips the extension and gets the last 2 characters
+                array_subdirectory = array_filename[-6:-4]
                 array_directory = os.path.join(
-                    self.manager_directory, array_filename[-6:-4])
+                    self.manager_directory, array_subdirectory)
                 if not os.path.isdir(array_directory):
                     os.mkdir(array_directory)
                 array_path = os.path.join(array_directory, array_filename)
@@ -131,7 +133,8 @@ class BufferedNumpyDiskMap(object):
                 array_data = numpy.concatenate(array_deque)
                 array_deque = None
                 numpy.save(array_path, array_data)
-                insert_list.append((array_id, array_path))
+                # insert_list.append((array_id, array_path))
+                insert_list.append((array_id, os.path.join(array_subdirectory, array_filename)))
         db_connection.close()
         return insert_list
 
@@ -193,7 +196,7 @@ class BufferedNumpyDiskMap(object):
         db_connection.close()
 
         if array_path is not None:
-            array_data = numpy.load(array_path[0])
+            array_data = numpy.load(os.path.join(self.manager_directory, array_path[0]))
         else:
             array_data = numpy.empty(
                 0, dtype=BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE)
@@ -215,10 +218,11 @@ class BufferedNumpyDiskMap(object):
             [array_id])
         array_path = db_cursor.fetchone()
         if array_path is not None:
-            os.remove(array_path[0])
+            array_abs_path = os.path.join(self.manager_directory, array_path[0])
+            os.remove(array_abs_path)
             try:
                 # attempt to remove the directory if it's empty
-                os.rmdir(os.path.dirname(array_path[0]))
+                os.rmdir(os.path.dirname(array_abs_path))
             except OSError:
                 # it's not empty, not a big deal
                 pass

@@ -130,6 +130,7 @@ class RecModel(object):
             # ooc_qt_picklefilename = os.path.join(
             #     global_cache, quadtree_pickle_filename)
             ooc_qt_picklefilename = quadtree_pickle_filename
+            global_cache = os.path.dirname(ooc_qt_picklefilename)
         else:
             raise ValueError(
                 'Both raw_csv_filename and quadtree_pickle_filename'
@@ -138,6 +139,7 @@ class RecModel(object):
         if os.path.isfile(ooc_qt_picklefilename):
             LOGGER.info(
                 '%s quadtree already exists', ooc_qt_picklefilename)
+            ooc_qt_picklefilename = transplant_quadtree(ooc_qt_picklefilename, cache_workspace)
         else:
             LOGGER.info(
                 '%s not found, constructing quadtree', ooc_qt_picklefilename)
@@ -149,6 +151,7 @@ class RecModel(object):
                 max_points_per_node, max_depth)
         self.qt_pickle_filename = ooc_qt_picklefilename
         self.local_cache_workspace = os.path.join(cache_workspace, 'local')
+        # self.global_cache_dir = global_cache
         self.min_year = min_year
         self.max_year = max_year
 
@@ -283,8 +286,10 @@ class RecModel(object):
         pud_poly_feature_queue = multiprocessing.Queue(4)
         n_polytest_processes = multiprocessing.cpu_count()
 
+        LOGGER.info(f'OPENING {self.qt_pickle_filename}')
         with open(self.qt_pickle_filename, 'rb') as qt_pickle:
             global_qt = pickle.load(qt_pickle)
+
         aoi_layer = aoi_vector.GetLayer()
         aoi_extent = aoi_layer.GetExtent()
         aoi_ref = aoi_layer.GetSpatialRef()
@@ -1010,3 +1015,32 @@ def _hashfile(file_path, blocksize=2**20, fast_hash=False):
     if fast_hash:
         file_hash += '_fast_hash'
     return file_hash
+
+def transplant_quadtree(qt_pickle_filepath, workspace):
+    storage_dir = os.path.dirname(qt_pickle_filepath)
+    pickle_filepath = qt_pickle_filepath
+
+    def rename_managers(qt):
+        if qt.is_leaf:
+            qt.node_data_manager.manager_filename = f'{qt_pickle_filepath}.db'
+            qt.node_data_manager.manager_directory = os.path.dirname(qt_pickle_filepath)
+            qt.quad_tree_storage_dir = storage_dir
+        else:
+            [rename_managers(qt.nodes[index]) for index in range(4)]
+        return qt
+
+    with open(qt_pickle_filepath, 'rb') as qt_pickle:
+        global_qt = pickle.load(qt_pickle)
+
+    if global_qt.quad_tree_storage_dir != storage_dir:
+        LOGGER.info(
+            f'setting quadtree node references to the local filesystem '
+            f'{storage_dir}')
+        new_qt = rename_managers(global_qt)
+        pickle_filepath = os.path.join(
+            workspace, f'transplant_{os.path.basename(qt_pickle_filepath)}')
+        LOGGER.info(
+            f'writing new quadtree index to {pickle_filepath}')
+        with open(pickle_filepath, 'wb') as qt_pickle:
+            pickle.dump(new_qt, qt_pickle)
+    return pickle_filepath
