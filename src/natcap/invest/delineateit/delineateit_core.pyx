@@ -1,4 +1,3 @@
-# cython: language_level=3
 import numpy
 import pygeoprocessing
 cimport numpy
@@ -105,5 +104,3 @@ cpdef cset[cpair[double, double]] calculate_pour_point_array(
     # return set of (x, y) coordinates referenced to the same coordinate system
     # as the original raster
     return pour_points
-
-
