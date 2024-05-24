@@ -8,15 +8,17 @@ logging.basicConfig(
     format='%(asctime)s %(name)-20s %(levelname)-8s %(message)s',
     level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-cache_workspace = '/home/dmf/projects/recreation/'
+# a writeable dir, not the read-only mounted volume
+cache_workspace = '/home/davemfish/twitter/server/'
+mounted_volume = os.path.join(cache_workspace, 'cache')
 args = {
-    'hostname': '127.0.0.1',  # the local IP for the server
+    'hostname': '10.240.0.6',  # the local IP for the server
     'port': 54322,
     'max_year': 2021,
     'min_year': 2017,
     'cache_workspace': cache_workspace,
     'quadtree_pickle_filename': os.path.join(
-        cache_workspace, 'gcs/twitter_quadtree/global_twitter_qt.pickle')
+        mounted_volume, 'global_twitter_qt.pickle')
 }
 
 if __name__ == '__main__':

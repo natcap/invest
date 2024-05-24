@@ -1,4 +1,4 @@
 #!/bin/bash
-source /home/davemfish/miniconda3/etc/profile.d/conda.sh
-conda activate ./invest/env/
-nohup python -u execute_recmodel_server.py > nohup_recmodel_server.txt 2>&1 &
+# source /home/davemfish/miniconda3/etc/profile.d/conda.sh
+# mamba activate /home/davemfish/twitter/invest/env/
+nohup python -u execute_recmodel_server_twitter.py > /home/davemfish/twitter/recmodel_server_log.txt 2>&1 &
