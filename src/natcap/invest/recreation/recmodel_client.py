@@ -39,8 +39,11 @@ from ..unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-# This URL is a NatCap global constant
-RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_py36/'  # pylint: disable=line-too-long
+# NatCap Rec Server URLs
+SERVER_URL_DICT = {
+    'photos': 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_py36/index.html',  # pylint: disable=line-too-long
+    'tweets': 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_twitter/index.html',  # pylint: disable=line-too-long
+}
 
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
@@ -109,6 +112,18 @@ MODEL_SPEC = {
             **spec_utils.AOI,
             "about": gettext("Map of area(s) over which to run the model.")
         },
+        "visitation_proxy": {
+            "type": "option_string",
+            "options": {
+                "photos": {"display_name": gettext("photos")},
+                "tweets": {"display_name": gettext("tweets")}
+            },
+            "required": True,
+            "about": gettext(
+                "Choose which geotagged social media dataset will be "
+                "used to calculate userdays, a proxy for visitation rates."),
+            "name": gettext("visitation proxy")
+        },
         "hostname": {
             "type": "freestyle_string",
             "required": False,
@@ -140,7 +155,7 @@ MODEL_SPEC = {
         },
         "end_year": {
             "type": "number",
-            "expression": "2005 <= value <= 2017",
+            "expression": "2012 <= value <= 2017",
             "units": u.year_AD,
             "about": gettext(
                 "Year at which to end photo user-day calculations. "
@@ -447,7 +462,8 @@ def execute(args):
     else:
         # else use a well known path to get active server
         server_url = urllib.request.urlopen(
-            RECREATION_SERVER_URL).read().decode('utf-8').rstrip()
+            SERVER_URL_DICT[args['visitation_proxy']]).read().decode('utf-8').rstrip()
+        LOGGER.info(server_url)
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     output_dir = args['workspace_dir']
