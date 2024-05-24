@@ -272,7 +272,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: workbench/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('workbench/yarn.lock') }}
 
       - name: Install workbench dependencies
         if: steps.nodemodules-cache.outputs.cache-hit != 'true'
@@ -313,7 +313,11 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
-          requirements-files: requirements.txt requirements-dev.txt requirements-docs.txt
+          requirements-files: |
+            requirements.txt
+            requirements-dev.txt
+            requirements-docs.txt
+            constraints_tests.txt
           requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pandoc
 
       - name: Make install
@@ -347,7 +351,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: workbench/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('workbench/yarn.lock') }}
 
       - name: Install Workbench Dependencies
         if: steps.nodemodules-cache.outputs.cache-hit != 'true'

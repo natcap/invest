@@ -1,5 +1,3 @@
-# cython: profile=True
-# cython: language_level=2
 """A hierarchical spatial index for fast culling of points in 2D space."""
 
 import os
@@ -22,7 +20,7 @@ from osgeo import osr
 cimport numpy
 
 MAX_BYTES_TO_BUFFER = 2**27  # buffer a little over 128 megabytes
-import buffered_numpy_disk_map
+from natcap.invest.recreation import buffered_numpy_disk_map
 _ARRAY_TUPLE_TYPE = (
     buffered_numpy_disk_map.BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE)
 
