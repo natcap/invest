@@ -237,18 +237,18 @@ class RecModel(object):
         numpy_date_range = (
             numpy.datetime64(date_range[0]),
             numpy.datetime64(date_range[1]))
-        base_pud_aoi_path, monthly_table_path, _ = (
+        base_ud_aoi_path, monthly_table_path, _ = (
             self._calc_aggregated_points_in_aoi(
                 aoi_path, workspace_path, numpy_date_range,
                 out_vector_filename))
 
         # ZIP and stream the result back
         LOGGER.info('zipping result')
-        aoi_pud_archive_path = os.path.join(
-            workspace_path, 'aoi_pud_result.zip')
-        with zipfile.ZipFile(aoi_pud_archive_path, 'w') as myzip:
+        aoi_ud_archive_path = os.path.join(
+            workspace_path, 'aoi_ud_result.zip')
+        with zipfile.ZipFile(aoi_ud_archive_path, 'w') as myzip:
             for filename in glob.glob(
-                    os.path.splitext(base_pud_aoi_path)[0] + '.*'):
+                    os.path.splitext(base_ud_aoi_path)[0] + '.*'):
                 myzip.write(filename, os.path.basename(filename))
             myzip.write(
                 monthly_table_path, os.path.basename(monthly_table_path))
@@ -256,8 +256,8 @@ class RecModel(object):
         LOGGER.info(
             'calc user days complete sending binary back on %s',
             workspace_path)
-        with open(aoi_pud_archive_path, 'rb') as aoi_pud_archive:
-            return aoi_pud_archive.read(), workspace_id
+        with open(aoi_ud_archive_path, 'rb') as aoi_ud_archive:
+            return aoi_ud_archive.read(), workspace_id
 
     def _calc_aggregated_points_in_aoi(
             self, aoi_path, workspace_path, date_range, out_vector_filename):
@@ -277,13 +277,13 @@ class RecModel(object):
 
         """
         aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
-        # append a _pud to the aoi filename
-        out_aoi_pud_path = os.path.join(workspace_path, out_vector_filename)
+        # append a _ud to the aoi filename
+        out_aoi_ud_path = os.path.join(workspace_path, out_vector_filename)
 
         # start the workers now, because they have to load a quadtree and
         # it will take some time
         poly_test_queue = multiprocessing.Queue()
-        pud_poly_feature_queue = multiprocessing.Queue(4)
+        ud_poly_feature_queue = multiprocessing.Queue(4)
         n_polytest_processes = multiprocessing.cpu_count()
 
         LOGGER.info(f'OPENING {self.qt_pickle_filename}')
@@ -396,9 +396,9 @@ class RecModel(object):
         polytest_process_list = []
         for _ in range(n_polytest_processes):
             polytest_process = multiprocessing.Process(
-                target=_calc_poly_pud, args=(
+                target=_calc_poly_ud, args=(
                     local_qt_pickle_filename, aoi_path, date_range,
-                    poly_test_queue, pud_poly_feature_queue))
+                    poly_test_queue, ud_poly_feature_queue))
             polytest_process.daemon = True
             polytest_process.start()
             polytest_process_list.append(polytest_process)
@@ -406,32 +406,32 @@ class RecModel(object):
         # Copy the input shapefile into the designated output folder
         LOGGER.info('Creating a copy of the input shapefile')
         driver = gdal.GetDriverByName('ESRI Shapefile')
-        pud_aoi_vector = driver.CreateCopy(out_aoi_pud_path, aoi_vector)
-        pud_aoi_layer = pud_aoi_vector.GetLayer()
+        ud_aoi_vector = driver.CreateCopy(out_aoi_ud_path, aoi_vector)
+        ud_aoi_layer = ud_aoi_vector.GetLayer()
 
         aoi_layer = None
         gdal.Dataset.__swig_destroy__(aoi_vector)
         aoi_vector = None
 
-        pud_id_suffix_list = [
+        ud_id_suffix_list = [
             'YR_AVG', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG',
             'SEP', 'OCT', 'NOV', 'DEC']
-        for field_suffix in pud_id_suffix_list:
+        for field_suffix in ud_id_suffix_list:
             field_id = 'PUD_%s' % field_suffix
             # delete the field if it already exists
-            field_index = pud_aoi_layer.FindFieldIndex(str(field_id), 1)
+            field_index = ud_aoi_layer.FindFieldIndex(str(field_id), 1)
             if field_index >= 0:
-                pud_aoi_layer.DeleteField(field_index)
+                ud_aoi_layer.DeleteField(field_index)
             field_defn = ogr.FieldDefn(field_id, ogr.OFTReal)
             field_defn.SetWidth(24)
             field_defn.SetPrecision(11)
-            pud_aoi_layer.CreateField(field_defn)
+            ud_aoi_layer.CreateField(field_defn)
 
         last_time = time.time()
         LOGGER.info('testing polygons against quadtree')
 
         # Load up the test queue with polygons
-        for poly_feat in pud_aoi_layer:
+        for poly_feat in ud_aoi_layer:
             poly_test_queue.put(poly_feat.GetFID())
 
         # Fill the queue with STOPs for each process
@@ -453,7 +453,7 @@ class RecModel(object):
             monthly_table.write('poly_id,' + ','.join(table_headers) + '\n')
 
             while True:
-                result_tuple = pud_poly_feature_queue.get()
+                result_tuple = ud_poly_feature_queue.get()
                 n_poly_tested += 1
                 if result_tuple == 'STOP':
                     n_processes_alive -= 1
@@ -463,31 +463,31 @@ class RecModel(object):
                 last_time = recmodel_client.delay_op(
                     last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                         '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
-                        pud_aoi_layer.GetFeatureCount()))
-                poly_id, pud_list, pud_monthly_set = result_tuple
-                poly_feat = pud_aoi_layer.GetFeature(poly_id)
-                for pud_index, pud_id in enumerate(pud_id_suffix_list):
-                    poly_feat.SetField('PUD_%s' % pud_id, pud_list[pud_index])
-                pud_aoi_layer.SetFeature(poly_feat)
+                        ud_aoi_layer.GetFeatureCount()))
+                poly_id, ud_list, ud_monthly_set = result_tuple
+                poly_feat = ud_aoi_layer.GetFeature(poly_id)
+                for ud_index, ud_id in enumerate(ud_id_suffix_list):
+                    poly_feat.SetField('PUD_%s' % ud_id, ud_list[ud_index])
+                ud_aoi_layer.SetFeature(poly_feat)
 
                 line = '%s,' % poly_id
                 line += (
-                    ",".join(['%s' % len(pud_monthly_set[header])
+                    ",".join(['%s' % len(ud_monthly_set[header])
                               for header in table_headers]))
                 line += '\n'  # final newline
                 monthly_table.write(line)
 
         LOGGER.info('done with polygon test, syncing to disk')
-        pud_aoi_layer = None
-        pud_aoi_vector.FlushCache()
-        gdal.Dataset.__swig_destroy__(pud_aoi_vector)
-        pud_aoi_vector = None
+        ud_aoi_layer = None
+        ud_aoi_vector.FlushCache()
+        gdal.Dataset.__swig_destroy__(ud_aoi_vector)
+        ud_aoi_vector = None
 
         for polytest_process in polytest_process_list:
             polytest_process.join()
 
         LOGGER.info('returning out shapefile path')
-        return out_aoi_pud_path, monthly_table_path, len(local_points)
+        return out_aoi_ud_path, monthly_table_path, len(local_points)
 
 
 def _parse_big_input_csv(
@@ -815,9 +815,9 @@ def build_quadtree_shape(
     quadtree.build_node_shapes(polygon_layer)
 
 
-def _calc_poly_pud(
+def _calc_poly_ud(
         local_qt_pickle_path, aoi_path, date_range, poly_test_queue,
-        pud_poly_feature_queue):
+        ud_poly_feature_queue):
     """Load a pre-calculated quadtree and test incoming polygons against it.
 
     Updates polygons with a PUD and send back out on the queue.
@@ -829,8 +829,8 @@ def _calc_poly_pud(
             and stop dates
         poly_test_queue (multiprocessing.Queue): queue with incoming
             ogr.Features
-        pud_poly_feature_queue (multiprocessing.Queue): queue to put outgoing
-            (fid, pud) tuple
+        ud_poly_feature_queue (multiprocessing.Queue): queue to put outgoing
+            (fid, ud) tuple
 
     Returns:
         None
@@ -860,8 +860,8 @@ def _calc_poly_pud(
                 continue
             poly_points = local_qt.get_intersecting_points_in_polygon(
                 shapely_polygon)
-            pud_set = set()
-            pud_monthly_set = collections.defaultdict(set)
+            ud_set = set()
+            ud_monthly_set = collections.defaultdict(set)
             for point_datetime, user_hash, _, _ in poly_points:
                 if date_range[0] <= point_datetime <= date_range[1]:
                     timetuple = point_datetime.tolist().timetuple()
@@ -869,24 +869,24 @@ def _calc_poly_pud(
                     year = str(timetuple.tm_year)
                     month = str(timetuple.tm_mon)
                     day = str(timetuple.tm_mday)
-                    pud_hash = str(user_hash) + '%s-%s-%s' % (year, month, day)
-                    pud_set.add(pud_hash)
-                    pud_monthly_set[month].add(pud_hash)
-                    pud_monthly_set["%s-%s" % (year, month)].add(pud_hash)
+                    ud_hash = str(user_hash) + '%s-%s-%s' % (year, month, day)
+                    ud_set.add(ud_hash)
+                    ud_monthly_set[month].add(ud_hash)
+                    ud_monthly_set["%s-%s" % (year, month)].add(ud_hash)
 
             # calculate the number of years and months between the max/min dates
             # index 0 is annual and 1-12 are the months
-            pud_averages = [0.0] * 13
+            ud_averages = [0.0] * 13
             n_years = (
                 date_range[1].tolist().timetuple().tm_year -
                 date_range[0].tolist().timetuple().tm_year + 1)
-            pud_averages[0] = len(pud_set) / float(n_years)
+            ud_averages[0] = len(ud_set) / float(n_years)
             for month_id in range(1, 13):
-                monthly_pud_set = pud_monthly_set[str(month_id)]
-                pud_averages[month_id] = (
-                    len(monthly_pud_set) / float(n_years))
-            pud_poly_feature_queue.put((poly_id, pud_averages, pud_monthly_set))
-    pud_poly_feature_queue.put('STOP')
+                monthly_ud_set = ud_monthly_set[str(month_id)]
+                ud_averages[month_id] = (
+                    len(monthly_ud_set) / float(n_years))
+            ud_poly_feature_queue.put((poly_id, ud_averages, ud_monthly_set))
+    ud_poly_feature_queue.put('STOP')
     aoi_layer = None
     gdal.Dataset.__swig_destroy__(aoi_vector)
     aoi_vector = None
