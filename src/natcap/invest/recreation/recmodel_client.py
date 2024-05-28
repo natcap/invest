@@ -465,7 +465,8 @@ def execute(args):
     else:
         # else use a well known path to get active server
         server_url = urllib.request.urlopen(
-            SERVER_URL_DICT[args['visitation_proxy']]).read().decode('utf-8').rstrip()
+            SERVER_URL_DICT[args['visitation_proxy']]
+        ).read().decode('utf-8').rstrip()
         LOGGER.info(server_url)
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
