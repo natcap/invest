@@ -164,7 +164,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          - fetch-depth: 0  # Fetch complete history for accurate versioning
+          fetch-depth: 0  # Fetch complete history for accurate versioning
 
       - uses: ./.github/actions/setup_env
         with:
