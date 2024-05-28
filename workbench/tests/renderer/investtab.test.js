@@ -71,6 +71,7 @@ describe('Run status Alert renders with status from a recent run', () => {
 
   afterEach(() => {
     removeIpcMainListeners();
+    jest.resetAllMocks();
   });
 
   test.each([
@@ -78,6 +79,9 @@ describe('Run status Alert renders with status from a recent run', () => {
     ['error', 'Error: see log for details'],
     ['canceled', 'Run Canceled'],
   ])('status message displays on %s', async (status, message) => {
+    // mock a defined value for ipcMainChannels.INVEST_SERVE so the tab loads
+    ipcRenderer.invoke.mockResolvedValueOnce('foo');
+
     const job = new InvestJob({
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Model',
@@ -94,6 +98,8 @@ describe('Run status Alert renders with status from a recent run', () => {
   test.each([
     'success', 'error', 'canceled',
   ])('Open Workspace button is available on %s', async (status) => {
+    // mock a defined value for ipcMainChannels.INVEST_SERVE so the tab loads
+    ipcRenderer.invoke.mockResolvedValueOnce('foo');
     const job = new InvestJob({
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Model',
@@ -136,6 +142,12 @@ describe('Sidebar Buttons', () => {
     fetchArgsEnabled.mockResolvedValue({ workspace: true, port: true });
     setupOpenExternalUrl();
     setupOpenLocalHtml();
+    ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === ipcMainChannels.SHOW_SAVE_DIALOG) {
+        return { canceled: false, filePath: 'foo.json' };
+      }
+      return {};
+    });
   });
 
   afterEach(() => {
@@ -145,8 +157,6 @@ describe('Sidebar Buttons', () => {
   test('Save to JSON: requests endpoint with correct payload', async () => {
     const response = 'saved';
     writeParametersToFile.mockResolvedValue(response);
-    const mockDialogData = { canceled: false, filePath: 'foo.json' };
-    ipcRenderer.invoke.mockResolvedValueOnce(mockDialogData);
 
     const { findByText, findByLabelText, findByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');

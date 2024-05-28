@@ -1049,23 +1049,13 @@ def _validate_threat_path(threat_path, lulc_key):
     """
     # Checking threat path exists to control custom error messages
     # for user readability.
-    try:
-        threat_gis_type = pygeoprocessing.get_gis_type(threat_path)
-        if threat_gis_type != pygeoprocessing.RASTER_TYPE:
-            # Raise a value error with custom message to help users
-            # debug threat raster issues
-            if lulc_key != '_b':
-                return "error"
-            # it's OK to have no threat raster w/ baseline scenario
-            else:
-                return None
-        else:
-            return threat_path
-    except ValueError:
-        if lulc_key != '_b':
-            return "error"
-        else:
+    if threat_path:
+        return threat_path
+    else:
+        if lulc_key == '_b':
             return None
+        else:
+            return 'error'
 
 
 @validation.invest_validator

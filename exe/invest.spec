@@ -31,6 +31,7 @@ kwargs = {
         'pkg_resources.py2_warn',
         'cmath',
         'charset_normalizer',
+        'scipy.special._cdflib'
     ],
     'datas': [proj_datas],
     'cipher': block_cipher,

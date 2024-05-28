@@ -84,7 +84,14 @@ MODEL_SPEC = {
             "contents": {
                 # monthly precipitation maps, each file ending in a number 1-12
                 "[MONTH]": {
-                    **spec_utils.PRECIP,
+                    "type": "raster",
+                    "bands": {
+                        1: {
+                            "type": "number",
+                            "units": u.millimeter/u.month,
+                        },
+                    },
+                    "name": gettext("precipitation"),
                     "about": gettext(
                         "Twelve files, one for each month. File names must "
                         "end with the month number (1-12). For example, "
@@ -916,7 +923,7 @@ def execute(args):
             ],
             dependent_task_list=[
                 align_task, flow_dir_task, stream_threshold_task,
-                fill_pit_task, qf_task] + quick_flow_task_list,
+                fill_pit_task] + quick_flow_task_list,
             task_name='calculate local recharge')
 
     # calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
@@ -988,7 +995,7 @@ def execute(args):
 
 
 # raster_map equation: sum the monthly qfis
-def qfi_sum_op(*qf_values): return numpy.sum(qf_values)
+def qfi_sum_op(*qf_values): return numpy.sum(qf_values, axis=0)
 
 
 def _calculate_l_avail(l_path, gamma, target_l_avail_path):

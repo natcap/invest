@@ -1,5 +1,3 @@
-# cython: profile=False
-# cython: language_level=2
 import tempfile
 import logging
 import os
@@ -129,9 +127,9 @@ cdef class _ManagedRaster:
         self.block_xbits = numpy.log2(self.block_xsize)
         self.block_ybits = numpy.log2(self.block_ysize)
         self.block_nx = (
-            self.raster_x_size + (self.block_xsize) - 1) / self.block_xsize
+            self.raster_x_size + (self.block_xsize) - 1) // self.block_xsize
         self.block_ny = (
-            self.raster_y_size + (self.block_ysize) - 1) / self.block_ysize
+            self.raster_y_size + (self.block_ysize) - 1) // self.block_ysize
 
         self.lru_cache = new LRUCache[int, double*](MANAGED_RASTER_N_BLOCKS)
         self.raster_path = <bytes> raster_path
@@ -197,7 +195,7 @@ cdef class _ManagedRaster:
             if dirty_itr != self.dirty_blocks.end():
                 self.dirty_blocks.erase(dirty_itr)
                 block_xi = block_index % self.block_nx
-                block_yi = block_index / self.block_nx
+                block_yi = block_index // self.block_nx
 
                 # we need the offsets to subtract from global indexes for
                 # cached array
@@ -261,7 +259,7 @@ cdef class _ManagedRaster:
 
     cdef void _load_block(self, int block_index) except *:
         cdef int block_xi = block_index % self.block_nx
-        cdef int block_yi = block_index / self.block_nx
+        cdef int block_yi = block_index // self.block_nx
 
         # we need the offsets to subtract from global indexes for cached array
         cdef int xoff = block_xi << self.block_xbits
@@ -322,7 +320,7 @@ cdef class _ManagedRaster:
                     self.dirty_blocks.erase(dirty_itr)
 
                     block_xi = block_index % self.block_nx
-                    block_yi = block_index / self.block_nx
+                    block_yi = block_index // self.block_nx
 
                     xoff = block_xi << self.block_xbits
                     yoff = block_yi << self.block_ybits
@@ -415,9 +413,9 @@ def ndr_eff_calculation(
 
     # create direction raster in bytes
     def _mfd_to_flow_dir_op(mfd_array):
-        result = numpy.zeros(mfd_array.shape, dtype=numpy.int8)
+        result = numpy.zeros(mfd_array.shape, dtype=numpy.uint8)
         for i in range(8):
-            result[:] |= (((mfd_array >> (i*4)) & 0xF) > 0) << i
+            result[:] |= ((((mfd_array >> (i*4)) & 0xF) > 0) << i).astype(numpy.uint8)
         return result
 
     pygeoprocessing.raster_calculator(
@@ -488,7 +486,7 @@ def ndr_eff_calculation(
             # hasn't already been set for processing.
             flat_index = processing_stack.top()
             processing_stack.pop()
-            global_row = flat_index / n_cols
+            global_row = flat_index // n_cols
             global_col = flat_index % n_cols
 
             crit_len = <float>crit_len_raster.get(global_col, global_row)

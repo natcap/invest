@@ -2,7 +2,7 @@
 name = "natcap.invest"
 description = "InVEST Ecosystem Service models"
 readme = "README_PYTHON.rst"
-requires-python = ">=3.8,<3.12"
+requires-python = ">=3.8"
 license = {file = "LICENSE.txt"}
 maintainers = [
     {name = "Natural Capital Project Software Team"}
@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Cython",
     "License :: OSI Approved :: BSD License",
     "Topic :: Scientific/Engineering :: GIS"
@@ -44,7 +45,7 @@ invest = "natcap.invest.cli:main"
 # that we can provide a much easier build experience so long as GDAL is
 # available at runtime.
 requires = [
-    'setuptools>=61', 'wheel', 'setuptools_scm>=8.0', 'cython', 'babel',
+    'setuptools>=61', 'wheel', 'setuptools_scm>=8.0', 'cython>=3.0.0', 'babel',
     'oldest-supported-numpy'
 ]
 build-backend = "setuptools.build_meta"
@@ -78,4 +79,11 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 # raise warnings to errors, except for deprecation warnings
-filterwarnings = ["error", "default::DeprecationWarning"]
+filterwarnings = [
+    "error",
+    "default::DeprecationWarning",
+    "default::FutureWarning",
+    # don't error on a specific runtime warning coming from a shapely
+    # issue on M1: https://github.com/natcap/invest/issues/1562
+    "default:invalid value encountered in intersection:RuntimeWarning",
+]

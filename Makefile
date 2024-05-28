@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 2e7cd618c661ec3f3b2a3bddfd2ce7d4704abc05
+GIT_SAMPLE_DATA_REPO_REV    := ab8c74a62a93fd0019de2bca064abc0a5a07afab
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := da013683e80ea094fbb2309197e2488c02794da8
+GIT_TEST_DATA_REPO_REV      := 324abde73e1d770ad75921466ecafd1ec6297752
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := fa6b181d49136089dce56d4ff8f3dcaf12eb4ced
+GIT_UG_REPO_REV             := 0404bc5d4d43085cdc58f50f8fc29944b10cefb1
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -251,6 +251,7 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	-$(RMDIR) $(INVEST_BINARIES_DIR)
 	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
 	$(CONDA) list > $(INVEST_BINARIES_DIR)/package_versions.txt
+	$(PYTHON) -m pip list >> $(INVEST_BINARIES_DIR)/package_versions.txt
 	$(INVEST_BINARIES_DIR)/invest list
 
 # Documentation.

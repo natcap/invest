@@ -856,6 +856,20 @@ class TestCBC2(unittest.TestCase):
         self.assertEqual([], validation_warnings)
 
         # Now work through the extra validation warnings.
+        # test validation: invalid analysis year
+        prior_snapshots = validation.get_validated_dataframe(
+            args['landcover_snapshot_csv'],
+            **coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
+        )['raster_path'].to_dict()
+        baseline_year = min(prior_snapshots)
+        # analysis year must be >= the last transition year.
+        args['analysis_year'] = baseline_year
+        validation_warnings = coastal_blue_carbon.validate(args)
+        self.assertIn(
+            coastal_blue_carbon.INVALID_ANALYSIS_YEAR_MSG.format(
+                analysis_year=2000, latest_year=2020),
+            validation_warnings[0][1])
+
         # Create an invalid transitions table.
         invalid_raster_path = os.path.join(self.workspace_dir,
                                            'invalid_raster.tif')
@@ -863,20 +877,12 @@ class TestCBC2(unittest.TestCase):
             raster.write('not a raster')
 
         # Write over the landcover snapshot CSV
-        prior_snapshots = validation.get_validated_dataframe(
-            args['landcover_snapshot_csv'],
-            **coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
-        )['raster_path'].to_dict()
-        baseline_year = min(prior_snapshots)
         with open(args['landcover_snapshot_csv'], 'w') as snapshot_table:
             snapshot_table.write('snapshot_year,raster_path\n')
             snapshot_table.write(
                 f'{baseline_year},{prior_snapshots[baseline_year]}\n')
             snapshot_table.write(
                 f"{baseline_year + 10},{invalid_raster_path}")
-
-        # analysis year must be >= the last transition year.
-        args['analysis_year'] = baseline_year
 
         # Write invalid entries to landcover transition table
         with open(args['landcover_transitions_table'], 'w') as transition_table:
@@ -887,22 +893,16 @@ class TestCBC2(unittest.TestCase):
         transition_options = [
                 'accum', 'high-impact-disturb', 'med-impact-disturb',
                 'low-impact-disturb', 'ncc']
-
         validation_warnings = coastal_blue_carbon.validate(args)
-        self.assertEqual(len(validation_warnings), 3)
+        self.assertEqual(len(validation_warnings), 2)
         self.assertIn(
-            coastal_blue_carbon.INVALID_SNAPSHOT_RASTER_MSG.format(
-                snapshot_year=baseline_year + 10),
+            'File could not be opened as a GDAL raster',
             validation_warnings[0][1])
-        self.assertIn(
-            coastal_blue_carbon.INVALID_ANALYSIS_YEAR_MSG.format(
-                analysis_year=2000, latest_year=2010),
-            validation_warnings[1][1])
         self.assertIn(
             coastal_blue_carbon.INVALID_TRANSITION_VALUES_MSG.format(
                 model_transitions=transition_options,
                 transition_values=['disturb', 'invalid']),
-            validation_warnings[2][1])
+            validation_warnings[1][1])
 
     def test_track_first_disturbance(self):
         """CBC: Track disturbances over time."""
@@ -1034,3 +1034,28 @@ class TestCBC2(unittest.TestCase):
                 expected_year_of_disturbance)
         finally:
             raster = None
+
+    def test_validate_required_analysis_year(self):
+        """CBC: analysis year validation (regression test for #1534)."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
+
+        args = TestCBC2._create_model_args(self.workspace_dir)
+        args['workspace_dir'] = self.workspace_dir
+        args['analysis_year'] = None
+        # truncate the CSV so that it has only one snapshot year
+        with open(args['landcover_snapshot_csv'], 'r') as file:
+            lines = file.readlines()
+        with open(args['landcover_snapshot_csv'], 'w') as file:
+            file.writelines(lines[:2])
+        validation_warnings = coastal_blue_carbon.validate(args)
+        self.assertEqual(
+            validation_warnings,
+            [(['analysis_year'], coastal_blue_carbon.MISSING_ANALYSIS_YEAR_MSG)])
+
+        args['analysis_year'] = 2000  # set analysis year equal to snapshot year
+        validation_warnings = coastal_blue_carbon.validate(args)
+        self.assertEqual(
+            validation_warnings,
+            [(['analysis_year'],
+                coastal_blue_carbon.INVALID_ANALYSIS_YEAR_MSG.format(
+                    analysis_year=2000, latest_year=2000))])

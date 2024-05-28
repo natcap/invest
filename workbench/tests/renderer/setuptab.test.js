@@ -73,7 +73,7 @@ function renderSetupFromSpec(baseSpec, initValues = undefined) {
     <SetupTab
       pyModuleName={spec.pyname}
       userguide={spec.userguide}
-      modelName={spec.modelName}
+      modelId={spec.modelName}
       argsSpec={spec.args}
       uiSpec={spec.ui_spec}
       argsInitValues={initValues}

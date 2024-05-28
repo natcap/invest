@@ -27,7 +27,7 @@ import {
   APP_HAS_RUN_TOKEN
 } from '../../src/main/setupCheckFirstRun';
 import {
-  createPythonFlaskProcess,
+  createCoreServerProcess,
   getFlaskIsReady
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
@@ -46,7 +46,7 @@ beforeEach(() => {
     stderr: Buffer.from('', 'utf8'),
     error: null
   });
-  createPythonFlaskProcess.mockImplementation(() => {});
+  createCoreServerProcess.mockImplementation(() => {});
   getFlaskIsReady.mockResolvedValue(true);
   // These vars are only defined in an electron environment and our
   // app expects them to be defined.
@@ -180,6 +180,7 @@ describe('createWindow', () => {
   test('should register various ipcMain listeners', async () => {
     await createWindow();
     const expectedHandleChannels = [
+      ipcMainChannels.ADD_PLUGIN,
       ipcMainChannels.CHANGE_LANGUAGE,
       ipcMainChannels.CHECK_STORAGE_TOKEN,
       ipcMainChannels.CHECK_FILE_PERMISSIONS,
@@ -187,6 +188,7 @@ describe('createWindow', () => {
       ipcMainChannels.GET_N_CPUS,
       ipcMainChannels.INVEST_VERSION,
       ipcMainChannels.IS_FIRST_RUN,
+      ipcMainChannels.LAUNCH_PLUGIN_SERVER,
       ipcMainChannels.SHOW_OPEN_DIALOG,
       ipcMainChannels.SHOW_SAVE_DIALOG,
     ];
