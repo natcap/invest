@@ -364,11 +364,14 @@ _ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
 LOGGER_TIME_DELAY = 5
 
 # For now, this is the field name we use to mark the photo user "days"
-RESPONSE_ID = 'PUD_YR_AVG'
-SCENARIO_RESPONSE_ID = 'PUD_EST'
+RESPONSE_ID_DICT = {
+    'photos': 'PUD_YR_AVG',
+    'tweets': 'TUD_YR_AVG'
+}
+SCENARIO_RESPONSE_ID = 'UD_EST'
 
 _OUTPUT_BASE_FILES = {
-    'pud_results_path': 'pud_results.shp',
+    'results_path': 'userday_results.shp',
     'monthly_table_path': 'monthly_table.csv',
     'predictor_vector_path': 'predictor_data.shp',
     'scenario_results_path': 'scenario_results.shp',
@@ -378,7 +381,7 @@ _OUTPUT_BASE_FILES = {
 _INTERMEDIATE_BASE_FILES = {
     'local_aoi_path': 'aoi.shp',
     'compressed_aoi_path': 'aoi.zip',
-    'compressed_pud_path': 'pud.zip',
+    'compressed_userdays_path': 'userdays.zip',
     'response_polygons_lookup': 'response_polygons_lookup.pickle',
     'server_version': 'server_version.pickle',
 }
@@ -512,13 +515,13 @@ def execute(args):
         args=(file_registry['local_aoi_path'],
               file_registry['compressed_aoi_path'],
               args['start_year'], args['end_year'],
-              os.path.basename(file_registry['pud_results_path']),
+              os.path.basename(file_registry['results_path']),
               os.path.basename(file_registry['monthly_table_path']),
-              file_registry['compressed_pud_path'],
+              file_registry['compressed_userdays_path'],
               output_dir, server_url, file_registry['server_version']),
         target_path_list=[file_registry['compressed_aoi_path'],
-                          file_registry['compressed_pud_path'],
-                          file_registry['pud_results_path'],
+                          file_registry['compressed_userdays_path'],
+                          file_registry['results_path'],
                           file_registry['monthly_table_path'],
                           file_registry['server_version']],
         task_name='photo-user-day-calculation')
@@ -546,7 +549,8 @@ def execute(args):
             intermediate_dir, 'predictor_estimates.json')
         compute_regression_task = task_graph.add_task(
             func=_compute_and_summarize_regression,
-            args=(file_registry['pud_results_path'],
+            args=(file_registry['results_path'],
+                  RESPONSE_ID_DICT[args['visitation_proxy']],
                   file_registry['predictor_vector_path'],
                   file_registry['server_version'],
                   coefficient_json_path,
@@ -1278,7 +1282,7 @@ def _ogr_to_geometry_list(vector_path):
 
 
 def _compute_and_summarize_regression(
-        response_vector_path, predictor_vector_path, server_version_path,
+        response_vector_path, response_id, predictor_vector_path, server_version_path,
         target_coefficient_json_path, target_regression_summary_path):
     """Compute a regression and summary statistics and generate a report.
 
@@ -1302,7 +1306,7 @@ def _compute_and_summarize_regression(
     """
     predictor_id_list, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
         _build_regression(
-            response_vector_path, predictor_vector_path, RESPONSE_ID))
+            response_vector_path, predictor_vector_path, response_id))
 
     # Generate a nice looking regression result and write to log and file
     coefficients_string = '               estimate     stderr    t value\n'

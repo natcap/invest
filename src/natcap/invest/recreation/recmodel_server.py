@@ -443,7 +443,8 @@ class RecModel(object):
         n_processes_alive = n_polytest_processes
         n_poly_tested = 0
 
-        monthly_table_path = os.path.join(workspace_path, 'monthly_table.csv')
+        monthly_table_path = os.path.join(
+            workspace_path, f'{self.acronym}_monthly_table.csv')
         date_range_year = [
             date.tolist().timetuple().tm_year for date in date_range]
         table_headers = [
