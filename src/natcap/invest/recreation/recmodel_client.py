@@ -665,7 +665,7 @@ def _retrieve_photo_user_days(
     LOGGER.info('Please wait for server to calculate PUD...')
 
     result_zip_file_binary, workspace_id = (
-        recmodel_server.calc_photo_user_days_in_aoi(
+        recmodel_server.calc_user_days_in_aoi(
             zip_file_binary, date_range,
             pud_results_filename))
     LOGGER.info(f'received result, took {time.time() - start_time} seconds, '

@@ -154,6 +154,7 @@ class RecModel(object):
         # self.global_cache_dir = global_cache
         self.min_year = min_year
         self.max_year = max_year
+        self.acronym = 'PUD' if dataset_name == 'flickr' else 'TUD'
 
     def get_valid_year_range(self):
         """Return the min and max year queriable.
@@ -168,7 +169,7 @@ class RecModel(object):
     def get_version(self):  # pylint: disable=no-self-use
         """Return the rec model server version.
 
-        This string can be used to uniquely identify the PUD database and
+        This string can be used to uniquely identify the userday database and
         algorithm for publication in terms of reproducibility.
         """
         return '%s:%s' % (invest.__version__, self.qt_pickle_filename)
@@ -195,10 +196,10 @@ class RecModel(object):
         with open(out_zip_file_path, 'rb') as out_zipfile:
             return out_zipfile.read()
 
-    @_try_except_wrapper("exception in calc_photo_user_days_in_aoi")
-    def calc_photo_user_days_in_aoi(
+    @_try_except_wrapper("exception in calc_user_days_in_aoi")
+    def calc_user_days_in_aoi(
             self, zip_file_binary, date_range, out_vector_filename):
-        """Calculate annual average and per monthly average photo user days.
+        """Calculate annual average and per monthly average user days.
 
         Args:
             zip_file_binary (string): a bytestring that is a zip file of an
@@ -261,7 +262,7 @@ class RecModel(object):
 
     def _calc_aggregated_points_in_aoi(
             self, aoi_path, workspace_path, date_range, out_vector_filename):
-        """Aggregate the PUD in the AOI.
+        """Aggregate the userdays in the AOI.
 
         Args:
             aoi_path (string): a path to an OGR compatible vector.
@@ -273,7 +274,7 @@ class RecModel(object):
 
         Returns:
             a path to an ESRI shapefile copy of `aoi_path` updated with a
-            "PUD" field which contains the metric per polygon.
+            "PUD" or "TUD" fields which contains the metric per polygon.
 
         """
         aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
@@ -417,7 +418,7 @@ class RecModel(object):
             'YR_AVG', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG',
             'SEP', 'OCT', 'NOV', 'DEC']
         for field_suffix in ud_id_suffix_list:
-            field_id = 'PUD_%s' % field_suffix
+            field_id = f'{self.acronym}_{field_suffix}'
             # delete the field if it already exists
             field_index = ud_aoi_layer.FindFieldIndex(str(field_id), 1)
             if field_index >= 0:
@@ -467,7 +468,7 @@ class RecModel(object):
                 poly_id, ud_list, ud_monthly_set = result_tuple
                 poly_feat = ud_aoi_layer.GetFeature(poly_id)
                 for ud_index, ud_id in enumerate(ud_id_suffix_list):
-                    poly_feat.SetField('PUD_%s' % ud_id, ud_list[ud_index])
+                    poly_feat.SetField(f'{self.acronym}_{ud_id}', ud_list[ud_index])
                 ud_aoi_layer.SetFeature(poly_feat)
 
                 line = '%s,' % poly_id
@@ -820,7 +821,7 @@ def _calc_poly_ud(
         ud_poly_feature_queue):
     """Load a pre-calculated quadtree and test incoming polygons against it.
 
-    Updates polygons with a PUD and send back out on the queue.
+    Updates polygons with a userday count and send back out on the queue.
 
     Args:
         local_qt_pickle_path (string): path to pickled local quadtree
@@ -909,6 +910,7 @@ def execute(args):
         'raw_csv_point_data_path': $POINT_DATA_PATH,
         'max_year': $MAX_YEAR,
         'min_year': $MIN_YEAR,
+        'dataset_name': 'flickr',
         'cache_workspace': $CACHE_WORKSPACE_PATH'};
 
     natcap.invest.recreation.recmodel_server.execute(args)"
@@ -923,6 +925,9 @@ def execute(args):
         args['max_year'] (int): maximum year allowed to be queries by user
         args['min_year'] (int): minimum valid year allowed to be queried by
             user
+        args['dataset_name'] (string): 'flickr' or 'twitter' to indicate the
+            dataset exposed by this server and used to count either
+            photo-userdays (PUD) or twitter-userdays (TUD)
 
     Returns:
         Never returns
@@ -936,13 +941,15 @@ def execute(args):
         uri = daemon.register(
             RecModel(args['min_year'], args['max_year'], args['cache_workspace'],
                      raw_csv_filename=args['raw_csv_point_data_path'],
-                     max_points_per_node=max_points_per_node),
+                     max_points_per_node=max_points_per_node,
+                     dataset_name=dataset_name),
             'natcap.invest.recreation')
     elif args['quadtree_pickle_filename']:
         uri = daemon.register(
             RecModel(args['min_year'], args['max_year'],
                      args['cache_workspace'],
-                     quadtree_pickle_filename=args['quadtree_pickle_filename']),
+                     quadtree_pickle_filename=args['quadtree_pickle_filename'],
+                     dataset_name=dataset_name),
             'natcap.invest.recreation')
     else:
         raise ValueError(

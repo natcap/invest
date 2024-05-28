@@ -18,7 +18,8 @@ args = {
     'min_year': 2017,
     'cache_workspace': cache_workspace,
     'quadtree_pickle_filename': os.path.join(
-        mounted_volume, 'global_twitter_qt.pickle')
+        mounted_volume, 'global_twitter_qt.pickle'),
+    'dataset_name': 'twitter'
 }
 
 if __name__ == '__main__':

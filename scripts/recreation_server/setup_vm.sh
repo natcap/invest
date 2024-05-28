@@ -20,3 +20,11 @@ mamba install gdal pygeoprocessing numpy
 pip install .
 
 # Mount GCS Fuse
+cd .. && mkdir server && cd server
+mkdir cache
+
+gcsfuse --implicit-dirs -o ro --only-dir twitter_quadtree natcap-recreation cache
+cd cache && ls -R
+
+cd ~/twitter/invest/scripts/recreation_server
+
