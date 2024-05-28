@@ -1,7 +1,14 @@
 const { execFileSync } = require('child_process');
 
 const OS = process.platform;
-const ARCH = process.arch;
+
+// github actions now defaults to ARM builds, so fall back to x64.
+let ARCH;
+if (OS === 'darwin') {
+  ARCH = 'x64';
+} else {
+  ARCH = process.arch;
+}
 const EXT = OS === 'win32' ? 'exe' : 'dmg';
 
 // Uniquely identify the changeset we're building & packaging.
