@@ -65,7 +65,12 @@ const config = {
   mac: {
     category: 'public.app-category.business',
     icon: 'resources/InVEST-2-574x574.ico',
-    target: 'dmg',
+    target: [
+      {
+        target: 'dmg',
+        arch: ['x64'], // force build of x64 even on ARM macs
+      },
+    ],
   },
   win: {
     target: 'nsis',
