@@ -14,8 +14,8 @@ mounted_volume = os.path.join(cache_workspace, 'cache')
 args = {
     'hostname': '10.240.0.6',  # the local IP for the server
     'port': 54322,
+    'min_year': 2012,
     'max_year': 2021,
-    'min_year': 2017,
     'cache_workspace': cache_workspace,
     'quadtree_pickle_filename': os.path.join(
         mounted_volume, 'global_twitter_qt.pickle'),
