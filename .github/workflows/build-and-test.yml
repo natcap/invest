@@ -178,7 +178,9 @@ jobs:
           # computer is guaranteed to have cython available at build
           # time.  Thus, it is no longer necessary to distribute the
           # .cpp files in addition to the .pyx files.
-          python -m build --sdist
+          #
+          # Elevating any python warnings to errors to catch build issues ASAP.
+          python -W error -m build --sdist
 
       - name: Install from source distribution
         run : |
