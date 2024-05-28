@@ -1,14 +1,7 @@
 const { execFileSync } = require('child_process');
 
 const OS = process.platform;
-
-// github actions now defaults to ARM builds, so fall back to x64.
-let ARCH;
-if (OS === 'darwin') {
-  ARCH = 'x64';
-} else {
-  ARCH = process.arch;
-}
+const ARCH = process.arch;
 const EXT = OS === 'win32' ? 'exe' : 'dmg';
 
 // Uniquely identify the changeset we're building & packaging.
@@ -65,12 +58,7 @@ const config = {
   mac: {
     category: 'public.app-category.business',
     icon: 'resources/InVEST-2-574x574.ico',
-    target: [
-      {
-        target: 'dmg',
-        arch: ['x64'], // force build of x64 even on ARM macs
-      },
-    ],
+    target: 'dmg',
   },
   win: {
     target: 'nsis',
