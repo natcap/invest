@@ -942,14 +942,14 @@ def execute(args):
             RecModel(args['min_year'], args['max_year'], args['cache_workspace'],
                      raw_csv_filename=args['raw_csv_point_data_path'],
                      max_points_per_node=max_points_per_node,
-                     dataset_name=dataset_name),
+                     dataset_name=args['dataset_name']),
             'natcap.invest.recreation')
     elif args['quadtree_pickle_filename']:
         uri = daemon.register(
             RecModel(args['min_year'], args['max_year'],
                      args['cache_workspace'],
                      quadtree_pickle_filename=args['quadtree_pickle_filename'],
-                     dataset_name=dataset_name),
+                     dataset_name=args['dataset_name']),
             'natcap.invest.recreation')
     else:
         raise ValueError(
