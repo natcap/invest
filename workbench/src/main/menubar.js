@@ -8,7 +8,6 @@ import { getLogger } from './logger';
 import {
   createJupyterProcess,
   shutdownPythonProcess,
-  getJupyterIsReady,
 } from './createPythonFlaskProcess';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -146,12 +145,11 @@ function createWindow(parentWindow, isDevMode) {
 async function openJupyterLab(parentWindow, isDevMode, jupyterExe) {
   let labDir = `${process.resourcesPath}/notebooks`;
   if (isDevMode) { labDir = 'resources/notebooks'; }
-  const subprocess = createJupyterProcess(jupyterExe, labDir);
+  const [subprocess, port] = await createJupyterProcess(jupyterExe, labDir);
   const child = createWindow(parentWindow, isDevMode);
-  await getJupyterIsReady();
-  child.loadURL(`http://localhost:${process.env.JUPYTER_PORT}/?token=${process.env.JUPYTER_TOKEN}`);
+  child.loadURL(`http://localhost:${port}/?token=${process.env.JUPYTER_TOKEN}`);
   child.on('close', async (event) => {
-    await shutdownPythonProcess(subprocess);
+    await shutdownPythonProcess(subprocess.pid);
   });
   // TODO: what if entire app is quit instead of this window closing first
 }

@@ -85,6 +85,7 @@ export async function createJupyterProcess(jupyterExe, notebookDir, _port = unde
   let port = _port;
   if (port === undefined) {
     port = await getFreePort();
+    logger.debug(`PORT ${port}`)
   }
   logger.debug('creating jupyterlab server process');
   logger.debug(jupyterExe);
@@ -94,7 +95,8 @@ export async function createJupyterProcess(jupyterExe, notebookDir, _port = unde
     { shell: true } // necessary in dev mode & relying on a conda env
   );
   setupServerProcessHandlers(subprocess);
-  await getFlaskIsReady(port, 0, 500);
+  await getJupyterIsReady(port, 0, 500);
+  return [subprocess, port];
 }
 
 // /**
@@ -195,9 +197,10 @@ export async function createPluginServerProcess(modelName, _port = undefined) {
  * @param {number} retries - number of recursive calls this function is allowed.
  * @returns { Promise } resolves text indicating success.
  */
-export async function getJupyterIsReady({ i = 0, retries = 41 } = {}) {
+export async function getJupyterIsReady(port = undefined, { i = 0, retries = 41 } = {}) {
   try {
-    await fetch(`${HOSTNAME}:${process.env.JUPYTER_PORT}/?token=${process.env.JUPYTER_TOKEN}`, {
+    logger.debug(`${HOSTNAME}:${port}/?token=${process.env.JUPYTER_TOKEN}`)
+    await fetch(`${HOSTNAME}:${port}`, {
       method: 'get',
     });
   } catch (error) {
@@ -207,7 +210,7 @@ export async function getJupyterIsReady({ i = 0, retries = 41 } = {}) {
         // Try every X ms, usually takes a couple seconds to startup.
         await new Promise((resolve) => setTimeout(resolve, 300));
         logger.debug(`retry # ${i}`);
-        return getJupyterIsReady({ i: i, retries: retries });
+        return getJupyterIsReady(port, { i: i, retries: retries });
       }
       logger.error(`Not able to connect to server after ${retries} tries.`);
     }
