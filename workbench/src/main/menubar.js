@@ -5,10 +5,6 @@ import { app, BrowserWindow } from 'electron'; // eslint-disable-line import/no-
 import setupContextMenu from './setupContextMenu';
 import BASE_URL from './baseUrl';
 import { getLogger } from './logger';
-import {
-  createJupyterProcess,
-  shutdownPythonProcess,
-} from './createPythonFlaskProcess';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -110,10 +106,6 @@ export default function menuTemplate(parentWindow, isDevMode, i18n, jupyterExe) 
           label: i18n.t('Report a problem'),
           click: () => openReportWindow(parentWindow, isDevMode),
         },
-        {
-          label: i18n.t('Open Notebook'),
-          click: () => openJupyterLab(parentWindow, isDevMode, jupyterExe),
-        }
       ],
     },
   ];
@@ -140,18 +132,6 @@ function createWindow(parentWindow, isDevMode) {
     win.webContents.openDevTools();
   }
   return win;
-}
-
-async function openJupyterLab(parentWindow, isDevMode, jupyterExe) {
-  let labDir = `${process.resourcesPath}/notebooks`;
-  if (isDevMode) { labDir = 'resources/notebooks'; }
-  const [subprocess, port] = await createJupyterProcess(jupyterExe, labDir);
-  const child = createWindow(parentWindow, isDevMode);
-  child.loadURL(`http://localhost:${port}/?token=${process.env.JUPYTER_TOKEN}`);
-  child.on('close', async (event) => {
-    await shutdownPythonProcess(subprocess.pid);
-  });
-  // TODO: what if entire app is quit instead of this window closing first
 }
 
 function openAboutWindow(parentWindow, isDevMode) {

@@ -10,6 +10,16 @@ export default function ModelStatusAlert(props) {
   const { status } = props;
   const { t, i18n } = useTranslation();
 
+  const ResultsButton = (
+    <Button
+      variant="outline-dark"
+      onClick={props.handleViewResults}
+      disabled={props.status !== 'success'}
+    >
+      {t('View Results')}
+    </Button>
+  );
+
   const WorkspaceButton = (
     <Button
       variant="outline-dark"
@@ -57,6 +67,7 @@ export default function ModelStatusAlert(props) {
     >
       {alertMessage}
       {WorkspaceButton}
+      {ResultsButton}
     </Alert>
   );
 }

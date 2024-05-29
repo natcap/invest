@@ -11,7 +11,7 @@ const HOSTNAME = 'http://127.0.0.1';
 const pidToSubprocess = {};
 
 // https://stackoverflow.com/a/71178451
-async function getFreePort() {
+export async function getFreePort() {
   return new Promise((resolve) => {
     const srv = http.createServer();
     srv.listen(0, () => {

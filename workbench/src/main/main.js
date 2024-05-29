@@ -32,6 +32,7 @@ import setupOpenLocalHtml from './setupOpenLocalHtml';
 import { settingsStore, setupSettingsHandlers } from './settingsStore';
 import setupGetElectronPaths from './setupGetElectronPaths';
 import setupRendererLogger from './setupRendererLogger';
+import setupJupyter from './setupJupyter';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
@@ -156,6 +157,7 @@ export const createWindow = async () => {
   // have callbacks that won't work until the invest server is ready.
   setupContextMenu(mainWindow);
   setupDownloadHandlers(mainWindow);
+  setupJupyter(mainWindow, ELECTRON_DEV_MODE, jupyterExe)
   setupInvestRunHandlers();
   setupLaunchPluginServerHandler();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
