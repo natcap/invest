@@ -290,6 +290,7 @@ export default function ArgInput(props) {
       key={argkey}
       data-testid={`group-${argkey}`}
       className={className} // this grays out the label but doesn't actually disable the field
+      style={{ display: (enabled ? 'flex' : 'none') }}
     >
       <FormLabel
         argkey={argkey}
