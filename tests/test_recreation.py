@@ -244,7 +244,7 @@ class UnitTestRecServer(unittest.TestCase):
         out_vector_filename = 'test_aoi_for_subset_pud.shp'
         print('calc photo userdays')
         zip_result, workspace_id = (
-            recreation_server.calc_photo_user_days_in_aoi(
+            recreation_server.calc_user_days_in_aoi(
                 zip_file_binary, date_range, out_vector_filename))
         print('calc photo userdays done')
         # unpack result
@@ -272,7 +272,7 @@ class UnitTestRecServer(unittest.TestCase):
             aoi_path,
             os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
-    def test_local_calc_poly_pud(self):
+    def test_local_calc_poly_ud(self):
         """Recreation test single threaded local PUD calculation."""
         from natcap.invest.recreation import recmodel_server
 
@@ -288,7 +288,7 @@ class UnitTestRecServer(unittest.TestCase):
         poly_test_queue.put(0)
         poly_test_queue.put('STOP')
         pud_poly_feature_queue = queue.Queue()
-        recmodel_server._calc_poly_pud(
+        recmodel_server._calc_poly_ud(
             recreation_server.qt_pickle_filename,
             os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp'),
             date_range, poly_test_queue, pud_poly_feature_queue)
@@ -297,7 +297,7 @@ class UnitTestRecServer(unittest.TestCase):
         self.assertEqual(
             83.2, pud_poly_feature_queue.get()[1][0])
 
-    def test_local_calc_poly_pud_bad_aoi(self):
+    def test_local_calc_poly_ud_bad_aoi(self):
         """Recreation test PUD calculation with missing AOI features."""
         from natcap.invest.recreation import recmodel_server
 
@@ -337,7 +337,7 @@ class UnitTestRecServer(unittest.TestCase):
         target_vector = None
 
         pud_poly_feature_queue = queue.Queue()
-        recmodel_server._calc_poly_pud(
+        recmodel_server._calc_poly_ud(
             recreation_server.qt_pickle_filename,
             aoi_vector_path, date_range, poly_test_queue,
             pud_poly_feature_queue)
@@ -367,7 +367,7 @@ class UnitTestRecServer(unittest.TestCase):
         poly_test_queue.put(0)
         poly_test_queue.put('STOP')
         pud_poly_feature_queue = queue.Queue()
-        recmodel_server._calc_poly_pud(
+        recmodel_server._calc_poly_ud(
             recreation_server.qt_pickle_filename,
             os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp'),
             date_range, poly_test_queue, pud_poly_feature_queue)
@@ -689,7 +689,7 @@ class TestRecClientServer(unittest.TestCase):
         out_vector_filename = 'test_aoi_for_subset_pud.shp'
 
         _, workspace_id = (
-            recreation_server.calc_photo_user_days_in_aoi(
+            recreation_server.calc_user_days_in_aoi(
                 zip_file_binary, date_range, out_vector_filename))
         fetcher_args = {
             'workspace_dir': self.workspace_dir,
