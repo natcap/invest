@@ -20,7 +20,8 @@ export default function findInvestBinaries(isDevMode) {
   let jupyterExe;
   const ext = (process.platform === 'win32') ? '.exe' : '';
   const investFilename = `invest${ext}`;
-  const jupyterFilename = `jupyter${ext}`;
+  //const jupyterFilename = `jupyter${ext}`;
+  const jupyterFilename = `voila${ext}`;
 
   if (isDevMode) {
     investExe = investFilename; // assume an active python env w/ exe on path
