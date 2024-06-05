@@ -44,6 +44,27 @@ export function setupLaunchPluginServerHandler() {
 
 export function setupInvestRunHandlers() {
   const runningJobs = {};
+  ipcMain.handle(ipcMainChannels.WRITE_CSV, (event, values) => {
+    console.log('WRITE_CSV');
+    // Write a temporary datastack json for passing to invest CLI
+    try {
+      fs.mkdirSync(TEMP_DIR);
+    } catch {}
+    const tempCSVDir = fs.mkdtempSync(
+      path.join(TEMP_DIR, 'form-table-')
+    );
+    const csvPath = path.join(tempCSVDir, 'table.csv');
+    const keys = [];
+    const vals = [];
+    Object.entries(values).forEach(([k, v]) => {
+      keys.push(k);
+      vals.push(v);
+    });
+    const text = [keys.join(','), vals.join(',')].join('\n');
+    console.log('writing', text);
+    fs.writeFileSync(csvPath, text, 'utf8');
+    return csvPath;
+  });
 
   ipcMain.on(ipcMainChannels.INVEST_KILL, (event, jobID) => {
     if (runningJobs[jobID]) {

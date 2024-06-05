@@ -54,6 +54,7 @@
   "dependencies": {
     "@babel/runtime": "^7.13.10",
     "connect": "^3.7.0",
+    "csv-parse": "^5.5.6",
     "electron-log": "^4.3.5",
     "electron-store": "^8.1.0",
     "http-server": "^14.1.1",
