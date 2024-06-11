@@ -461,7 +461,8 @@ class UnitTestRecServer(unittest.TestCase):
         max_year = 2018
         server = recmodel_server.RecModel(
             min_year, max_year, cache_dir,
-            quadtree_pickle_filename=ooc_qt_picklefilename)
+            quadtree_pickle_filename=ooc_qt_picklefilename,
+            dataset_name='twitter')
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
         target_filename = 'results.shp'  # model uses ESRI Shapefile driver
@@ -494,7 +495,7 @@ class UnitTestRecServer(unittest.TestCase):
            '2017-12': [0]
         }, index=None)
         result_table = pandas.read_csv(
-            os.path.join(self.workspace_dir, 'monthly_table.csv'))
+            os.path.join(self.workspace_dir, 'TUD_monthly_table.csv'))
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
 
@@ -526,7 +527,7 @@ class TestLocalRecServer(unittest.TestCase):
             aoi_path, self.workspace_dir, date_range, out_vector_filename)
 
         with open(os.path.join(
-                self.workspace_dir, 'monthly_table.csv'), 'r') as file:
+                self.workspace_dir, 'PUD_monthly_table.csv'), 'r') as file:
             output_lines = file.readlines()
         with open(os.path.join(
                 REGRESSION_DATA, 'expected_monthly_table_for_subset.csv'),
@@ -1046,8 +1047,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'compute_regression': False,
-            'start_year': '2005',
-            'end_year': '2014',
+            'start_year': '2012',
+            'end_year': '2017',
             'grid_aoi': False,
             'results_suffix': '',
             'workspace_dir': self.workspace_dir,
@@ -1069,8 +1070,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'compute_regression': True,
-            'start_year': '2005',
-            'end_year': '2014',
+            'start_year': '2012',
+            'end_year': '2017',
             'grid_aoi': True,
             'grid_type': 'square',
             'cell_size': 20000,
@@ -1209,8 +1210,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'cell_size': 7000.0,
             'compute_regression': True,
-            'start_year': '2014',  # note start_year > end_year
-            'end_year': '2005',
+            'start_year': '2017',  # note start_year > end_year
+            'end_year': '2012',
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
@@ -1234,8 +1235,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'cell_size': 7000.0,
             'compute_regression': False,
-            'start_year': '2005',
-            'end_year': '2014',
+            'start_year': '2012',
+            'end_year': '2017',
             'grid_aoi': True,
             'grid_type': 'circle',  # intentionally bad gridtype
             'results_suffix': '',
