@@ -43,25 +43,17 @@ LogDisplay.propTypes = {
   ).isRequired,
 };
 
-export default class LogTab extends React.Component {
-  constructor(props) {
-    super(props);
-    this.validationTimer = null;
-    this.cache = [];
-    this.state = {
-      logdata: [],
-    };
+export default function LogTab(props) {
+  const [logdata, setLogdata] = React.useState([]);
+  let validationTimer = null;
+  let cache = [];
 
-    this.updateState = this.updateState.bind(this);
-    this.debouncedLogUpdate = this.debouncedLogUpdate.bind(this);
-  }
-
-  componentDidMount() {
-    const { logfile, executeClicked, tabID } = this.props;
+  React.useEffect(() => {
+    const { logfile, executeClicked, tabID } = props;
     // This channel is replied to by the invest process stdout listener
     // And by the logfile reader.
     ipcRenderer.on(`invest-stdout-${tabID}`, (data) => {
-      this.debouncedLogUpdate(data);
+      debouncedLogUpdate(data);
     });
     if (!executeClicked && logfile) {
       ipcRenderer.send(
@@ -70,32 +62,31 @@ export default class LogTab extends React.Component {
         tabID,
       );
     }
-  }
+    return () => {
+      ipcRenderer.removeAllListeners(`invest-stdout-${props.tabID}`);
+      clearTimeout(validationTimer);
+    };
+  }, [props.executeClicked]);
 
-  componentDidUpdate(prevProps) {
-    // If we're re-running a model after loading a recent run,
-    // we should clear out the logdata when the new run is launched.
-    if (this.props.executeClicked && !prevProps.executeClicked) {
-      this.setState({ logdata: [] });
-    }
-  }
 
-  componentWillUnmount() {
-    ipcRenderer.removeAllListeners(`invest-stdout-${this.props.tabID}`);
-    clearTimeout(this.validationTimer);
-  }
+  // componentDidUpdate(prevProps) {
+  //   // If we're re-running a model after loading a recent run,
+  //   // we should clear out the logdata when the new run is launched.
+  //   if (this.props.executeClicked && !prevProps.executeClicked) {
+  //     this.setState({ logdata: [] });
+  //   }
+  // }
 
-  updateState() {
+
+  function updateState() {
     // flushSync will override react18 batched updates
     // and force state updates to happen now. We're managing
     // the rate of updates ourselves in this component via
     // debouncedLogUpdate.
     ReactDom.flushSync(() => {
-      this.setState((state) => ({
-        logdata: state.logdata.concat(this.cache)
-      }));
+      setLogdata(logdata.concat(cache));
     });
-    this.cache = [];
+    cache = [];
   }
 
   /*
@@ -104,24 +95,22 @@ export default class LogTab extends React.Component {
    * the event of very high volume logging, while still allowing the browser to
    * appear that it is updating in real-time.
    */
-  debouncedLogUpdate(data) {
-    if (this.validationTimer) {
-      clearTimeout(this.validationTimer);
+  function debouncedLogUpdate(data) {
+    if (validationTimer) {
+      clearTimeout(validationTimer);
     }
-    this.cache.push(data);
+    cache.push(data);
     // updates every 10ms will appear to be real-time
-    this.validationTimer = setTimeout(this.updateState, 10);
+    validationTimer = setTimeout(updateState, 10);
   }
 
-  render() {
-    return (
-      <Container fluid>
-        <Row>
-          <LogDisplay logdata={this.state.logdata} />
-        </Row>
-      </Container>
-    );
-  }
+  return (
+    <Container fluid>
+      <Row>
+        <LogDisplay logdata={logdata} />
+      </Row>
+    </Container>
+  );
 }
 
 LogTab.propTypes = {

@@ -17,14 +17,9 @@ const { logger } = window.Workbench;
  * Render a button that loads args from a datastack, parameterset, or logfile.
  * Opens a native OS filesystem dialog to browse to a file.
  */
-class OpenButton extends React.Component {
-  constructor(props) {
-    super(props);
-    this.browseFile = this.browseFile.bind(this);
-  }
-
-  async browseFile() {
-    const { t } = this.props;
+function OpenButton(props) {
+  async function browseFile() {
+    const { t } = props;
     const data = await ipcRenderer.invoke(ipcMainChannels.SHOW_OPEN_DIALOG);
     if (!data.canceled) {
       let datastack;
@@ -45,29 +40,27 @@ class OpenButton extends React.Component {
         modelHumanName: datastack.model_human_name,
         argsValues: datastack.args,
       });
-      this.props.openInvestModel(job);
+      props.openInvestModel(job);
     }
   }
 
-  render() {
-    const { t } = this.props;
-    const tipText = t('Browse to a datastack (.json) or InVEST logfile (.txt)');
-    return (
-      <OverlayTrigger
-        placement="left"
-        delay={{ show: 250, hide: 400 }}
-        overlay={<Tooltip>{tipText}</Tooltip>}
+  const { t } = props;
+  const tipText = t('Browse to a datastack (.json) or InVEST logfile (.txt)');
+  return (
+    <OverlayTrigger
+      placement="left"
+      delay={{ show: 250, hide: 400 }}
+      overlay={<Tooltip>{tipText}</Tooltip>}
+    >
+      <Button
+        className={props.className}
+        onClick={browseFile}
+        variant="outline-dark"
       >
-        <Button
-          className={this.props.className}
-          onClick={this.browseFile}
-          variant="outline-dark"
-        >
-          {t("Open")}
-        </Button>
-      </OverlayTrigger>
-    );
-  }
+        {t("Open")}
+      </Button>
+    </OverlayTrigger>
+  );
 }
 
 OpenButton.propTypes = {
