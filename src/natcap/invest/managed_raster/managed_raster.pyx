@@ -1,6 +1,7 @@
 # cython: language_level=3
 # distutils: language = c++
 import os
+import logging
 
 import numpy
 import pygeoprocessing
@@ -17,6 +18,8 @@ from libcpp.set cimport set as cset
 from libcpp.list cimport list as clist
 from libcpp.stack cimport stack
 from libcpp.vector cimport vector
+
+LOGGER = logging.getLogger(__name__)
 
 # this ctype is used to store the block ID and the block buffer as one object
 # inside Managed Raster
@@ -315,15 +318,6 @@ cdef class _ManagedRaster:
             raster = None
 
 
-cdef class NeighborTupleClass():
-
-    def __cinit__(self, direction, x, y, flow_proportion):
-        self.direction = direction
-        self.x = x
-        self.y = y
-        self.flow_proportion = flow_proportion
-
-
 cdef class DownslopeNeighborIterator():
 
     def __cinit__(self, managed_raster, x, y):
@@ -343,8 +337,7 @@ cdef class DownslopeNeighborIterator():
         cdef int flow_ji
 
         if self.n_dir == 8:
-            n = NeighborTupleClass(
-                8, -1, -1, -1)
+            n = NeighborTupleClass(8, -1, -1, -1)
             return n
 
         xj = self.col + COL_OFFSETS[self.n_dir]
@@ -359,11 +352,7 @@ cdef class DownslopeNeighborIterator():
         if flow_ij:
             self.flow_dir_sum += flow_ij
 
-            n = NeighborTupleClass(
-                direction=self.n_dir,
-                x=xj,
-                y=yj,
-                flow_proportion=flow_ij)
+            n = NeighborTupleClass(self.n_dir, xj, yj, flow_ij)
             self.n_dir += 1
             return n
         else:
@@ -378,8 +367,6 @@ cdef class UpslopeNeighborIterator():
         self.col = x
         self.row = y
         self.n_dir = 0
-        self.flow_dir = <int>self.raster.get(self.col, self.row)
-
 
     cdef NeighborTupleClass next(self):
 
@@ -387,10 +374,11 @@ cdef class UpslopeNeighborIterator():
         cdef long xj, yj
         cdef int flow_dir_j
         cdef int flow_ji
+        cdef long flow_dir_j_sum
+        cdef int idx
 
         if self.n_dir == 8:
-            n = NeighborTupleClass(
-                8, -1, -1, -1)
+            n = NeighborTupleClass(8, -1, -1, -1)
             return n
 
         xj = self.col + COL_OFFSETS[self.n_dir]
@@ -409,16 +397,52 @@ cdef class UpslopeNeighborIterator():
             for idx in range(8):
                 flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF
 
-            n = NeighborTupleClass(
-                direction=self.n_dir,
-                x=xj,
-                y=yj,
-                flow_proportion=flow_ji / flow_dir_j_sum)
+            n = NeighborTupleClass(self.n_dir, xj, yj, flow_ji / flow_dir_j_sum)
             self.n_dir += 1
             return n
         else:
             self.n_dir += 1
             return self.next()
+
+    cdef NeighborTupleClass next_skip(self, int skip):
+
+        cdef NeighborTupleClass n
+        cdef long xj, yj
+        cdef int flow_dir_j
+        cdef int flow_ji
+        cdef long flow_dir_j_sum
+        cdef int idx
+
+        if self.n_dir == 8:
+            n = NeighborTupleClass(8, -1, -1, -1)
+            return n
+
+        xj = self.col + COL_OFFSETS[self.n_dir]
+        yj = self.row + ROW_OFFSETS[self.n_dir]
+
+        if (xj < 0 or xj >= self.raster.raster_x_size or
+                yj < 0 or yj >= self.raster.raster_y_size or
+                INFLOW_OFFSETS[self.n_dir] == skip):
+            self.n_dir += 1
+            return self.next_skip(skip)
+
+        flow_dir_j = <int>self.raster.get(xj, yj)
+        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[self.n_dir])))
+
+        if flow_ji:
+            flow_dir_j_sum = 0
+            for idx in range(8):
+                flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF
+
+            n = NeighborTupleClass(self.n_dir, xj, yj, flow_ji / flow_dir_j_sum)
+            self.n_dir += 1
+            return n
+        else:
+            self.n_dir += 1
+            return self.next_skip(skip)
+
+
+
 
 
 
@@ -436,7 +460,10 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
             True if the pixel is a local high point, i.e. it has no
             upslope neighbors; False otherwise.
         """
-        return self.get_upslope_neighbors(xi, yi).size() == 0
+        cdef UpslopeNeighborIterator up_iterator = UpslopeNeighborIterator(self, xi, yi)
+        # if the first upslope neighbor found is the iterator end,
+        # then there are no upslope neighbors.
+        return up_iterator.next().direction == 8
 
     @cython.cdivision(True)
     cdef vector[NeighborTuple] get_upslope_neighbors(
@@ -463,6 +490,54 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
         cdef vector[NeighborTuple] upslope_neighbor_tuples
 
         for n_dir in range(8):
+            xj = xi + COL_OFFSETS[n_dir]
+            yj = yi + ROW_OFFSETS[n_dir]
+            if (xj < 0 or xj >= self.raster_x_size or
+                    yj < 0 or yj >= self.raster_y_size):
+                continue
+            flow_dir_j = <int>self.get(xj, yj)
+            flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])))
+
+            if flow_ji:
+                flow_dir_j_sum = 0
+                for idx in range(8):
+                    flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF
+                n.direction = n_dir
+                n.x = xj
+                n.y = yj
+                n.flow_proportion = flow_ji / flow_dir_j_sum
+                upslope_neighbor_tuples.push_back(n)
+
+        return upslope_neighbor_tuples
+
+
+    @cython.cdivision(True)
+    cdef vector[NeighborTuple] get_upslope_neighbors_skip(
+            ManagedFlowDirRaster self, long xi, long yi, int skip):
+        """Return upslope neighbors of a given pixel.
+
+        Args:
+            xi (int): x coord in pixel space of the pixel to consider
+            yi (int): y coord in pixel space of the pixel to consider
+
+        Returns:
+            libcpp.vector of NeighborTuples. Each NeighborTuple has
+            the attributes ``direction`` (integer flow direction 0-7
+            of the neighbor relative to the original pixel), ``x``
+            and ``y`` (integer coordinates of the neighbor in pixel
+            space), and ``flow_proportion`` (fraction of the flow
+            from the neighbor that flows to the original pixel).
+        """
+        cdef int n_dir, flow_dir_j, idx
+        cdef long xj, yj
+        cdef float flow_ji, flow_dir_j_sum
+
+        cdef NeighborTuple n
+        cdef vector[NeighborTuple] upslope_neighbor_tuples
+
+        for n_dir in range(8):
+            if INFLOW_OFFSETS[n_dir] == skip:
+                continue
             xj = xi + COL_OFFSETS[n_dir]
             yj = yi + ROW_OFFSETS[n_dir]
             if (xj < 0 or xj >= self.raster_x_size or

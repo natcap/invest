@@ -143,6 +143,9 @@ def calculate_sediment_deposition(
             for col_index in range(win_xsize):
                 xs = xoff + col_index
 
+                if mfd_flow_direction_raster.get(xs, ys) == mfd_nodata:
+                    continue
+
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack
                 if (mfd_flow_direction_raster.is_local_high_point(xs, ys) and
@@ -213,22 +216,14 @@ def calculate_sediment_deposition(
                         #
                         up_iterator = UpslopeNeighborIterator(
                             mfd_flow_direction_raster, neighbor2.x, neighbor2.y)
-                        neighbor_of_neighbor = up_iterator.next()
+                        neighbor_of_neighbor = up_iterator.next_skip(neighbor2.direction)
                         while neighbor_of_neighbor.direction < 8:
 
-                            # no need to push the one we're currently
-                            # calculating back onto the stack
-                            if (INFLOW_OFFSETS[neighbor_of_neighbor.direction] ==
-                                    neighbor2.direction):
-                                neighbor_of_neighbor = up_iterator.next()
-                                continue
-                            if is_close(
-                                    sediment_deposition_raster.get(
-                                        neighbor_of_neighbor.x, neighbor_of_neighbor.y
-                                    ), target_nodata):
+                            if (sediment_deposition_raster.get(
+                                    neighbor_of_neighbor.x, neighbor_of_neighbor.y) == target_nodata):
                                 upslope_neighbors_processed = 0
                                 break
-                            neighbor_of_neighbor = up_iterator.next()
+                            neighbor_of_neighbor = up_iterator.next_skip(neighbor2.direction)
                         # if all upslope neighbors of neighbor j are
                         # processed, we can push j onto the stack.
                         if upslope_neighbors_processed:

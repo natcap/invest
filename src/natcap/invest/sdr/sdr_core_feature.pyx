@@ -135,6 +135,9 @@ def calculate_sediment_deposition(
             for col_index in range(win_xsize):
                 xs = xoff + col_index
 
+                if mfd_flow_direction_raster.get(xs, ys) == mfd_nodata:
+                    continue
+
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack
                 if (mfd_flow_direction_raster.is_local_high_point(xs, ys) and
@@ -175,7 +178,6 @@ def calculate_sediment_deposition(
                     for neighbor in (
                             mfd_flow_direction_raster.get_downslope_neighbors(
                                 global_col, global_row)):
-                        print(neighbor.direction, neighbor.x, neighbor.y, neighbor.flow_proportion)
                         sdr_j = sdr_raster.get(neighbor.x, neighbor.y)
                         if is_close(sdr_j, sdr_nodata):
                             continue
@@ -197,8 +199,8 @@ def calculate_sediment_deposition(
                         upslope_neighbors_processed = 1
                         # iterate over each neighbor-of-neighbor
                         for neighbor_of_neighbor in (
-                                mfd_flow_direction_raster.get_upslope_neighbors(
-                                    neighbor.x, neighbor.y)):
+                                mfd_flow_direction_raster.get_upslope_neighbors_skip(
+                                    neighbor.x, neighbor.y, neighbor.direction)):
                             # no need to push the one we're currently
                             # calculating back onto the stack
                             if (INFLOW_OFFSETS[neighbor_of_neighbor.direction] ==

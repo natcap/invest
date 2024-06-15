@@ -14,12 +14,6 @@ cdef struct s_neighborTuple:
 
 ctypedef s_neighborTuple NeighborTuple
 
-cdef class NeighborTupleClass:
-    cdef int direction
-    cdef int x
-    cdef int y
-    cdef float flow_proportion
-
 
 # this is a least recently used cache written in C++ in an external file,
 # exposing here so _ManagedRaster can use it
@@ -31,6 +25,19 @@ cdef extern from "LRUCache.h" nogil:
         clist[pair[KEY_T,VAL_T]].iterator end()
         bint exist(KEY_T &)
         VAL_T get(KEY_T &)
+
+
+cdef extern from "Rectangle.cpp":
+    pass
+
+# Declare the class with cdef
+cdef extern from "Rectangle.h" namespace "shapes":
+    cdef cppclass NeighborTupleClass:
+        NeighborTupleClass() except +
+        NeighborTupleClass(int, int, int, float) except +
+        int direction, x, y
+        float flow_proportion
+
 
 cdef class _ManagedRaster:
     cdef LRUCache[int, double*]* lru_cache
@@ -75,6 +82,7 @@ cdef class UpslopeNeighborIterator:
     cdef int flow_dir
 
     cdef NeighborTupleClass next(UpslopeNeighborIterator self)
+    cdef NeighborTupleClass next_skip(UpslopeNeighborIterator self, int skip)
 
 
 cdef class ManagedFlowDirRaster(_ManagedRaster):
@@ -82,6 +90,8 @@ cdef class ManagedFlowDirRaster(_ManagedRaster):
     cdef bint is_local_high_point(ManagedFlowDirRaster self, long xi, long yi)
 
     cdef vector[NeighborTuple] get_upslope_neighbors(ManagedFlowDirRaster self, long xi, long yi)
+
+    cdef vector[NeighborTuple] get_upslope_neighbors_skip(ManagedFlowDirRaster self, long xi, long yi, int skip)
 
     cdef vector[NeighborTuple] get_downslope_neighbors(ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=*)
 
