@@ -40,10 +40,7 @@ from ..unit_registry import u
 LOGGER = logging.getLogger(__name__)
 
 # NatCap Rec Server URLs
-SERVER_URL_DICT = {
-    'photos': 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_py36/index.html',  # pylint: disable=line-too-long
-    'tweets': 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_twitter/index.html',  # pylint: disable=line-too-long
-}
+SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_twitter/index.html',  # pylint: disable=line-too-long
 
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro5.config.SERIALIZER = 'marshal'
@@ -111,18 +108,6 @@ MODEL_SPEC = {
         "aoi_path": {
             **spec_utils.AOI,
             "about": gettext("Map of area(s) over which to run the model.")
-        },
-        "visitation_proxy": {
-            "type": "option_string",
-            "options": {
-                "photos": {"display_name": gettext("photos")},
-                "tweets": {"display_name": gettext("tweets")}
-            },
-            "required": True,
-            "about": gettext(
-                "Choose which geotagged social media dataset will be "
-                "used to calculate userdays, a proxy for visitation rates."),
-            "name": gettext("visitation proxy")
         },
         "hostname": {
             "type": "freestyle_string",
@@ -468,7 +453,7 @@ def execute(args):
     else:
         # else use a well known path to get active server
         server_url = urllib.request.urlopen(
-            SERVER_URL_DICT[args['visitation_proxy']]
+            SERVER_URL
         ).read().decode('utf-8').rstrip()
         LOGGER.info(server_url)
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
