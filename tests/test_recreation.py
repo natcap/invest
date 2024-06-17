@@ -566,11 +566,20 @@ class TestRecClientServer(unittest.TestCase):
         server_args = {
             'hostname': 'localhost',
             'port': self.port,
-            'raw_csv_point_data_path': self.resampled_data_path,
             'cache_workspace': self.workspace_dir,
-            'min_year': 2008,
-            'max_year': 2015,
             'max_points_per_node': 200,
+            'datasets': {
+                'flickr': {
+                    'raw_csv_point_data_path': self.resampled_data_path,
+                    'min_year': 2008,
+                    'max_year': 2015
+                },
+                'twitter': {
+                    'raw_csv_point_data_path': self.resampled_data_path,
+                    'min_year': 2008,
+                    'max_year': 2015
+                }
+            }
         }
 
         self.server_process = multiprocessing.Process(

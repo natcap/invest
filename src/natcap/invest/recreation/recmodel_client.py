@@ -629,7 +629,7 @@ def _retrieve_photo_user_days(
     """
 
     LOGGER.info('Contacting server, please wait.')
-    recmodel_server = Pyro4.Proxy(server_url)
+    recmodel_server = Pyro5.api.Proxy(server_url)
     server_version = recmodel_server.get_version()
     LOGGER.info(f'Server online, version: {server_version}')
     # store server version info in a file so we can list it in results summary.

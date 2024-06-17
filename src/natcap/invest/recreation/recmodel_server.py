@@ -1,6 +1,6 @@
 """InVEST Recreation Server."""
 
-import functools
+import concurrent.futures
 import subprocess
 import os
 import multiprocessing
@@ -18,11 +18,11 @@ import queue
 import random
 from io import StringIO
 
-import Pyro4
 import numpy
 from osgeo import ogr
 from osgeo import osr
 from osgeo import gdal
+import Pyro5.api
 import shapely.ops
 import shapely.wkt
 import shapely.geometry
@@ -76,7 +76,6 @@ def _try_except_wrapper(mesg):
     return try_except_decorator
 
 
-@Pyro4.expose
 class RecModel(object):
     """Class that manages RPCs for calculating photo user days."""
 
@@ -908,10 +907,20 @@ def execute(args):
 
         'hostname':'$LOCALIP',
         'port':$REC_SERVER_PORT,
-        'raw_csv_point_data_path': $POINT_DATA_PATH,
-        'max_year': $MAX_YEAR,
-        'min_year': $MIN_YEAR,
-        'dataset_name': 'flickr',
+        'datasets': {
+            'flickr': {
+                'raw_csv_point_data_path': $POINT_DATA_PATH,
+                'quadtree_pickle_filepath': $QT_PICKLE_PATH,
+                'min_year': $MIN_YEAR,
+                'max_year': $MAX_YEAR
+            },
+            'twitter': {
+                'raw_csv_point_data_path': $POINT_DATA_PATH,
+                'quadtree_pickle_filepath': $QT_PICKLE_PATH,
+                'min_year': $MIN_YEAR,
+                'max_year': $MAX_YEAR
+            }
+        },
         'cache_workspace': $CACHE_WORKSPACE_PATH'};
 
     natcap.invest.recreation.recmodel_server.execute(args)"
@@ -933,31 +942,55 @@ def execute(args):
     Returns:
         Never returns
     """
-    daemon = Pyro4.Daemon(args['hostname'], int(args['port']))
+    daemon = Pyro5.api.Daemon(args['hostname'], int(args['port']))
     max_points_per_node = GLOBAL_MAX_POINTS_PER_NODE
     if 'max_points_per_node' in args:
         max_points_per_node = args['max_points_per_node']
 
-    if 'raw_csv_point_data_path' in args and args['raw_csv_point_data_path']:
-        uri = daemon.register(
-            RecModel(args['min_year'], args['max_year'], args['cache_workspace'],
-                     raw_csv_filename=args['raw_csv_point_data_path'],
-                     max_points_per_node=max_points_per_node,
-                     dataset_name=args['dataset_name']),
-            'natcap.invest.recreation')
-    elif args['quadtree_pickle_filename']:
-        uri = daemon.register(
-            RecModel(args['min_year'], args['max_year'],
-                     args['cache_workspace'],
-                     quadtree_pickle_filename=args['quadtree_pickle_filename'],
-                     dataset_name=args['dataset_name']),
-            'natcap.invest.recreation')
-    else:
-        raise ValueError(
-            'Either `raw_csv_point_data_path` or `quadtree_pickle_filename`'
-            'must be present in `args`')
+    models = []
+    for dataset, props in args['datasets'].items():
+        if 'raw_csv_point_data_path' in args and args['raw_csv_point_data_path']:
+            models.append(RecModel(
+                args['min_year'], args['max_year'], args['cache_workspace'],
+                raw_csv_filename=args['raw_csv_point_data_path'],
+                max_points_per_node=max_points_per_node,
+                dataset_name=dataset))
+        elif args['quadtree_pickle_filename']:
+            models.append(RecModel(
+                args['min_year'], args['max_year'],
+                args['cache_workspace'],
+                quadtree_pickle_filename=args['quadtree_pickle_filename'],
+                dataset_name=dataset))
+        else:
+            raise ValueError(
+                f'Either `raw_csv_point_data_path` or `quadtree_pickle_filename`'
+                f'must be present in `args[datasets][{dataset}]`')
+    if len(models) == 0:
+        raise ValueError('No valid RecModel servers configured in `args`')
+    manager = RecManager(**models)
+    uri = daemon.register(manager, 'natcap.invest.recreation')
     LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
     daemon.requestLoop()
+
+
+@Pyro5.api.expose
+class RecManager(object):
+
+    def __init__(self, *args):
+        self.servers = args
+
+    def calculate_userdays(self, zip_file_binary, date_range, results_filename):
+        results = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            future_to_label = {
+                executor.submit(
+                    server.calc_user_days_in_aoi,
+                    zip_file_binary, date_range, results_filename): server.acronym
+                for server in self.servers}
+            for future in concurrent.futures.as_completed(future_to_label):
+                label = future_to_label[future]
+                results[label] = future.result()
+        return results
 
 
 def _hashfile(file_path, blocksize=2**20, fast_hash=False):
@@ -1023,6 +1056,7 @@ def _hashfile(file_path, blocksize=2**20, fast_hash=False):
     if fast_hash:
         file_hash += '_fast_hash'
     return file_hash
+
 
 def transplant_quadtree(qt_pickle_filepath, workspace):
     storage_dir = os.path.dirname(qt_pickle_filepath)
