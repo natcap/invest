@@ -500,46 +500,6 @@ class UnitTestRecServer(unittest.TestCase):
             expected_result_table, result_table, check_dtype=False)
 
 
-# TODO: is this test redundant with one from above?
-class TestLocalRecServer(unittest.TestCase):
-    """Tests using a local rec server."""
-
-    def setUp(self):
-        """Setup workspace and server."""
-        from natcap.invest.recreation import recmodel_server
-        self.workspace_dir = tempfile.mkdtemp()
-        self.recreation_server = recmodel_server.RecModel(
-            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
-            raw_csv_filename=os.path.join(SAMPLE_DATA, 'sample_data.csv'))
-
-    def tearDown(self):
-        """Delete workspace."""
-        shutil.rmtree(self.workspace_dir)
-
-    def test_local_aoi(self):
-        """Recreation test local AOI with local server."""
-        aoi_path = os.path.join(SAMPLE_DATA, 'test_local_aoi_for_subset.shp')
-        date_range = (
-            numpy.datetime64('2010-01-01'),
-            numpy.datetime64('2014-12-31'))
-        out_vector_filename = os.path.join(self.workspace_dir, 'pud.shp')
-        self.recreation_server._calc_aggregated_points_in_aoi(
-            aoi_path, self.workspace_dir, date_range, out_vector_filename)
-
-        with open(os.path.join(
-                self.workspace_dir, 'PUD_monthly_table.csv'), 'r') as file:
-            output_lines = file.readlines()
-        with open(os.path.join(
-                REGRESSION_DATA, 'expected_monthly_table_for_subset.csv'),
-                'r') as file:
-            expected_lines = file.readlines()
-
-        if output_lines != expected_lines:
-            raise ValueError(
-                "Output table not the same as input.\n"
-                "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
-
-
 class TestRecClientServer(unittest.TestCase):
     """Client regression tests using a server executing in a local process."""
 
