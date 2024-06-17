@@ -45,7 +45,7 @@ CSV_ROWS_PER_PARSE = 2 ** 10
 LOGGER_TIME_DELAY = 5.0
 INITIAL_BOUNDING_BOX = [-180, -90, 180, 90]
 
-Pyro4.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
+Pyro5.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
 
 LOGGER = logging.getLogger('natcap.invest.recreation.recmodel_server')
 
@@ -153,7 +153,7 @@ class RecModel(object):
         # self.global_cache_dir = global_cache
         self.min_year = min_year
         self.max_year = max_year
-        self.acronym = 'PUD' if dataset_name == 'flickr' else 'TUD'
+        self.acronym = 'pud' if dataset_name == 'flickr' else 'tud'
 
     def get_valid_year_range(self):
         """Return the min and max year queriable.
@@ -257,7 +257,7 @@ class RecModel(object):
             'calc user days complete sending binary back on %s',
             workspace_path)
         with open(aoi_ud_archive_path, 'rb') as aoi_ud_archive:
-            return aoi_ud_archive.read(), workspace_id
+            return aoi_ud_archive.read(), workspace_id, self.get_version()
 
     def _calc_aggregated_points_in_aoi(
             self, aoi_path, workspace_path, date_range, out_vector_filename):
@@ -947,27 +947,27 @@ def execute(args):
     if 'max_points_per_node' in args:
         max_points_per_node = args['max_points_per_node']
 
-    models = []
-    for dataset, props in args['datasets'].items():
-        if 'raw_csv_point_data_path' in args and args['raw_csv_point_data_path']:
-            models.append(RecModel(
-                args['min_year'], args['max_year'], args['cache_workspace'],
-                raw_csv_filename=args['raw_csv_point_data_path'],
+    servers = {}
+    for dataset, ds_args in args['datasets'].items():
+        cache_workspace = os.path.join(args['cache_workspace'], dataset)
+        if 'raw_csv_point_data_path' in ds_args and ds_args['raw_csv_point_data_path']:
+            servers[dataset] = RecModel(
+                ds_args['min_year'], ds_args['max_year'], cache_workspace,
+                raw_csv_filename=ds_args['raw_csv_point_data_path'],
                 max_points_per_node=max_points_per_node,
-                dataset_name=dataset))
-        elif args['quadtree_pickle_filename']:
-            models.append(RecModel(
-                args['min_year'], args['max_year'],
-                args['cache_workspace'],
-                quadtree_pickle_filename=args['quadtree_pickle_filename'],
-                dataset_name=dataset))
+                dataset_name=dataset)
+        elif 'quadtree_pickle_filename' in ds_args and ds_args['quadtree_pickle_filename']:
+            servers[dataset] = RecModel(
+                ds_args['min_year'], ds_args['max_year'], cache_workspace,
+                quadtree_pickle_filename=ds_args['quadtree_pickle_filename'],
+                dataset_name=dataset)
         else:
             raise ValueError(
                 f'Either `raw_csv_point_data_path` or `quadtree_pickle_filename`'
                 f'must be present in `args[datasets][{dataset}]`')
-    if len(models) == 0:
+    if len(servers) == 0:
         raise ValueError('No valid RecModel servers configured in `args`')
-    manager = RecManager(**models)
+    manager = RecManager(servers)
     uri = daemon.register(manager, 'natcap.invest.recreation')
     LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
     daemon.requestLoop()
@@ -976,17 +976,38 @@ def execute(args):
 @Pyro5.api.expose
 class RecManager(object):
 
-    def __init__(self, *args):
-        self.servers = args
+    def __init__(self, servers_dict):
+        self.servers = servers_dict
 
-    def calculate_userdays(self, zip_file_binary, date_range, results_filename):
+    def calculate_userdays(self, zip_file_binary, start_year, end_year, dataset_list):
         results = {}
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            future_to_label = {
-                executor.submit(
-                    server.calc_user_days_in_aoi,
-                    zip_file_binary, date_range, results_filename): server.acronym
-                for server in self.servers}
+            future_to_label = {}
+            for dataset in dataset_list:
+                server = self.servers[dataset]
+                # validate available year range
+                min_year, max_year = server.get_valid_year_range()
+                LOGGER.info(
+                    f"Server supports year queries between {min_year} and {max_year}")
+                if not min_year <= int(start_year) <= max_year:
+                    raise ValueError(
+                        f"Start year must be between {min_year} and {max_year}.\n"
+                        f" User input: ({start_year})")
+                if not min_year <= int(end_year) <= max_year:
+                    raise ValueError(
+                        f"End year must be between {min_year} and {max_year}.\n"
+                        f" User input: ({end_year})")
+
+                # append jan 1 to start and dec 31 to end
+                date_range = (str(start_year)+'-01-01',
+                              str(end_year)+'-12-31')
+
+                results_filename = f'{self.servers[dataset].acronym}_results.shp'
+                fut = executor.submit(
+                    self.servers[dataset].calc_user_days_in_aoi,
+                    zip_file_binary, date_range, results_filename)
+                future_to_label[fut] = self.servers[dataset].acronym
+
             for future in concurrent.futures.as_completed(future_to_label):
                 label = future_to_label[future]
                 results[label] = future.result()

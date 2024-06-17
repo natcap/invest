@@ -13,7 +13,7 @@ import zipfile
 import numpy
 import numpy.linalg
 import pygeoprocessing
-import Pyro4
+import Pyro5
 import rtree
 import shapely
 import shapely.geometry
@@ -46,7 +46,7 @@ SERVER_URL_DICT = {
 }
 
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
-Pyro4.config.SERIALIZER = 'marshal'
+Pyro5.config.SERIALIZER = 'marshal'
 
 predictor_table_columns = {
     "id": {
@@ -371,8 +371,10 @@ RESPONSE_ID_DICT = {
 SCENARIO_RESPONSE_ID = 'UD_EST'
 
 _OUTPUT_BASE_FILES = {
-    'results_path': 'userday_results.shp',
-    'monthly_table_path': 'monthly_table.csv',
+    'pud_results_path': 'pud_results.shp',
+    'pud_monthly_table_path': 'pud_monthly_table.csv',
+    'tud_results_path': 'tud_results.shp',
+    'tud_monthly_table_path': 'tud_monthly_table.csv',
     'predictor_vector_path': 'predictor_data.shp',
     'scenario_results_path': 'scenario_results.shp',
     'regression_coefficients': 'regression_coefficients.txt',
@@ -381,7 +383,8 @@ _OUTPUT_BASE_FILES = {
 _INTERMEDIATE_BASE_FILES = {
     'local_aoi_path': 'aoi.shp',
     'compressed_aoi_path': 'aoi.zip',
-    'compressed_userdays_path': 'userdays.zip',
+    'pud_compressed_userdays_path': 'pud_userdays.zip',
+    'tud_compressed_userdays_path': 'tud_userdays.zip',
     'response_polygons_lookup': 'response_polygons_lookup.pickle',
     'server_version': 'server_version.pickle',
 }
@@ -511,21 +514,21 @@ def execute(args):
     prep_aoi_task.join()
 
     # All the server communication happens in this task.
-    photo_user_days_task = task_graph.add_task(
-        func=_retrieve_photo_user_days,
+    user_days_task = task_graph.add_task(
+        func=_retrieve_user_days,
         args=(file_registry['local_aoi_path'],
               file_registry['compressed_aoi_path'],
               args['start_year'], args['end_year'],
-              os.path.basename(file_registry['results_path']),
-              os.path.basename(file_registry['monthly_table_path']),
-              file_registry['compressed_userdays_path'],
+              os.path.basename(file_registry['pud_monthly_table_path']),
+              os.path.basename(file_registry['tud_monthly_table_path']),
               output_dir, server_url, file_registry['server_version']),
         target_path_list=[file_registry['compressed_aoi_path'],
-                          file_registry['compressed_userdays_path'],
-                          file_registry['results_path'],
-                          file_registry['monthly_table_path'],
+                          file_registry['pud_results_path'],
+                          file_registry['pud_monthly_table_path'],
+                          file_registry['tud_results_path'],
+                          file_registry['tud_monthly_table_path'],
                           file_registry['server_version']],
-        task_name='photo-user-day-calculation')
+        task_name='user-day-calculation')
 
     if 'compute_regression' in args and args['compute_regression']:
         # Prepare the AOI for geoprocessing.
@@ -559,7 +562,7 @@ def execute(args):
             target_path_list=[file_registry['regression_coefficients'],
                               coefficient_json_path],
             dependent_task_list=[
-                photo_user_days_task, build_predictor_data_task],
+                user_days_task, build_predictor_data_task],
             task_name='compute regression')
 
         if ('scenario_predictor_table_path' in args and
@@ -598,9 +601,9 @@ def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
     aoi_vector = None
 
 
-def _retrieve_photo_user_days(
+def _retrieve_user_days(
         local_aoi_path, compressed_aoi_path, start_year, end_year,
-        pud_results_filename, monthly_table_filename, compressed_pud_path,
+        pud_monthly_table_filename, tud_monthly_table_filename,
         output_dir, server_url, server_version_pickle):
     """Calculate photo-user-days (PUD) on the server and send back results.
 
@@ -629,29 +632,7 @@ def _retrieve_photo_user_days(
     """
 
     LOGGER.info('Contacting server, please wait.')
-    recmodel_server = Pyro5.api.Proxy(server_url)
-    server_version = recmodel_server.get_version()
-    LOGGER.info(f'Server online, version: {server_version}')
-    # store server version info in a file so we can list it in results summary.
-    with open(server_version_pickle, 'wb') as f:
-        pickle.dump(server_version, f)
-
-    # validate available year range
-    min_year, max_year = recmodel_server.get_valid_year_range()
-    LOGGER.info(
-        f"Server supports year queries between {min_year} and {max_year}")
-    if not min_year <= int(start_year) <= max_year:
-        raise ValueError(
-            f"Start year must be between {min_year} and {max_year}.\n"
-            f" User input: ({start_year})")
-    if not min_year <= int(end_year) <= max_year:
-        raise ValueError(
-            f"End year must be between {min_year} and {max_year}.\n"
-            f" User input: ({end_year})")
-
-    # append jan 1 to start and dec 31 to end
-    date_range = (str(start_year)+'-01-01',
-                  str(end_year)+'-12-31')
+    recmodel_manager = Pyro5.api.Proxy(server_url)
 
     basename = os.path.splitext(local_aoi_path)[0]
     with zipfile.ZipFile(compressed_aoi_path, 'w') as aoizip:
@@ -667,32 +648,49 @@ def _retrieve_photo_user_days(
 
     # transfer zipped file to server
     start_time = time.time()
-    LOGGER.info('Please wait for server to calculate PUD...')
+    LOGGER.info('Please wait for server to calculate PUD and TUD...')
 
-    result_zip_file_binary, workspace_id = (
-        recmodel_server.calc_user_days_in_aoi(
-            zip_file_binary, date_range,
-            pud_results_filename))
-    LOGGER.info(f'received result, took {time.time() - start_time} seconds, '
-                f'workspace_id: {workspace_id}')
+    dataset_list = ['flickr', 'twitter']
+    acronym_lookup = {
+        'flickr': 'pud',
+        'twitter': 'tud'
+    }
+    results = recmodel_manager.calculate_userdays(
+        zip_file_binary, start_year, end_year, dataset_list)
+    for dataset in dataset_list:
+        result_zip_file_binary, workspace_id, server_version = (
+            results[acronym_lookup[dataset]])
 
-    # unpack result
-    with open(compressed_pud_path, 'wb') as pud_file:
-        pud_file.write(result_zip_file_binary)
-    temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
-    zipfile.ZipFile(compressed_pud_path, 'r').extractall(
-        temporary_output_dir)
+        LOGGER.info(f'Server version: {server_version}')
+        # store server version info in a file so we can list it in results summary.
+        with open(server_version_pickle, 'ab') as f:
+            pickle.dump(server_version, f)
+        LOGGER.info(f'received result, took {time.time() - start_time} seconds, '
+                    f'workspace_id: {workspace_id}')
 
-    for filename in os.listdir(temporary_output_dir):
-        shutil.copy(os.path.join(temporary_output_dir, filename), output_dir)
-    shutil.rmtree(temporary_output_dir)
-    # the monthly table is returned from the server without a results_suffix.
-    shutil.move(
-        os.path.join(output_dir, 'monthly_table.csv'),
-        os.path.join(output_dir, monthly_table_filename))
+        # unpack result
+        compressed_userdays_path = os.path.join(
+            output_dir, 'intermediate', f'{dataset}_userdays.zip')
+        with open(compressed_userdays_path, 'wb') as pud_file:
+            pud_file.write(result_zip_file_binary)
+        temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
+        zipfile.ZipFile(compressed_userdays_path, 'r').extractall(
+            temporary_output_dir)
+
+        for filename in os.listdir(temporary_output_dir):
+            shutil.copy(os.path.join(temporary_output_dir, filename), output_dir)
+        shutil.rmtree(temporary_output_dir)
+        # the monthly table is returned from the server without a results_suffix.
+        if dataset == 'flickr':
+            renamed_table = pud_monthly_table_filename
+        else:
+            renamed_table = tud_monthly_table_filename
+        shutil.move(
+            os.path.join(output_dir, f'{acronym_lookup[dataset]}_monthly_table.csv'),
+            os.path.join(output_dir, renamed_table))
 
     LOGGER.info('connection release')
-    recmodel_server._pyroRelease()
+    recmodel_manager._pyroRelease()
 
 
 def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):

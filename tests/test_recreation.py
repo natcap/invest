@@ -21,14 +21,14 @@ from osgeo import ogr
 from osgeo import osr
 import pandas
 import pygeoprocessing
-import Pyro4
+import Pyro5
 import shapely
 import taskgraph
 import warnings
 
 from natcap.invest import utils
 
-Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
+Pyro5.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -677,12 +677,12 @@ class TestRecClientServer(unittest.TestCase):
 
     @_timeout(30.0)
     def test_workspace_fetcher(self):
-        """Recreation test workspace fetcher on a local Pyro4 empty server."""
+        """Recreation test workspace fetcher on a local Pyro5 empty server."""
         from natcap.invest.recreation import recmodel_workspace_fetcher
 
         path = "PYRO:natcap.invest.recreation@localhost:%s" % self.port
         LOGGER.info("Local server path %s", path)
-        recreation_server = Pyro4.Proxy(path)
+        recreation_server = Pyro5.Proxy(path)
         aoi_path = os.path.join(
             SAMPLE_DATA, 'test_aoi_for_subset.shp')
         basename = os.path.splitext(aoi_path)[0]
