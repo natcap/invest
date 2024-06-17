@@ -727,6 +727,8 @@ class TestRecClientServer(unittest.TestCase):
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
+            'hostname': 'localhost',
+            'port': self.port
         }
 
         with self.assertRaises(ValueError):
@@ -750,6 +752,8 @@ class TestRecClientServer(unittest.TestCase):
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
+            'hostname': 'localhost',
+            'port': self.port
         }
 
         with self.assertRaises(ValueError):
