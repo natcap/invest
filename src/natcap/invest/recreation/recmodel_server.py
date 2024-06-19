@@ -153,7 +153,7 @@ class RecModel(object):
         # self.global_cache_dir = global_cache
         self.min_year = min_year
         self.max_year = max_year
-        self.acronym = 'pud' if dataset_name == 'flickr' else 'tud'
+        self.acronym = 'PUD' if dataset_name == 'flickr' else 'TUD'
 
     def get_valid_year_range(self):
         """Return the min and max year queriable.

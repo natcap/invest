@@ -507,7 +507,8 @@ class TestRecClientServer(unittest.TestCase):
         """Setup workspace."""
         from natcap.invest.recreation import recmodel_server
 
-        self.workspace_dir = tempfile.mkdtemp()
+        # self.workspace_dir = tempfile.mkdtemp()
+        self.workspace_dir = 'test_ws'
         self.resampled_data_path = os.path.join(
             self.workspace_dir, 'resampled_data.csv')
         _resample_csv(
@@ -554,7 +555,7 @@ class TestRecClientServer(unittest.TestCase):
     def tearDown(self):
         """Delete workspace."""
         self.server_process.terminate()
-        shutil.rmtree(self.workspace_dir, ignore_errors=True)
+        # shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
     def test_all_metrics_local_server(self):
         """Recreation test with all but trivial predictor metrics.

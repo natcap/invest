@@ -348,11 +348,7 @@ _ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
 # Have 5 seconds between timed progress outputs
 LOGGER_TIME_DELAY = 5
 
-# For now, this is the field name we use to mark the photo user "days"
-RESPONSE_ID_DICT = {
-    'photos': 'PUD_YR_AVG',
-    'tweets': 'TUD_YR_AVG'
-}
+RESPONSE_VARIABLE_ID = 'sumPUD_TUD'
 SCENARIO_RESPONSE_ID = 'UD_EST'
 
 _OUTPUT_BASE_FILES = {
@@ -360,7 +356,7 @@ _OUTPUT_BASE_FILES = {
     'pud_monthly_table_path': 'pud_monthly_table.csv',
     'tud_results_path': 'tud_results.shp',
     'tud_monthly_table_path': 'tud_monthly_table.csv',
-    'predictor_vector_path': 'predictor_data.shp',
+    'regression_vector_path': 'regression_data.shp',
     'scenario_results_path': 'scenario_results.shp',
     'regression_coefficients': 'regression_coefficients.txt',
 }
@@ -525,35 +521,44 @@ def execute(args):
             task_name='prepare response polygons for geoprocessing')
 
         # Build predictor data
-        build_predictor_data_task = _schedule_predictor_data_processing(
+        predictor_task_list, predictor_json_list = _schedule_predictor_data_processing(
             file_registry['local_aoi_path'],
             file_registry['response_polygons_lookup'],
             prepare_response_polygons_task,
             args['predictor_table_path'],
-            file_registry['predictor_vector_path'],
+            # file_registry['predictor_vector_path'],
             intermediate_dir, task_graph)
+
+        assemble_regression_data_task = task_graph.add_task(
+            func=_assemble_regression_data,
+            args=(file_registry['pud_results_path'],
+                  file_registry['tud_results_path'],
+                  predictor_json_list,
+                  file_registry['regression_vector_path']),
+            target_path_list=[file_registry['regression_vector_path']],
+            dependent_task_list=predictor_task_list + [user_days_task],
+            task_name='assemble predictor data')
 
         # Compute the regression
         coefficient_json_path = os.path.join(
             intermediate_dir, 'predictor_estimates.json')
         compute_regression_task = task_graph.add_task(
             func=_compute_and_summarize_regression,
-            args=(file_registry['results_path'],
-                  RESPONSE_ID_DICT[args['visitation_proxy']],
-                  file_registry['predictor_vector_path'],
+            args=(file_registry['regression_vector_path'],
+                  RESPONSE_VARIABLE_ID,
+                  args['predictor_table_path'],
                   file_registry['server_version'],
                   coefficient_json_path,
                   file_registry['regression_coefficients']),
             target_path_list=[file_registry['regression_coefficients'],
                               coefficient_json_path],
-            dependent_task_list=[
-                user_days_task, build_predictor_data_task],
+            dependent_task_list=[assemble_regression_data_task],
             task_name='compute regression')
 
         if ('scenario_predictor_table_path' in args and
                 args['scenario_predictor_table_path'] != ''):
             utils.make_directories([scenario_dir])
-            build_scenario_data_task = _schedule_predictor_data_processing(
+            build_scenario_data_task, predictor_json_list = _schedule_predictor_data_processing(
                 file_registry['local_aoi_path'],
                 file_registry['response_polygons_lookup'],
                 prepare_response_polygons_task,
@@ -637,8 +642,8 @@ def _retrieve_user_days(
 
     dataset_list = ['flickr', 'twitter']
     acronym_lookup = {
-        'flickr': 'pud',
-        'twitter': 'tud'
+        'flickr': 'PUD',
+        'twitter': 'TUD'
     }
     results = recmodel_manager.calculate_userdays(
         zip_file_binary, start_year, end_year, dataset_list)
@@ -791,7 +796,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 def _schedule_predictor_data_processing(
         response_vector_path, response_polygons_pickle_path,
         prepare_response_polygons_task,
-        predictor_table_path, out_predictor_vector_path,
+        predictor_table_path,
         working_dir, task_graph):
     """Summarize spatial predictor data by polygons in the response vector.
 
@@ -891,15 +896,16 @@ def _schedule_predictor_data_processing(
                 dependent_task_list=[prepare_response_polygons_task],
                 task_name=f'predictor {predictor_id}'))
 
-    assemble_predictor_data_task = task_graph.add_task(
-        func=_json_to_shp_table,
-        args=(response_vector_path, out_predictor_vector_path,
-              predictor_json_list),
-        target_path_list=[out_predictor_vector_path],
-        dependent_task_list=predictor_task_list,
-        task_name='assemble predictor data')
+    return predictor_task_list, predictor_json_list
+    # assemble_predictor_data_task = task_graph.add_task(
+    #     func=_json_to_shp_table,
+    #     args=(response_vector_path, out_predictor_vector_path,
+    #           predictor_json_list),
+    #     target_path_list=[out_predictor_vector_path],
+    #     dependent_task_list=predictor_task_list,
+    #     task_name='assemble predictor data')
 
-    return assemble_predictor_data_task
+    # return assemble_predictor_data_task
 
 
 def _prepare_response_polygons_lookup(
@@ -918,37 +924,70 @@ def _prepare_response_polygons_lookup(
         pickle.dump(response_polygons_lookup, pickle_file)
 
 
-def _json_to_shp_table(
-        response_vector_path, predictor_vector_path,
-        predictor_json_list):
-    """Create a shapefile and a field with data from each json file.
+def _assemble_regression_data(
+        pud_vector_path, tud_vector_path,
+        predictor_json_list, target_vector_path):
+    """Create a vector with data for each predictor and response variables.
 
     Args:
-        response_vector_path (string): Path to the response vector polygon
-            shapefile.
-        predictor_vector_path (string): a copy of ``response_vector_path``.
-            One field will be added for each json file, and all other
-            fields will be deleted.
+        pud_vector_path (string): Path to the vector polygon
+            layer with PUD_YR_AVG.
+        tud_vector_path (string): Path to the vector polygon
+            layer with TUD_YR_AVG.
         predictor_json_list (list): list of json filenames, one for each
             predictor dataset. A json file will look like this,
             {0: 0.0, 1: 0.0}
             Keys match FIDs of ``response_vector_path``.
+        target_vector_path (string): a copy of the geometry from ``pud_vector_path``.
+            Fields include all data needed to compute the linear regression:
+                * one field for each predictor,
+                * PUD_YR_AVG
+                * TUD_YR_AVG
+                * PUD_plus_TUD (the response variable for linear regression)
 
     Returns:
         None
 
     """
     driver = gdal.GetDriverByName('ESRI Shapefile')
-    if os.path.exists(predictor_vector_path):
-        driver.Delete(predictor_vector_path)
-    response_vector = gdal.OpenEx(
-        response_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-    predictor_vector = driver.CreateCopy(
-        predictor_vector_path, response_vector)
-    response_vector = None
+    if os.path.exists(target_vector_path):
+        driver.Delete(target_vector_path)
+    pud_vector = gdal.OpenEx(
+        pud_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_vector = driver.CreateCopy(
+        target_vector_path, pud_vector)
+    tud_vector = gdal.OpenEx(
+        tud_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    tud_layer = tud_vector.GetLayer()
 
-    layer = predictor_vector.GetLayer()
+    layer = target_vector.GetLayer()
     layer_defn = layer.GetLayerDefn()
+
+    def _create_field(fieldname):
+        # Create a new field for the predictor
+        # Delete the field first if it already exists
+        field_index = layer.FindFieldIndex(
+            str(fieldname), 1)
+        if field_index >= 0:
+            layer.DeleteField(field_index)
+        field = ogr.FieldDefn(str(fieldname), ogr.OFTReal)
+        field.SetWidth(24)
+        field.SetPrecision(11)
+        layer.CreateField(field)
+
+    tud_variable_id = 'TUD_YR_AVG'
+    pud_variable_id = 'PUD_YR_AVG'
+    _create_field(tud_variable_id)
+    _create_field(RESPONSE_VARIABLE_ID)
+
+    for feature in layer:
+        tud_feature = tud_layer.GetFeature(feature.GetFID())
+        tud_yr_avg = tud_feature.GetField(tud_variable_id)
+        feature.SetField(tud_variable_id, tud_yr_avg)
+        feature.SetField(
+            RESPONSE_VARIABLE_ID,
+            feature.GetField(pud_variable_id) + tud_yr_avg)
+        layer.SetFeature(feature)
 
     predictor_id_list = []
     for json_filename in predictor_json_list:
@@ -956,14 +995,15 @@ def _json_to_shp_table(
         predictor_id_list.append(predictor_id)
         # Create a new field for the predictor
         # Delete the field first if it already exists
-        field_index = layer.FindFieldIndex(
-            str(predictor_id), 1)
-        if field_index >= 0:
-            layer.DeleteField(field_index)
-        predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
-        predictor_field.SetWidth(24)
-        predictor_field.SetPrecision(11)
-        layer.CreateField(predictor_field)
+        # field_index = layer.FindFieldIndex(
+        #     str(predictor_id), 1)
+        # if field_index >= 0:
+        #     layer.DeleteField(field_index)
+        # predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
+        # predictor_field.SetWidth(24)
+        # predictor_field.SetPrecision(11)
+        # layer.CreateField(predictor_field)
+        _create_field(predictor_id)
 
         with open(json_filename, 'r') as file:
             predictor_results = json.load(file)
@@ -973,20 +1013,22 @@ def _json_to_shp_table(
             layer.SetFeature(feature)
 
     # Get all the fieldnames. If they are not in the predictor_id_list,
-    # get their index and delete
+    # or the userday variables, find and delete them.
+    field_list = predictor_id_list + [
+        RESPONSE_VARIABLE_ID, tud_variable_id, pud_variable_id]
     n_fields = layer_defn.GetFieldCount()
     fieldnames = []
     for idx in range(n_fields):
         field_defn = layer_defn.GetFieldDefn(idx)
         fieldnames.append(field_defn.GetName())
     for field_name in fieldnames:
-        if field_name not in predictor_id_list:
+        if field_name not in field_list:
             idx = layer.FindFieldIndex(field_name, 1)
             layer.DeleteField(idx)
     layer_defn = None
     layer = None
-    predictor_vector.FlushCache()
-    predictor_vector = None
+    target_vector.FlushCache()
+    target_vector = None
 
 
 def _raster_sum_mean(
@@ -1266,13 +1308,13 @@ def _ogr_to_geometry_list(vector_path):
 
 
 def _compute_and_summarize_regression(
-        response_vector_path, response_id, predictor_vector_path, server_version_path,
+        data_vector_path, response_id, predictor_table_path, server_version_path,
         target_coefficient_json_path, target_regression_summary_path):
     """Compute a regression and summary statistics and generate a report.
 
     Args:
-        response_vector_path (string): path to polygon vector containing the
-            RESPONSE_ID field.
+        data_vector_path (string): path to polygon vector containing the
+            RESPONSE_ID field and predictor data
         predictor_vector_path (string): path to polygon vector containing
             fields for each predictor variable. Geometry is identical to that
             of 'response_vector_path'.
@@ -1288,9 +1330,13 @@ def _compute_and_summarize_regression(
         None
 
     """
+    predictor_df = validation.get_validated_dataframe(
+        predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
+    predictor_list = predictor_df.index
+    import pdb; pdb.set_trace()
     predictor_id_list, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
         _build_regression(
-            response_vector_path, predictor_vector_path, response_id))
+            data_vector_path, predictor_list, response_id))
 
     # Generate a nice looking regression result and write to log and file
     coefficients_string = '               estimate     stderr    t value\n'
@@ -1331,7 +1377,7 @@ def _compute_and_summarize_regression(
 
 
 def _build_regression(
-        response_vector_path, predictor_vector_path,
+        data_vector_path, predictor_id_list,
         response_id):
     """Multiple least-squares regression with log-transformed response.
 
@@ -1368,21 +1414,14 @@ def _build_regression(
 
     """
     LOGGER.info("Computing regression")
-    response_vector = gdal.OpenEx(response_vector_path, gdal.OF_VECTOR)
-    response_layer = response_vector.GetLayer()
+    data_vector = gdal.OpenEx(data_vector_path, gdal.OF_VECTOR)
+    data_layer = data_vector.GetLayer()
 
-    predictor_vector = gdal.OpenEx(predictor_vector_path, gdal.OF_VECTOR)
-    predictor_layer = predictor_vector.GetLayer()
-    predictor_layer_defn = predictor_layer.GetLayerDefn()
-
-    n_features = predictor_layer.GetFeatureCount()
-    # Not sure what would cause this to be untrue, but if it ever is,
-    # we sure want to know about it.
-    assert(n_features == response_layer.GetFeatureCount())
+    n_features = data_layer.GetFeatureCount()
 
     # Response data matrix
     response_array = numpy.empty((n_features, 1))
-    for row_index, feature in enumerate(response_layer):
+    for row_index, feature in enumerate(data_layer):
         response_array[row_index, :] = feature.GetField(str(response_id))
     response_array = numpy.log1p(response_array)
 
@@ -1390,22 +1429,22 @@ def _build_regression(
     intercept_array = numpy.ones_like(response_array)
 
     # Predictor data matrix
-    n_predictors = predictor_layer_defn.GetFieldCount()
-    predictor_matrix = numpy.empty((n_features, n_predictors))
-    predictor_names = []
-    for idx in range(n_predictors):
-        field_defn = predictor_layer_defn.GetFieldDefn(idx)
-        field_name = field_defn.GetName()
-        predictor_names.append(field_name)
-    for row_index, feature in enumerate(predictor_layer):
+    # n_predictors = predictor_layer_defn.GetFieldCount()
+    predictor_matrix = numpy.empty((n_features, len(predictor_id_list)))
+    # predictor_names = []
+    # for idx in range(n_predictors):
+    #     field_defn = predictor_layer_defn.GetFieldDefn(idx)
+    #     field_name = field_defn.GetName()
+    #     predictor_names.append(field_name)
+    for row_index, feature in enumerate(data_layer):
         predictor_matrix[row_index, :] = numpy.array(
-            [feature.GetField(str(key)) for key in predictor_names])
+            [feature.GetField(str(key)) for key in predictor_id_list])
 
     # If some predictor has no data across all features, drop that predictor:
     valid_pred = ~numpy.isnan(predictor_matrix).all(axis=0)
     predictor_matrix = predictor_matrix[:, valid_pred]
     predictor_names = [
-        pred for (pred, valid) in zip(predictor_names, valid_pred)
+        pred for (pred, valid) in zip(predictor_id_list, valid_pred)
         if valid]
     n_predictors = predictor_matrix.shape[1]
 
