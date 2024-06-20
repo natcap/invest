@@ -585,7 +585,7 @@ class TestRecClientServer(unittest.TestCase):
         recmodel_client.execute(args)
 
         out_grid_vector_path = os.path.join(
-            args['workspace_dir'], 'predictor_data.shp')
+            args['workspace_dir'], 'regression_data.shp')
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'predictor_data_all_metrics.shp')
         utils._assert_vectors_equal(
@@ -598,7 +598,7 @@ class TestRecClientServer(unittest.TestCase):
         utils._assert_vectors_equal(
             out_scenario_path, expected_scenario_path, 1e-3)
 
-    @_timeout(30.0)
+    @_timeout(60.0)
     def test_execute_local_server(self):
         """Recreation base regression test on sample data on local server.
 

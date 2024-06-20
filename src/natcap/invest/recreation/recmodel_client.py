@@ -219,7 +219,7 @@ MODEL_SPEC = {
                 "Copy of the the AOI vector with aggregate attributes added."),
             "geometries": spec_utils.POLYGONS,
             "fields": {
-                "PUD_YR_AVG" : {
+                "PUD_YR_AVG": {
                     "about": gettext(
                         "The average photo-user-days per year"),
                     "type": "number",
@@ -521,22 +521,22 @@ def execute(args):
             task_name='prepare response polygons for geoprocessing')
 
         # Build predictor data
-        predictor_task_list, predictor_json_list = _schedule_predictor_data_processing(
+        assemble_predictor_data_task = _schedule_predictor_data_processing(
             file_registry['local_aoi_path'],
             file_registry['response_polygons_lookup'],
             prepare_response_polygons_task,
             args['predictor_table_path'],
-            # file_registry['predictor_vector_path'],
+            file_registry['regression_vector_path'],
             intermediate_dir, task_graph)
 
         assemble_regression_data_task = task_graph.add_task(
             func=_assemble_regression_data,
             args=(file_registry['pud_results_path'],
                   file_registry['tud_results_path'],
-                  predictor_json_list,
+                  # file_registry['predictor_vector_path'],
                   file_registry['regression_vector_path']),
             target_path_list=[file_registry['regression_vector_path']],
-            dependent_task_list=predictor_task_list + [user_days_task],
+            dependent_task_list=[assemble_predictor_data_task, user_days_task],
             task_name='assemble predictor data')
 
         # Compute the regression
@@ -558,7 +558,7 @@ def execute(args):
         if ('scenario_predictor_table_path' in args and
                 args['scenario_predictor_table_path'] != ''):
             utils.make_directories([scenario_dir])
-            build_scenario_data_task, predictor_json_list = _schedule_predictor_data_processing(
+            build_scenario_data_task = _schedule_predictor_data_processing(
                 file_registry['local_aoi_path'],
                 file_registry['response_polygons_lookup'],
                 prepare_response_polygons_task,
@@ -796,7 +796,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 def _schedule_predictor_data_processing(
         response_vector_path, response_polygons_pickle_path,
         prepare_response_polygons_task,
-        predictor_table_path,
+        predictor_table_path, target_predictor_vector_path,
         working_dir, task_graph):
     """Summarize spatial predictor data by polygons in the response vector.
 
@@ -829,7 +829,7 @@ def _schedule_predictor_data_processing(
                     polygon
                 'raster_mean': average of predictor raster under the
                     response polygon
-        out_predictor_vector_path (string): path to a copy of
+        target_predictor_vector_path (string): path to a copy of
             ``response_vector_path`` with a column for each id in
             predictor_table_path. Overwritten if exists.
         working_dir (string): path to an intermediate directory to store json
@@ -896,16 +896,16 @@ def _schedule_predictor_data_processing(
                 dependent_task_list=[prepare_response_polygons_task],
                 task_name=f'predictor {predictor_id}'))
 
-    return predictor_task_list, predictor_json_list
-    # assemble_predictor_data_task = task_graph.add_task(
-    #     func=_json_to_shp_table,
-    #     args=(response_vector_path, out_predictor_vector_path,
-    #           predictor_json_list),
-    #     target_path_list=[out_predictor_vector_path],
-    #     dependent_task_list=predictor_task_list,
-    #     task_name='assemble predictor data')
+    # return predictor_task_list, predictor_json_list
+    assemble_predictor_data_task = task_graph.add_task(
+        func=_json_to_shp_table,
+        args=(response_vector_path, target_predictor_vector_path,
+              predictor_json_list),
+        target_path_list=[target_predictor_vector_path],
+        dependent_task_list=predictor_task_list,
+        task_name='assemble predictor data')
 
-    # return assemble_predictor_data_task
+    return assemble_predictor_data_task
 
 
 def _prepare_response_polygons_lookup(
@@ -925,8 +925,7 @@ def _prepare_response_polygons_lookup(
 
 
 def _assemble_regression_data(
-        pud_vector_path, tud_vector_path,
-        predictor_json_list, target_vector_path):
+        pud_vector_path, tud_vector_path, target_vector_path):
     """Create a vector with data for each predictor and response variables.
 
     Args:
@@ -949,19 +948,18 @@ def _assemble_regression_data(
         None
 
     """
-    driver = gdal.GetDriverByName('ESRI Shapefile')
-    if os.path.exists(target_vector_path):
-        driver.Delete(target_vector_path)
+    # driver = gdal.GetDriverByName('ESRI Shapefile')
     pud_vector = gdal.OpenEx(
-        pud_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-    target_vector = driver.CreateCopy(
-        target_vector_path, pud_vector)
+        pud_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
+    pud_layer = pud_vector.GetLayer()
     tud_vector = gdal.OpenEx(
-        tud_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+        tud_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
     tud_layer = tud_vector.GetLayer()
+    target_vector = gdal.OpenEx(
+        target_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
 
     layer = target_vector.GetLayer()
-    layer_defn = layer.GetLayerDefn()
+    # layer_defn = layer.GetLayerDefn()
 
     def _create_field(fieldname):
         # Create a new field for the predictor
@@ -978,16 +976,39 @@ def _assemble_regression_data(
     tud_variable_id = 'TUD_YR_AVG'
     pud_variable_id = 'PUD_YR_AVG'
     _create_field(tud_variable_id)
+    _create_field(pud_variable_id)
     _create_field(RESPONSE_VARIABLE_ID)
 
     for feature in layer:
+        pud_feature = pud_layer.GetFeature(feature.GetFID())
         tud_feature = tud_layer.GetFeature(feature.GetFID())
+        pud_yr_avg = pud_feature.GetField(pud_variable_id)
         tud_yr_avg = tud_feature.GetField(tud_variable_id)
+        feature.SetField(pud_variable_id, pud_yr_avg)
         feature.SetField(tud_variable_id, tud_yr_avg)
         feature.SetField(
-            RESPONSE_VARIABLE_ID,
-            feature.GetField(pud_variable_id) + tud_yr_avg)
+            RESPONSE_VARIABLE_ID, pud_yr_avg + tud_yr_avg)
         layer.SetFeature(feature)
+
+    layer = None
+    target_vector = None
+
+
+def _json_to_shp_table(
+        response_vector_path, predictor_vector_path,
+        predictor_json_list):
+    """Create a shapefile and a field with data from each json file."""
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    if os.path.exists(predictor_vector_path):
+        driver.Delete(predictor_vector_path)
+    response_vector = gdal.OpenEx(
+        response_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    predictor_vector = driver.CreateCopy(
+        predictor_vector_path, response_vector)
+    response_vector = None
+
+    layer = predictor_vector.GetLayer()
+    layer_defn = layer.GetLayerDefn()
 
     predictor_id_list = []
     for json_filename in predictor_json_list:
@@ -995,15 +1016,15 @@ def _assemble_regression_data(
         predictor_id_list.append(predictor_id)
         # Create a new field for the predictor
         # Delete the field first if it already exists
-        # field_index = layer.FindFieldIndex(
-        #     str(predictor_id), 1)
-        # if field_index >= 0:
-        #     layer.DeleteField(field_index)
-        # predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
-        # predictor_field.SetWidth(24)
-        # predictor_field.SetPrecision(11)
-        # layer.CreateField(predictor_field)
-        _create_field(predictor_id)
+        field_index = layer.FindFieldIndex(
+            str(predictor_id), 1)
+        if field_index >= 0:
+            layer.DeleteField(field_index)
+        predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
+        predictor_field.SetWidth(24)
+        predictor_field.SetPrecision(11)
+        layer.CreateField(predictor_field)
+        # _create_field(predictor_id)
 
         with open(json_filename, 'r') as file:
             predictor_results = json.load(file)
@@ -1014,21 +1035,21 @@ def _assemble_regression_data(
 
     # Get all the fieldnames. If they are not in the predictor_id_list,
     # or the userday variables, find and delete them.
-    field_list = predictor_id_list + [
-        RESPONSE_VARIABLE_ID, tud_variable_id, pud_variable_id]
+    # field_list = predictor_id_list + [
+    #     RESPONSE_VARIABLE_ID, tud_variable_id, pud_variable_id]
     n_fields = layer_defn.GetFieldCount()
     fieldnames = []
     for idx in range(n_fields):
         field_defn = layer_defn.GetFieldDefn(idx)
         fieldnames.append(field_defn.GetName())
     for field_name in fieldnames:
-        if field_name not in field_list:
+        if field_name not in predictor_id_list:
             idx = layer.FindFieldIndex(field_name, 1)
             layer.DeleteField(idx)
     layer_defn = None
     layer = None
-    target_vector.FlushCache()
-    target_vector = None
+    predictor_vector.FlushCache()
+    predictor_vector = None
 
 
 def _raster_sum_mean(
@@ -1333,7 +1354,6 @@ def _compute_and_summarize_regression(
     predictor_df = validation.get_validated_dataframe(
         predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
     predictor_list = predictor_df.index
-    import pdb; pdb.set_trace()
     predictor_id_list, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
         _build_regression(
             data_vector_path, predictor_list, response_id))
@@ -1548,7 +1568,7 @@ def _calculate_scenario(
         except TypeError:
             # TypeError will happen if GetField returned None
             LOGGER.warning('incomplete predictor data for feature_id '
-                           f'{feature_id}, not estimating PUD_EST')
+                           f'{feature_id}, not estimating UD_EST')
             feature = None
             continue  # without writing to the feature
         response_value += y_intercept
