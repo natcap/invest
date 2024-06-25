@@ -41,6 +41,7 @@ cdef int MANAGED_RASTER_N_BLOCKS = 2**6
 #           5 6 7
 cdef int *ROW_OFFSETS = [0, -1, -1, -1,  0,  1, 1, 1]
 cdef int *COL_OFFSETS = [1,  1,  0, -1, -1, -1, 0, 1]
+cdef int *INFLOW_OFFSETS = [4, 5, 6, 7, 0, 1, 2, 3]
 
 
 # this is a least recently used cache written in C++ in an external file,
@@ -70,8 +71,8 @@ cdef class _ManagedRaster:
     cdef int block_ymod
     cdef int block_xbits
     cdef int block_ybits
-    cdef long raster_x_size
-    cdef long raster_y_size
+    cdef public long raster_x_size
+    cdef public long raster_y_size
     cdef int block_nx
     cdef int block_ny
     cdef int write_mode
@@ -351,6 +352,36 @@ cdef class _ManagedRaster:
             raster = None
 
 
+cdef bint is_seed_pixel(int seed_row, int seed_col, _ManagedRaster mfd_flow_direction_raster):
+    cdef bint seed_pixel = 1
+    cdef int mfd_nodata = 0
+    cdef int j, neighbor_row, neighbor_col,
+    cdef int neighbor_flow_val, neighbor_flow_weight
+
+    # iterate over each of the pixel's neighbors
+    for j in range(8):
+        # skip if the neighbor is outside the raster bounds
+        neighbor_row = seed_row + ROW_OFFSETS[j]
+        if neighbor_row < 0 or neighbor_row >= mfd_flow_direction_raster.raster_y_size:
+            continue
+        neighbor_col = seed_col + COL_OFFSETS[j]
+        if neighbor_col < 0 or neighbor_col >= mfd_flow_direction_raster.raster_x_size:
+            continue
+        # skip if the neighbor's flow direction is undefined
+        neighbor_flow_val = <int>mfd_flow_direction_raster.get(
+            neighbor_col, neighbor_row)
+        if neighbor_flow_val == mfd_nodata:
+            continue
+        # if the neighbor flows into it, it's not a local high
+        # point and so can't be a seed pixel
+        neighbor_flow_weight = (
+            neighbor_flow_val >> (INFLOW_OFFSETS[j]*4)) & 0xF
+        if neighbor_flow_weight > 0:
+            seed_pixel = 0  # neighbor flows in, not a seed
+            break
+    return seed_pixel
+
+
 def calculate_sediment_deposition(
         mfd_flow_direction_path, e_prime_path, f_path, sdr_path,
         target_sediment_deposition_path):
@@ -474,28 +505,7 @@ def calculate_sediment_deposition(
                 # check if this is a good seed pixel ( a local high point)
                 if mfd_flow_direction_raster.get(seed_col, seed_row) == mfd_nodata:
                     continue
-                seed_pixel = 1
-                # iterate over each of the pixel's neighbors
-                for j in range(8):
-                    # skip if the neighbor is outside the raster bounds
-                    neighbor_row = seed_row + ROW_OFFSETS[j]
-                    if neighbor_row < 0 or neighbor_row >= n_rows:
-                        continue
-                    neighbor_col = seed_col + COL_OFFSETS[j]
-                    if neighbor_col < 0 or neighbor_col >= n_cols:
-                        continue
-                    # skip if the neighbor's flow direction is undefined
-                    neighbor_flow_val = <int>mfd_flow_direction_raster.get(
-                        neighbor_col, neighbor_row)
-                    if neighbor_flow_val == mfd_nodata:
-                        continue
-                    # if the neighbor flows into it, it's not a local high
-                    # point and so can't be a seed pixel
-                    neighbor_flow_weight = (
-                        neighbor_flow_val >> (inflow_offsets[j]*4)) & 0xF
-                    if neighbor_flow_weight > 0:
-                        seed_pixel = 0  # neighbor flows in, not a seed
-                        break
+                seed_pixel = is_seed_pixel(seed_row, seed_col, mfd_flow_direction_raster)
 
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack

@@ -53,15 +53,16 @@ setup(
             include_dirs=[numpy.get_include()] + ['src/natcap/invest/managed_raster'],
             extra_compile_args=compiler_and_linker_args + ["-g3", "-UNDEBUG", "-O0"],
             extra_link_args=compiler_and_linker_args,
-            language='c++'
+            language='c++',
+            libraries=['gdal']
         ) for package, module in [
-            ('managed_raster', 'managed_raster'),
+            # ('managed_raster', 'managed_raster'),
             # ('delineateit', 'delineateit_core'),
             # ('recreation', 'out_of_core_quadtree'),
             # ('scenic_quality', 'viewshed'),
             # ('ndr', 'ndr_core'),
-            ('sdr', 'sdr_core_main'),
-            ('sdr', 'sdr_core_feature'),
+            # ('sdr', 'sdr_core_main'),
+            # ('sdr', 'sdr_core_feature'),
             ('sdr', 'sdr_core')
             # ('seasonal_water_yield', 'seasonal_water_yield_core')
         ]
