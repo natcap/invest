@@ -1474,8 +1474,15 @@ def _build_regression(
     predictor_names.append('(Intercept)')
 
     # if any variable is missing data for some feature, drop that feature:
-    data_matrix = data_matrix[~numpy.isnan(data_matrix).any(axis=1)]
+    incomplete_rows = numpy.isnan(data_matrix).any(axis=1)
+    data_matrix = data_matrix[~incomplete_rows]
     n_features = data_matrix.shape[0]
+    n_missing = numpy.count_nonzero(incomplete_rows)
+    if n_missing:
+        LOGGER.warning(
+            f'{n_missing} features are missing data for at least one '
+            'predictor and will be ommitted from the regression model. '
+            'See regression_data.shp to see the missing values.')
     y_factors = data_matrix[:, 0]  # useful to have this as a 1-D array
     coefficients, _, _, _ = numpy.linalg.lstsq(
         data_matrix[:, 1:], y_factors, rcond=-1)
