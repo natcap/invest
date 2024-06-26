@@ -10,7 +10,6 @@ curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Mi
 bash Miniforge3-$(uname)-$(uname -m).sh
 source .bashrc
 
-mkdir twitter && cd twitter
 git clone https://github.com/davemfish/invest.git
 cd invest
 git checkout exp/REC-twitter
@@ -20,12 +19,13 @@ mamba install gdal pygeoprocessing numpy
 pip install .
 
 # Mount GCS Fuse
-cd .. && mkdir server && cd server
-mkdir volume
+cd ~ && mkdir server
+mkdir server/volume
+cd server
 
 gcsfuse --implicit-dirs -o ro natcap-recreation volume
 # Listing all contents should build some indices and improve performance later
 cd volume && ls -R
 
-cd ~/twitter/invest/scripts/recreation_server
+cd ~/invest/scripts/recreation_server
 
