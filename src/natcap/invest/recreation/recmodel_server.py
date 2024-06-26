@@ -942,7 +942,6 @@ def execute(args):
     Returns:
         Never returns
     """
-    daemon = Pyro5.api.Daemon(args['hostname'], int(args['port']))
     max_points_per_node = GLOBAL_MAX_POINTS_PER_NODE
     if 'max_points_per_node' in args:
         max_points_per_node = args['max_points_per_node']
@@ -967,6 +966,8 @@ def execute(args):
                 f'must be present in `args[datasets][{dataset}]`')
     if len(servers) == 0:
         raise ValueError('No valid RecModel servers configured in `args`')
+
+    daemon = Pyro5.api.Daemon(args['hostname'], int(args['port']))
     manager = RecManager(servers)
     uri = daemon.register(manager, 'natcap.invest.recreation')
     LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
