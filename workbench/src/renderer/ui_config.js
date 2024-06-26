@@ -220,7 +220,7 @@ const UI_SPEC = {
     order: [
       ['workspace_dir', 'results_suffix'],
       ['aoi_path'],
-      ['visitation_proxy', 'start_year', 'end_year'],
+      ['start_year', 'end_year'],
       ['compute_regression', 'predictor_table_path', 'scenario_predictor_table_path'],
       ['grid_aoi', 'grid_type', 'cell_size'],
     ],
