@@ -14,6 +14,7 @@ import numpy
 import numpy.linalg
 import pygeoprocessing
 import Pyro5
+import Pyro5.api
 import rtree
 import shapely
 import shapely.geometry
@@ -352,10 +353,10 @@ RESPONSE_VARIABLE_ID = 'sumPUD_TUD'
 SCENARIO_RESPONSE_ID = 'UD_EST'
 
 _OUTPUT_BASE_FILES = {
-    'pud_results_path': 'pud_results.shp',
-    'pud_monthly_table_path': 'pud_monthly_table.csv',
-    'tud_results_path': 'tud_results.shp',
-    'tud_monthly_table_path': 'tud_monthly_table.csv',
+    'pud_results_path': 'PUD_results.shp',
+    'pud_monthly_table_path': 'PUD_monthly_table.csv',
+    'tud_results_path': 'TUD_results.shp',
+    'tud_monthly_table_path': 'TUD_monthly_table.csv',
     'regression_vector_path': 'regression_data.shp',
     'scenario_results_path': 'scenario_results.shp',
     'regression_coefficients': 'regression_coefficients.txt',

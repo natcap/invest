@@ -119,34 +119,37 @@ class RecModel(object):
 
         # local_cache = os.path.join(cache_workspace, 'local')
         if raw_csv_filename:
-            global_cache = os.path.join(cache_workspace, 'global')
+            # global_cache = os.path.join(cache_workspace, 'global')
             LOGGER.info('hashing input file')
             LOGGER.info(raw_csv_filename)
             csv_hash = _hashfile(raw_csv_filename, fast_hash=True)
             ooc_qt_picklefilename = os.path.join(
-                global_cache, csv_hash + '.pickle')
+                cache_workspace, csv_hash + '.pickle')
         elif quadtree_pickle_filename:
             # ooc_qt_picklefilename = os.path.join(
             #     global_cache, quadtree_pickle_filename)
             ooc_qt_picklefilename = quadtree_pickle_filename
-            global_cache = os.path.dirname(ooc_qt_picklefilename)
+            # global_cache = os.path.dirname(ooc_qt_picklefilename)
         else:
             raise ValueError(
                 'Both raw_csv_filename and quadtree_pickle_filename'
                 'are None. One of these kwargs must be given a value.')
 
         if os.path.isfile(ooc_qt_picklefilename):
-            LOGGER.info(
-                '%s quadtree already exists', ooc_qt_picklefilename)
-            ooc_qt_picklefilename = transplant_quadtree(ooc_qt_picklefilename, cache_workspace)
+            LOGGER.info(f'{ooc_qt_picklefilename} quadtree already exists')
+            if os.path.dirname(ooc_qt_picklefilename) != cache_workspace:
+                if not os.path.exists(cache_workspace):
+                    os.mkdir(cache_workspace)
+                ooc_qt_picklefilename = transplant_quadtree(
+                    ooc_qt_picklefilename, cache_workspace)
         else:
             LOGGER.info(
-                '%s not found, constructing quadtree', ooc_qt_picklefilename)
+                f'{ooc_qt_picklefilename} not found, constructing quadtree')
             if not os.path.exists(raw_csv_filename):
                 raise ValueError(f'{raw_csv_filename} does not exist.')
             construct_userday_quadtree(
                 INITIAL_BOUNDING_BOX, [raw_csv_filename], dataset_name,
-                global_cache, ooc_qt_picklefilename,
+                cache_workspace, ooc_qt_picklefilename,
                 max_points_per_node, max_depth)
         self.qt_pickle_filename = ooc_qt_picklefilename
         self.local_cache_workspace = os.path.join(cache_workspace, 'local')
@@ -253,9 +256,6 @@ class RecModel(object):
             myzip.write(
                 monthly_table_path, os.path.basename(monthly_table_path))
         # return the binary stream
-        LOGGER.info(
-            'calc user days complete sending binary back on %s',
-            workspace_path)
         with open(aoi_ud_archive_path, 'rb') as aoi_ud_archive:
             return aoi_ud_archive.read(), workspace_id, self.get_version()
 
@@ -1002,15 +1002,17 @@ class RecManager(object):
                 date_range = (str(start_year)+'-01-01',
                               str(end_year)+'-12-31')
 
-                results_filename = f'{self.servers[dataset].acronym}_results.shp'
+                results_filename = f'{server.acronym}_results.shp'
                 fut = executor.submit(
-                    self.servers[dataset].calc_user_days_in_aoi,
+                    server.calc_user_days_in_aoi,
                     zip_file_binary, date_range, results_filename)
-                future_to_label[fut] = self.servers[dataset].acronym
+                future_to_label[fut] = server.acronym
 
             for future in concurrent.futures.as_completed(future_to_label):
                 label = future_to_label[future]
                 results[label] = future.result()
+                LOGGER.info(f'calc user-days complete for {label}')
+        LOGGER.info('all user-day calculations complete; sending binary back')
         return results
 
 
@@ -1080,6 +1082,21 @@ def _hashfile(file_path, blocksize=2**20, fast_hash=False):
 
 
 def transplant_quadtree(qt_pickle_filepath, workspace):
+    """Move quadtree filepath references to a local filesystem.
+
+    The quadtree index contains absolute paths that are remnants of the
+    filesystem where it was created. Since we're serving it from a
+    different filesystem, we overwrite those paths and write a new
+    quadtree index file.
+
+    Args:
+        qt_pickle_filepath (string): path to a quadtree pickle file
+        workspace (string): path to a local directory to write the
+            modified quadtree index.
+
+    Returns:
+        None
+    """
     storage_dir = os.path.dirname(qt_pickle_filepath)
     pickle_filepath = qt_pickle_filepath
 

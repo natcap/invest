@@ -97,7 +97,6 @@ class BufferedNumpyDiskMap(object):
         db_connection = sqlite3.connect(
             self.manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
-        LOGGER.debug(f'WRITE with list: {array_id_list}')
         insert_list = []
         if not isinstance(array_id_list, list):
             array_id_list = [array_id_list]

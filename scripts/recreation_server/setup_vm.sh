@@ -21,10 +21,11 @@ pip install .
 
 # Mount GCS Fuse
 cd .. && mkdir server && cd server
-mkdir cache
+mkdir volume
 
-gcsfuse --implicit-dirs -o ro --only-dir twitter_quadtree natcap-recreation cache
-cd cache && ls -R
+gcsfuse --implicit-dirs -o ro natcap-recreation volume
+# Listing all contents should build some indices and improve performance later
+cd volume && ls -R
 
 cd ~/twitter/invest/scripts/recreation_server
 
