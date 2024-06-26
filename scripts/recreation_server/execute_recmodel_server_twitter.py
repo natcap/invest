@@ -14,12 +14,12 @@ args_dict = {
     'port': 54322,
     'datasets': {
         'flickr': {
-            'raw_csv_point_data_path': '~/server/volume/flickr/photos_2005-2017_odlla.csv',
+            'raw_csv_point_data_path': '/home/davemfish/server/volume/flickr/photos_2005-2017_odlla.csv',
             'min_year': 2005,
             'max_year': 2017
         },
         'twitter': {
-            'quadtree_pickle_filename': '~/server/volume/twitter_quadtree/global_twitter_qt.pickle',
+            'quadtree_pickle_filename': '/home/davemfish/server/volume/twitter_quadtree/global_twitter_qt.pickle',
             'min_year': 2012,
             'max_year': 2022
         }
