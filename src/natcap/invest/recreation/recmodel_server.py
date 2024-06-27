@@ -284,7 +284,7 @@ class RecModel(object):
         # it will take some time
         poly_test_queue = multiprocessing.Queue()
         ud_poly_feature_queue = multiprocessing.Queue(4)
-        n_polytest_processes = multiprocessing.cpu_count()
+        n_processes = multiprocessing.cpu_count()
 
         LOGGER.info(f'OPENING {self.qt_pickle_filename}')
         with open(self.qt_pickle_filename, 'rb') as qt_pickle:
@@ -352,7 +352,8 @@ class RecModel(object):
         LOGGER.info('building local quadtree in bounds %s', str(local_b_box))
         local_qt = out_of_core_quadtree.OutOfCoreQuadTree(
             local_b_box, LOCAL_MAX_POINTS_PER_NODE, LOCAL_DEPTH,
-            local_qt_cache_dir, pickle_filename=local_qt_pickle_filename)
+            local_qt_cache_dir, pickle_filename=local_qt_pickle_filename,
+            n_workers=n_processes)
 
         LOGGER.info(
             'building local quadtree with %d points', len(local_points))
@@ -394,7 +395,7 @@ class RecModel(object):
 
         # Start several testing processes
         polytest_process_list = []
-        for _ in range(n_polytest_processes):
+        for _ in range(n_processes):
             polytest_process = multiprocessing.Process(
                 target=_calc_poly_ud, args=(
                     local_qt_pickle_filename, aoi_path, date_range,
@@ -435,11 +436,11 @@ class RecModel(object):
             poly_test_queue.put(poly_feat.GetFID())
 
         # Fill the queue with STOPs for each process
-        for _ in range(n_polytest_processes):
+        for _ in range(n_processes):
             poly_test_queue.put('STOP')
 
         # Read the result until we've seen n_processes_alive
-        n_processes_alive = n_polytest_processes
+        n_processes_alive = n_processes
         n_poly_tested = 0
 
         monthly_table_path = os.path.join(
@@ -982,7 +983,7 @@ class RecManager(object):
 
     def calculate_userdays(self, zip_file_binary, start_year, end_year, dataset_list):
         results = {}
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=2) as executor:
             future_to_label = {}
             for dataset in dataset_list:
                 server = self.servers[dataset]

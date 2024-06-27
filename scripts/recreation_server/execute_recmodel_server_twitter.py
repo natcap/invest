@@ -10,7 +10,7 @@ logging.basicConfig(
     level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 args_dict = {
-    'hostname': 'localhost',
+    'hostname': '',
     'port': 54322,
     'datasets': {
         'flickr': {
