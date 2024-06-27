@@ -79,7 +79,7 @@ def _try_except_wrapper(mesg):
 class RecModel(object):
     """Class that manages RPCs for calculating photo user days."""
 
-    @_try_except_wrapper("RecModel construction exited while multiprocessing.")
+    # @_try_except_wrapper("RecModel construction exited while multiprocessing.")
     def __init__(
             self, min_year, max_year, cache_workspace,
             raw_csv_filename=None,
@@ -981,6 +981,7 @@ class RecManager(object):
     def __init__(self, servers_dict):
         self.servers = servers_dict
 
+    @_try_except_wrapper("calculate_userdays exited while multiprocessing.")
     def calculate_userdays(self, zip_file_binary, start_year, end_year, dataset_list):
         results = {}
         with concurrent.futures.ProcessPoolExecutor(max_workers=2) as executor:
