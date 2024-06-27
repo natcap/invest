@@ -177,7 +177,7 @@ class RecModel(object):
         return '%s:%s' % (invest.__version__, self.qt_pickle_filename)
 
     # not static so it can register in Pyro object
-    @_try_except_wrapper("exception in fetch_workspace_aoi")
+    # @_try_except_wrapper("exception in fetch_workspace_aoi")
     def fetch_workspace_aoi(self, workspace_id):  # pylint: disable=no-self-use
         """Download the AOI of the workspace specified by workspace_id.
 
@@ -198,7 +198,7 @@ class RecModel(object):
         with open(out_zip_file_path, 'rb') as out_zipfile:
             return out_zipfile.read()
 
-    @_try_except_wrapper("exception in calc_user_days_in_aoi")
+    # @_try_except_wrapper("exception in calc_user_days_in_aoi")
     def calc_user_days_in_aoi(
             self, zip_file_binary, date_range, out_vector_filename):
         """Calculate annual average and per monthly average user days.
