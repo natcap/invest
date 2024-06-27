@@ -4,10 +4,10 @@ import logging
 import math
 import os
 import pickle
+import requests
 import shutil
 import tempfile
 import time
-import urllib.request
 import zipfile
 
 import numpy
@@ -41,7 +41,7 @@ from ..unit_registry import u
 LOGGER = logging.getLogger(__name__)
 
 # NatCap Rec Server URLs
-SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_twitter/index.html',  # pylint: disable=line-too-long
+SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_twitter/index.html'  # pylint: disable=line-too-long
 
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro5.config.SERIALIZER = 'marshal'
@@ -130,12 +130,12 @@ MODEL_SPEC = {
         },
         "start_year": {
             "type": "number",
-            "expression": "2005 <= value <= 2017",
+            "expression": "2012 <= value <= 2017",
             "units": u.year_AD,
             "about": gettext(
-                "Year at which to start photo user-day calculations. "
+                "Year at which to start user-day calculations. "
                 "Calculations start on the first day of the year. Year "
-                "must be in the range 2005 - 2017, and must be less than "
+                "must be in the range 2012 - 2017, and must be less than "
                 "or equal to the End Year."),
             "name": gettext("start year")
         },
@@ -144,9 +144,9 @@ MODEL_SPEC = {
             "expression": "2012 <= value <= 2017",
             "units": u.year_AD,
             "about": gettext(
-                "Year at which to end photo user-day calculations. "
+                "Year at which to end user-day calculations. "
                 "Calculations continue through the last day of the year. "
-                "Year must be in the range 2005 - 2017, and must be "
+                "Year must be in the range 2012 - 2017, and must be "
                 "greater than or equal to the Start Year."),
             "name": gettext("end year")
         },
@@ -449,9 +449,7 @@ def execute(args):
         server_url = f"PYRO:natcap.invest.recreation@{args['hostname']}:{args['port']}"
     else:
         # else use a well known path to get active server
-        server_url = urllib.request.urlopen(
-            SERVER_URL
-        ).read().decode('utf-8').rstrip()
+        server_url = requests.get(SERVER_URL).text.rstrip()
         LOGGER.info(server_url)
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
@@ -641,6 +639,9 @@ def _retrieve_user_days(
     start_time = time.time()
     LOGGER.info('Please wait for server to calculate PUD and TUD...')
 
+    # TODO: allow datasets to be specified in args to
+    # allow API users access to a single dataset and a wider
+    # range of years
     dataset_list = ['flickr', 'twitter']
     acronym_lookup = {
         'flickr': 'PUD',
