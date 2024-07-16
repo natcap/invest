@@ -21,7 +21,7 @@ _REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
 # older system.  Tested and it works on Mac OSX Catalina.
 compiler_and_linker_args = []
 if platform.system() == 'Darwin':
-    compiler_and_linker_args = ['-stdlib=libc++']
+    compiler_and_linker_args = ['-stdlib=libc++', '-std=gnu++11']
 
 
 class build_py(_build_py):
@@ -56,12 +56,12 @@ setup(
             language='c++',
             libraries=['gdal']
         ) for package, module in [
-            # ('managed_raster', 'managed_raster'),
+            ('managed_raster', 'managed_raster'),
             # ('delineateit', 'delineateit_core'),
             # ('recreation', 'out_of_core_quadtree'),
             # ('scenic_quality', 'viewshed'),
             # ('ndr', 'ndr_core'),
-            # ('sdr', 'sdr_core_main'),
+            ('sdr', 'sdr_core_main'),
             # ('sdr', 'sdr_core_feature'),
             ('sdr', 'sdr_core')
             # ('seasonal_water_yield', 'seasonal_water_yield_core')

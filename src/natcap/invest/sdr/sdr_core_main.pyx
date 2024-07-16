@@ -1,5 +1,3 @@
-# cython: profile=False
-# cython: language_level=3
 import logging
 import os
 
@@ -41,7 +39,6 @@ cdef int MANAGED_RASTER_N_BLOCKS = 2**6
 #           5 6 7
 cdef int *ROW_OFFSETS = [0, -1, -1, -1,  0,  1, 1, 1]
 cdef int *COL_OFFSETS = [1,  1,  0, -1, -1, -1, 0, 1]
-cdef int *INFLOW_OFFSETS = [4, 5, 6, 7, 0, 1, 2, 3]
 
 
 # this is a least recently used cache written in C++ in an external file,
@@ -71,8 +68,8 @@ cdef class _ManagedRaster:
     cdef int block_ymod
     cdef int block_xbits
     cdef int block_ybits
-    cdef public long raster_x_size
-    cdef public long raster_y_size
+    cdef long raster_x_size
+    cdef long raster_y_size
     cdef int block_nx
     cdef int block_ny
     cdef int write_mode
@@ -197,7 +194,7 @@ cdef class _ManagedRaster:
             if dirty_itr != self.dirty_blocks.end():
                 self.dirty_blocks.erase(dirty_itr)
                 block_xi = block_index % self.block_nx
-                block_yi = block_index / self.block_nx
+                block_yi = block_index // self.block_nx
 
                 # we need the offsets to subtract from global indexes for
                 # cached array
@@ -352,36 +349,6 @@ cdef class _ManagedRaster:
             raster = None
 
 
-cdef bint is_seed_pixel(int seed_row, int seed_col, _ManagedRaster mfd_flow_direction_raster):
-    cdef bint seed_pixel = 1
-    cdef int mfd_nodata = 0
-    cdef int j, neighbor_row, neighbor_col,
-    cdef int neighbor_flow_val, neighbor_flow_weight
-
-    # iterate over each of the pixel's neighbors
-    for j in range(8):
-        # skip if the neighbor is outside the raster bounds
-        neighbor_row = seed_row + ROW_OFFSETS[j]
-        if neighbor_row < 0 or neighbor_row >= mfd_flow_direction_raster.raster_y_size:
-            continue
-        neighbor_col = seed_col + COL_OFFSETS[j]
-        if neighbor_col < 0 or neighbor_col >= mfd_flow_direction_raster.raster_x_size:
-            continue
-        # skip if the neighbor's flow direction is undefined
-        neighbor_flow_val = <int>mfd_flow_direction_raster.get(
-            neighbor_col, neighbor_row)
-        if neighbor_flow_val == mfd_nodata:
-            continue
-        # if the neighbor flows into it, it's not a local high
-        # point and so can't be a seed pixel
-        neighbor_flow_weight = (
-            neighbor_flow_val >> (INFLOW_OFFSETS[j]*4)) & 0xF
-        if neighbor_flow_weight > 0:
-            seed_pixel = 0  # neighbor flows in, not a seed
-            break
-    return seed_pixel
-
-
 def calculate_sediment_deposition(
         mfd_flow_direction_path, e_prime_path, f_path, sdr_path,
         target_sediment_deposition_path):
@@ -505,12 +472,36 @@ def calculate_sediment_deposition(
                 # check if this is a good seed pixel ( a local high point)
                 if mfd_flow_direction_raster.get(seed_col, seed_row) == mfd_nodata:
                     continue
-                seed_pixel = is_seed_pixel(seed_row, seed_col, mfd_flow_direction_raster)
+                seed_pixel = 1
+                # iterate over each of the pixel's neighbors
+                for j in range(8):
+                    # skip if the neighbor is outside the raster bounds
+                    neighbor_row = seed_row + ROW_OFFSETS[j]
+                    if neighbor_row < 0 or neighbor_row >= n_rows:
+                        continue
+                    neighbor_col = seed_col + COL_OFFSETS[j]
+                    if neighbor_col < 0 or neighbor_col >= n_cols:
+                        continue
+                    # skip if the neighbor's flow direction is undefined
+                    neighbor_flow_val = <int>mfd_flow_direction_raster.get(
+                        neighbor_col, neighbor_row)
+                    if neighbor_flow_val == mfd_nodata:
+                        continue
+                    # if the neighbor flows into it, it's not a local high
+                    # point and so can't be a seed pixel
+                    neighbor_flow_weight = (
+                        neighbor_flow_val >> (inflow_offsets[j]*4)) & 0xF
+                    if neighbor_flow_weight > 0:
+                        seed_pixel = 0  # neighbor flows in, not a seed
+                        break
+
+                a = sediment_deposition_raster.get(seed_col, seed_row)
+                isc = a == target_nodata
 
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack
-                if seed_pixel and sediment_deposition_raster.get(
-                        seed_col, seed_row) == target_nodata:
+                if seed_pixel and isc:
+                    print('pushing', seed_col, seed_row)
                     processing_stack.push(seed_row * n_cols + seed_col)
 
                 while processing_stack.size() > 0:
@@ -521,6 +512,7 @@ def calculate_sediment_deposition(
                     processing_stack.pop()
                     global_row = flat_index // n_cols
                     global_col = flat_index % n_cols
+                    print('processing', global_col, global_row)
 
                     # (sum over j ∈ J of f_j * p(i,j) in the equation for t_i)
                     # calculate the upslope f_j contribution to this pixel,
@@ -584,6 +576,7 @@ def calculate_sediment_deposition(
                         # check if it can be pushed onto the stack yet
                         flow_weight = (flow_val >> (j*4)) & 0xF
                         if flow_weight > 0:
+                            print("neighbor", j)
                             sdr_j = sdr_raster.get(neighbor_col, neighbor_row)
                             if sdr_j == sdr_nodata:
                                 continue
@@ -634,6 +627,7 @@ def calculate_sediment_deposition(
                             # if all upslope neighbors of neighbor j are
                             # processed, we can push j onto the stack.
                             if upslope_neighbors_processed:
+                                print('push 2', neighbor_col, neighbor_row)
                                 processing_stack.push(
                                     neighbor_row * n_cols +
                                     neighbor_col)
@@ -677,6 +671,7 @@ def calculate_sediment_deposition(
                     if f_i < 0:
                         f_i = 0
 
+                    print('setting')
                     sediment_deposition_raster.set(global_col, global_row, t_i)
                     f_raster.set(global_col, global_row, f_i)
         n_pixels_processed += (win_xsize * win_ysize)

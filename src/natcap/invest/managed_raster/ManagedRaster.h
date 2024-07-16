@@ -2,6 +2,7 @@
 
 #include "gdal.h"
 #include "gdal_priv.h"
+#include <stdint.h>
 
 #include <errno.h>
 #include <string>
@@ -9,13 +10,11 @@
 #include <cmath>
 #include <list>
 #include <utility>
+#include <iterator>
 
-int main() {
-  cout << "Hello World" << endl;
-  return 0;
-}
+#include "LRUCache.h"
 
-int MANAGED_RASTER_N_BLOCKS = pow(2, 6);
+int MANAGED_RASTER_N_BLOCKS = pow(2, 5);
 // given the pixel neighbor numbering system
 //  3 2 1
 //  4 x 0
@@ -30,7 +29,7 @@ int FLOW_DIR_REVERSE_DIRECTION[8] = {4, 5, 6, 7, 0, 1, 2, 3};
 // is the original pixel `x`
 int INFLOW_OFFSETS[8] = {4, 5, 6, 7, 0, 1, 2, 3};
 
-typedef pair<int, double*> BlockBufferPair;
+typedef std::pair<int, double*> BlockBufferPair;
 
 class NeighborTuple {
 public:
@@ -49,23 +48,6 @@ public:
     ~NeighborTuple () {}
 };
 
-// int main(int argc, const char* argv[])
-// {
-//     if (argc != 2) {
-//         return EINVAL;
-//     }
-//     const char* pszFilename = argv[1];
-
-//     GDALDatasetUniquePtr poDataset;
-
-//     const GDALAccess eAccess = GA_ReadOnly;
-//     poDataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen( pszFilename, eAccess )));
-//     if( !poDataset )
-//     {
-//         ...; // handle error
-//     }
-//     return 0;
-// }
 
 class ManagedRaster {
     public:
@@ -83,6 +65,7 @@ class ManagedRaster {
         int block_ny;
         char* raster_path;
         int band_id;
+        GDALRasterBand* band;
         int write_mode;
         int closed;
 
@@ -107,24 +90,13 @@ class ManagedRaster {
             // Returns:
             //     None.
             //         """
-            // raster_info = pygeoprocessing.get_raster_info(raster_path)
             GDALAllRegister();
-            GDALDatasetUniquePtr poDataset;
-            GDALRasterBand* band;
 
-            cout << "path1: ";
-            cout << raster_path;
-            cout << "\n";
+            GDALDataset *poDataset;
 
-            GDALDataset *poSrcDS;
 
-            cout << "h";
+            poDataset = (GDALDataset *) GDALOpen( raster_path, GA_ReadOnly );
 
-            poSrcDS = (GDALDataset *) GDALOpen( raster_path, GA_ReadOnly );
-            cout << "a";
-            poDataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(poSrcDS));
-
-            cout << "aaa";
             raster_x_size = poDataset->GetRasterXSize();
             raster_y_size = poDataset->GetRasterYSize();
 
@@ -163,33 +135,36 @@ class ManagedRaster {
             block_xbits = log2(block_xsize);
             block_ybits = log2(block_ysize);
 
-            cout << "bbb";
             // integer floor division
-            block_nx = raster_x_size + (block_xsize) - 1 / block_xsize;
-            block_ny = raster_y_size + (block_ysize) - 1 / block_ysize;
+            block_nx = (raster_x_size + block_xsize - 1) / block_xsize;
+            block_ny = (raster_y_size + block_ysize - 1) / block_ysize;
 
-            cout << "ccc";
-            lru_cache = new LRUCache<int, double*>(MANAGED_RASTER_N_BLOCKS);
-            cout << "ddd";
+            this->lru_cache = new LRUCache<int, double*>(MANAGED_RASTER_N_BLOCKS);
+
             raster_path = raster_path;
             write_mode = write_mode;
             closed = 0;
-            cout << "done";
-            cout << "\n";
         }
 
         void set(long xi, long yi, double value) {
+            // cout << "set" << xi << ", " << yi << endl;
             // Set the pixel at `xi,yi` to `value`
-            int block_xi = xi >> block_xbits;
-            int block_yi = yi >> block_ybits;
+            int block_xi = xi / block_xsize;
+            int block_yi = yi / block_ysize;
+
             // this is the flat index for the block
             int block_index = block_yi * block_nx + block_xi;
+
             if (not lru_cache->exist(block_index)) {
                 _load_block(block_index);
             }
-            lru_cache->get(block_index)[
-                    ((yi & (block_ymod)) << block_xbits) +
-                    (xi & (block_xmod))] = value;
+
+            int actual_xsize = 0;
+            int actual_ysize = 0;
+            band->GetActualBlockSize(block_xi, block_yi, &actual_xsize, &actual_ysize);
+            int idx = ((yi % block_ysize) * actual_xsize) + (xi % block_xsize);
+
+            lru_cache->get(block_index)[idx] = value;
             if (write_mode) {
 
                 std::set<int>::iterator dirty_itr = dirty_blocks.find(block_index);
@@ -200,21 +175,29 @@ class ManagedRaster {
         }
 
         double get(long xi, long yi) {
-            cout << "get\n";
             // Return the value of the pixel at `xi,yi`
-            int block_xi = xi >> block_xbits;
-            int block_yi = yi >> block_ybits;
+            int block_xi = xi / block_xsize;
+            int block_yi = yi / block_ysize;
+
             // this is the flat index for the block
             int block_index = block_yi * block_nx + block_xi;
+
             if (not lru_cache->exist(block_index)) {
-                cout << "load block\n";
                 _load_block(block_index);
-                cout << "done loading block\n";
             }
-            cout << "lru cache get\n";
-            return lru_cache->get(block_index)[
-                ((yi & (block_ymod)) << block_xbits) +
-                (xi & (block_xmod))];
+            double* block = lru_cache->get(block_index);
+
+            int actual_xsize = 0;
+            int actual_ysize = 0;
+
+            band->GetActualBlockSize(block_xi, block_yi, &actual_xsize, &actual_ysize);
+            // Using the property n % 2^i = n & (2^i - 1)
+            // to efficienty compute the modulo: yi % block_xsize
+            int idx = ((yi % block_ysize) * actual_xsize) + (xi % block_xsize);
+            // Shift over by the number of spaces taken by the x value
+
+            double value = block[idx];
+            return value;
         }
 
         void _load_block(int block_index) {
@@ -236,29 +219,26 @@ class ManagedRaster {
             int win_ysize = block_ysize;
 
             // load a new block
-            if (xoff + win_xsize > raster_x_size) {
+            if ((xoff + win_xsize) > raster_x_size) {
                 win_xsize = win_xsize - (xoff + win_xsize - raster_x_size);
             }
-            if (yoff + win_ysize > raster_y_size) {
+            if ((yoff + win_ysize) > raster_y_size) {
                 win_ysize = win_ysize - (yoff + win_ysize - raster_y_size);
             }
 
-            GDALDatasetUniquePtr poDataset;
-            GDALDataset *poSrcDS;
-
-            poSrcDS = (GDALDataset *) GDALOpen( raster_path, GA_ReadOnly );
-            poDataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(poSrcDS));
+            GDALDataset *poDataset = (GDALDataset *) GDALOpen( raster_path, GA_Update );
             GDALRasterBand* band = poDataset->GetRasterBand(band_id);
+            GDALDataType dtype = band->GetRasterDataType();
 
-            double *pafScanline;
-            pafScanline = (double *) CPLMalloc(sizeof(double)*win_xsize * win_ysize);
-            CPLErr err = band->RasterIO(GF_Read, xoff, yoff, win_xsize, win_ysize,
-                        pafScanline, win_xsize, win_ysize, GDT_Float32,
+            CPLErr err;
+            double *pafScanline = (double *) CPLMalloc(sizeof(double) * win_xsize * win_ysize);
+            err = band->RasterIO(GF_Read, xoff, yoff, win_xsize, win_ysize,
+                        pafScanline, win_xsize, win_ysize, GDT_Float64,
                         0, 0 );
-            if (not err == CE_None) {
-                cout << "Error reading block";
-            }
 
+            if (not err == CE_None) {
+                std::cout << "Error reading block\n";
+            }
             lru_cache->put(block_index, pafScanline, removed_value_list);
             while (not removed_value_list.empty()) {
                 // write the changed value back if desired
@@ -287,11 +267,10 @@ class ManagedRaster {
                         if (yoff + win_ysize > raster_y_size) {
                             win_ysize = win_ysize - (yoff + win_ysize - raster_y_size);
                         }
-
                         err = band->RasterIO( GF_Write, xoff, yoff, win_xsize, win_ysize,
-                            double_buffer, win_xsize, win_ysize, GDT_Byte, 0, 0 );
+                            double_buffer, win_xsize, win_ysize, GDT_Float64, 0, 0 );
                         if (not err == CE_None) {
-                            cout << "Error reading block";
+                            std::cout << "Error writing block\n";
                         }
                     }
                 }
@@ -299,14 +278,89 @@ class ManagedRaster {
                 CPLFree(double_buffer);
                 removed_value_list.pop_front();
             }
-
-            cout << "done\n";
             if (write_mode) {
-                GDALClose( (GDALDatasetH) poSrcDS );
+                GDALClose( (GDALDatasetH) poDataset );
             }
-            cout << "end\n";
         }
 
+        void close() {
+        // """Close the _ManagedRaster and free up resources.
+
+        //     This call writes any dirty blocks to disk, frees up the memory
+        //     allocated as part of the cache, and frees all GDAL references.
+
+        //     Any subsequent calls to any other functions in _ManagedRaster will
+        //     have undefined behavior.
+        // """
+
+            if (closed) {
+                return;
+            }
+            closed = 1;
+
+            double *double_buffer;
+            int block_xi;
+            int block_yi;
+            int block_index;
+            // initially the win size is the same as the block size unless
+            // we're at the edge of a raster
+            int win_xsize;
+            int win_ysize;
+
+            // we need the offsets to subtract from global indexes for cached array
+            int xoff;
+            int yoff;
+
+            if (not write_mode) {
+                for (auto it = lru_cache->begin(); it != lru_cache->end(); it++) {
+                    // write the changed value back if desired
+                    CPLFree(it->second);
+                }
+                return;
+            }
+
+            GDALDataset *poDataset;
+            poDataset = (GDALDataset *) GDALOpen( raster_path, GA_Update );
+            GDALRasterBand* band = poDataset->GetRasterBand(band_id);
+
+            // if we get here, we're in write_mode
+            std::set<int>::iterator dirty_itr;
+            for (auto it = lru_cache->begin(); it != lru_cache->end(); it++) {
+                double_buffer = it->second;
+                block_index = it->first;
+
+                // write to disk if block is dirty
+                dirty_itr = dirty_blocks.find(block_index);
+                if (dirty_itr != dirty_blocks.end()) {
+                    dirty_blocks.erase(dirty_itr);
+                    block_xi = block_index % block_nx;
+                    block_yi = block_index / block_nx;
+
+                    // we need the offsets to subtract from global indexes for
+                    // cached array
+                    xoff = block_xi << block_xbits;
+                    yoff = block_yi << block_ybits;
+
+                    win_xsize = block_xsize;
+                    win_ysize = block_ysize;
+
+                    // clip window sizes if necessary
+                    if (xoff + win_xsize > raster_x_size) {
+                        win_xsize = win_xsize - (xoff + win_xsize - raster_x_size);
+                    }
+                    if (yoff + win_ysize > raster_y_size) {
+                        win_ysize = win_ysize - (yoff + win_ysize - raster_y_size);
+                    }
+                    CPLErr err = band->RasterIO( GF_Write, xoff, yoff, win_xsize, win_ysize,
+                        double_buffer, win_xsize, win_ysize, GDT_Float64, 0, 0 );
+                    if (not err == CE_None) {
+                        std::cout << "Error writing block\n";
+                    }
+                }
+                CPLFree(double_buffer);
+            }
+            GDALClose( (GDALDatasetH) poDataset );
+        }
 };
 
 class ManagedFlowDirRaster: public ManagedRaster {
@@ -397,7 +451,6 @@ public:
             n_dir += 1;
             return next();
         }
-
         flow_ij = (flow_dir >> (n_dir * 4)) & 0xF;
         if (flow_ij) {
             flow_dir_sum += flow_ij;
@@ -462,7 +515,7 @@ public:
                 flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF;
             }
 
-            n = NeighborTuple(n_dir, xj, yj, flow_ji / flow_dir_j_sum);
+            n = NeighborTuple(n_dir, xj, yj, static_cast<float>(flow_ji) / static_cast<float>(flow_dir_j_sum));
             n_dir += 1;
             return n;
         } else {
@@ -503,7 +556,7 @@ public:
                 flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF;
             }
 
-            n = NeighborTuple(n_dir, xj, yj, flow_ji / flow_dir_j_sum);
+            n = NeighborTuple(n_dir, xj, yj, static_cast<float>(flow_ji) / static_cast<float>(flow_dir_j_sum));
             n_dir += 1;
             return n;
         } else {
@@ -512,6 +565,13 @@ public:
         }
     }
 };
+
+bool is_close(float x, float y) {
+    if (isnan(x) and isnan(y)) {
+        return true;
+    }
+    return abs(x - y) <= (pow(10, -8) + pow(10, -05) * abs(y));
+}
 
 
 

@@ -42,6 +42,7 @@ cdef extern from "ManagedRaster.h":
         void set(long xi, long yi, double value)
         double get(long xi, long yi)
         void _load_block(int block_index) except *
+        void close()
 
     cdef cppclass ManagedFlowDirRaster:
         LRUCache[int, double*]* lru_cache
@@ -67,6 +68,7 @@ cdef extern from "ManagedRaster.h":
         ManagedFlowDirRaster(char*, int, bool) except +
         void set(long xi, long yi, double value)
         double get(long xi, long yi)
+        void close()
 
     cdef cppclass NeighborTuple:
         NeighborTuple() except +
@@ -98,32 +100,7 @@ cdef extern from "ManagedRaster.h":
         NeighborTuple next()
         NeighborTuple next_skip(int skip)
 
-
-
-
-
-# cdef class UpslopeNeighborIterator:
-
-#     cdef ManagedFlowDirRaster raster
-#     cdef int col
-#     cdef int row
-#     cdef int n_dir
-#     cdef int flow_dir
-
-#     cdef NeighborTuple next(UpslopeNeighborIterator self)
-#     cdef NeighborTuple next_skip(UpslopeNeighborIterator self, int skip)
-
-
-# cdef class ManagedFlowDirRaster(PyManagedRaster):
-
-#     cdef bint is_local_high_point(ManagedFlowDirRaster self, int xi, int yi)
-
-#     cdef vector[NeighborTuple] get_upslope_neighbors(ManagedFlowDirRaster self, long xi, long yi)
-
-#     cdef vector[NeighborTuple] get_upslope_neighbors_skip(ManagedFlowDirRaster self, long xi, long yi, int skip)
-
-#     cdef vector[NeighborTuple] get_downslope_neighbors(ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=*)
-
+    bint is_close(double, double)
 
 # These offsets are for the neighbor rows and columns according to the
 # ordering: 3 2 1
@@ -134,7 +111,3 @@ cdef int *COL_OFFSETS
 cdef int *FLOW_DIR_REVERSE_DIRECTION
 cdef int *INFLOW_OFFSETS
 
-cdef inline int is_close(double x, double y):
-    if isnan(x) and isnan(y):
-        return 1
-    return abs(x - y) <= (1e-8 + 1e-05 * abs(y))

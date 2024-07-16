@@ -59,15 +59,16 @@ public:
         // possibly remove any elements that have exceeded the cache size
         return clean(removed_value_list);
     };
-    bool exist(const KEY_T &key){
+    bool exist(const KEY_T &key) {
         return (item_map.count(key)>0);
     };
-    VAL_T& get(const KEY_T &key){
+    VAL_T& get(const KEY_T &key) {
         MapIter it = item_map.find(key);
         assert(it!=item_map.end());
         // move the element to the front of the list
         item_list.splice(item_list.begin(), item_list, it->second);
-        return it->second->second;
+        VAL_T& value = it->second->second;
+        return value;
     };
 };
 #endif
