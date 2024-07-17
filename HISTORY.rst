@@ -36,8 +36,12 @@
 .. :changelog:
 
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.14.2 (2024-05-29)
+-------------------
 * General
     * Validation now covers file paths contained in CSVs. CSV validation
       will fail if the files listed in a CSV fail to validate.
@@ -65,9 +69,17 @@ Unreleased Changes
     * Add support for latest GDAL versions; remove test-specific constraint on
       GDAL versions from invest requirements.
       https://github.com/natcap/invest/issues/916
+    * Updated to Cython 3 (https://github.com/natcap/invest/issues/556)
 * Annual Water Yield
     * Added the results_suffix to a few intermediate files where it was
       missing. https://github.com/natcap/invest/issues/1517
+* Coastal Blue Carbon
+    * Updated model validation to prevent the case where a user provides only
+      one snapshot year and no analysis year
+      (`#1534 <https://github.com/natcap/invest/issues/1534>`_).
+      Also enforces that the analysis year, if provided, is greater than the
+      latest snapshot year. An analysis year equal to the latest snapshot year
+      is no longer allowed.
 * Coastal Vulnerability
     * Fixed a bug in handling ``nan`` as the nodata value of the bathymetry
       raster. ``nan`` pixels will now be propertly ignored before calculating
@@ -87,6 +99,14 @@ Unreleased Changes
       to negative dimensions. https://github.com/natcap/invest/issues/1431
     * Optimized the creation of the summary vector by minimizing the number of
       times the target vector needs to be rasterized.
+* Seasonal Water Yield
+    * Fixed an issue with the precip directory units. Units for these input
+      rasters are now correctly stated as mm/month.
+      https://github.com/natcap/invest/issues/1571
+    * Fixed an issue where the monthly quickflow values were being summed over
+      a block area and not summed pixelwise. This caused the quickflow
+      output ``QF.tif`` to have malformed values.
+      https://github.com/natcap/invest/issues/1541
 * Wind Energy
     * Fixed a bug where some number inputs were not being properly cast to
       ``float`` or ``int`` types. If the inputs happened to be passed as

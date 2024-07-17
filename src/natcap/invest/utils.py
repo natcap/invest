@@ -10,6 +10,7 @@ import tempfile
 import time
 from datetime import datetime
 
+import natcap.invest
 import numpy
 import pandas
 import pygeoprocessing
@@ -169,7 +170,7 @@ def prepare_workspace(
                 LOGGER.info('Elapsed time: %s',
                             _format_time(round(time.time() - start_time, 2)))
                 logging.captureWarnings(False)
-                LOGGER.info('Execution finished')
+                LOGGER.info(f'Execution finished; version: {natcap.invest.__version__}')
 
 
 class ThreadFilter(logging.Filter):

@@ -1,6 +1,3 @@
-# cython: profile=False
-# cython: language_level=3
-# distutils: language = c++
 import logging
 import os
 
@@ -22,7 +19,6 @@ cdef extern from "time.h" nogil:
     time_t time(time_t*)
 
 LOGGER = logging.getLogger(__name__)
-
 
 def calculate_sediment_deposition(
         mfd_flow_direction_path, e_prime_path, f_path, sdr_path,

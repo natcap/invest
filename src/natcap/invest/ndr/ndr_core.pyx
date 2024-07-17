@@ -1,5 +1,3 @@
-# cython: profile=False
-# cython: language_level=2
 import tempfile
 import logging
 import os
@@ -149,7 +147,7 @@ def ndr_eff_calculation(
             # hasn't already been set for processing.
             flat_index = processing_stack.top()
             processing_stack.pop()
-            global_row = flat_index / n_cols
+            global_row = flat_index // n_cols
             global_col = flat_index % n_cols
 
             crit_len = <float>crit_len_raster.get(global_col, global_row)
