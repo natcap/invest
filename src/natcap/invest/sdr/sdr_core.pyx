@@ -1,9 +1,7 @@
 import logging
 import os
 
-import numpy
 import pygeoprocessing
-cimport numpy
 cimport cython
 from osgeo import gdal
 
@@ -137,8 +135,6 @@ def calculate_sediment_deposition(
     cdef float f_j_weighted_sum
     cdef NeighborTuple neighbor2
 
-    array = pygeoprocessing.raster_to_numpy_array(mfd_flow_direction_path)
-
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
         # use cython variables to avoid python overhead of dict values
@@ -159,17 +155,13 @@ def calculate_sediment_deposition(
                 if mfd_flow_direction_raster.get(xs, ys) == mfd_nodata:
                     continue
 
-                is_high = mfd_flow_direction_raster.is_local_high_point(xs, ys)
-                a = sediment_deposition_raster.get(xs, ys)
-                isc = is_close(a, target_nodata)
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack
-                if ( is_high and isc):
-                    print('pushing', xs, ys)
+                if (mfd_flow_direction_raster.is_local_high_point(xs, ys) and
+                        sediment_deposition_raster.get(xs, ys) == target_nodata):
                     processing_stack.push(ys * n_cols + xs)
 
                 while processing_stack.size() > 0:
-
                     # loop invariant: cell has all upslope neighbors
                     # processed. this is true for seed pixels because they
                     # have no upslope neighbors.
@@ -177,7 +169,6 @@ def calculate_sediment_deposition(
                     processing_stack.pop()
                     global_row = flat_index // n_cols
                     global_col = flat_index % n_cols
-                    print('processing', global_col, global_row)
 
                     # (sum over j ∈ J of f_j * p(i,j) in the equation for t_i)
                     # calculate the upslope f_j contribution to this pixel,
@@ -188,7 +179,6 @@ def calculate_sediment_deposition(
                         mfd_flow_direction_raster, global_col, global_row)
                     neighbor = up_iterator.next()
                     while neighbor.direction < 8:
-
 
                         f_j = f_raster.get(neighbor.x, neighbor.y)
                         if is_close(f_j, target_nodata):
@@ -210,7 +200,6 @@ def calculate_sediment_deposition(
 
                     neighbor2 = <NeighborTuple>dn_iterator.next()
                     while neighbor2.direction < 8:
-                        print("neighbor", neighbor2.direction)
 
                         sdr_j = sdr_raster.get(neighbor2.x, neighbor2.y)
                         if is_close(sdr_j, sdr_nodata):
@@ -245,7 +234,6 @@ def calculate_sediment_deposition(
                         # if all upslope neighbors of neighbor j are
                         # processed, we can push j onto the stack.
                         if upslope_neighbors_processed:
-                            print('push 2', neighbor2.x, neighbor2.y)
                             processing_stack.push(
                                 neighbor2.y * n_cols + neighbor2.x)
 
@@ -293,7 +281,6 @@ def calculate_sediment_deposition(
                     if f_i < 0:
                         f_i = 0
 
-                    print('setting')
                     sediment_deposition_raster.set(global_col, global_row, t_i)
                     f_raster.set(global_col, global_row, f_i)
         n_pixels_processed += win_xsize * win_ysize

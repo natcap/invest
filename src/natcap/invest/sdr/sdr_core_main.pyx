@@ -495,13 +495,9 @@ def calculate_sediment_deposition(
                         seed_pixel = 0  # neighbor flows in, not a seed
                         break
 
-                a = sediment_deposition_raster.get(seed_col, seed_row)
-                isc = a == target_nodata
-
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack
-                if seed_pixel and isc:
-                    print('pushing', seed_col, seed_row)
+                if seed_pixel and sediment_deposition_raster.get(seed_col, seed_row) == target_nodata:
                     processing_stack.push(seed_row * n_cols + seed_col)
 
                 while processing_stack.size() > 0:
@@ -512,7 +508,6 @@ def calculate_sediment_deposition(
                     processing_stack.pop()
                     global_row = flat_index // n_cols
                     global_col = flat_index % n_cols
-                    print('processing', global_col, global_row)
 
                     # (sum over j ∈ J of f_j * p(i,j) in the equation for t_i)
                     # calculate the upslope f_j contribution to this pixel,
@@ -576,7 +571,6 @@ def calculate_sediment_deposition(
                         # check if it can be pushed onto the stack yet
                         flow_weight = (flow_val >> (j*4)) & 0xF
                         if flow_weight > 0:
-                            print("neighbor", j)
                             sdr_j = sdr_raster.get(neighbor_col, neighbor_row)
                             if sdr_j == sdr_nodata:
                                 continue
@@ -627,7 +621,6 @@ def calculate_sediment_deposition(
                             # if all upslope neighbors of neighbor j are
                             # processed, we can push j onto the stack.
                             if upslope_neighbors_processed:
-                                print('push 2', neighbor_col, neighbor_row)
                                 processing_stack.push(
                                     neighbor_row * n_cols +
                                     neighbor_col)
@@ -671,7 +664,6 @@ def calculate_sediment_deposition(
                     if f_i < 0:
                         f_i = 0
 
-                    print('setting')
                     sediment_deposition_raster.set(global_col, global_row, t_i)
                     f_raster.set(global_col, global_row, f_i)
         n_pixels_processed += (win_xsize * win_ysize)

@@ -14,7 +14,7 @@
 
 #include "LRUCache.h"
 
-int MANAGED_RASTER_N_BLOCKS = pow(2, 5);
+int MANAGED_RASTER_N_BLOCKS = pow(2, 6);
 // given the pixel neighbor numbering system
 //  3 2 1
 //  4 x 0
@@ -53,6 +53,7 @@ class ManagedRaster {
     public:
         LRUCache<int, double*>* lru_cache;
         std::set<int> dirty_blocks;
+        int* actualBlockWidths;
         int block_xsize;
         int block_ysize;
         int block_xmod;
@@ -65,6 +66,7 @@ class ManagedRaster {
         int block_ny;
         char* raster_path;
         int band_id;
+        GDALDataset* dataset;
         GDALRasterBand* band;
         int write_mode;
         int closed;
@@ -92,15 +94,12 @@ class ManagedRaster {
             //         """
             GDALAllRegister();
 
-            GDALDataset *poDataset;
+            dataset = (GDALDataset *) GDALOpen( raster_path, GA_Update );
 
+            raster_x_size = dataset->GetRasterXSize();
+            raster_y_size = dataset->GetRasterYSize();
 
-            poDataset = (GDALDataset *) GDALOpen( raster_path, GA_ReadOnly );
-
-            raster_x_size = poDataset->GetRasterXSize();
-            raster_y_size = poDataset->GetRasterYSize();
-
-            band = poDataset->GetRasterBand(band_id);
+            band = dataset->GetRasterBand(band_id);
 
             band->GetBlockSize( &block_xsize, &block_ysize );
 
@@ -139,6 +138,17 @@ class ManagedRaster {
             block_nx = (raster_x_size + block_xsize - 1) / block_xsize;
             block_ny = (raster_y_size + block_ysize - 1) / block_ysize;
 
+            int actual_x = 0;
+            int actual_y = 0;
+            actualBlockWidths = (int *) CPLMalloc(sizeof(int) * block_nx * block_ny);
+
+            for (int block_yi = 0; block_yi < block_ny; block_yi++) {
+                for (int block_xi = 0; block_xi < block_nx; block_xi++) {
+                    band->GetActualBlockSize(block_xi, block_yi, &actual_x, &actual_y);
+                    actualBlockWidths[block_yi * block_nx + block_xi] = actual_x;
+                }
+            }
+
             this->lru_cache = new LRUCache<int, double*>(MANAGED_RASTER_N_BLOCKS);
 
             raster_path = raster_path;
@@ -147,7 +157,6 @@ class ManagedRaster {
         }
 
         void set(long xi, long yi, double value) {
-            // cout << "set" << xi << ", " << yi << endl;
             // Set the pixel at `xi,yi` to `value`
             int block_xi = xi / block_xsize;
             int block_yi = yi / block_ysize;
@@ -159,11 +168,7 @@ class ManagedRaster {
                 _load_block(block_index);
             }
 
-            int actual_xsize = 0;
-            int actual_ysize = 0;
-            band->GetActualBlockSize(block_xi, block_yi, &actual_xsize, &actual_ysize);
-            int idx = ((yi % block_ysize) * actual_xsize) + (xi % block_xsize);
-
+            int idx = ((yi & block_ymod) * actualBlockWidths[block_index]) + (xi & block_xmod);
             lru_cache->get(block_index)[idx] = value;
             if (write_mode) {
 
@@ -187,14 +192,9 @@ class ManagedRaster {
             }
             double* block = lru_cache->get(block_index);
 
-            int actual_xsize = 0;
-            int actual_ysize = 0;
-
-            band->GetActualBlockSize(block_xi, block_yi, &actual_xsize, &actual_ysize);
             // Using the property n % 2^i = n & (2^i - 1)
             // to efficienty compute the modulo: yi % block_xsize
-            int idx = ((yi % block_ysize) * actual_xsize) + (xi % block_xsize);
-            // Shift over by the number of spaces taken by the x value
+            int idx = ((yi & block_ymod) * actualBlockWidths[block_index]) + (xi & block_xmod);
 
             double value = block[idx];
             return value;
@@ -226,13 +226,8 @@ class ManagedRaster {
                 win_ysize = win_ysize - (yoff + win_ysize - raster_y_size);
             }
 
-            GDALDataset *poDataset = (GDALDataset *) GDALOpen( raster_path, GA_Update );
-            GDALRasterBand* band = poDataset->GetRasterBand(band_id);
-            GDALDataType dtype = band->GetRasterDataType();
-
-            CPLErr err;
             double *pafScanline = (double *) CPLMalloc(sizeof(double) * win_xsize * win_ysize);
-            err = band->RasterIO(GF_Read, xoff, yoff, win_xsize, win_ysize,
+            CPLErr err = band->RasterIO(GF_Read, xoff, yoff, win_xsize, win_ysize,
                         pafScanline, win_xsize, win_ysize, GDT_Float64,
                         0, 0 );
 
@@ -278,9 +273,6 @@ class ManagedRaster {
                 CPLFree(double_buffer);
                 removed_value_list.pop_front();
             }
-            if (write_mode) {
-                GDALClose( (GDALDatasetH) poDataset );
-            }
         }
 
         void close() {
@@ -319,10 +311,6 @@ class ManagedRaster {
                 return;
             }
 
-            GDALDataset *poDataset;
-            poDataset = (GDALDataset *) GDALOpen( raster_path, GA_Update );
-            GDALRasterBand* band = poDataset->GetRasterBand(band_id);
-
             // if we get here, we're in write_mode
             std::set<int>::iterator dirty_itr;
             for (auto it = lru_cache->begin(); it != lru_cache->end(); it++) {
@@ -359,7 +347,7 @@ class ManagedRaster {
                 }
                 CPLFree(double_buffer);
             }
-            GDALClose( (GDALDatasetH) poDataset );
+            GDALClose( (GDALDatasetH) dataset );
         }
 };
 
