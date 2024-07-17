@@ -18,5 +18,9 @@ build:
   tools:
     python: "mambaforge-4.10"
   jobs:
+    post_create_environment:
+      - pip install --upgrade-strategy=only-if-needed -r requirements.txt
+      - pip install --upgrade-strategy=only-if-needed -r requirements-dev.txt
+      - pip install --upgrade-strategy=only-if-needed -r requirements-docs.txt
     post_install:
       - make install

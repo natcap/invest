@@ -22,7 +22,6 @@ cdef extern from "time.h" nogil:
 
 LOGGER = logging.getLogger(__name__)
 
-
 def calculate_sediment_deposition(
         mfd_flow_direction_path, e_prime_path, f_path, sdr_path,
         target_sediment_deposition_path):

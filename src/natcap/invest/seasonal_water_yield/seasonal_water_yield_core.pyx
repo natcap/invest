@@ -1,5 +1,3 @@
-# cython: profile=False
-# cython: language_level=2
 import logging
 import os
 import collections
@@ -29,7 +27,6 @@ cdef extern from "time.h" nogil:
 LOGGER = logging.getLogger(__name__)
 
 cdef int N_MONTHS = 12
-
 
 cpdef calculate_local_recharge(
         precip_path_list, et0_path_list, qf_m_path_list, flow_dir_mfd_path,
