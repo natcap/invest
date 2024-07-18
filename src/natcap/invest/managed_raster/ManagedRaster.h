@@ -150,9 +150,6 @@ class ManagedRaster {
             }
 
             this->lru_cache = new LRUCache<int, double*>(MANAGED_RASTER_N_BLOCKS);
-
-            raster_path = raster_path;
-            write_mode = write_mode;
             closed = 0;
         }
 
@@ -231,7 +228,7 @@ class ManagedRaster {
                         pafScanline, win_xsize, win_ysize, GDT_Float64,
                         0, 0 );
 
-            if (not err == CE_None) {
+            if (err != CE_None) {
                 std::cout << "Error reading block\n";
             }
             lru_cache->put(block_index, pafScanline, removed_value_list);
@@ -264,7 +261,7 @@ class ManagedRaster {
                         }
                         err = band->RasterIO( GF_Write, xoff, yoff, win_xsize, win_ysize,
                             double_buffer, win_xsize, win_ysize, GDT_Float64, 0, 0 );
-                        if (not err == CE_None) {
+                        if (err != CE_None) {
                             std::cout << "Error writing block\n";
                         }
                     }
@@ -341,7 +338,7 @@ class ManagedRaster {
                     }
                     CPLErr err = band->RasterIO( GF_Write, xoff, yoff, win_xsize, win_ysize,
                         double_buffer, win_xsize, win_ysize, GDT_Float64, 0, 0 );
-                    if (not err == CE_None) {
+                    if (err != CE_None) {
                         std::cout << "Error writing block\n";
                     }
                 }
@@ -419,9 +416,7 @@ public:
         flow_dir_sum = 0;
     }
 
-
     NeighborTuple next() {
-
         NeighborTuple n;
         long xj, yj;
         int flow_ij;
@@ -442,13 +437,37 @@ public:
         flow_ij = (flow_dir >> (n_dir * 4)) & 0xF;
         if (flow_ij) {
             flow_dir_sum += flow_ij;
-
             n = NeighborTuple(n_dir, xj, yj, flow_ij);
             n_dir += 1;
             return n;
         } else {
             n_dir += 1;
             return next();
+        }
+    }
+
+    NeighborTuple next_no_skip() {
+        NeighborTuple n;
+        long xj, yj;
+        int flow_ij;
+
+        if (n_dir == 8) {
+            n = NeighborTuple(8, -1, -1, -1);
+            return n;
+        }
+
+        xj = col + COL_OFFSETS[n_dir];
+        yj = row + ROW_OFFSETS[n_dir];
+
+        flow_ij = (flow_dir >> (n_dir * 4)) & 0xF;
+        if (flow_ij) {
+            flow_dir_sum += flow_ij;
+            n = NeighborTuple(n_dir, xj, yj, flow_ij);
+            n_dir += 1;
+            return n;
+        } else {
+            n_dir += 1;
+            return next_no_skip();
         }
     }
 };

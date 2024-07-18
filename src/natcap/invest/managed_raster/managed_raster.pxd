@@ -87,6 +87,7 @@ cdef extern from "ManagedRaster.h":
         DownslopeNeighborIterator()
         DownslopeNeighborIterator(ManagedFlowDirRaster, int, int)
         NeighborTuple next()
+        NeighborTuple next_no_skip()
 
     cdef cppclass UpslopeNeighborIterator:
         ManagedFlowDirRaster raster
@@ -102,12 +103,7 @@ cdef extern from "ManagedRaster.h":
 
     bint is_close(double, double)
 
-# These offsets are for the neighbor rows and columns according to the
-# ordering: 3 2 1
-#           4 x 0
-#           5 6 7
-cdef int *ROW_OFFSETS
-cdef int *COL_OFFSETS
-cdef int *FLOW_DIR_REVERSE_DIRECTION
-cdef int *INFLOW_OFFSETS
-
+    int[8] INFLOW_OFFSETS
+    int[8] COL_OFFSETS
+    int[8] ROW_OFFSETS
+    int[8] FLOW_DIR_REVERSE_DIRECTION

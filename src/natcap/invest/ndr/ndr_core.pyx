@@ -11,10 +11,15 @@ from osgeo import gdal
 
 from libcpp.stack cimport stack
 from libc.math cimport exp
-from ..managed_raster.managed_raster cimport _ManagedRaster
+from ..managed_raster.managed_raster cimport ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
+from ..managed_raster.managed_raster cimport DownslopeNeighborIterator
+from ..managed_raster.managed_raster cimport UpslopeNeighborIterator
+from ..managed_raster.managed_raster cimport NeighborTuple
 from ..managed_raster.managed_raster cimport is_close
 from ..managed_raster.managed_raster cimport INFLOW_OFFSETS
+from ..managed_raster.managed_raster cimport COL_OFFSETS
+from ..managed_raster.managed_raster cimport ROW_OFFSETS
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -68,19 +73,35 @@ def ndr_eff_calculation(
     # cell sizes must be square, so no reason to test at this point.
     cdef float cell_size = abs(stream_info['pixel_size'][0])
 
-    cdef _ManagedRaster stream_raster = _ManagedRaster(stream_path, 1, False)
-    cdef _ManagedRaster crit_len_raster = _ManagedRaster(
-        crit_len_path, 1, False)
+    stream_path_bytes = stream_path.encode('UTF-8')
+    cdef char* stream_path_char_ptr = stream_path_bytes
+    cdef ManagedRaster stream_raster = ManagedRaster(
+        stream_path_char_ptr, 1, False)
+
+    crit_len_path_bytes = crit_len_path.encode('UTF-8')
+    cdef char* crit_len_path_char_ptr = crit_len_path_bytes
+    cdef ManagedRaster crit_len_raster = ManagedRaster(
+        crit_len_path_char_ptr, 1, False)
+
+    retention_eff_lulc_path_bytes = retention_eff_lulc_path.encode('UTF-8')
+    cdef char* retention_eff_lulc_path_char_ptr = retention_eff_lulc_path_bytes
+    cdef ManagedRaster retention_eff_lulc_raster = ManagedRaster(
+        retention_eff_lulc_path_char_ptr, 1, False)
+
+    effective_retention_path_bytes = effective_retention_path.encode('UTF-8')
+    cdef char* effective_retention_path_char_ptr = effective_retention_path_bytes
+    cdef ManagedRaster effective_retention_raster = ManagedRaster(
+        effective_retention_path_char_ptr, 1, True)
+
+    mfd_flow_direction_path_bytes = mfd_flow_direction_path.encode('UTF-8')
+    cdef char* mfd_flow_direction_path_char_ptr = mfd_flow_direction_path_bytes
+    cdef ManagedFlowDirRaster mfd_flow_direction_raster = ManagedFlowDirRaster(
+        mfd_flow_direction_path_char_ptr, 1, False)
+
     cdef float crit_len_nodata = pygeoprocessing.get_raster_info(
         crit_len_path)['nodata'][0]
-    cdef _ManagedRaster retention_eff_lulc_raster = _ManagedRaster(
-        retention_eff_lulc_path, 1, False)
     cdef float retention_eff_nodata = pygeoprocessing.get_raster_info(
         retention_eff_lulc_path)['nodata'][0]
-    cdef _ManagedRaster effective_retention_raster = _ManagedRaster(
-        effective_retention_path, 1, True)
-    cdef ManagedFlowDirRaster mfd_flow_direction_raster = ManagedFlowDirRaster(
-        mfd_flow_direction_path, 1, False)
 
     # create direction raster in bytes
     def _mfd_to_flow_dir_op(mfd_array):
@@ -97,8 +118,10 @@ def ndr_eff_calculation(
         [(mfd_flow_direction_path, 1)], _mfd_to_flow_dir_op,
         to_process_flow_directions_path, gdal.GDT_Byte, None)
 
-    cdef _ManagedRaster to_process_flow_directions_raster = _ManagedRaster(
-        to_process_flow_directions_path, 1, True)
+    to_process_flow_directions_path_bytes = to_process_flow_directions_path.encode('UTF-8')
+    cdef char* to_process_flow_directions_path_char_ptr = to_process_flow_directions_path_bytes
+    cdef ManagedRaster to_process_flow_directions_raster = ManagedRaster(
+        to_process_flow_directions_path_char_ptr, 1, True)
 
     cdef long col_index, row_index, win_xsize, win_ysize, xoff, yoff
     cdef long global_col, global_row
@@ -109,6 +132,7 @@ def ndr_eff_calculation(
     cdef long neighbor_row, neighbor_col
     cdef int neighbor_outflow_dir, neighbor_outflow_dir_mask, neighbor_process_flow_dir
     cdef int outflow_dirs, dir_mask
+    cdef NeighborTuple neighbor
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
@@ -126,15 +150,25 @@ def ndr_eff_calculation(
                 should_seed = 0
                 # see if this pixel drains to nodata or the edge, if so it's
                 # a drain
-                for neighbor in (
-                        mfd_flow_direction_raster.get_downslope_neighbors(
-                            global_col, global_row, skip_oob=False)):
-                    if (neighbor.x < 0 or neighbor.x >= n_cols or
-                        neighbor.y < 0 or neighbor.y >= n_rows or
-                        to_process_flow_directions_raster.get(
-                            neighbor.x, neighbor.y) == 0):
-                        should_seed = 1
-                        outflow_dirs &= ~(1 << neighbor.direction)
+                for i in range(8):
+                    dir_mask = 1 << i
+                    if outflow_dirs & dir_mask > 0:
+                        neighbor_col = COL_OFFSETS[i] + global_col
+                        neighbor_row = ROW_OFFSETS[i] + global_row
+                        if (neighbor_col < 0 or neighbor_col >= n_cols or
+                            neighbor_row < 0 or neighbor_row >= n_rows):
+                            should_seed = 1
+                            outflow_dirs &= ~dir_mask
+
+                        # Only consider neighbor flow directions if the
+                        # neighbor index is within the raster.
+                        else:
+                            neighbor_flow_dirs = (
+                                to_process_flow_directions_raster.get(
+                                    neighbor_col, neighbor_row))
+                            if neighbor_flow_dirs == 0:
+                                should_seed = 1
+                                outflow_dirs &= ~dir_mask
 
                 if should_seed:
                     # mark all outflow directions processed
@@ -156,7 +190,7 @@ def ndr_eff_calculation(
             flow_dir = <int>mfd_flow_direction_raster.get(
                     global_col, global_row)
             if stream_raster.get(global_col, global_row) == 1:
-                # if it's a stream effective retention is 0.
+                # if it's a stream, effective retention is 0.
                 effective_retention_raster.set(global_col, global_row, STREAM_EFFECTIVE_RETENTION)
             elif (is_close(crit_len, crit_len_nodata) or
                   is_close(retention_eff_lulc, retention_eff_nodata) or
@@ -166,14 +200,17 @@ def ndr_eff_calculation(
                     global_col, global_row, effective_retention_nodata)
             else:
                 working_retention_eff = 0.0
+
+                dn_iterator = DownslopeNeighborIterator(
+                    mfd_flow_direction_raster, global_col, global_row)
                 has_outflow = False
-                for neighbor in mfd_flow_direction_raster.get_downslope_neighbors(
-                        global_col, global_row, skip_oob=False):
+                neighbor = dn_iterator.next_no_skip()
+                while neighbor.direction < 8:
                     has_outflow = True
                     if (neighbor.x < 0 or neighbor.x >= n_cols or
                         neighbor.y < 0 or neighbor.y >= n_rows):
+                        neighbor = dn_iterator.next_no_skip()
                         continue
-
                     if neighbor.direction % 2 == 1:
                         step_size = <float>(cell_size * 1.41421356237)
                     else:
@@ -206,16 +243,20 @@ def ndr_eff_calculation(
 
                     working_retention_eff += (
                         intermediate_retention * neighbor.flow_proportion)
+                    neighbor = dn_iterator.next_no_skip()
 
                 if has_outflow:
+                    working_retention_eff /= dn_iterator.flow_dir_sum
                     effective_retention_raster.set(
                         global_col, global_row, working_retention_eff)
                 else:
                     raise Exception("got to a cell that has no outflow!")
             # search upslope to see if we need to push a cell on the stack
             # for i in range(8):
-            for neighbor in mfd_flow_direction_raster.get_upslope_neighbors(
-                    global_col, global_row):
+            up_iterator = UpslopeNeighborIterator(
+                mfd_flow_direction_raster, global_col, global_row)
+            neighbor = up_iterator.next()
+            while neighbor.direction < 8:
                 neighbor_outflow_dir = INFLOW_OFFSETS[neighbor.direction]
                 neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir
                 neighbor_process_flow_dir = <int>(
@@ -223,9 +264,11 @@ def ndr_eff_calculation(
                         neighbor.x, neighbor.y))
                 if neighbor_process_flow_dir == 0:
                     # skip, due to loop invariant this must be a nodata pixel
+                    neighbor = up_iterator.next()
                     continue
                 if neighbor_process_flow_dir & neighbor_outflow_dir_mask == 0:
                     # no outflow
+                    neighbor = up_iterator.next()
                     continue
                 # mask out the outflow dir that this iteration processed
                 neighbor_process_flow_dir &= ~neighbor_outflow_dir_mask
@@ -236,5 +279,8 @@ def ndr_eff_calculation(
                     # push on stack, otherwise another downslope pixel will
                     # pick it up
                     processing_stack.push(neighbor.y * n_cols + neighbor.x)
+                neighbor = up_iterator.next()
+
     to_process_flow_directions_raster.close()
+    effective_retention_raster.close()
     os.remove(to_process_flow_directions_path)

@@ -71,6 +71,7 @@ setup(
             # as expected, with consistent results.
             ('scenic_quality', 'viewshed', ['-ffp-contract=off']),
             ('ndr', 'ndr_core', []),
+            ('ndr', 'ndr_core_main', []),
             ('sdr', 'sdr_core', []),
             ('seasonal_water_yield', 'seasonal_water_yield_core', [])
         ]
