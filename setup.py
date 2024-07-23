@@ -24,9 +24,11 @@ compiler_and_linker_args = []
 if platform.system() == 'Darwin':
     compiler_and_linker_args = ['-stdlib=libc++', '-std=c++20']
     linker_args = []
+    libraries = ["gdal"]
 else:
     compiler_args =['/std:c++20']
     linker_args = ["-LIBPATH:C:/Users/runneradmin/micromamba/envs/env/Library/lib gdal"]
+    libraries = []
 
 
 
@@ -58,9 +60,9 @@ setup(
             sources=[f'src/natcap/invest/{package}/{module}.pyx'],
             include_dirs=[numpy.get_include()] + ['src/natcap/invest/managed_raster', r"C:\Users\runneradmin\micromamba\envs\env\Library\include"],
             extra_compile_args=package_compiler_args + compiler_and_linker_args,
-            extra_link_args=compiler_and_linker_args + linker_args,
+            extra_link_args=compiler_and_linker_args + linker_args + ["foo"],
             language='c++',
-            libraries=['gdal'],
+            libraries=libraries,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
         ) for package, module, package_compiler_args in [
             ('delineateit', 'delineateit_core', []),

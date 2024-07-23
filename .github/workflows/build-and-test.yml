@@ -119,9 +119,6 @@ jobs:
         run: |
 
           cat $(which gdal-config)
-          gdal-config --libs
-          gdal-config --dep-libs
-          gdal-config --cflags
 
           # uninstall InVEST if it was already in the restored cache
           python -m pip uninstall -y natcap.invest
