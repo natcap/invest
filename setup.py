@@ -28,8 +28,8 @@ if platform.system() == 'Darwin':
     libraries = ["gdal"]
 else:
     compiler_args = ['/std:c++20']
-    linker_args = ["-LIBPATH:C:/Users/runneradmin/micromamba/envs/env/Library/lib gdal gdal_i.lib"]
-    libraries = ["gdal"]
+    linker_args = ["-LIBPATH:C:/Users/runneradmin/micromamba/envs/env/Library/lib gdal gdal.lib gdal_i.lib"]
+    libraries = []
 
 
 class build_py(_build_py):
