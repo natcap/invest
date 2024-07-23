@@ -56,7 +56,7 @@ setup(
         Extension(
             name=f'natcap.invest.{package}.{module}',
             sources=[f'src/natcap/invest/{package}/{module}.pyx'],
-            include_dirs=[numpy.get_include()] + ['src/natcap/invest/managed_raster', r"\Users\runneradmin\micromamba\envs\env\Library\include\gdal.h"],
+            include_dirs=[numpy.get_include()] + ['src/natcap/invest/managed_raster', r"\Users\runneradmin\micromamba\envs\env\Library\include"],
             extra_compile_args=compiler_args + compiler_and_linker_args,
             extra_link_args=compiler_and_linker_args,
             language='c++',
