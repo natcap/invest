@@ -118,6 +118,7 @@ jobs:
       - name: Build and install wheel
         run: |
 
+          cat $(which gdal-config)
           gdal-config --libs
           gdal-config --dep-libs
           gdal-config --cflags
