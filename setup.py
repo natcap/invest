@@ -60,7 +60,7 @@ setup(
             sources=[f'src/natcap/invest/{package}/{module}.pyx'],
             include_dirs=[numpy.get_include()] + ['src/natcap/invest/managed_raster', r"C:\Users\runneradmin\micromamba\envs\env\Library\include"],
             extra_compile_args=package_compiler_args + compiler_and_linker_args,
-            extra_link_args=compiler_and_linker_args + linker_args + ["foo"],
+            extra_link_args=compiler_and_linker_args + linker_args,
             language='c++',
             libraries=libraries,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
