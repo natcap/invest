@@ -116,7 +116,10 @@ jobs:
           diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
       - name: find gdal.h
-        run: find ~/micromamba -name "gdal.h"
+        run: |
+          find ~/micromamba -name "gdal.h"
+          ls \Users\runneradmin\micromamba\envs\env\Library\include
+
 
       - name: Build and install wheel
         run: |
