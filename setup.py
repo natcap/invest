@@ -21,7 +21,7 @@ _REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
 # older system.  Tested and it works on Mac OSX Catalina.
 compiler_and_linker_args = []
 if platform.system() == 'Darwin':
-    compiler_and_linker_args = ['-stdlib=libc++', '-std=gnu++11']
+    compiler_and_linker_args = ['-stdlib=libc++', '-std=gnu++11', '-I=~/micromamba/envs/env/Library/include']
 
 
 class build_py(_build_py):
