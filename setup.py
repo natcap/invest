@@ -23,7 +23,10 @@ compiler_and_linker_args = []
 if platform.system() == 'Darwin':
     compiler_and_linker_args = ['-stdlib=libc++', '-std=gnu++11']
 else:
-    compiler_and_linker_args = ['-IC:~/micromamba/envs/env/Library/include']
+    compiler_and_linker_args = [
+        '-IC:/c/Users/runneradmin/micromamba/envs/env/Library/include/gdal.h',
+        r'-IC:\Users\runneradmin\micromamba\envs\env\Library\include\gdal.h'
+        ]
 
 
 
