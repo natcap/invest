@@ -21,12 +21,13 @@ _REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
 # older system.  Tested and it works on Mac OSX Catalina.
 compiler_and_linker_args = []
 if platform.system() == 'Darwin':
-    compiler_and_linker_args = ['-stdlib=libc++', '-std=gnu++11']
+    compiler_and_linker_args = ['-stdlib=libc++', '-std=c++20']
 else:
     compiler_and_linker_args = [
         '-IC:/c/Users/runneradmin/micromamba/envs/env/Library/include/gdal.h',
-        r'-IC:\Users\runneradmin\micromamba\envs\env\Library\include\gdal.h'
-        ]
+        r'-IC:\Users\runneradmin\micromamba\envs\env\Library\include\gdal.h',
+        '/std:c++20'
+    ]
 
 
 
@@ -63,7 +64,6 @@ setup(
             libraries=['gdal'],
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
         ) for package, module, compiler_args in [
-            ('managed_raster', 'managed_raster', []),
             ('delineateit', 'delineateit_core', []),
             ('recreation', 'out_of_core_quadtree', []),
             # clang-14 defaults to -ffp-contract=on, which causes the
