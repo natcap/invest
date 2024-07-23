@@ -283,5 +283,10 @@ def calculate_sediment_deposition(
                     f_raster.set(global_col, global_row, f_i)
         n_pixels_processed += win_xsize * win_ysize
 
-    LOGGER.info('Sediment deposition 100% complete')
     sediment_deposition_raster.close()
+    mfd_flow_direction_raster.close()
+    e_prime_raster.close()
+    sdr_raster.close()
+    f_raster.close()
+
+    LOGGER.info('Sediment deposition 100% complete')

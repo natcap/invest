@@ -99,6 +99,7 @@ cdef extern from "ManagedRaster.h":
         UpslopeNeighborIterator()
         UpslopeNeighborIterator(ManagedFlowDirRaster, int, int)
         NeighborTuple next()
+        NeighborTuple next_no_divide()
         NeighborTuple next_skip(int skip)
 
     bint is_close(double, double)

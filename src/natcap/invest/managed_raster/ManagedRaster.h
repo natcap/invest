@@ -531,6 +531,40 @@ public:
         }
     }
 
+    NeighborTuple next_no_divide() {
+
+        NeighborTuple n;
+        long xj, yj;
+        int flow_dir_j;
+        int flow_ji;
+
+        if (n_dir == 8) {
+            n = NeighborTuple(8, -1, -1, -1);
+            return n;
+        }
+
+        xj = col + COL_OFFSETS[n_dir];
+        yj = row + ROW_OFFSETS[n_dir];
+
+        if (xj < 0 or xj >= raster.raster_x_size or
+                yj < 0 or yj >= raster.raster_y_size) {
+            n_dir += 1;
+            return next_no_divide();
+        }
+
+        flow_dir_j = raster.get(xj, yj);
+        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])));
+
+        if (flow_ji) {
+            n = NeighborTuple(n_dir, xj, yj, static_cast<float>(flow_ji));
+            n_dir += 1;
+            return n;
+        } else {
+            n_dir += 1;
+            return next_no_divide();
+        }
+    }
+
     NeighborTuple next_skip(int skip) {
 
         NeighborTuple n;
@@ -573,7 +607,7 @@ public:
     }
 };
 
-bool is_close(float x, float y) {
+bool is_close(double x, double y) {
     if (isnan(x) and isnan(y)) {
         return true;
     }

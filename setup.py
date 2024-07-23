@@ -51,7 +51,7 @@ setup(
             name=f'natcap.invest.{package}.{module}',
             sources=[f'src/natcap/invest/{package}/{module}.pyx'],
             include_dirs=[numpy.get_include()] + ['src/natcap/invest/managed_raster'],
-            extra_compile_args=compiler_args + compiler_and_linker_args,
+            extra_compile_args=compiler_args + compiler_and_linker_args +  ["-g3", "-UNDEBUG", "-O0"],
             extra_link_args=compiler_and_linker_args,
             language='c++',
             libraries=['gdal'],
@@ -71,7 +71,6 @@ setup(
             # as expected, with consistent results.
             ('scenic_quality', 'viewshed', ['-ffp-contract=off']),
             ('ndr', 'ndr_core', []),
-            ('ndr', 'ndr_core_main', []),
             ('sdr', 'sdr_core', []),
             ('seasonal_water_yield', 'seasonal_water_yield_core', [])
         ]

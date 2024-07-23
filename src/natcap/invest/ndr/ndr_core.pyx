@@ -281,6 +281,9 @@ def ndr_eff_calculation(
                     processing_stack.push(neighbor.y * n_cols + neighbor.x)
                 neighbor = up_iterator.next()
 
-    to_process_flow_directions_raster.close()
+    stream_raster.close()
+    crit_len_raster.close()
+    retention_eff_lulc_raster.close()
     effective_retention_raster.close()
-    os.remove(to_process_flow_directions_path)
+    mfd_flow_direction_raster.close()
+    to_process_flow_directions_raster.close()

@@ -350,12 +350,20 @@ def viewshed(dem_raster_path_band,
         raster_driver_creation_tuple=BYTE_GTIFF_CREATION_OPTIONS)
 
     # LRU-cached rasters for easier access to individual pixels.
+    dem_raster_path_bytes = dem_raster_path_band[0].encode('UTF-8')
+    cdef char* dem_raster_path_char_ptr = dem_raster_path_bytes
     cdef ManagedRaster dem_managed_raster = (
-            ManagedRaster(dem_raster_path_band[0], dem_raster_path_band[1], 0))
+            ManagedRaster(dem_raster_path_char_ptr, dem_raster_path_band[1], 0))
+
+    aux_path_bytes = aux_filepath.encode('UTF-8')
+    cdef char* aux_path_char_ptr = aux_path_bytes
     cdef ManagedRaster aux_managed_raster = (
-            ManagedRaster(aux_filepath, 1, 1))
+        ManagedRaster(aux_path_char_ptr, 1, 1))
+
+    visibility_path_bytes = visibility_filepath.encode('UTF-8')
+    cdef char* visibility_path_char_ptr = visibility_path_bytes
     cdef ManagedRaster visibility_managed_raster = (
-            ManagedRaster(visibility_filepath, 1, 1))
+            ManagedRaster(visibility_path_char_ptr, 1, 1))
 
     # get the pixel size in terms of meters.
     dem_srs = osr.SpatialReference()
