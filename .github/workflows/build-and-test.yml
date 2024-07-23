@@ -120,6 +120,8 @@ jobs:
 
           cat $(which gdal-config)
 
+          ls /c/Users/runneradmin/micromamba/envs/env/Library/lib
+
           # uninstall InVEST if it was already in the restored cache
           python -m pip uninstall -y natcap.invest
           python -m build --wheel
