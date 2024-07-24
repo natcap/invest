@@ -25,10 +25,12 @@ if platform.system() == 'Darwin':
     compiler_args = []
     compiler_and_linker_args = ['-stdlib=libc++', '-std=c++20']
     linker_args = []
+    library_dirs = []
     libraries = ["gdal"]
 else:
     compiler_args = ['/std:c++20']
     linker_args = [r"/LIBPATH:C:\Users\runneradmin\micromamba\envs\env\Library\lib gdal gdal.lib gdal_i.lib"]
+    library_dirs = r"C:\Users\runneradmin\micromamba\envs\env\Library\lib"
     libraries = ["gdal"]
 
 
@@ -63,6 +65,7 @@ setup(
             extra_link_args=compiler_and_linker_args + linker_args,
             language='c++',
             libraries=libraries,
+            library_dirs=library_dirs,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
         ) for package, module, package_compiler_args in [
             ('delineateit', 'delineateit_core', []),
