@@ -17,7 +17,6 @@ from libcpp.stack cimport stack
 from libcpp.queue cimport queue
 from libcpp.vector cimport vector
 from libc.time cimport time as ctime
-from libc.stdlib cimport malloc, free
 from ..managed_raster.managed_raster cimport ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport DownslopeNeighborIterator
@@ -118,11 +117,11 @@ cpdef calculate_local_recharge(
     # precipitation and evapotranspiration data should
     # always be non-negative
     cdef vector[ManagedRaster] et0_m_rasters
-    cdef char **et0_path_char_ptrs = <char**>malloc(12 * sizeof(char*))
+    cdef vector[char*] et0_path_char_ptrs
     et0_m_nodata_list = []
     for i, et0_path in enumerate(et0_path_list):
         et0_path_bytes = et0_path.encode('UTF-8')
-        et0_path_char_ptrs[i] = et0_path_bytes
+        et0_path_char_ptrs.push_back(et0_path_bytes)
         et0_m_rasters.push_back(ManagedRaster(et0_path_char_ptrs[i], 1, 0))
         nodata = pygeoprocessing.get_raster_info(et0_path)['nodata'][0]
         if nodata is None:
@@ -130,11 +129,11 @@ cpdef calculate_local_recharge(
         et0_m_nodata_list.append(nodata)
 
     cdef vector[ManagedRaster] precip_m_rasters
-    cdef char **precip_path_char_ptrs = <char**>malloc(12 * sizeof(char*))
+    cdef vector[char*] precip_path_char_ptrs
     precip_m_nodata_list = []
     for i, precip_m_path in enumerate(precip_path_list):
         precip_path_bytes = precip_m_path.encode('UTF-8')
-        precip_path_char_ptrs[i] = precip_path_bytes
+        precip_path_char_ptrs.push_back(precip_path_bytes)
         precip_m_rasters.push_back(ManagedRaster(precip_path_char_ptrs[i], 1, 0))
         nodata = pygeoprocessing.get_raster_info(precip_m_path)['nodata'][0]
         if nodata is None:
@@ -142,21 +141,21 @@ cpdef calculate_local_recharge(
         precip_m_nodata_list.append(nodata)
 
     cdef vector[ManagedRaster] qf_m_rasters
-    cdef char **qf_path_char_ptrs = <char**>malloc(12 * sizeof(char*))
+    cdef vector[char*] qf_path_char_ptrs
     qf_m_nodata_list = []
     for i, qf_m_path in enumerate(qf_m_path_list):
         qf_path_bytes = qf_m_path.encode('UTF-8')
-        qf_path_char_ptrs[i] = qf_path_bytes
+        qf_path_char_ptrs.push_back(qf_path_bytes)
         qf_m_rasters.push_back(ManagedRaster(qf_path_char_ptrs[i], 1, 0))
         qf_m_nodata_list.append(
             pygeoprocessing.get_raster_info(qf_m_path)['nodata'][0])
 
     cdef vector[ManagedRaster] kc_m_rasters
-    cdef char **kc_path_char_ptrs = <char**>malloc(12 * sizeof(char*))
+    cdef vector[char*] kc_path_char_ptrs
     kc_m_nodata_list = []
     for i, kc_m_path in enumerate(kc_path_list):
         kc_path_bytes = kc_m_path.encode('UTF-8')
-        kc_path_char_ptrs[i] = kc_path_bytes
+        kc_path_char_ptrs.push_back(kc_path_bytes)
         kc_m_rasters.push_back(ManagedRaster(kc_path_char_ptrs[i], 1, 0))
         kc_m_nodata_list.append(
             pygeoprocessing.get_raster_info(kc_m_path)['nodata'][0])
@@ -337,7 +336,6 @@ cpdef calculate_local_recharge(
     target_l_sum_avail_raster.close()
     target_aet_raster.close()
     target_pi_raster.close()
-
     for raster in et0_m_rasters:
         raster.close()
     for raster in precip_m_rasters:
