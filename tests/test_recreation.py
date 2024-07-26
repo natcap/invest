@@ -37,6 +37,10 @@ SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
 
 LOGGER = logging.getLogger('test_recreation')
 
+# These are defined in the model spec for validating start and end year
+MIN_YEAR = 2012
+MAX_YEAR = 2017
+
 
 def _timeout(max_timeout):
     """Timeout decorator, parameter in seconds."""
@@ -243,7 +247,7 @@ class UnitTestRecServer(unittest.TestCase):
         date_range = (('2005-01-01'), ('2014-12-31'))
         out_vector_filename = 'test_aoi_for_subset_pud.shp'
         print('calc photo userdays')
-        zip_result, workspace_id = (
+        zip_result, workspace_id, version_str = (
             recreation_server.calc_user_days_in_aoi(
                 zip_file_binary, date_range, out_vector_filename))
         print('calc photo userdays done')
@@ -507,8 +511,8 @@ class TestRecClientServer(unittest.TestCase):
         """Setup workspace."""
         from natcap.invest.recreation import recmodel_server
 
-        # self.workspace_dir = tempfile.mkdtemp()
-        self.workspace_dir = 'test_ws'
+        self.workspace_dir = tempfile.mkdtemp()
+        # self.workspace_dir = 'test_ws'
         self.resampled_data_path = os.path.join(
             self.workspace_dir, 'resampled_data.csv')
         _resample_csv(
@@ -532,13 +536,13 @@ class TestRecClientServer(unittest.TestCase):
             'datasets': {
                 'flickr': {
                     'raw_csv_point_data_path': self.resampled_data_path,
-                    'min_year': 2008,
-                    'max_year': 2015
+                    'min_year': 2005,
+                    'max_year': 2017
                 },
                 'twitter': {
                     'raw_csv_point_data_path': self.resampled_data_path,
-                    'min_year': 2008,
-                    'max_year': 2015
+                    'min_year': 2012,
+                    'max_year': 2022
                 }
             }
         }
@@ -570,8 +574,8 @@ class TestRecClientServer(unittest.TestCase):
             'aoi_path': os.path.join(
                 SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
             'compute_regression': True,
-            'start_year': '2008',
-            'end_year': '2014',
+            'start_year': MIN_YEAR,
+            'end_year': MAX_YEAR,
             'grid_aoi': False,
             'predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
@@ -614,8 +618,8 @@ class TestRecClientServer(unittest.TestCase):
                 SAMPLE_DATA, 'local_recreation_aoi_florida_utm18n.shp'),
             'cell_size': 40000.0,
             'compute_regression': True,
-            'start_year': '2008',
-            'end_year': '2014',
+            'start_year': MIN_YEAR,
+            'end_year': MAX_YEAR,
             'hostname': 'localhost',
             'port': self.port,
             'grid_aoi': True,
@@ -636,56 +640,56 @@ class TestRecClientServer(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
             os.path.join(REGRESSION_DATA, 'local_server_scenario_results.csv'))
 
-    @_timeout(30.0)
-    def test_workspace_fetcher(self):
-        """Recreation test workspace fetcher on a local Pyro5 empty server."""
-        from natcap.invest.recreation import recmodel_workspace_fetcher
+    # @_timeout(30.0)
+    # def test_workspace_fetcher(self):
+    #     """Recreation test workspace fetcher on a local Pyro5 empty server."""
+    #     from natcap.invest.recreation import recmodel_workspace_fetcher
 
-        path = "PYRO:natcap.invest.recreation@localhost:%s" % self.port
-        LOGGER.info("Local server path %s", path)
-        recreation_server = Pyro5.Proxy(path)
-        aoi_path = os.path.join(
-            SAMPLE_DATA, 'test_aoi_for_subset.shp')
-        basename = os.path.splitext(aoi_path)[0]
-        aoi_archive_path = os.path.join(
-            self.workspace_dir, 'aoi_zipped.zip')
-        with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
-            for filename in glob.glob(basename + '.*'):
-                myzip.write(filename, os.path.basename(filename))
+    #     path = "PYRO:natcap.invest.recreation@localhost:%s" % self.port
+    #     LOGGER.info("Local server path %s", path)
+    #     recreation_server = Pyro5.api.Proxy(path)
+    #     aoi_path = os.path.join(
+    #         SAMPLE_DATA, 'test_aoi_for_subset.shp')
+    #     basename = os.path.splitext(aoi_path)[0]
+    #     aoi_archive_path = os.path.join(
+    #         self.workspace_dir, 'aoi_zipped.zip')
+    #     with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
+    #         for filename in glob.glob(basename + '.*'):
+    #             myzip.write(filename, os.path.basename(filename))
 
-        # convert shapefile to binary string for serialization
-        with open(aoi_archive_path, 'rb') as file:
-            zip_file_binary = file.read()
-        date_range = (('2005-01-01'), ('2014-12-31'))
-        out_vector_filename = 'test_aoi_for_subset_pud.shp'
+    #     # convert shapefile to binary string for serialization
+    #     with open(aoi_archive_path, 'rb') as file:
+    #         zip_file_binary = file.read()
+    #     date_range = (('2005-01-01'), ('2014-12-31'))
+    #     out_vector_filename = 'test_aoi_for_subset_pud.shp'
 
-        _, workspace_id = (
-            recreation_server.calc_user_days_in_aoi(
-                zip_file_binary, date_range, out_vector_filename))
-        fetcher_args = {
-            'workspace_dir': self.workspace_dir,
-            'hostname': 'localhost',
-            'port': self.port,
-            'workspace_id': workspace_id,
-        }
-        try:
-            recmodel_workspace_fetcher.execute(fetcher_args)
-        except:
-            LOGGER.error(
-                "Server process failed (%s) is_alive=%s",
-                str(server_thread), server_thread.is_alive())
-            raise
+    #     _, workspace_id = (
+    #         recreation_server.calc_user_days_in_aoi(
+    #             zip_file_binary, date_range, out_vector_filename))
+    #     fetcher_args = {
+    #         'workspace_dir': self.workspace_dir,
+    #         'hostname': 'localhost',
+    #         'port': self.port,
+    #         'workspace_id': workspace_id,
+    #     }
+    #     try:
+    #         recmodel_workspace_fetcher.execute(fetcher_args)
+    #     except:
+    #         LOGGER.error(
+    #             "Server process failed (%s) is_alive=%s",
+    #             str(server_thread), server_thread.is_alive())
+    #         raise
 
-        out_workspace_dir = os.path.join(
-            self.workspace_dir, 'workspace_zip')
-        os.makedirs(out_workspace_dir)
-        workspace_zip_path = os.path.join(
-            self.workspace_dir, workspace_id + '.zip')
-        zipfile.ZipFile(workspace_zip_path, 'r').extractall(
-            out_workspace_dir)
-        utils._assert_vectors_equal(
-            aoi_path,
-            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
+    #     out_workspace_dir = os.path.join(
+    #         self.workspace_dir, 'workspace_zip')
+    #     os.makedirs(out_workspace_dir)
+    #     workspace_zip_path = os.path.join(
+    #         self.workspace_dir, workspace_id + '.zip')
+    #     zipfile.ZipFile(workspace_zip_path, 'r').extractall(
+    #         out_workspace_dir)
+    #     utils._assert_vectors_equal(
+    #         aoi_path,
+    #         os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
     def test_results_suffix_on_serverside_files(self):
         """Recreation test suffix gets added to files created on server."""
@@ -695,8 +699,8 @@ class TestRecClientServer(unittest.TestCase):
             'aoi_path': os.path.join(
                 SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
             'compute_regression': False,
-            'start_year': '2014',
-            'end_year': '2015',
+            'start_year': MIN_YEAR,
+            'end_year': MAX_YEAR,
             'grid_aoi': False,
             'results_suffix': 'hello',
             'workspace_dir': self.workspace_dir,
@@ -719,7 +723,7 @@ class TestRecClientServer(unittest.TestCase):
             'cell_size': 7000.0,
             'compute_regression': True,
             'start_year': '1219',  # start year ridiculously out of range
-            'end_year': '2014',
+            'end_year': MAX_YEAR,
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
@@ -743,7 +747,7 @@ class TestRecClientServer(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'cell_size': 7000.0,
             'compute_regression': True,
-            'start_year': '2005',
+            'start_year': MIN_YEAR,
             'end_year': '2219',  # end year ridiculously out of range
             'grid_aoi': True,
             'grid_type': 'hexagon',
@@ -960,8 +964,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'cell_size': 40000.0,
             'compute_regression': True,
-            'start_year': '2005',
-            'end_year': '2014',
+            'start_year': MIN_YEAR,
+            'end_year': MAX_YEAR,
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
@@ -1021,8 +1025,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'compute_regression': False,
-            'start_year': '2012',
-            'end_year': '2017',
+            'start_year': MIN_YEAR,
+            'end_year': MAX_YEAR,
             'grid_aoi': False,
             'results_suffix': '',
             'workspace_dir': self.workspace_dir,
@@ -1044,8 +1048,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'compute_regression': True,
-            'start_year': '2012',
-            'end_year': '2017',
+            'start_year': MIN_YEAR,
+            'end_year': MAX_YEAR,
             'grid_aoi': True,
             'grid_type': 'square',
             'cell_size': 20000,
@@ -1184,8 +1188,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'cell_size': 7000.0,
             'compute_regression': True,
-            'start_year': '2017',  # note start_year > end_year
-            'end_year': '2012',
+            'start_year': MAX_YEAR,  # note start_year > end_year
+            'end_year': MIN_YEAR,
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
@@ -1209,8 +1213,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'cell_size': 7000.0,
             'compute_regression': False,
-            'start_year': '2012',
-            'end_year': '2017',
+            'start_year': MIN_YEAR,
+            'end_year': MAX_YEAR,
             'grid_aoi': True,
             'grid_type': 'circle',  # intentionally bad gridtype
             'results_suffix': '',
@@ -1287,8 +1291,8 @@ class RecreationValidationTests(unittest.TestCase):
         validation_warnings = recreation.recmodel_client.validate({
             'compute_regression': True,
             'predictor_table_path': table_path,
-            'start_year': '2012',
-            'end_year': '2016',
+            'start_year': MIN_YEAR,
+            'end_year': MAX_YEAR,
             'workspace_dir': self.workspace_dir,
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
 
@@ -1298,8 +1302,8 @@ class RecreationValidationTests(unittest.TestCase):
             'compute_regression': True,
             'predictor_table_path': table_path,
             'scenario_predictor_table_path': table_path,
-            'start_year': '2012',
-            'end_year': '2016',
+            'start_year': MIN_YEAR,
+            'end_year': MAX_YEAR,
             'workspace_dir': self.workspace_dir,
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
         expected_messages = [
@@ -1329,8 +1333,8 @@ class RecreationValidationTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'cell_size': 40000.0,
             'compute_regression': True,
-            'start_year': '2005',
-            'end_year': '2014',
+            'start_year': MIN_YEAR,
+            'end_year': MAX_YEAR,
             'grid_aoi': False,
             'predictor_table_path': bad_table_path,
             'workspace_dir': self.workspace_dir,

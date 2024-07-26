@@ -216,6 +216,7 @@ class RecModel(object):
                 calendar months.
             workspace_id: a string that can be used to uniquely identify this
                 run on the server
+            server version string
 
         """
         # make a random workspace name so we can work in parallel
