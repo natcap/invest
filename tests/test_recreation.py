@@ -527,9 +527,10 @@ class TestRecClientServer(unittest.TestCase):
         self.port = sock.getsockname()[1]
         sock.close()
         sock = None
+        self.hostname = 'localhost'
 
         server_args = {
-            'hostname': 'localhost',
+            'hostname': self.hostname,
             'port': self.port,
             'cache_workspace': self.workspace_dir,
             'max_points_per_node': 200,
@@ -550,16 +551,27 @@ class TestRecClientServer(unittest.TestCase):
         self.server_process = multiprocessing.Process(
             target=recmodel_server.execute, args=(server_args,), daemon=False)
         self.server_process.start()
-        # need a few seconds for the server to be ready
-        # Dave suggested that if this turns out to be flaky, we could instead
-        # listen for the stdout from the server process indicating it's done
-        # initializing, or poll the server and retry multiple times.
-        time.sleep(5)
+
+        # The recmodel_server.execute takes ~10-20 seconds to build quadtrees
+        # before the remote Pyro object is ready.
+        proxy = Pyro5.api.Proxy(
+            f'PYRO:natcap.invest.recreation@{self.hostname}:{self.port}')
+        ready = False
+        while not ready:
+            try:
+                # _pyroBind() forces the client-server handshake and
+                # seems like a good way to check if the remote object is ready
+                proxy._pyroBind()
+            except Pyro5.errors.CommunicationError:
+                time.sleep(2)
+                continue
+            ready = True
+        proxy._pyroRelease()
 
     def tearDown(self):
         """Delete workspace."""
         self.server_process.terminate()
-        # shutil.rmtree(self.workspace_dir, ignore_errors=True)
+        shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
     def test_all_metrics_local_server(self):
         """Recreation test with all but trivial predictor metrics.
@@ -583,7 +595,7 @@ class TestRecClientServer(unittest.TestCase):
                 SAMPLE_DATA, 'predictors_all.csv'),
             'results_suffix': '',
             'workspace_dir': self.workspace_dir,
-            'hostname': 'localhost',
+            'hostname': self.hostname,
             'port': self.port,
         }
         recmodel_client.execute(args)
@@ -620,7 +632,7 @@ class TestRecClientServer(unittest.TestCase):
             'compute_regression': True,
             'start_year': MIN_YEAR,
             'end_year': MAX_YEAR,
-            'hostname': 'localhost',
+            'hostname': self.hostname,
             'port': self.port,
             'grid_aoi': True,
             'grid_type': 'hexagon',
@@ -704,7 +716,7 @@ class TestRecClientServer(unittest.TestCase):
             'grid_aoi': False,
             'results_suffix': 'hello',
             'workspace_dir': self.workspace_dir,
-            'hostname': 'localhost',
+            'hostname': self.hostname,
             'port': self.port,
         }
         recmodel_client.execute(args)
@@ -732,7 +744,7 @@ class TestRecClientServer(unittest.TestCase):
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
-            'hostname': 'localhost',
+            'hostname': self.hostname,
             'port': self.port
         }
 
@@ -757,7 +769,7 @@ class TestRecClientServer(unittest.TestCase):
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
-            'hostname': 'localhost',
+            'hostname': self.hostname,
             'port': self.port
         }
 
