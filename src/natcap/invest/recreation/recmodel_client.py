@@ -19,15 +19,11 @@ import rtree
 import shapely
 import shapely.geometry
 import shapely.prepared
-import shapely.speedups
 import shapely.wkt
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-
-if shapely.speedups.available:
-    shapely.speedups.enable()
 
 # prefer to do intrapackage imports to avoid case where global package is
 # installed and we import the global version of it rather than the local
