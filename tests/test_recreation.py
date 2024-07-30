@@ -938,6 +938,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
             REGRESSION_DATA, 'predictor_data_pud.shp')
         response_id = 'PUD_YR_AVG'
 
+        # TODO: the signature of _build_regression changed. So did the structure
+        # of the input data.
         _, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
             recmodel_client._build_regression(
                 response_vector_path, coefficient_vector_path, response_id))
@@ -967,37 +969,6 @@ class RecreationClientRegressionTests(unittest.TestCase):
 
         for key in expected_results:
             numpy.testing.assert_allclose(results[key], expected_results[key])
-
-    @unittest.skip("skipping to avoid remote server call (issue #3753)")
-    def test_base_execute(self):
-        """Recreation base regression test on fast sample data.
-
-        Executes Recreation model with default data and default arguments.
-        """
-        from natcap.invest.recreation import recmodel_client
-
-        args = {
-            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
-            'cell_size': 40000.0,
-            'compute_regression': True,
-            'start_year': MIN_YEAR,
-            'end_year': MAX_YEAR,
-            'grid_aoi': True,
-            'grid_type': 'hexagon',
-            'predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors.csv'),
-            'results_suffix': '',
-            'scenario_predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors_scenario.csv'),
-            'workspace_dir': self.workspace_dir,
-        }
-
-        recmodel_client.execute(args)
-        _assert_regression_results_eq(
-            args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
-            os.path.join(args['workspace_dir'], 'scenario_results.shp'),
-            os.path.join(REGRESSION_DATA, 'scenario_results_40000.csv'))
 
     def test_square_grid(self):
         """Recreation square grid regression test."""
@@ -1032,30 +1003,6 @@ class RecreationClientRegressionTests(unittest.TestCase):
 
         utils._assert_vectors_equal(
             expected_grid_vector_path, out_grid_vector_path)
-
-    @unittest.skip("skipping to avoid remote server call (issue #3753)")
-    def test_no_grid_execute(self):
-        """Recreation execute on ungridded AOI."""
-        from natcap.invest.recreation import recmodel_client
-
-        args = {
-            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
-            'compute_regression': False,
-            'start_year': MIN_YEAR,
-            'end_year': MAX_YEAR,
-            'grid_aoi': False,
-            'results_suffix': '',
-            'workspace_dir': self.workspace_dir,
-        }
-
-        recmodel_client.execute(args)
-
-        expected_result_table = pandas.read_csv(os.path.join(
-            REGRESSION_DATA, 'expected_monthly_table_for_no_grid.csv'))
-        result_table = pandas.read_csv(
-            os.path.join(self.workspace_dir, 'monthly_table.csv'))
-        pandas.testing.assert_frame_equal(
-            expected_result_table, result_table, check_dtype=False)
 
     def test_predictor_id_too_long(self):
         """Recreation can validate predictor ID length."""
