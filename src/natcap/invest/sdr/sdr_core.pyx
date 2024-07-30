@@ -84,28 +84,14 @@ def calculate_sediment_deposition(
         mfd_flow_direction_path, f_path,
         gdal.GDT_Float32, [target_nodata])
 
-    mfd_flow_dir_path_bytes = mfd_flow_direction_path.encode('UTF-8')
-    cdef char* mfd_flow_dir_path_char_ptr = mfd_flow_dir_path_bytes
     cdef ManagedFlowDirRaster mfd_flow_direction_raster = ManagedFlowDirRaster(
-        mfd_flow_dir_path_char_ptr, 1, False)
-
-    e_prime_path_bytes = e_prime_path.encode('UTF-8')
-    cdef char* e_prime_path_char_ptr = e_prime_path_bytes
+        mfd_flow_direction_path.encode('utf-8'), 1, False)
     cdef ManagedRaster e_prime_raster = ManagedRaster(
-        e_prime_path_char_ptr, 1, False)
-
-    sdr_path_bytes = sdr_path.encode('UTF-8')
-    cdef char* sdr_path_char_ptr = sdr_path_bytes
-    cdef ManagedRaster sdr_raster = ManagedRaster(sdr_path_char_ptr, 1, False)
-
-    f_path_bytes = f_path.encode('UTF-8')
-    cdef char* f_path_char_ptr = f_path_bytes
-    cdef ManagedRaster f_raster = ManagedRaster(f_path_char_ptr, 1, True)
-
-    sed_dep_path_bytes = target_sediment_deposition_path.encode('UTF-8')
-    cdef char* sed_dep_path_char_ptr = sed_dep_path_bytes
+        e_prime_path.encode('utf-8'), 1, False)
+    cdef ManagedRaster sdr_raster = ManagedRaster(sdr_path.encode('utf-8'), 1, False)
+    cdef ManagedRaster f_raster = ManagedRaster(f_path.encode('utf-8'), 1, True)
     cdef ManagedRaster sediment_deposition_raster = ManagedRaster(
-        sed_dep_path_char_ptr, 1, True)
+        target_sediment_deposition_path.encode('utf-8'), 1, True)
 
     cdef long n_cols, n_rows
     flow_dir_info = pygeoprocessing.get_raster_info(mfd_flow_direction_path)

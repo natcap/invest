@@ -64,7 +64,7 @@ class ManagedRaster {
     long raster_y_size;
     int block_nx;
     int block_ny;
-    char* raster_path;
+    std::string raster_path;
     int band_id;
     GDALDataset* dataset;
     GDALRasterBand* band;
@@ -73,14 +73,14 @@ class ManagedRaster {
 
     ManagedRaster() { }
 
-    ManagedRaster(char* raster_path, int band_id, bool write_mode)
+    ManagedRaster(std::string raster_path, int band_id, bool write_mode)
       : raster_path { raster_path }
       , band_id { band_id }
       , write_mode { write_mode }
     {
       GDALAllRegister();
 
-      dataset = (GDALDataset *) GDALOpen( raster_path, GA_Update );
+      dataset = (GDALDataset *) GDALOpen( raster_path.c_str(), GA_Update );
 
       raster_x_size = dataset->GetRasterXSize();
       raster_y_size = dataset->GetRasterYSize();
@@ -340,11 +340,8 @@ public:
 
   ManagedFlowDirRaster() {}
 
-  ManagedFlowDirRaster(char* raster_path, int band_id, bool write_mode)
-    : ManagedRaster(raster_path, band_id, write_mode)   // Call the superclass constructor in the subclass' initialization list.
-    {
-      // do something with bar
-    }
+  ManagedFlowDirRaster(std::string raster_path, int band_id, bool write_mode)
+    : ManagedRaster(raster_path, band_id, write_mode) {}
 
   bool is_local_high_point(int xi, int yi) {
     // """Check if a given pixel is a local high point.

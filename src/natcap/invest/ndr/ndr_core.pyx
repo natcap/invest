@@ -73,30 +73,16 @@ def ndr_eff_calculation(
     # cell sizes must be square, so no reason to test at this point.
     cdef float cell_size = abs(stream_info['pixel_size'][0])
 
-    stream_path_bytes = stream_path.encode('UTF-8')
-    cdef char* stream_path_char_ptr = stream_path_bytes
     cdef ManagedRaster stream_raster = ManagedRaster(
-        stream_path_char_ptr, 1, False)
-
-    crit_len_path_bytes = crit_len_path.encode('UTF-8')
-    cdef char* crit_len_path_char_ptr = crit_len_path_bytes
+        stream_path.encode('utf-8'), 1, False)
     cdef ManagedRaster crit_len_raster = ManagedRaster(
-        crit_len_path_char_ptr, 1, False)
-
-    retention_eff_lulc_path_bytes = retention_eff_lulc_path.encode('UTF-8')
-    cdef char* retention_eff_lulc_path_char_ptr = retention_eff_lulc_path_bytes
+        crit_len_path.encode('utf-8'), 1, False)
     cdef ManagedRaster retention_eff_lulc_raster = ManagedRaster(
-        retention_eff_lulc_path_char_ptr, 1, False)
-
-    effective_retention_path_bytes = effective_retention_path.encode('UTF-8')
-    cdef char* effective_retention_path_char_ptr = effective_retention_path_bytes
+        retention_eff_lulc_path.encode('utf-8'), 1, False)
     cdef ManagedRaster effective_retention_raster = ManagedRaster(
-        effective_retention_path_char_ptr, 1, True)
-
-    mfd_flow_direction_path_bytes = mfd_flow_direction_path.encode('UTF-8')
-    cdef char* mfd_flow_direction_path_char_ptr = mfd_flow_direction_path_bytes
+        effective_retention_path.encode('utf-8'), 1, True)
     cdef ManagedFlowDirRaster mfd_flow_direction_raster = ManagedFlowDirRaster(
-        mfd_flow_direction_path_char_ptr, 1, False)
+        mfd_flow_direction_path.encode('utf-8'), 1, False)
 
     cdef float crit_len_nodata = pygeoprocessing.get_raster_info(
         crit_len_path)['nodata'][0]
@@ -118,10 +104,8 @@ def ndr_eff_calculation(
         [(mfd_flow_direction_path, 1)], _mfd_to_flow_dir_op,
         to_process_flow_directions_path, gdal.GDT_Byte, None)
 
-    to_process_flow_directions_path_bytes = to_process_flow_directions_path.encode('UTF-8')
-    cdef char* to_process_flow_directions_path_char_ptr = to_process_flow_directions_path_bytes
     cdef ManagedRaster to_process_flow_directions_raster = ManagedRaster(
-        to_process_flow_directions_path_char_ptr, 1, True)
+        to_process_flow_directions_path.encode('utf-8'), 1, True)
 
     cdef long col_index, row_index, win_xsize, win_ysize, xoff, yoff
     cdef long global_col, global_row

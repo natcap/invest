@@ -106,10 +106,8 @@ cpdef calculate_local_recharge(
     flow_dir_nodata = flow_dir_raster_info['nodata'][0]
     raster_x_size, raster_y_size = flow_dir_raster_info['raster_size']
 
-    flow_dir_mfd_path_bytes = flow_dir_mfd_path.encode('UTF-8')
-    cdef char* flow_dir_mfd_path_char_ptr = flow_dir_mfd_path_bytes
     cdef ManagedFlowDirRaster flow_raster = ManagedFlowDirRaster(
-        flow_dir_mfd_path_char_ptr, 1, 0)
+        flow_dir_mfd_path.encode('utf-8'), 1, 0)
     cdef NeighborTuple neighbor
 
     # make sure that user input nodata values are defined
@@ -117,46 +115,34 @@ cpdef calculate_local_recharge(
     # precipitation and evapotranspiration data should
     # always be non-negative
     cdef vector[ManagedRaster] et0_m_rasters
-    cdef vector[char*] et0_path_char_ptrs
     et0_m_nodata_list = []
     for i, et0_path in enumerate(et0_path_list):
-        et0_path_bytes = et0_path.encode('UTF-8')
-        et0_path_char_ptrs.push_back(et0_path_bytes)
-        et0_m_rasters.push_back(ManagedRaster(et0_path_char_ptrs[i], 1, 0))
+        et0_m_rasters.push_back(ManagedRaster(et0_path.encode('utf-8'), 1, 0))
         nodata = pygeoprocessing.get_raster_info(et0_path)['nodata'][0]
         if nodata is None:
             nodata = -1
         et0_m_nodata_list.append(nodata)
 
     cdef vector[ManagedRaster] precip_m_rasters
-    cdef vector[char*] precip_path_char_ptrs
     precip_m_nodata_list = []
     for i, precip_m_path in enumerate(precip_path_list):
-        precip_path_bytes = precip_m_path.encode('UTF-8')
-        precip_path_char_ptrs.push_back(precip_path_bytes)
-        precip_m_rasters.push_back(ManagedRaster(precip_path_char_ptrs[i], 1, 0))
+        precip_m_rasters.push_back(ManagedRaster(precip_m_path.encode('utf-8'), 1, 0))
         nodata = pygeoprocessing.get_raster_info(precip_m_path)['nodata'][0]
         if nodata is None:
             nodata = -1
         precip_m_nodata_list.append(nodata)
 
     cdef vector[ManagedRaster] qf_m_rasters
-    cdef vector[char*] qf_path_char_ptrs
     qf_m_nodata_list = []
     for i, qf_m_path in enumerate(qf_m_path_list):
-        qf_path_bytes = qf_m_path.encode('UTF-8')
-        qf_path_char_ptrs.push_back(qf_path_bytes)
-        qf_m_rasters.push_back(ManagedRaster(qf_path_char_ptrs[i], 1, 0))
+        qf_m_rasters.push_back(ManagedRaster(qf_m_path.encode('utf-8'), 1, 0))
         qf_m_nodata_list.append(
             pygeoprocessing.get_raster_info(qf_m_path)['nodata'][0])
 
     cdef vector[ManagedRaster] kc_m_rasters
-    cdef vector[char*] kc_path_char_ptrs
     kc_m_nodata_list = []
     for i, kc_m_path in enumerate(kc_path_list):
-        kc_path_bytes = kc_m_path.encode('UTF-8')
-        kc_path_char_ptrs.push_back(kc_path_bytes)
-        kc_m_rasters.push_back(ManagedRaster(kc_path_char_ptrs[i], 1, 0))
+        kc_m_rasters.push_back(ManagedRaster(kc_m_path.encode('utf-8'), 1, 0))
         kc_m_nodata_list.append(
             pygeoprocessing.get_raster_info(kc_m_path)['nodata'][0])
 
@@ -164,42 +150,32 @@ cpdef calculate_local_recharge(
     pygeoprocessing.new_raster_from_base(
         flow_dir_mfd_path, target_li_path, gdal.GDT_Float32, [target_nodata],
         fill_value_list=[target_nodata])
-    target_li_path_bytes = target_li_path.encode('UTF-8')
-    cdef char* target_li_path_char_ptr = target_li_path_bytes
     cdef ManagedRaster target_li_raster = ManagedRaster(
-        target_li_path_char_ptr, 1, 1)
+        target_li_path.encode('utf-8'), 1, 1)
 
     pygeoprocessing.new_raster_from_base(
         flow_dir_mfd_path, target_li_avail_path, gdal.GDT_Float32,
         [target_nodata], fill_value_list=[target_nodata])
-    target_li_avail_path_bytes = target_li_avail_path.encode('UTF-8')
-    cdef char* target_li_avail_path_char_ptr = target_li_avail_path_bytes
     cdef ManagedRaster target_li_avail_raster = ManagedRaster(
-        target_li_avail_path_char_ptr, 1, 1)
+        target_li_avail_path.encode('utf-8'), 1, 1)
 
     pygeoprocessing.new_raster_from_base(
         flow_dir_mfd_path, target_l_sum_avail_path, gdal.GDT_Float32,
         [target_nodata], fill_value_list=[target_nodata])
-    target_l_sum_avail_path_bytes = target_l_sum_avail_path.encode('UTF-8')
-    cdef char* target_l_sum_avail_path_char_ptr = target_l_sum_avail_path_bytes
     cdef ManagedRaster target_l_sum_avail_raster = ManagedRaster(
-        target_l_sum_avail_path_char_ptr, 1, 1)
+        target_l_sum_avail_path.encode('utf-8'), 1, 1)
 
     pygeoprocessing.new_raster_from_base(
         flow_dir_mfd_path, target_aet_path, gdal.GDT_Float32, [target_nodata],
         fill_value_list=[target_nodata])
-    target_aet_path_bytes = target_aet_path.encode('UTF-8')
-    cdef char* target_aet_path_char_ptr = target_aet_path_bytes
     cdef ManagedRaster target_aet_raster = ManagedRaster(
-        target_aet_path_char_ptr, 1, 1)
+        target_aet_path.encode('utf-8'), 1, 1)
 
     pygeoprocessing.new_raster_from_base(
         flow_dir_mfd_path, target_pi_path, gdal.GDT_Float32, [target_nodata],
         fill_value_list=[target_nodata])
-    target_pi_path_bytes = target_pi_path.encode('UTF-8')
-    cdef char* target_pi_path_char_ptr = target_pi_path_bytes
     cdef ManagedRaster target_pi_raster = ManagedRaster(
-        target_pi_path_char_ptr, 1, 1)
+        target_pi_path.encode('utf-8'), 1, 1)
 
     for offset_dict in pygeoprocessing.iterblocks(
             (flow_dir_mfd_path, 1), offset_only=True, largest_block=0):
@@ -397,36 +373,16 @@ def route_baseflow_sum(
         flow_dir_mfd_path, target_b_path, gdal.GDT_Float32,
         [target_nodata], fill_value_list=[target_nodata])
 
-    target_b_sum_path_bytes = target_b_sum_path.encode('UTF-8')
-    cdef char* target_b_sum_path_char_ptr = target_b_sum_path_bytes
     cdef ManagedRaster target_b_sum_raster = ManagedRaster(
-        target_b_sum_path_char_ptr, 1, 1)
-
-    target_b_path_bytes = target_b_path.encode('UTF-8')
-    cdef char* target_b_path_char_ptr = target_b_path_bytes
+        target_b_sum_path.encode('utf-8'), 1, 1)
     cdef ManagedRaster target_b_raster = ManagedRaster(
-        target_b_path_char_ptr, 1, 1)
-
-    l_path_bytes = l_path.encode('UTF-8')
-    cdef char* l_path_char_ptr = l_path_bytes
-    cdef ManagedRaster l_raster = ManagedRaster(l_path_char_ptr, 1, 0)
-
-    l_avail_path_bytes = l_avail_path.encode('UTF-8')
-    cdef char* l_avail_path_char_ptr = l_avail_path_bytes
-    cdef ManagedRaster l_avail_raster = ManagedRaster(l_avail_path_char_ptr, 1, 0)
-
-    l_sum_path_bytes = l_sum_path.encode('UTF-8')
-    cdef char* l_sum_path_char_ptr = l_sum_path_bytes
-    cdef ManagedRaster l_sum_raster = ManagedRaster(l_sum_path_char_ptr, 1, 0)
-
-    flow_dir_mfd_path_bytes = flow_dir_mfd_path.encode('UTF-8')
-    cdef char* flow_dir_mfd_path_char_ptr = flow_dir_mfd_path_bytes
+        target_b_path.encode('utf-8'), 1, 1)
+    cdef ManagedRaster l_raster = ManagedRaster(l_path.encode('utf-8'), 1, 0)
+    cdef ManagedRaster l_avail_raster = ManagedRaster(l_avail_path.encode('utf-8'), 1, 0)
+    cdef ManagedRaster l_sum_raster = ManagedRaster(l_sum_path.encode('utf-8'), 1, 0)
     cdef ManagedFlowDirRaster flow_dir_mfd_raster = ManagedFlowDirRaster(
-        flow_dir_mfd_path_char_ptr, 1, 0)
-
-    stream_path_bytes = stream_path.encode('UTF-8')
-    cdef char* stream_path_char_ptr = stream_path_bytes
-    cdef ManagedRaster stream_raster = ManagedRaster(stream_path_char_ptr, 1, 0)
+        flow_dir_mfd_path.encode('utf-8'), 1, 0)
+    cdef ManagedRaster stream_raster = ManagedRaster(stream_path.encode('utf-8'), 1, 0)
 
     current_pixel = 0
     for offset_dict in pygeoprocessing.iterblocks(
