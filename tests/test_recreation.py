@@ -722,9 +722,13 @@ class TestRecClientServer(unittest.TestCase):
         recmodel_client.execute(args)
 
         self.assertTrue(os.path.exists(
-            os.path.join(args['workspace_dir'], 'monthly_table_hello.csv')))
+            os.path.join(args['workspace_dir'], 'pud_monthly_table_hello.csv')))
         self.assertTrue(os.path.exists(
             os.path.join(args['workspace_dir'], 'pud_results_hello.shp')))
+        self.assertTrue(os.path.exists(
+            os.path.join(args['workspace_dir'], 'tud_monthly_table_hello.csv')))
+        self.assertTrue(os.path.exists(
+            os.path.join(args['workspace_dir'], 'tud_results_hello.shp')))
 
     def test_start_year_out_of_range(self):
         """Test server sends valid date-ranges; client raises ValueError."""
