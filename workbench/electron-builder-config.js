@@ -36,6 +36,10 @@ const config = {
       to: 'invest',
     },
     {
+      from: '../dist/miniforge3',
+      to: 'miniforge3',
+    },
+    {
       from: '../dist/userguide',
       to: 'documentation',
     },
