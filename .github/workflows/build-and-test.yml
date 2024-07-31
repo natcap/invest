@@ -363,7 +363,7 @@ jobs:
       - name: Download mamba for distribution
         run: |
            curl -fsSLo Miniforge3.sh --output-dir dist "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
-           dist/Miniforge3.sh -b -p dist/miniforge3
+           bash dist/Miniforge3.sh -b -p dist/miniforge3
            dist/miniforge3/condabin/mamba --help  # test that the executable is working
 
       - name: Authenticate GCP
