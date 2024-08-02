@@ -39,14 +39,15 @@ export default function setupAddPlugin() {
 
         // Create a conda env containing the plugin and its dependencies
         const envName = `invest_plugin_${pluginID}`;
-        fs.writeFileSync('tmp_env.txt', 'python<3.12\ngdal<3.6');
         const mamba = settingsStore.get('mamba');
-        execSync(`${mamba} create --yes --name ${envName} -f tmp_env.txt -c conda-forge`);
-        execSync(`${mamba} run --name ${envName} pip install "git+${pluginURL}"`, { stdio: 'inherit' });
+        execSync(`${mamba} create --yes --name ${envName} -c conda-forge "python<3.12" "gdal<3.6"`,
+          { stdio: 'inherit' });
+        execSync(`${mamba} run --name ${envName} pip install "git+${pluginURL}"`,
+          { stdio: 'inherit' });
 
         // Write plugin metadata to the workbench's config.json
-        const envInfo = execSync(`${mamba} info --name ${envName}`).toString();
-        const envPath = envInfo.split('env location : ')[1].split('\n')[0];
+        const envInfo = execSync(`${mamba} info --envs`).toString();
+        const envPath = envInfo.match(`${envName}\\s+(.+)\n`)[1];
         settingsStore.set(
           `plugins.${pluginID}`,
           {
