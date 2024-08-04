@@ -44,6 +44,8 @@ LOCAL_DEPTH = 8
 CSV_ROWS_PER_PARSE = 2 ** 10
 LOGGER_TIME_DELAY = 5.0
 INITIAL_BOUNDING_BOX = [-180, -90, 180, 90]
+# Max points within an AOI bounding box before rejecting the AOI.
+MAX_ALLOWABLE_QUERY = 30_000_000
 
 Pyro5.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
 
@@ -85,7 +87,8 @@ class RecModel(object):
             raw_csv_filename=None,
             quadtree_pickle_filename=None,
             max_points_per_node=GLOBAL_MAX_POINTS_PER_NODE,
-            max_depth=GLOBAL_DEPTH, dataset_name='flickr'):
+            max_depth=GLOBAL_DEPTH, dataset_name='flickr',
+            max_allowable_query=MAX_ALLOWABLE_QUERY):
         """Initialize RecModel object.
 
         The object can be initialized either with a path to a CSV file
@@ -156,6 +159,7 @@ class RecModel(object):
         # self.global_cache_dir = global_cache
         self.min_year = min_year
         self.max_year = max_year
+        self.max_allowable_query = max_allowable_query
         self.acronym = 'PUD' if dataset_name == 'flickr' else 'TUD'
 
     def get_valid_year_range(self):
@@ -197,6 +201,9 @@ class RecModel(object):
             workspace_path, str('server_in')+'.zip')
         with open(out_zip_file_path, 'rb') as out_zipfile:
             return out_zipfile.read()
+
+    def get_aoi_query_size(self):
+        return (50_000_000, self.max_allowable_query)
 
     # @_try_except_wrapper("exception in calc_user_days_in_aoi")
     def calc_user_days_in_aoi(
@@ -982,6 +989,14 @@ class RecManager(object):
     def __init__(self, servers_dict):
         self.servers = servers_dict
 
+    def get_valid_year_range(self, dataset):
+        server = self.servers[dataset]
+        return server.get_valid_year_range()
+
+    def get_aoi_query_size(self, dataset):
+        server = self.servers[dataset]
+        return server.get_aoi_query_size()
+
     @_try_except_wrapper("calculate_userdays exited while multiprocessing.")
     def calculate_userdays(self, zip_file_binary, start_year, end_year, dataset_list):
         results = {}
@@ -989,18 +1004,18 @@ class RecManager(object):
             future_to_label = {}
             for dataset in dataset_list:
                 server = self.servers[dataset]
-                # validate available year range
-                min_year, max_year = server.get_valid_year_range()
-                LOGGER.info(
-                    f"Server supports year queries between {min_year} and {max_year}")
-                if not min_year <= int(start_year) <= max_year:
-                    raise ValueError(
-                        f"Start year must be between {min_year} and {max_year}.\n"
-                        f" User input: ({start_year})")
-                if not min_year <= int(end_year) <= max_year:
-                    raise ValueError(
-                        f"End year must be between {min_year} and {max_year}.\n"
-                        f" User input: ({end_year})")
+            #     # validate available year range
+            #     min_year, max_year = server.get_valid_year_range()
+            #     LOGGER.info(
+            #         f"Server supports year queries between {min_year} and {max_year}")
+            #     if not min_year <= int(start_year) <= max_year:
+            #         raise ValueError(
+            #             f"Start year must be between {min_year} and {max_year}.\n"
+            #             f" User input: ({start_year})")
+            #     if not min_year <= int(end_year) <= max_year:
+            #         raise ValueError(
+            #             f"End year must be between {min_year} and {max_year}.\n"
+            #             f" User input: ({end_year})")
 
                 # append jan 1 to start and dec 31 to end
                 date_range = (str(start_year)+'-01-01',

@@ -646,6 +646,26 @@ def _retrieve_user_days(
         'flickr': 'PUD',
         'twitter': 'TUD'
     }
+    for dataset in dataset_list:
+        # validate available year range
+        min_year, max_year = recmodel_manager.get_valid_year_range(dataset)
+        LOGGER.info(
+            f"{dataset} server supports year queries between {min_year} and {max_year}")
+        if not min_year <= int(start_year) <= max_year:
+            raise ValueError(
+                f"Start year must be between {min_year} and {max_year}.\n"
+                f" User input: ({start_year})")
+        if not min_year <= int(end_year) <= max_year:
+            raise ValueError(
+                f"End year must be between {min_year} and {max_year}.\n"
+                f" User input: ({end_year})")
+        n_points, max_allowable = recmodel_manager.get_aoi_query_size(dataset)
+        if n_points > max_allowable:
+            raise ValueError(
+                f'The AOI extent is too large. Its bounding box contains '
+                f'{n_points} {dataset} points. Please reduce the extent of '
+                f'the AOI until it contains fewer than '
+                f'{max_allowable} points.')
     results = recmodel_manager.calculate_userdays(
         zip_file_binary, start_year, end_year, dataset_list)
     for dataset in dataset_list:

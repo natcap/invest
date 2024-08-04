@@ -246,11 +246,11 @@ class UnitTestRecServer(unittest.TestCase):
         # transfer zipped file to server
         date_range = (('2005-01-01'), ('2014-12-31'))
         out_vector_filename = 'test_aoi_for_subset_pud.shp'
-        print('calc photo userdays')
+
         zip_result, workspace_id, version_str = (
             recreation_server.calc_user_days_in_aoi(
                 zip_file_binary, date_range, out_vector_filename))
-        print('calc photo userdays done')
+
         # unpack result
         result_zip_path = os.path.join(self.workspace_dir, 'pud_result.zip')
         with open(result_zip_path, 'wb') as file:
@@ -427,7 +427,7 @@ class UnitTestRecServer(unittest.TestCase):
         # user,date,lat,lon
         # 1117195232,2023-01-01,-22.908,-43.1975
         # 54900515,2023-01-01,44.62804,10.60603
-        
+
         def make_twitter_csv(target_filename):
             dates = numpy.arange(
                 numpy.datetime64('2017-01-01'), numpy.datetime64('2017-12-31'))
@@ -779,6 +779,34 @@ class TestRecClientServer(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
+
+    def test_aoi_too_large(self):
+        """Test server checks aoi size; client raises exception."""
+        from natcap.invest.recreation import recmodel_client
+
+        args = {
+            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'cell_size': 7000.0,
+            'compute_regression': True,
+            'start_year': MIN_YEAR,
+            'end_year': MAX_YEAR,
+            'grid_aoi': True,
+            'grid_type': 'hexagon',
+            'predictor_table_path': os.path.join(
+                SAMPLE_DATA, 'predictors.csv'),
+            'results_suffix': '',
+            'scenario_predictor_table_path': os.path.join(
+                SAMPLE_DATA, 'predictors_scenario.csv'),
+            'workspace_dir': self.workspace_dir,
+            'hostname': self.hostname,
+            'port': self.port
+        }
+
+        with self.assertRaises(ValueError) as cm:
+            recmodel_client.execute(args)
+        actual_message = str(cm.exception)
+        expected_message = 'The AOI extent is too large'
+        self.assertIn(expected_message, actual_message)
 
 
 class RecreationClientRegressionTests(unittest.TestCase):
