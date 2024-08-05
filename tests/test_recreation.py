@@ -518,6 +518,8 @@ class TestRecClientServer(unittest.TestCase):
         _resample_csv(
             os.path.join(SAMPLE_DATA, 'sample_data.csv'),
             self.resampled_data_path, resample_factor=10)
+        with open(self.resampled_data_path, 'rb') as f:
+            n_points = sum(1 for _ in f)
 
         # attempt to get an open port; could result in race condition but
         # will be okay for a test. if this test ever fails because of port
@@ -534,6 +536,7 @@ class TestRecClientServer(unittest.TestCase):
             'port': self.port,
             'cache_workspace': self.workspace_dir,
             'max_points_per_node': 200,
+            'max_allowable_query': n_points - 1000,
             'datasets': {
                 'flickr': {
                     'raw_csv_point_data_path': self.resampled_data_path,
@@ -784,19 +787,24 @@ class TestRecClientServer(unittest.TestCase):
         """Test server checks aoi size; client raises exception."""
         from natcap.invest.recreation import recmodel_client
 
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)  # WGS84
+        wkt = srs.ExportToWkt()
+
+        # This AOI should capture all the points in the quadtree
+        # and that should exceed the max_allowable limit set
+        # in the server args.
+        aoi_geometries = [shapely.geometry.Polygon([
+            (-180, -90), (-180, 90), (180, 90), (180, -90), (-180, -90)])]
+        pygeoprocessing.shapely_geometry_to_vector(
+            aoi_geometries, aoi_path, wkt, 'GeoJSON')
         args = {
-            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
-            'cell_size': 7000.0,
-            'compute_regression': True,
+            'aoi_path': aoi_path,
+            'compute_regression': False,
             'start_year': MIN_YEAR,
             'end_year': MAX_YEAR,
-            'grid_aoi': True,
-            'grid_type': 'hexagon',
-            'predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors.csv'),
-            'results_suffix': '',
-            'scenario_predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors_scenario.csv'),
+            'grid_aoi': False,
             'workspace_dir': self.workspace_dir,
             'hostname': self.hostname,
             'port': self.port

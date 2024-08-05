@@ -646,6 +646,14 @@ def _retrieve_user_days(
         'flickr': 'PUD',
         'twitter': 'TUD'
     }
+
+    aoi_info = pygeoprocessing.get_vector_info(local_aoi_path)
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(4326)
+    target_proj = srs.ExportToWkt()
+    aoi_bounding_box = pygeoprocessing.transform_bounding_box(
+        aoi_info['bounding_box'], aoi_info['projection_wkt'], target_proj)
+
     for dataset in dataset_list:
         # validate available year range
         min_year, max_year = recmodel_manager.get_valid_year_range(dataset)
@@ -659,13 +667,19 @@ def _retrieve_user_days(
             raise ValueError(
                 f"End year must be between {min_year} and {max_year}.\n"
                 f" User input: ({end_year})")
-        n_points, max_allowable = recmodel_manager.get_aoi_query_size(dataset)
+
+        # Check for a reasonably-sized AOI
+        n_points, max_allowable = recmodel_manager.get_aoi_query_size(
+            aoi_bounding_box, dataset)
         if n_points > max_allowable:
             raise ValueError(
-                f'The AOI extent is too large. Its bounding box contains '
-                f'{n_points} {dataset} points. Please reduce the extent of '
-                f'the AOI until it contains fewer than '
-                f'{max_allowable} points.')
+                f'The AOI extent is too large. The bounding box '
+                f'{aoi_bounding_box} contains up to {n_points} {dataset} points. '
+                f'Please reduce the extent of the AOI until it contains '
+                f'fewer than {max_allowable} points.')
+        LOGGER.info(f'AOI accepted. Fewer than {n_points} {dataset} points '
+                    f'found within AOI extent: {aoi_bounding_box}')
+
     results = recmodel_manager.calculate_userdays(
         zip_file_binary, start_year, end_year, dataset_list)
     for dataset in dataset_list:
