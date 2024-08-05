@@ -73,7 +73,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
-        os: [windows-latest, macos-latest]
+        os: [windows-latest, macos-13]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -160,9 +160,11 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
-        os: [windows-latest, macos-latest]
+        os: [windows-latest, macos-13]
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch complete history for accurate versioning
 
       - uses: ./.github/actions/setup_env
         with:
@@ -176,7 +178,9 @@ jobs:
           # computer is guaranteed to have cython available at build
           # time.  Thus, it is no longer necessary to distribute the
           # .cpp files in addition to the .pyx files.
-          python -m build --sdist
+          #
+          # Elevating any python warnings to errors to catch build issues ASAP.
+          python -W error -m build --sdist
 
       - name: Install from source distribution
         run : |
@@ -199,17 +203,17 @@ jobs:
         # overwrite artifacts or have duplicates (mac/windows sdists have
         # different extensions)
       - name: Authenticate GCP
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-13' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         uses: google-github-actions/auth@v0
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-13' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         uses: google-github-actions/setup-gcloud@v0
 
       - name: Deploy artifacts to GCS
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-13' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         run: make deploy
 
   validate-resources:
@@ -244,7 +248,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [windows-latest, macos-13]
 
     steps:
       - name: Check out repo
@@ -294,9 +298,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-13, windows-latest]
         include:
-          - os: macos-latest
+          - os: macos-13
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
             binary-extension: dmg
@@ -382,7 +386,7 @@ jobs:
           yarn run dist
 
       - name: Build Workbench (macOS)
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' # secrets not available in PR
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-13' # secrets not available in PR
         working-directory: workbench
         env:
           GH_TOKEN: env.GITHUB_TOKEN
@@ -412,7 +416,7 @@ jobs:
         run: npx cross-env CI=true yarn run test-electron-app
 
       - name: Sign binaries (macOS)
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' # secrets not available in PR
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-13' # secrets not available in PR
         env:
           CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
           CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
@@ -464,7 +468,7 @@ jobs:
         run: make invest_autotest
 
       - name: Tar the workspace to preserve permissions (macOS)
-        if: failure() && matrix.os == 'macos-latest'
+        if: failure() && matrix.os == 'macos-13'
         run: tar -cvf ${{ matrix.workspace-path}} ${{ github.workspace }}
 
       - name: Upload workspace on failure
