@@ -346,6 +346,15 @@ class OutOfCoreQuadTree(object):
             return point_list
 
     def estimate_points_in_bounding_box(self, bounding_box):
+        """Count points in nodes intersecting a bounding_box.
+
+        Args:
+            bounding_box (list): of the form [xmin, ymin, xmax, ymax]
+
+        Returns:
+            int
+
+        """
         if not self._bounding_box_intersect(bounding_box):
             return 0
         if self.is_leaf:

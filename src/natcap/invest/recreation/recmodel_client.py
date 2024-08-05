@@ -669,7 +669,7 @@ def _retrieve_user_days(
                 f" User input: ({end_year})")
 
         # Check for a reasonably-sized AOI
-        n_points, max_allowable = recmodel_manager.get_aoi_query_size(
+        n_points, max_allowable = recmodel_manager.estimate_aoi_query_size(
             aoi_bounding_box, dataset)
         if n_points > max_allowable:
             raise ValueError(

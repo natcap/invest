@@ -200,8 +200,20 @@ class RecModel(object):
         with open(out_zip_file_path, 'rb') as out_zipfile:
             return out_zipfile.read()
 
-    def get_aoi_query_size(self, bounding_box):
-        LOGGER.info(f'Validating AOI extent: {bounding_box}')
+    def n_points_in_intersecting_nodes(self, bounding_box):
+        """Count points in quadtree nodes that intersect a bounding box.
+
+        This allows for a quick upper-limit estimate of the number
+        of points found within an AOI extent.
+
+        Args:
+            bounding_box (list): of the form [xmin, ymin, xmax, ymax]
+                where coordinates are WGS84 decimal degrees.
+
+        Returns:
+            int
+
+        """
         with open(self.qt_pickle_filename, 'rb') as qt_pickle:
             global_qt = pickle.load(qt_pickle)
         return global_qt.estimate_points_in_bounding_box(bounding_box)
@@ -1001,9 +1013,26 @@ class RecManager(object):
         server = self.servers[dataset]
         return server.get_valid_year_range()
 
-    def get_aoi_query_size(self, bounding_box, dataset):
+    def estimate_aoi_query_size(self, bounding_box, dataset):
+        """Count points in quadtree nodes that intersect a bounding box.
+
+        This allows for a quick upper-limit estimate of the number
+        of points found within an AOI extent.
+
+        Args:
+            bounding_box (list): of the form [xmin, ymin, xmax, ymax]
+                where coordinates are WGS84 decimal degrees.
+            dataset (str): one of 'flickr' or 'twitter'
+
+        Returns:
+            (int, int): (n points, max number of points allowed by this server)
+
+        """
+        LOGGER.info(f'Validating AOI extent: {bounding_box} against {dataset}')
         server = self.servers[dataset]
-        n_points = server.get_aoi_query_size(bounding_box)
+        n_points = server.n_points_in_intersecting_nodes(bounding_box)
+        LOGGER.info(
+            f'{n_points} found; max allowed: {self.max_allowable_query}')
         return (n_points, self.max_allowable_query)
 
     @_try_except_wrapper("calculate_userdays exited while multiprocessing.")
