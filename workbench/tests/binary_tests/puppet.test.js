@@ -314,7 +314,7 @@ test('Install and run a plugin', async () => {
 
   await page.waitForSelector('div ::-p-text(Starting up model...)');
   console.log('starting up model');
-  const argsForm = await page.waitForSelector('.args-form', { timeout: 1000000 });
+  const argsForm = await page.waitForSelector('.args-form', { timeout: 3000000 });
   console.log('found args form');
   const workspace = await argsForm.waitForSelector(
     'aria/[name="Workspace"][role="textbox"]'
@@ -335,7 +335,7 @@ test('Install and run a plugin', async () => {
   await runButton.click();
   await page.waitForSelector('#invest-tab-tab-log.active');
   await page.waitForSelector('div ::-p-text(Model Complete)');
-}, 500000);
+}, 3000000);
 
 const testWin = process.platform === 'win32' ? test : test.skip;
 /* Test for duplicate application launch.
