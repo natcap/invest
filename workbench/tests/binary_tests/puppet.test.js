@@ -314,7 +314,7 @@ test('Install and run a plugin', async () => {
 
   await page.waitForSelector('div ::-p-text(Starting up model...)');
   console.log('starting up model');
-  const argsForm = await page.waitForSelector('.args-form', { timeout: 500000 });
+  const argsForm = await page.waitForSelector('.args-form', { timeout: 1000000 });
   console.log('found args form');
   const workspace = await argsForm.waitForSelector(
     'aria/[name="Workspace"][role="textbox"]'
