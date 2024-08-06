@@ -302,7 +302,6 @@ class OutOfCoreQuadTree(object):
                             shapely_prepared_polygon.contains(shapely_point)):
                         result_deque.append(point)
                 return result_deque
-        # DF: here's where we dive into the tree:
         elif shapely_polygon.intersects(bounding_polygon):
             # combine results of children
             result_deque = collections.deque()
@@ -345,6 +344,25 @@ class OutOfCoreQuadTree(object):
                     self.nodes[node_index].get_intersecting_points_in_bounding_box(
                         bounding_box), point_list))
             return point_list
+
+    def estimate_points_in_bounding_box(self, bounding_box):
+        """Count points in nodes intersecting a bounding_box.
+
+        Args:
+            bounding_box (list): of the form [xmin, ymin, xmax, ymax]
+
+        Returns:
+            int
+
+        """
+        if not self._bounding_box_intersect(bounding_box):
+            return 0
+        if self.is_leaf:
+            return self.n_points_in_node
+        else:
+            return sum([
+                self.nodes[index].estimate_points_in_bounding_box(bounding_box)
+                for index in xrange(4)])
 
 
 cdef _sort_list_to_quads(

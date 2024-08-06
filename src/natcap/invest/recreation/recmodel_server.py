@@ -44,6 +44,8 @@ LOCAL_DEPTH = 8
 CSV_ROWS_PER_PARSE = 2 ** 10
 LOGGER_TIME_DELAY = 5.0
 INITIAL_BOUNDING_BOX = [-180, -90, 180, 90]
+# Max points within an AOI bounding box before rejecting the AOI.
+MAX_ALLOWABLE_QUERY = 30_000_000
 
 Pyro5.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
 
@@ -198,6 +200,24 @@ class RecModel(object):
         with open(out_zip_file_path, 'rb') as out_zipfile:
             return out_zipfile.read()
 
+    def n_points_in_intersecting_nodes(self, bounding_box):
+        """Count points in quadtree nodes that intersect a bounding box.
+
+        This allows for a quick upper-limit estimate of the number
+        of points found within an AOI extent.
+
+        Args:
+            bounding_box (list): of the form [xmin, ymin, xmax, ymax]
+                where coordinates are WGS84 decimal degrees.
+
+        Returns:
+            int
+
+        """
+        with open(self.qt_pickle_filename, 'rb') as qt_pickle:
+            global_qt = pickle.load(qt_pickle)
+        return global_qt.estimate_points_in_bounding_box(bounding_box)
+
     # @_try_except_wrapper("exception in calc_user_days_in_aoi")
     def calc_user_days_in_aoi(
             self, zip_file_binary, date_range, out_vector_filename):
@@ -216,6 +236,7 @@ class RecModel(object):
                 calendar months.
             workspace_id: a string that can be used to uniquely identify this
                 run on the server
+            server version string
 
         """
         # make a random workspace name so we can work in parallel
@@ -294,6 +315,7 @@ class RecModel(object):
         aoi_extent = aoi_layer.GetExtent()
         aoi_ref = aoi_layer.GetSpatialRef()
 
+        # TODO: replace all this with pygeoprocessing.transform_bounding_box
         # coordinate transformation to convert AOI points to and from lat/lng
         lat_lng_ref = osr.SpatialReference()
         lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
@@ -947,6 +969,10 @@ def execute(args):
     if 'max_points_per_node' in args:
         max_points_per_node = args['max_points_per_node']
 
+    max_allowable_query = MAX_ALLOWABLE_QUERY
+    if 'max_allowable_query' in args:
+        max_allowable_query = args['max_allowable_query']
+
     servers = {}
     for dataset, ds_args in args['datasets'].items():
         cache_workspace = os.path.join(args['cache_workspace'], dataset)
@@ -969,17 +995,45 @@ def execute(args):
         raise ValueError('No valid RecModel servers configured in `args`')
 
     daemon = Pyro5.api.Daemon(args['hostname'], int(args['port']))
-    manager = RecManager(servers)
+    manager = RecManager(servers, max_allowable_query)
     uri = daemon.register(manager, 'natcap.invest.recreation')
     LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
+    LOGGER.info(f'accepting queries up to {max_allowable_query} points')
     daemon.requestLoop()
 
 
 @Pyro5.api.expose
 class RecManager(object):
 
-    def __init__(self, servers_dict):
+    def __init__(self, servers_dict, max_allowable_query):
         self.servers = servers_dict
+        self.max_allowable_query = max_allowable_query
+
+    def get_valid_year_range(self, dataset):
+        server = self.servers[dataset]
+        return server.get_valid_year_range()
+
+    def estimate_aoi_query_size(self, bounding_box, dataset):
+        """Count points in quadtree nodes that intersect a bounding box.
+
+        This allows for a quick upper-limit estimate of the number
+        of points found within an AOI extent.
+
+        Args:
+            bounding_box (list): of the form [xmin, ymin, xmax, ymax]
+                where coordinates are WGS84 decimal degrees.
+            dataset (str): one of 'flickr' or 'twitter'
+
+        Returns:
+            (int, int): (n points, max number of points allowed by this server)
+
+        """
+        LOGGER.info(f'Validating AOI extent: {bounding_box} against {dataset}')
+        server = self.servers[dataset]
+        n_points = server.n_points_in_intersecting_nodes(bounding_box)
+        LOGGER.info(
+            f'{n_points} found; max allowed: {self.max_allowable_query}')
+        return (n_points, self.max_allowable_query)
 
     @_try_except_wrapper("calculate_userdays exited while multiprocessing.")
     def calculate_userdays(self, zip_file_binary, start_year, end_year, dataset_list):
@@ -988,19 +1042,6 @@ class RecManager(object):
             future_to_label = {}
             for dataset in dataset_list:
                 server = self.servers[dataset]
-                # validate available year range
-                min_year, max_year = server.get_valid_year_range()
-                LOGGER.info(
-                    f"Server supports year queries between {min_year} and {max_year}")
-                if not min_year <= int(start_year) <= max_year:
-                    raise ValueError(
-                        f"Start year must be between {min_year} and {max_year}.\n"
-                        f" User input: ({start_year})")
-                if not min_year <= int(end_year) <= max_year:
-                    raise ValueError(
-                        f"End year must be between {min_year} and {max_year}.\n"
-                        f" User input: ({end_year})")
-
                 # append jan 1 to start and dec 31 to end
                 date_range = (str(start_year)+'-01-01',
                               str(end_year)+'-12-31')
