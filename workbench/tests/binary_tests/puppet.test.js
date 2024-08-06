@@ -115,6 +115,7 @@ beforeEach(() => {
   });
   const stdOutCallback = async (data) => {
     // Here's how we know the electron window is ready to connect to
+    console.log(`${data}`);
     if (`${data}`.match('main window loaded')) {
       try {
         BROWSER = await puppeteer.connect({
@@ -125,7 +126,7 @@ beforeEach(() => {
       } catch (e) {
         console.log(e);
       }
-      ELECTRON_PROCESS.stdout.removeListener('data', stdOutCallback);
+      // ELECTRON_PROCESS.stdout.removeListener('data', stdOutCallback);
     }
   };
   ELECTRON_PROCESS.stdout.on('data', stdOutCallback);
