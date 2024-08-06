@@ -507,18 +507,18 @@ class UnitTestRecServer(unittest.TestCase):
 class TestRecClientServer(unittest.TestCase):
     """Client regression tests using a server executing in a local process."""
 
-    def setUp(self):
-        """Setup workspace."""
+    @classmethod
+    def setUpClass(cls):
+        """Setup Rec model server."""
         from natcap.invest.recreation import recmodel_server
 
-        self.workspace_dir = tempfile.mkdtemp()
-        # self.workspace_dir = 'test_ws'
-        self.resampled_data_path = os.path.join(
-            self.workspace_dir, 'resampled_data.csv')
+        cls.server_workspace_dir = tempfile.mkdtemp()
+        cls.resampled_data_path = os.path.join(
+            cls.server_workspace_dir, 'resampled_data.csv')
         _resample_csv(
             os.path.join(SAMPLE_DATA, 'sample_data.csv'),
-            self.resampled_data_path, resample_factor=10)
-        with open(self.resampled_data_path, 'rb') as f:
+            cls.resampled_data_path, resample_factor=10)
+        with open(cls.resampled_data_path, 'rb') as f:
             n_points = sum(1 for _ in f)
 
         # attempt to get an open port; could result in race condition but
@@ -526,39 +526,39 @@ class TestRecClientServer(unittest.TestCase):
         # in use, that's probably why
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind(('', 0))
-        self.port = sock.getsockname()[1]
+        cls.port = sock.getsockname()[1]
         sock.close()
         sock = None
-        self.hostname = 'localhost'
+        cls.hostname = 'localhost'
 
         server_args = {
-            'hostname': self.hostname,
-            'port': self.port,
-            'cache_workspace': self.workspace_dir,
+            'hostname': cls.hostname,
+            'port': cls.port,
+            'cache_workspace': cls.server_workspace_dir,
             'max_points_per_node': 200,
             'max_allowable_query': n_points - 1000,
             'datasets': {
                 'flickr': {
-                    'raw_csv_point_data_path': self.resampled_data_path,
+                    'raw_csv_point_data_path': cls.resampled_data_path,
                     'min_year': 2005,
                     'max_year': 2017
                 },
                 'twitter': {
-                    'raw_csv_point_data_path': self.resampled_data_path,
+                    'raw_csv_point_data_path': cls.resampled_data_path,
                     'min_year': 2012,
                     'max_year': 2022
                 }
             }
         }
 
-        self.server_process = multiprocessing.Process(
+        cls.server_process = multiprocessing.Process(
             target=recmodel_server.execute, args=(server_args,), daemon=False)
-        self.server_process.start()
+        cls.server_process.start()
 
         # The recmodel_server.execute takes ~10-20 seconds to build quadtrees
         # before the remote Pyro object is ready.
         proxy = Pyro5.api.Proxy(
-            f'PYRO:natcap.invest.recreation@{self.hostname}:{self.port}')
+            f'PYRO:natcap.invest.recreation@{cls.hostname}:{cls.port}')
         ready = False
         while not ready:
             try:
@@ -571,9 +571,18 @@ class TestRecClientServer(unittest.TestCase):
             ready = True
         proxy._pyroRelease()
 
+    @classmethod
+    def tearDownClass(cls):
+        """Delete workspace and terminate child process."""
+        cls.server_process.terminate()
+        shutil.rmtree(cls.server_workspace_dir, ignore_errors=True)
+
+    def setUp(self):
+        """Create workspace"""
+        self.workspace_dir = tempfile.mkdtemp()
+
     def tearDown(self):
-        """Delete workspace."""
-        self.server_process.terminate()
+        """Delete workspace"""
         shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
     def test_all_metrics_local_server(self):
@@ -755,8 +764,11 @@ class TestRecClientServer(unittest.TestCase):
             'port': self.port
         }
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             recmodel_client.execute(args)
+        actual_message = str(cm.exception)
+        expected_message = 'Start year must be between'
+        self.assertIn(expected_message, actual_message)
 
     def test_end_year_out_of_range(self):
         """Test server sends valid date-ranges; client raises ValueError."""
@@ -780,8 +792,11 @@ class TestRecClientServer(unittest.TestCase):
             'port': self.port
         }
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             recmodel_client.execute(args)
+        actual_message = str(cm.exception)
+        expected_message = 'End year must be between'
+        self.assertIn(expected_message, actual_message)
 
     def test_aoi_too_large(self):
         """Test server checks aoi size; client raises exception."""
