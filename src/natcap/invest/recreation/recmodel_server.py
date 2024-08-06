@@ -44,7 +44,11 @@ LOCAL_DEPTH = 8
 CSV_ROWS_PER_PARSE = 2 ** 10
 LOGGER_TIME_DELAY = 5.0
 INITIAL_BOUNDING_BOX = [-180, -90, 180, 90]
+
 # Max points within an AOI bounding box before rejecting the AOI.
+# This is configureable in the execute args, but here is a conservative
+# default. For a 2-CPU VM, an AOI capturing ~20 million points
+# takes ~30 minutes to build the local quadtree and uses ~2GB RAM.
 MAX_ALLOWABLE_QUERY = 30_000_000
 
 Pyro5.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings

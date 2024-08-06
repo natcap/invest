@@ -12,6 +12,7 @@ logging.basicConfig(
 args_dict = {
     'hostname': '',
     'port': 54322,
+    'max_allowable_query': 40_000_000,
     'datasets': {
         'flickr': {
             'raw_csv_point_data_path': '/home/davemfish/server/volume/flickr/photos_2005-2017_odlla.csv',
