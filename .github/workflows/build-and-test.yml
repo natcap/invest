@@ -304,6 +304,7 @@ jobs:
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
             binary-extension: dmg
+            miniforge-dist: Miniforge-pypy3-MacOSX-x86_64
           - os: windows-latest
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
             workspace-path: ${{ github.workspace }}
@@ -364,11 +365,27 @@ jobs:
           yarn config set network-timeout 600000 -g
           yarn install
 
-      - name: Download mamba for distribution
+      - name: Download mamba for distribution (MacOS)
+        if: matrix.os == 'macos-13'
         run: |
-           curl -fsSLo Miniforge3.sh --output-dir dist "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+           curl -fsSLo Miniforge3.sh --output-dir dist "https://github.com/conda-forge/miniforge/releases/latest/download/${{ matrix.miniforge-dist }}"
            bash dist/Miniforge3.sh -b -p dist/miniforge3
-           dist/miniforge3/condabin/mamba --help  # test that the executable is working
+
+      - name: Download mamba for distribution (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+           curl -fsSLo Miniforge3.exe --output-dir dist "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge-pypy3-Windows-x86_64.exe"
+
+      - name: Install mamba (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: start /wait "" Miniforge3.exe /InstallationType=JustMe /RegisterPython=0 /S /D=dist\miniforge3
+
+      - name: Test mamba
+        run: |
+          ls dist/miniforge3
+          ls dist/miniforge3/condabin
+          dist/miniforge3/condabin/mamba --help  # test that the executable is working
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
