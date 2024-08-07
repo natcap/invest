@@ -373,9 +373,7 @@ jobs:
       - name: Install mamba for MacOS
         if: matrix.os == 'macos-13'
         run: |
-          bash dist/Miniforge-pypy3-MacOSX-x86_64.sh -b
-          ls
-          ls dist
+          bash dist/Miniforge-pypy3-MacOSX-x86_64.sh -b -p dist/Miniforge3
 
       - name: Download mamba installer for distribution (Windows)
         if: matrix.os == 'windows-latest'
@@ -386,7 +384,8 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: cmd
         run: |
-          start /wait "" dist/Miniforge3-Windows-x86_64.exe /InstallationType=JustMe /RegisterPython=0 /S /D=%UserProfile%\Miniforge3
+          start /wait "" dist/Miniforge3-Windows-x86_64.exe /?
+          start /wait "" dist/Miniforge3-Windows-x86_64.exe /InstallationType=JustMe /RegisterPython=0 /S /D=dist/Miniforge3
 
       - name: test
         if: matrix.os == 'windows-latest'
