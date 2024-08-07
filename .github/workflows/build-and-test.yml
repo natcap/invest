@@ -374,7 +374,7 @@ jobs:
       - name: Download mamba for distribution (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-           curl -fsSLo Miniforge3.exe --output-dir dist "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge-pypy3-Windows-x86_64.exe"
+           curl -fsSLo Miniforge3.exe "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge-pypy3-Windows-x86_64.exe"
 
       - name: Install mamba (Windows)
         if: matrix.os == 'windows-latest'
