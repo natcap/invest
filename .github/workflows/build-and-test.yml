@@ -378,7 +378,7 @@ jobs:
 
       - name: Install mamba (Windows)
         if: matrix.os == 'windows-latest'
-        shell: pwsh
+        shell: cmd
         run: start /wait "" Miniforge3.exe /InstallationType=JustMe /RegisterPython=0 /S /D=dist\miniforge3
 
       - name: Test mamba
