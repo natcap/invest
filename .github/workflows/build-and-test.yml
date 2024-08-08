@@ -384,7 +384,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: cmd
         run: |
-          Miniforge3-Windows-x86_64.exe /InstallationType=JustMe /RegisterPython=0 /S /D=%UserProfile%\dist\miniforge3
+          Miniforge-pypy3-Windows-x86_64.exe /InstallationType=JustMe /RegisterPython=0 /S /D=%UserProfile%\dist\miniforge3
 
       - name: test
         run: |
