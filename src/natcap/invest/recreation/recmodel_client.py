@@ -345,7 +345,7 @@ _ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
 # Have 5 seconds between timed progress outputs
 LOGGER_TIME_DELAY = 5
 
-RESPONSE_VARIABLE_ID = 'sumPUD_TUD'
+RESPONSE_VARIABLE_ID = 'avg_pr_UD'
 SCENARIO_RESPONSE_ID = 'UD_EST'
 
 _OUTPUT_BASE_FILES = {
@@ -622,22 +622,6 @@ def _retrieve_user_days(
     LOGGER.info('Contacting server, please wait.')
     recmodel_manager = Pyro5.api.Proxy(server_url)
 
-    basename = os.path.splitext(local_aoi_path)[0]
-    with zipfile.ZipFile(compressed_aoi_path, 'w') as aoizip:
-        for suffix in _ESRI_SHAPEFILE_EXTENSIONS:
-            filename = basename + suffix
-            if os.path.exists(filename):
-                LOGGER.info(f'archiving {filename}')
-                aoizip.write(filename, os.path.basename(filename))
-
-    # convert shapefile to binary string for serialization
-    with open(compressed_aoi_path, 'rb') as aoifile:
-        zip_file_binary = aoifile.read()
-
-    # transfer zipped file to server
-    start_time = time.time()
-    LOGGER.info('Please wait for server to calculate PUD and TUD...')
-
     # TODO: allow datasets to be specified in args to
     # allow API users access to a single dataset and a wider
     # range of years
@@ -680,6 +664,20 @@ def _retrieve_user_days(
         LOGGER.info(f'AOI accepted. Fewer than {n_points} {dataset} points '
                     f'found within AOI extent: {aoi_bounding_box}')
 
+    basename = os.path.splitext(local_aoi_path)[0]
+    with zipfile.ZipFile(compressed_aoi_path, 'w') as aoizip:
+        for suffix in _ESRI_SHAPEFILE_EXTENSIONS:
+            filename = basename + suffix
+            if os.path.exists(filename):
+                LOGGER.info(f'archiving {filename}')
+                aoizip.write(filename, os.path.basename(filename))
+
+    # convert shapefile to binary string for serialization
+    with open(compressed_aoi_path, 'rb') as aoifile:
+        zip_file_binary = aoifile.read()
+
+    start_time = time.time()
+    LOGGER.info('Please wait for server to calculate PUD and TUD...')
     results = recmodel_manager.calculate_userdays(
         zip_file_binary, start_year, end_year, dataset_list)
     for dataset in dataset_list:
@@ -963,76 +961,6 @@ def _prepare_response_polygons_lookup(
     response_layer = None
     with open(target_pickle_path, 'wb') as pickle_file:
         pickle.dump(response_polygons_lookup, pickle_file)
-
-
-def _assemble_regression_data(
-        pud_vector_path, tud_vector_path, target_vector_path):
-    """Create a vector with data for each predictor and response variables.
-
-    Args:
-        pud_vector_path (string): Path to the vector polygon
-            layer with PUD_YR_AVG.
-        tud_vector_path (string): Path to the vector polygon
-            layer with TUD_YR_AVG.
-        predictor_json_list (list): list of json filenames, one for each
-            predictor dataset. A json file will look like this,
-            {0: 0.0, 1: 0.0}
-            Keys match FIDs of ``response_vector_path``.
-        target_vector_path (string): a copy of the geometry from ``pud_vector_path``.
-            Fields include all data needed to compute the linear regression:
-                * one field for each predictor,
-                * PUD_YR_AVG
-                * TUD_YR_AVG
-                * PUD_plus_TUD (the response variable for linear regression)
-
-    Returns:
-        None
-
-    """
-    # driver = gdal.GetDriverByName('ESRI Shapefile')
-    pud_vector = gdal.OpenEx(
-        pud_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
-    pud_layer = pud_vector.GetLayer()
-    tud_vector = gdal.OpenEx(
-        tud_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
-    tud_layer = tud_vector.GetLayer()
-    target_vector = gdal.OpenEx(
-        target_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-
-    layer = target_vector.GetLayer()
-    # layer_defn = layer.GetLayerDefn()
-
-    def _create_field(fieldname):
-        # Create a new field for the predictor
-        # Delete the field first if it already exists
-        field_index = layer.FindFieldIndex(
-            str(fieldname), 1)
-        if field_index >= 0:
-            layer.DeleteField(field_index)
-        field = ogr.FieldDefn(str(fieldname), ogr.OFTReal)
-        field.SetWidth(24)
-        field.SetPrecision(11)
-        layer.CreateField(field)
-
-    tud_variable_id = 'TUD_YR_AVG'
-    pud_variable_id = 'PUD_YR_AVG'
-    _create_field(tud_variable_id)
-    _create_field(pud_variable_id)
-    _create_field(RESPONSE_VARIABLE_ID)
-
-    for feature in layer:
-        pud_feature = pud_layer.GetFeature(feature.GetFID())
-        tud_feature = tud_layer.GetFeature(feature.GetFID())
-        pud_yr_avg = pud_feature.GetField(pud_variable_id)
-        tud_yr_avg = tud_feature.GetField(tud_variable_id)
-        feature.SetField(pud_variable_id, pud_yr_avg)
-        feature.SetField(tud_variable_id, tud_yr_avg)
-        feature.SetField(
-            RESPONSE_VARIABLE_ID, pud_yr_avg + tud_yr_avg)
-        layer.SetFeature(feature)
-
-    layer = None
-    target_vector = None
 
 
 def _json_to_shp_table(
@@ -1369,6 +1297,90 @@ def _ogr_to_geometry_list(vector_path):
     return geometry_list
 
 
+def _assemble_regression_data(
+        pud_vector_path, tud_vector_path, target_vector_path):
+    """Create a vector with data for each predictor and response variables.
+
+    Args:
+        pud_vector_path (string): Path to the vector polygon
+            layer with PUD_YR_AVG.
+        tud_vector_path (string): Path to the vector polygon
+            layer with TUD_YR_AVG.
+        predictor_json_list (list): list of json filenames, one for each
+            predictor dataset. A json file will look like this,
+            {0: 0.0, 1: 0.0}
+            Keys match FIDs of ``response_vector_path``.
+        target_vector_path (string): The response polygons with predictor data.
+            Fields will be added in order to compute the linear regression:
+                * pr_PUD
+                * pr_TUD
+                * avg_pr_UD (the response variable for linear regression)
+
+    Returns:
+        None
+
+    """
+    # driver = gdal.GetDriverByName('ESRI Shapefile')
+    pud_vector = gdal.OpenEx(
+        pud_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
+    pud_layer = pud_vector.GetLayer()
+    tud_vector = gdal.OpenEx(
+        tud_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
+    tud_layer = tud_vector.GetLayer()
+    target_vector = gdal.OpenEx(
+        target_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+
+    target_layer = target_vector.GetLayer()
+
+    def _create_field(fieldname):
+        # Create a new field for the predictor
+        # Delete the field first if it already exists
+        field_index = target_layer.FindFieldIndex(
+            str(fieldname), 1)
+        if field_index >= 0:
+            target_layer.DeleteField(field_index)
+        field = ogr.FieldDefn(str(fieldname), ogr.OFTReal)
+        field.SetWidth(24)
+        field.SetPrecision(11)
+        target_layer.CreateField(field)
+
+    tud_variable_id = 'pr_TUD'
+    pud_variable_id = 'pr_PUD'
+    _create_field(tud_variable_id)
+    _create_field(pud_variable_id)
+    _create_field(RESPONSE_VARIABLE_ID)
+
+    # Calculate response variable as the average of two proportions:
+    # the proportion of PUD_YR_AVG for each feature
+    # the proportion of TUD_YR_AVG for each feature
+    sql = f'SELECT SUM(PUD_YR_AVG) sum_PUD FROM {pud_layer.GetName()}'
+    pud_sum_layer = pud_vector.ExecuteSQL(sql)
+    pud_sum = pud_sum_layer.GetNextFeature().GetField('sum_PUD')
+    sql = f'SELECT SUM(TUD_YR_AVG) sum_TUD FROM {tud_layer.GetName()}'
+    tud_sum_layer = tud_vector.ExecuteSQL(sql)
+    tud_sum = tud_sum_layer.GetNextFeature().GetField('sum_TUD')
+    pud_sum_layer = tud_sum_layer = None
+
+    if pud_sum == 0 or tud_sum == 0:
+        raise RuntimeError(
+            'Cannot compute regression because either PUD_YR_AVG'
+            'or TUD_YR_AVG are all 0s')
+
+    for feature in target_layer:
+        pud_feature = pud_layer.GetFeature(feature.GetFID())
+        tud_feature = tud_layer.GetFeature(feature.GetFID())
+        pr_pud = pud_feature.GetField('PUD_YR_AVG') / pud_sum
+        pr_tud = tud_feature.GetField('TUD_YR_AVG') / tud_sum
+        feature.SetField(pud_variable_id, pr_pud)
+        feature.SetField(tud_variable_id, pr_tud)
+        feature.SetField(
+            RESPONSE_VARIABLE_ID, (pr_pud + pr_tud) / 2)
+        target_layer.SetFeature(feature)
+
+    target_layer = None
+    target_vector = None
+
+
 def _compute_and_summarize_regression(
         data_vector_path, response_id, predictor_table_path, server_version_path,
         target_coefficient_json_path, target_regression_summary_path):
@@ -1395,7 +1407,7 @@ def _compute_and_summarize_regression(
     predictor_df = validation.get_validated_dataframe(
         predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
     predictor_list = predictor_df.index
-    predictor_id_list, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
+    predictor_id_list, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est, eps = (
         _build_regression(
             data_vector_path, predictor_list, response_id))
 
@@ -1413,7 +1425,7 @@ def _compute_and_summarize_regression(
         for p_id, coefficient, se_est_factor in zip(
             predictor_id_list[:-1], coefficients[:-1], se_est[:-1]))
 
-    # Include the server version and PUD hash in the report:
+    # Include the server version and hash in the report:
     with open(server_version_path, 'rb') as f:
         server_version = pickle.load(f)
     report_string = (
@@ -1431,8 +1443,9 @@ def _compute_and_summarize_regression(
             regression_log:
         regression_log.write(report_string + '\n')
 
-    # Predictor coefficients are needed for _calculate_scenario()
+    # Predictor coefficients and epsilon are needed for _calculate_scenario()
     predictor_estimates = dict(zip(predictor_id_list, coefficients))
+    predictor_estimates['epsilon'] = eps
     with open(target_coefficient_json_path, 'w') as json_file:
         json.dump(predictor_estimates, json_file)
 
@@ -1440,26 +1453,25 @@ def _compute_and_summarize_regression(
 def _build_regression(
         data_vector_path, predictor_id_list,
         response_id):
-    """Multiple least-squares regression with log-transformed response.
+    """Multiple least-squares regression with logit-transformed response.
 
     The regression is built such that each feature in the single layer vector
-    pointed to by ``predictor_vector_path`` corresponds to one data point.
-    ``response_id`` is the response variable to be log-transformed, and is found
-    in ``response_vector_path``. Predictor variables are found in
-    ``predictor_vector_path`` and are not transformed. Features with incomplete
-    data are dropped prior to computing the regression.
+    ``data_vector_path`` corresponds to one data point.
+    ``response_id`` is the response variable found in ``response_vector_path``.
+    The response variable is an average of two proportions and is
+    logit-transformed following Warton & Hui 2011 (doi: 10.1890/10-0340.1).
+
+    Predictor variables are found in``predictor_vector_path`` and are not
+    transformed. Features with incomplete data are dropped prior to
+    computing the regression.
 
     Args:
-        response_vector_path (string): path to polygon vector with PUD
-            results, in particular a field named with the ``response_id``.
-        predictor_vector_path (string): path to a shapefile that contains
-            only the fields to be used as predictor variables.
-        response_id (string): field ID in ``response_vector_path`` whose
+        data_vector_path (string): path to polygon vector with fields for
+            each predictor in ``predictor_id_list`` and ``response_id``
+        predictor_id_list (list): list of strings that are the predictor
+            variable names.
+        response_id (string): field name in ``data_vector_path`` whose
             values correspond to the regression response variable.
-
-    Asserts:
-        ``response_vector_path`` and ``predictor_vector_path`` have an equal
-        number of features.
 
     Returns:
         predictor_names: A list of predictor id strings. Length matches
@@ -1472,6 +1484,7 @@ def _build_regression(
         std_err: residual standard error
         dof: degrees of freedom
         se_est: A list of standard error estimate, length matches coefficients.
+        epsilon: value used to adjust response variable before logit-transform
 
     """
     LOGGER.info("Computing regression")
@@ -1484,19 +1497,19 @@ def _build_regression(
     response_array = numpy.empty((n_features, 1))
     for row_index, feature in enumerate(data_layer):
         response_array[row_index, :] = feature.GetField(str(response_id))
-    response_array = numpy.log1p(response_array)
+
+    # Logit transformation.
+    # The smallest non-zero value is added to the array because
+    # the array is likely to include zeros.
+    epsilon = response_array[response_array > 0].min()
+    array_adj = response_array + epsilon
+    response_array = numpy.log(array_adj / (1 - array_adj))
 
     # Y-Intercept data matrix
     intercept_array = numpy.ones_like(response_array)
 
     # Predictor data matrix
-    # n_predictors = predictor_layer_defn.GetFieldCount()
     predictor_matrix = numpy.empty((n_features, len(predictor_id_list)))
-    # predictor_names = []
-    # for idx in range(n_predictors):
-    #     field_defn = predictor_layer_defn.GetFieldDefn(idx)
-    #     field_name = field_defn.GetName()
-    #     predictor_names.append(field_name)
     for row_index, feature in enumerate(data_layer):
         predictor_matrix[row_index, :] = numpy.array(
             [feature.GetField(str(key)) for key in predictor_id_list])
@@ -1555,7 +1568,9 @@ def _build_regression(
         LOGGER.warning(f"Linear model is under constrained with DOF={dof}")
         std_err = sigma2 = numpy.nan
         se_est = var_est = [numpy.nan] * data_matrix.shape[1]
-    return predictor_names, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est
+    return (
+        predictor_names, coefficients, ssres, r_sq,
+        r_sq_adj, std_err, dof, se_est, epsilon)
 
 
 def _calculate_scenario(
@@ -1574,7 +1589,8 @@ def _calculate_scenario(
             the scenario result.
         coefficient_json_path (string): path to json file with the pre-existing
             regression results. It contains a dictionary that maps
-            predictor id strings to coefficient values. Includes Y-Intercept.
+            predictor id strings to coefficient values. Includes Y-Intercept
+            and the epsilon used to adjust the response variable.
 
     Returns:
         None
@@ -1603,7 +1619,8 @@ def _calculate_scenario(
     with open(coefficient_json_path, 'r') as json_file:
         predictor_estimates = json.load(json_file)
 
-    y_intercept = predictor_estimates.pop("(Intercept)")
+    y_intercept = predictor_estimates.pop('(Intercept)')
+    epsilon = predictor_estimates.pop('epsilon')
 
     for feature in scenario_coefficient_layer:
         feature_id = feature.GetFID()
@@ -1620,8 +1637,11 @@ def _calculate_scenario(
             feature = None
             continue  # without writing to the feature
         response_value += y_intercept
-        # recall the coefficients are log normal, so expm1 inverses it
-        feature.SetField(response_id, numpy.expm1(response_value))
+        # recall that the response was logit-transformed, so inverse it
+        value = (
+            numpy.exp(response_value) / (numpy.exp(response_value) + 1)
+        ) - epsilon
+        feature.SetField(response_id, value)
         scenario_coefficient_layer.SetFeature(feature)
         feature = None
 

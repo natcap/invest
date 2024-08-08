@@ -983,17 +983,45 @@ class RecreationClientRegressionTests(unittest.TestCase):
         """Recreation regression test for the least-squares linear model."""
         from natcap.invest.recreation import recmodel_client
 
-        coefficient_vector_path = os.path.join(
-            REGRESSION_DATA, 'predictor_data.shp')
-        response_vector_path = os.path.join(
-            REGRESSION_DATA, 'predictor_data_pud.shp')
-        response_id = 'PUD_YR_AVG'
+        data_vector_path = os.path.join(
+            self.workspace_dir, 'regression_data.shp')
+        driver = 'ESRI Shapefile'
+        n_features = 10
+        userdays = numpy.linspace(0, 1, n_features)
+        avg_pr_UD = userdays / userdays.sum()
+        roads = numpy.linspace(0, 100, n_features)
+        parks = numpy.linspace(0, 100, n_features)**2
+        response_id = 'avg_pr_UD'
 
-        # TODO: the signature of _build_regression changed. So did the structure
-        # of the input data.
-        _, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
+        attribute_list = []
+        for i in range(n_features):
+            attribute_list.append({
+                response_id: avg_pr_UD[i],
+                'roads': roads[i],
+                'parks': parks[i]
+            })
+        field_map = {
+            response_id: ogr.OFTReal,
+            'roads': ogr.OFTReal,
+            'parks': ogr.OFTReal,
+        }
+
+        # The geometries don't matter.
+        geom_list = [shapely.geometry.Point(1, -1)] * n_features
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        pygeoprocessing.shapely_geometry_to_vector(
+            geom_list,
+            data_vector_path,
+            srs.ExportToWkt(),
+            driver,
+            fields=field_map,
+            attribute_list=attribute_list,
+            ogr_geom_type=ogr.wkbPoint)
+        predictor_list = ['roads', 'parks']
+        predictor_id_list, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est, eps = (
             recmodel_client._build_regression(
-                response_vector_path, coefficient_vector_path, response_id))
+                data_vector_path, predictor_list, response_id))
 
         results = {}
         results['coefficients'] = coefficients
@@ -1004,22 +1032,20 @@ class RecreationClientRegressionTests(unittest.TestCase):
         results['dof'] = dof
         results['se_est'] = se_est
 
-        # Dave created these numbers using Recreation model release/3.5.0
+        # Expected results created using R 4.4.0 lm()
         expected_results = {}
-        expected_results['coefficients'] = [
-            -3.67484238e-03, -8.76864968e-06, 1.75244536e-01, 2.07040116e-01,
-            6.59076098e-01]
-        expected_results['ssres'] = 11.03734250869611
-        expected_results['r_sq'] = 0.5768926587089602
-        expected_results['r_sq_adj'] = 0.5256069203706524
-        expected_results['std_err'] = 0.5783294255923199
-        expected_results['dof'] = 33
-        expected_results['se_est'] = [
-            5.93275522e-03, 8.49251058e-06, 1.72921342e-01, 6.39079593e-02,
-            3.98165865e-01]
+        # y-intercept is last
+        expected_results['coefficients'] = [4.480035e-02, -2.177808e-04, -3.636955e+00]
+        expected_results['se_est'] = [3.540886e-03, 3.408778e-05, 7.603066e-02]
+        expected_results['ssres'] = 0.065457
+        expected_results['r_sq'] = 0.988802
+        expected_results['r_sq_adj'] = 0.985603
+        expected_results['std_err'] = 0.0967
+        expected_results['dof'] = 7
 
         for key in expected_results:
-            numpy.testing.assert_allclose(results[key], expected_results[key])
+            numpy.testing.assert_allclose(
+                results[key], expected_results[key], rtol=1e-05)
 
     def test_square_grid(self):
         """Recreation square grid regression test."""
