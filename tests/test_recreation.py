@@ -560,7 +560,7 @@ class TestRecClientServer(unittest.TestCase):
         proxy = Pyro5.api.Proxy(
             f'PYRO:natcap.invest.recreation@{cls.hostname}:{cls.port}')
         ready = False
-        while not ready:
+        while not ready and cls.server_process.is_alive():
             try:
                 # _pyroBind() forces the client-server handshake and
                 # seems like a good way to check if the remote object is ready
@@ -592,6 +592,7 @@ class TestRecClientServer(unittest.TestCase):
         With this 'extra_fields_features' AOI, we also cover two edge cases:
         1) the AOI has a pre-existing field that the model wishes to create.
         2) the AOI has features only covering nodata raster predictor values.
+
         """
         from natcap.invest.recreation import recmodel_client
         args = {
