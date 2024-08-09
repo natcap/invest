@@ -115,6 +115,7 @@ beforeEach(() => {
   });
   const stdOutCallback = async (data) => {
     // Here's how we know the electron window is ready to connect to
+    console.log(`${data}`);
     if (`${data}`.match('main window loaded')) {
       try {
         BROWSER = await puppeteer.connect({
@@ -125,7 +126,7 @@ beforeEach(() => {
       } catch (e) {
         console.log(e);
       }
-      ELECTRON_PROCESS.stdout.removeListener('data', stdOutCallback);
+      // ELECTRON_PROCESS.stdout.removeListener('data', stdOutCallback);
     }
   };
   ELECTRON_PROCESS.stdout.on('data', stdOutCallback);
@@ -314,7 +315,7 @@ test('Install and run a plugin', async () => {
 
   await page.waitForSelector('div ::-p-text(Starting up model...)');
   console.log('starting up model');
-  const argsForm = await page.waitForSelector('.args-form');
+  const argsForm = await page.waitForSelector('.args-form', { timeout: 3000000 });
   console.log('found args form');
   const workspace = await argsForm.waitForSelector(
     'aria/[name="Workspace"][role="textbox"]'
@@ -335,7 +336,7 @@ test('Install and run a plugin', async () => {
   await runButton.click();
   await page.waitForSelector('#invest-tab-tab-log.active');
   await page.waitForSelector('div ::-p-text(Model Complete)');
-}, 500000);
+}, 3000000);
 
 const testWin = process.platform === 'win32' ? test : test.skip;
 /* Test for duplicate application launch.

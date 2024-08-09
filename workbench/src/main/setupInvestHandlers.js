@@ -90,7 +90,7 @@ export function setupInvestRunHandlers() {
     let cmdArgs;
     const plugins = settingsStore.get('plugins');
     if (plugins && Object.keys(plugins).includes(modelRunName)) {
-      cmd = 'micromamba'//settingsStore.get('micromamba_path');
+      cmd = settingsStore.get('mamba');
       cmdArgs = [
         'run',
         `--prefix ${settingsStore.get(`plugins.${modelRunName}.env`)}`,
