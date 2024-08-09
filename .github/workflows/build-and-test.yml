@@ -379,12 +379,13 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
            curl -fsSLo Miniforge-pypy3-Windows-x86_64.exe "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge-pypy3-Windows-x86_64.exe"
+           pwd
 
       - name: Install mamba for Windows
         if: matrix.os == 'windows-latest'
         shell: cmd
         run: |
-          Miniforge-pypy3-Windows-x86_64.exe /InstallationType=JustMe /RegisterPython=0 /S /D=dist\miniforge3
+          Miniforge-pypy3-Windows-x86_64.exe /InstallationType=JustMe /RegisterPython=0 /S /D=%UserProfile%\invest\dist\miniforge3
 
       - name: test
         run: |
