@@ -211,9 +211,9 @@ MODEL_SPEC = {
         }
     },
     "outputs": {
-        "pud_results.shp": {
+        "PUD_results.shp": {
             "about": gettext(
-                "Copy of the the AOI vector with aggregate attributes added."),
+                "Results of photo-user-days aggregations in the AOI."),
             "geometries": spec_utils.POLYGONS,
             "fields": {
                 "PUD_YR_AVG": {
@@ -230,8 +230,27 @@ MODEL_SPEC = {
                 }
             }
         },
-        "monthly_table.csv": {
-            "about": gettext("Table of monthly photo-user-days."),
+        "TUD_results.shp": {
+            "about": gettext(
+                "Results of twitter-user-days aggregations in the AOI."),
+            "geometries": spec_utils.POLYGONS,
+            "fields": {
+                "PUD_YR_AVG": {
+                    "about": gettext(
+                        "The average twitter-user-days per year"),
+                    "type": "number",
+                    "units": u.none
+                },
+                "PUD_[MONTH]": {
+                    "about": gettext(
+                        "The average twitter-user-days for each month."),
+                    "type": "number",
+                    "units": u.none
+                }
+            }
+        },
+        "PUD_monthly_table.csv": {
+            "about": gettext("Table of monthly photo-user-days in each AOI polygon."),
             "index_col": "poly_id",
             "columns": {
                 "poly_id": {
@@ -240,17 +259,35 @@ MODEL_SPEC = {
                 },
                 "[YEAR]-[MONTH]": {
                     "about": gettext(
-                        "Total photo-user-days counted in each cell in the "
+                        "Total photo-user-days counted in the polygon in the "
                         "given month."),
                     "type": "number",
                     "units": u.none
                 }
             }
         },
-        "predictor_data.shp": {
+        "TUD_monthly_table.csv": {
+            "about": gettext("Table of monthly twitter-user-days in each AOI polygon."),
+            "index_col": "poly_id",
+            "columns": {
+                "poly_id": {
+                    "type": "integer",
+                    "about": gettext("Polygon ID")
+                },
+                "[YEAR]-[MONTH]": {
+                    "about": gettext(
+                        "Total twitter-user-days counted in the polygon in the "
+                        "given month."),
+                    "type": "number",
+                    "units": u.none
+                }
+            }
+        },
+        "regression_data.shp": {
             "created_if": "compute_regression",
             "about": gettext(
-                "AOI polygons with their corresponding predictor attributes."),
+                "AOI polygons with all the variables needed to compute a regression, "
+                "including predictor attributes and the user-days response variable."),
             "geometries": spec_utils.POLYGONS,
             "fields": {
                 "[PREDICTOR]": {
@@ -258,6 +295,26 @@ MODEL_SPEC = {
                     "units": u.none,
                     "about": gettext(
                         "Predictor attribute value for each polygon.")
+                },
+                "pr_TUD": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": gettext(
+                        "proportion of the sum of TUD_YR_AVG across all features.")
+                },
+                "pr_PUD": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": gettext(
+                        "proportion of the sum of PUD_YR_AVG across all features.")
+                },
+                "avg_pr_UD": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": gettext(
+                        "average of pr_TUD and pr_TUD. This variable "
+                        "is logit-transformed and then used as the response "
+                        "variable in the regression model.")
                 }
             }
         },
@@ -274,8 +331,8 @@ MODEL_SPEC = {
         "scenario_results.shp": {
             "created_if": "scenario_predictor_table_path",
             "about": gettext(
-                "AOI polygons with their corresponding predictor attributes "
-                "in the scenario."),
+                "Results of scenario, including the predictor data used in the "
+                "scenario and the predicted visitation patterns for the scenario."),
             "geometries": spec_utils.POLYGONS,
             "fields": {
                 "[PREDICTOR]": {
@@ -284,10 +341,13 @@ MODEL_SPEC = {
                     "about": gettext(
                         "Predictor attribute value for each polygon.")
                 },
-                "PUD_EST": {
+                "pr_UD_EST": {
                     "type": "number",
                     "units": u.none,
-                    "about": gettext("The estimated PUD_YR_AVG per polygon.")
+                    "about": gettext(
+                        "The estimated avg_pr_UD for each polygon. "
+                        "Estimated using the regression coefficients for each "
+                        "predictor in regression_coefficients.txt")
                 }
             }
         },
@@ -346,7 +406,7 @@ _ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
 LOGGER_TIME_DELAY = 5
 
 RESPONSE_VARIABLE_ID = 'avg_pr_UD'
-SCENARIO_RESPONSE_ID = 'UD_EST'
+SCENARIO_RESPONSE_ID = 'pr_UD_EST'
 
 _OUTPUT_BASE_FILES = {
     'pud_results_path': 'PUD_results.shp',
