@@ -8,9 +8,9 @@ GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
 GIT_TEST_DATA_REPO_REV      := 324abde73e1d770ad75921466ecafd1ec6297752
 
-GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
+GIT_UG_REPO                 := https://github.com/davemfish/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 0404bc5d4d43085cdc58f50f8fc29944b10cefb1
+GIT_UG_REPO_REV             := 63d16eeb50d480e216b9cdf6c56f31f83340ebd0
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
