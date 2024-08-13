@@ -1,6 +1,8 @@
 """InVEST specific code utils."""
 import codecs
 import contextlib
+import importlib
+import inspect
 import logging
 import os
 import platform
@@ -10,12 +12,15 @@ import tempfile
 import time
 from datetime import datetime
 
+import geometamaker
 import numpy
 import pandas
 import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
 from shapely.wkt import loads
+
+from natcap.invest import spec_utils
 
 LOGGER = logging.getLogger(__name__)
 _OSGEO_LOGGER = logging.getLogger('osgeo')
@@ -764,3 +769,63 @@ def matches_format_string(test_string, format_string):
     if re.fullmatch(pattern, test_string):
         return True
     return False
+
+
+def write_metadata_file(datasource_path, spec):
+    print(datasource_path)
+    resource = geometamaker.describe(datasource_path)
+    # mc.set_contact(**CONTACT)
+    # mc.set_license(**LICENSE)
+    # mc.set_lineage(LINEAGE_STATEMENT)
+
+    if 'about' in spec:
+        resource.set_abstract(spec['about'])
+    attr_spec = None
+    if 'columns' in spec:
+        attr_spec = spec['columns']
+    if 'fields' in spec:
+        attr_spec = spec['fields']
+    if attr_spec:
+        for key, value in attr_spec.items():
+            abstract = value['about'] if 'about' in value else ''
+            if 'units' in value:
+                units = spec_utils.format_unit(value['units'])
+            else:
+                units = ''
+            try:
+                resource.set_field_description(
+                    key, abstract=abstract, units=units)
+            except KeyError as error:
+                LOGGER.warning(error)
+    if 'bands' in spec:
+        for idx, value in spec['bands'].items():
+            try:
+                units = spec_utils.format_unit(spec['bands'][idx]['units'])
+            except KeyError:
+                units = ''
+            resource.set_band_description(idx, units=units)
+
+    # resource.validate()
+    resource.write()
+
+
+def generate_metadata(execute_func):
+    execute_func_args = inspect.getfullargspec(execute_func)
+    model_module = importlib.import_module(execute_func.__module__)
+    spec = model_module['MODEL_SPEC']['outputs']
+
+    workspace = execute_func_args.args['workspace_dir']
+    results_suffix = execute_func_args.args.get('results_suffix', '')
+    for filename, data in spec.items():
+        if 'type' in data and data['type'] == 'directory':
+            if 'taskgraph.db' in data['contents']:
+                continue
+            generate_metadata(
+                data['contents'], os.path.join(workspace, filename))
+        else:
+            pre, post = os.path.splitext(filename)
+            full_path = os.path.join(workspace, pre+results_suffix+post)
+            try:
+                write_metadata_file(full_path, data)
+            except ValueError as error:
+                LOGGER.warning(error)

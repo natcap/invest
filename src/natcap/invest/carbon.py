@@ -297,6 +297,8 @@ _TMP_BASE_FILES = {
 # -1.0 since carbon stocks are 0 or greater
 _CARBON_NODATA = -1.0
 
+
+@utils.generate_metadata
 def execute(args):
     """Carbon.
 
