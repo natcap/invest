@@ -774,9 +774,13 @@ def _retrieve_user_days(
         shutil.move(
             os.path.join(output_dir, f'{acronym_lookup[dataset]}_monthly_table.csv'),
             os.path.join(output_dir, renamed_table))
-        shutil.move(
-            os.path.join(output_dir, f'{acronym_lookup[dataset]}_results.shp'),
-            os.path.join(output_dir, renamed_vector))
+        driver = gdal.GetDriverByName('ESRI Shapefile')
+        source_path = os.path.join(
+            output_dir, f'{acronym_lookup[dataset]}_results.shp')
+        source = gdal.OpenEx(source_path, gdal.OF_VECTOR)
+        driver.CreateCopy(
+            os.path.join(output_dir, renamed_vector), source)
+        driver.Delete(source_path)
 
     LOGGER.info('connection release')
     recmodel_manager._pyroRelease()

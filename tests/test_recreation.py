@@ -606,7 +606,7 @@ class TestRecClientServer(unittest.TestCase):
                 SAMPLE_DATA, 'predictors_all.csv'),
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
-            'results_suffix': '',
+            'results_suffix': 'foo',
             'workspace_dir': self.workspace_dir,
             'hostname': self.hostname,
             'port': self.port,
