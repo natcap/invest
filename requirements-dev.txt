@@ -9,6 +9,8 @@
 # Any lines with "# pip-only" at the end will be processed by
 # scripts/convert-requirements-to-conda-yml.py as though it can only be found
 # on pip.
+# Sometimes conda-forge does not install the latest available version,
+# pip-only can be a workaround for that.
 
 virtualenv>=12.0.1
 pytest
