@@ -41,23 +41,28 @@ function filterSpatialOverlapFeedback(message, filepath) {
 
 function FormLabel(props) {
   const {
-    argkey, argname, required, units,
+    argkey, argname, argtype, required, units,
   } = props;
+
+  const userFriendlyArgType = parseArgType(argtype);
+  const optional = typeof required === 'boolean' && !required;
+  const includeComma = userFriendlyArgType && optional;
 
   return (
     <Form.Label column sm="3" htmlFor={argkey}>
-      <span id="argname">
-        {argname}
-      </span>
-      <span>
-        {
-          (typeof required === 'boolean' && !required)
-            ? <em> ({i18n.t('optional')})</em>
-            : <React.Fragment />
-        }
-        {/* display units at the end of the arg name, if applicable */}
-        { (units && units !== 'unitless') ? ` (${units})` : <React.Fragment /> }
-      </span>
+      <span className="argname">{argname} </span>
+      {
+       (userFriendlyArgType || optional) && 
+        <span>
+          (
+            {userFriendlyArgType}
+            {includeComma && ', '}
+            {optional && <em>{i18n.t('optional')}</em>}
+          )
+        </span>
+      }
+      {/* display units at the end of the arg name, if applicable */}
+      { (units && units !== 'unitless') ? <span> ({units})</span> : <React.Fragment /> }
     </Form.Label>
   );
 }
@@ -65,6 +70,7 @@ function FormLabel(props) {
 FormLabel.propTypes = {
   argkey: PropTypes.string.isRequired,
   argname: PropTypes.string.isRequired,
+  argtype: PropTypes.string.isRequired,
   required: PropTypes.oneOfType(
     [PropTypes.string, PropTypes.bool]
   ),
@@ -72,7 +78,7 @@ FormLabel.propTypes = {
 };
 
 function Feedback(props) {
-  const { argkey, argtype, message } = props;
+  const { argkey, message } = props;
   return (
     // d-block class is needed because of a bootstrap bug
     // https://github.com/twbs/bootstrap/issues/29439
@@ -81,13 +87,12 @@ function Feedback(props) {
       type="invalid"
       id={`${argkey}-feedback`}
     >
-      {`${i18n.t(argtype)} : ${(message)}`}
+      {message}
     </Form.Control.Feedback>
   );
 }
 Feedback.propTypes = {
   argkey: PropTypes.string.isRequired,
-  argtype: PropTypes.string.isRequired,
   message: PropTypes.string,
 };
 Feedback.defaultProps = {
@@ -125,6 +130,30 @@ function dragLeavingHandler(event) {
   event.stopPropagation();
   event.dataTransfer.dropEffect = 'copy';
   event.currentTarget.classList.remove('input-dragging');
+}
+
+function parseArgType(argtype) {
+  const { t, i18n } = useTranslation();
+  // These types benefit from more descriptive placeholder text.
+  let userFriendlyArgType;
+  switch (argtype) {
+    case 'freestyle_string':
+      userFriendlyArgType = t('text');
+      break;
+    case 'percent':
+      userFriendlyArgType = t('percent: a number from 0 - 100');
+      break;
+    case 'ratio':
+      userFriendlyArgType = t('ratio: a decimal from 0 - 1');
+      break;
+    case 'boolean':
+    case 'option_string':
+      userFriendlyArgType = '';
+      break;
+    default:
+      userFriendlyArgType = t(argtype);
+  }
+  return userFriendlyArgType;
 }
 
 export default function ArgInput(props) {
@@ -207,20 +236,7 @@ export default function ArgInput(props) {
   }
 
   // These types benefit from more descriptive placeholder text.
-  let placeholderText;
-  switch (argSpec.type) {
-    case 'freestyle_string':
-      placeholderText = t('text');
-      break;
-    case 'percent':
-      placeholderText = t('percent: a number from 0 - 100');
-      break;
-    case 'ratio':
-      placeholderText = t('ratio: a decimal from 0 - 1');
-      break;
-    default:
-      placeholderText = t(argSpec.type);
-  }
+  const placeholderText = parseArgType(argSpec.type);
 
   let form;
   if (argSpec.type === 'boolean') {
@@ -296,6 +312,7 @@ export default function ArgInput(props) {
       <FormLabel
         argkey={argkey}
         argname={argSpec.name}
+        argtype={argSpec.type}
         required={argSpec.required}
         units={argSpec.units} // undefined for all types except number
       />

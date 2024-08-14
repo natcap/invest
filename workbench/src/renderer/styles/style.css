@@ -486,7 +486,7 @@ exceed 100% of window.*/
   align-items: center;
 }
 
-#argname {
+.argname {
   text-transform: capitalize;
   font-weight: 600;
 }
