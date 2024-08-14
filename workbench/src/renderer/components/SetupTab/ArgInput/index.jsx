@@ -176,8 +176,6 @@ export default function ArgInput(props) {
   } = props;
   let { validationMessage } = props;
 
-  const { t, i18n } = useTranslation();
-
   // Occasionaly we want to force a scroll to the end of input fields
   // so that the most important part of a filepath is visible.
   // scrollEventCount changes on drop events and on use of the browse button.
@@ -296,6 +294,7 @@ export default function ArgInput(props) {
           onDragOver={dragOverHandler}
           onDragEnter={dragEnterHandler}
           onDragLeave={dragLeavingHandler}
+          aria-describedby={`${argkey}-feedback`}
         />
         {fileSelector}
       </React.Fragment>
