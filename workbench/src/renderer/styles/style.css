@@ -483,7 +483,7 @@ exceed 100% of window.*/
 }
 
 .args-form .form-group {
-  align-items: center;
+  align-items: flex-start;
 }
 
 .argname {
@@ -499,6 +499,11 @@ exceed 100% of window.*/
 
 .args-form {
   --form-field-padding-right: 2em;
+}
+
+.args-form .form-label {
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .args-form .form-control[type=text] {
