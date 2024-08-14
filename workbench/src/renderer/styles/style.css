@@ -491,15 +491,20 @@ exceed 100% of window.*/
   font-weight: 600;
 }
 
-.args-form .form-control {
+.args-form .form-control,
+.custom-select {
   font-family: monospace;
-  font-size:1.3rem;
+  font-size: 1.3rem;
+}
+
+.args-form {
+  --form-field-padding-right: 2em;
 }
 
 .args-form .form-control[type=text] {
   /*always hold space for a validation mark so the rightmost
   text is never hidden by the mark when it appears.*/
-  padding-right: 2em;
+  padding-right: var(--form-field-padding-right);
 }
 
 input.input-dragging {
@@ -528,6 +533,17 @@ input[type=text]::placeholder {
 
 .args-form svg {
   font-size: 1.5rem;
+}
+
+.custom-select,
+.custom-select.is-valid {
+  --caret-width: 1.875rem;
+  padding-right: var(--form-field-padding-right);
+  /* Custom dropdown icon is react-icons/md/MdKeyboardArrowDown, as a URL-encoded SVG */
+  background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" height="200px" width="200px"%3E%3Cpath fill="none" d="M0 0h24v24H0V0z"%3E%3C/path%3E%3Cpath d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"%3E%3C/path%3E%3C/svg%3E');
+  background-repeat: no-repeat;
+  background-position: center right calc((var(--form-field-padding-right) - var(--caret-width)) / 2);
+  background-size: var(--caret-width);
 }
 
 /* InVEST Log Tab */

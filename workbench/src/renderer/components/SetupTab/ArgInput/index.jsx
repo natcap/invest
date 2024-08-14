@@ -246,6 +246,8 @@ export default function ArgInput(props) {
         onChange={handleChange}
         onFocus={handleChange}
         disabled={!enabled}
+        isValid={enabled && isValid}
+        custom
       >
         {
           Array.isArray(dropdownOptions) ?
