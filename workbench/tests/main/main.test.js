@@ -30,7 +30,7 @@ import {
   createCoreServerProcess,
   getFlaskIsReady
 } from '../../src/main/createPythonFlaskProcess';
-import findInvestBinaries from '../../src/main/findInvestBinaries';
+import { findInvestBinaries } from '../../src/main/findBinaries';
 import extractZipInplace from '../../src/main/extractZipInplace';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import investUsageLogger from '../../src/main/investUsageLogger';
