@@ -183,16 +183,16 @@ test('Run a real invest model', async () => {
   const argsForm = await page.waitForSelector('.args-form');
   const typeDelay = 10;
   const workspace = await argsForm.waitForSelector(
-    'aria/[name^="Workspace"][role="textbox"]');
+    'aria/[name="Workspace (directory)"][role="textbox"]');
   await workspace.type(TMP_DIR, { delay: typeDelay });
   const aoi = await argsForm.waitForSelector(
-    'aria/[name^="Area Of Interest"][role="textbox"]');
+    'aria/[name="Area Of Interest (vector)"][role="textbox"]');
   await aoi.type(TMP_AOI_PATH, { delay: typeDelay });
   const startYear = await argsForm.waitForSelector(
-    'aria/[name^="Start Year"][role="textbox"]');
+    'aria/[name="Start Year (number)"][role="textbox"]');
   await startYear.type('2008', { delay: typeDelay });
   const endYear = await argsForm.waitForSelector(
-    'aria/[name^="End Year"][role="textbox"]');
+    'aria/[name="End Year (number)"][role="textbox"]');
   await endYear.type('2012', { delay: typeDelay });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
 
