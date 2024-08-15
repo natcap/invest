@@ -37,7 +37,7 @@
 
 Unreleased Changes
 ------------------
-* Workbench  
+* Workbench
   * Several small updates to the model input form UI to improve usability and visual consistency (https://github.com/natcap/invest/issues/912)
 
 3.14.2 (2024-05-29)
