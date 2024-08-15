@@ -532,8 +532,7 @@ input[type=text]::placeholder {
   font-size: 0.9rem;
   font-family: monospace;
   white-space: pre-wrap;
-  padding-left: 3rem;
-  text-indent: -3rem;
+  padding-left: calc(3.5rem + 2px);
 }
 
 .args-form svg {
