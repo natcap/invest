@@ -122,6 +122,20 @@ describe('Run status Alert renders with status from a recent run', () => {
     openWorkspace.click();
     expect(shell.showItemInFolder).toHaveBeenCalledTimes(1);
   });
+
+  test('Open Workspace button is NOT available when logfile does not exist', async () => {
+    const job = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Model',
+      status: 'error',
+      argsValues: {},
+      logfile: undefined,
+    });
+
+    const { queryByRole } = renderInvestTab(job);
+    const openWorkspaceBtn = queryByRole('button', { name: 'Open Workspace' });
+    expect(openWorkspaceBtn).toBe(null);
+  });
 });
 
 describe('Sidebar Buttons', () => {

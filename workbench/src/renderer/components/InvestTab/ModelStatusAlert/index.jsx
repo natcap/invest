@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 /* Render different Alert contents depending on an InVEST run status */
 export default function ModelStatusAlert(props) {
-  const { status } = props;
+  const { status, hideOpenWorkspace } = props;
   const { t, i18n } = useTranslation();
 
   const WorkspaceButton = (
@@ -56,7 +56,7 @@ export default function ModelStatusAlert(props) {
       variant={alertVariant}
     >
       {alertMessage}
-      {WorkspaceButton}
+      {!hideOpenWorkspace && WorkspaceButton}
     </Alert>
   );
 }
@@ -67,4 +67,5 @@ ModelStatusAlert.propTypes = {
   ).isRequired,
   terminateInvestProcess: PropTypes.func.isRequired,
   handleOpenWorkspace: PropTypes.func.isRequired,
+  hideOpenWorkspace: PropTypes.bool,
 };

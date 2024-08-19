@@ -208,7 +208,7 @@ class InvestTab extends React.Component {
       return (<div />);
     }
 
-    const logDisabled = !logfile;
+    const logDoesNotExist = !logfile;
     const sidebarSetupElementId = `sidebar-setup-${tabID}`;
     const sidebarFooterElementId = `sidebar-footer-${tabID}`;
 
@@ -229,7 +229,7 @@ class InvestTab extends React.Component {
                 {t('Setup')}
                 <MdKeyboardArrowRight />
               </Nav.Link>
-              <Nav.Link eventKey="log" disabled={logDisabled}>
+              <Nav.Link eventKey="log" disabled={logDoesNotExist}>
                 {t('Log')}
                 <MdKeyboardArrowRight />
               </Nav.Link>
@@ -254,6 +254,7 @@ class InvestTab extends React.Component {
                     <ModelStatusAlert
                       status={status}
                       handleOpenWorkspace={() => handleOpenWorkspace(logfile)}
+                      hideOpenWorkspace={logDoesNotExist}
                       terminateInvestProcess={this.terminateInvestProcess}
                     />
                   )

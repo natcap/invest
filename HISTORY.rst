@@ -36,9 +36,11 @@
 .. :changelog:
 
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* Workbench
+  * Fixed a bug that caused the application to crash when attempting to open a workspace without a valid logfile (https://github.com/natcap/invest/issues/1598)
 
 3.14.2 (2024-05-29)
 -------------------
