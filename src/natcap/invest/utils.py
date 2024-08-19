@@ -779,7 +779,7 @@ def write_metadata_file(datasource_path, spec):
     # mc.set_lineage(LINEAGE_STATEMENT)
 
     if 'about' in spec:
-        resource.set_abstract(spec['about'])
+        resource.set_description(spec['about'])
     attr_spec = None
     if 'columns' in spec:
         attr_spec = spec['columns']
@@ -787,14 +787,14 @@ def write_metadata_file(datasource_path, spec):
         attr_spec = spec['fields']
     if attr_spec:
         for key, value in attr_spec.items():
-            abstract = value['about'] if 'about' in value else ''
+            about = value['about'] if 'about' in value else ''
             if 'units' in value:
                 units = spec_utils.format_unit(value['units'])
             else:
                 units = ''
             try:
                 resource.set_field_description(
-                    key, abstract=abstract, units=units)
+                    key, description=about, units=units)
             except KeyError as error:
                 LOGGER.warning(error)
     if 'bands' in spec:
@@ -809,23 +809,22 @@ def write_metadata_file(datasource_path, spec):
     resource.write()
 
 
-def generate_metadata(execute_func):
-    execute_func_args = inspect.getfullargspec(execute_func)
-    model_module = importlib.import_module(execute_func.__module__)
-    spec = model_module['MODEL_SPEC']['outputs']
-
-    workspace = execute_func_args.args['workspace_dir']
-    results_suffix = execute_func_args.args.get('results_suffix', '')
-    for filename, data in spec.items():
+def generate_metadata(output_spec, workspace, file_suffix):
+    for filename, data in output_spec.items():
+        # print(filename)
         if 'type' in data and data['type'] == 'directory':
             if 'taskgraph.db' in data['contents']:
                 continue
+            print(data['contents'])
             generate_metadata(
-                data['contents'], os.path.join(workspace, filename))
+                data['contents'], os.path.join(workspace, filename), file_suffix)
         else:
             pre, post = os.path.splitext(filename)
-            full_path = os.path.join(workspace, pre+results_suffix+post)
-            try:
-                write_metadata_file(full_path, data)
-            except ValueError as error:
-                LOGGER.warning(error)
+            full_path = os.path.join(workspace, pre+file_suffix+post)
+            print(full_path)
+            if os.path.exists(full_path):
+                try:
+                    write_metadata_file(full_path, data)
+                except ValueError as error:
+                    # Some unsupported file formats, e.g. html
+                    LOGGER.warning(error)
