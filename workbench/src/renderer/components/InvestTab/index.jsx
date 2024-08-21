@@ -45,8 +45,27 @@ async function investGetSpec(modelName) {
   return undefined;
 }
 
-function handleOpenWorkspace(logfile) {
-  ipcRenderer.send(ipcMainChannels.SHOW_ITEM_IN_FOLDER, logfile);
+function handleOpenWorkspace(logfile, workspace_dir) {
+  if (logfile) {
+    logger.info(`Attempting to show logfile in workspace directory: ${logfile}`);
+    ipcRenderer.send(ipcMainChannels.SHOW_ITEM_IN_FOLDER, logfile);
+  }
+  // Always call shell.openPath.
+  // If shell.showItemInFolder failed, it will have failed silently;
+  // if it succeeded, the subsequent call to shell.openPath will not "undo" the result of shell.showItemInFolder.
+  openWorkspaceDir(workspace_dir);
+}
+
+async function openWorkspaceDir(workspace_dir) {
+  logger.info(`Attempting to open directory: ${workspace_dir}`);
+  const error = await ipcRenderer.invoke(ipcMainChannels.OPEN_PATH, workspace_dir);
+  if (error) {
+    logger.error(`Error opening directory: ${error}`);
+    // @TODO: render this error message in a modal
+    alert('Failed to open workspace directory. Make sure the directory exists and that you have write access to it.');
+  } else {
+    logger.info(`Directory should be open now`);
+  }
 }
 
 /**
@@ -154,6 +173,7 @@ class InvestTab extends React.Component {
     updateJobProperties(tabID, {
       argsValues: args,
       status: undefined, // in case of re-run, clear an old status
+      logfile: undefined, // in case of re-run where logfile may no longer exist, clear old logfile path
     });
 
     ipcRenderer.send(
@@ -200,6 +220,7 @@ class InvestTab extends React.Component {
       argsValues,
       logfile,
     } = this.props.job;
+    const {workspace_dir} = argsValues;
 
     const { tabID, t } = this.props;
 
@@ -253,7 +274,7 @@ class InvestTab extends React.Component {
                   ? (
                     <ModelStatusAlert
                       status={status}
-                      handleOpenWorkspace={() => handleOpenWorkspace(logfile)}
+                      handleOpenWorkspace={() => handleOpenWorkspace(logfile, workspace_dir)}
                       terminateInvestProcess={this.terminateInvestProcess}
                     />
                   )
