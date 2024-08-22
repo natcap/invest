@@ -50,10 +50,12 @@ function handleOpenWorkspace(logfile, workspace_dir) {
     logger.info(`Attempting to show logfile in workspace directory: ${logfile}`);
     ipcRenderer.send(ipcMainChannels.SHOW_ITEM_IN_FOLDER, logfile);
   }
-  // Always call shell.openPath.
-  // If shell.showItemInFolder failed, it will have failed silently;
-  // if it succeeded, the subsequent call to shell.openPath will not "undo" the result of shell.showItemInFolder.
-  openWorkspaceDir(workspace_dir);
+  if (workspace_dir) {
+    // Always call shell.openPath.
+    // If shell.showItemInFolder failed, it will have failed silently;
+    // if it succeeded, the subsequent call to shell.openPath will not "undo" the result of shell.showItemInFolder.
+    openWorkspaceDir(workspace_dir);
+  }
 }
 
 async function openWorkspaceDir(workspace_dir) {
@@ -220,7 +222,6 @@ class InvestTab extends React.Component {
       argsValues,
       logfile,
     } = this.props.job;
-    const {workspace_dir} = argsValues;
 
     const { tabID, t } = this.props;
 
@@ -274,7 +275,7 @@ class InvestTab extends React.Component {
                   ? (
                     <ModelStatusAlert
                       status={status}
-                      handleOpenWorkspace={() => handleOpenWorkspace(logfile, workspace_dir)}
+                      handleOpenWorkspace={() => handleOpenWorkspace(logfile, argsValues?.workspace_dir)}
                       terminateInvestProcess={this.terminateInvestProcess}
                     />
                   )

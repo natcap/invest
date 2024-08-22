@@ -117,10 +117,100 @@ describe('Run status Alert renders with status from a recent run', () => {
       logfile: 'foo.txt',
     });
 
+    jest.spyOn(shell, 'showItemInFolder');
+
     const { findByRole } = renderInvestTab(job);
-    const openWorkspace = await findByRole('button', { name: 'Open Workspace' })
-    openWorkspace.click();
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' });
+    expect(openWorkspaceBtn).toBeTruthy();
+    openWorkspaceBtn.click();
     expect(shell.showItemInFolder).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Open Workspace button', () => {
+  const spec = {
+    args: {},
+  };
+
+  const baseJob = {
+    ...DEFAULT_JOB,
+    status: 'success',
+  };
+
+  beforeEach(() => {
+    getSpec.mockResolvedValue(spec);
+    fetchValidation.mockResolvedValue([]);
+    uiConfig.UI_SPEC = mockUISpec(spec);
+    setupDialogs();
+  });
+
+  afterEach(() => {
+    removeIpcMainListeners();
+  });
+
+  test('should open workspace with logfile selected, if logfile exists', async () => {
+    const job = {
+      ...baseJob,
+      argsValues: {
+        workspace_dir: '/workspace',
+      },
+      logfile: '/workspace/log.txt',
+    };
+
+    jest.spyOn(shell, 'showItemInFolder');
+
+    const { findByRole } = renderInvestTab(job);
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' });
+    openWorkspaceBtn.click();
+
+    expect(shell.showItemInFolder).toHaveBeenCalledTimes(1);
+    expect(shell.showItemInFolder).toHaveBeenCalledWith(job.logfile);
+  });
+
+  test('should open workspace (without logfile selected), if workspace exists but logfile does not', async () => {
+    const job = {
+      ...baseJob,
+      argsValues: {
+        workspace_dir: '/workspace',
+      },
+      logfile: undefined,
+    };
+
+    jest.spyOn(shell, 'showItemInFolder');
+    jest.spyOn(ipcRenderer, 'invoke');
+
+    const { findByRole } = renderInvestTab(job);
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' })
+    openWorkspaceBtn.click();
+
+    expect(shell.showItemInFolder).not.toHaveBeenCalled();
+    expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith(ipcMainChannels.OPEN_PATH, job.argsValues.workspace_dir);
+  });
+
+  test('should present an error message to the user if workspace cannot be opened (e.g., if it does not exist)', async () => {
+    const job = {
+      ...baseJob,
+      status: 'error',
+      argsValues: {
+        workspace_dir: '/nonexistent-workspace',
+      },
+      logfile: undefined,
+    };
+
+    jest.spyOn(shell, 'showItemInFolder');
+    jest.spyOn(ipcRenderer, 'invoke');
+    ipcRenderer.invoke.mockResolvedValue('Error opening workspace');
+
+    const { findByRole } = renderInvestTab(job);
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' })
+    openWorkspaceBtn.click();
+
+    expect(shell.showItemInFolder).not.toHaveBeenCalled();
+    expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith(ipcMainChannels.OPEN_PATH, job.argsValues.workspace_dir);
+
+    // @TODO: expect error message UI element to exist
   });
 });
 
