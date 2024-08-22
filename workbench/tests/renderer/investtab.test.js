@@ -299,9 +299,9 @@ describe('Sidebar Buttons', () => {
     const setupTab = await findByRole('tab', { name: 'Setup' });
     expect(setupTab.classList.contains('active')).toBeTruthy();
 
-    const input1 = await findByLabelText(spec.args.workspace.name);
+    const input1 = await findByLabelText((content) => content.startsWith(spec.args.workspace.name));
     expect(input1).toHaveValue(mockDatastack.args.workspace);
-    const input2 = await findByLabelText(spec.args.port.name);
+    const input2 = await findByLabelText((content) => content.startsWith(spec.args.port.name));
     expect(input2).toHaveValue(mockDatastack.args.port);
   });
 
@@ -427,8 +427,8 @@ describe('InVEST Run Button', () => {
     const runButton = await findByRole('button', { name: /Run/ });
     expect(runButton).toBeDisabled();
 
-    const a = await findByLabelText(`${spec.args.a.name}`);
-    const b = await findByLabelText(`${spec.args.b.name}`);
+    const a = await findByLabelText((content) => content.startsWith(spec.args.a.name));
+    const b = await findByLabelText((content) => content.startsWith(spec.args.b.name));
 
     expect(a).toHaveClass('is-invalid');
     expect(b).toHaveClass('is-invalid');
