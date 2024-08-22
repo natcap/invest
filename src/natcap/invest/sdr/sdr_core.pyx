@@ -142,7 +142,7 @@ def calculate_sediment_deposition(
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack
                 if (mfd_flow_direction_raster.is_local_high_point(xs, ys) and
-                        sediment_deposition_raster.get(xs, ys) == target_nodata):
+                        is_close(sediment_deposition_raster.get(xs, ys), target_nodata)):
                     processing_stack.push(ys * n_cols + xs)
 
                 while processing_stack.size() > 0:
@@ -205,13 +205,13 @@ def calculate_sediment_deposition(
                         # completed
                         upslope_neighbors_processed = 1
                         # iterate over each neighbor-of-neighbor
-                        #
                         up_iterator = UpslopeNeighborIterator(
                             mfd_flow_direction_raster, neighbor.x, neighbor.y)
                         neighbor_of_neighbor = up_iterator.next_skip(neighbor.direction)
                         while neighbor_of_neighbor.direction < 8:
-                            a = sediment_deposition_raster.get(neighbor_of_neighbor.x, neighbor_of_neighbor.y)
-                            if (a == target_nodata):
+                            if is_close(sediment_deposition_raster.get(
+                                neighbor_of_neighbor.x, neighbor_of_neighbor.y
+                            ), target_nodata):
                                 upslope_neighbors_processed = 0
                                 break
                             neighbor_of_neighbor = up_iterator.next_skip(neighbor.direction)
