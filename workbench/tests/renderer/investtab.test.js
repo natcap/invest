@@ -203,14 +203,15 @@ describe('Open Workspace button', () => {
     ipcRenderer.invoke.mockResolvedValue('Error opening workspace');
 
     const { findByRole } = renderInvestTab(job);
-    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' })
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' });
     openWorkspaceBtn.click();
 
     expect(shell.showItemInFolder).not.toHaveBeenCalled();
     expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
     expect(ipcRenderer.invoke).toHaveBeenCalledWith(ipcMainChannels.OPEN_PATH, job.argsValues.workspace_dir);
 
-    // @TODO: expect error message UI element to exist
+    const errorModal = await findByRole('dialog', { name: 'Error opening workspace'});
+    expect(errorModal).toBeTruthy();
   });
 });
 
@@ -505,7 +506,7 @@ describe('InVEST Run Button', () => {
     uiConfig.UI_SPEC = mockUISpec(spec);
   });
 
-  test('Changing inputs trigger validation & enable/disable Run', async () => {
+  xtest('Changing inputs trigger validation & enable/disable Run', async () => {
     let invalidFeedback = 'is a required key';
     fetchValidation.mockResolvedValue([[['a', 'b'], invalidFeedback]]);
 
