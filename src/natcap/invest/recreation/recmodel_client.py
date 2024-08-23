@@ -554,11 +554,7 @@ def execute(args):
         func=_retrieve_user_days,
         args=(file_registry['local_aoi_path'],
               file_registry['compressed_aoi_path'],
-              args['start_year'], args['end_year'],
-              os.path.basename(file_registry['pud_results_path']),
-              os.path.basename(file_registry['tud_results_path']),
-              os.path.basename(file_registry['pud_monthly_table_path']),
-              os.path.basename(file_registry['tud_monthly_table_path']),
+              args['start_year'], args['end_year'],file_suffix,
               output_dir, server_url, file_registry['server_version']),
         target_path_list=[file_registry['compressed_aoi_path'],
                           file_registry['pud_results_path'],
@@ -650,9 +646,7 @@ def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
 
 def _retrieve_user_days(
         local_aoi_path, compressed_aoi_path, start_year, end_year,
-        pud_results_filename, tud_results_filename,
-        pud_monthly_table_filename, tud_monthly_table_filename,
-        output_dir, server_url, server_version_pickle):
+        file_suffix, output_dir, server_url, server_version_pickle):
     """Calculate photo-user-days (PUD) on the server and send back results.
 
     All of the client-server communication happens in this scope. The local AOI
@@ -664,10 +658,7 @@ def _retrieve_user_days(
         compressed_aoi_path (string): path to zip file storing compressed AOI
         start_year (int/string): lower limit of date-range for PUD queries
         end_year (int/string): upper limit of date-range for PUD queries
-        pud_results_filename (string): filename for a vector with PUD results
-        tud_results_filename (string): filename for a vector with TUD results
-        pud_monthly_table_filename (string): filename for monthly PUD results CSV
-        tud_monthly_table_filename (string): filename for monthly TUD results CSV
+        file_suffix (string): to append to filenames of files created by server
         output_dir (string): path to output workspace where results are
             unpacked.
         server_url (string): URL for connecting to the server
@@ -761,26 +752,12 @@ def _retrieve_user_days(
             temporary_output_dir)
 
         for filename in os.listdir(temporary_output_dir):
-            shutil.copy(os.path.join(temporary_output_dir, filename), output_dir)
+            # Results are returned from the server without a results_suffix.
+            pre, post = os.path.splitext(filename)
+            shutil.copy(
+                os.path.join(temporary_output_dir, filename),
+                os.path.join(output_dir, f'{pre}{file_suffix}{post}'))
         shutil.rmtree(temporary_output_dir)
-
-        # Results are returned from the server without a results_suffix.
-        if dataset == 'flickr':
-            renamed_table = pud_monthly_table_filename
-            renamed_vector = pud_results_filename
-        else:
-            renamed_table = tud_monthly_table_filename
-            renamed_vector = tud_results_filename
-        shutil.move(
-            os.path.join(output_dir, f'{acronym_lookup[dataset]}_monthly_table.csv'),
-            os.path.join(output_dir, renamed_table))
-        driver = gdal.GetDriverByName('ESRI Shapefile')
-        source_path = os.path.join(
-            output_dir, f'{acronym_lookup[dataset]}_results.shp')
-        source = gdal.OpenEx(source_path, gdal.OF_VECTOR)
-        driver.CreateCopy(
-            os.path.join(output_dir, renamed_vector), source)
-        driver.Delete(source_path)
 
     LOGGER.info('connection release')
     recmodel_manager._pyroRelease()
