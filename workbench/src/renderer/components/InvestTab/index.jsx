@@ -191,7 +191,6 @@ class InvestTab extends React.Component {
 
   handleOpenWorkspace(logfile, workspace_dir) {
     if (logfile) {
-      logger.info(`Attempting to show logfile in workspace directory: ${logfile}`);
       ipcRenderer.send(ipcMainChannels.SHOW_ITEM_IN_FOLDER, logfile);
     }
     if (workspace_dir) {
@@ -203,13 +202,10 @@ class InvestTab extends React.Component {
   }
 
   async openWorkspaceDir(workspace_dir) {
-    logger.info(`Attempting to open directory: ${workspace_dir}`);
     const error = await ipcRenderer.invoke(ipcMainChannels.OPEN_PATH, workspace_dir);
     if (error) {
-      logger.error(`Error opening directory: ${error}`);
+      logger.error(`Error opening workspace (${workspace_dir}). ${error}`);
       this.showErrorModal(true);
-    } else {
-      logger.info(`Directory should be open now`);
     }
   }
 

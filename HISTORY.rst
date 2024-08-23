@@ -39,6 +39,7 @@ Unreleased Changes
 ------------------
 * Workbench
   * Several small updates to the model input form UI to improve usability and visual consistency (https://github.com/natcap/invest/issues/912)
+  * Fixed a bug that caused the application to crash when attempting to open a workspace without a valid logfile (https://github.com/natcap/invest/issues/1598)
 
 3.14.2 (2024-05-29)
 -------------------

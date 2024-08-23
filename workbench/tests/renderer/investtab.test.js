@@ -506,7 +506,7 @@ describe('InVEST Run Button', () => {
     uiConfig.UI_SPEC = mockUISpec(spec);
   });
 
-  xtest('Changing inputs trigger validation & enable/disable Run', async () => {
+  test('Changing inputs trigger validation & enable/disable Run', async () => {
     let invalidFeedback = 'is a required key';
     fetchValidation.mockResolvedValue([[['a', 'b'], invalidFeedback]]);
 
