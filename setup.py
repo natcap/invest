@@ -24,11 +24,11 @@ include_dirs = [numpy.get_include(), 'src/natcap/invest/managed_raster']
 if platform.system() == 'Darwin':
     compiler_args = []
     compiler_and_linker_args = ['-stdlib=libc++', '-std=c++20']
-    library_dirs = [f'{os.environ['CONDA_PREFIX']}/lib']
+    library_dirs = [f'{os.environ["CONDA_PREFIX"]}/lib']
 else:
     compiler_args = ['/std:c++20']
-    library_dirs = [f'{os.environ['CONDA_PREFIX']}/Library/lib']
-    include_dirs.append(f'{os.environ['CONDA_PREFIX']}/Library/include')
+    library_dirs = [f'{os.environ["CONDA_PREFIX"]}/Library/lib']
+    include_dirs.append(f'{os.environ["CONDA_PREFIX"]}/Library/include')
 
 
 class build_py(_build_py):
