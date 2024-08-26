@@ -24,11 +24,11 @@ include_dirs = [numpy.get_include(), 'src/natcap/invest/managed_raster']
 if platform.system() == 'Darwin':
     compiler_args = []
     compiler_and_linker_args = ['-stdlib=libc++', '-std=c++20']
-    library_dirs = []
+    library_dirs = [f'{os.environ['CONDA_PREFIX']}/lib']
 else:
     compiler_args = ['/std:c++20']
-    library_dirs = [r"C:\Users\runneradmin\micromamba\envs\env\Library\lib"]
-    include_dirs.append(r"C:\Users\runneradmin\micromamba\envs\env\Library\include")
+    library_dirs = [f'{os.environ['CONDA_PREFIX']}/Library/lib']
+    include_dirs.append(f'{os.environ['CONDA_PREFIX']}/Library/include')
 
 
 class build_py(_build_py):
@@ -62,7 +62,7 @@ setup(
             extra_link_args=compiler_and_linker_args,
             language='c++',
             libraries=['gdal'],
-            library_dirs=library_dirs,
+            library_dirs=["/Users/emily/mambaforge/envs/plugin/envs/main/lib"],
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
         ) for package, module, package_compiler_args in [
             ('delineateit', 'delineateit_core', []),
@@ -79,6 +79,7 @@ setup(
             ('scenic_quality', 'viewshed', ['-ffp-contract=off']),
             ('ndr', 'ndr_core', []),
             ('sdr', 'sdr_core', []),
+            ('sdr', 'sdr_core_main', []),
             ('seasonal_water_yield', 'seasonal_water_yield_core', [])
         ]
     ], compiler_directives={'language_level': '3'}),
