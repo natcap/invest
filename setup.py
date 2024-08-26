@@ -62,7 +62,7 @@ setup(
             extra_link_args=compiler_and_linker_args,
             language='c++',
             libraries=['gdal'],
-            library_dirs=["/Users/emily/mambaforge/envs/plugin/envs/main/lib"],
+            library_dirs=library_dirs,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
         ) for package, module, package_compiler_args in [
             ('delineateit', 'delineateit_core', []),
