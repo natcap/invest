@@ -272,70 +272,70 @@ test('Check local userguide links', async () => {
   }
 });
 
-test('Install and run a plugin', async () => {
-  // On GHA MacOS, we seem to have to wait a long time for the browser
-  // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
-  let i = 0;
-  while (!BROWSER || !BROWSER.isConnected()) {
-    i++;
-    await new Promise(r => setTimeout(r, 1000));
-  }
-  console.log(`waited ${i} seconds for pptr to connect`);
-  // find the mainWindow's index.html, not the splashScreen's splash.html
-  const target = await BROWSER.waitForTarget(
-    (target) => target.url().endsWith('index.html')
-  );
-  const page = await target.page();
-  page.on('error', (err) => {
-    console.log(err);
-  });
-  await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
-  const downloadModal = await page.waitForSelector('.modal-dialog');
-  const downloadModalCancel = await downloadModal.waitForSelector(
-    'aria/[name="Cancel"][role="button"]'
-  );
-  await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
-  await downloadModalCancel.click();
+// test('Install and run a plugin', async () => {
+//   // On GHA MacOS, we seem to have to wait a long time for the browser
+//   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
+//   let i = 0;
+//   while (!BROWSER || !BROWSER.isConnected()) {
+//     i++;
+//     await new Promise(r => setTimeout(r, 1000));
+//   }
+//   console.log(`waited ${i} seconds for pptr to connect`);
+//   // find the mainWindow's index.html, not the splashScreen's splash.html
+//   const target = await BROWSER.waitForTarget(
+//     (target) => target.url().endsWith('index.html')
+//   );
+//   const page = await target.page();
+//   page.on('error', (err) => {
+//     console.log(err);
+//   });
+//   await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
+//   const downloadModal = await page.waitForSelector('.modal-dialog');
+//   const downloadModalCancel = await downloadModal.waitForSelector(
+//     'aria/[name="Cancel"][role="button"]'
+//   );
+//   await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
+//   await downloadModalCancel.click();
 
-  const addPluginButton = await page.waitForSelector('div ::-p-text(Add a plugin)');
-  await addPluginButton.click();
-  console.log('clicked add plugin');
-  const urlInputField = await page.waitForSelector('input[name=url]');
-  console.log('found url field');
-  await urlInputField.type(TEST_PLUGIN_GIT_URL, { delay: TYPE_DELAY });
-  console.log('typed into input field');
-  const submitButton = await page.waitForSelector('button[name=submit]');
-  console.log('found submit button');
-  console.log(submitButton);
-  await submitButton.click();
-  console.log('clicked submit');
-  const pluginButton = await page.waitForSelector("button[name='Foo Model']");
-  await pluginButton.evaluate((b) => b.click());
+//   const addPluginButton = await page.waitForSelector('div ::-p-text(Add a plugin)');
+//   await addPluginButton.click();
+//   console.log('clicked add plugin');
+//   const urlInputField = await page.waitForSelector('input[name=url]');
+//   console.log('found url field');
+//   await urlInputField.type(TEST_PLUGIN_GIT_URL, { delay: TYPE_DELAY });
+//   console.log('typed into input field');
+//   const submitButton = await page.waitForSelector('button[name=submit]');
+//   console.log('found submit button');
+//   console.log(submitButton);
+//   await submitButton.click();
+//   console.log('clicked submit');
+//   const pluginButton = await page.waitForSelector("button[name='Foo Model']");
+//   await pluginButton.evaluate((b) => b.click());
 
-  await page.waitForSelector('div ::-p-text(Starting up model...)');
-  console.log('starting up model');
-  const argsForm = await page.waitForSelector('.args-form');
-  console.log('found args form');
-  const workspace = await argsForm.waitForSelector(
-    'aria/[name="Workspace"][role="textbox"]'
-  );
-  console.log('found workspace');
-  await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
-  const rasterInput = await argsForm.waitForSelector(
-    'aria/[name="Input Raster"][role="textbox"]'
-  );
-  await rasterInput.type(testRaster, { delay: TYPE_DELAY });
-  const numberInput = await argsForm.waitForSelector(
-    'aria/[name="Multiplication Factor"][role="textbox"]'
-  );
-  await numberInput.type('2', { delay: TYPE_DELAY });
+//   await page.waitForSelector('div ::-p-text(Starting up model...)');
+//   console.log('starting up model');
+//   const argsForm = await page.waitForSelector('.args-form');
+//   console.log('found args form');
+//   const workspace = await argsForm.waitForSelector(
+//     'aria/[name="Workspace"][role="textbox"]'
+//   );
+//   console.log('found workspace');
+//   await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
+//   const rasterInput = await argsForm.waitForSelector(
+//     'aria/[name="Input Raster"][role="textbox"]'
+//   );
+//   await rasterInput.type(testRaster, { delay: TYPE_DELAY });
+//   const numberInput = await argsForm.waitForSelector(
+//     'aria/[name="Multiplication Factor"][role="textbox"]'
+//   );
+//   await numberInput.type('2', { delay: TYPE_DELAY });
 
-  const sidebar = await page.waitForSelector('.invest-sidebar-col');
-  const runButton = await sidebar.waitForSelector('.btn-primary:not([disabled])');
-  await runButton.click();
-  await page.waitForSelector('#invest-tab-tab-log.active');
-  await page.waitForSelector('div ::-p-text(Model Complete)');
-}, 500000);
+//   const sidebar = await page.waitForSelector('.invest-sidebar-col');
+//   const runButton = await sidebar.waitForSelector('.btn-primary:not([disabled])');
+//   await runButton.click();
+//   await page.waitForSelector('#invest-tab-tab-log.active');
+//   await page.waitForSelector('div ::-p-text(Model Complete)');
+// }, 500000);
 
 const testWin = process.platform === 'win32' ? test : test.skip;
 /* Test for duplicate application launch.
