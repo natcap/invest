@@ -204,13 +204,15 @@ def check_directory(dirpath, must_exist=True, permissions='rx', **kwargs):
     # Check for x access before checking for w, since w operations to a dir are dependent on x access
     if 'x' in permissions:
         try:
+            cwd = os.getcwd()
             os.chdir(dirpath)
+            os.chdir(cwd)
         except:
             return MESSAGES[MESSAGE_KEY].format(permission='execute')
 
     if 'w' in permissions:
         try:
-            tempfile.TemporaryFile(dir=dirpath)
+            tempfile.TemporaryFile(dir=dirpath).close()
         except:
             return MESSAGES[MESSAGE_KEY].format(permission='write')
 
