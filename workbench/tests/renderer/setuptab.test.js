@@ -63,7 +63,7 @@ const UI_SPEC = { order: [Object.keys(BASE_MODEL_SPEC.args)] };
  * @param {object} baseSpec - an invest model spec
  * @returns {object} - containing the test utility functions returned by render
  */
-function renderSetupFromSpec(baseSpec, initValues = undefined) {
+function renderSetupFromSpec(baseSpec, uiSpec, initValues = undefined) {
   // some MODEL_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
   const spec = { ...baseSpec };
@@ -76,7 +76,7 @@ function renderSetupFromSpec(baseSpec, initValues = undefined) {
       userguide={spec.userguide}
       modelId={spec.modelName}
       argsSpec={spec.args}
-      uiSpec={spec.ui_spec}
+      uiSpec={uiSpec}
       argsInitValues={initValues}
       investExecute={() => {}}
       nWorkers="-1"
@@ -108,7 +108,7 @@ describe('Arguments form input types', () => {
 
     const {
       findByLabelText, findByRole,
-    } = renderSetupFromSpec(spec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(RegExp(`^${spec.args.arg.name}`));
     expect(input).toHaveAttribute('type', 'text');
@@ -137,7 +137,7 @@ describe('Arguments form input types', () => {
 
   test('render an unchecked toggle switch for a boolean', async () => {
     const spec = baseArgsSpec('boolean');
-    const { findByLabelText } = renderSetupFromSpec(spec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
     // for some reason, the type is still checkbox when it renders as a switch
     expect(input).toHaveAttribute('type', 'checkbox');
@@ -146,7 +146,7 @@ describe('Arguments form input types', () => {
 
   test('render a toggle with a value', async () => {
     const spec = baseArgsSpec('boolean');
-    const { findByLabelText } = renderSetupFromSpec(spec, { arg: true });
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC, { arg: true });
     const input = await findByLabelText(`${spec.args.arg.name}`);
     // for some reason, the type is still checkbox when it renders as a switch
     expect(input).toBeChecked();
@@ -155,12 +155,12 @@ describe('Arguments form input types', () => {
   test('render a select input for an option_string dict', async () => {
     const spec = baseArgsSpec('option_string');
     spec.args.arg.options = {
-      a: {'display_name': 'Option A'},
-      b: {'display_name': 'Option B'}
+      a: { display_name: 'Option A' },
+      b: { display_name: 'Option B' },
     };
-    const { findByLabelText } = renderSetupFromSpec(spec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
-    expect(input).toHaveDisplayValue('Option A')
+    expect(input).toHaveDisplayValue('Option A');
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
@@ -168,7 +168,7 @@ describe('Arguments form input types', () => {
   test('render a select input for an option_string list', async () => {
     const spec = baseArgsSpec('option_string');
     spec.args.arg.options = ['a', 'b'];
-    const { findByLabelText } = renderSetupFromSpec(spec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
@@ -207,7 +207,7 @@ describe('Arguments form interactions', () => {
     const spec = baseArgsSpec('csv');
     const {
       findByRole, findByLabelText,
-    } = renderSetupFromSpec(spec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
     expect(input).toHaveAttribute('type', 'text');
@@ -236,7 +236,7 @@ describe('Arguments form interactions', () => {
     const spec = baseArgsSpec('csv');
     const {
       findByRole, findByLabelText,
-    } = renderSetupFromSpec(spec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const filepath = 'grilled_cheese.csv';
     const mockDialogData = { filePaths: [filepath] };
@@ -254,7 +254,7 @@ describe('Arguments form interactions', () => {
     spec.args.arg.required = true;
     const {
       findByText, findByLabelText, queryByText,
-    } = renderSetupFromSpec(spec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
 
@@ -283,7 +283,7 @@ describe('Arguments form interactions', () => {
     const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
     const spec = baseArgsSpec('directory');
     spec.args.arg.required = true;
-    const { findByLabelText } = renderSetupFromSpec(spec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
     spy.mockClear(); // it was already called once on render
@@ -299,7 +299,7 @@ describe('Arguments form interactions', () => {
     const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
     const spec = baseArgsSpec('directory');
     spec.args.arg.required = true;
-    const { findByLabelText } = renderSetupFromSpec(spec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
     spy.mockClear(); // it was already called once on render
@@ -317,7 +317,7 @@ describe('Arguments form interactions', () => {
     spec.args.arg.required = true;
     const {
       findByText, findByLabelText, queryByText,
-    } = renderSetupFromSpec(spec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
     expect(input).toHaveClass('is-invalid');
@@ -335,7 +335,7 @@ describe('Arguments form interactions', () => {
     const spec = baseArgsSpec('csv');
     spec.args.arg.required = false;
     fetchValidation.mockResolvedValue([]);
-    const { findByLabelText } = renderSetupFromSpec(spec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText((content) => content.includes('optional'));
 
@@ -353,7 +353,7 @@ describe('Arguments form interactions', () => {
     const spy = jest.spyOn(ipcRenderer, 'send')
       .mockImplementation(() => Promise.resolve());
     const spec = baseArgsSpec('directory');
-    const { findByText, findByRole } = renderSetupFromSpec(spec);
+    const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
     await userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
     const link = await findByRole('link', { name: /user guide/ });
@@ -385,14 +385,17 @@ describe('UI spec functionality', () => {
           name: 'Bfoo',
           type: 'boolean',
         },
+        arg3: {
+          name: 'Cfoo',
+          type: 'number',
+        },
+        arg4: {
+          name: 'Dfoo',
+          type: 'number',
+        },
       },
-      ui_spec: {
-        order: [['arg1', 'arg2']],
-      }
     };
-    fetchArgsEnabled.mockResolvedValue({
-      arg1: false, arg2: true
-    })
+    fetchArgsEnabled.mockResolvedValue({ arg1: false, arg2: true });
 
     const uiSpec = {
       order: [Object.keys(spec.args)],
@@ -422,6 +425,7 @@ describe('UI spec functionality', () => {
 
   test('expect dropdown options can be dynamic', async () => {
     getDynamicDropdowns.mockResolvedValue({ arg2: ['Field1'] });
+    fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
     const spec = {
       args: {
         arg1: {
@@ -434,14 +438,13 @@ describe('UI spec functionality', () => {
           options: {},
         },
       },
-      ui_spec: {
-        order: [['arg1', 'arg2']],
-        dropdown_functions: {
-          arg2: 'function to retrieve arg1 column names',
-        },
+    };
+    const uiSpec = {
+      order: [Object.keys(spec.args)],
+      dropdown_functions: {
+        arg2: 'function to retrieve arg1 column names',
       },
     };
-
     const {
       findByLabelText, findByText, queryByText,
     } = renderSetupFromSpec(spec, uiSpec);
@@ -483,13 +486,14 @@ describe('UI spec functionality', () => {
           type: 'number',
         },
       },
-      ui_spec: {
-        // intentionally leaving out arg6, it should not be in the setup form
-        order: [['arg4'], ['arg3', 'arg2'], ['arg1'], ['arg5']],
-      }
     };
 
-    const { findByTestId, queryByText } = renderSetupFromSpec(spec);
+    const uiSpec = {
+      // intentionally leaving out arg6, it should not be in the setup form
+      order: [['arg4'], ['arg3', 'arg2'], ['arg1'], ['arg5']],
+    };
+
+    const { findByTestId, queryByText } = renderSetupFromSpec(spec, uiSpec);
     const form = await findByTestId('setup-form');
 
     await waitFor(() => {
@@ -530,10 +534,8 @@ describe('Misc form validation stuff', () => {
           type: 'csv',
         },
       },
-      ui_spec: {
-        order: [['a', 'b', 'c']]
-      }
     };
+    const uiSpec = { order: [Object.keys(spec.args)] };
 
     // Mocking to return the payload so we can assert we always send
     // correct payload to this endpoint.
@@ -542,7 +544,7 @@ describe('Misc form validation stuff', () => {
     );
     fetchArgsEnabled.mockResolvedValue({ a: true, b: true, c: true });
 
-    renderSetupFromSpec(spec);
+    renderSetupFromSpec(spec, uiSpec);
     await waitFor(() => {
       const expectedKeys = ['model_module', 'args'];
       const payload = fetchValidation.mock.results[0].value;
@@ -564,10 +566,8 @@ describe('Misc form validation stuff', () => {
           type: 'raster',
         },
       },
-      ui_spec: {
-        order: [['vector', 'raster']]
-      }
     };
+    const uiSpec = { order: [Object.keys(spec.args)] };
     const vectorValue = './vector.shp';
     const expectedVal1 = '-84.9';
     const vectorBox = `[${expectedVal1}, 19.1, -69.1, 29.5]`;
@@ -621,16 +621,12 @@ describe('Form drag-and-drop', () => {
           type: 'vector',
         },
       },
-      ui_spec: {
-        order: [['arg1', 'arg2']]
-      },
     };
+    const uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
-    fetchArgsEnabled.mockResolvedValue({
-      arg1: true, arg2: true
-    });
+    fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
     const mockDatastack = {
       module_name: spec.pyname,
@@ -643,7 +639,7 @@ describe('Form drag-and-drop', () => {
 
     const {
       findByLabelText, findByTestId,
-    } = renderSetupFromSpec(spec);
+    } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
 
     // This should work but doesn't due to lack of dataTransfer object in jsdom:
@@ -688,16 +684,12 @@ describe('Form drag-and-drop', () => {
           type: 'vector',
         },
       },
-      ui_spec: {
-        order: [['arg1', 'arg2']]
-      },
     };
+    const uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
-    fetchArgsEnabled.mockResolvedValue({
-      arg1: true, arg2: true
-    });
+    fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
     const mockDatastack = {
       module_name: spec.pyname,
@@ -710,7 +702,7 @@ describe('Form drag-and-drop', () => {
 
     const {
       findByLabelText, findByTestId,
-    } = renderSetupFromSpec(spec);
+    } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
 
     const fileDragEvent = createEvent.dragEnter(setupForm);
@@ -755,18 +747,14 @@ describe('Form drag-and-drop', () => {
           type: 'vector',
         },
       },
-      ui_spec: {
-        order: [['arg1', 'arg2']]
-      },
     };
+    const uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
-    fetchArgsEnabled.mockResolvedValue({
-      arg1: true, arg2: true
-    });
+    fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
-    const { findByTestId } = renderSetupFromSpec(spec);
+    const { findByTestId } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
 
     const fileDragEnterEvent = createEvent.dragEnter(setupForm);
@@ -804,20 +792,16 @@ describe('Form drag-and-drop', () => {
           type: 'vector',
         },
       },
-      ui_spec: {
-        order: [['arg1', 'arg2']]
-      },
     };
+    const uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
-    fetchArgsEnabled.mockResolvedValue({
-      arg1: true, arg2: true
-    });
+    fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
     const {
       findByLabelText, findByTestId,
-    } = renderSetupFromSpec(spec);
+    } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
     const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
 
@@ -862,16 +846,12 @@ describe('Form drag-and-drop', () => {
           type: 'vector',
         },
       },
-      ui_spec: {
-        order: [['arg1', 'arg2']]
-      },
     };
+    const uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
-    fetchArgsEnabled.mockResolvedValue({
-      arg1: true, arg2: true
-    });
+    fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
     const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
@@ -914,17 +894,18 @@ describe('Form drag-and-drop', () => {
           type: 'vector',
         },
       },
-      ui_spec: {
-        order: [['arg1', 'arg2']]
+    };
+    const uiSpec = {
+      order: [Object.keys(spec.args)],
+      enabledFunctions: {
+        arg2: (() => false), // make this arg always disabled
       },
     };
 
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
-    fetchArgsEnabled.mockResolvedValue({
-      arg1: true, arg2: false
-    });
+    fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: false });
 
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
     const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
