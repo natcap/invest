@@ -65,7 +65,9 @@ MESSAGES = {
     'BBOX_NOT_INTERSECT': gettext(
         'Not all of the spatial layers overlap each '
         'other. All bounding boxes must intersect: {bboxes}'),
-    'NEED_PERMISSION': gettext(
+    'NEED_PERMISSION_DIRECTORY': gettext(
+        'You must have {permission} access to this directory'),
+    'NEED_PERMISSION_FILE': gettext(
         'You must have {permission} access to this file'),
     'WRONG_GEOM_TYPE': gettext('Geometry type must be one of {allowed}')
 }
@@ -191,7 +193,7 @@ def check_directory(dirpath, must_exist=True, permissions='rx', **kwargs):
                 dirpath = parent
                 break
 
-    permissions_warning = check_permissions(dirpath, permissions)
+    permissions_warning = check_permissions(dirpath, permissions, True)
     if permissions_warning:
         return permissions_warning
 
@@ -218,7 +220,7 @@ def check_file(filepath, permissions='r', **kwargs):
         return permissions_warning
 
 
-def check_permissions(path, permissions):
+def check_permissions(path, permissions, is_directory=False):
     """Validate permissions on a filesystem object.
 
     This function uses ``os.access`` to determine permissions access.
@@ -229,6 +231,8 @@ def check_permissions(path, permissions):
             and/or ``x`` (lowercase), indicating read, write, and execute
             permissions (respectively) that the filesystem object at ``path``
             must have.
+        is_directory (boolean): Indicates whether the path refers to a directory
+            (True) or a file (False). Defaults to False.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -239,7 +243,8 @@ def check_permissions(path, permissions):
             ('w', os.W_OK, 'write'),
             ('x', os.X_OK, 'execute')):
         if letter in permissions and not os.access(path, mode):
-            return MESSAGES['NEED_PERMISSION'].format(permission=letter)
+            message_key = 'NEED_PERMISSION_DIRECTORY' if is_directory else 'NEED_PERMISSION_FILE'
+            return MESSAGES[message_key].format(permission=descriptor)
 
 
 def _check_projection(srs, projected, projection_units):

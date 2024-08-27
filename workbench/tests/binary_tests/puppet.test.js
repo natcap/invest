@@ -188,16 +188,16 @@ test('Run a real invest model', async () => {
   const argsForm = await page.waitForSelector('.args-form');
 
   const workspace = await argsForm.waitForSelector(
-    'aria/[name="Workspace"][role="textbox"]');
+    'aria/[name="Workspace (directory)"][role="textbox"]');
   await workspace.type(TMP_DIR, { delay: TYPE_DELAY });
   const aoi = await argsForm.waitForSelector(
-    'aria/[name="Area Of Interest"][role="textbox"]');
+    'aria/[name="Area Of Interest (vector)"][role="textbox"]');
   await aoi.type(TMP_AOI_PATH, { delay: TYPE_DELAY });
   const startYear = await argsForm.waitForSelector(
-    'aria/[name="Start Year"][role="textbox"]');
+    'aria/[name="Start Year (number)"][role="textbox"]');
   await startYear.type('2008', { delay: TYPE_DELAY });
   const endYear = await argsForm.waitForSelector(
-    'aria/[name="End Year"][role="textbox"]');
+    'aria/[name="End Year (number)"][role="textbox"]');
   await endYear.type('2012', { delay: TYPE_DELAY });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
 
@@ -315,7 +315,7 @@ test('Check local userguide links', async () => {
 
 //   await page.waitForSelector('div ::-p-text(Starting up model...)');
 //   console.log('starting up model');
-//   const argsForm = await page.waitForSelector('.args-form', { timeout: 3000000 });
+//   const argsForm = await page.waitForSelector('.args-form');
 //   console.log('found args form');
 //   const workspace = await argsForm.waitForSelector(
 //     'aria/[name="Workspace"][role="textbox"]'
@@ -336,7 +336,7 @@ test('Check local userguide links', async () => {
 //   await runButton.click();
 //   await page.waitForSelector('#invest-tab-tab-log.active');
 //   await page.waitForSelector('div ::-p-text(Model Complete)');
-// }, 3000000);
+// }, 500000);
 
 const testWin = process.platform === 'win32' ? test : test.skip;
 /* Test for duplicate application launch.
