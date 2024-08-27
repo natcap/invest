@@ -55,6 +55,7 @@ const BASE_ARGS_ENABLED = {}
 Object.keys(BASE_MODEL_SPEC.args).forEach((arg) => {
   BASE_ARGS_ENABLED[arg] = true;
 });
+const UI_SPEC = { order: [Object.keys(BASE_MODEL_SPEC.args)] };
 
 /**
  * Render a SetupTab component given the necessary specs.
@@ -122,15 +123,15 @@ describe('Arguments form input types', () => {
     ['integer'],
   ])('render a text input for a %s', async (type) => {
     const spec = baseArgsSpec(type);
-    const { findByLabelText } = renderSetupFromSpec(spec);
-    const input = await findByLabelText(RegExp(`^${spec.args.arg.name}$`));
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
     expect(input).toHaveAttribute('type', 'text');
   });
 
   test('render a text input with unit label for a number', async () => {
     const spec = baseArgsSpec('number');
-    const { findByLabelText } = renderSetupFromSpec(spec);
-    const input = await findByLabelText(`${spec.args.arg.name} (${spec.args.arg.units})`);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
+    const input = await findByLabelText(`${spec.args.arg.name} (number) (${spec.args.arg.units})`);
     expect(input).toHaveAttribute('type', 'text');
   });
 
@@ -182,8 +183,8 @@ describe('Arguments form input types', () => {
       paramZ: missingValue, // paramZ is not in the ARGS_SPEC
     };
 
-    const { findByLabelText, queryByText } = renderSetupFromSpec(spec, initArgs);
-    const input = await findByLabelText(`${spec.args.arg.name} (${spec.args.arg.units})`);
+    const { findByLabelText, queryByText } = renderSetupFromSpec(spec, UI_SPEC, initArgs);
+    const input = await findByLabelText(`${spec.args.arg.name} (number) (${spec.args.arg.units})`);
     await waitFor(() => expect(input).toHaveValue(displayedValue));
     expect(queryByText(missingValue)).toBeNull();
   });
@@ -208,7 +209,7 @@ describe('Arguments form interactions', () => {
       findByRole, findByLabelText,
     } = renderSetupFromSpec(spec);
 
-    const input = await findByLabelText(`${spec.args.arg.name}`);
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
     expect(input).toHaveAttribute('type', 'text');
     expect(await findByRole('button', { name: /browse for/ }))
       .toBeInTheDocument();
@@ -244,7 +245,7 @@ describe('Arguments form interactions', () => {
     // Click on a target element nested within the button to make
     // sure the handler still works correctly.
     await userEvent.click(btn.querySelector('svg'));
-    expect(await findByLabelText(`${spec.args.arg.name}`))
+    expect(await findByLabelText((content) => content.startsWith(spec.args.arg.name)))
       .toHaveValue(filepath);
   });
 
@@ -255,7 +256,7 @@ describe('Arguments form interactions', () => {
       findByText, findByLabelText, queryByText,
     } = renderSetupFromSpec(spec);
 
-    const input = await findByLabelText(`${spec.args.arg.name}`);
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
 
     // A required input with no value is invalid (red X), but
     // feedback does not display until the input has been touched.
@@ -284,7 +285,7 @@ describe('Arguments form interactions', () => {
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec);
 
-    const input = await findByLabelText(`${spec.args.arg.name}`);
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
     spy.mockClear(); // it was already called once on render
 
     // Fast typing, expect only 1 validation call
@@ -300,7 +301,7 @@ describe('Arguments form interactions', () => {
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec);
 
-    const input = await findByLabelText(`${spec.args.arg.name}`);
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
     spy.mockClear(); // it was already called once on render
 
     // Slow typing, expect validation call after each character
@@ -318,7 +319,7 @@ describe('Arguments form interactions', () => {
       findByText, findByLabelText, queryByText,
     } = renderSetupFromSpec(spec);
 
-    const input = await findByLabelText(spec.args.arg.name);
+    const input = await findByLabelText((content) => content.startsWith(spec.args.arg.name));
     expect(input).toHaveClass('is-invalid');
     expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
 
@@ -336,7 +337,7 @@ describe('Arguments form interactions', () => {
     fetchValidation.mockResolvedValue([]);
     const { findByLabelText } = renderSetupFromSpec(spec);
 
-    const input = await findByLabelText(`${spec.args.arg.name} (optional)`);
+    const input = await findByLabelText((content) => content.includes('optional'));
 
     // An optional input with no value is valid, but green check
     // does not display until the input has been touched.
@@ -393,9 +394,25 @@ describe('UI spec functionality', () => {
       arg1: false, arg2: true
     })
 
-    const { findByLabelText } = renderSetupFromSpec(spec);
-    const arg1 = await findByLabelText(`${spec.args.arg1.name}`);
-    const arg2 = await findByLabelText(`${spec.args.arg2.name}`);
+    const uiSpec = {
+      order: [Object.keys(spec.args)],
+      enabledFunctions: {
+        // enabled if arg1 is sufficient
+        arg2: ((state) => state.argsEnabled.arg1 && !!state.argsValues.arg1.value),
+        // enabled if arg1 and arg2 are sufficient
+        arg3: ((state) => state.argsEnabled.arg1 && !!state.argsValues.arg1.value
+                       && (state.argsEnabled.arg2 && !!state.argsValues.arg2.value)),
+        // enabled if arg1 is sufficient and arg2 is not sufficient
+        arg4: ((state) => state.argsEnabled.arg1 && !!state.argsValues.arg1.value
+                      && !(state.argsEnabled.arg2 && !!state.argsValues.arg2.value)),
+      },
+    };
+
+    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const arg1 = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
+    const arg2 = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
+    const arg3 = await findByLabelText((content) => content.startsWith(spec.args.arg3.name));
+    const arg4 = await findByLabelText((content) => content.startsWith(spec.args.arg4.name));
 
     await waitFor(() => {
       expect(arg1).toBeDisabled();
@@ -427,8 +444,8 @@ describe('UI spec functionality', () => {
 
     const {
       findByLabelText, findByText, queryByText,
-    } = renderSetupFromSpec(spec);
-    const arg1 = await findByLabelText(`${spec.args.arg1.name}`);
+    } = renderSetupFromSpec(spec, uiSpec);
+    const arg1 = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
     let option = await queryByText('Field1');
     expect(option).toBeNull();
 
@@ -564,8 +581,8 @@ describe('Misc form validation stuff', () => {
 
     fetchValidation.mockResolvedValue([[Object.keys(spec.args), message]]);
     fetchArgsEnabled.mockResolvedValue({ vector: true, raster: true });
-    const { findByLabelText } = renderSetupFromSpec(spec);
-    const vectorInput = await findByLabelText(spec.args.vector.name);
+    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const vectorInput = await findByLabelText((content) => content.startsWith(spec.args.vector.name));
     const rasterInput = await findByLabelText(RegExp(`^${spec.args.raster.name}`));
     await userEvent.type(vectorInput, vectorValue);
     await userEvent.type(rasterInput, rasterValue);
@@ -652,9 +669,9 @@ describe('Form drag-and-drop', () => {
     });
     fireEvent(setupForm, fileDropEvent);
 
-    expect(await findByLabelText(`${spec.args.arg1.name}`))
+    expect(await findByLabelText((content) => content.startsWith(spec.args.arg1.name)))
       .toHaveValue(mockDatastack.args.arg1);
-    expect(await findByLabelText(`${spec.args.arg2.name}`))
+    expect(await findByLabelText((content) => content.startsWith(spec.args.arg2.name)))
       .toHaveValue(mockDatastack.args.arg2);
   });
 
@@ -718,9 +735,9 @@ describe('Form drag-and-drop', () => {
     });
     fireEvent(setupForm, fileDropEvent);
 
-    expect(await findByLabelText(`${spec.args.arg1.name}`))
+    expect(await findByLabelText((content) => content.startsWith(spec.args.arg1.name)))
       .toHaveValue(mockDatastack.args.arg1);
-    expect(await findByLabelText(`${spec.args.arg2.name}`))
+    expect(await findByLabelText((content) => content.startsWith(spec.args.arg2.name)))
       .toHaveValue(mockDatastack.args.arg2);
     expect(setupForm).not.toHaveClass('dragging');
   });
@@ -802,7 +819,7 @@ describe('Form drag-and-drop', () => {
       findByLabelText, findByTestId,
     } = renderSetupFromSpec(spec);
     const setupForm = await findByTestId('setup-form');
-    const setupInput = await findByLabelText(`${spec.args.arg1.name}`);
+    const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
 
     const fileDragEvent = createEvent.dragEnter(setupInput);
     // `dataTransfer.files` normally returns a `FileList` object. Since we are
@@ -856,8 +873,8 @@ describe('Form drag-and-drop', () => {
       arg1: true, arg2: true
     });
 
-    const { findByLabelText } = renderSetupFromSpec(spec);
-    const setupInput = await findByLabelText(`${spec.args.arg1.name}`);
+    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
 
     const fileDragEnterEvent = createEvent.dragEnter(setupInput);
     // `dataTransfer.files` normally returns a `FileList` object. Since we are
@@ -908,8 +925,9 @@ describe('Form drag-and-drop', () => {
     fetchArgsEnabled.mockResolvedValue({
       arg1: true, arg2: false
     });
-    const { findByLabelText } = renderSetupFromSpec(spec);
-    const setupInput = await findByLabelText(`${spec.args.arg2.name}`);
+
+    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const setupInput = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
 
     const fileDragEnterEvent = createEvent.dragEnter(setupInput);
     // `dataTransfer.files` normally returns a `FileList` object. Since we are

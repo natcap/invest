@@ -117,7 +117,7 @@ describe('Various ways to open and close InVEST models', () => {
     expect(setupTab.classList.contains('active')).toBeTruthy();
 
     // Expect some arg values that were loaded from the saved job:
-    const input = await findByLabelText(SAMPLE_SPEC.args.workspace_dir.name);
+    const input = await findByLabelText((content) => content.startsWith(SAMPLE_SPEC.args.workspace_dir.name));
     expect(input).toHaveValue(
       argsValues.workspace_dir
     );
@@ -155,7 +155,7 @@ describe('Various ways to open and close InVEST models', () => {
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
     const input = await findByLabelText(
-      SAMPLE_SPEC.args.carbon_pools_path.name
+      (content) => content.startsWith(SAMPLE_SPEC.args.carbon_pools_path.name)
     );
     expect(setupTab.classList.contains('active')).toBeTruthy();
     expect(input).toHaveValue(mockDatastack.args.carbon_pools_path);
