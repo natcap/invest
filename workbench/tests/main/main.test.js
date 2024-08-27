@@ -9,7 +9,7 @@
 
 import fs from 'fs';
 import os from 'os';
-import path from 'path';
+import upath from 'upath';
 import { spawnSync } from 'child_process';
 
 import { app, ipcMain } from 'electron';
@@ -55,7 +55,7 @@ beforeEach(() => {
 });
 
 describe('checkFirstRun', () => {
-  const tokenPath = path.join(app.getPath(), APP_HAS_RUN_TOKEN);
+  const tokenPath = upath.join(app.getPath(), APP_HAS_RUN_TOKEN);
   beforeEach(() => {
     try {
       fs.unlinkSync(tokenPath);
@@ -94,7 +94,7 @@ describe('findInvestBinaries', () => {
     const isDevMode = false;
     const exePath = findInvestBinaries(isDevMode);
     expect(exePath).toBe(
-      `"${path.join(process.resourcesPath, 'invest', filename)}"`
+      `"${upath.join(process.resourcesPath, 'invest', filename)}"`
     );
   });
 
@@ -114,8 +114,8 @@ describe('findInvestBinaries', () => {
 // probably means re-writing this test from scratch.
 const maybe = process.platform !== 'win32' ? describe : describe.skip;
 maybe('extractZipInplace', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
-  const zipPath = path.join(root, 'output.zip');
+  const root = fs.mkdtempSync(upath.join(os.tmpdir(), 'data-'));
+  const zipPath = upath.join(root, 'output.zip');
   let level1Dir;
   let level2Dir;
   let file1Path;
@@ -123,18 +123,18 @@ maybe('extractZipInplace', () => {
   let doneZipping = false;
 
   beforeEach((done) => {
-    level1Dir = fs.mkdtempSync(path.join(root, 'level1'));
-    level2Dir = fs.mkdtempSync(path.join(level1Dir, 'level2'));
-    file1Path = path.join(level1Dir, 'file1');
-    file2Path = path.join(level2Dir, 'file2');
+    level1Dir = fs.mkdtempSync(upath.join(root, 'level1'));
+    level2Dir = fs.mkdtempSync(upath.join(level1Dir, 'level2'));
+    file1Path = upath.join(level1Dir, 'file1');
+    file2Path = upath.join(level2Dir, 'file2');
     fs.closeSync(fs.openSync(file1Path, 'w'));
     fs.closeSync(fs.openSync(file2Path, 'w'));
 
     const zipfile = new yazl.ZipFile();
     // adding the deeper file first, so extract function needs to
     // deal with extracting to non-existent directories.
-    zipfile.addFile(file2Path, path.relative(root, file2Path));
-    zipfile.addFile(file1Path, path.relative(root, file1Path));
+    zipfile.addFile(file2Path, upath.relative(root, file2Path));
+    zipfile.addFile(file1Path, upath.relative(root, file1Path));
     zipfile.outputStream.pipe(
       fs.createWriteStream(zipPath)
     ).on('close', () => {
