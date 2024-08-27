@@ -12,7 +12,7 @@
     "test-main": "jest --runInBand --testMatch **/tests/main/*.test.js",
     "test-renderer": "jest --runInBand --testMatch **/tests/renderer/*.test.js",
     "test-flask": "cross-env PORT=56788 jest --runInBand --testMatch **/tests/invest/*.test.js",
-    "test-electron-app": "jest --detectOpenHandles --runInBand --testMatch **/tests/binary_tests/*.test.js",
+    "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/*.test.js",
     "test-sampledata-registry": "jest --runInBand --testMatch **/tests/sampledata_linkcheck/*.test.js",
     "postinstall": "electron-builder install-app-deps",
     "build-license": "cat ../NOTICE.txt ../LICENSE.txt > build/license_en.txt",

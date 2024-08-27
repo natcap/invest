@@ -38,7 +38,6 @@ export async function getFlaskIsReady(port, i = 0, retries = 41) {
         i++;
         // Try every X ms, usually takes a couple seconds to startup.
         await new Promise((resolve) => setTimeout(resolve, 300));
-        console.log(`retry # ${i}`);
         logger.debug(`retry # ${i}`);
         return getFlaskIsReady(port, i, retries);
       }
@@ -56,11 +55,9 @@ export async function getFlaskIsReady(port, i = 0, retries = 41) {
  */
 export function setupServerProcessHandlers(pythonServerProcess) {
   pythonServerProcess.stdout.on('data', (data) => {
-    console.log(`${data}`);
     logger.debug(`${data}`);
   });
   pythonServerProcess.stderr.on('data', (data) => {
-    console.log(`${data}`);
     logger.debug(`${data}`);
   });
   pythonServerProcess.on('error', (err) => {
