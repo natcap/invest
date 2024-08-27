@@ -9,7 +9,6 @@ import os
 import pprint
 import queue
 import re
-import tempfile
 import threading
 import warnings
 
@@ -212,7 +211,10 @@ def check_directory(dirpath, must_exist=True, permissions='rx', **kwargs):
 
     if 'w' in permissions:
         try:
-            tempfile.TemporaryFile(dir=dirpath).close()
+            temp_path = os.path.join(dirpath, '__temp__workspace_validation_check.txt')
+            with open(temp_path, 'w') as temp:
+                temp.close()
+                os.remove(temp_path)
         except:
             return MESSAGES[MESSAGE_KEY].format(permission='write')
 
