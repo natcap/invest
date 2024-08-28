@@ -7,6 +7,7 @@ import platform
 import shutil
 import stat
 import string
+import sys
 import tempfile
 import textwrap
 import time
@@ -320,6 +321,20 @@ class DirectoryValidation(unittest.TestCase):
         self.assertEqual(None, validation.check_directory(
             self.workspace_dir, permissions='rwx'))
 
+    def test_workspace_not_exists(self):
+        """Validation: when a folder's parent must exist with permissions."""
+        from natcap.invest import validation
+
+        dirpath = 'foo'
+        new_dir = os.path.join(self.workspace_dir, dirpath)
+
+        self.assertEqual(None, validation.check_directory(
+            new_dir, must_exist=False, permissions='rwx'))
+
+@unittest.skipIf(sys.platform.startswith('win'), 'requires support for os.chmod(), which is unreliable on Windows')
+class DirectoryValidationMacOnly(unittest.TestCase):
+    """Test Directory Permissions Validation."""
+
     def test_invalid_permissions_r(self):
         """Validation: when a folder must have read/write/execute permissions but is missing write and execute permissions."""
         from natcap.invest import validation
@@ -373,17 +388,6 @@ class DirectoryValidation(unittest.TestCase):
             os.chmod(tempdir, stat.S_IWRITE | stat.S_IEXEC)
             validation_warning = validation.check_directory(tempdir, permissions='rwx')
             self.assertEqual(validation_warning, validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='read'))
-
-    def test_workspace_not_exists(self):
-        """Validation: when a folder's parent must exist with permissions."""
-        from natcap.invest import validation
-
-        dirpath = 'foo'
-        new_dir = os.path.join(self.workspace_dir, dirpath)
-
-        self.assertEqual(None, validation.check_directory(
-            new_dir, must_exist=False, permissions='rwx'))
-
 
 class FileValidation(unittest.TestCase):
     """Test File Validator."""
