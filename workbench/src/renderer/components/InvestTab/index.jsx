@@ -189,14 +189,8 @@ class InvestTab extends React.Component {
     );
   }
 
-  handleOpenWorkspace(logfile, workspace_dir) {
-    if (logfile) {
-      ipcRenderer.send(ipcMainChannels.SHOW_ITEM_IN_FOLDER, logfile);
-    }
+  handleOpenWorkspace(workspace_dir) {
     if (workspace_dir) {
-      // Always call shell.openPath.
-      // If shell.showItemInFolder failed, it will have failed silently;
-      // if it succeeded, the subsequent call to shell.openPath will not "undo" the result of shell.showItemInFolder.
       this.openWorkspaceDir(workspace_dir);
     }
   }
@@ -284,7 +278,7 @@ class InvestTab extends React.Component {
                     ? (
                       <ModelStatusAlert
                         status={status}
-                        handleOpenWorkspace={() => this.handleOpenWorkspace(logfile, argsValues?.workspace_dir)}
+                        handleOpenWorkspace={() => this.handleOpenWorkspace(argsValues?.workspace_dir)}
                         terminateInvestProcess={this.terminateInvestProcess}
                       />
                     )
