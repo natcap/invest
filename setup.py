@@ -65,8 +65,9 @@ setup(
             library_dirs=library_dirs,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
         ) for package, module, package_compiler_args in [
-            ('delineateit', 'delineateit_core', []),
-            ('recreation', 'out_of_core_quadtree', []),
+            # ('delineateit', 'delineateit_core', []),
+            # ('recreation', 'out_of_core_quadtree', []),
+            # ('managed_raster', 'neighbor_iterable', []),
             # clang-14 defaults to -ffp-contract=on, which causes the
             # arithmetic of A*B+C to be implemented using a contraction, which
             # causes an unexpected change in the precision in some viewshed
@@ -76,11 +77,11 @@ setup(
             #  * https://github.com/natcap/invest/pull/1564/files
             # Using this flag on gcc and on all versions of clang should work
             # as expected, with consistent results.
-            ('scenic_quality', 'viewshed', ['-ffp-contract=off']),
-            ('ndr', 'ndr_core', []),
+            # ('scenic_quality', 'viewshed', ['-ffp-contract=off']),
+            # ('ndr', 'ndr_core', []),
             ('sdr', 'sdr_core', []),
             ('sdr', 'sdr_core_main', []),
-            ('seasonal_water_yield', 'seasonal_water_yield_core', [])
+            # ('seasonal_water_yield', 'seasonal_water_yield_core', [])
         ]
     ], compiler_directives={'language_level': '3'}),
     include_dirs=[numpy.get_include()],

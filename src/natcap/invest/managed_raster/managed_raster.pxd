@@ -3,6 +3,7 @@
 from libcpp.list cimport list as clist
 from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
+from libcpp.stack cimport stack
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libc.math cimport isnan
@@ -36,6 +37,7 @@ cdef extern from "ManagedRaster.h":
         string raster_path
         int band_id
         int closed
+        double nodata
 
         ManagedRaster() except +
         ManagedRaster(char*, int, bool) except +
@@ -44,7 +46,7 @@ cdef extern from "ManagedRaster.h":
         void _load_block(int block_index) except *
         void close()
 
-    cdef cppclass ManagedFlowDirRaster:
+    cdef cppclass ManagedFlowDirRaster[T]:
         LRUCache[int, double*]* lru_cache
         cset[int] dirty_blocks
         int block_xsize
@@ -61,6 +63,7 @@ cdef extern from "ManagedRaster.h":
         string raster_path
         int band_id
         int closed
+        double nodata
 
         bint is_local_high_point(int xi, int yi)
 
@@ -70,14 +73,19 @@ cdef extern from "ManagedRaster.h":
         double get(long xi, long yi)
         void close()
 
+    cdef cppclass D8
+    cdef cppclass MFD
+
+
+
     cdef cppclass NeighborTuple:
         NeighborTuple() except +
         NeighborTuple(int, int, int, float) except +
         int direction, x, y
         float flow_proportion
 
-    cdef cppclass DownslopeNeighborIterator:
-        ManagedFlowDirRaster raster
+    cdef cppclass DownslopeNeighborIterator[T]:
+        ManagedFlowDirRaster[T] raster
         int col
         int row
         int n_dir
@@ -85,19 +93,19 @@ cdef extern from "ManagedRaster.h":
         int flow_dir_sum
 
         DownslopeNeighborIterator()
-        DownslopeNeighborIterator(ManagedFlowDirRaster, int, int)
+        DownslopeNeighborIterator(ManagedFlowDirRaster[T], int, int)
         NeighborTuple next()
         NeighborTuple next_no_skip()
 
-    cdef cppclass UpslopeNeighborIterator:
-        ManagedFlowDirRaster raster
+    cdef cppclass UpslopeNeighborIterator[T]:
+        ManagedFlowDirRaster[T] raster
         int col
         int row
         int n_dir
         int flow_dir
 
         UpslopeNeighborIterator()
-        UpslopeNeighborIterator(ManagedFlowDirRaster, int, int)
+        UpslopeNeighborIterator(ManagedFlowDirRaster[T], int, int)
         NeighborTuple next()
         NeighborTuple next_no_divide()
         NeighborTuple next_skip(int skip)
@@ -108,3 +116,10 @@ cdef extern from "ManagedRaster.h":
     int[8] COL_OFFSETS
     int[8] ROW_OFFSETS
     int[8] FLOW_DIR_REVERSE_DIRECTION
+
+    void run_sediment_deposition[T](
+        char*,
+        char*,
+        char*,
+        char*,
+        char*)
