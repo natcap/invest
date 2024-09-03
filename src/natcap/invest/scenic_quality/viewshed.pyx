@@ -39,7 +39,7 @@ from libcpp.queue cimport queue
 from libc cimport math
 cimport numpy
 cimport cython
-from ..managed_raster.managed_raster cimport _ManagedRaster
+from ..managed_raster.managed_raster cimport ManagedRaster
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
@@ -315,8 +315,8 @@ def viewshed(dem_raster_path_band,
                              (pixel_xsize, pixel_ysize))
 
     # Verify that the block sizes are powers of 2 and are square.
-    # This is needed for the _ManagedRaster classes.  If this is not asserted
-    # here, the _ManagedRaster classes will crash with a segfault.
+    # This is needed for the ManagedRaster classes.  If this is not asserted
+    # here, the ManagedRaster classes will crash with a segfault.
     block_xsize, block_ysize = dem_raster_info['block_size']
     if (block_xsize & (block_xsize - 1) != 0 or (
             block_ysize & (block_ysize - 1) != 0)) or (
@@ -350,12 +350,12 @@ def viewshed(dem_raster_path_band,
         raster_driver_creation_tuple=BYTE_GTIFF_CREATION_OPTIONS)
 
     # LRU-cached rasters for easier access to individual pixels.
-    cdef _ManagedRaster dem_managed_raster = (
-            _ManagedRaster(dem_raster_path_band[0], dem_raster_path_band[1], 0))
-    cdef _ManagedRaster aux_managed_raster = (
-            _ManagedRaster(aux_filepath, 1, 1))
-    cdef _ManagedRaster visibility_managed_raster = (
-            _ManagedRaster(visibility_filepath, 1, 1))
+    cdef ManagedRaster dem_managed_raster = (
+            ManagedRaster(dem_raster_path_band[0].encode('utf-8'), dem_raster_path_band[1], 0))
+    cdef ManagedRaster aux_managed_raster = (
+        ManagedRaster(aux_filepath.encode('utf-8'), 1, 1))
+    cdef ManagedRaster visibility_managed_raster = (
+            ManagedRaster(visibility_filepath.encode('utf-8'), 1, 1))
 
     # get the pixel size in terms of meters.
     dem_srs = osr.SpatialReference()
