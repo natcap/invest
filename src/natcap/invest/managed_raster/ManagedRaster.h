@@ -70,6 +70,7 @@ class ManagedRaster {
         GDALRasterBand* band;
         int write_mode;
         int closed;
+        double nodata;
 
         ManagedRaster() { }
 
@@ -99,37 +100,25 @@ class ManagedRaster {
             raster_x_size = dataset->GetRasterXSize();
             raster_y_size = dataset->GetRasterYSize();
 
+            if (band_id < 1 or band_id > dataset->GetRasterCount()) {
+                throw std::invalid_argument(
+                    "Error: band ID is not a valid band number. "
+                    "This error is happening in the ManagedRaster.h extension.");
+            }
             band = dataset->GetRasterBand(band_id);
-
             band->GetBlockSize( &block_xsize, &block_ysize );
 
             block_xmod = block_xsize - 1;
             block_ymod = block_ysize - 1;
 
-            // if not (1 <= band_id <= raster_info['n_bands']):
-            //     err_msg = (
-            //         "Error: band ID (%s) is not a valid band number. "
-            //         "This exception is happening in Cython, so it will cause a "
-            //         "hard seg-fault, but it's otherwise meant to be a "
-            //         "ValueError." % (band_id))
-            //     print(err_msg)
-            //     raise ValueError(err_msg)
-            // self.band_id = band_id
+            nodata = band->GetNoDataValue();
 
-            // if (self.block_xsize & (self.block_xsize - 1) != 0) or (
-            //         self.block_ysize & (self.block_ysize - 1) != 0):
-            //     # If inputs are not a power of two, this will at least print
-            //     # an error message. Unfortunately with Cython, the exception will
-            //     # present itself as a hard seg-fault, but I'm leaving the
-            //     # ValueError in here at least for readability.
-            //     err_msg = (
-            //         "Error: Block size is not a power of two: "
-            //         "block_xsize: %d, %d, %s. This exception is happening"
-            //         "in Cython, so it will cause a hard seg-fault, but it's"
-            //         "otherwise meant to be a ValueError." % (
-            //             self.block_xsize, self.block_ysize, raster_path))
-            //     print(err_msg)
-            //     raise ValueError(err_msg)
+            if (((block_xsize & (block_xsize - 1)) != 0) or (
+                    (block_ysize & (block_ysize - 1)) != 0)) {
+                throw std::invalid_argument(
+                    "Error: Block size is not a power of two. "
+                    "This error is happening in the ManagedRaster.h extension.");
+            }
 
             block_xbits = log2(block_xsize);
             block_ybits = log2(block_ysize);
