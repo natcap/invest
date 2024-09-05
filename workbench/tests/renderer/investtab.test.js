@@ -118,9 +118,71 @@ describe('Run status Alert renders with status from a recent run', () => {
     });
 
     const { findByRole } = renderInvestTab(job);
-    const openWorkspace = await findByRole('button', { name: 'Open Workspace' })
-    openWorkspace.click();
-    expect(shell.showItemInFolder).toHaveBeenCalledTimes(1);
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' });
+    expect(openWorkspaceBtn).toBeTruthy();
+  });
+});
+
+describe('Open Workspace button', () => {
+  const spec = {
+    args: {},
+  };
+
+  const baseJob = {
+    ...DEFAULT_JOB,
+    status: 'success',
+  };
+
+  beforeEach(() => {
+    getSpec.mockResolvedValue(spec);
+    fetchValidation.mockResolvedValue([]);
+    uiConfig.UI_SPEC = mockUISpec(spec);
+    setupDialogs();
+  });
+
+  afterEach(() => {
+    removeIpcMainListeners();
+  });
+
+  test('should open workspace', async () => {
+    const job = {
+      ...baseJob,
+      argsValues: {
+        workspace_dir: '/workspace',
+      },
+    };
+
+    jest.spyOn(ipcRenderer, 'invoke');
+
+    const { findByRole } = renderInvestTab(job);
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' })
+    openWorkspaceBtn.click();
+
+    expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith(ipcMainChannels.OPEN_PATH, job.argsValues.workspace_dir);
+  });
+
+  test('should present an error message to the user if workspace cannot be opened (e.g., if it does not exist)', async () => {
+    const job = {
+      ...baseJob,
+      status: 'error',
+      argsValues: {
+        workspace_dir: '/nonexistent-workspace',
+      },
+    };
+
+    jest.spyOn(ipcRenderer, 'invoke');
+    ipcRenderer.invoke.mockResolvedValue('Error opening workspace');
+
+    const { findByRole } = renderInvestTab(job);
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' });
+    openWorkspaceBtn.click();
+
+    expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith(ipcMainChannels.OPEN_PATH, job.argsValues.workspace_dir);
+
+    const errorModal = await findByRole('dialog', { name: 'Error opening workspace'});
+    expect(errorModal).toBeTruthy();
   });
 });
 
