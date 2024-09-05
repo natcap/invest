@@ -166,8 +166,8 @@ def check_directory(dirpath, must_exist=True, permissions='rx', **kwargs):
         must_exist=True (bool): If ``True``, the directory at ``dirpath``
             must already exist on the filesystem.
         permissions='rx' (string): A string that includes the lowercase
-            characters ``r``, ``w`` and/or ``x``, indicating read, write, and execute
-            permissions (respectively) required for this directory.
+            characters ``r``, ``w`` and/or ``x``, indicating read, write, and
+            execute permissions (respectively) required for this directory.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -197,25 +197,27 @@ def check_directory(dirpath, must_exist=True, permissions='rx', **kwargs):
     if 'r' in permissions:
         try:
             os.scandir(dirpath).close()
-        except:
+        except OSError:
             return MESSAGES[MESSAGE_KEY].format(permission='read')
 
-    # Check for x access before checking for w, since w operations to a dir are dependent on x access
+    # Check for x access before checking for w,
+    # since w operations to a dir are dependent on x access
     if 'x' in permissions:
         try:
             cwd = os.getcwd()
             os.chdir(dirpath)
-            os.chdir(cwd)
-        except:
+        except OSError:
             return MESSAGES[MESSAGE_KEY].format(permission='execute')
+        finally:
+            os.chdir(cwd)
 
     if 'w' in permissions:
         try:
-            temp_path = os.path.join(dirpath, '__temp__workspace_validation_check.txt')
+            temp_path = os.path.join(dirpath, 'temp__workspace_validation.txt')
             with open(temp_path, 'w') as temp:
                 temp.close()
                 os.remove(temp_path)
-        except:
+        except OSError:
             return MESSAGES[MESSAGE_KEY].format(permission='write')
 
 
@@ -225,8 +227,8 @@ def check_file(filepath, permissions='r', **kwargs):
     Args:
         filepath (string): The filepath to validate.
         permissions='r' (string): A string that includes the lowercase
-            characters ``r``, ``w`` and/or ``x``, indicating read, write, and execute
-            permissions (respectively) required for this file.
+            characters ``r``, ``w`` and/or ``x``, indicating read, write, and
+            execute permissions (respectively) required for this file.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
