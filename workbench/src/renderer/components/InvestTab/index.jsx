@@ -71,7 +71,6 @@ class InvestTab extends React.Component {
     this.investLogfileCallback = this.investLogfileCallback.bind(this);
     this.investExitCallback = this.investExitCallback.bind(this);
     this.handleOpenWorkspace = this.handleOpenWorkspace.bind(this);
-    this.openWorkspaceDir = this.openWorkspaceDir.bind(this);
     this.showErrorModal = this.showErrorModal.bind(this);
   }
 
@@ -189,17 +188,13 @@ class InvestTab extends React.Component {
     );
   }
 
-  handleOpenWorkspace(workspace_dir) {
+  async handleOpenWorkspace(workspace_dir) {
     if (workspace_dir) {
-      this.openWorkspaceDir(workspace_dir);
-    }
-  }
-
-  async openWorkspaceDir(workspace_dir) {
-    const error = await ipcRenderer.invoke(ipcMainChannels.OPEN_PATH, workspace_dir);
-    if (error) {
-      logger.error(`Error opening workspace (${workspace_dir}). ${error}`);
-      this.showErrorModal(true);
+      const error = await ipcRenderer.invoke(ipcMainChannels.OPEN_PATH, workspace_dir);
+      if (error) {
+        logger.error(`Error opening workspace (${workspace_dir}). ${error}`);
+        this.showErrorModal(true);
+      }
     }
   }
 
