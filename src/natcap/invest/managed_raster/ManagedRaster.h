@@ -191,12 +191,13 @@ class ManagedRaster {
             }
             double* block = lru_cache->get(block_index);
 
+
+
             // Using the property n % 2^i = n & (2^i - 1)
             // to efficienty compute the modulo: yi % block_xsize
             int idx = ((yi & block_ymod) * actualBlockWidths[block_index]) + (xi & block_xmod);
 
             double value = block[idx];
-            std::cout << "get " << xi << " " << yi << " " << value << " " << idx << " " << block_index << std::endl;
             return value;
         }
 
@@ -369,14 +370,6 @@ public:
             // do something with bar
         }
 
-    // UpslopeNeighborIterator<T> getUpslopeNeighborIterator(int xi, int yi) {
-    //     return UpslopeNeighborIterator<T>(this, xi, yi);
-    // }
-
-    // DownslopeNeighborIterator<T> getDownslopeNeighborIterator(int xi, int yi) {
-    //     return DownslopeNeighborIterator<T>(this, xi, yi);
-    // }
-
     bool is_local_high_point(int xi, int yi) {
         // """Check if a given pixel is a local high point.
 
@@ -433,7 +426,7 @@ public:
         , row { y }
     {
         n_dir = 0;
-        flow_dir = raster.get(col, row);
+        flow_dir = int(raster.get(col, row));
         flow_dir_sum = 0;
     }
 
@@ -544,7 +537,7 @@ public:
             return next();
         }
 
-        flow_dir_j = raster.get(xj, yj);
+        flow_dir_j = int(raster.get(xj, yj));
         flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])));
 
         if (flow_ji) {
@@ -583,7 +576,7 @@ public:
             return next_no_divide();
         }
 
-        flow_dir_j = raster.get(xj, yj);
+        flow_dir_j = int(raster.get(xj, yj));
         flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])));
 
         if (flow_ji) {
@@ -619,7 +612,7 @@ public:
             return next_skip(skip);
         }
 
-        flow_dir_j = raster.get(xj, yj);
+        flow_dir_j = int(raster.get(xj, yj));
         flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])));
 
         if (flow_ji) {
@@ -638,6 +631,13 @@ public:
     }
 };
 
+void do_test() {
+    ManagedFlowDirRaster fraster = ManagedFlowDirRaster<MFD>(
+        const_cast<char*>("/Users/emily/invest/sdr3.14.2/intermediate_outputs/sdr_factor_gura.tif"), 1, false);
+    std::cout << fraster.get(220, 99) << std::endl;
+    fraster.close();
+}
+
 bool is_close(double x, double y) {
     if (isnan(x) and isnan(y)) {
         return true;
@@ -646,7 +646,6 @@ bool is_close(double x, double y) {
 }
 
 
-template <class T>
 void run_sediment_deposition(
         char* flow_direction_path,
         char* e_prime_path,
@@ -654,9 +653,10 @@ void run_sediment_deposition(
         char* sdr_path,
         char* sediment_deposition_path) {
 
-    ManagedFlowDirRaster flow_dir_raster = ManagedFlowDirRaster<T>(
+    ManagedFlowDirRaster flow_dir_raster = ManagedFlowDirRaster<MFD>(
         flow_direction_path, 1, false);
-    ManagedRaster e_prime_raster = ManagedRaster(e_prime_path, 2, false);
+
+    ManagedRaster e_prime_raster = ManagedRaster(e_prime_path, 1, false);
     ManagedRaster sdr_raster = ManagedRaster(sdr_path, 1, false);
     ManagedRaster f_raster = ManagedRaster(f_path, 1, true);
     ManagedRaster sediment_deposition_raster = ManagedRaster(
@@ -669,18 +669,19 @@ void run_sediment_deposition(
     long global_col, global_row;
     int xs, ys;
     long flat_index;
-    float downslope_sdr_weighted_sum, sdr_i, sdr_j;
-    float f_j;
+    float downslope_sdr_weighted_sum;
+    double sdr_i, e_prime_i, sdr_j, f_j;
+
     // unsigned long n_pixels_processed = 0;
     bool upslope_neighbors_processed;
     // time_t last_log_time = ctime(NULL)
     float f_j_weighted_sum;
     NeighborTuple neighbor;
     NeighborTuple neighbor_of_neighbor;
-    float e_prime_i, dr_i, t_i, f_i;
+    float dr_i, t_i, f_i;
 
-    UpslopeNeighborIterator<T> up_iterator;
-    DownslopeNeighborIterator<T> dn_iterator;
+    UpslopeNeighborIterator<MFD> up_iterator;
+    DownslopeNeighborIterator<MFD> dn_iterator;
 
     // efficient way to calculate ceiling division:
     // a divided by b rounded up = (a + (b - 1)) / b
@@ -702,8 +703,6 @@ void run_sediment_deposition(
                 win_xsize = flow_dir_raster.block_xsize;
             }
 
-            std::cout << xoff << " " << yoff << " " << win_xsize << " " << win_ysize << std::endl;
-
             // if ctime(NULL) - last_log_time > 5.0:
             //     last_log_time = ctime(NULL)
             //     LOGGER.info('Sediment deposition %.2f%% complete', 100 * (
@@ -715,7 +714,6 @@ void run_sediment_deposition(
                     xs = xoff + col_index;
 
                     if (flow_dir_raster.get(xs, ys) == mfd_nodata) {
-                        std::cout << "continue" << std::endl;
                         continue;
                     }
 
@@ -723,7 +721,6 @@ void run_sediment_deposition(
                     // calculated, put it on the stack
                     if (flow_dir_raster.is_local_high_point(xs, ys) and
                             is_close(sediment_deposition_raster.get(xs, ys), target_nodata)) {
-                        std::cout << "push " << xs << " " << ys << std::endl;
                         processing_stack.push(ys * flow_dir_raster.raster_x_size + xs);
                     }
 
@@ -735,14 +732,13 @@ void run_sediment_deposition(
                         processing_stack.pop();
                         global_row = flat_index / flow_dir_raster.raster_x_size;
                         global_col = flat_index % flow_dir_raster.raster_x_size;
-                        std::cout << "processing " << global_col << " " << global_row << std::endl;
 
                         // # (sum over j ∈ J of f_j * p(i,j) in the equation for t_i)
                         // # calculate the upslope f_j contribution to this pixel,
                         // # the weighted sum of flux flowing onto this pixel from
                         // # all neighbors
                         f_j_weighted_sum = 0;
-                        up_iterator = UpslopeNeighborIterator(
+                        up_iterator = UpslopeNeighborIterator<MFD>(
                             flow_dir_raster, global_col, global_row);
                         neighbor = up_iterator.next();
                         while (neighbor.direction < 8) {
@@ -750,7 +746,6 @@ void run_sediment_deposition(
                             f_j = f_raster.get(neighbor.x, neighbor.y);
                             if (is_close(f_j, target_nodata)) {
                                 neighbor = up_iterator.next();
-                                std::cout << "continue a" << std::endl;
                                 continue;
                             }
 
@@ -765,13 +760,11 @@ void run_sediment_deposition(
                         // # neighbor
                         // # (sum over k ∈ K of SDR_k * p(i,k) in the equation above)
                         downslope_sdr_weighted_sum = 0;
-                        dn_iterator = DownslopeNeighborIterator<T>(
+                        dn_iterator = DownslopeNeighborIterator<MFD>(
                             flow_dir_raster, global_col, global_row);
 
-                        std::cout << "b" << std::endl;
                         neighbor = dn_iterator.next();
                         while (neighbor.direction < 8) {
-
                             sdr_j = sdr_raster.get(neighbor.x, neighbor.y);
                             if (is_close(sdr_j, sdr_raster.nodata)) {
                                 neighbor = dn_iterator.next();
@@ -794,7 +787,7 @@ void run_sediment_deposition(
                             // # completed
                             upslope_neighbors_processed = true;
                             // # iterate over each neighbor-of-neighbor
-                            up_iterator = UpslopeNeighborIterator<T>(
+                            up_iterator = UpslopeNeighborIterator<MFD>(
                                 flow_dir_raster, neighbor.x, neighbor.y);
                             neighbor_of_neighbor = up_iterator.next_skip(neighbor.direction);
                             while (neighbor_of_neighbor.direction < 8) {
@@ -816,17 +809,13 @@ void run_sediment_deposition(
                             neighbor = dn_iterator.next();
                         }
 
-                        std::cout << "c" << std::endl;
                         // # nodata pixels should propagate to the results
                         sdr_i = sdr_raster.get(global_col, global_row);
-                        std::cout << sdr_i << " " << sdr_raster.nodata << std::endl;
                         if (is_close(sdr_i, sdr_raster.nodata)) {
-                            std::cout << "d " << std::endl;
                             continue;
                         }
                         e_prime_i = e_prime_raster.get(global_col, global_row);
                         if (is_close(e_prime_i, e_prime_raster.nodata)) {
-                            std::cout << "e" << std::endl;
                             continue;
                         }
 
@@ -869,7 +858,6 @@ void run_sediment_deposition(
                         if (f_i < 0) {
                             f_i = 0;
                         }
-                        std::cout << "set" << " " << global_col << " " << global_row << std::endl;
                         sediment_deposition_raster.set(global_col, global_row, t_i);
                         f_raster.set(global_col, global_row, f_i);
                     }
@@ -882,8 +870,8 @@ void run_sediment_deposition(
     flow_dir_raster.close();
     e_prime_raster.close();
     sdr_raster.close();
-    f_raster.close();
+    // f_raster.close();
 
-    // LOGGER.info('Sediment deposition 100% complete')
+//     // LOGGER.info('Sediment deposition 100% complete')
 
 }

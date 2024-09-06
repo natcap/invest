@@ -26,6 +26,8 @@ cdef extern from "time.h" nogil:
 
 LOGGER = logging.getLogger(__name__)
 
+
+
 def calculate_sediment_deposition(
         mfd_flow_direction_path, e_prime_path, f_path, sdr_path,
         target_sediment_deposition_path):
@@ -80,17 +82,17 @@ def calculate_sediment_deposition(
         None.
 
     """
-    LOGGER.info('Calculate sediment deposition')
-    cdef float target_nodata = -1
-    pygeoprocessing.new_raster_from_base(
-        mfd_flow_direction_path, target_sediment_deposition_path,
-        gdal.GDT_Float32, [target_nodata])
-    pygeoprocessing.new_raster_from_base(
-        mfd_flow_direction_path, f_path,
-        gdal.GDT_Float32, [target_nodata])
+    # LOGGER.info('Calculate sediment deposition')
+    # cdef float target_nodata = -1
+    # pygeoprocessing.new_raster_from_base(
+    #     mfd_flow_direction_path, target_sediment_deposition_path,
+    #     gdal.GDT_Float32, [target_nodata])
+    # pygeoprocessing.new_raster_from_base(
+    #     mfd_flow_direction_path, f_path,
+    #     gdal.GDT_Float32, [target_nodata])
 
-    run_sediment_deposition[MFD](
+    run_sediment_deposition(
         mfd_flow_direction_path.encode('utf-8'), e_prime_path.encode('utf-8'),
-        sdr_path.encode('utf-8'), f_path.encode('utf-8'),
+        f_path.encode('utf-8'), sdr_path.encode('utf-8'),
         target_sediment_deposition_path.encode('utf-8'))
 

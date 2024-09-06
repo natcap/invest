@@ -117,7 +117,7 @@ cdef extern from "ManagedRaster.h":
     int[8] ROW_OFFSETS
     int[8] FLOW_DIR_REVERSE_DIRECTION
 
-    void run_sediment_deposition[T](
+    void run_sediment_deposition(
         char*,
         char*,
         char*,

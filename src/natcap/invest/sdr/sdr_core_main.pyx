@@ -254,7 +254,6 @@ cdef class _ManagedRaster:
         idx = ((yi & (self.block_ymod))<<self.block_xbits) + (xi & (self.block_xmod))
         x = self.lru_cache.get(
             block_index)[idx]
-        print('get', xi, yi, f'{x:g}', idx, block_index)
         return x
 
     cdef void _load_block(self, int block_index) except *:
@@ -406,12 +405,12 @@ def calculate_sediment_deposition(
     """
     LOGGER.info('Calculate sediment deposition')
     cdef float target_nodata = -1
-    pygeoprocessing.new_raster_from_base(
-        mfd_flow_direction_path, target_sediment_deposition_path,
-        gdal.GDT_Float32, [target_nodata])
-    pygeoprocessing.new_raster_from_base(
-        mfd_flow_direction_path, f_path,
-        gdal.GDT_Float32, [target_nodata])
+    # pygeoprocessing.new_raster_from_base(
+    #     mfd_flow_direction_path, target_sediment_deposition_path,
+    #     gdal.GDT_Float32, [target_nodata])
+    # pygeoprocessing.new_raster_from_base(
+    #     mfd_flow_direction_path, f_path,
+    #     gdal.GDT_Float32, [target_nodata])
 
     cdef _ManagedRaster mfd_flow_direction_raster = _ManagedRaster(
         mfd_flow_direction_path, 1, False)
@@ -461,8 +460,6 @@ def calculate_sediment_deposition(
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
 
-        print(xoff, yoff, win_xsize, win_ysize)
-
         if ctime(NULL) - last_log_time > 5.0:
             last_log_time = ctime(NULL)
             LOGGER.info('Sediment deposition %.2f%% complete', 100 * (
@@ -474,7 +471,6 @@ def calculate_sediment_deposition(
                 seed_col = xoff + col_index
                 # check if this is a good seed pixel ( a local high point)
                 if mfd_flow_direction_raster.get(seed_col, seed_row) == mfd_nodata:
-                    print('continue');
                     continue
                 seed_pixel = 1
                 # iterate over each of the pixel's neighbors
@@ -502,7 +498,6 @@ def calculate_sediment_deposition(
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack
                 if seed_pixel and sediment_deposition_raster.get(seed_col, seed_row) == target_nodata:
-                    print('push', seed_col, seed_row)
                     processing_stack.push(seed_row * n_cols + seed_col)
 
                 while processing_stack.size() > 0:
@@ -513,8 +508,6 @@ def calculate_sediment_deposition(
                     processing_stack.pop()
                     global_row = flat_index // n_cols
                     global_col = flat_index % n_cols
-
-                    print('processing', global_col, global_row)
 
                     # (sum over j ∈ J of f_j * p(i,j) in the equation for t_i)
                     # calculate the upslope f_j contribution to this pixel,
@@ -539,7 +532,6 @@ def calculate_sediment_deposition(
                         if neighbor_flow_weight > 0:
                             f_j = f_raster.get(neighbor_col, neighbor_row)
                             if f_j == target_nodata:
-                                print('continue a')
                                 continue
                             # sum up the neighbor's flow dir values in each
                             # direction.
@@ -566,7 +558,6 @@ def calculate_sediment_deposition(
                     for k in range(8):
                         flow_sum += (flow_val >> (k*4)) & 0xF
 
-                    print('b')
                     # iterate over the neighbors again
                     for j in range(8):
                         # skip if neighbor is outside the raster boundaries
@@ -634,16 +625,12 @@ def calculate_sediment_deposition(
                                     neighbor_row * n_cols +
                                     neighbor_col)
 
-                    print('c')
                     # nodata pixels should propagate to the results
                     sdr_i = sdr_raster.get(global_col, global_row)
-                    print(sdr_i, sdr_nodata)
                     if sdr_i == sdr_nodata:
-                        print('d')
                         continue
                     e_prime_i = e_prime_raster.get(global_col, global_row)
                     if e_prime_i == e_prime_nodata:
-                        print('e')
                         continue
 
                     # This condition reflects property A in the user's guide.
@@ -677,7 +664,6 @@ def calculate_sediment_deposition(
                     if f_i < 0:
                         f_i = 0
 
-                    print('set', global_col, global_row)
                     sediment_deposition_raster.set(global_col, global_row, t_i)
                     f_raster.set(global_col, global_row, f_i)
         n_pixels_processed += (win_xsize * win_ysize)
