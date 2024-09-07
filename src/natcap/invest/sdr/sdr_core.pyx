@@ -1,36 +1,18 @@
 import logging
-import os
 
 import pygeoprocessing
 cimport cython
 from osgeo import gdal
 
-from libc.time cimport time as ctime
-from libcpp.stack cimport stack
-from ..managed_raster.managed_raster cimport ManagedRaster
-from ..managed_raster.managed_raster cimport NeighborTuple
-from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
-from ..managed_raster.managed_raster cimport is_close
-from ..managed_raster.managed_raster cimport DownslopeNeighborIterator
-from ..managed_raster.managed_raster cimport UpslopeNeighborIterator
-
 from ..managed_raster.managed_raster cimport D8
 from ..managed_raster.managed_raster cimport MFD
 from ..managed_raster.managed_raster cimport run_sediment_deposition
 
-
-
-cdef extern from "time.h" nogil:
-    ctypedef int time_t
-    time_t time(time_t*)
-
 LOGGER = logging.getLogger(__name__)
-
-
 
 def calculate_sediment_deposition(
         mfd_flow_direction_path, e_prime_path, f_path, sdr_path,
-        target_sediment_deposition_path):
+        target_sediment_deposition_path, algorithm):
     """Calculate sediment deposition layer.
 
     This algorithm outputs both sediment deposition (t_i) and flux (f_i)::
@@ -77,22 +59,28 @@ def calculate_sediment_deposition(
         sdr_path (string): path to Sediment Delivery Ratio raster.
         target_sediment_deposition_path (string): path to created that
             shows where the E' sources end up across the landscape.
+        algorithm (string): MFD or D8
 
     Returns:
         None.
 
     """
-    # LOGGER.info('Calculate sediment deposition')
-    # cdef float target_nodata = -1
-    # pygeoprocessing.new_raster_from_base(
-    #     mfd_flow_direction_path, target_sediment_deposition_path,
-    #     gdal.GDT_Float32, [target_nodata])
-    # pygeoprocessing.new_raster_from_base(
-    #     mfd_flow_direction_path, f_path,
-    #     gdal.GDT_Float32, [target_nodata])
+    LOGGER.info('Calculate sediment deposition')
+    cdef float target_nodata = -1
+    pygeoprocessing.new_raster_from_base(
+        mfd_flow_direction_path, target_sediment_deposition_path,
+        gdal.GDT_Float32, [target_nodata])
+    pygeoprocessing.new_raster_from_base(
+        mfd_flow_direction_path, f_path,
+        gdal.GDT_Float32, [target_nodata])
 
-    run_sediment_deposition(
-        mfd_flow_direction_path.encode('utf-8'), e_prime_path.encode('utf-8'),
-        f_path.encode('utf-8'), sdr_path.encode('utf-8'),
-        target_sediment_deposition_path.encode('utf-8'))
-
+    if algorithm == 'D8':
+        run_sediment_deposition[D8](
+            mfd_flow_direction_path.encode('utf-8'), e_prime_path.encode('utf-8'),
+            f_path.encode('utf-8'), sdr_path.encode('utf-8'),
+            target_sediment_deposition_path.encode('utf-8'))
+    else:
+        run_sediment_deposition[MFD](
+            mfd_flow_direction_path.encode('utf-8'), e_prime_path.encode('utf-8'),
+            f_path.encode('utf-8'), sdr_path.encode('utf-8'),
+            target_sediment_deposition_path.encode('utf-8'))

@@ -461,13 +461,13 @@ public:
         }
     }
 
-    // template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
-    // NeighborTuple next() {
-    //     long xj, yj;
-    //     xj = col + COL_OFFSETS[flow_dir];
-    //     yj = row + ROW_OFFSETS[flow_dir];
-    //     return NeighborTuple(flow_dir, xj, yj, 1);
-    // }
+    template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
+    NeighborTuple next() {
+        long xj, yj;
+        xj = col + COL_OFFSETS[flow_dir];
+        yj = row + ROW_OFFSETS[flow_dir];
+        return NeighborTuple(flow_dir, xj, yj, 1);
+    }
 
     NeighborTuple next_no_skip() {
         NeighborTuple n;
@@ -631,12 +631,6 @@ public:
     }
 };
 
-void do_test() {
-    ManagedFlowDirRaster fraster = ManagedFlowDirRaster<MFD>(
-        const_cast<char*>("/Users/emily/invest/sdr3.14.2/intermediate_outputs/sdr_factor_gura.tif"), 1, false);
-    std::cout << fraster.get(220, 99) << std::endl;
-    fraster.close();
-}
 
 bool is_close(double x, double y) {
     if (isnan(x) and isnan(y)) {
@@ -645,7 +639,7 @@ bool is_close(double x, double y) {
     return abs(x - y) <= (pow(10, -8) + pow(10, -05) * abs(y));
 }
 
-
+template<class T>
 void run_sediment_deposition(
         char* flow_direction_path,
         char* e_prime_path,
@@ -653,7 +647,7 @@ void run_sediment_deposition(
         char* sdr_path,
         char* sediment_deposition_path) {
 
-    ManagedFlowDirRaster flow_dir_raster = ManagedFlowDirRaster<MFD>(
+    ManagedFlowDirRaster flow_dir_raster = ManagedFlowDirRaster<T>(
         flow_direction_path, 1, false);
 
     ManagedRaster e_prime_raster = ManagedRaster(e_prime_path, 1, false);
@@ -680,8 +674,8 @@ void run_sediment_deposition(
     NeighborTuple neighbor_of_neighbor;
     float dr_i, t_i, f_i;
 
-    UpslopeNeighborIterator<MFD> up_iterator;
-    DownslopeNeighborIterator<MFD> dn_iterator;
+    UpslopeNeighborIterator<T> up_iterator;
+    DownslopeNeighborIterator<T> dn_iterator;
 
     // efficient way to calculate ceiling division:
     // a divided by b rounded up = (a + (b - 1)) / b
@@ -738,7 +732,7 @@ void run_sediment_deposition(
                         // # the weighted sum of flux flowing onto this pixel from
                         // # all neighbors
                         f_j_weighted_sum = 0;
-                        up_iterator = UpslopeNeighborIterator<MFD>(
+                        up_iterator = UpslopeNeighborIterator<T>(
                             flow_dir_raster, global_col, global_row);
                         neighbor = up_iterator.next();
                         while (neighbor.direction < 8) {
@@ -760,7 +754,7 @@ void run_sediment_deposition(
                         // # neighbor
                         // # (sum over k ∈ K of SDR_k * p(i,k) in the equation above)
                         downslope_sdr_weighted_sum = 0;
-                        dn_iterator = DownslopeNeighborIterator<MFD>(
+                        dn_iterator = DownslopeNeighborIterator<T>(
                             flow_dir_raster, global_col, global_row);
 
                         neighbor = dn_iterator.next();
@@ -787,7 +781,7 @@ void run_sediment_deposition(
                             // # completed
                             upslope_neighbors_processed = true;
                             // # iterate over each neighbor-of-neighbor
-                            up_iterator = UpslopeNeighborIterator<MFD>(
+                            up_iterator = UpslopeNeighborIterator<T>(
                                 flow_dir_raster, neighbor.x, neighbor.y);
                             neighbor_of_neighbor = up_iterator.next_skip(neighbor.direction);
                             while (neighbor_of_neighbor.direction < 8) {

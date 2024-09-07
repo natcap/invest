@@ -140,6 +140,15 @@ MODEL_SPEC = {
                 "watershed. Pixels with 1 are drainages and are treated like "
                 "streams. Pixels with 0 are not drainages."),
             "name": gettext("drainages")
+        },
+        "algorithm": {
+            "type": "option_string",
+            "options": {
+                "D8": {"description": "D8 flow direction"},
+                "MFD": {"description": "Multiple flow direction"}
+            },
+            "about": gettext("Flow direction algorithm to use."),
+            "name": gettext("flow direction algorithm")
         }
     },
     "outputs": {
@@ -681,8 +690,38 @@ def execute(args):
         dependent_task_list=[slope_task],
         task_name='threshold slope')
 
+    if args['algorithm'] == 'MFD':
+        flow_dir_func = pygeoprocessing.routing.flow_dir_mfd
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_mfd
+        stream_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_streams_mfd,
+            args=(
+                (f_reg['flow_accumulation_path'], 1),
+                (f_reg['flow_direction_path'], 1),
+                float(args['threshold_flow_accumulation']),
+                f_reg['stream_path']),
+            kwargs={'trace_threshold_proportion': 0.7},
+            target_path_list=[f_reg['stream_path']],
+            dependent_task_list=[flow_accumulation_task],
+            task_name='extract streams')
+    else:
+        flow_dir_func = pygeoprocessing.routing.flow_dir_d8
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_d8
+        stream_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_strahler_streams_d8,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                (f_reg['flow_accumulation_path'], 1),
+                (f_reg['pit_filled_dem_path'], 1),
+                float(args['threshold_flow_accumulation']),
+                f_reg['stream_path']),
+            kwargs={'trace_threshold_proportion': 0.7},
+            target_path_list=[f_reg['stream_path']],
+            dependent_task_list=[flow_accumulation_task],
+            task_name='extract streams')
+
     flow_dir_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_dir_mfd,
+        func=flow_dir_func,
         args=(
             (f_reg['pit_filled_dem_path'], 1),
             f_reg['flow_direction_path']),
@@ -710,18 +749,6 @@ def execute(args):
         dependent_task_list=[
             flow_accumulation_task, slope_task],
         task_name='ls factor calculation')
-
-    stream_task = task_graph.add_task(
-        func=pygeoprocessing.routing.extract_streams_mfd,
-        args=(
-            (f_reg['flow_accumulation_path'], 1),
-            (f_reg['flow_direction_path'], 1),
-            float(args['threshold_flow_accumulation']),
-            f_reg['stream_path']),
-        kwargs={'trace_threshold_proportion': 0.7},
-        target_path_list=[f_reg['stream_path']],
-        dependent_task_list=[flow_accumulation_task],
-        task_name='extract streams')
 
     if drainage_present:
         drainage_task = task_graph.add_task(
