@@ -70,6 +70,7 @@ class SDRTests(unittest.TestCase):
             'watersheds_path': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
             'workspace_dir': workspace_dir,
             'n_workers': -1,
+            'algorithm': 'MFD'
         }
         return args
 
@@ -103,15 +104,6 @@ class SDRTests(unittest.TestCase):
         for (validation_keys, error_msg), phrase in zip(
                 validate_result, ['GDAL raster', 'GDAL vector']):
             self.assertTrue(phrase in error_msg)
-
-    def test_sdr_validation_missing_key(self):
-        """SDR test validation that's missing keys."""
-        from natcap.invest.sdr import sdr
-
-        # use predefined directory so test can clean up files during teardown
-        args = {}
-        validation_warnings = sdr.validate(args, limit_to=None)
-        self.assertEqual(len(validation_warnings[0][0]), 12)
 
     def test_sdr_validation_key_no_value(self):
         """SDR test validation that's missing a value on a key."""

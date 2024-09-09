@@ -11,7 +11,7 @@ from ..managed_raster.managed_raster cimport run_sediment_deposition
 LOGGER = logging.getLogger(__name__)
 
 def calculate_sediment_deposition(
-        mfd_flow_direction_path, e_prime_path, f_path, sdr_path,
+        flow_direction_path, e_prime_path, f_path, sdr_path,
         target_sediment_deposition_path, algorithm):
     """Calculate sediment deposition layer.
 
@@ -50,8 +50,8 @@ def calculate_sediment_deposition(
     will come from the SDR model and have nodata in the same places.
 
     Args:
-        mfd_flow_direction_path (string): a path to a raster with
-            pygeoprocessing.routing MFD flow direction values.
+        flow_direction_path (string): a path to a flow direction raster,
+            in either MFD or D8 format. Specify with the ``algorithm`` arg.
         e_prime_path (string): path to a raster that shows sources of
             sediment that wash off a pixel but do not reach the stream.
         f_path (string): path to a raster that shows the sediment flux
@@ -68,19 +68,19 @@ def calculate_sediment_deposition(
     LOGGER.info('Calculate sediment deposition')
     cdef float target_nodata = -1
     pygeoprocessing.new_raster_from_base(
-        mfd_flow_direction_path, target_sediment_deposition_path,
+        flow_direction_path, target_sediment_deposition_path,
         gdal.GDT_Float32, [target_nodata])
     pygeoprocessing.new_raster_from_base(
-        mfd_flow_direction_path, f_path,
+        flow_direction_path, f_path,
         gdal.GDT_Float32, [target_nodata])
 
     if algorithm == 'D8':
         run_sediment_deposition[D8](
-            mfd_flow_direction_path.encode('utf-8'), e_prime_path.encode('utf-8'),
+            flow_direction_path.encode('utf-8'), e_prime_path.encode('utf-8'),
             f_path.encode('utf-8'), sdr_path.encode('utf-8'),
             target_sediment_deposition_path.encode('utf-8'))
     else:
         run_sediment_deposition[MFD](
-            mfd_flow_direction_path.encode('utf-8'), e_prime_path.encode('utf-8'),
+            flow_direction_path.encode('utf-8'), e_prime_path.encode('utf-8'),
             f_path.encode('utf-8'), sdr_path.encode('utf-8'),
             target_sediment_deposition_path.encode('utf-8'))
