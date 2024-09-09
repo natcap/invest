@@ -17,29 +17,20 @@ function dragOverHandler(event) {
 }
 
 /** Renders a form with a list of input components. */
-class ArgsForm extends React.Component {
-  constructor(props) {
-    super(props);
-    this.handleFocus = this.handleFocus.bind(this);
-    this.selectFile = this.selectFile.bind(this);
-    this.inputDropHandler = this.inputDropHandler.bind(this);
-    this.onArchiveDragDrop = this.onArchiveDragDrop.bind(this);
-    this.dragEnterHandler = this.dragEnterHandler.bind(this);
-    this.dragLeaveHandler = this.dragLeaveHandler.bind(this);
-    this.formRef = React.createRef(); // For dragging CSS
-    this.dragDepth = 0; // To determine Form dragging CSS
-  }
+function  ArgsForm(props) {
+  const formRef = React.useRef(null);
+  let dragDepth = 0;
 
-  async onArchiveDragDrop(event) {
+  async function onArchiveDragDrop(event) {
     /** Handle drag-drop of datastack JSON files and InVEST logfiles */
     event.preventDefault();
     event.stopPropagation();
     // No longer dragging so reset dragging depth and remove CSS
-    this.dragDepth = 0;
-    const formElement = this.formRef.current;
+    dragDepth = 0;
+    const formElement = formRef.current;
     formElement.classList.remove('dragging');
 
-    const { loadParametersFromFile, t } = this.props;
+    const { loadParametersFromFile, t } = props;
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
       alert(t('Only drop one file at a time.')); // eslint-disable-line no-alert
@@ -49,30 +40,30 @@ class ArgsForm extends React.Component {
   }
 
   /** Handle drag enter events for the Form elements. */
-  dragEnterHandler(event) {
+  function dragEnterHandler(event) {
     event.preventDefault();
     event.stopPropagation();
     event.dataTransfer.dropEffect = 'copy';
-    this.dragDepth += 1;
-    const formElement = this.formRef.current;
+    dragDepth += 1;
+    const formElement = formRef.current;
     if (!formElement.classList.contains('dragging')) {
       formElement.classList.add('dragging');
     }
   }
 
   /** Handle drag leave events for the Form elements. */
-  dragLeaveHandler(event) {
+  function dragLeaveHandler(event) {
     event.preventDefault();
     event.stopPropagation();
-    this.dragDepth -= 1;
-    const formElement = this.formRef.current;
-    if (this.dragDepth <= 0) {
+    dragDepth -= 1;
+    const formElement = formRef.current;
+    if (dragDepth <= 0) {
       formElement.classList.remove('dragging');
     }
   }
 
   /** Handle drop events for input elements from the ArgInput components. */
-  inputDropHandler(event) {
+  function inputDropHandler(event) {
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.classList.remove('input-dragging');
@@ -83,7 +74,7 @@ class ArgsForm extends React.Component {
     const { name } = event.currentTarget; // the arg's key and type
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const fileList = event.dataTransfer.files;
-    const { triggerScrollEvent, updateArgValues, t } = this.props;
+    const { triggerScrollEvent, updateArgValues, t } = props;
     if (fileList.length !== 1) {
       alert(t('Only drop one file at a time.')); // eslint-disable-line no-alert
     } else if (fileList.length === 1) {
@@ -95,12 +86,12 @@ class ArgsForm extends React.Component {
     triggerScrollEvent();
   }
 
-  handleFocus(event) {
+  function handleFocus(event) {
     const { name } = event.currentTarget;
-    this.props.updateArgTouched(name);
+    props.updateArgTouched(name);
   }
 
-  async selectFile(event) {
+  async function selectFile(event) {
     /** Handle clicks on browse-button inputs */
     const { name, value } = event.currentTarget; // the arg's key and type
     const prop = (value === 'directory') ? 'openDirectory' : 'openFile';
@@ -110,70 +101,68 @@ class ArgsForm extends React.Component {
     );
     if (data.filePaths.length) {
       // dialog defaults allow only 1 selection
-      this.props.updateArgValues(name, data.filePaths[0]);
-      this.props.triggerScrollEvent();
+      props.updateArgValues(name, data.filePaths[0]);
+      props.triggerScrollEvent();
     }
   }
 
-  render() {
-    const {
-      argsOrder,
-      argsSpec,
-      argsValues,
-      argsValidation,
-      argsEnabled,
-      argsDropdownOptions,
-      userguide,
-      scrollEventCount,
-    } = this.props;
-    const formItems = [];
-    let k = 0;
-    argsOrder.forEach((groupArray) => {
-      k += 1;
-      const groupItems = [];
-      groupArray.forEach((argkey) => {
-        groupItems.push(
-          <ArgInput
-            argkey={argkey}
-            argSpec={argsSpec[argkey]}
-            userguide={userguide}
-            dropdownOptions={argsDropdownOptions[argkey]}
-            enabled={argsEnabled[argkey]}
-            updateArgValues={this.props.updateArgValues}
-            handleFocus={this.handleFocus}
-            inputDropHandler={this.inputDropHandler}
-            isValid={argsValidation[argkey].valid}
-            key={argkey}
-            selectFile={this.selectFile}
-            touched={argsValues[argkey].touched}
-            validationMessage={argsValidation[argkey].validationMessage}
-            value={argsValues[argkey].value}
-            scrollEventCount={scrollEventCount}
-          />
-        );
-      });
-      formItems.push(
-        <div className="arg-group" key={k}>
-          {groupItems}
-        </div>
+  const {
+    argsOrder,
+    argsSpec,
+    argsValues,
+    argsValidation,
+    argsEnabled,
+    argsDropdownOptions,
+    userguide,
+    scrollEventCount,
+  } = props;
+  const formItems = [];
+  let k = 0;
+  argsOrder.forEach((groupArray) => {
+    k += 1;
+    const groupItems = [];
+    groupArray.forEach((argkey) => {
+      groupItems.push(
+        <ArgInput
+          argkey={argkey}
+          argSpec={argsSpec[argkey]}
+          userguide={userguide}
+          dropdownOptions={argsDropdownOptions[argkey]}
+          enabled={argsEnabled[argkey]}
+          updateArgValues={props.updateArgValues}
+          handleFocus={handleFocus}
+          inputDropHandler={inputDropHandler}
+          isValid={argsValidation[argkey].valid}
+          key={argkey}
+          selectFile={selectFile}
+          touched={argsValues[argkey].touched}
+          validationMessage={argsValidation[argkey].validationMessage}
+          value={argsValues[argkey].value}
+          scrollEventCount={scrollEventCount}
+        />
       );
     });
-
-    return (
-      <Form
-        ref={this.formRef}
-        data-testid="setup-form"
-        className="args-form"
-        validated={false}
-        onDrop={this.onArchiveDragDrop}
-        onDragOver={dragOverHandler}
-        onDragEnter={this.dragEnterHandler}
-        onDragLeave={this.dragLeaveHandler}
-      >
-        {formItems}
-      </Form>
+    formItems.push(
+      <div className="arg-group" key={k}>
+        {groupItems}
+      </div>
     );
-  }
+  });
+
+  return (
+    <Form
+      ref={formRef}
+      data-testid="setup-form"
+      className="args-form"
+      validated={false}
+      onDrop={onArchiveDragDrop}
+      onDragOver={dragOverHandler}
+      onDragEnter={dragEnterHandler}
+      onDragLeave={dragLeaveHandler}
+    >
+      {formItems}
+    </Form>
+  );
 }
 
 ArgsForm.propTypes = {

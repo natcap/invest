@@ -2,34 +2,28 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import PropTypes from 'prop-types';
 
-export default class Portal extends React.Component {
-  constructor(props) {
-    super(props);
-    this.el = document.createElement('div');
-    this.parent = null;
-  }
+export default function Portal(props) {
+  const el = document.createElement('div');
+  const [parent, setParent] = React.useState(null);
 
-  componentDidMount() {
-    this.parent = document.getElementById(this.props.elId);
-    if (this.parent) {
-      this.parent.appendChild(this.el);
+  React.useEffect(() => {
+    setParent(document.getElementById(props.elId));
+    if (parent) {
+      setParent(parent => parent.appendChild(el));
     }
-  }
+    return () => {
+      if (parent) {
+        setParent(parent => parent.removeChild(el));
+      }
+    }
+  }, []);
 
-  componentWillUnmount() {
-    if (this.parent) {
-      this.parent.removeChild(this.el);
-    }
+  if (parent) {
+    return ReactDOM.createPortal(
+      props.children, parent
+    );
   }
-
-  render() {
-    if (this.parent) {
-      return ReactDOM.createPortal(
-        this.props.children, this.parent
-      );
-    }
-    return (<div />);
-  }
+  return (<div />);
 }
 
 Portal.propTypes = {
