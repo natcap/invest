@@ -32,6 +32,7 @@ kwargs = {
         'charset_normalizer',
         'scipy.special._cdflib',
         'scipy.special._special_ufuncs',
+        'scipy._lib.array_api_compat.numpy.fft',
     ],
     'datas': [proj_datas],
     'cipher': block_cipher,
