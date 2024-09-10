@@ -554,6 +554,7 @@ def _write_summary_vector(
     """
     source_aoi_vector = gdal.OpenEx(source_aoi_vector_path, gdal.OF_VECTOR)
     source_aoi_layer = source_aoi_vector.GetLayer()
+    source_aoi_field_defns = source_aoi_layer.schema
     source_geom_type = source_aoi_layer.GetGeomType()
     source_srs_wkt = pygeoprocessing.get_vector_info(
         source_aoi_vector_path)['projection_wkt']
@@ -612,6 +613,10 @@ def _write_summary_vector(
             'flood_vol', float(flood_volume_stats[feature_id]['sum']))
 
         target_watershed_layer.CreateFeature(target_feature)
+
+    for field_defn in source_aoi_field_defns:
+        target_watershed_layer.CreateField(field_defn)
+
     target_watershed_layer.SyncToDisk()
     target_watershed_layer = None
     target_watershed_vector = None
