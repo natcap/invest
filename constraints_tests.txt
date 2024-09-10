@@ -8,3 +8,8 @@ GDAL!=3.6.*,!=3.7.*
 
 # https://github.com/natcap/pygeoprocessing/issues/387
 GDAL<3.8.5
+
+# Pyinstaller 6.10 breaks our windows builds.  Until we can figure out the
+root cause, let's cap the versions to those that work.
+# https://github.com/natcap/invest/issues/1622
+pyinstaller<6.10
