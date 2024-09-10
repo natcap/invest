@@ -170,7 +170,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} twine
 
       - name: Build source distribution
         run: |
@@ -192,9 +192,6 @@ jobs:
           # The point here is to make sure that we can build
           # natcap.invest from source and that it imports.
           python -c "from natcap.invest import *"
-
-      - name: Set up environment
-        run: pip install twine
 
       - name: Check long description with twine
         run: twine check $(find dist -name "natcap[._-]invest*")
