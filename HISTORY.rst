@@ -45,6 +45,9 @@ Unreleased Changes
       (https://github.com/natcap/invest/issues/1598)
     * Fixed a bug that was allowing readonly workspace directories on Windows
       (https://github.com/natcap/invest/issues/1599)
+* Urban Flood Risk
+    * Fields present on the input AOI vector are now retained in the output.
+      (https://github.com/natcap/invest/issues/1600)
 
 3.14.2 (2024-05-29)
 -------------------
