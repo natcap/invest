@@ -166,6 +166,58 @@ class SDRTests(unittest.TestCase):
         self.assertEqual(
             numpy.count_nonzero(sed_dep_array[negative_non_nodata_mask]), 0)
 
+    def test_base_regression_d8(self):
+        """SDR base regression test on sample data in D8 mode.
+
+        Execute SDR with sample data and checks that the output files are
+        generated and that the aggregate shapefile fields are the same as the
+        regression case.
+        """
+        from natcap.invest.sdr import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(self.workspace_dir)
+        args['algorithm'] = 'D8'
+        args['threshold_flow_accumulation'] = 100
+        args['workspace_dir'] = '/Users/emily/Documents/test_sdr_d8'
+        # make args explicit that this is a base run of SWY
+
+        sdr.execute(args)
+        expected_results = {
+            'usle_tot': 2.62457418442,
+            'sed_export': 0.09748090804,
+            'sed_dep': 1.71672844887,
+            'avoid_exp': 10199.46875,
+            'avoid_eros': 274444.75,
+        }
+
+        vector_path = os.path.join(
+            args['workspace_dir'], 'watershed_results_sdr.shp')
+        assert_expected_results_in_vector(expected_results, vector_path)
+
+        # We only need to test that the drainage mask exists.  Functionality
+        # for that raster is tested elsewhere
+        self.assertTrue(
+            os.path.exists(
+                os.path.join(
+                    args['workspace_dir'], 'intermediate_outputs',
+                    'what_drains_to_stream.tif')))
+
+        # Check that sed_deposition does not have any negative, non-nodata
+        # values, even if they are very small.
+        sed_deposition_path = os.path.join(args['workspace_dir'],
+                                           'sed_deposition.tif')
+        sed_dep_nodata = pygeoprocessing.get_raster_info(
+            sed_deposition_path)['nodata'][0]
+        sed_dep_array = pygeoprocessing.raster_to_numpy_array(
+            sed_deposition_path)
+        negative_non_nodata_mask = (
+            (~numpy.isclose(sed_dep_array, sed_dep_nodata)) &
+            (sed_dep_array < 0))
+        self.assertEqual(
+            numpy.count_nonzero(sed_dep_array[negative_non_nodata_mask]), 0)
+
+
     def test_regression_with_undefined_nodata(self):
         """SDR base regression test with undefined nodata values.
 

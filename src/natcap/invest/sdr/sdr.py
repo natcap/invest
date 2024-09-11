@@ -743,14 +743,11 @@ def execute(args):
             task_name='flow accumulation calculation')
 
         stream_task = task_graph.add_task(
-            func=pygeoprocessing.routing.extract_strahler_streams_d8,
-            args=(
-                (f_reg['flow_direction_path'], 1),
-                (f_reg['flow_accumulation_path'], 1),
-                (f_reg['pit_filled_dem_path'], 1),
-                float(args['threshold_flow_accumulation']),
-                f_reg['stream_path']),
-            kwargs={'trace_threshold_proportion': 0.7},
+            func=pygeoprocessing.routing.extract_streams_d8,
+            kwargs=dict(
+                flow_accum_raster_path_band=(f_reg['flow_accumulation_path'], 1),
+                flow_threshold=float(args['threshold_flow_accumulation']),
+                target_stream_raster_path=f_reg['stream_path']),
             target_path_list=[f_reg['stream_path']],
             dependent_task_list=[flow_accumulation_task],
             task_name='extract streams')

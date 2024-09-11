@@ -6,7 +6,7 @@ from osgeo import gdal
 
 from ..managed_raster.managed_raster cimport D8
 from ..managed_raster.managed_raster cimport MFD
-from ..managed_raster.managed_raster cimport run_sediment_deposition
+from .sediment_deposition cimport run_sediment_deposition
 
 LOGGER = logging.getLogger(__name__)
 
