@@ -28,7 +28,7 @@ jobs:
     name: Check for syntax errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up python
         uses: actions/setup-python@v4
@@ -50,7 +50,7 @@ jobs:
     name: Check HISTORY RST syntax
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v4
         name: Set up python
@@ -75,7 +75,7 @@ jobs:
         python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
         os: [windows-latest, macos-13]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -162,7 +162,7 @@ jobs:
         python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
         os: [windows-latest, macos-13]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Fetch complete history for accurate versioning
 
@@ -221,7 +221,7 @@ jobs:
     runs-on: windows-latest
     needs: check-syntax-errors
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -252,7 +252,7 @@ jobs:
 
     steps:
       - name: Check out repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -309,7 +309,7 @@ jobs:
             workspace-path: ${{ github.workspace }}
             binary-extension: exe
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -483,7 +483,7 @@ jobs:
     needs: check-syntax-errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
