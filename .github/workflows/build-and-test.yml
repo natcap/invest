@@ -195,7 +195,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Source distribution
+          name: Source distribution ${{ matrix.os }} ${{ matrix.python-version }}
           path: dist
 
         # Secrets not available in PR so don't use GCP.
