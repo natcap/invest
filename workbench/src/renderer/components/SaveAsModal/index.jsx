@@ -67,7 +67,10 @@ class SaveAsModal extends React.Component {
   }
 
   handleShow() {
-    this.setState({ show: true });
+    this.setState({
+      relativePaths: false,
+      show: true,
+    });
   }
 
   handleChange(event) {
