@@ -141,7 +141,7 @@ jobs:
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
@@ -204,7 +204,7 @@ jobs:
         # different extensions)
       - name: Authenticate GCP
         if: github.event_name != 'pull_request' && matrix.os == 'macos-13' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
@@ -366,7 +366,7 @@ jobs:
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
@@ -505,7 +505,7 @@ jobs:
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
