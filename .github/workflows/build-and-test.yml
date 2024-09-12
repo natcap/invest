@@ -147,7 +147,7 @@ jobs:
 
       - name: Set up GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
@@ -210,7 +210,7 @@ jobs:
 
       - name: Set up GCP
         if: github.event_name != 'pull_request' && matrix.os == 'macos-13' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request' && matrix.os == 'macos-13' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
@@ -372,7 +372,7 @@ jobs:
 
       - name: Set up GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v2
 
       - name: Build Workbench (PRs)
         if: github.event_name == 'pull_request'
@@ -511,7 +511,7 @@ jobs:
 
       - name: Set up GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
