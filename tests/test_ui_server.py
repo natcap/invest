@@ -122,8 +122,11 @@ class EndpointFunctionTests(unittest.TestCase):
             }),
             'relativePaths': True,
         }
-        _ = test_client.post(
+        response = test_client.post(
             f'{ROUTE_PREFIX}/write_parameter_set_file', json=payload)
+        self.assertEqual(
+            response.json,
+            {'message': 'Parameter set saved', 'error': False})
         with open(filepath, 'r') as file:
             actual_data = json.loads(file.read())
         self.assertEqual(

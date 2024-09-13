@@ -175,7 +175,9 @@ def write_parameter_set_file():
         relativePaths: boolean
 
     Returns:
-        A string.
+        A dictionary with the following key/value pairs:
+        - message (string): for logging and/or rendering in the UI.
+        - error (boolean): True if an error occurred, otherwise False.
     """
     payload = request.get_json()
     filepath = payload['filepath']
@@ -183,9 +185,20 @@ def write_parameter_set_file():
     args = json.loads(payload['args'])
     relative_paths = payload['relativePaths']
 
-    datastack.build_parameter_set(
-        args, modulename, filepath, relative=relative_paths)
-    return 'parameter set saved'
+    try:
+        datastack.build_parameter_set(
+            args, modulename, filepath, relative=relative_paths)
+    except ValueError as message:
+        LOGGER.error(str(message))
+        return {
+            'message': str(message),
+            'error': True
+        }
+    else:
+        return {
+            'message': 'Parameter set saved',
+            'error': False
+        }
 
 
 @app.route(f'/{PREFIX}/save_to_python', methods=['POST'])

@@ -217,7 +217,10 @@ describe('Sidebar Buttons', () => {
   });
 
   test('Save to JSON: requests endpoint with correct payload', async () => {
-    const response = 'saved';
+    const response = {
+      message: 'saved',
+      error: false,
+    };
     writeParametersToFile.mockResolvedValue(response);
     const mockDialogData = { canceled: false, filePath: 'foo.json' };
     ipcRenderer.invoke.mockResolvedValueOnce(mockDialogData);
@@ -230,7 +233,7 @@ describe('Sidebar Buttons', () => {
     const saveButton = await findByRole('button', { name: 'Save' });
     await userEvent.click(saveButton);
 
-    expect(await findByRole('alert')).toHaveTextContent(response);
+    expect(await findByRole('alert')).toHaveTextContent(response.message);
     const payload = writeParametersToFile.mock.calls[0][0];
     expect(Object.keys(payload)).toEqual(expect.arrayContaining(
       ['filepath', 'moduleName', 'relativePaths', 'args']

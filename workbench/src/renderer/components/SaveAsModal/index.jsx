@@ -67,6 +67,7 @@ class SaveAsModal extends React.Component {
   }
 
   handleShow() {
+    this.props.removeSaveErrors();
     this.setState({
       relativePaths: false,
       show: true,
