@@ -234,15 +234,27 @@ def build_datastack_archive():
         args: JSON string of InVEST model args keys and values
 
     Returns:
-        A string.
+        A dictionary with the following key/value pairs:
+        - message (string): for logging and/or rendering in the UI.
+        - error (boolean): True if an error occurred, otherwise False.
     """
     payload = request.get_json()
-    datastack.build_datastack_archive(
-        json.loads(payload['args']),
-        payload['moduleName'],
-        payload['filepath'])
-
-    return 'datastack archive created'
+    try:
+        datastack.build_datastack_archive(
+            json.loads(payload['args']),
+            payload['moduleName'],
+            payload['filepath'])
+    except ValueError as message:
+        LOGGER.error(str(message))
+        return {
+            'message': str(message),
+            'error': True
+        }
+    else:
+        return {
+            'message': 'Datastack archive created',
+            'error': False
+        }
 
 
 @app.route(f'/{PREFIX}/log_model_start', methods=['POST'])
@@ -263,6 +275,7 @@ def log_model_exit():
         payload['session_id'],
         payload['status'])
     return 'OK'
+
 
 @app.route(f'/{PREFIX}/languages', methods=['GET'])
 def get_supported_languages():

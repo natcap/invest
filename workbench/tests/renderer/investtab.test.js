@@ -289,7 +289,10 @@ describe('Sidebar Buttons', () => {
   });
 
   test('Save datastack: requests endpoint with correct payload', async () => {
-    const response = 'saved';
+    const response = {
+      message: 'saved',
+      error: false,
+    };
     archiveDatastack.mockImplementation(() => new Promise(
       (resolve) => {
         setTimeout(() => resolve(response), 500);
@@ -308,7 +311,7 @@ describe('Sidebar Buttons', () => {
 
     expect(await findByRole('alert')).toHaveTextContent('archiving...');
     await waitFor(() => {
-      expect(getByRole('alert')).toHaveTextContent(response);
+      expect(getByRole('alert')).toHaveTextContent(response.message);
     });
     const payload = archiveDatastack.mock.calls[0][0];
     expect(Object.keys(payload)).toEqual(expect.arrayContaining(

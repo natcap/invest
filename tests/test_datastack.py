@@ -397,6 +397,25 @@ class DatastackArchiveTests(unittest.TestCase):
             os.path.join(spatial_csv_dir, spatial_csv_dict[4]['path']),
             target_csv_vector_path)
 
+    def test_relative_path_failure(self):
+        """Datastack: raise error when relative path creation fails."""
+        from natcap.invest import datastack
+        params = {
+            'workspace_dir': os.path.join(self.workspace),
+        }
+
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+
+        # Call build_datastack_archive and force build_parameter_set
+        # to raise an error
+        error_message = 'Error saving datastack'
+        with self.assertRaises(ValueError):
+            with patch('natcap.invest.datastack.build_parameter_set',
+                       side_effect=ValueError(error_message)):
+                datastack.build_datastack_archive(
+                    params, 'test_datastack_modules.simple_parameters',
+                    archive_path)
+
 
 class ParameterSetTest(unittest.TestCase):
     """Test Datastack."""

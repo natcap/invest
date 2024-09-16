@@ -190,10 +190,41 @@ class EndpointFunctionTests(unittest.TestCase):
                 'carbon_pools_path': data_path
             }),
         }
-        _ = test_client.post(
+        response = test_client.post(
             f'{ROUTE_PREFIX}/build_datastack_archive', json=payload)
+        self.assertEqual(
+            response.json,
+            {'message': 'Datastack archive created', 'error': False})
         # test_datastack.py asserts the actual archiving functionality
         self.assertTrue(os.path.exists(target_filepath))
+
+    def test_build_datastack_archive_error_handling(self):
+        """UI server: build_datastack_archive endpoint
+        should catch a ValueError and return an error message.
+        """
+        test_client = ui_server.app.test_client()
+        self.workspace_dir = tempfile.mkdtemp()
+        target_filepath = os.path.join(self.workspace_dir, 'data.tgz')
+        data_path = os.path.join(self.workspace_dir, 'data.csv')
+        with open(data_path, 'w') as file:
+            file.write('hello')
+
+        payload = {
+            'filepath': target_filepath,
+            'moduleName': 'natcap.invest.carbon',
+            'args': json.dumps({
+                'workspace_dir': 'foo',
+                'carbon_pools_path': data_path
+            }),
+        }
+        error_message = 'Error saving datastack'
+        with patch('natcap.invest.datastack.build_datastack_archive',
+                   side_effect=ValueError(error_message)):
+            response = test_client.post(
+                f'{ROUTE_PREFIX}/build_datastack_archive', json=payload)
+            self.assertEqual(
+                response.json,
+                {'message': error_message, 'error': True})
 
     @patch('natcap.invest.ui_server.usage.requests.post')
     @patch('natcap.invest.ui_server.usage.requests.get')

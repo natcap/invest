@@ -251,8 +251,8 @@ class SetupTab extends React.Component {
     };
     const key = window.crypto.getRandomValues(new Uint16Array(1))[0].toString();
     this.setSaveAlert('archiving...', false, key);
-    const response = await archiveDatastack(payload);
-    this.setSaveAlert(response, false, key);
+    const {message, error} = await archiveDatastack(payload);
+    this.setSaveAlert(message, error, key);
   }
 
   /** State updater for alert messages from various save buttons.

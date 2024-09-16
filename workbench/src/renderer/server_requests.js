@@ -146,10 +146,14 @@ export function archiveDatastack(payload) {
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
     })
-      .then((response) => response.text())
-      .then((text) => {
-        logger.debug(text);
-        return text;
+      .then((response) => response.json())
+      .then(({message, error}) => {
+        if (error) {
+          logger.error(message);
+        } else {
+          logger.debug(message);
+        }
+        return {message, error};
       })
       .catch((error) => logger.error(error.stack))
   );
