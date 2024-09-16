@@ -133,6 +133,30 @@ class EndpointFunctionTests(unittest.TestCase):
             set(actual_data),
             {'args', 'invest_version', 'model_name'})
 
+    def test_write_parameter_set_file_error_handling(self):
+        """UI server: write_parameter_set_file endpoint
+        should catch a ValueError and return an error message.
+        """
+        test_client = ui_server.app.test_client()
+        self.workspace_dir = tempfile.mkdtemp()
+        filepath = os.path.join(self.workspace_dir, 'datastack.json')
+        payload = {
+            'filepath': filepath,
+            'moduleName': 'natcap.invest.carbon',
+            'args': json.dumps({
+                'workspace_dir': 'foo'
+            }),
+            'relativePaths': True,
+        }
+        error_message = 'Error saving datastack'
+        with patch('natcap.invest.datastack.build_parameter_set',
+                   side_effect=ValueError(error_message)):
+            response = test_client.post(
+                f'{ROUTE_PREFIX}/write_parameter_set_file', json=payload)
+            self.assertEqual(
+                response.json,
+                {'message': error_message, 'error': True})
+
     def test_save_to_python(self):
         """UI server: save_to_python endpoint."""
         test_client = ui_server.app.test_client()
