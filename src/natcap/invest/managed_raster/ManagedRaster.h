@@ -79,6 +79,7 @@ class ManagedRaster {
         int write_mode;
         int closed;
         double nodata;
+        double* geotransform;
 
         ManagedRaster() { }
 
@@ -120,6 +121,9 @@ class ManagedRaster {
             block_ymod = block_ysize - 1;
 
             nodata = band->GetNoDataValue();
+
+            geotransform = (double *) CPLMalloc(sizeof(double) * 6);
+            dataset->GetGeoTransform(geotransform);
 
             // if (self.block_xsize & (self.block_xsize - 1) != 0) or (
             //         self.block_ysize & (self.block_ysize - 1) != 0):
@@ -222,21 +226,13 @@ class ManagedRaster {
             int win_xsize = block_xsize;
             int win_ysize = block_ysize;
 
-            std::cout << "block_xsize " << block_xsize << std::endl;
-            std::cout << "block_ysize " << block_ysize << std::endl;
-
             // load a new block
             if ((xoff + win_xsize) > raster_x_size) {
-                std::cout << xoff << " " << raster_x_size << std::endl;
                 win_xsize = win_xsize - (xoff + win_xsize - raster_x_size);
             }
             if ((yoff + win_ysize) > raster_y_size) {
-                std::cout << yoff << " " << raster_y_size << std::endl;
                 win_ysize = win_ysize - (yoff + win_ysize - raster_y_size);
             }
-
-            std::cout << "win_xsize " << win_xsize << std::endl;
-            std::cout << "win_ysize " << win_ysize << std::endl;
 
             double *pafScanline = (double *) CPLMalloc(sizeof(double) * win_xsize * win_ysize);
             CPLErr err = band->RasterIO(GF_Read, xoff, yoff, win_xsize, win_ysize,
@@ -437,7 +433,6 @@ public:
         , row { y }
     {
         n_dir = 0;
-        std::cout << col << " " << row << " " << raster.get(col, row) << std::endl;
         flow_dir = int(raster.get(col, row));
         flow_dir_sum = 0;
     }
@@ -475,23 +470,16 @@ public:
 
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
     NeighborTuple next() {
-        std::cout << "1" << std::endl;
         if (n_dir == 8) {
             return NeighborTuple(8, -1, -1, -1);
         }
-        std::cout << "2" << std::endl;
-        std::cout << flow_dir << std::endl;
         long xj = col + COL_OFFSETS[flow_dir];
-        std::cout << "3" << std::endl;
         long yj = row + ROW_OFFSETS[flow_dir];
-        std::cout << "4" << std::endl;
         if (xj < 0 or xj >= raster.raster_x_size or
                 yj < 0 or yj >= raster.raster_y_size) {
-            std::cout << "5" << std::endl;
             n_dir = 8;
             return NeighborTuple(8, -1, -1, -1);
         }
-        std::cout << "6" << std::endl;
         n_dir = 8;
         return NeighborTuple(flow_dir, xj, yj, 1);
     }
