@@ -367,11 +367,15 @@ describe('Sidebar Buttons', () => {
     ]
   ])('%s: renders success message', async (label, method, response) => {
     ipcRenderer.invoke.mockResolvedValueOnce({canceled: false, filePath: 'example.txt'});
-    method.mockImplementation(() => new Promise(
-      (resolve) => {
-        setTimeout(() => resolve(response), 10);
-      }
-    ));
+    if (method == archiveDatastack) {
+      method.mockImplementationOnce(() => new Promise(
+        (resolve) => {
+          setTimeout(() => resolve(response), 500);
+        }
+      ));
+    } else {
+      method.mockResolvedValueOnce(response);
+    }
 
     const { findByText, findByLabelText, findByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
@@ -404,11 +408,7 @@ describe('Sidebar Buttons', () => {
     ],
   ])('%s: renders error message', async (label, method, response) => {
     ipcRenderer.invoke.mockResolvedValueOnce({canceled: false, filePath: 'example.txt'});
-    method.mockImplementation(() => new Promise(
-      (resolve) => {
-        setTimeout(() => resolve(response), 10);
-      }
-    ));
+    method.mockResolvedValueOnce(response);
 
     const { findByText, findByLabelText, findByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
@@ -419,12 +419,7 @@ describe('Sidebar Buttons', () => {
     await userEvent.click(saveButton);
 
     const saveAlert = await findByRole('alert');
-    if (method == archiveDatastack) {
-      expect(saveAlert).toHaveTextContent('archiving...');
-    }
-    await waitFor(() => {
-      expect(saveAlert).toHaveTextContent(response.message);
-    });
+    expect(saveAlert).toHaveTextContent(response.message);
     expect(saveAlert).toHaveClass('alert-danger');
   });
 
