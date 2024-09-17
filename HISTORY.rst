@@ -39,15 +39,17 @@ Unreleased Changes
 ------------------
 * Workbench
     * Several small updates to the model input form UI to improve usability
-      and visual consistency (https://github.com/natcap/invest/issues/912)
+      and visual consistency (https://github.com/natcap/invest/issues/912).
     * Fixed a bug that caused the application to crash when attempting to
       open a workspace without a valid logfile
-      (https://github.com/natcap/invest/issues/1598)
+      (https://github.com/natcap/invest/issues/1598).
     * Fixed a bug that was allowing readonly workspace directories on Windows
-      (https://github.com/natcap/invest/issues/1599)
+      (https://github.com/natcap/invest/issues/1599).
     * Fixed a bug that, in certain scenarios, caused a datastack to be saved
       with relative paths when the Relative Paths checkbox was left unchecked
-      (https://github.com/natcap/invest/issues/1609)
+      (https://github.com/natcap/invest/issues/1609).
+    * Improved error handling when a datastack cannot be saved with relative
+      paths across drives (https://github.com/natcap/invest/issues/1608).
 
 3.14.2 (2024-05-29)
 -------------------
