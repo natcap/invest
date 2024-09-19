@@ -2543,8 +2543,10 @@ def _warp_lulc(source_lulc_path, target_lulc_path, target_pixel_size,
     source_raster_info = pygeoprocessing.get_raster_info(source_lulc_path)
     target_nodata = source_raster_info['nodata'][0]
     if target_nodata is None:
+        # Guarantee that our nodata cannot be represented by the datatype -
+        # select a nodata value that's out of range.
         target_nodata = pygeoprocessing.choose_nodata(
-            source_raster_info['numpy_type'])
+            source_raster_info['numpy_type']) + 1
 
     pygeoprocessing.warp_raster(
         source_lulc_path, target_pixel_size, target_lulc_path,
