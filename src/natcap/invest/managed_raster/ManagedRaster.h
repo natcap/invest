@@ -80,6 +80,7 @@ class ManagedRaster {
         int closed;
         double nodata;
         double* geotransform;
+        int hasNodata;
 
         ManagedRaster() { }
 
@@ -120,7 +121,7 @@ class ManagedRaster {
             block_xmod = block_xsize - 1;
             block_ymod = block_ysize - 1;
 
-            nodata = band->GetNoDataValue();
+            nodata = band->GetNoDataValue( &hasNodata );
 
             geotransform = (double *) CPLMalloc(sizeof(double) * 6);
             dataset->GetGeoTransform(geotransform);
