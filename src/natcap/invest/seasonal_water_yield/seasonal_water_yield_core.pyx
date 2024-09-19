@@ -76,7 +76,7 @@ cpdef calculate_local_recharge(
     """
     cdef vector[float] alpha_values;
     for x in sorted(alpha_month_map.items()):
-        alpha_values.push_back(x)
+        alpha_values.push_back(x[1])
 
     # make sure that user input nodata values are defined
     # set to -1 if not defined
