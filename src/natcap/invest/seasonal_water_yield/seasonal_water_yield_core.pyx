@@ -13,20 +13,9 @@ from osgeo import ogr
 from osgeo import osr
 
 from libcpp.vector cimport vector
-from libc.time cimport time as ctime
-from ..managed_raster.managed_raster cimport ManagedRaster
-from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
-from ..managed_raster.managed_raster cimport DownslopeNeighborIterator
-from ..managed_raster.managed_raster cimport UpslopeNeighborIterator
-from ..managed_raster.managed_raster cimport NeighborTuple
-from ..managed_raster.managed_raster cimport is_close
+
 from ..managed_raster.managed_raster cimport D8, MFD
-
 from .swy cimport run_route_baseflow_sum, run_calculate_local_recharge
-
-cdef extern from "time.h" nogil:
-    ctypedef int time_t
-    time_t time(time_t*)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -34,7 +23,7 @@ cpdef calculate_local_recharge(
         precip_path_list, et0_path_list, qf_m_path_list, flow_dir_mfd_path,
         kc_path_list, alpha_month_map, float beta_i, float gamma, stream_path,
         target_li_path, target_li_avail_path, target_l_sum_avail_path,
-        target_aet_path, target_pi_path):
+        target_aet_path, target_pi_path, algorithm):
     """
     Calculate the rasters defined by equations [3]-[7].
 
@@ -74,29 +63,21 @@ cpdef calculate_local_recharge(
             None.
 
     """
-    cdef vector[float] alpha_values;
-    for x in sorted(alpha_month_map.items()):
-        alpha_values.push_back(x[1])
-
-    # make sure that user input nodata values are defined
-    # set to -1 if not defined
-    # precipitation and evapotranspiration data should
-    # always be non-negative
+    cdef vector[float] alpha_values
     cdef vector[char*] et0_paths
-    for et0_path in et0_path_list:
-        et0_paths.push_back(et0_path.encode('utf-8'))
-
     cdef vector[char*] precip_paths
-    for precip_path in precip_path_list:
-        precip_paths.push_back(precip_path.encode('utf-8'))
-
     cdef vector[char*] qf_paths
-    for qf_path in qf_m_path_list:
-        qf_paths.push_back(qf_path.encode('utf-8'))
-
     cdef vector[char*] kc_paths
-    for kc_path in kc_path_list:
-        kc_paths.push_back(kc_path.encode('utf-8'))
+    encoded_et0_paths = [p.encode('utf-8') for p in et0_path_list]
+    encoded_precip_paths = [p.encode('utf-8') for p in precip_path_list]
+    encoded_qf_paths = [p.encode('utf-8') for p in qf_m_path_list]
+    encoded_kc_paths = [p.encode('utf-8') for p in kc_path_list]
+    for i in range(12):
+        et0_paths.push_back(encoded_et0_paths[i])
+        precip_paths.push_back(encoded_precip_paths[i])
+        qf_paths.push_back(encoded_qf_paths[i])
+        kc_paths.push_back(encoded_kc_paths[i])
+        alpha_values.push_back(alpha_month_map[i + 1])
 
     target_nodata = -1e32
     pygeoprocessing.new_raster_from_base(
@@ -114,12 +95,11 @@ cpdef calculate_local_recharge(
     pygeoprocessing.new_raster_from_base(
         flow_dir_mfd_path, target_pi_path, gdal.GDT_Float32, [target_nodata],
         fill_value_list=[target_nodata])
-
-    run_calculate_local_recharge(
+    args = [
         precip_paths,
         et0_paths,
         qf_paths,
-        flow_dir_mfd_path,
+        flow_dir_mfd_path.encode('utf-8'),
         kc_paths,
         alpha_values,
         beta_i,
@@ -129,12 +109,17 @@ cpdef calculate_local_recharge(
         target_li_avail_path.encode('utf-8'),
         target_l_sum_avail_path.encode('utf-8'),
         target_aet_path.encode('utf-8'),
-        target_pi_path.encode('utf-8'))
+        target_pi_path.encode('utf-8')]
+
+    if algorithm == 'MFD':
+        run_calculate_local_recharge[MFD](*args)
+    else:  # D8
+        run_calculate_local_recharge[D8](*args)
 
 
 def route_baseflow_sum(
         flow_dir_path, l_path, l_avail_path, l_sum_path,
-        stream_path, target_b_path, target_b_sum_path):
+        stream_path, target_b_path, target_b_sum_path, algorithm):
     """Route Baseflow through MFD as described in Equation 11.
 
     Args:
@@ -161,12 +146,16 @@ def route_baseflow_sum(
     pygeoprocessing.new_raster_from_base(
         flow_dir_path, target_b_path, gdal.GDT_Float32,
         [target_nodata], fill_value_list=[target_nodata])
-
-    run_route_baseflow_sum[MFD](
+    args = [
         flow_dir_path.encode('utf-8'),
         l_path.encode('utf-8'),
         l_avail_path.encode('utf-8'),
         l_sum_path.encode('utf-8'),
         stream_path.encode('utf-8'),
         target_b_path.encode('utf-8'),
-        target_b_sum_path.encode('utf-8'))
+        target_b_sum_path.encode('utf-8')]
+
+    if algorithm == 'MFD':
+        run_route_baseflow_sum[MFD](*args)
+    else:  # D8
+        run_route_baseflow_sum[D8](*args)

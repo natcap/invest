@@ -1,7 +1,7 @@
 from libcpp.vector cimport vector
 
 cdef extern from "swy.h":
-    void run_calculate_local_recharge(
+    void run_calculate_local_recharge[T](
         vector[char*], # precip_path_list
         vector[char*], # et0_path_list
         vector[char*], # qf_m_path_list

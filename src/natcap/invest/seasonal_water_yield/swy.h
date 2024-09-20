@@ -4,8 +4,7 @@
 
 #include "ManagedRaster.h"
 
-
-
+template<class T>
 void run_calculate_local_recharge(
         vector<char*> precip_paths,
         vector<char*> et0_paths,
@@ -60,31 +59,24 @@ void run_calculate_local_recharge(
     //         None.
 
     // """
-    int i_n;
-    int peak_pixel;
-    long xs, ys, xs_root, ys_root, xoff, yoff;
-    int flow_dir_s;
-    long xi, yi, xj, yj, mfd_dir_sum;
-    int flow_dir_j;
-    int n_dir;
+    long xs_root, ys_root, xoff, yoff;
+    long xi, yi, mfd_dir_sum;
     long win_xsize, win_ysize;
     double kc_m, pet_m, p_m, qf_m, et0_m, aet_i, p_i, qf_i, l_i;
     double l_avail_i, l_avail_j, l_sum_avail_i, l_sum_avail_j;
-    float qf_nodata, kc_nodata;
     bool upslope_defined;
-    float mfd_direction_array[8];
 
     queue<pair<long, long>> work_queue;
     ManagedRaster et0_m_raster, qf_m_raster, kc_m_raster;
 
-    UpslopeNeighborIterator<MFD> up_iterator;
-    DownslopeNeighborIterator<MFD> dn_iterator;
+    UpslopeNeighborIterator<T> up_iterator;
+    DownslopeNeighborIterator<T> dn_iterator;
 
     // # used for time-delayed logging
     // cdef time_t last_log_time
     // last_log_time = ctime(NULL)
 
-    ManagedFlowDirRaster<MFD> flow_dir_raster = ManagedFlowDirRaster<MFD>(
+    ManagedFlowDirRaster<T> flow_dir_raster = ManagedFlowDirRaster<T>(
         flow_dir_path, 1, 0);
     NeighborTuple neighbor;
 
@@ -94,8 +86,8 @@ void run_calculate_local_recharge(
     // always be non-negative
     vector<ManagedRaster> et0_m_rasters;
     vector<double> et0_m_nodata_list;
-    for (auto et0_path: et0_paths) {
-        ManagedRaster et0_raster = ManagedRaster(et0_path, 1, 0);
+    for (int i = 0; i < et0_paths.size(); i++) {
+        ManagedRaster et0_raster = ManagedRaster(et0_paths[i], 1, 0);
         et0_m_rasters.push_back(et0_raster);
         if (et0_raster.hasNodata) {
             et0_m_nodata_list.push_back(et0_raster.nodata);
@@ -164,7 +156,6 @@ void run_calculate_local_recharge(
                 for (int col_index = 0; col_index < win_xsize; col_index++) {
                     xs_root = xoff + col_index;
 
-
                     if (flow_dir_raster.is_local_high_point(xs_root, ys_root)) {
                         work_queue.push(pair<long, long>(xs_root, ys_root));
                     }
@@ -186,7 +177,7 @@ void run_calculate_local_recharge(
                         // initialize to 0 so we indicate we haven't tracked any
                         // mfd values yet
                         l_sum_avail_i = 0.0;
-                        up_iterator = UpslopeNeighborIterator<MFD>(flow_dir_raster, xi, yi);
+                        up_iterator = UpslopeNeighborIterator<T>(flow_dir_raster, xi, yi);
                         neighbor = up_iterator.next_no_divide();
                         mfd_dir_sum = 0;
                         while (neighbor.direction < 8) {
@@ -263,7 +254,7 @@ void run_calculate_local_recharge(
                         target_li_raster.set(xi, yi, l_i);
                         target_li_avail_raster.set(xi, yi, l_avail_i);
 
-                        dn_iterator = DownslopeNeighborIterator<MFD>(flow_dir_raster, xi, yi);
+                        dn_iterator = DownslopeNeighborIterator<T>(flow_dir_raster, xi, yi);
                         neighbor = dn_iterator.next();
                         while (neighbor.direction < 8) {
                             work_queue.push(pair<long, long>(neighbor.x, neighbor.y));

@@ -343,6 +343,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
+            'algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(args['workspace_dir'],
@@ -404,6 +405,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
+            'algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(args['workspace_dir'],
@@ -504,6 +506,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
+            'algorithm': 'MFD'
         }
 
         biophysical_csv_path = os.path.join(args['workspace_dir'],
@@ -563,6 +566,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             'results_suffix': '',
             'threshold_flow_accumulation': '50',
             'workspace_dir': workspace_dir,
+            'algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(workspace_dir, 'watershed.shp')
@@ -1183,13 +1187,14 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         seasonal_water_yield_core.calculate_local_recharge(
             [precip_path for i in range(12)], [et0_path for i in range(12)],
             [quickflow_path for i in range(12)], flow_dir_path,
-            [kc_path for i in range(12)], {i: 0.5 for i in range(12)}, 0.5,
+            [kc_path for i in range(12)], {i: 0.5 for i in range(1, 13)}, 0.5,
             0.5, stream_path,
             os.path.join(self.workspace_dir, 'target_li_path.tif'),
             os.path.join(self.workspace_dir, 'target_li_avail_path.tif'),
             os.path.join(self.workspace_dir, 'target_l_sum_avail_path.tif'),
             os.path.join(self.workspace_dir, 'target_aet_path.tif'),
-            os.path.join(self.workspace_dir, 'target_precip_path.tif'))
+            os.path.join(self.workspace_dir, 'target_precip_path.tif'),
+            algorithm='MFD')
 
 
 class SWYValidationTests(unittest.TestCase):
@@ -1215,6 +1220,7 @@ class SWYValidationTests(unittest.TestCase):
             'precip_dir',
             'threshold_flow_accumulation',
             'user_defined_local_recharge',
+            'algorithm'
         ]
 
     def tearDown(self):
