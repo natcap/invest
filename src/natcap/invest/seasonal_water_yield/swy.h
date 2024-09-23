@@ -67,7 +67,6 @@ void run_calculate_local_recharge(
     bool upslope_defined;
 
     queue<pair<long, long>> work_queue;
-    ManagedRaster et0_m_raster, qf_m_raster, kc_m_raster;
 
     UpslopeNeighborIterator<T> up_iterator;
     DownslopeNeighborIterator<T> dn_iterator;
@@ -87,10 +86,9 @@ void run_calculate_local_recharge(
     vector<ManagedRaster> et0_m_rasters;
     vector<double> et0_m_nodata_list;
     for (int i = 0; i < et0_paths.size(); i++) {
-        ManagedRaster et0_raster = ManagedRaster(et0_paths[i], 1, 0);
-        et0_m_rasters.push_back(et0_raster);
-        if (et0_raster.hasNodata) {
-            et0_m_nodata_list.push_back(et0_raster.nodata);
+        et0_m_rasters.push_back(ManagedRaster(et0_paths[i], 1, 0));
+        if (et0_m_rasters[i].hasNodata) {
+            et0_m_nodata_list.push_back(et0_m_rasters[i].nodata);
         } else {
             et0_m_nodata_list.push_back(-1);
         }
@@ -272,17 +270,11 @@ void run_calculate_local_recharge(
     target_l_sum_avail_raster.close();
     target_aet_raster.close();
     target_pi_raster.close();
-    for (auto raster: et0_m_rasters) {
-        raster.close();
-    }
-    for (auto raster: precip_m_rasters) {
-        raster.close();
-    }
-    for (auto raster: qf_m_rasters) {
-        raster.close();
-    }
-    for (auto raster: kc_m_rasters) {
-        raster.close();
+    for (int i = 0; i < 12; i++) {
+        et0_m_rasters[i].close();
+        precip_m_rasters[i].close();
+        qf_m_rasters[i].close();
+        kc_m_rasters[i].close();
     }
 }
 

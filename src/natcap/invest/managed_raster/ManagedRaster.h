@@ -293,7 +293,6 @@ class ManagedRaster {
         //     Any subsequent calls to any other functions in _ManagedRaster will
         //     have undefined behavior.
         // """
-
             if (closed) {
                 return;
             }
@@ -317,6 +316,7 @@ class ManagedRaster {
                     // write the changed value back if desired
                     CPLFree(it->second);
                 }
+                GDALClose( (GDALDatasetH) dataset );
                 return;
             }
 

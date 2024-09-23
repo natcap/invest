@@ -653,6 +653,54 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
 
+    def test_base_regression_d8(self):
+        """SWY base regression test on sample data in D8 mode.
+
+        Executes SWY in default mode and checks that the output files are
+        generated and that the aggregate shapefile fields are the same as the
+        regression case.
+        """
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # use predefined directory so test can clean up files during teardown
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir)
+
+        # Ensure the model can pass when a nodata value is not defined.
+        size = 100
+        lulc_array = numpy.zeros((size, size), dtype=numpy.int8)
+        lulc_array[size // 2:, :] = 1
+
+        driver = gdal.GetDriverByName('GTiff')
+        new_raster = driver.Create(
+            args['lulc_raster_path'], lulc_array.shape[0],
+            lulc_array.shape[1], 1, gdal.GDT_Byte)
+        band = new_raster.GetRasterBand(1)
+        band.WriteArray(lulc_array)
+        geotransform = [1180000, 1, 0, 690000, 0, -1]
+        new_raster.SetGeoTransform(geotransform)
+        band = None
+        new_raster = None
+        driver = None
+
+        # make args explicit that this is a base run of SWY
+        args['user_defined_climate_zones'] = False
+        args['user_defined_local_recharge'] = False
+        args['monthly_alpha'] = False
+        args['results_suffix'] = ''
+        args['algorithm'] = 'D8'
+
+        seasonal_water_yield.execute(args)
+
+        # generate aggregated results csv table for assertion
+        agg_results_csv_path = os.path.join(
+            args['workspace_dir'], 'agg_results_base.csv')
+        make_agg_results_csv(agg_results_csv_path)
+
+        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
+            agg_results_csv_path)
+
     def test_base_regression_nodata_inf(self):
         """SWY base regression test on sample data with really small nodata.
 

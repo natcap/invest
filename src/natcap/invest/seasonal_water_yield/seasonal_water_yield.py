@@ -783,11 +783,10 @@ def execute(args):
 
         stream_threshold_task = task_graph.add_task(
             func=pygeoprocessing.routing.extract_streams_d8,
-            args=(
-                (file_registry['flow_accum_path'], 1),
-                (file_registry['flow_dir_path'], 1),
-                threshold_flow_accumulation,
-                file_registry['stream_path']),
+            kwargs=dict(
+                flow_accum_raster_path_band=(file_registry['flow_accum_path'], 1),
+                flow_threshold=threshold_flow_accumulation,
+                target_stream_raster_path=file_registry['stream_path']),
             target_path_list=[file_registry['stream_path']],
             dependent_task_list=[flow_accum_task],
             task_name='stream threshold - D8')
