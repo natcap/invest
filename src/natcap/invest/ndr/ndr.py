@@ -166,8 +166,14 @@ MODEL_SPEC = {
         "algorithm": {
             "type": "option_string",
             "options": {
-                "D8": {"description": "D8 flow direction"},
-                "MFD": {"description": "Multiple flow direction"}
+                "D8": {
+                    "display_name": gettext("D8"),
+                    "description": "D8 flow direction"
+                },
+                "MFD": {
+                    "display_name": gettext("MFD"),
+                    "description": "Multiple flow direction"
+                }
             },
             "about": gettext("Flow direction algorithm to use."),
             "name": gettext("flow direction algorithm")
