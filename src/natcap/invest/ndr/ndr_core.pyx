@@ -22,16 +22,16 @@ LOGGER = logging.getLogger(__name__)
 cdef int STREAM_EFFECTIVE_RETENTION = 0
 
 def ndr_eff_calculation(
-        mfd_flow_direction_path, stream_path, retention_eff_lulc_path,
-        crit_len_path, effective_retention_path):
+        flow_direction_path, stream_path, retention_eff_lulc_path,
+        crit_len_path, effective_retention_path, algorithm):
     """Calculate flow downhill effective_retention to the channel.
 
         Args:
-            mfd_flow_direction_path (string): a path to a raster with
-                pygeoprocessing.routing MFD flow direction values.
+            flow_direction_path (string): a path to a raster with
+                pygeoprocessing.routing flow direction values (MFD or D8).
             stream_path (string): a path to a raster where 1 indicates a
                 stream all other values ignored must be same dimensions and
-                projection as mfd_flow_direction_path.
+                projection as flow_direction_path.
             retention_eff_lulc_path (string): a path to a raster indicating
                 the maximum retention efficiency that the landcover on that
                 pixel can accumulate.
@@ -48,7 +48,7 @@ def ndr_eff_calculation(
     """
     cdef float effective_retention_nodata = -1.0
     pygeoprocessing.new_raster_from_base(
-        mfd_flow_direction_path, effective_retention_path, gdal.GDT_Float32,
+        flow_direction_path, effective_retention_path, gdal.GDT_Float32,
         [effective_retention_nodata])
     fp, to_process_flow_directions_path = tempfile.mkstemp(
         suffix='.tif', prefix='flow_to_process',
@@ -62,18 +62,32 @@ def ndr_eff_calculation(
             result[:] |= ((((mfd_array >> (i*4)) & 0xF) > 0) << i).astype(numpy.uint8)
         return result
 
+    # create direction raster in bytes
+    def _d8_to_flow_dir_op(d8_array):
+        result = numpy.zeros(d8_array.shape, dtype=numpy.uint8)
+        for i in range(8):
+            result[d8_array == i] = 1 << i
+        return result
+
+    flow_dir_op = _mfd_to_flow_dir_op if algorithm == 'MFD' else _d8_to_flow_dir_op
+
     # convert mfd raster to binary mfd
     # each value is an 8-digit binary number
     # where 1 indicates that the pixel drains in that direction
     # and 0 indicates that it does not drain in that direction
     pygeoprocessing.raster_calculator(
-        [(mfd_flow_direction_path, 1)], _mfd_to_flow_dir_op,
+        [(flow_direction_path, 1)], flow_dir_op,
         to_process_flow_directions_path, gdal.GDT_Byte, None)
 
-    run_effective_retention[MFD](
-        mfd_flow_direction_path.encode('utf-8'),
+    args = [
+        flow_direction_path.encode('utf-8'),
         stream_path.encode('utf-8'),
         retention_eff_lulc_path.encode('utf-8'),
         crit_len_path.encode('utf-8'),
         to_process_flow_directions_path.encode('utf-8'),
-        effective_retention_path.encode('utf-8'))
+        effective_retention_path.encode('utf-8')]
+
+    if algorithm == 'MFD':
+        run_effective_retention[MFD](*args)
+    else: # D8
+        run_effective_retention[D8](*args)

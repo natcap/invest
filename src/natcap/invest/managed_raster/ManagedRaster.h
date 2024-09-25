@@ -471,6 +471,7 @@ public:
 
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
     NeighborTuple next() {
+        flow_dir_sum = 1;
         if (n_dir == 8) {
             return NeighborTuple(8, -1, -1, -1);
         }
@@ -512,6 +513,7 @@ public:
 
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
     NeighborTuple next_no_skip() {
+        flow_dir_sum = 1;
         if (n_dir == 8) {
             return NeighborTuple(8, -1, -1, -1);
         }
