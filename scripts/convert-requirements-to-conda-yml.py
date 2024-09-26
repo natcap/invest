@@ -36,7 +36,7 @@ def _get_implementation_version():
 # Environment marker handling is taken straight from
 # https://peps.python.org/pep-0508/#environment-markers
 ENV_MARKERS = {
-    "os_name": os.name(),
+    "os_name": os.name,
     "sys_platform": sys.platform,
     "platform_machine": platform.machine(),
     "platform_python_impl": platform.python_implementation(),
