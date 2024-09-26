@@ -37,6 +37,14 @@
 
 Unreleased Changes
 ------------------
+* Pollination
+    * Fixed an issue with nodata handling that was causing some outputs to be
+      filled either with the float32 value for positive infinity, or else with
+      a value very close to it. https://github.com/natcap/invest/issues/1635
+    * While working on https://github.com/natcap/invest/issues/1635, we also
+      updated the stated dtype of most pollination model outputs to be float32
+      instead of the float64 dtype that was being assumed previously.  This
+      will result in smaller output filesizes with minimal loss of precision.
 * Workbench
     * Several small updates to the model input form UI to improve usability
       and visual consistency (https://github.com/natcap/invest/issues/912)
