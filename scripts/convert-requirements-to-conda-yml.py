@@ -2,6 +2,7 @@
 """convert-requirements-to-conda-yml.py"""
 
 import argparse
+import os
 import platform
 import sys
 
@@ -12,6 +13,46 @@ dependencies:
 {conda_dependencies}
 {pip_dependencies}
 """
+
+
+# Environment marker handling is taken straight from
+# https://peps.python.org/pep-0508/#environment-markers
+def _get_implementation_version():
+    def format_full_version(info):
+        version = '{0.major}.{0.minor}.{0.micro}'.format(info)
+        kind = info.releaselevel
+        if kind != 'final':
+            version += kind[0] + str(info.serial)
+        return version
+
+    if hasattr(sys, 'implementation'):
+        implementation_version = format_full_version(
+            sys.implementation.version)
+    else:
+        implementation_version = "0"
+    return implementation_version
+
+
+# Environment marker handling is taken straight from
+# https://peps.python.org/pep-0508/#environment-markers
+ENV_MARKERS = {
+    "os_name": os.name(),
+    "sys_platform": sys.platform,
+    "platform_machine": platform.machine(),
+    "platform_python_impl": platform.python_implementation(),
+    "platform_release": platform.release(),
+    "platform_system": platform.system(),
+    "platform_version": platform.version(),
+
+    # Deliberately not supporting python_version marker in order to avoid
+    # possible issues with the python version not yet being known when this
+    # script is run.
+    # "python_version": '.'.join(platform.python_version_tuple()[:2]),
+
+    "python_full_version": platform.python_version(),
+    "implementation_name": sys.implementation.name,
+    "implementation_version": _get_implementation_version(),
+}
 
 
 def build_environment_from_requirements(cli_args):
@@ -62,7 +103,16 @@ def build_environment_from_requirements(cli_args):
                     # requirement if we're using pip.
                     conda_requirements.add('pip')
 
-                    pip_requirements.add(line)
+                    # Handle environment specifiers and see if the requirement
+                    # should exist in this environment.
+                    # InVEST pretty much just uses this for checking operating
+                    # systems.
+                    if ";" in line:
+                        package, marker = line.split(';')
+                        if eval(marker, ENV_MARKERS):
+                            pip_requirements.add(package)
+                    else:
+                        pip_requirements.add(line)
 
                     # If an scm needs to be installed for pip to clone to a
                     # revision, add it to the conda package list.
