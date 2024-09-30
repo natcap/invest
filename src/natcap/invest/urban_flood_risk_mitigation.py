@@ -553,22 +553,11 @@ def _write_summary_vector(
         ``None``
     """
     source_aoi_vector = gdal.OpenEx(source_aoi_vector_path, gdal.OF_VECTOR)
-    source_aoi_layer = source_aoi_vector.GetLayer()
-    source_aoi_field_defns = source_aoi_layer.schema
-    source_geom_type = source_aoi_layer.GetGeomType()
-    source_srs_wkt = pygeoprocessing.get_vector_info(
-        source_aoi_vector_path)['projection_wkt']
-    source_srs = osr.SpatialReference()
-    source_srs.ImportFromWkt(source_srs_wkt)
-
     esri_driver = gdal.GetDriverByName('ESRI Shapefile')
-    target_watershed_vector = esri_driver.Create(
-        target_vector_path, 0, 0, 0, gdal.GDT_Unknown)
-    layer_name = os.path.splitext(os.path.basename(
-        target_vector_path))[0]
-    LOGGER.debug(f"creating layer {layer_name}")
-    target_watershed_layer = target_watershed_vector.CreateLayer(
-        layer_name, source_srs, source_geom_type)
+    esri_driver.CreateCopy(target_vector_path, source_aoi_vector)
+    target_watershed_vector = gdal.OpenEx(target_vector_path,
+                                          gdal.OF_VECTOR | gdal.GA_Update)
+    target_watershed_layer = target_watershed_vector.GetLayer()
 
     target_fields = ['rnf_rt_idx', 'rnf_rt_m3', 'flood_vol']
     if damage_per_aoi_stats is not None:
@@ -580,42 +569,38 @@ def _write_summary_vector(
         field_def.SetPrecision(11)
         target_watershed_layer.CreateField(field_def)
 
-    target_layer_defn = target_watershed_layer.GetLayerDefn()
-    for base_feature in source_aoi_layer:
-        feature_id = base_feature.GetFID()
-        target_feature = ogr.Feature(target_layer_defn)
-        base_geom_ref = base_feature.GetGeometryRef()
-        target_feature.SetGeometry(base_geom_ref.Clone())
-        base_geom_ref = None
+    target_watershed_layer.ResetReading()
+    for target_feature in target_watershed_layer:
+        # Target vector is SHP, where FIDs start at 0, but stats were
+        # generated based on GPKG reprojection, where FIDs start at 1.
+        # Therefore, we need to reference stats at SHP FID + 1.
+        stat_key = target_feature.GetFID() + 1
 
-        pixel_count = runoff_ret_stats[feature_id]['count']
+        pixel_count = runoff_ret_stats[stat_key]['count']
         if pixel_count > 0:
             mean_value = (
-                runoff_ret_stats[feature_id]['sum'] / float(pixel_count))
+                runoff_ret_stats[stat_key]['sum'] / float(pixel_count))
             target_feature.SetField('rnf_rt_idx', float(mean_value))
 
         target_feature.SetField(
             'rnf_rt_m3', float(
-                runoff_ret_vol_stats[feature_id]['sum']))
+                runoff_ret_vol_stats[stat_key]['sum']))
 
         if damage_per_aoi_stats is not None:
-            pixel_count = runoff_ret_vol_stats[feature_id]['count']
+            pixel_count = runoff_ret_vol_stats[stat_key]['count']
             if pixel_count > 0:
-                damage_sum = damage_per_aoi_stats[feature_id]
+                damage_sum = damage_per_aoi_stats[stat_key]
                 target_feature.SetField('aff_bld', damage_sum)
 
                 # This is the service_built equation.
                 target_feature.SetField(
                     'serv_blt', (
-                        damage_sum * runoff_ret_vol_stats[feature_id]['sum']))
+                        damage_sum * runoff_ret_vol_stats[stat_key]['sum']))
 
         target_feature.SetField(
-            'flood_vol', float(flood_volume_stats[feature_id]['sum']))
+            'flood_vol', float(flood_volume_stats[stat_key]['sum']))
 
-        target_watershed_layer.CreateFeature(target_feature)
-
-    for field_defn in source_aoi_field_defns:
-        target_watershed_layer.CreateField(field_defn)
+        target_watershed_layer.SetFeature(target_feature)
 
     target_watershed_layer.SyncToDisk()
     target_watershed_layer = None

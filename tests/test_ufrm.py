@@ -79,7 +79,7 @@ class UFRMTests(unittest.TestCase):
             set(output_fields),
             set(field.GetName() for field in result_layer.schema))
 
-        result_feature = result_layer.GetFeature(0)
+        result_feature = result_layer.GetNextFeature()
         for fieldname, expected_value in (
                 ('aff_bld', 187010830.32202843),
                 ('serv_blt', 13253546667257.65),
@@ -91,6 +91,11 @@ class UFRMTests(unittest.TestCase):
                 int(round(numpy.log(expected_value)/numpy.log(10)))-6)
             self.assertAlmostEqual(
                 result_val, expected_value, places=-places_to_round)
+
+        input_feature = input_layer.GetNextFeature()
+        for fieldname in input_fields:
+            self.assertEqual(result_feature.GetField(fieldname),
+                             input_feature.GetField(fieldname))
 
         result_feature = None
         result_layer = None
