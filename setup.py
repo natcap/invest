@@ -20,8 +20,15 @@ _REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
 # access to a pre-Mavericks mac, so hopefully this won't break on someone's
 # older system.  Tested and it works on Mac OSX Catalina.
 compiler_and_linker_args = []
+include_dirs = [numpy.get_include(), 'src/natcap/invest/managed_raster']
 if platform.system() == 'Darwin':
-    compiler_and_linker_args = ['-stdlib=libc++']
+    compiler_args = []
+    compiler_and_linker_args = ['-stdlib=libc++', '-std=c++20']
+    library_dirs = [f'{os.environ["CONDA_PREFIX"]}/lib']
+else:
+    compiler_args = ['/std:c++20']
+    library_dirs = [f'{os.environ["CONDA_PREFIX"]}/Library/lib']
+    include_dirs.append(f'{os.environ["CONDA_PREFIX"]}/Library/include')
 
 
 class build_py(_build_py):
@@ -50,15 +57,17 @@ setup(
         Extension(
             name=f'natcap.invest.{package}.{module}',
             sources=[f'src/natcap/invest/{package}/{module}.pyx'],
-            include_dirs=[numpy.get_include()] + ['src/natcap/invest/managed_raster'],
-            extra_compile_args=compiler_args + compiler_and_linker_args,
+            include_dirs=include_dirs,
+            extra_compile_args=compiler_args + package_compiler_args + compiler_and_linker_args,
             extra_link_args=compiler_and_linker_args,
             language='c++',
+            libraries=['gdal'],
+            library_dirs=library_dirs,
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
-        ) for package, module, compiler_args in [
-            ('managed_raster', 'managed_raster', []),
-            ('delineateit', 'delineateit_core', []),
-            ('recreation', 'out_of_core_quadtree', []),
+        ) for package, module, package_compiler_args in [
+            # ('delineateit', 'delineateit_core', []),
+            # ('recreation', 'out_of_core_quadtree', []),
+            # ('managed_raster', 'neighbor_iterable', []),
             # clang-14 defaults to -ffp-contract=on, which causes the
             # arithmetic of A*B+C to be implemented using a contraction, which
             # causes an unexpected change in the precision in some viewshed
@@ -68,10 +77,11 @@ setup(
             #  * https://github.com/natcap/invest/pull/1564/files
             # Using this flag on gcc and on all versions of clang should work
             # as expected, with consistent results.
-            ('scenic_quality', 'viewshed', ['-ffp-contract=off']),
-            ('ndr', 'ndr_core', []),
+            # ('scenic_quality', 'viewshed', ['-ffp-contract=off']),
+            # ('ndr', 'ndr_core', []),
             ('sdr', 'sdr_core', []),
-            ('seasonal_water_yield', 'seasonal_water_yield_core', [])
+            ('sdr', 'sdr_core_main', []),
+            # ('seasonal_water_yield', 'seasonal_water_yield_core', [])
         ]
     ], compiler_directives={'language_level': '3'}),
     include_dirs=[numpy.get_include()],
