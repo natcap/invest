@@ -2542,11 +2542,6 @@ def _warp_lulc(source_lulc_path, target_lulc_path, target_pixel_size,
     """
     source_raster_info = pygeoprocessing.get_raster_info(source_lulc_path)
     target_nodata = source_raster_info['nodata'][0]
-    if target_nodata is None:
-        # Guarantee that our nodata cannot be represented by the datatype -
-        # select a nodata value that's out of range.
-        target_nodata = pygeoprocessing.choose_nodata(
-            source_raster_info['numpy_type']) + 1
 
     pygeoprocessing.warp_raster(
         source_lulc_path, target_pixel_size, target_lulc_path,
@@ -2554,11 +2549,16 @@ def _warp_lulc(source_lulc_path, target_lulc_path, target_pixel_size,
         target_projection_wkt=source_raster_info['projection_wkt'])
 
     # if there is no defined nodata, set a default value
-    raster = gdal.OpenEx(target_lulc_path, gdal.GA_Update)
-    band = raster.GetRasterBand(1)
-    band.SetNoDataValue(target_nodata)
-    band = None
-    raster = None
+    if target_nodata is None:
+        # Guarantee that our nodata cannot be represented by the datatype -
+        # select a nodata value that's out of range.
+        target_nodata = pygeoprocessing.choose_nodata(
+            source_raster_info['numpy_type']) + 1
+        raster = gdal.OpenEx(target_lulc_path, gdal.GA_Update)
+        band = raster.GetRasterBand(1)
+        band.SetNoDataValue(target_nodata)
+        band = None
+        raster = None
 
 
 def _mask_raster(source_raster_path, mask_raster_path, target_raster_path):
