@@ -154,6 +154,10 @@ void run_calculate_local_recharge(
                 for (int col_index = 0; col_index < win_xsize; col_index++) {
                     xs_root = xoff + col_index;
 
+                    if (flow_dir_raster.get(xs_root, ys_root) == flow_dir_raster.nodata) {
+                        continue;
+                    }
+
                     if (flow_dir_raster.is_local_high_point(xs_root, ys_root)) {
                         work_queue.push(pair<long, long>(xs_root, ys_root));
                     }
@@ -243,7 +247,6 @@ void run_calculate_local_recharge(
                                 p_m - qf_m +
                                 alpha_values[m_index]*beta_i*l_sum_avail_i);
                         }
-
                         l_i = (p_i - qf_i - aet_i);
                         l_avail_i = min(gamma * l_i, l_i);
 
@@ -313,7 +316,7 @@ void run_route_baseflow_sum(
     float target_nodata = -1e32;
     float b_i, b_sum_i, b_sum_j, l_j, l_avail_j, l_sum_j;
     double l_i, l_sum_i;
-    long xi, yi;
+    long xi, yi, flow_dir_sum;
     long xs_root, ys_root, xoff, yoff;
     int win_xsize, win_ysize;
     stack<pair<long, long>> work_stack;
@@ -406,8 +409,17 @@ void run_route_baseflow_sum(
                         b_sum_i = 0;
                         downslope_defined = true;
                         dn_iterator = DownslopeNeighborIterator(flow_dir_raster, xi, yi);
-                        neighbor = dn_iterator.next();
+                        neighbor = dn_iterator.next_no_skip();
+                        flow_dir_sum = 0;
                         while (neighbor.direction < 8) {
+                            flow_dir_sum += neighbor.flow_proportion;
+
+                            if (neighbor.x < 0 or neighbor.x >= flow_dir_raster.raster_x_size or
+                                neighbor.y < 0 or neighbor.y >= flow_dir_raster.raster_y_size) {
+                                neighbor = dn_iterator.next_no_skip();
+                                continue;
+                            }
+
                             if (static_cast<int>(stream_raster.get(neighbor.x, neighbor.y))) {
                                 b_sum_i += neighbor.flow_proportion;
                             } else {
@@ -428,16 +440,19 @@ void run_route_baseflow_sum(
                                     b_sum_i += neighbor.flow_proportion;
                                 }
                             }
-                            neighbor = dn_iterator.next();
+                            neighbor = dn_iterator.next_no_skip();
                         }
 
                         if (not downslope_defined) {
                             continue;
                         }
-
                         l_i = l_raster.get(xi, yi);
                         l_sum_i = l_sum_raster.get(xi, yi);
-                        b_sum_i = l_sum_i * b_sum_i;
+
+                        if (flow_dir_sum > 0) {
+                            b_sum_i = l_sum_i * b_sum_i / flow_dir_sum;
+                        }
+
 
                         if (l_sum_i != 0) {
                             b_i = max(b_sum_i * l_i / l_sum_i, 0.0);
