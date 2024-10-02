@@ -118,9 +118,71 @@ describe('Run status Alert renders with status from a recent run', () => {
     });
 
     const { findByRole } = renderInvestTab(job);
-    const openWorkspace = await findByRole('button', { name: 'Open Workspace' })
-    openWorkspace.click();
-    expect(shell.showItemInFolder).toHaveBeenCalledTimes(1);
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' });
+    expect(openWorkspaceBtn).toBeTruthy();
+  });
+});
+
+describe('Open Workspace button', () => {
+  const spec = {
+    args: {},
+  };
+
+  const baseJob = {
+    ...DEFAULT_JOB,
+    status: 'success',
+  };
+
+  beforeEach(() => {
+    getSpec.mockResolvedValue(spec);
+    fetchValidation.mockResolvedValue([]);
+    uiConfig.UI_SPEC = mockUISpec(spec);
+    setupDialogs();
+  });
+
+  afterEach(() => {
+    removeIpcMainListeners();
+  });
+
+  test('should open workspace', async () => {
+    const job = {
+      ...baseJob,
+      argsValues: {
+        workspace_dir: '/workspace',
+      },
+    };
+
+    jest.spyOn(ipcRenderer, 'invoke');
+
+    const { findByRole } = renderInvestTab(job);
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' })
+    openWorkspaceBtn.click();
+
+    expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith(ipcMainChannels.OPEN_PATH, job.argsValues.workspace_dir);
+  });
+
+  test('should present an error message to the user if workspace cannot be opened (e.g., if it does not exist)', async () => {
+    const job = {
+      ...baseJob,
+      status: 'error',
+      argsValues: {
+        workspace_dir: '/nonexistent-workspace',
+      },
+    };
+
+    jest.spyOn(ipcRenderer, 'invoke');
+    ipcRenderer.invoke.mockResolvedValue('Error opening workspace');
+
+    const { findByRole } = renderInvestTab(job);
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' });
+    openWorkspaceBtn.click();
+
+    expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith(ipcMainChannels.OPEN_PATH, job.argsValues.workspace_dir);
+
+    const errorModal = await findByRole('dialog', { name: 'Error opening workspace'});
+    expect(errorModal).toBeTruthy();
   });
 });
 
@@ -299,9 +361,9 @@ describe('Sidebar Buttons', () => {
     const setupTab = await findByRole('tab', { name: 'Setup' });
     expect(setupTab.classList.contains('active')).toBeTruthy();
 
-    const input1 = await findByLabelText(spec.args.workspace.name);
+    const input1 = await findByLabelText((content) => content.startsWith(spec.args.workspace.name));
     expect(input1).toHaveValue(mockDatastack.args.workspace);
-    const input2 = await findByLabelText(spec.args.port.name);
+    const input2 = await findByLabelText((content) => content.startsWith(spec.args.port.name));
     expect(input2).toHaveValue(mockDatastack.args.port);
   });
 
@@ -427,8 +489,8 @@ describe('InVEST Run Button', () => {
     const runButton = await findByRole('button', { name: /Run/ });
     expect(runButton).toBeDisabled();
 
-    const a = await findByLabelText(`${spec.args.a.name}`);
-    const b = await findByLabelText(`${spec.args.b.name}`);
+    const a = await findByLabelText((content) => content.startsWith(spec.args.a.name));
+    const b = await findByLabelText((content) => content.startsWith(spec.args.b.name));
 
     expect(a).toHaveClass('is-invalid');
     expect(b).toHaveClass('is-invalid');

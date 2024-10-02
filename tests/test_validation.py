@@ -1,11 +1,10 @@
 """Testing module for validation."""
-import codecs
-import collections
 import functools
 import os
-import platform
 import shutil
+import stat
 import string
+import sys
 import tempfile
 import textwrap
 import time
@@ -330,6 +329,91 @@ class DirectoryValidation(unittest.TestCase):
             new_dir, must_exist=False, permissions='rwx'))
 
 
+@unittest.skipIf(
+    sys.platform.startswith('win'),
+    'requires support for os.chmod(), which is unreliable on Windows')
+class DirectoryValidationMacOnly(unittest.TestCase):
+    """Test Directory Permissions Validation."""
+
+    def test_invalid_permissions_r(self):
+        """Validation: when a folder must have read/write/execute
+        permissions but is missing write and execute permissions."""
+        from natcap.invest import validation
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.chmod(tempdir, stat.S_IREAD)
+            validation_warning = validation.check_directory(tempdir,
+                                                            permissions='rwx')
+            self.assertEqual(
+                validation_warning,
+                validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='execute'))
+
+    def test_invalid_permissions_w(self):
+        """Validation: when a folder must have read/write/execute
+        permissions but is missing read and execute permissions."""
+        from natcap.invest import validation
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.chmod(tempdir, stat.S_IWRITE)
+            validation_warning = validation.check_directory(tempdir,
+                                                            permissions='rwx')
+            self.assertEqual(
+                validation_warning,
+                validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='read'))
+
+    def test_invalid_permissions_x(self):
+        """Validation: when a folder must have read/write/execute
+        permissions but is missing read and write permissions."""
+        from natcap.invest import validation
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.chmod(tempdir, stat.S_IEXEC)
+            validation_warning = validation.check_directory(tempdir,
+                                                            permissions='rwx')
+            self.assertEqual(
+                validation_warning,
+                validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='read'))
+
+    def test_invalid_permissions_rw(self):
+        """Validation: when a folder must have read/write/execute
+        permissions but is missing execute permission."""
+        from natcap.invest import validation
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.chmod(tempdir, stat.S_IREAD | stat.S_IWRITE)
+            validation_warning = validation.check_directory(tempdir,
+                                                            permissions='rwx')
+            self.assertEqual(
+                validation_warning,
+                validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='execute'))
+
+    def test_invalid_permissions_rx(self):
+        """Validation: when a folder must have read/write/execute
+        permissions but is missing write permission."""
+        from natcap.invest import validation
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.chmod(tempdir, stat.S_IREAD | stat.S_IEXEC)
+            validation_warning = validation.check_directory(tempdir,
+                                                            permissions='rwx')
+            self.assertEqual(
+                validation_warning,
+                validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='write'))
+
+    def test_invalid_permissions_wx(self):
+        """Validation: when a folder must have read/write/execute
+        permissions but is missing read permission."""
+        from natcap.invest import validation
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.chmod(tempdir, stat.S_IWRITE | stat.S_IEXEC)
+            validation_warning = validation.check_directory(tempdir,
+                                                            permissions='rwx')
+            self.assertEqual(
+                validation_warning,
+                validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='read'))
+
+
 class FileValidation(unittest.TestCase):
     """Test File Validator."""
 
@@ -539,7 +623,6 @@ class VectorValidation(unittest.TestCase):
 
     def test_wrong_geom_type(self):
         """Validation: checks that the vector's geometry type is correct."""
-        from natcap.invest import spec_utils
         from natcap.invest import validation
         driver = gdal.GetDriverByName('GPKG')
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
@@ -1098,7 +1181,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             csv_file,
             columns={
                 'id': {'type': 'integer'},
-                'header': {'type': 'integer', 'na_allowed': True}})
+                'header': {'type': 'integer'}})
         self.assertIsInstance(df['header'][0], numpy.int64)
         self.assertIsInstance(df['header'][1], numpy.int64)
         # empty values are returned as pandas.NA
@@ -1113,7 +1196,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 """\
                 h1,h2,h3
                 5,0.5,.4
-                -1,-.3,
+                -1,.3,
                 """
             ))
         df = validation.get_validated_dataframe(
@@ -1121,7 +1204,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             columns={
                 'h1': {'type': 'number'},
                 'h2': {'type': 'ratio'},
-                'h3': {'type': 'percent', 'na_allowed': True},
+                'h3': {'type': 'percent'},
             })
         self.assertEqual(df['h1'].dtype, float)
         self.assertEqual(df['h2'].dtype, float)
@@ -1145,7 +1228,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             csv_file,
             columns={
                 'h1': {'type': 'freestyle_string'},
-                'h2': {'type': 'option_string'},
+                'h2': {'type': 'option_string', 'options': ['a', 'b']},
                 'h3': {'type': 'freestyle_string'},
             })
         self.assertEqual(df['h1'][0], '1')
@@ -1170,7 +1253,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             csv_file,
             columns={
                 'index': {'type': 'freestyle_string'},
-                'h1': {'type': 'boolean', 'na_allowed': True}})
+                'h1': {'type': 'boolean'}})
         self.assertEqual(df['h1'][0], True)
         self.assertEqual(df['h1'][1], False)
         # empty values are returned as pandas.NA
@@ -1180,15 +1263,18 @@ class TestGetValidatedDataframe(unittest.TestCase):
         """validation: test values in path columns are expanded."""
         from natcap.invest import validation
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        # create files so that validation will pass
+        open(os.path.join(self.workspace_dir, 'foo.txt'), 'w').close()
+        os.mkdir(os.path.join(self.workspace_dir, 'foo'))
+        open(os.path.join(self.workspace_dir, 'foo', 'bar.txt'), 'w').close()
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
                 f"""\
                 bar,path
                 1,foo.txt
                 2,foo/bar.txt
-                3,foo\\bar.txt
-                4,{self.workspace_dir}/foo.txt
-                5,
+                3,{self.workspace_dir}/foo.txt
+                4,
                 """
             ))
         df = validation.get_validated_dataframe(
@@ -1203,23 +1289,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(
             f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
             df['path'][1])
-
-        # utils.expand_path() will convert Windows path separators to linux if
-        # we're on mac/linux
-        if platform.system() == 'Windows':
-            self.assertEqual(
-                f'{self.workspace_dir}{os.sep}foo\\bar.txt',
-                df['path'][2])
-        else:
-            self.assertEqual(
-                f'{self.workspace_dir}{os.sep}foo/bar.txt',
-                df['path'][2])
-
         self.assertEqual(
             f'{self.workspace_dir}{os.sep}foo.txt',
-            df['path'][3])
+            df['path'][2])
         # empty values are returned as empty strings
-        self.assertTrue(pandas.isna(df['path'][4]))
+        self.assertTrue(pandas.isna(df['path'][3]))
 
     def test_other_kwarg(self):
         """validation: any other kwarg should be passed to pandas.read_csv"""
@@ -1349,7 +1423,6 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 'row1': {'type': 'freestyle_string'},
                 'row2': {'type': 'number'},
             })
-        print(df)
         # header should have no leading / trailing whitespace
         self.assertEqual(list(df.columns), ['row1', 'row2'])
 
@@ -1358,6 +1431,125 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(df['row2'][0], 1)
         self.assertEqual(df['row2'][1], 3)
         self.assertEqual(df['row2'].dtype, float)
+
+    def test_csv_raster_validation_missing_file(self):
+        """validation: validate missing raster within csv column"""
+        from natcap.invest import validation
+
+        csv_path = os.path.join(self.workspace_dir, 'csv.csv')
+        raster_path = os.path.join(self.workspace_dir, 'foo.tif')
+
+        with open(csv_path, 'w') as file_obj:
+            file_obj.write('col1,col2\n')
+            file_obj.write(f'1,{raster_path}\n')
+
+        with self.assertRaises(ValueError) as cm:
+            validation.get_validated_dataframe(
+                csv_path,
+                columns={
+                    'col1': {'type': 'number'},
+                    'col2': {'type': 'raster'}
+                })
+        self.assertIn('File not found', str(cm.exception))
+
+    def test_csv_raster_validation_not_projected(self):
+        """validation: validate unprojected raster within csv column"""
+        from natcap.invest import validation
+        # create a non-linear projected raster and validate it
+        driver = gdal.GetDriverByName('GTiff')
+        csv_path = os.path.join(self.workspace_dir, 'csv.csv')
+        raster_path = os.path.join(self.workspace_dir, 'foo.tif')
+        raster = driver.Create(raster_path, 3, 3, 1, gdal.GDT_Int32)
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        raster.SetProjection(wgs84_srs.ExportToWkt())
+        raster = None
+
+        with open(csv_path, 'w') as file_obj:
+            file_obj.write('col1,col2\n')
+            file_obj.write(f'1,{raster_path}\n')
+
+        with self.assertRaises(ValueError) as cm:
+            validation.get_validated_dataframe(
+                csv_path,
+                columns={
+                    'col1': {'type': 'number'},
+                    'col2': {'type': 'raster', 'projected': True}
+                })
+        self.assertIn('must be projected', str(cm.exception))
+
+    def test_csv_vector_validation_missing_field(self):
+        """validation: validate vector missing field in csv column"""
+        from natcap.invest import validation
+        import pygeoprocessing
+        from shapely.geometry import Point
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        projection_wkt = srs.ExportToWkt()
+        csv_path = os.path.join(self.workspace_dir, 'csv.csv')
+        vector_path = os.path.join(self.workspace_dir, 'test.gpkg')
+        pygeoprocessing.shapely_geometry_to_vector(
+            [Point(0.0, 0.0)], vector_path, projection_wkt, 'GPKG',
+            fields={'b': ogr.OFTInteger},
+            attribute_list=[{'b': 0}],
+            ogr_geom_type=ogr.wkbPoint)
+
+        with open(csv_path, 'w') as file_obj:
+            file_obj.write('col1,col2\n')
+            file_obj.write(f'1,{vector_path}\n')
+
+        with self.assertRaises(ValueError) as cm:
+            validation.get_validated_dataframe(
+                csv_path,
+                columns={
+                    'col1': {'type': 'number'},
+                    'col2': {
+                        'type': 'vector',
+                        'fields': {
+                            'a': {'type': 'integer'},
+                            'b': {'type': 'integer'}
+                        },
+                        'geometries': ['POINT']
+                    }
+                })
+        self.assertIn(
+            'Expected the field "a" but did not find it',
+            str(cm.exception))
+
+    def test_csv_raster_or_vector_validation(self):
+        """validation: validate vector in raster-or-vector csv column"""
+        from natcap.invest import validation
+        import pygeoprocessing
+        from shapely.geometry import Point
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        projection_wkt = srs.ExportToWkt()
+        csv_path = os.path.join(self.workspace_dir, 'csv.csv')
+        vector_path = os.path.join(self.workspace_dir, 'test.gpkg')
+        pygeoprocessing.shapely_geometry_to_vector(
+            [Point(0.0, 0.0)], vector_path, projection_wkt, 'GPKG',
+            ogr_geom_type=ogr.wkbPoint)
+
+        with open(csv_path, 'w') as file_obj:
+            file_obj.write('col1,col2\n')
+            file_obj.write(f'1,{vector_path}\n')
+
+        with self.assertRaises(ValueError) as cm:
+            validation.get_validated_dataframe(
+                csv_path,
+                columns={
+                    'col1': {'type': 'number'},
+                    'col2': {
+                        'type': {'raster', 'vector'},
+                        'fields': {},
+                        'geometries': ['POLYGON']
+                    }
+                })
+        self.assertIn(
+            "Geometry type must be one of ['POLYGON']",
+            str(cm.exception))
 
 
 class TestValidationFromSpec(unittest.TestCase):
@@ -2002,6 +2194,7 @@ class TestValidationFromSpec(unittest.TestCase):
         layer = vector.CreateLayer('layer', vector_srs, ogr.wkbPoint)
         new_feature = ogr.Feature(layer.GetLayerDefn())
         new_feature.SetGeometry(ogr.CreateGeometryFromWkt('POINT (1 1)'))
+        layer.CreateFeature(new_feature)
 
         new_feature = None
         layer = None

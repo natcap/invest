@@ -11,9 +11,5 @@ channels:
 - nodefaults
 dependencies:
 - python=3.11
-- gdal>=3.4.2,<3.6.0
+- gdal>=3.4.2
 - pip
-- pip:
-  - -r requirements.txt
-  - -r requirements-dev.txt
-  - -r requirements-docs.txt

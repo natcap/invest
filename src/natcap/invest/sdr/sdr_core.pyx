@@ -1,5 +1,3 @@
-# cython: profile=False
-# cython: language_level=3
 import logging
 import os
 
@@ -196,7 +194,7 @@ cdef class _ManagedRaster:
             if dirty_itr != self.dirty_blocks.end():
                 self.dirty_blocks.erase(dirty_itr)
                 block_xi = block_index % self.block_nx
-                block_yi = block_index / self.block_nx
+                block_yi = block_index // self.block_nx
 
                 # we need the offsets to subtract from global indexes for
                 # cached array
