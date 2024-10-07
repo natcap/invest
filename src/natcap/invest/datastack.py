@@ -226,10 +226,6 @@ def build_datastack_archive(args, model_name, datastack_path):
 
     Returns:
         ``None``
-
-    Raises:
-        ValueError if raised by build_parameter_set
-        (i.e., if creating a relative path fails).
     """
     module = importlib.import_module(name=model_name)
 
@@ -457,12 +453,8 @@ def build_datastack_archive(args, model_name, datastack_path):
     # write parameters to a new json file in the temp workspace
     param_file_uri = os.path.join(temp_workspace,
                                   'parameters' + PARAMETER_SET_EXTENSION)
-    try:
-        build_parameter_set(
+    build_parameter_set(
             rewritten_args, model_name, param_file_uri, relative=True)
-    except ValueError as message:
-        # Pass through for handling by ui_server
-        raise ValueError(message)
 
     # Remove the handler before archiving the working dir (and the logfile)
     archive_filehandler.close()
@@ -573,9 +565,8 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
                             """Error: Cannot save datastack with relative
                             paths across drives. Choose a different save
                             location, or use absolute paths.""")
-                    else:
-                        # Always save unix paths.
-                        linux_style_path = temp_rel_path.replace('\\', '/')
+                    # Always save unix paths.
+                    linux_style_path = temp_rel_path.replace('\\', '/')
                 else:
                     # Always save unix paths.
                     linux_style_path = normalized_path.replace('\\', '/')

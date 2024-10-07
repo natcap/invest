@@ -194,11 +194,10 @@ def write_parameter_set_file():
             'message': str(message),
             'error': True
         }
-    else:
-        return {
-            'message': 'Parameter set saved',
-            'error': False
-        }
+    return {
+        'message': 'Parameter set saved',
+        'error': False
+    }
 
 
 @app.route(f'/{PREFIX}/save_to_python', methods=['POST'])
@@ -250,11 +249,10 @@ def build_datastack_archive():
             'message': str(message),
             'error': True
         }
-    else:
-        return {
-            'message': 'Datastack archive created',
-            'error': False
-        }
+    return {
+        'message': 'Datastack archive created',
+        'error': False
+    }
 
 
 @app.route(f'/{PREFIX}/log_model_start', methods=['POST'])
