@@ -454,7 +454,7 @@ def build_datastack_archive(args, model_name, datastack_path):
     param_file_uri = os.path.join(temp_workspace,
                                   'parameters' + PARAMETER_SET_EXTENSION)
     build_parameter_set(
-            rewritten_args, model_name, param_file_uri, relative=True)
+        rewritten_args, model_name, param_file_uri, relative=True)
 
     # Remove the handler before archiving the working dir (and the logfile)
     archive_filehandler.close()

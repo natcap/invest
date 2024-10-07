@@ -513,7 +513,7 @@ class SetupTab extends React.Component {
       Object.keys(saveAlerts).forEach((key) => {
         const { message, error } = saveAlerts[key];
         if (message) {
-          // Alert won't expire during archiving; will expire 2s after completion
+          // Alert won't expire during archiving; will expire 4s after completion
           // Alert won't expire when an error has occurred;
           // will be hidden next time save modal opens
           const alertExpires = (error || message === 'archiving...') ? 1e7 : 4000;
