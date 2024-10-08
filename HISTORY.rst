@@ -37,6 +37,9 @@
 
 Unreleased Changes
 ------------------
+* General
+    * InVEST has been updated to build against numpy 2.
+      https://github.com/natcap/invest/issues/1641
 * Workbench
     * Several small updates to the model input form UI to improve usability
       and visual consistency (https://github.com/natcap/invest/issues/912)
