@@ -62,11 +62,7 @@ export function findInvestBinaries(isDevMode) {
  * @returns {string} mamba executable.
  */
 export function findMambaExecutable(isDevMode) {
-  // Binding to the invest server binary:
   let mambaExe;
-  const ext = (process.platform === 'win32') ? '.exe' : '';
-  const filename = `invest${ext}`;
-
   if (isDevMode) {
     mambaExe = 'mamba'; // assume that mamba is available
   } else {
@@ -78,7 +74,7 @@ export function findMambaExecutable(isDevMode) {
     }
   }
   // Check that the executable is working
-  const { stdout, stderr, error } = spawnSync(mambaExe, ['--help'], { shell: true });
+  const { stderr, error } = spawnSync(mambaExe, ['--help'], { shell: true });
   if (error) {
     logger.error(stderr.toString());
     logger.error('mamba executable is not where we expected it.');
