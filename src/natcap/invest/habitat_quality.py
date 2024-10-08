@@ -555,7 +555,7 @@ def execute(args):
 
         rasterize_access_task = task_graph.add_task(
             func=pygeoprocessing.rasterize,
-            args=(args['access_vector_path'], access_raster_path),
+            args=(reprojected_access_path, access_raster_path),
             kwargs={
                 'option_list': ['ATTRIBUTE=ACCESS'],
                 'burn_values': None

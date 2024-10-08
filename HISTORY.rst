@@ -48,6 +48,9 @@ Unreleased Changes
     * Fixed a bug that, in certain scenarios, caused a datastack to be saved
       with relative paths when the Relative Paths checkbox was left unchecked
       (https://github.com/natcap/invest/issues/1609)
+* Habitat Quality
+    * Access raster is now generated from the reprojected access vector.
+      (https://github.com/natcap/invest/issues/1615)
 * Urban Flood Risk
     * Fields present on the input AOI vector are now retained in the output.
       (https://github.com/natcap/invest/issues/1600)
