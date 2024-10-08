@@ -79,12 +79,6 @@ keep_warnings = False
 
 import sphinx_rtd_theme
 
-# Tell Jinja2 templates the build is running on Read the Docs
-if os.environ.get('READTHEDOCS', '') == 'True':
-    if 'html_context' not in globals():
-        html_context = {}
-    html_context['READTHEDOCS'] = True
-
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'sphinx_rtd_theme'
