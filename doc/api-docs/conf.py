@@ -89,9 +89,6 @@ if os.environ.get('READTHEDOCS', '') == 'True':
 # a list of builtin themes.
 html_theme = 'sphinx_rtd_theme'
 
-# Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
 html_logo = "_static/invest-logo.png"
