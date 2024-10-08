@@ -358,6 +358,21 @@ class UNATests(unittest.TestCase):
         self.assertAlmostEqual(numpy.min(valid_pixels), 1171.7352294921875)
         self.assertAlmostEqual(numpy.max(valid_pixels), 11898.0712890625)
 
+    def test_no_lulc_nodata(self):
+        """UNA: verify behavior when the LULC has no nodata value."""
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = 100
+
+        raster = gdal.OpenEx(args['lulc_raster_path'], gdal.OF_RASTER)
+        band = raster.GetRasterBand(1)
+        band.DeleteNoDataValue()
+        band = None
+        raster = None
+        urban_nature_access.execute(args)
+
     def test_split_urban_nature(self):
         from natcap.invest import urban_nature_access
 
