@@ -45,6 +45,10 @@ Unreleased Changes
       updated the stated dtype of most pollination model outputs to be float32
       instead of the float64 dtype that was being assumed previously.  This
       will result in smaller output filesizes with minimal loss of precision.
+* Urban Nature Access
+    * The model now works as expected when the user provides an LULC raster
+      that does not have a nodata value defined.
+      https://github.com/natcap/invest/issues/1293
 * Workbench
     * Several small updates to the model input form UI to improve usability
       and visual consistency (https://github.com/natcap/invest/issues/912)
