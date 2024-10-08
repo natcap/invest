@@ -50,6 +50,9 @@ Unreleased Changes
       (https://github.com/natcap/invest/issues/1609).
     * Improved error handling when a datastack cannot be saved with relative
       paths across drives (https://github.com/natcap/invest/issues/1608).
+* Habitat Quality
+    * Access raster is now generated from the reprojected access vector
+      (https://github.com/natcap/invest/issues/1615).
 
 3.14.2 (2024-05-29)
 -------------------
