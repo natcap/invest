@@ -78,6 +78,13 @@ keep_warnings = False
 # -- Options for HTML output ----------------------------------------------
 
 import sphinx_rtd_theme
+
+# Tell Jinja2 templates the build is running on Read the Docs
+if os.environ.get('READTHEDOCS', '') == 'True':
+    if 'html_context' not in globals():
+        html_context = {}
+    html_context['READTHEDOCS'] = True
+
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'sphinx_rtd_theme'
@@ -130,7 +137,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'InVEST', 'InVEST Documentation',
-   'The Natural Capital Project', 'InVEST', 
+   'The Natural Capital Project', 'InVEST',
    'Integrated Valuation of Ecosystem Services and Tradeoffs',
    'Scientific Software'),
 ]
@@ -138,8 +145,8 @@ texinfo_documents = [
 
 # -- Prepare for sphinx build ---------------------------------------------
 
-# Use sphinx apidoc tool to generate documentation for invest. Generated rst 
-# files go into the api/ directory. Note that some apidoc options may not work 
+# Use sphinx apidoc tool to generate documentation for invest. Generated rst
+# files go into the api/ directory. Note that some apidoc options may not work
 # the same because we aren't using their values in the custom templates
 apidoc.main([
     '--force',  # overwrite any files from previous run
@@ -164,7 +171,7 @@ InVEST Model Entry Points
 
 All InVEST models share a consistent python API:
 
-    - Every InVEST model has a corresponding module or subpackage in the 
+    - Every InVEST model has a corresponding module or subpackage in the
       ``natcap.invest`` package
     - The model modules contain a function called ``execute``
     - The ``execute`` function takes a single argument (``args``), a dictionary
