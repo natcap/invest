@@ -356,13 +356,13 @@ def calculate_sediment_deposition(
 
     This algorithm outputs both sediment deposition (t_i) and flux (f_i)::
 
-        t_i  =      dr_i  * (sum over j ∈ J of f_j * p(i,j)) + E'_i
+        t_i  =      dt_i  * (sum over j ∈ J of f_j * p(j,i))
 
-        f_i  = (1 - dr_i) * (sum over j ∈ J of f_j * p(i,j)) + E'_i
+        f_i  = (1 - dt_i) * (sum over j ∈ J of f_j * p(j,i)) + E'_i
 
 
                 (sum over k ∈ K of SDR_k * p(i,k)) - SDR_i
-        dr_i = --------------------------------------------
+        dt_i = --------------------------------------------
                               (1 - SDR_i)
 
     where:
@@ -645,21 +645,21 @@ def calculate_sediment_deposition(
                     if sdr_i == 1:
                         # This reflects property B in the user's guide and is
                         # an edge case to avoid division-by-zero.
-                        dr_i = 1
+                        dt_i = 1
                     else:
-                        dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
+                        dt_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
 
                     # Lisa's modified equations
-                    t_i = dr_i * f_j_weighted_sum  # deposition, a.k.a trapped sediment
-                    f_i = (1 - dr_i) * f_j_weighted_sum + e_prime_i  # flux
+                    t_i = dt_i * f_j_weighted_sum  # deposition, a.k.a trapped sediment
+                    f_i = (1 - dt_i) * f_j_weighted_sum + e_prime_i  # flux
 
-                    # On large flow paths, it's possible for dr_i, f_i and t_i
+                    # On large flow paths, it's possible for dt_i, f_i and t_i
                     # to have very small negative values that are numerically
                     # equivalent to 0. These negative values were raising
                     # questions on the forums and it's easier to clamp the
                     # values here than to explain IEEE 754.
-                    if dr_i < 0:
-                        dr_i = 0
+                    if dt_i < 0:
+                        dt_i = 0
                     if t_i < 0:
                         t_i = 0
                     if f_i < 0:
