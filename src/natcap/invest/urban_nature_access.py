@@ -2548,7 +2548,6 @@ def _warp_lulc(source_lulc_path, target_lulc_path, target_pixel_size,
         'near', target_bb=target_bounding_box,
         target_projection_wkt=source_raster_info['projection_wkt'])
 
-    # if there is no defined nodata, set a default value
     if target_nodata is None:
         # Guarantee that our nodata cannot be represented by the datatype -
         # select a nodata value that's out of range.
