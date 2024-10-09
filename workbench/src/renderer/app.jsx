@@ -22,12 +22,14 @@ import InvestTab from './components/InvestTab';
 import SettingsModal from './components/SettingsModal';
 import DataDownloadModal from './components/DataDownloadModal';
 import DownloadProgressBar from './components/DownloadProgressBar';
+import PluginModal from './components/PluginModal';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 
 const { ipcRenderer } = window.Workbench.electron;
 import { ipcMainChannels } from '../main/ipcMainChannels';
 import { getInvestModelNames } from './server_requests';
+
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
@@ -347,11 +349,15 @@ export default class App extends React.Component {
                     )
                     : <div />
                 }
+                <PluginModal
+                  updateInvestList={this.updateInvestList}
+                />
                 <SettingsModal
                   className="mx-3"
                   clearJobsStorage={this.clearRecentJobs}
                   showDownloadModal={() => this.showDownloadModal(true)}
                   nCPU={this.props.nCPU}
+                  updateInvestList={this.updateInvestList}
                 />
               </Col>
             </Row>
@@ -372,7 +378,6 @@ export default class App extends React.Component {
                     openInvestModel={this.openInvestModel}
                     recentJobs={recentJobs}
                     batchUpdateArgs={this.batchUpdateArgs}
-                    updateInvestList={this.updateInvestList}
                   />
                 )
                 : <div />}
