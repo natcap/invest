@@ -25,11 +25,10 @@ import DownloadProgressBar from './components/DownloadProgressBar';
 import PluginModal from './components/PluginModal';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
-
-const { ipcRenderer } = window.Workbench.electron;
 import { ipcMainChannels } from '../main/ipcMainChannels';
 import { getInvestModelNames } from './server_requests';
 
+const { ipcRenderer } = window.Workbench.electron;
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.
@@ -357,7 +356,6 @@ export default class App extends React.Component {
                   clearJobsStorage={this.clearRecentJobs}
                   showDownloadModal={() => this.showDownloadModal(true)}
                   nCPU={this.props.nCPU}
-                  updateInvestList={this.updateInvestList}
                 />
               </Col>
             </Row>
