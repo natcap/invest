@@ -48,9 +48,6 @@ describe('Add plugin modal', () => {
   });
 
   test('Interface to add a plugin', async () => {
-    const {
-      findByText, findByLabelText, findByRole, queryByRole,
-    } = render(<App />);
     const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.GET_SETTING) {
         if (setting === 'plugins') {
@@ -64,11 +61,14 @@ describe('Add plugin modal', () => {
       }
       return Promise.resolve();
     });
+    const {
+      findByText, findByLabelText, findByRole, queryByRole,
+    } = render(<App />);
 
-    const addPluginButton = await findByText('Add a plugin');
-    userEvent.click(addPluginButton);
+    const managePluginsButton = await findByText('Manage plugins');
+    userEvent.click(managePluginsButton);
 
-    const urlField = await findByLabelText('Git URL');
+    const urlField = await findByLabelText('Add a plugin');
     await userEvent.type(urlField, 'fake url', { delay: 0 });
     const submitButton = await findByText('Add');
     userEvent.click(submitButton);

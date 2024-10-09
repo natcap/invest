@@ -11,7 +11,7 @@ import { settingsStore } from './settingsStore';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
-export default function setupAddPlugin() {
+export function setupAddPlugin() {
   ipcMain.handle(
     ipcMainChannels.ADD_PLUGIN,
     (e, pluginURL) => {
@@ -59,6 +59,29 @@ export default function setupAddPlugin() {
         logger.info('successfully added plugin');
       } catch (error) {
         return error;
+      }
+    }
+  );
+}
+
+export function setupRemovePlugin() {
+  ipcMain.handle(
+    ipcMainChannels.REMOVE_PLUGIN,
+    (e, pluginID) => {
+      logger.info('removing plugin', pluginID);
+      try {
+        // Delete the plugin's conda env
+        const env = settingsStore.get(`plugins.${pluginID}.env`);
+        execSync(
+          `micromamba remove --yes --prefix ${env} --all`,
+          { stdio: 'inherit' }
+        );
+        // Delete the plugin's data from storage
+        settingsStore.delete(`plugins.${pluginID}`);
+        logger.info('successfully removed plugin');
+      } catch (error) {
+        logger.info('Error removing plugin:');
+        logger.info(error);
       }
     }
   );

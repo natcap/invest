@@ -11,7 +11,6 @@ import { useTranslation } from 'react-i18next';
 
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
-import PluginModal from '../PluginModal';
 
 const { logger } = window.Workbench;
 
@@ -36,7 +35,7 @@ export default class HomeTab extends React.Component {
   }
 
   render() {
-    const { recentJobs, investList, openInvestModel, updateInvestList } = this.props;
+    const { recentJobs, investList, openInvestModel } = this.props;
 
     let sortedModelIds = {};
     if (investList) {
@@ -90,9 +89,6 @@ export default class HomeTab extends React.Component {
             {investButtons}
           </ListGroup>
         </Col>
-        <PluginModal
-          updateInvestList={updateInvestList}
-        />
         <Col className="recent-job-card-col">
           <RecentInvestJobs
             openInvestModel={openInvestModel}
@@ -111,7 +107,6 @@ HomeTab.propTypes = {
       type: PropTypes.string,
     })
   ).isRequired,
-  updateInvestList: PropTypes.func.isRequired,
   openInvestModel: PropTypes.func.isRequired,
   recentJobs: PropTypes.arrayOf(
     PropTypes.shape({
