@@ -1,10 +1,12 @@
-import path from 'path';
-import { spawnSync } from 'child_process';
+import upath from 'upath';
+import fs from 'fs';
+import { execSync, spawnSync } from 'child_process';
 
 import { ipcMain } from 'electron';
 
 import { ipcMainChannels } from './ipcMainChannels';
 import { getLogger } from './logger';
+import { checkFirstRun } from './setupCheckFirstRun';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -14,7 +16,7 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
  * @param {boolean} isDevMode - a boolean designating dev mode or not.
  * @returns {string} invest binary path string.
  */
-export default function findInvestBinaries(isDevMode) {
+export function findInvestBinaries(isDevMode) {
   // Binding to the invest server binary:
   let investExe;
   const ext = (process.platform === 'win32') ? '.exe' : '';
@@ -23,7 +25,7 @@ export default function findInvestBinaries(isDevMode) {
   if (isDevMode) {
     investExe = filename; // assume an active python env w/ exe on path
   } else {
-    investExe = path.join(process.resourcesPath, 'invest', filename);
+    investExe = upath.join(process.resourcesPath, 'invest', filename);
     // It's likely the exe path includes spaces because it's composed of
     // app's Product Name, a user-facing name given to electron-builder.
     // Quoting depends on the shell, ('/bin/sh' or 'cmd.exe') and type of
@@ -50,4 +52,34 @@ export default function findInvestBinaries(isDevMode) {
     ipcMainChannels.INVEST_VERSION, () => investVersion
   );
   return investExe;
+}
+
+
+/**
+ * Return the available mamba executable.
+ *
+ * @param {boolean} isDevMode - a boolean designating dev mode or not.
+ * @returns {string} mamba executable.
+ */
+export function findMambaExecutable(isDevMode) {
+  let mambaExe;
+  if (isDevMode) {
+    mambaExe = 'mamba'; // assume that mamba is available
+  } else {
+    if (process.platform === 'win32') {
+      mambaExe = `"${upath.join(process.resourcesPath, 'miniforge3', 'condabin', 'mamba.bat')}"`;
+    } else {
+      // Quote the path in case of spaces
+      mambaExe = `"${upath.join(process.resourcesPath, 'miniforge3', 'condabin', 'mamba')}"`;
+    }
+  }
+  // Check that the executable is working
+  const { stderr, error } = spawnSync(mambaExe, ['--help'], { shell: true });
+  if (error) {
+    logger.error(stderr.toString());
+    logger.error('mamba executable is not where we expected it.');
+    throw error;
+  }
+  logger.info(`using mamba executable '${mambaExe}'`);
+  return mambaExe;
 }

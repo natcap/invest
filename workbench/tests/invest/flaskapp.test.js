@@ -18,7 +18,7 @@ import {
   createCoreServerProcess,
   shutdownPythonProcess
 } from '../../src/main/createPythonFlaskProcess';
-import findInvestBinaries from '../../src/main/findInvestBinaries';
+import { findInvestBinaries } from '../../src/main/findBinaries';
 import { settingsStore } from '../../src/main/settingsStore';
 import { checkFirstRun, APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';

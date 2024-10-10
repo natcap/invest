@@ -22,9 +22,9 @@ export default function setupAddPlugin() {
         const tmpPluginDir = fs.mkdtempSync(upath.join(tmpdir(), 'natcap-invest-'));
         execSync(
           `git clone --depth 1 --no-checkout ${pluginURL} "${tmpPluginDir}"`,
-          { stdio: 'inherit' }
+          { stdio: 'inherit', windowsHide: true }
         );
-        execSync('git checkout HEAD pyproject.toml', { cwd: tmpPluginDir, stdio: 'inherit' });
+        execSync('git checkout HEAD pyproject.toml', { cwd: tmpPluginDir, stdio: 'inherit', windowsHide: true });
 
         // Read in the plugin's pyproject.toml, then delete it
         const pyprojectTOML = toml.parse(fs.readFileSync(
@@ -39,13 +39,20 @@ export default function setupAddPlugin() {
 
         // Create a conda env containing the plugin and its dependencies
         const envName = `invest_plugin_${pluginID}`;
-        fs.writeFileSync('tmp_env.txt', 'python<3.12\ngdal<3.6');
-        execSync(`micromamba create --yes --name ${envName} -f tmp_env.txt -c conda-forge`);
-        execSync(`micromamba run --name ${envName} pip install "git+${pluginURL}"`, { stdio: 'inherit' });
+        const mamba = settingsStore.get('mamba');
+        execSync(`${mamba} create --yes --name ${envName} -c conda-forge "python<3.12" "gdal<3.6"`,
+          { stdio: 'inherit', windowsHide: true });
+        logger.info('created mamba env for plugin');
+        execSync(`${mamba} run --name ${envName} pip install "git+${pluginURL}"`,
+          { stdio: 'inherit', windowsHide: true });
+        logger.info('installed plugin into its env');
 
         // Write plugin metadata to the workbench's config.json
-        const envInfo = execSync(`micromamba info --name ${envName}`).toString();
-        const envPath = envInfo.split('env location : ')[1].split('\n')[0];
+        const envInfo = execSync(`${mamba} info --envs`, { windowsHide: true }).toString();
+        logger.info(`env info:\n${envInfo}`);
+        const envPath = envInfo.match(`${envName}\\s+(.+)$`)[1];
+        logger.info(`env path:\n${envPath}`);
+        logger.info('writing plugin info to settings store');
         settingsStore.set(
           `plugins.${pluginID}`,
           {
