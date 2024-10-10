@@ -37,6 +37,10 @@
 
 Unreleased Changes
 ------------------
+* Urban Nature Access
+    * The model now works as expected when the user provides an LULC raster
+      that does not have a nodata value defined.
+      https://github.com/natcap/invest/issues/1293
 * Workbench
     * Several small updates to the model input form UI to improve usability
       and visual consistency (https://github.com/natcap/invest/issues/912).
@@ -53,6 +57,9 @@ Unreleased Changes
 * Habitat Quality
     * Access raster is now generated from the reprojected access vector
       (https://github.com/natcap/invest/issues/1615).
+* Urban Flood Risk
+    * Fields present on the input AOI vector are now retained in the output.
+      (https://github.com/natcap/invest/issues/1600)
 
 3.14.2 (2024-05-29)
 -------------------
