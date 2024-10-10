@@ -81,7 +81,9 @@ def main(sampledatadir):
 
         model_warnings = []  # define here in case of uncaught exception.
         try:
-            LOGGER.info('validating %s ', datastack_path)
+            LOGGER.info('validating %s ', os.path.abspath(datastack_path))
+            filepath = r"D:\a\invest\invest\data\invest-sample-data\Annual_Water_Yield\watershed_gura.shp"
+            print(f"File exists {filepath}: ", os.path.exists(filepath))
             model_warnings = getattr(
                 model_module, 'validate')(paramset.args)
         except AttributeError as err:
