@@ -58,6 +58,9 @@ Unreleased Changes
 * Habitat Quality
     * Access raster is now generated from the reprojected access vector.
       (https://github.com/natcap/invest/issues/1615)
+* Urban Flood Risk
+    * Fields present on the input AOI vector are now retained in the output.
+      (https://github.com/natcap/invest/issues/1600)
 
 3.14.2 (2024-05-29)
 -------------------
