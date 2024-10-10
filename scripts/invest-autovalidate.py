@@ -1,14 +1,14 @@
 #!python
 
-import os
-import tempfile
-import logging
 import argparse
-import unittest
 import glob
 import importlib
-import shutil
+import logging
+import os
 import pprint
+import shutil
+import tempfile
+import unittest
 
 from natcap.invest import datastack
 
@@ -82,8 +82,13 @@ def main(sampledatadir):
         model_warnings = []  # define here in case of uncaught exception.
         try:
             LOGGER.info('validating %s ', datastack_path)
-            model_warnings = getattr(
-                model_module, 'validate')(paramset.args)
+            try:
+                model_warnings = getattr(
+                    model_module, 'validate')(paramset.args)
+            except RuntimeError:
+                with open('data/invest-sample-data/Annual_Water_Yield/subwatersheds_gura.shp') as shp:
+                    print(shp.read())
+                raise
         except AttributeError as err:
             # If there was no validate function, don't crash but raise it later.
             model_warnings = err
