@@ -43,18 +43,20 @@ Unreleased Changes
       https://github.com/natcap/invest/issues/1293
 * Workbench
     * Several small updates to the model input form UI to improve usability
-      and visual consistency (https://github.com/natcap/invest/issues/912)
+      and visual consistency (https://github.com/natcap/invest/issues/912).
     * Fixed a bug that caused the application to crash when attempting to
       open a workspace without a valid logfile
-      (https://github.com/natcap/invest/issues/1598)
+      (https://github.com/natcap/invest/issues/1598).
     * Fixed a bug that was allowing readonly workspace directories on Windows
-      (https://github.com/natcap/invest/issues/1599)
+      (https://github.com/natcap/invest/issues/1599).
     * Fixed a bug that, in certain scenarios, caused a datastack to be saved
       with relative paths when the Relative Paths checkbox was left unchecked
-      (https://github.com/natcap/invest/issues/1609)
+      (https://github.com/natcap/invest/issues/1609).
+    * Improved error handling when a datastack cannot be saved with relative
+      paths across drives (https://github.com/natcap/invest/issues/1608).
 * Habitat Quality
-    * Access raster is now generated from the reprojected access vector.
-      (https://github.com/natcap/invest/issues/1615)
+    * Access raster is now generated from the reprojected access vector
+      (https://github.com/natcap/invest/issues/1615).
 * Urban Flood Risk
     * Fields present on the input AOI vector are now retained in the output.
       (https://github.com/natcap/invest/issues/1600)
