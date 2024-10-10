@@ -86,7 +86,8 @@ def main(sampledatadir):
                 model_warnings = getattr(
                     model_module, 'validate')(paramset.args)
             except RuntimeError:
-                with open('data/invest-sample-data/Annual_Water_Yield/subwatersheds_gura.shp') as shp:
+                with open(('data/invest-sample-data/Annual_Water_Yield/'
+                           'subwatersheds_gura.shp'), 'rb') as shp:
                     print(shp.read())
                 raise
         except AttributeError as err:
