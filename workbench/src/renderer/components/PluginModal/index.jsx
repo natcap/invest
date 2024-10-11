@@ -26,7 +26,7 @@ export default function PluginModal(props) {
     setShowPluginModal(false);
   };
   const handleModalOpen = () => setShowPluginModal(true);
-  const handleSubmit = () => {
+  const addPlugin = () => {
     setLoading(true);
     ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, url).then((addPluginErr) => {
       setLoading(false);
@@ -63,11 +63,9 @@ export default function PluginModal(props) {
     <Modal.Body>
       <Form>
         <Form.Group className="mb-3">
-          <Form.Label htmlFor="url">Add a plugin</Form.Label>
+          <Form.Label htmlFor="url">{t('Add a plugin')}</Form.Label>
           <Form.Control
             id="url"
-            name="url"
-            type="text"
             placeholder={t('Enter Git URL')}
             onChange={(event) => setURL(event.currentTarget.value)}
           />
@@ -75,22 +73,19 @@ export default function PluginModal(props) {
             {t('This may take several minutes')}
           </Form.Text>
           <Button
-            name="submit"
             disabled={loading}
             className="mt-2"
-            onClick={handleSubmit}
+            onClick={addPlugin}
           >
             {t('Add')}
           </Button>
         </Form.Group>
         <hr />
         <Form.Group className="mb-3">
-          <Form.Label htmlFor="url">Remove a plugin</Form.Label>
+          <Form.Label htmlFor="plugin-select">{t('Remove a plugin')}</Form.Label>
           <Form.Control
             id="plugin-select"
             as="select"
-            name="plugin"
-            type="text"
             value={pluginToRemove}
             onChange={(event) => setPluginToRemove(event.currentTarget.value)}
           >
@@ -108,8 +103,7 @@ export default function PluginModal(props) {
             }
           </Form.Control>
           <Button
-            name="remove"
-            disabled={loading || !Object.keys(plugins).length }
+            disabled={loading || !Object.keys(plugins).length}
             className="mt-2"
             onClick={removePlugin}
           >
