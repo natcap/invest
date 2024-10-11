@@ -44,7 +44,7 @@ Unreleased Changes
       https://github.com/natcap/invest/issues/1645
 * Forest Carbon Edge Effects
     * Updating vector reprojection to allow partial reprojection.  Related to
-     https://github.com/natcap/invest/issues/1645
+      https://github.com/natcap/invest/issues/1645
 * Urban Nature Access
     * The model now works as expected when the user provides an LULC raster
       that does not have a nodata value defined.
