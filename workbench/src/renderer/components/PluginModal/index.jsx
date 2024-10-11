@@ -66,6 +66,7 @@ export default function PluginModal(props) {
           <Form.Label htmlFor="url">{t('Add a plugin')}</Form.Label>
           <Form.Control
             id="url"
+            type="text"
             placeholder={t('Enter Git URL')}
             onChange={(event) => setURL(event.currentTarget.value)}
           />
