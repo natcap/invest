@@ -13,7 +13,7 @@ import {
   createCoreServerProcess,
   shutdownPythonProcess
 } from './createPythonFlaskProcess';
-import findInvestBinaries from './findInvestBinaries';
+import { findInvestBinaries, findMambaExecutable } from './findBinaries';
 import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
@@ -78,8 +78,8 @@ export const createWindow = async () => {
   });
   splashScreen.loadURL(path.join(BASE_URL, 'splash.html'));
 
-  const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
-  settingsStore.set('investExe', investExe);
+  settingsStore.set('investExe', findInvestBinaries(ELECTRON_DEV_MODE));
+  settingsStore.set('mamba', findMambaExecutable(ELECTRON_DEV_MODE));
   // No plugin server processes should persist between workbench sessions
   // In case any were left behind, remove them
   const plugins = settingsStore.get('plugins');
