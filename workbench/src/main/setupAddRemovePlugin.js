@@ -79,8 +79,9 @@ export function setupRemovePlugin() {
       try {
         // Delete the plugin's conda env
         const env = settingsStore.get(`plugins.${pluginID}.env`);
+        const mamba = settingsStore.get('mamba');
         execSync(
-          `micromamba remove --yes --prefix ${env} --all`,
+          `${mamba} remove --yes --prefix ${env} --all`,
           { stdio: 'inherit' }
         );
         // Delete the plugin's data from storage
