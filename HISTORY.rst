@@ -37,6 +37,11 @@
 
 Unreleased Changes
 ------------------
+* General
+    * Updating validation to handle a change in exceptions raised by GDAL in
+      ``pygeoprocessing.get_raster_info`` and
+      ``pygeoprocessing.get_vector_info``.
+      https://github.com/natcap/invest/issues/1645
 * Urban Nature Access
     * The model now works as expected when the user provides an LULC raster
       that does not have a nodata value defined.
