@@ -632,6 +632,7 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
+    LOGGER.debug('n_workers: %s', n_workers)
     task_graph = taskgraph.TaskGraph(
         os.path.join(args['workspace_dir'], 'taskgraph_cache'),
         n_workers, reporting_interval=5)
@@ -642,6 +643,9 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
 
     LOGGER.info('Checking that the AOI is not the output aggregate vector')
+    LOGGER.debug("aoi_path: %s", args['aoi_path'])
+    LOGGER.debug("aggregate_vector_path: %s",
+                 os.path.normpath(file_registry['aggregate_vector_path']))
     if (os.path.normpath(args['aoi_path']) ==
             os.path.normpath(file_registry['aggregate_vector_path'])):
         raise ValueError(
