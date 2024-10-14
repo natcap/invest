@@ -743,13 +743,16 @@ def execute(args):
                 intermediate_output_dir,
                 f'new_cover{lulc_key}{file_suffix}.tif')
 
-            rarity_path = os.path.join(
+            rarity_raster_path = os.path.join(
                 output_dir, f'rarity{lulc_key}{file_suffix}.tif')
+
+            rarity_csv_path = os.path.join(
+                output_dir, f'rarity{lulc_key}{file_suffix}.csv')
 
             _ = task_graph.add_task(
                 func=_compute_rarity_operation,
                 args=((lulc_base_path, 1), (lulc_path, 1), (new_cover_path, 1),
-                      rarity_path),
+                      rarity_raster_path, rarity_csv_path),
                 dependent_task_list=[align_task],
                 task_name=f'rarity{lulc_time}')
 
@@ -773,7 +776,7 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
     pygeoprocessing.raster_map(
         op=lambda degradation, habitat: (
             habitat * (1 - (degradation**_SCALING_PARAM) /
-            (degradation**_SCALING_PARAM + ksq))),
+                       (degradation**_SCALING_PARAM + ksq))),
         rasters=deg_hab_raster_list,
         target_path=quality_out_path)
 
@@ -829,7 +832,8 @@ def _calculate_total_degradation(
 
 
 def _compute_rarity_operation(
-        base_lulc_path_band, lulc_path_band, new_cover_path, rarity_path):
+        base_lulc_path_band, lulc_path_band, new_cover_path,
+        rarity_raster_path, rarity_csv_path):
     """Calculate habitat rarity.
 
     Output rarity values will be an index from 0 - 1 where:
@@ -846,7 +850,8 @@ def _compute_rarity_operation(
         new_cover_path (tuple): a 2 tuple for the path to intermediate
             raster file for trimming ``lulc_path_band`` to
             ``base_lulc_path_band`` of the form (path, band index).
-        rarity_path (string): path to output rarity raster.
+        rarity_raster_path (string): path to output rarity raster.
+        rarity_csv_path (string): path to output rarity CSV.
 
     Returns:
         None
@@ -895,11 +900,22 @@ def _compute_rarity_operation(
             code_index[code] = 0.0
 
     pygeoprocessing.reclassify_raster(
-        new_cover_path, code_index, rarity_path, gdal.GDT_Float32,
+        new_cover_path, code_index, rarity_raster_path, gdal.GDT_Float32,
         _OUT_NODATA)
+
+    _generate_rarity_csv(code_index, rarity_csv_path)
 
     LOGGER.info('Finished rarity computation on'
                 f' {os.path.basename(lulc_path_band[0])} land cover.')
+
+
+def _generate_rarity_csv(rarity_dict, target_csv_path):
+    cols = ['LULC_code', 'rarity_value']
+    with open(target_csv_path, 'w') as csvfile:
+        csvfile.write(str(','.join(cols) + '\n'))
+        for lulc_code in rarity_dict:
+            row = [str(lulc_code), str(rarity_dict[lulc_code])]
+            csvfile.write(str(','.join(row) + '\n'))
 
 
 def _raster_pixel_count(raster_path_band):
