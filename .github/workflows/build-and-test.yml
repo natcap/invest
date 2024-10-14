@@ -89,6 +89,13 @@ jobs:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
+      - name: debug
+        run: |
+          ls data/invest-test-data
+          ls data/invest-test-data/wind_energy/smoke
+          ls /Users/runner/work/invest/invest/tests/../data/invest-test-data/wind_energy/smoke
+          gdalinfo /Users/runner/work/invest/invest/tests/../data/invest-test-data/wind_energy/smoke/landpoly_smoke.shp
+
       - name: Set up python environment
         uses: ./.github/actions/setup_env
         with:
