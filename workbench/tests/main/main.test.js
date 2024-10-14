@@ -181,6 +181,7 @@ describe('createWindow', () => {
     await createWindow();
     const expectedHandleChannels = [
       ipcMainChannels.ADD_PLUGIN,
+      ipcMainChannels.REMOVE_PLUGIN,
       ipcMainChannels.CHANGE_LANGUAGE,
       ipcMainChannels.CHECK_STORAGE_TOKEN,
       ipcMainChannels.CHECK_FILE_PERMISSIONS,

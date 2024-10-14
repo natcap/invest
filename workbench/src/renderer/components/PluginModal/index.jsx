@@ -51,8 +51,10 @@ export default function PluginModal(props) {
   useEffect(() => {
     ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins').then(
       (data) => {
-        setPlugins(data);
-        setPluginToRemove(Object.keys(data)[0]);
+        if (data) {
+          setPlugins(data);
+          setPluginToRemove(Object.keys(data)[0]);
+        }
       }
     );
   }, [loading]);
