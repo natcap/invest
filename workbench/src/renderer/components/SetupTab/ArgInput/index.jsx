@@ -8,6 +8,7 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
+import Table from 'react-bootstrap/Table';
 import { MdFolderOpen, MdInfo, MdOpenInNew } from 'react-icons/md';
 
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
@@ -156,12 +157,13 @@ function parseArgType(argtype) {
   return userFriendlyArgType;
 }
 
-export default function ArgInput(props) {
+export function ArgInput(props) {
   const inputRef = useRef();
 
   const {
     argkey,
     argSpec,
+    formTable,
     userguide,
     enabled,
     updateArgValues,
@@ -175,6 +177,17 @@ export default function ArgInput(props) {
     scrollEventCount,
   } = props;
   let { validationMessage } = props;
+
+  const { t } = useTranslation();
+
+  const initFormTableValues = {};
+  if (formTable) {
+    Object.keys(argSpec.columns).forEach((colName) => {
+      initFormTableValues[colName] = '';
+    });
+  }
+
+  const [formTableValues, setFormTableValues] = useState(initFormTableValues);
 
   // Occasionaly we want to force a scroll to the end of input fields
   // so that the most important part of a filepath is visible.
@@ -274,6 +287,47 @@ export default function ArgInput(props) {
         }
       </Form.Control>
     );
+  } else if (argSpec.type === 'csv' && formTable) {
+    const rows = [];
+    Object.entries(argSpec.columns).forEach(([key, spec]) => {
+      rows.push(
+        <tr>
+          <td>
+            <AboutModal arg={spec} userguide={userguide} argkey={key} />
+          </td>
+          <td>{key}</td>
+          <td>
+            <Form.Control
+              ref={inputRef}
+              id={argkey}
+              name={key}
+              type="text"
+              placeholder={t(spec.type)}
+              value={formTableValues[key] || ''} // empty string is handled better than `undefined`
+              onChange={handleChangeFormTable}
+              onFocus={() => handleFocus({ currentTarget: { name: argkey } })}
+              onBlur={(e) => e.target.scrollLeft = e.target.scrollWidth}
+              isValid={enabled && touched && isValid}
+              isInvalid={enabled && validationMessage}
+              disabled={!enabled}
+              onDrop={inputDropHandler}
+              onDragOver={dragOverHandler}
+              onDragEnter={dragEnterHandler}
+              onDragLeave={dragLeavingHandler}
+            />
+          </td>
+        </tr>
+      );
+    });
+    form = (
+      <Table striped bordered hover>
+        <tbody
+          isValid={enabled && touched && isValid}
+          isInvalid={enabled && validationMessage}>
+          {rows}
+        </tbody>
+      </Table>
+    );
   } else {
     form = (
       <React.Fragment>
@@ -307,6 +361,7 @@ export default function ArgInput(props) {
       key={argkey}
       data-testid={`group-${argkey}`}
       className={className} // this grays out the label but doesn't actually disable the field
+      style={{ display: (enabled ? 'flex' : 'none') }}
     >
       <FormLabel
         argkey={argkey}
@@ -423,3 +478,137 @@ AboutModal.propTypes = {
   userguide: PropTypes.string.isRequired,
   argkey: PropTypes.string.isRequired,
 };
+
+export function FormTableInput(props) {
+  const {
+    argkeys,
+    argsSpec,
+    groupName,
+    argsEnabled,
+    formTable,
+    userguide,
+    updateArgValues,
+    handleFocus,
+    inputDropHandler,
+    argsValidation,
+    selectFile,
+    touched,
+    dropdownOptions,
+    argsValues,
+    scrollEventCount,
+  } = props;
+  let { validationMessage } = props;
+
+  console.log('render formtable', argkeys);
+
+  const { t } = useTranslation();
+
+  const initFormTableValues = {};
+  if (formTable) {
+    Object.keys(argSpec.columns).forEach((colName) => {
+      initFormTableValues[colName] = '';
+    });
+  }
+
+  const [formTableValues, setFormTableValues] = useState(initFormTableValues);
+
+  function handleChange(event) {
+    /** Pass input value up to SetupTab for storage & validation. */
+    const { name, value } = event.currentTarget;
+    updateArgValues(name, value);
+  }
+
+  function handleChangeFormTable(event, argkey) {
+    const { name, value } = event.currentTarget;
+    const newValues = { ...formTableValues };
+    newValues[name] = value;
+    setFormTableValues(newValues);
+    ipcRenderer.invoke(ipcMainChannels.WRITE_CSV, newValues).then(
+      (path) => handleChange({ currentTarget: { name: argkey, value: path } })
+    );
+  }
+
+  const rows = [];
+  let anyEnabled = false;
+  argkeys.forEach((key) => {
+    const spec = argsSpec[key];
+
+    let feedback = <React.Fragment />;
+    if (argsValidation[key].validationMessage && argsValues[key].touched && spec.type !== 'boolean') {
+      feedback = (
+        <Feedback
+          argkey={key}
+          argtype={spec.type}
+          message={argsValidation[key].validationMessage}
+        />
+      );
+    }
+
+    anyEnabled = anyEnabled || argsEnabled[key];
+
+    rows.push(
+      <tr style={argsEnabled[key] ? {} : { display: 'none' }}>
+        <td>
+          <AboutModal arg={spec} userguide={userguide} argkey={key} />
+        </td>
+        <td>
+          <FormLabel
+            argkey={key}
+            argname={argsSpec[key].name}
+            required={argsSpec[key].required}
+            units={argsSpec[key].units} // undefined for all types except number
+          />
+        </td>
+        <td className="is-valid">
+          <Form.Control
+            id={key}
+            name={key}
+            type="text"
+            placeholder={t(spec.type)}
+            value={argsValues[key].value || ''} // empty string is handled better than `undefined`
+            onChange={handleChange}
+            onFocus={() => handleFocus({ currentTarget: { name: key } })}
+            onBlur={(e) => e.target.scrollLeft = e.target.scrollWidth}
+            isValid={argsEnabled[key] && argsValues[key].touched && argsValidation[key].valid}
+            isInvalid={argsEnabled[key] && argsValidation[key].validationMessage}
+            disabled={!argsEnabled[key]}
+            onDrop={inputDropHandler}
+            onDragOver={dragOverHandler}
+            onDragEnter={dragEnterHandler}
+            onDragLeave={dragLeavingHandler}
+          />
+          {feedback}
+        </td>
+      </tr>
+    );
+  });
+  const form = (
+    <Table striped bordered hover>
+      <tbody>
+        {rows}
+      </tbody>
+    </Table>
+  );
+
+  return (
+    <Form.Group
+      as={Row}
+      key={groupName}
+      data-testid={`group-${groupName}`}
+      style={anyEnabled ? {} : { display: 'none' }}
+    >
+      <FormLabel
+        argkey={groupName}
+        argname={groupName}
+      />
+      <Col>
+        <InputGroup>
+          <div className="d-flex flex-nowrap w-100">
+            {/*<AboutModal arg={argSpec} userguide={userguide} argkey={argkey} />*/}
+            {form}
+          </div>
+        </InputGroup>
+      </Col>
+    </Form.Group>
+  );
+}

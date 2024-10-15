@@ -32,6 +32,7 @@ import setupOpenLocalHtml from './setupOpenLocalHtml';
 import { settingsStore, setupSettingsHandlers } from './settingsStore';
 import setupGetElectronPaths from './setupGetElectronPaths';
 import setupRendererLogger from './setupRendererLogger';
+import setupJupyter from './setupJupyter';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
@@ -51,6 +52,8 @@ process.on('unhandledRejection', (err, promise) => {
   logger.error(err);
   process.exit(1);
 });
+
+process.env.JUPYTER_TOKEN = 'abcdef';
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -78,7 +81,8 @@ export const createWindow = async () => {
   });
   splashScreen.loadURL(path.join(BASE_URL, 'splash.html'));
 
-  settingsStore.set('investExe', findInvestBinaries(ELECTRON_DEV_MODE));
+  const [investExe, jupyterExe] = findInvestBinaries(ELECTRON_DEV_MODE);
+  settingsStore.set('investExe', investExe);
   settingsStore.set('mamba', findMambaExecutable(ELECTRON_DEV_MODE));
   // No plugin server processes should persist between workbench sessions
   // In case any were left behind, remove them
@@ -116,7 +120,7 @@ export const createWindow = async () => {
   });
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
-      menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
+      menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n, jupyterExe)
     )
   );
   mainWindow.loadURL(path.join(BASE_URL, 'index.html'));
@@ -154,6 +158,7 @@ export const createWindow = async () => {
   // have callbacks that won't work until the invest server is ready.
   setupContextMenu(mainWindow);
   setupDownloadHandlers(mainWindow);
+  setupJupyter(mainWindow, ELECTRON_DEV_MODE, jupyterExe)
   setupInvestRunHandlers();
   setupLaunchPluginServerHandler();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);

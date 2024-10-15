@@ -17,8 +17,10 @@ export const ipcMainChannels = {
   LOGGER: 'logger',
   OPEN_EXTERNAL_URL: 'open-external-url',
   OPEN_LOCAL_HTML: 'open-local-html',
+  OPEN_JUPYTER: 'open-jupyter-lab',
   SET_SETTING: 'set-setting',
   SHOW_ITEM_IN_FOLDER: 'show-item-in-folder',
   SHOW_OPEN_DIALOG: 'show-open-dialog',
   SHOW_SAVE_DIALOG: 'show-save-dialog',
+  WRITE_CSV: 'write-csv',
 };

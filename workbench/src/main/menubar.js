@@ -10,7 +10,7 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 const isMac = process.platform === 'darwin';
 
-export default function menuTemplate(parentWindow, isDevMode, i18n) {
+export default function menuTemplate(parentWindow, isDevMode, i18n, jupyterExe) {
   // Much of this template comes straight from the docs
   // https://www.electronjs.org/docs/api/menu
   const template = [

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 
 import Form from 'react-bootstrap/Form';
 
-import ArgInput from '../ArgInput';
+import { ArgInput, FormTableInput } from '../ArgInput';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import { withTranslation } from 'react-i18next';
 
@@ -123,6 +123,7 @@ class ArgsForm extends React.Component {
       argsValidation,
       argsEnabled,
       argsDropdownOptions,
+      uiSpec,
       userguide,
       scrollEventCount,
     } = this.props;
@@ -132,25 +133,51 @@ class ArgsForm extends React.Component {
       k += 1;
       const groupItems = [];
       groupArray.forEach((argkey) => {
-        groupItems.push(
-          <ArgInput
-            argkey={argkey}
-            argSpec={argsSpec[argkey]}
-            userguide={userguide}
-            dropdownOptions={argsDropdownOptions[argkey]}
-            enabled={argsEnabled[argkey]}
-            updateArgValues={this.props.updateArgValues}
-            handleFocus={this.handleFocus}
-            inputDropHandler={this.inputDropHandler}
-            isValid={argsValidation[argkey].valid}
-            key={argkey}
-            selectFile={this.selectFile}
-            touched={argsValues[argkey].touched}
-            validationMessage={argsValidation[argkey].validationMessage}
-            value={argsValues[argkey].value}
-            scrollEventCount={scrollEventCount}
-          />
-        );
+        if (typeof argkey === 'object') {
+          console.log(argkey);
+          const groupName = Object.keys(argkey)[0];
+          const argkeys = argkey[groupName];
+          groupItems.push(
+            <FormTableInput
+              argkeys={argkeys}
+              argsSpec={argsSpec}
+              groupName={groupName}
+              // formTable={uiSpec.form_tables.includes(argkey)}
+              userguide={userguide}
+              dropdownOptions={argsDropdownOptions[argkey]}
+              argsEnabled={argsEnabled}
+              updateArgValues={this.props.updateArgValues}
+              handleFocus={this.handleFocus}
+              inputDropHandler={this.inputDropHandler}
+              argsValidation={argsValidation}
+              argsValues={argsValues}
+              key={argkey}
+              selectFile={this.selectFile}
+              scrollEventCount={scrollEventCount}
+            />
+          );
+        } else {
+          groupItems.push(
+            <ArgInput
+              argkey={argkey}
+              argSpec={argsSpec[argkey]}
+              // formTable={uiSpec.form_tables.includes(argkey)}
+              userguide={userguide}
+              dropdownOptions={argsDropdownOptions[argkey]}
+              enabled={argsEnabled[argkey]}
+              updateArgValues={this.props.updateArgValues}
+              handleFocus={this.handleFocus}
+              inputDropHandler={this.inputDropHandler}
+              isValid={argsValidation[argkey].valid}
+              key={argkey}
+              selectFile={this.selectFile}
+              touched={argsValues[argkey].touched}
+              validationMessage={argsValidation[argkey].validationMessage}
+              value={argsValues[argkey].value}
+              scrollEventCount={scrollEventCount}
+            />
+          );
+        }
       });
       formItems.push(
         <div className="arg-group" key={k}>
@@ -197,7 +224,11 @@ ArgsForm.propTypes = {
     })
   ).isRequired,
   argsOrder: PropTypes.arrayOf(
-    PropTypes.arrayOf(PropTypes.string)
+    PropTypes.arrayOf(
+      PropTypes.oneOfType([
+        PropTypes.string, PropTypes.object
+      ])
+    )
   ).isRequired,
   argsEnabled: PropTypes.objectOf(PropTypes.bool),
   userguide: PropTypes.string.isRequired,

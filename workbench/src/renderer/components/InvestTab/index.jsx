@@ -26,6 +26,11 @@ function handleOpenWorkspace(logfile) {
   ipcRenderer.send(ipcMainChannels.SHOW_ITEM_IN_FOLDER, logfile);
 }
 
+function handleViewResults(logfile) {
+  console.log('View Results')
+  ipcRenderer.send(ipcMainChannels.OPEN_JUPYTER, logfile);
+}
+
 /**
  * Render an invest model setup form, log display, etc.
  * Manage launching of an invest model in a child process.
@@ -273,6 +278,7 @@ class InvestTab extends React.Component {
                     <ModelStatusAlert
                       status={status}
                       handleOpenWorkspace={() => handleOpenWorkspace(logfile)}
+                      handleViewResults={() => handleViewResults(logfile)}
                       terminateInvestProcess={this.terminateInvestProcess}
                     />
                   )

@@ -48,6 +48,10 @@ const config = {
       to: 'storage_token.txt',
     },
     {
+      from: 'resources/notebooks',
+      to: 'notebooks',
+    },
+    {
       from: '../LICENSE.txt',
       to: 'LICENSE.InVEST.txt',
     },
