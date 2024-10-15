@@ -13,3 +13,6 @@ GDAL<3.8.5
 # root cause, let's cap the versions to those that work.
 # https://github.com/natcap/invest/issues/1622
 #pyinstaller<6.10
+
+# Test whether InVEST will build with numpy 2
+numpy>2
