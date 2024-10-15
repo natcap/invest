@@ -799,7 +799,11 @@ def check_spatial_overlap(spatial_filepaths_list,
     for filepath in spatial_filepaths_list:
         try:
             info = pygeoprocessing.get_raster_info(filepath)
-        except ValueError:
+        except (ValueError, RuntimeError):
+            # ValueError is raised by PyGeoprocessing < 3.4.4 when the file is
+            # not a raster.
+            # RuntimeError is raised by GDAL in PyGeoprocessing >= 3.4.4 when
+            # the file is not a raster.
             info = pygeoprocessing.get_vector_info(filepath)
 
         if info['projection_wkt'] is None:
