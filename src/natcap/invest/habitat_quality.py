@@ -908,6 +908,16 @@ def _compute_rarity_operation(
 
 
 def _generate_rarity_csv(rarity_dict, target_csv_path):
+    """Generate CSV containing rarity values by LULC code.
+
+    Args:
+        rarity_dict (dict): dictionary containing LULC codes (as keys)
+            and their associated rarity values (as values).
+        target_csv_path (string): path to output CSV.
+
+    Returns:
+        None
+    """
     lulc_codes = sorted(rarity_dict)
     cols = ['LULC_code', 'rarity_value']
     with open(target_csv_path, 'w') as csvfile:
