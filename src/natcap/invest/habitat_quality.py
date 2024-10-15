@@ -910,10 +910,11 @@ def _compute_rarity_operation(
 
 
 def _generate_rarity_csv(rarity_dict, target_csv_path):
+    lulc_codes = sorted(rarity_dict)
     cols = ['LULC_code', 'rarity_value']
     with open(target_csv_path, 'w') as csvfile:
         csvfile.write(str(','.join(cols) + '\n'))
-        for lulc_code in rarity_dict:
+        for lulc_code in lulc_codes:
             row = [str(lulc_code), str(rarity_dict[lulc_code])]
             csvfile.write(str(','.join(row) + '\n'))
 
