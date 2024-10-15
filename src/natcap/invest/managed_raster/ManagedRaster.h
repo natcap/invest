@@ -217,7 +217,7 @@ class ManagedRaster {
                         0, 0 );
 
             if (err != CE_None) {
-                std::cout << "Error reading block\n";
+                std::cerr << "Error reading block\n";
             }
             lru_cache->put(block_index, pafScanline, removed_value_list);
             while (not removed_value_list.empty()) {
@@ -250,7 +250,7 @@ class ManagedRaster {
                         err = band->RasterIO( GF_Write, xoff, yoff, win_xsize, win_ysize,
                             double_buffer, win_xsize, win_ysize, GDT_Float64, 0, 0 );
                         if (err != CE_None) {
-                            std::cout << "Error writing block\n";
+                            std::cerr << "Error writing block\n";
                         }
                     }
                 }
@@ -327,7 +327,7 @@ class ManagedRaster {
                     CPLErr err = band->RasterIO( GF_Write, xoff, yoff, win_xsize, win_ysize,
                         double_buffer, win_xsize, win_ysize, GDT_Float64, 0, 0 );
                     if (err != CE_None) {
-                        std::cout << "Error writing block\n";
+                        std::cerr << "Error writing block\n";
                     }
                 }
                 CPLFree(double_buffer);
