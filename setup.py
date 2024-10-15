@@ -79,7 +79,6 @@ setup(
             ('scenic_quality', 'viewshed', ['-ffp-contract=off']),
             ('ndr', 'ndr_core', []),
             ('sdr', 'sdr_core', []),
-            ('sdr', 'sdr_core_main', []),
             ('seasonal_water_yield', 'seasonal_water_yield_core', [])
         ]
     ], compiler_directives={'language_level': '3'}),

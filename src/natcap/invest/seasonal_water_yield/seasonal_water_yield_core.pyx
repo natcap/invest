@@ -116,7 +116,7 @@ cpdef calculate_local_recharge(
     # always be non-negative
     cdef vector[ManagedRaster] et0_m_rasters
     et0_m_nodata_list = []
-    for i, et0_path in enumerate(et0_path_list):
+    for et0_path in et0_path_list:
         et0_m_rasters.push_back(ManagedRaster(et0_path.encode('utf-8'), 1, 0))
         nodata = pygeoprocessing.get_raster_info(et0_path)['nodata'][0]
         if nodata is None:
@@ -125,7 +125,7 @@ cpdef calculate_local_recharge(
 
     cdef vector[ManagedRaster] precip_m_rasters
     precip_m_nodata_list = []
-    for i, precip_m_path in enumerate(precip_path_list):
+    for precip_m_path in precip_path_list:
         precip_m_rasters.push_back(ManagedRaster(precip_m_path.encode('utf-8'), 1, 0))
         nodata = pygeoprocessing.get_raster_info(precip_m_path)['nodata'][0]
         if nodata is None:
@@ -134,14 +134,14 @@ cpdef calculate_local_recharge(
 
     cdef vector[ManagedRaster] qf_m_rasters
     qf_m_nodata_list = []
-    for i, qf_m_path in enumerate(qf_m_path_list):
+    for qf_m_path in qf_m_path_list:
         qf_m_rasters.push_back(ManagedRaster(qf_m_path.encode('utf-8'), 1, 0))
         qf_m_nodata_list.append(
             pygeoprocessing.get_raster_info(qf_m_path)['nodata'][0])
 
     cdef vector[ManagedRaster] kc_m_rasters
     kc_m_nodata_list = []
-    for i, kc_m_path in enumerate(kc_path_list):
+    for kc_m_path in kc_path_list:
         kc_m_rasters.push_back(ManagedRaster(kc_m_path.encode('utf-8'), 1, 0))
         kc_m_nodata_list.append(
             pygeoprocessing.get_raster_info(kc_m_path)['nodata'][0])
