@@ -142,7 +142,7 @@ class ManagedRaster {
             closed = 0;
         }
 
-        void set(long xi, long yi, double value) {
+        void inline set(long xi, long yi, double value) {
             // Set the pixel at `xi,yi` to `value`
             int block_xi = xi / block_xsize;
             int block_yi = yi / block_ysize;
@@ -164,7 +164,7 @@ class ManagedRaster {
             }
         }
 
-        double get(long xi, long yi) {
+        double inline get(long xi, long yi) {
             // Return the value of the pixel at `xi,yi`
             int block_xi = xi / block_xsize;
             int block_yi = yi / block_ysize;
