@@ -157,7 +157,6 @@ class ManagedRaster {
             int idx = ((yi & block_ymod) * actualBlockWidths[block_index]) + (xi & block_xmod);
             lru_cache->get(block_index)[idx] = value;
             if (write_mode) {
-
                 std::set<int>::iterator dirty_itr = dirty_blocks.find(block_index);
                 if (dirty_itr == dirty_blocks.end()) {
                     dirty_blocks.insert(block_index);
