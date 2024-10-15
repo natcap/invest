@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 import numpy
+import pandas
 import pygeoprocessing
 from osgeo import gdal
 from osgeo import ogr
@@ -244,6 +245,14 @@ class HabitatQualityTests(unittest.TestCase):
             # expanded to be beyond the bounds of the original threat values,
             # so we should exclude those new nodata pixel values.
             assert_array_sum(raster_path, assert_value, include_nodata=False)
+
+        for csv_filename in ['rarity_c_regression.csv',
+                             'rarity_f_regression.csv']:
+            csv_path = os.path.join(args['workspace_dir'], csv_filename)
+            rarity_table = pandas.read_csv(csv_path)
+            assert 'LULC_code' in rarity_table.columns
+            self.assertAlmostEqual(rarity_table['rarity_value'].sum(),
+                                   0.6667, 4)
 
     def test_habitat_quality_regression_different_projections(self):
         """Habitat Quality: base regression test with simplified data."""
@@ -2105,3 +2114,5 @@ class HabitatQualityTests(unittest.TestCase):
                 header='column', header_name='fut_path')
         )]
         self.assertEqual(validate_result, expected)
+
+# @TODO: ¿add rarity CSV test?
