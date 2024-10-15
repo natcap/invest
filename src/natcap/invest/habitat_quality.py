@@ -862,7 +862,6 @@ def _compute_rarity_operation(
         base_lulc_path_band[0])
     base_pixel_size = base_raster_info['pixel_size']
     base_area = float(abs(base_pixel_size[0]) * abs(base_pixel_size[1]))
-    base_nodata = base_raster_info['nodata'][0]
 
     lulc_code_count_b = _raster_pixel_count(base_lulc_path_band)
 
@@ -870,7 +869,6 @@ def _compute_rarity_operation(
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_path_band[0])
     lulc_pixel_size = lulc_raster_info['pixel_size']
     lulc_area = float(abs(lulc_pixel_size[0]) * abs(lulc_pixel_size[1]))
-    lulc_nodata = lulc_raster_info['nodata'][0]
 
     # Trim cover_x to the mask of base.
     pygeoprocessing.raster_map(
