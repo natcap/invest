@@ -93,7 +93,7 @@ export async function createJupyterProcess(jupyterExe, notebookDir, _port = unde
   const subprocess = spawn(
     jupyterExe,
     //['lab', '--notebook-dir', notebookDir, '--no-browser', '--port', port],
-    [notebookPath, '--no-browser', '--port', port],
+    [notebookPath, '--debug', '--no-browser', '--port', port],
     { shell: true } // necessary in dev mode & relying on a conda env
   );
   setupServerProcessHandlers(subprocess);
