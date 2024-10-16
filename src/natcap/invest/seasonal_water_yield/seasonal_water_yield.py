@@ -1238,7 +1238,7 @@ def _calculate_curve_number_raster(
         # if lulc_array value not in lulc_to_soil[soil_group_id]['lulc_values']
         # then numpy.digitize will not bin properly and cause an IndexError
         # during the reshaping call
-        lulc_unique = set(numpy.unique(lulc_array))
+        lulc_unique = set(i.item() for i in numpy.unique(lulc_array))
         if not lulc_unique.issubset(lucodes_set):
             # cast to list to conform with similar error messages in InVEST
             missing_lulc_values = sorted(lulc_unique.difference(lucodes_set))
