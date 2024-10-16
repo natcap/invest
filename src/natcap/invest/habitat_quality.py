@@ -285,7 +285,8 @@ MODEL_SPEC = {
                     "columns": {
                         "LULC_code": {
                             "type": "number",
-                            "about": "LULC class"
+                            "units": u.none,
+                            "about": "LULC class",
                         },
                         "rarity_value": {
                             "type": "number",
@@ -316,7 +317,8 @@ MODEL_SPEC = {
                     "columns": {
                         "LULC_code": {
                             "type": "number",
-                            "about": "LULC class"
+                            "units": u.none,
+                            "about": "LULC class",
                         },
                         "rarity_value": {
                             "type": "number",
