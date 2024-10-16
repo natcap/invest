@@ -25,7 +25,7 @@ import {
   setupLaunchPluginServerHandler,
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
-import setupAddPlugin from './setupAddPlugin';
+import { setupAddPlugin, setupRemovePlugin } from './setupAddRemovePlugin';
 import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
@@ -102,6 +102,7 @@ export const createWindow = async () => {
   setupOpenExternalUrl();
   setupRendererLogger();
   setupAddPlugin();
+  setupRemovePlugin();
 
   const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';
   // Create the browser window.
