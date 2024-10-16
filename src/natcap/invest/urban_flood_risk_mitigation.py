@@ -591,7 +591,7 @@ def _write_summary_vector(
 
                 # This is the service_built equation.
                 target_feature.SetField(
-                    'serv_blt', (
+                    'serv_blt', float(
                         damage_sum * runoff_ret_vol_stats[feature_id]['sum']))
 
         target_feature.SetField(
@@ -936,7 +936,8 @@ def validate(args, limit_to=None):
         nan_mask = cn_df.isna()
         if nan_mask.any(axis=None):
             nan_lucodes = nan_mask[nan_mask.any(axis=1)].index
-            lucode_list = list(nan_lucodes.values)
+            # Convert numpy dtype values to native python types
+            lucode_list = [i.item() for i in nan_lucodes.values]
             validation_warnings.append((
                 ['curve_number_table_path'],
                 f'Missing curve numbers for lucode(s) {lucode_list}'))
