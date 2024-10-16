@@ -213,36 +213,36 @@ MODEL_SPEC = {
         "output": {
             "type": "directory",
             "contents": {
-                "deg_sum_out_c.tif": {
+                "deg_sum_c.tif": {
                     "about": (
                         "Relative level of habitat degradation on the current "
                         "landscape."),
                     "bands": {1: {"type": "ratio"}}
                 },
-                "deg_sum_out_f.tif": {
+                "deg_sum_f.tif": {
                     "about": (
                         "Relative level of habitat degradation on the future "
                         "landscape."),
                     "bands": {1: {"type": "ratio"}},
                     "created_if": "lulc_fut_path"
                 },
-                "quality_out_c.tif": {
+                "quality_c.tif": {
                     "about": (
                         "Relative level of habitat quality on the current "
                         "landscape."),
                     "bands": {1: {"type": "ratio"}}
                 },
-                "quality_out_f.tif": {
+                "quality_f.tif": {
                     "about": (
                         "Relative level of habitat quality on the future "
                         "landscape."),
                     "bands": {1: {"type": "ratio"}},
                     "created_if": "lulc_fut_path"
                 },
-                "rarity_out_c.tif": {
+                "rarity_c.tif": {
                     "about": (
                         "Relative habitat rarity on the current landscape "
-                        "vis-a-vis the baseline map. The grid cell’s values "
+                        "vis-a-vis the baseline map. The grid cell's values "
                         "are defined between a range of 0 and 1 where 0.5 "
                         "indicates no abundance change between the baseline "
                         "and current or projected map. Values between 0 and 0.5 "
@@ -258,10 +258,10 @@ MODEL_SPEC = {
                     "created_if": "lulc_bas_path",
                     "bands": {1: {"type": "ratio"}}
                 },
-                "rarity_out_f.tif": {
+                "rarity_f.tif": {
                     "about": (
                         "Relative habitat rarity on the future landscape "
-                        "vis-a-vis the baseline map. The grid cell’s values "
+                        "vis-a-vis the baseline map. The grid cell's values "
                         "are defined between a range of 0 and 1 where 0.5 "
                         "indicates no abundance change between the baseline "
                         "and current or projected map. Values between 0 and "
@@ -277,6 +277,66 @@ MODEL_SPEC = {
                         "conservation."),
                     "created_if": "lulc_bas_path and lulc_fut_path",
                     "bands": {1: {"type": "ratio"}}
+                },
+                "rarity_c.csv": {
+                    "about": ("Table of rarity values by LULC code for the "
+                              "current landscape"),
+                    "index_col": "LULC_code",
+                    "columns": {
+                        "LULC_code": {
+                            "type": "number",
+                            "about": "LULC class"
+                        },
+                        "rarity_value": {
+                            "type": "number",
+                            "about": (
+                                "Relative habitat rarity on the current landscape "
+                                "vis-a-vis the baseline map. The rarity values "
+                                "are defined between a range of 0 and 1 where 0.5 "
+                                "indicates no abundance change between the baseline "
+                                "and current or projected map. Values between 0 and 0.5 "
+                                "indicate a habitat is more abundant and the closer "
+                                "the value is to 0 the lesser the likelihood that the "
+                                "preservation of that habitat type on the current or "
+                                "future landscape is important to biodiversity conservation. "
+                                "Values between 0.5 and 1 indicate a habitat is less "
+                                "abundant and the closer the value is to 1 the greater "
+                                "the likelihood that the preservation of that habitat "
+                                "type on the current or future landscape is important "
+                                "to biodiversity conservation."),
+                        },
+                    },
+                    "created_if": "lulc_bas_path",
+                },
+                "rarity_f.csv": {
+                    "about": ("Table of rarity values by LULC code for the "
+                              "future landscape"),
+                    "index_col": "LULC_code",
+                    "columns": {
+                        "LULC_code": {
+                            "type": "number",
+                            "about": "LULC class"
+                        },
+                        "rarity_value": {
+                            "type": "number",
+                            "about": (
+                                "Relative habitat rarity on the future landscape "
+                                "vis-a-vis the baseline map. The rarity values "
+                                "are defined between a range of 0 and 1 where 0.5 "
+                                "indicates no abundance change between the baseline "
+                                "and current or projected map. Values between 0 and 0.5 "
+                                "indicate a habitat is more abundant and the closer "
+                                "the value is to 0 the lesser the likelihood that the "
+                                "preservation of that habitat type on the current or "
+                                "future landscape is important to biodiversity conservation. "
+                                "Values between 0.5 and 1 indicate a habitat is less "
+                                "abundant and the closer the value is to 1 the greater "
+                                "the likelihood that the preservation of that habitat "
+                                "type on the current or future landscape is important "
+                                "to biodiversity conservation."),
+                        },
+                    },
+                    "created_if": "lulc_bas_path and lulc_fut_path",
                 },
             }
         },
