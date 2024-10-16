@@ -289,6 +289,7 @@ MODEL_SPEC = {
                         },
                         "rarity_value": {
                             "type": "number",
+                            "units": u.none,
                             "about": (
                                 "Relative habitat rarity on the current landscape "
                                 "vis-a-vis the baseline map. The rarity values "
@@ -319,6 +320,7 @@ MODEL_SPEC = {
                         },
                         "rarity_value": {
                             "type": "number",
+                            "units": u.none,
                             "about": (
                                 "Relative habitat rarity on the future landscape "
                                 "vis-a-vis the baseline map. The rarity values "
