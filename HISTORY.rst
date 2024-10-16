@@ -38,6 +38,8 @@
 Unreleased Changes
 ------------------
 * General
+    * InVEST has been updated to build against numpy 2.
+      https://github.com/natcap/invest/issues/1641
     * Updating validation to handle a change in exceptions raised by GDAL in
       ``pygeoprocessing.get_raster_info`` and
       ``pygeoprocessing.get_vector_info``.
