@@ -40,18 +40,23 @@ export default function setupAddPlugin() {
         // Create a conda env containing the plugin and its dependencies
         const envName = `invest_plugin_${pluginID}`;
         const mamba = settingsStore.get('mamba');
-        execSync(`${mamba} create --yes --name ${envName} -c conda-forge "python<3.12" "gdal<3.6"`,
-          { stdio: 'inherit', windowsHide: true });
+        execSync(
+          `${mamba} create --yes --name ${envName} -c conda-forge "python<3.12" "gdal<3.6"`,
+          { stdio: 'inherit', windowsHide: true }
+        );
         logger.info('created mamba env for plugin');
-        execSync(`${mamba} run --name ${envName} pip install "git+${pluginURL}"`,
-          { stdio: 'inherit', windowsHide: true });
+        execSync(
+          `${mamba} run --name ${envName} pip install "git+${pluginURL}"`,
+          { stdio: 'inherit', windowsHide: true }
+        );
         logger.info('installed plugin into its env');
 
         // Write plugin metadata to the workbench's config.json
         const envInfo = execSync(`${mamba} info --envs`, { windowsHide: true }).toString();
         logger.info(`env info:\n${envInfo}`);
-        const envPath = envInfo.match(`${envName}\\s+(.+)$`)[1];
-        logger.info(`env path:\n${envPath}`);
+        const regex = new RegExp(String.raw`^${envName} +(.+)$`, 'm');
+        const envPath = envInfo.match(regex)[1];
+        logger.info(`env path: ${envPath}`);
         logger.info('writing plugin info to settings store');
         settingsStore.set(
           `plugins.${pluginID}`,
