@@ -76,7 +76,7 @@ export function setupServerProcessHandlers(subprocess) {
     logger.debug(`process exited with code ${code}`);
   });
   subprocess.on('disconnect', () => {
-    logger.debug(`process disconnected`);
+    logger.debug('process disconnected');
   });
   pidToSubprocess[subprocess.pid] = subprocess;
 }
@@ -85,17 +85,31 @@ export async function createJupyterProcess(jupyterExe, notebookDir, _port = unde
   let port = _port;
   if (port === undefined) {
     port = await getFreePort();
-    logger.debug(`PORT ${port}`)
+    logger.debug(`PORT ${port}`);
   }
   logger.debug('creating jupyterlab server process');
   logger.debug(jupyterExe);
-  let notebookPath = `${notebookDir}/ipyleaflet.ipynb`;
-  const subprocess = spawn(
-    jupyterExe,
-    //['lab', '--notebook-dir', notebookDir, '--no-browser', '--port', port],
-    [notebookPath, '--debug', '--no-browser', '--port', port],
-    { shell: true } // necessary in dev mode & relying on a conda env
-  );
+
+  const mamba = settingsStore.get('mamba');
+  const modelEnvPath = settingsStore.get('plugins.schistosomiasis.env');
+
+  const pipShow = execSync(
+    `mamba run --prefix "${modelEnvPath}" pip show schistosomiasis`,
+    { windowsHide: true }
+  ).toString();
+  logger.info(pipShow);
+  const pluginLocation = pipShow.match(/Location: (.+)/)[1];
+  logger.info('location', pluginLocation);
+  const notebookPath = `${pluginLocation}/notebooks/ipyleaflet.ipynb`;
+
+  const args = [
+    'run', '--prefix', `"${modelEnvPath}"`,
+    'voila', notebookPath, '--debug', '--no-browser', '--port', port
+  ];
+  logger.debug('spawning command:', mamba, args);
+
+  // shell: true necessary in dev mode & relying on a conda env
+  const subprocess = spawn(mamba, args, { shell: true });
   setupServerProcessHandlers(subprocess);
   await getJupyterIsReady(port, 0, 500);
   return [subprocess, port];
