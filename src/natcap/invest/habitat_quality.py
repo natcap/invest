@@ -1,6 +1,7 @@
 # coding=UTF-8
 """InVEST Habitat Quality model."""
 import collections
+import csv
 import logging
 import os
 
@@ -983,12 +984,11 @@ def _generate_rarity_csv(rarity_dict, target_csv_path):
         None
     """
     lulc_codes = sorted(rarity_dict)
-    cols = ['lulc_code', 'rarity_value']
-    with open(target_csv_path, 'w') as csvfile:
-        csvfile.write(str(','.join(cols) + '\n'))
+    with open(target_csv_path, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['lulc_code', 'rarity_value'])
         for lulc_code in lulc_codes:
-            row = [str(lulc_code), str(rarity_dict[lulc_code])]
-            csvfile.write(str(','.join(row) + '\n'))
+            writer.writerow([lulc_code, rarity_dict[lulc_code]])
 
 
 def _raster_pixel_count(raster_path_band):
