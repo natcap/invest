@@ -2114,5 +2114,3 @@ class HabitatQualityTests(unittest.TestCase):
                 header='column', header_name='fut_path')
         )]
         self.assertEqual(validate_result, expected)
-
-# @TODO: ¿add rarity CSV test?

@@ -280,10 +280,10 @@ MODEL_SPEC = {
                 },
                 "rarity_c.csv": {
                     "about": ("Table of rarity values by LULC code for the "
-                              "current landscape"),
-                    "index_col": "LULC_code",
+                              "current landscape."),
+                    "index_col": "lulc_code",
                     "columns": {
-                        "LULC_code": {
+                        "lulc_code": {
                             "type": "number",
                             "units": u.none,
                             "about": "LULC class",
@@ -312,10 +312,10 @@ MODEL_SPEC = {
                 },
                 "rarity_f.csv": {
                     "about": ("Table of rarity values by LULC code for the "
-                              "future landscape"),
-                    "index_col": "LULC_code",
+                              "future landscape."),
+                    "index_col": "lulc_code",
                     "columns": {
-                        "LULC_code": {
+                        "lulc_code": {
                             "type": "number",
                             "units": u.none,
                             "about": "LULC class",
@@ -898,7 +898,7 @@ def _calculate_total_degradation(
 def _compute_rarity_operation(
         base_lulc_path_band, lulc_path_band, new_cover_path,
         rarity_raster_path, rarity_csv_path):
-    """Calculate habitat rarity.
+    """Calculate habitat rarity and generate raster and CSV output.
 
     Output rarity values will be an index from 0 - 1 where:
        pixel > 0.5 - more rare
@@ -983,7 +983,7 @@ def _generate_rarity_csv(rarity_dict, target_csv_path):
         None
     """
     lulc_codes = sorted(rarity_dict)
-    cols = ['LULC_code', 'rarity_value']
+    cols = ['lulc_code', 'rarity_value']
     with open(target_csv_path, 'w') as csvfile:
         csvfile.write(str(','.join(cols) + '\n'))
         for lulc_code in lulc_codes:
