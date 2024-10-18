@@ -1,11 +1,11 @@
 """Module for Regression Testing the InVEST Habitat Quality model."""
+import csv
 import os
 import shutil
 import tempfile
 import unittest
 
 import numpy
-import pandas
 import pygeoprocessing
 from osgeo import gdal
 from osgeo import ogr
@@ -246,13 +246,32 @@ class HabitatQualityTests(unittest.TestCase):
             # so we should exclude those new nodata pixel values.
             assert_array_sum(raster_path, assert_value, include_nodata=False)
 
-        for csv_filename in ['rarity_c_regression.csv',
-                             'rarity_f_regression.csv']:
+        # Based on the scenarios used to generate the rasters above,
+        # rarity values are calculated as follows:
+        # For LULC 1, rarity = 1.0 - (5000 / (10000 + 5000)) = 0.6667.
+        # For LULC 2 and 3, rarity = 0.0 because they are not in the baseline.
+        expected_csv_values = {
+            'rarity_c_regression.csv': [
+                (1, 0.6667, 4),
+                (2, 0.0, 0),
+            ],
+            'rarity_f_regression.csv': [
+                (1, 0.6667, 4),
+                (3, 0.0, 0),
+            ],
+        }
+        for csv_filename in expected_csv_values.keys():
             csv_path = os.path.join(args['workspace_dir'], csv_filename)
-            rarity_table = pandas.read_csv(csv_path)
-            assert 'LULC_code' in rarity_table.columns
-            self.assertAlmostEqual(rarity_table['rarity_value'].sum(),
-                                   0.6667, 4)
+            with open(csv_path, newline='') as csvfile:
+                reader = csv.DictReader(csvfile, delimiter=',')
+                self.assertEqual(reader.fieldnames,
+                                 ['lulc_code', 'rarity_value'])
+                for (exp_lulc, exp_rarity,
+                     places_to_round) in expected_csv_values[csv_filename]:
+                    row = next(reader)
+                    self.assertEqual(int(row['lulc_code']), exp_lulc)
+                    self.assertAlmostEqual(float(row['rarity_value']),
+                                           exp_rarity, places_to_round)
 
     def test_habitat_quality_regression_different_projections(self):
         """Habitat Quality: base regression test with simplified data."""
@@ -1056,7 +1075,6 @@ class HabitatQualityTests(unittest.TestCase):
         habitat_quality.execute(args)
 
         # Reasonable to just check quality out in this case
-        #assert_array_sum(
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'quality_c.tif'),
             5852.088)
