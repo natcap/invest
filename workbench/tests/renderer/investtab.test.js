@@ -109,9 +109,71 @@ describe('Run status Alert renders with status from a recent run', () => {
     });
 
     const { findByRole } = renderInvestTab(job);
-    const openWorkspace = await findByRole('button', { name: 'Open Workspace' })
-    openWorkspace.click();
-    expect(shell.showItemInFolder).toHaveBeenCalledTimes(1);
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' });
+    expect(openWorkspaceBtn).toBeTruthy();
+  });
+});
+
+describe('Open Workspace button', () => {
+  const spec = {
+    args: {},
+    ui_spec: { order: [] },
+  };
+
+  const baseJob = {
+    ...DEFAULT_JOB,
+    status: 'success',
+  };
+
+  beforeEach(() => {
+    getSpec.mockResolvedValue(spec);
+    fetchValidation.mockResolvedValue([]);
+    setupDialogs();
+  });
+
+  afterEach(() => {
+    removeIpcMainListeners();
+  });
+
+  test('should open workspace', async () => {
+    const job = {
+      ...baseJob,
+      argsValues: {
+        workspace_dir: '/workspace',
+      },
+    };
+
+    jest.spyOn(ipcRenderer, 'invoke');
+
+    const { findByRole } = renderInvestTab(job);
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' })
+    openWorkspaceBtn.click();
+
+    expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith(ipcMainChannels.OPEN_PATH, job.argsValues.workspace_dir);
+  });
+
+  test('should present an error message to the user if workspace cannot be opened (e.g., if it does not exist)', async () => {
+    const job = {
+      ...baseJob,
+      status: 'error',
+      argsValues: {
+        workspace_dir: '/nonexistent-workspace',
+      },
+    };
+
+    jest.spyOn(ipcRenderer, 'invoke');
+    ipcRenderer.invoke.mockResolvedValue('Error opening workspace');
+
+    const { findByRole } = renderInvestTab(job);
+    const openWorkspaceBtn = await findByRole('button', { name: 'Open Workspace' });
+    openWorkspaceBtn.click();
+
+    expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith(ipcMainChannels.OPEN_PATH, job.argsValues.workspace_dir);
+
+    const errorModal = await findByRole('dialog', { name: 'Error opening workspace'});
+    expect(errorModal).toBeTruthy();
   });
 });
 
@@ -155,18 +217,22 @@ describe('Sidebar Buttons', () => {
   });
 
   test('Save to JSON: requests endpoint with correct payload', async () => {
-    const response = 'saved';
-    writeParametersToFile.mockResolvedValue(response);
+    const response = {
+      message: 'saved',
+      error: false,
+    };
+    writeParametersToFile.mockResolvedValueOnce(response);
+    const mockDialogData = { canceled: false, filePath: 'foo.json' };
+    ipcRenderer.invoke.mockResolvedValueOnce(mockDialogData);
 
     const { findByText, findByLabelText, findByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
     await userEvent.click(saveAsButton);
-    const jsonOption = await findByLabelText((content, element) => content.startsWith('Parameters only'));
+    const jsonOption = await findByLabelText((content) => content.startsWith('Parameters only'));
     await userEvent.click(jsonOption);
     const saveButton = await findByRole('button', { name: 'Save' });
     await userEvent.click(saveButton);
 
-    expect(await findByRole('alert')).toHaveTextContent(response);
     const payload = writeParametersToFile.mock.calls[0][0];
     expect(Object.keys(payload)).toEqual(expect.arrayContaining(
       ['filepath', 'moduleName', 'relativePaths', 'args']
@@ -187,19 +253,18 @@ describe('Sidebar Buttons', () => {
 
   test('Save to Python script: requests endpoint with correct payload', async () => {
     const response = 'saved';
-    saveToPython.mockResolvedValue(response);
+    saveToPython.mockResolvedValueOnce(response);
     const mockDialogData = { canceled: false, filePath: 'foo.py' };
     ipcRenderer.invoke.mockResolvedValueOnce(mockDialogData);
 
     const { findByText, findByLabelText, findByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
     await userEvent.click(saveAsButton);
-    const pythonOption = await findByLabelText((content, element) => content.startsWith('Python script'));
+    const pythonOption = await findByLabelText((content) => content.startsWith('Python script'));
     await userEvent.click(pythonOption);
     const saveButton = await findByRole('button', { name: 'Save' });
     await userEvent.click(saveButton);
 
-    expect(await findByRole('alert')).toHaveTextContent(response);
     const payload = saveToPython.mock.calls[0][0];
     expect(Object.keys(payload)).toEqual(expect.arrayContaining(
       ['filepath', 'modelname', 'args']
@@ -222,27 +287,22 @@ describe('Sidebar Buttons', () => {
   });
 
   test('Save datastack: requests endpoint with correct payload', async () => {
-    const response = 'saved';
-    archiveDatastack.mockImplementation(() => new Promise(
-      (resolve) => {
-        setTimeout(() => resolve(response), 500);
-      }
-    ));
+    const response = {
+      message: 'saved',
+      error: false,
+    };
+    archiveDatastack.mockResolvedValueOnce(response);
     const mockDialogData = { canceled: false, filePath: 'data.tgz' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
     const { findByText, findByLabelText, findByRole, getByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
     await userEvent.click(saveAsButton);
-    const datastackOption = await findByLabelText((content, element) => content.startsWith('Parameters and data'));
+    const datastackOption = await findByLabelText((content) => content.startsWith('Parameters and data'));
     await userEvent.click(datastackOption);
     const saveButton = await findByRole('button', { name: 'Save' });
     await userEvent.click(saveButton);
 
-    expect(await findByRole('alert')).toHaveTextContent('archiving...');
-    await waitFor(() => {
-      expect(getByRole('alert')).toHaveTextContent(response);
-    });
     const payload = archiveDatastack.mock.calls[0][0];
     expect(Object.keys(payload)).toEqual(expect.arrayContaining(
       ['filepath', 'moduleName', 'args']
@@ -262,6 +322,124 @@ describe('Sidebar Buttons', () => {
       expect(typeof args[key]).toBe('string');
     });
     expect(archiveDatastack).toHaveBeenCalledTimes(1);
+  });
+
+  test.each([
+    ['Parameters only', 'saveJsonFile'],
+    ['Parameters and data', 'saveDatastack'],
+    ['Python script', 'savePythonScript']
+  ])('%s: does nothing when canceled', async (label, method) => {
+    // callback data if the OS dialog was canceled
+    const mockDialogData = {
+      canceled: true,
+      filePaths: []
+    };
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+    const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, method);
+
+    const { findByText, findByLabelText, findByRole } = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    await userEvent.click(saveAsButton);
+    const option = await findByLabelText((content, element) => content.startsWith(label));
+    await userEvent.click(option);
+    const saveButton = await findByRole('button', { name: 'Save' });
+    await userEvent.click(saveButton);
+
+    // Calls that would have triggered if a file was selected
+    expect(spy).toHaveBeenCalledTimes(0);
+  });
+
+  test.each([
+    [
+      'Parameters only',
+      writeParametersToFile,
+      {message: 'Parameter set saved', error: false}
+    ],
+    [
+      'Parameters and data',
+      archiveDatastack,
+      {message: 'Datastack archive created', error: false}
+    ],
+    [
+      'Python script',
+      saveToPython,
+      'Python script saved'
+    ]
+  ])('%s: renders success message', async (label, method, response) => {
+    ipcRenderer.invoke.mockResolvedValueOnce({canceled: false, filePath: 'example.txt'});
+    if (method == archiveDatastack) {
+      method.mockImplementationOnce(() => new Promise(
+        (resolve) => {
+          setTimeout(() => resolve(response), 500);
+        }
+      ));
+    } else {
+      method.mockResolvedValueOnce(response);
+    }
+
+    const { findByText, findByLabelText, findByRole } = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    await userEvent.click(saveAsButton);
+    const option = await findByLabelText((content) => content.startsWith(label));
+    await userEvent.click(option);
+    const saveButton = await findByRole('button', { name: 'Save' });
+    await userEvent.click(saveButton);
+
+    const saveAlert = await findByRole('alert');
+    if (method == archiveDatastack) {
+      expect(saveAlert).toHaveTextContent('archiving...');
+    }
+    await waitFor(() => {
+      expect(saveAlert).toHaveTextContent(response.message ?? response);
+    });
+    expect(saveAlert).toHaveClass('alert-success');
+  });
+
+  test.each([
+    [
+      'Parameters only',
+      writeParametersToFile,
+      {message: 'Error saving parameter set', error: true}
+    ],
+    [
+      'Parameters and data',
+      archiveDatastack,
+      {message: 'Error creating datastack archive', error: true}
+    ],
+  ])('%s: renders error message', async (label, method, response) => {
+    ipcRenderer.invoke.mockResolvedValueOnce({canceled: false, filePath: 'example.txt'});
+    method.mockResolvedValueOnce(response);
+
+    const { findByText, findByLabelText, findByRole } = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    await userEvent.click(saveAsButton);
+    const option = await findByLabelText((content) => content.startsWith(label));
+    await userEvent.click(option);
+    const saveButton = await findByRole('button', { name: 'Save' });
+    await userEvent.click(saveButton);
+
+    const saveAlert = await findByRole('alert');
+    expect(saveAlert).toHaveTextContent(response.message);
+    expect(saveAlert).toHaveClass('alert-danger');
+  });
+
+  test('Save errors are cleared when save modal opens', async () => {
+    ipcRenderer.invoke.mockResolvedValueOnce({canceled: false, filePath: 'example.txt'});
+    writeParametersToFile.mockResolvedValueOnce({message: 'Error saving parameter set', error: true});
+
+    // Trigger error alert
+    const { findByText, findByLabelText, findByRole, queryByRole } = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    await userEvent.click(saveAsButton);
+    const jsonOption = await findByLabelText((content) => content.startsWith('Parameters only'));
+    await userEvent.click(jsonOption);
+    const saveButton = await findByRole('button', { name: 'Save' });
+    await userEvent.click(saveButton);
+    expect(await findByRole('alert')).toHaveClass('alert-danger');
+
+    // Re-open save modal
+    await userEvent.click(saveAsButton);
+    expect(queryByRole('alert')).toBe(null);
   });
 
   test('Load parameters from file: loads parameters', async () => {
@@ -316,31 +494,6 @@ describe('Sidebar Buttons', () => {
 
     const loadButton = await findByText('Load parameters from file');
     await userEvent.click(loadButton);
-
-    // Calls that would have triggered if a file was selected
-    expect(spy).toHaveBeenCalledTimes(0);
-  });
-
-  test.each([
-    ['Parameters only', 'saveJsonFile'],
-    ['Parameters and data', 'saveDatastack'],
-    ['Python script', 'savePythonScript']
-  ])('%s: does nothing when canceled', async (label, method) => {
-    // callback data if the OS dialog was canceled
-    const mockDialogData = {
-      canceled: true,
-      filePaths: []
-    };
-    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, method);
-
-    const { findByText, findByLabelText, findByRole } = renderInvestTab();
-    const saveAsButton = await findByText('Save as...');
-    await userEvent.click(saveAsButton);
-    const option = await findByLabelText((content, element) => content.startsWith(label));
-    await userEvent.click(option);
-    const saveButton = await findByRole('button', { name: 'Save' });
-    await userEvent.click(saveButton);
 
     // Calls that would have triggered if a file was selected
     expect(spy).toHaveBeenCalledTimes(0);

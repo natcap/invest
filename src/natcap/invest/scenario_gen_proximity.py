@@ -500,7 +500,7 @@ def _convert_landscape(
 
             def _mask_base_op(lulc_array):
                 """Create a mask of valid non-base pixels only."""
-                base_mask = numpy.in1d(
+                base_mask = numpy.isin(
                     lulc_array.flatten(), focal_landcover_codes).reshape(
                         lulc_array.shape)
                 if invert_mask:
@@ -545,7 +545,7 @@ def _convert_landscape(
         # turn inside and outside masks into a single mask
         def _mask_to_convertible_codes(distance_from_base_edge, lulc):
             """Mask out the distance transform to a set of lucodes."""
-            convertible_mask = numpy.in1d(
+            convertible_mask = numpy.isin(
                 lulc.flatten(), convertible_type_list).reshape(lulc.shape)
             return numpy.where(
                 convertible_mask, distance_from_base_edge,

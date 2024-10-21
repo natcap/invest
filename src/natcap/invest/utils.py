@@ -121,6 +121,25 @@ def capture_gdal_logging():
         gdal.PopErrorHandler()
 
 
+@contextlib.contextmanager
+def _set_gdal_configuration(opt, value):
+    """Temporarily set a GDAL configuration option.
+
+    Args:
+        opt (string): The GDAL configuration option to set.
+        value (string): The value to set the option to.
+
+    Returns:
+        ``None``
+    """
+    prior_value = gdal.GetConfigOption(opt)
+    gdal.SetConfigOption(opt, value)
+    try:
+        yield
+    finally:
+        gdal.SetConfigOption(opt, prior_value)
+
+
 def _format_time(seconds):
     """Render the integer number of seconds as a string. Returns a string."""
     hours, remainder = divmod(seconds, 3600)

@@ -767,13 +767,12 @@ def execute(args):
     squared_lulc_pixel_size = _square_off_pixels(args['lulc_raster_path'])
 
     lulc_alignment_task = graph.add_task(
-        pygeoprocessing.warp_raster,
+        _warp_lulc,
         kwargs={
-            'base_raster_path': args['lulc_raster_path'],
-            'target_pixel_size': squared_lulc_pixel_size,
-            'target_bb': target_bounding_box,
-            'target_raster_path': file_registry['aligned_lulc'],
-            'resample_method': 'near',
+            "source_lulc_path": args['lulc_raster_path'],
+            "target_lulc_path": file_registry['aligned_lulc'],
+            "target_pixel_size": squared_lulc_pixel_size,
+            "target_bounding_box": target_bounding_box,
         },
         target_path_list=[file_registry['aligned_lulc']],
         task_name='Resample LULC to have square pixels'
@@ -2538,6 +2537,40 @@ def _create_valid_pixels_nodata_mask(raster_list, target_mask_path):
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in raster_list],
         _create_mask, target_mask_path, gdal.GDT_Byte, nodata_target=255)
+
+
+def _warp_lulc(source_lulc_path, target_lulc_path, target_pixel_size,
+               target_bounding_box):
+    """Warp a LULC raster and set a nodata if needed.
+
+    Args:
+        source_lulc_path (str): The path to a source LULC raster.
+        target_lulc_path (str): The path to the new LULC raster.
+        target_pixel_size (tuple): A 2-tuple of the target pixel size.
+        target_bounding_box (tuple): A 4-tuple of the target bounding box.
+
+    Returns:
+        ``None``.
+    """
+    source_raster_info = pygeoprocessing.get_raster_info(source_lulc_path)
+    target_nodata = source_raster_info['nodata'][0]
+
+    pygeoprocessing.warp_raster(
+        source_lulc_path, target_pixel_size, target_lulc_path,
+        'near', target_bb=target_bounding_box,
+        target_projection_wkt=source_raster_info['projection_wkt'])
+
+    # if there is no defined nodata, set a default value
+    if target_nodata is None:
+        # Guarantee that our nodata cannot be represented by the datatype -
+        # select a nodata value that's out of range.
+        target_nodata = pygeoprocessing.choose_nodata(
+            source_raster_info['numpy_type']) + 1
+        raster = gdal.OpenEx(target_lulc_path, gdal.GA_Update)
+        band = raster.GetRasterBand(1)
+        band.SetNoDataValue(target_nodata)
+        band = None
+        raster = None
 
 
 def _mask_raster(source_raster_path, mask_raster_path, target_raster_path):

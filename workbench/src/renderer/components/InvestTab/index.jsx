@@ -8,6 +8,8 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Nav from 'react-bootstrap/Nav';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import Modal from 'react-bootstrap/Modal';
+import Button from 'react-bootstrap/Button';
 import {
   MdKeyboardArrowRight
 } from 'react-icons/md';
@@ -21,10 +23,7 @@ import { getSpec } from '../../server_requests';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
-
-function handleOpenWorkspace(logfile) {
-  ipcRenderer.send(ipcMainChannels.SHOW_ITEM_IN_FOLDER, logfile);
-}
+const { logger } = window.Workbench;
 
 /**
  * Render an invest model setup form, log display, etc.
@@ -42,6 +41,7 @@ class InvestTab extends React.Component {
       userTerminated: false,
       executeClicked: false,
       tabStatus: '',
+      showErrorModal: false,
     };
 
     this.investExecute = this.investExecute.bind(this);
@@ -49,6 +49,8 @@ class InvestTab extends React.Component {
     this.terminateInvestProcess = this.terminateInvestProcess.bind(this);
     this.investLogfileCallback = this.investLogfileCallback.bind(this);
     this.investExitCallback = this.investExitCallback.bind(this);
+    this.handleOpenWorkspace = this.handleOpenWorkspace.bind(this);
+    this.showErrorModal = this.showErrorModal.bind(this);
   }
 
   async componentDidMount() {
@@ -156,6 +158,7 @@ class InvestTab extends React.Component {
     updateJobProperties(tabID, {
       argsValues: args,
       status: undefined, // in case of re-run, clear an old status
+      logfile: undefined, // in case of re-run where logfile may no longer exist, clear old logfile path
     });
 
     ipcRenderer.send(
@@ -188,6 +191,22 @@ class InvestTab extends React.Component {
     );
   }
 
+  async handleOpenWorkspace(workspace_dir) {
+    if (workspace_dir) {
+      const error = await ipcRenderer.invoke(ipcMainChannels.OPEN_PATH, workspace_dir);
+      if (error) {
+        logger.error(`Error opening workspace (${workspace_dir}). ${error}`);
+        this.showErrorModal(true);
+      }
+    }
+  }
+
+  showErrorModal(shouldShow) {
+    this.setState({
+      showErrorModal: shouldShow,
+    });
+  }
+
   render() {
     const {
       activeTab,
@@ -195,7 +214,8 @@ class InvestTab extends React.Component {
       argsSpec,
       uiSpec,
       executeClicked,
-      tabStatus
+      tabStatus,
+      showErrorModal,
     } = this.state;
     const {
       status,
@@ -232,88 +252,99 @@ class InvestTab extends React.Component {
     const sidebarFooterElementId = `sidebar-footer-${tabID}`;
 
     return (
-      <TabContainer activeKey={activeTab} id="invest-tab">
-        <Row className="flex-nowrap">
-          <Col
-            className="invest-sidebar-col"
-          >
-            <Nav
-              className="flex-column"
-              id="vertical tabs"
-              variant="pills"
-              activeKey={activeTab}
-              onSelect={this.switchTabs}
+      <>
+        <TabContainer activeKey={activeTab} id="invest-tab">
+          <Row className="flex-nowrap">
+            <Col
+              className="invest-sidebar-col"
             >
-              <Nav.Link eventKey="setup">
-                {t('Setup')}
-                <MdKeyboardArrowRight />
-              </Nav.Link>
-              <Nav.Link eventKey="log" disabled={logDisabled}>
-                {t('Log')}
-                <MdKeyboardArrowRight />
-              </Nav.Link>
-            </Nav>
-            <div
-              className="sidebar-row sidebar-buttons"
-              id={sidebarSetupElementId}
-            />
-            <div className="sidebar-row sidebar-links">
-              <ResourcesLinks
-                moduleName={modelRunName}
-                docs={modelSpec.userguide}
+              <Nav
+                className="flex-column"
+                id="vertical tabs"
+                variant="pills"
+                activeKey={activeTab}
+                onSelect={this.switchTabs}
+              >
+                <Nav.Link eventKey="setup">
+                  {t('Setup')}
+                  <MdKeyboardArrowRight />
+                </Nav.Link>
+                <Nav.Link eventKey="log" disabled={logDisabled}>
+                  {t('Log')}
+                  <MdKeyboardArrowRight />
+                </Nav.Link>
+              </Nav>
+              <div
+                className="sidebar-row sidebar-buttons"
+                id={sidebarSetupElementId}
               />
-            </div>
-            <div
-              className="sidebar-row sidebar-footer"
-              id={sidebarFooterElementId}
-            >
-              {
-                status
-                  ? (
-                    <ModelStatusAlert
-                      status={status}
-                      handleOpenWorkspace={() => handleOpenWorkspace(logfile)}
-                      terminateInvestProcess={this.terminateInvestProcess}
-                    />
-                  )
-                  : null
-              }
-            </div>
-          </Col>
-          <Col className="invest-main-col">
-            <TabContent>
-              <TabPane
-                eventKey="setup"
-                aria-label="model setup tab"
-              >
-                <SetupTab
-                  pyModuleName={modelSpec.pyname}
-                  userguide={modelSpec.userguide}
-                  modelId={modelRunName}
-                  argsSpec={argsSpec}
-                  uiSpec={uiSpec}
-                  argsInitValues={argsValues}
-                  investExecute={this.investExecute}
-                  sidebarSetupElementId={sidebarSetupElementId}
-                  sidebarFooterElementId={sidebarFooterElementId}
-                  executeClicked={executeClicked}
-                  switchTabs={this.switchTabs}
+              <div className="sidebar-row sidebar-links">
+                <ResourcesLinks
+                  moduleName={modelRunName}
+                  docs={modelSpec.userguide}
                 />
-              </TabPane>
-              <TabPane
-                eventKey="log"
-                aria-label="model log tab"
+              </div>
+              <div
+                className="sidebar-row sidebar-footer"
+                id={sidebarFooterElementId}
               >
-                <LogTab
-                  logfile={logfile}
-                  executeClicked={executeClicked}
-                  tabID={tabID}
-                />
-              </TabPane>
-            </TabContent>
-          </Col>
-        </Row>
-      </TabContainer>
+                {
+                  status
+                    ? (
+                      <ModelStatusAlert
+                        status={status}
+                        handleOpenWorkspace={() => this.handleOpenWorkspace(argsValues?.workspace_dir)}
+                        terminateInvestProcess={this.terminateInvestProcess}
+                      />
+                    )
+                    : null
+                }
+              </div>
+            </Col>
+            <Col className="invest-main-col">
+              <TabContent>
+                <TabPane
+                  eventKey="setup"
+                  aria-label="model setup tab"
+                >
+                  <SetupTab
+                    pyModuleName={modelSpec.pyname}
+                    userguide={modelSpec.userguide}
+                    modelId={modelRunName}
+                    argsSpec={argsSpec}
+                    uiSpec={uiSpec}
+                    argsInitValues={argsValues}
+                    investExecute={this.investExecute}
+                    sidebarSetupElementId={sidebarSetupElementId}
+                    sidebarFooterElementId={sidebarFooterElementId}
+                    executeClicked={executeClicked}
+                    switchTabs={this.switchTabs}
+                  />
+                </TabPane>
+                <TabPane
+                  eventKey="log"
+                  aria-label="model log tab"
+                >
+                  <LogTab
+                    logfile={logfile}
+                    executeClicked={executeClicked}
+                    tabID={tabID}
+                  />
+                </TabPane>
+              </TabContent>
+            </Col>
+          </Row>
+        </TabContainer>
+        <Modal show={showErrorModal} onHide={() => this.showErrorModal(false)} aria-labelledby="error-modal-title">
+          <Modal.Header closeButton>
+            <Modal.Title id="error-modal-title">{t('Error opening workspace')}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>{t('Failed to open workspace directory. Make sure the directory exists and that you have write access to it.')}</Modal.Body>
+          <Modal.Footer>
+            <Button variant="primary" onClick={() => this.showErrorModal(false)}>{t('OK')}</Button>
+          </Modal.Footer>
+        </Modal>
+      </>
     );
   }
 }

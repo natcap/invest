@@ -1043,10 +1043,12 @@ def _raster_sum_mean(
             numpy.array(fid_raster_values['sum']) /
             numpy.array(fid_raster_values['count']))
         predictor_results = dict(
-            zip(fid_raster_values['fid'], mean_results))
+            zip(fid_raster_values['fid'],
+                (i.item() for i in mean_results)))
     else:
         predictor_results = dict(
-            zip(fid_raster_values['fid'], fid_raster_values['sum']))
+            zip(fid_raster_values['fid'],
+                (i.item() for i in fid_raster_values['sum'])))
     with open(predictor_target_path, 'w') as jsonfile:
         json.dump(predictor_results, jsonfile)
 
