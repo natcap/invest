@@ -1045,28 +1045,28 @@ def execute(args):
             # this is YT from the user's guide (y_tot)
             farm_feature.SetField(
                 _TOTAL_FARM_YIELD_FIELD_ID,
-                1 - nu * (
+                float(1 - nu * (
                     1 - total_farm_results[fid]['sum'] /
-                    float(total_farm_results[fid]['count'])))
+                    float(total_farm_results[fid]['count']))))
 
             # this is PYW ('pdep_y_w')
             farm_feature.SetField(
                 _POLLINATOR_PROPORTION_FARM_YIELD_FIELD_ID,
-                (wild_pollinator_yield_aggregate[fid]['sum'] /
+                float(wild_pollinator_yield_aggregate[fid]['sum'] /
                  float(wild_pollinator_yield_aggregate[fid]['count'])))
 
             # this is YW ('y_wild')
             farm_feature.SetField(
                 _WILD_POLLINATOR_FARM_YIELD_FIELD_ID,
-                nu * (wild_pollinator_yield_aggregate[fid]['sum'] /
-                      float(wild_pollinator_yield_aggregate[fid]['count'])))
+                float(nu * (wild_pollinator_yield_aggregate[fid]['sum'] /
+                      float(wild_pollinator_yield_aggregate[fid]['count']))))
 
             # this is PAT ('p_abund')
             farm_season = farm_feature.GetField(_FARM_SEASON_FIELD)
             farm_feature.SetField(
                 _POLLINATOR_ABUNDANCE_FARM_FIELD_ID,
-                pollinator_abundance_results[farm_season][fid]['sum'] /
-                float(pollinator_abundance_results[farm_season][fid]['count']))
+                float(pollinator_abundance_results[farm_season][fid]['sum'] /
+                float(pollinator_abundance_results[farm_season][fid]['count'])))
 
         target_farm_layer.SetFeature(farm_feature)
     target_farm_layer.SyncToDisk()

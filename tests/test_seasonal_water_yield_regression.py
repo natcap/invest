@@ -495,7 +495,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'aoi_path': os.path.join(
-                        self.workspace_dir, 'aggregated_results_foo.shp'),
+                        self.workspace_dir, 'aggregated_results_swy_foo.shp'),
             'results_suffix': 'foo',
             'alpha_m': '1/12',
             'beta_i': '1.0',

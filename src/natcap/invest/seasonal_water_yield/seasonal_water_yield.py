@@ -654,6 +654,7 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
+    LOGGER.debug('n_workers: %s', n_workers)
     task_graph = taskgraph.TaskGraph(
         os.path.join(args['workspace_dir'], 'taskgraph_cache'),
         n_workers, reporting_interval=5)
@@ -664,6 +665,9 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
 
     LOGGER.info('Checking that the AOI is not the output aggregate vector')
+    LOGGER.debug("aoi_path: %s", args['aoi_path'])
+    LOGGER.debug("aggregate_vector_path: %s",
+                 os.path.normpath(file_registry['aggregate_vector_path']))
     if (os.path.normpath(args['aoi_path']) ==
             os.path.normpath(file_registry['aggregate_vector_path'])):
         raise ValueError(
@@ -1256,7 +1260,7 @@ def _calculate_curve_number_raster(
         # if lulc_array value not in lulc_to_soil[soil_group_id]['lulc_values']
         # then numpy.digitize will not bin properly and cause an IndexError
         # during the reshaping call
-        lulc_unique = set(numpy.unique(lulc_array))
+        lulc_unique = set(i.item() for i in numpy.unique(lulc_array))
         if not lulc_unique.issubset(lucodes_set):
             # cast to list to conform with similar error messages in InVEST
             missing_lulc_values = sorted(lulc_unique.difference(lucodes_set))

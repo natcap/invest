@@ -190,6 +190,7 @@ describe('createWindow', () => {
       ipcMainChannels.INVEST_VERSION,
       ipcMainChannels.IS_FIRST_RUN,
       ipcMainChannels.LAUNCH_PLUGIN_SERVER,
+      ipcMainChannels.OPEN_PATH,
       ipcMainChannels.SHOW_OPEN_DIALOG,
       ipcMainChannels.SHOW_SAVE_DIALOG,
     ];

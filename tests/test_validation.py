@@ -1,11 +1,10 @@
 """Testing module for validation."""
-import codecs
-import collections
 import functools
 import os
-import platform
 import shutil
+import stat
 import string
+import sys
 import tempfile
 import textwrap
 import time
@@ -330,6 +329,91 @@ class DirectoryValidation(unittest.TestCase):
             new_dir, must_exist=False, permissions='rwx'))
 
 
+@unittest.skipIf(
+    sys.platform.startswith('win'),
+    'requires support for os.chmod(), which is unreliable on Windows')
+class DirectoryValidationMacOnly(unittest.TestCase):
+    """Test Directory Permissions Validation."""
+
+    def test_invalid_permissions_r(self):
+        """Validation: when a folder must have read/write/execute
+        permissions but is missing write and execute permissions."""
+        from natcap.invest import validation
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.chmod(tempdir, stat.S_IREAD)
+            validation_warning = validation.check_directory(tempdir,
+                                                            permissions='rwx')
+            self.assertEqual(
+                validation_warning,
+                validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='execute'))
+
+    def test_invalid_permissions_w(self):
+        """Validation: when a folder must have read/write/execute
+        permissions but is missing read and execute permissions."""
+        from natcap.invest import validation
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.chmod(tempdir, stat.S_IWRITE)
+            validation_warning = validation.check_directory(tempdir,
+                                                            permissions='rwx')
+            self.assertEqual(
+                validation_warning,
+                validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='read'))
+
+    def test_invalid_permissions_x(self):
+        """Validation: when a folder must have read/write/execute
+        permissions but is missing read and write permissions."""
+        from natcap.invest import validation
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.chmod(tempdir, stat.S_IEXEC)
+            validation_warning = validation.check_directory(tempdir,
+                                                            permissions='rwx')
+            self.assertEqual(
+                validation_warning,
+                validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='read'))
+
+    def test_invalid_permissions_rw(self):
+        """Validation: when a folder must have read/write/execute
+        permissions but is missing execute permission."""
+        from natcap.invest import validation
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.chmod(tempdir, stat.S_IREAD | stat.S_IWRITE)
+            validation_warning = validation.check_directory(tempdir,
+                                                            permissions='rwx')
+            self.assertEqual(
+                validation_warning,
+                validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='execute'))
+
+    def test_invalid_permissions_rx(self):
+        """Validation: when a folder must have read/write/execute
+        permissions but is missing write permission."""
+        from natcap.invest import validation
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.chmod(tempdir, stat.S_IREAD | stat.S_IEXEC)
+            validation_warning = validation.check_directory(tempdir,
+                                                            permissions='rwx')
+            self.assertEqual(
+                validation_warning,
+                validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='write'))
+
+    def test_invalid_permissions_wx(self):
+        """Validation: when a folder must have read/write/execute
+        permissions but is missing read permission."""
+        from natcap.invest import validation
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.chmod(tempdir, stat.S_IWRITE | stat.S_IEXEC)
+            validation_warning = validation.check_directory(tempdir,
+                                                            permissions='rwx')
+            self.assertEqual(
+                validation_warning,
+                validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='read'))
+
+
 class FileValidation(unittest.TestCase):
     """Test File Validator."""
 
@@ -539,7 +623,6 @@ class VectorValidation(unittest.TestCase):
 
     def test_wrong_geom_type(self):
         """Validation: checks that the vector's geometry type is correct."""
-        from natcap.invest import spec_utils
         from natcap.invest import validation
         driver = gdal.GetDriverByName('GPKG')
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
@@ -1368,7 +1451,6 @@ class TestGetValidatedDataframe(unittest.TestCase):
                     'col2': {'type': 'raster'}
                 })
         self.assertIn('File not found', str(cm.exception))
-
 
     def test_csv_raster_validation_not_projected(self):
         """validation: validate unprojected raster within csv column"""

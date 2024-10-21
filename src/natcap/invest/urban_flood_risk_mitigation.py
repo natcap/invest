@@ -183,14 +183,14 @@ MODEL_SPEC = {
                     "about": "Map of runoff volume.",
                     "bands": {1: {"type": "number", "units": u.meter**3}}
                 },
-                "reprojected_aoi.gpkg": {
+                "reprojected_aoi.shp": {
                     "about": (
                         "Copy of AOI vector reprojected to the same spatial "
                         "reference as the LULC."),
                     "geometries": spec_utils.POLYGONS,
                     "fields": {}
                 },
-                "structures_reprojected.gpkg": {
+                "structures_reprojected.shp": {
                     "about": (
                         "Copy of built infrastructure vector reprojected to "
                         "the same spatial reference as the LULC."),
@@ -418,14 +418,14 @@ def execute(args):
         task_name='calculate service built raster')
 
     reprojected_aoi_path = os.path.join(
-        intermediate_dir, 'reprojected_aoi.gpkg')
+        intermediate_dir, 'reprojected_aoi')
     reprojected_aoi_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
             args['aoi_watersheds_path'],
             target_sr_wkt,
             reprojected_aoi_path),
-        kwargs={'driver_name': 'GPKG'},
+        kwargs={'driver_name': 'ESRI Shapefile'},
         target_path_list=[reprojected_aoi_path],
         task_name='reproject aoi/watersheds')
 
@@ -445,7 +445,7 @@ def execute(args):
             (runoff_retention_raster_path, 1),
             reprojected_aoi_path),
         store_result=True,
-        dependent_task_list=[runoff_retention_task],
+        dependent_task_list=[runoff_retention_task, reprojected_aoi_task],
         task_name='zonal_statistics over runoff_retention raster')
 
     runoff_retention_volume_stats_task = task_graph.add_task(
@@ -454,7 +454,7 @@ def execute(args):
             (runoff_retention_vol_raster_path, 1),
             reprojected_aoi_path),
         store_result=True,
-        dependent_task_list=[runoff_retention_vol_task],
+        dependent_task_list=[runoff_retention_vol_task, reprojected_aoi_task],
         task_name='zonal_statistics over runoff_retention_volume raster')
 
     damage_per_aoi_stats = None
@@ -467,13 +467,13 @@ def execute(args):
             args['built_infrastructure_vector_path'] not in ('', None)):
         # Reproject the built infrastructure vector to the target SRS.
         reprojected_structures_path = os.path.join(
-            intermediate_dir, 'structures_reprojected.gpkg')
+            intermediate_dir, 'structures_reprojected')
         reproject_built_infrastructure_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(args['built_infrastructure_vector_path'],
                   target_sr_wkt,
                   reprojected_structures_path),
-            kwargs={'driver_name': 'GPKG'},
+            kwargs={'driver_name': 'ESRI Shapefile'},
             target_path_list=[reprojected_structures_path],
             task_name='reproject built infrastructure to target SRS')
 
@@ -522,7 +522,7 @@ def _write_summary_vector(
         runoff_ret_vol_stats, flood_volume_stats, damage_per_aoi_stats=None):
     """Write a vector with summary statistics.
 
-    This vector will always contain two fields::
+    This vector will always contain three fields::
 
         * ``'flood_vol'``: The volume of flood (runoff), in m3, per watershed.
         * ``'rnf_rt_idx'``: Average of runoff retention values per watershed
@@ -563,21 +563,11 @@ def _write_summary_vector(
         ``None``
     """
     source_aoi_vector = gdal.OpenEx(source_aoi_vector_path, gdal.OF_VECTOR)
-    source_aoi_layer = source_aoi_vector.GetLayer()
-    source_geom_type = source_aoi_layer.GetGeomType()
-    source_srs_wkt = pygeoprocessing.get_vector_info(
-        source_aoi_vector_path)['projection_wkt']
-    source_srs = osr.SpatialReference()
-    source_srs.ImportFromWkt(source_srs_wkt)
-
     esri_driver = gdal.GetDriverByName('ESRI Shapefile')
-    target_watershed_vector = esri_driver.Create(
-        target_vector_path, 0, 0, 0, gdal.GDT_Unknown)
-    layer_name = os.path.splitext(os.path.basename(
-        target_vector_path))[0]
-    LOGGER.debug(f"creating layer {layer_name}")
-    target_watershed_layer = target_watershed_vector.CreateLayer(
-        layer_name, source_srs, source_geom_type)
+    esri_driver.CreateCopy(target_vector_path, source_aoi_vector)
+    target_watershed_vector = gdal.OpenEx(target_vector_path,
+                                          gdal.OF_VECTOR | gdal.GA_Update)
+    target_watershed_layer = target_watershed_vector.GetLayer()
 
     target_fields = ['rnf_rt_idx', 'rnf_rt_m3', 'flood_vol']
     if damage_per_aoi_stats is not None:
@@ -589,13 +579,9 @@ def _write_summary_vector(
         field_def.SetPrecision(11)
         target_watershed_layer.CreateField(field_def)
 
-    target_layer_defn = target_watershed_layer.GetLayerDefn()
-    for base_feature in source_aoi_layer:
-        feature_id = base_feature.GetFID()
-        target_feature = ogr.Feature(target_layer_defn)
-        base_geom_ref = base_feature.GetGeometryRef()
-        target_feature.SetGeometry(base_geom_ref.Clone())
-        base_geom_ref = None
+    target_watershed_layer.ResetReading()
+    for target_feature in target_watershed_layer:
+        feature_id = target_feature.GetFID()
 
         pixel_count = runoff_ret_stats[feature_id]['count']
         if pixel_count > 0:
@@ -615,13 +601,14 @@ def _write_summary_vector(
 
                 # This is the service_built equation.
                 target_feature.SetField(
-                    'serv_blt', (
+                    'serv_blt', float(
                         damage_sum * runoff_ret_vol_stats[feature_id]['sum']))
 
         target_feature.SetField(
             'flood_vol', float(flood_volume_stats[feature_id]['sum']))
 
-        target_watershed_layer.CreateFeature(target_feature)
+        target_watershed_layer.SetFeature(target_feature)
+
     target_watershed_layer.SyncToDisk()
     target_watershed_layer = None
     target_watershed_vector = None
@@ -959,7 +946,8 @@ def validate(args, limit_to=None):
         nan_mask = cn_df.isna()
         if nan_mask.any(axis=None):
             nan_lucodes = nan_mask[nan_mask.any(axis=1)].index
-            lucode_list = list(nan_lucodes.values)
+            # Convert numpy dtype values to native python types
+            lucode_list = [i.item() for i in nan_lucodes.values]
             validation_warnings.append((
                 ['curve_number_table_path'],
                 f'Missing curve numbers for lucode(s) {lucode_list}'))

@@ -166,9 +166,8 @@ def check_directory(dirpath, must_exist=True, permissions='rx', **kwargs):
         must_exist=True (bool): If ``True``, the directory at ``dirpath``
             must already exist on the filesystem.
         permissions='rx' (string): A string that includes the lowercase
-            characters ``r``, ``w`` and/or ``x`` indicating required
-            permissions for this folder .  See ``check_permissions`` for
-            details.
+            characters ``r``, ``w`` and/or ``x``, indicating read, write, and
+            execute permissions (respectively) required for this directory.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -193,9 +192,33 @@ def check_directory(dirpath, must_exist=True, permissions='rx', **kwargs):
                 dirpath = parent
                 break
 
-    permissions_warning = check_permissions(dirpath, permissions, True)
-    if permissions_warning:
-        return permissions_warning
+    MESSAGE_KEY = 'NEED_PERMISSION_DIRECTORY'
+
+    if 'r' in permissions:
+        try:
+            os.scandir(dirpath).close()
+        except OSError:
+            return MESSAGES[MESSAGE_KEY].format(permission='read')
+
+    # Check for x access before checking for w,
+    # since w operations to a dir are dependent on x access
+    if 'x' in permissions:
+        try:
+            cwd = os.getcwd()
+            os.chdir(dirpath)
+        except OSError:
+            return MESSAGES[MESSAGE_KEY].format(permission='execute')
+        finally:
+            os.chdir(cwd)
+
+    if 'w' in permissions:
+        try:
+            temp_path = os.path.join(dirpath, 'temp__workspace_validation.txt')
+            with open(temp_path, 'w') as temp:
+                temp.close()
+                os.remove(temp_path)
+        except OSError:
+            return MESSAGES[MESSAGE_KEY].format(permission='write')
 
 
 def check_file(filepath, permissions='r', **kwargs):
@@ -204,9 +227,8 @@ def check_file(filepath, permissions='r', **kwargs):
     Args:
         filepath (string): The filepath to validate.
         permissions='r' (string): A string that includes the lowercase
-            characters ``r``, ``w`` and/or ``x`` indicating required
-            permissions for this file.  See ``check_permissions`` for
-            details.
+            characters ``r``, ``w`` and/or ``x``, indicating read, write, and
+            execute permissions (respectively) required for this file.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -215,36 +237,12 @@ def check_file(filepath, permissions='r', **kwargs):
     if not os.path.exists(filepath):
         return MESSAGES['FILE_NOT_FOUND']
 
-    permissions_warning = check_permissions(filepath, permissions)
-    if permissions_warning:
-        return permissions_warning
-
-
-def check_permissions(path, permissions, is_directory=False):
-    """Validate permissions on a filesystem object.
-
-    This function uses ``os.access`` to determine permissions access.
-
-    Args:
-        path (string): The path to examine for permissions.
-        permissions (string): a string including the characters ``r``, ``w``
-            and/or ``x`` (lowercase), indicating read, write, and execute
-            permissions (respectively) that the filesystem object at ``path``
-            must have.
-        is_directory (boolean): Indicates whether the path refers to a directory
-            (True) or a file (False). Defaults to False.
-
-    Returns:
-        A string error message if an error was found.  ``None`` otherwise.
-
-    """
     for letter, mode, descriptor in (
             ('r', os.R_OK, 'read'),
             ('w', os.W_OK, 'write'),
             ('x', os.X_OK, 'execute')):
-        if letter in permissions and not os.access(path, mode):
-            message_key = 'NEED_PERMISSION_DIRECTORY' if is_directory else 'NEED_PERMISSION_FILE'
-            return MESSAGES[message_key].format(permission=descriptor)
+        if letter in permissions and not os.access(filepath, mode):
+            return MESSAGES['NEED_PERMISSION_FILE'].format(permission=descriptor)
 
 
 def _check_projection(srs, projected, projection_units):
@@ -801,7 +799,11 @@ def check_spatial_overlap(spatial_filepaths_list,
     for filepath in spatial_filepaths_list:
         try:
             info = pygeoprocessing.get_raster_info(filepath)
-        except ValueError:
+        except (ValueError, RuntimeError):
+            # ValueError is raised by PyGeoprocessing < 3.4.4 when the file is
+            # not a raster.
+            # RuntimeError is raised by GDAL in PyGeoprocessing >= 3.4.4 when
+            # the file is not a raster.
             info = pygeoprocessing.get_vector_info(filepath)
 
         if info['projection_wkt'] is None:

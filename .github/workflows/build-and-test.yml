@@ -28,10 +28,10 @@ jobs:
     name: Check for syntax errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
@@ -46,13 +46,13 @@ jobs:
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           python -m flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-  check-history-rst-syntax:
-    name: Check HISTORY RST syntax
+  check-rst-syntax:
+    name: Check RST syntax
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         name: Set up python
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
@@ -63,7 +63,7 @@ jobs:
       - name: Lint with doc8
         run: |
             # Skip line-too-long errors (D001)
-            python -m doc8 --ignore D001 HISTORY.rst
+            python -m doc8 --ignore D001 HISTORY.rst README_PYTHON.rst
 
   run-model-tests:
     name: Run model tests
@@ -75,7 +75,7 @@ jobs:
         python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
         os: [windows-latest, macos-13]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -127,13 +127,13 @@ jobs:
         run: make test
 
       - name: Upload wheel artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
           path: dist
 
       - name: Upload conda env artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
           name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
@@ -141,13 +141,13 @@ jobs:
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
@@ -162,7 +162,7 @@ jobs:
         python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
         os: [windows-latest, macos-13]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Fetch complete history for accurate versioning
 
@@ -170,7 +170,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} twine
 
       - name: Build source distribution
         run: |
@@ -193,9 +193,12 @@ jobs:
           # natcap.invest from source and that it imports.
           python -c "from natcap.invest import *"
 
-      - uses: actions/upload-artifact@v3
+      - name: Check long description with twine
+        run: twine check $(find dist -name "natcap[._-]invest*")
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: Source distribution
+          name: Source distribution ${{ matrix.os }} ${{ matrix.python-version }}
           path: dist
 
         # Secrets not available in PR so don't use GCP.
@@ -204,13 +207,13 @@ jobs:
         # different extensions)
       - name: Authenticate GCP
         if: github.event_name != 'pull_request' && matrix.os == 'macos-13' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
         if: github.event_name != 'pull_request' && matrix.os == 'macos-13' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request' && matrix.os == 'macos-13' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
@@ -221,7 +224,7 @@ jobs:
     runs-on: windows-latest
     needs: check-syntax-errors
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -252,7 +255,7 @@ jobs:
 
     steps:
       - name: Check out repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -309,7 +312,7 @@ jobs:
             workspace-path: ${{ github.workspace }}
             binary-extension: exe
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -383,13 +386,13 @@ jobs:
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v2
 
       - name: Build Workbench (PRs)
         if: github.event_name == 'pull_request'
@@ -458,20 +461,20 @@ jobs:
 
       - name: Upload workbench binary artifact
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Workbench-${{ runner.os }}-binary
           path: workbench/dist/*.${{ matrix.binary-extension }}
 
       - name: Upload user's guide artifact (Windows)
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: InVEST-user-guide
           path: dist/InVEST_*_userguide.zip
 
       - name: Upload workbench logging from puppeteer
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ${{ runner.os }}_puppeteer_log.zip'
@@ -490,7 +493,7 @@ jobs:
 
       - name: Upload workspace on failure
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: InVEST-failed-${{ runner.os }}-workspace
           path: ${{ matrix.workspace-path}}
@@ -500,11 +503,11 @@ jobs:
     needs: check-syntax-errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
@@ -515,20 +518,20 @@ jobs:
       - run: make sampledata sampledata_single
 
       - name: Upload sample data artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: InVEST-sample-data
           path: dist/*.zip
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'

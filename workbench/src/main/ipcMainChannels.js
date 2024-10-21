@@ -16,6 +16,7 @@ export const ipcMainChannels = {
   LAUNCH_PLUGIN_SERVER: 'launch-plugin-server',
   LOGGER: 'logger',
   OPEN_EXTERNAL_URL: 'open-external-url',
+  OPEN_PATH: 'open-path',
   OPEN_LOCAL_HTML: 'open-local-html',
   REMOVE_PLUGIN: 'remove-plugin',
   SET_SETTING: 'set-setting',

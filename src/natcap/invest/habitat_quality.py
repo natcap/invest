@@ -1,6 +1,7 @@
 # coding=UTF-8
 """InVEST Habitat Quality model."""
 import collections
+import csv
 import logging
 import os
 
@@ -222,36 +223,36 @@ MODEL_SPEC = {
         "output": {
             "type": "directory",
             "contents": {
-                "deg_sum_out_c.tif": {
+                "deg_sum_c.tif": {
                     "about": (
                         "Relative level of habitat degradation on the current "
                         "landscape."),
                     "bands": {1: {"type": "ratio"}}
                 },
-                "deg_sum_out_f.tif": {
+                "deg_sum_f.tif": {
                     "about": (
                         "Relative level of habitat degradation on the future "
                         "landscape."),
                     "bands": {1: {"type": "ratio"}},
                     "created_if": "lulc_fut_path"
                 },
-                "quality_out_c.tif": {
+                "quality_c.tif": {
                     "about": (
                         "Relative level of habitat quality on the current "
                         "landscape."),
                     "bands": {1: {"type": "ratio"}}
                 },
-                "quality_out_f.tif": {
+                "quality_f.tif": {
                     "about": (
                         "Relative level of habitat quality on the future "
                         "landscape."),
                     "bands": {1: {"type": "ratio"}},
                     "created_if": "lulc_fut_path"
                 },
-                "rarity_out_c.tif": {
+                "rarity_c.tif": {
                     "about": (
                         "Relative habitat rarity on the current landscape "
-                        "vis-a-vis the baseline map. The grid cell’s values "
+                        "vis-a-vis the baseline map. The grid cell's values "
                         "are defined between a range of 0 and 1 where 0.5 "
                         "indicates no abundance change between the baseline "
                         "and current or projected map. Values between 0 and 0.5 "
@@ -267,10 +268,10 @@ MODEL_SPEC = {
                     "created_if": "lulc_bas_path",
                     "bands": {1: {"type": "ratio"}}
                 },
-                "rarity_out_f.tif": {
+                "rarity_f.tif": {
                     "about": (
                         "Relative habitat rarity on the future landscape "
-                        "vis-a-vis the baseline map. The grid cell’s values "
+                        "vis-a-vis the baseline map. The grid cell's values "
                         "are defined between a range of 0 and 1 where 0.5 "
                         "indicates no abundance change between the baseline "
                         "and current or projected map. Values between 0 and "
@@ -286,6 +287,70 @@ MODEL_SPEC = {
                         "conservation."),
                     "created_if": "lulc_bas_path and lulc_fut_path",
                     "bands": {1: {"type": "ratio"}}
+                },
+                "rarity_c.csv": {
+                    "about": ("Table of rarity values by LULC code for the "
+                              "current landscape."),
+                    "index_col": "lulc_code",
+                    "columns": {
+                        "lulc_code": {
+                            "type": "number",
+                            "units": u.none,
+                            "about": "LULC class",
+                        },
+                        "rarity_value": {
+                            "type": "number",
+                            "units": u.none,
+                            "about": (
+                                "Relative habitat rarity on the current landscape "
+                                "vis-a-vis the baseline map. The rarity values "
+                                "are defined between a range of 0 and 1 where 0.5 "
+                                "indicates no abundance change between the baseline "
+                                "and current or projected map. Values between 0 and 0.5 "
+                                "indicate a habitat is more abundant and the closer "
+                                "the value is to 0 the lesser the likelihood that the "
+                                "preservation of that habitat type on the current or "
+                                "future landscape is important to biodiversity conservation. "
+                                "Values between 0.5 and 1 indicate a habitat is less "
+                                "abundant and the closer the value is to 1 the greater "
+                                "the likelihood that the preservation of that habitat "
+                                "type on the current or future landscape is important "
+                                "to biodiversity conservation."),
+                        },
+                    },
+                    "created_if": "lulc_bas_path",
+                },
+                "rarity_f.csv": {
+                    "about": ("Table of rarity values by LULC code for the "
+                              "future landscape."),
+                    "index_col": "lulc_code",
+                    "columns": {
+                        "lulc_code": {
+                            "type": "number",
+                            "units": u.none,
+                            "about": "LULC class",
+                        },
+                        "rarity_value": {
+                            "type": "number",
+                            "units": u.none,
+                            "about": (
+                                "Relative habitat rarity on the future landscape "
+                                "vis-a-vis the baseline map. The rarity values "
+                                "are defined between a range of 0 and 1 where 0.5 "
+                                "indicates no abundance change between the baseline "
+                                "and current or projected map. Values between 0 and 0.5 "
+                                "indicate a habitat is more abundant and the closer "
+                                "the value is to 0 the lesser the likelihood that the "
+                                "preservation of that habitat type on the current or "
+                                "future landscape is important to biodiversity conservation. "
+                                "Values between 0.5 and 1 indicate a habitat is less "
+                                "abundant and the closer the value is to 1 the greater "
+                                "the likelihood that the preservation of that habitat "
+                                "type on the current or future landscape is important "
+                                "to biodiversity conservation."),
+                        },
+                    },
+                    "created_if": "lulc_bas_path and lulc_fut_path",
                 },
             }
         },
@@ -564,7 +629,7 @@ def execute(args):
 
         rasterize_access_task = task_graph.add_task(
             func=pygeoprocessing.rasterize,
-            args=(args['access_vector_path'], access_raster_path),
+            args=(reprojected_access_path, access_raster_path),
             kwargs={
                 'option_list': ['ATTRIBUTE=ACCESS'],
                 'burn_values': None
@@ -752,13 +817,16 @@ def execute(args):
                 intermediate_output_dir,
                 f'new_cover{lulc_key}{file_suffix}.tif')
 
-            rarity_path = os.path.join(
+            rarity_raster_path = os.path.join(
                 output_dir, f'rarity{lulc_key}{file_suffix}.tif')
+
+            rarity_csv_path = os.path.join(
+                output_dir, f'rarity{lulc_key}{file_suffix}.csv')
 
             _ = task_graph.add_task(
                 func=_compute_rarity_operation,
                 args=((lulc_base_path, 1), (lulc_path, 1), (new_cover_path, 1),
-                      rarity_path),
+                      rarity_raster_path, rarity_csv_path),
                 dependent_task_list=[align_task],
                 task_name=f'rarity{lulc_time}')
 
@@ -782,7 +850,7 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
     pygeoprocessing.raster_map(
         op=lambda degradation, habitat: (
             habitat * (1 - (degradation**_SCALING_PARAM) /
-            (degradation**_SCALING_PARAM + ksq))),
+                       (degradation**_SCALING_PARAM + ksq))),
         rasters=deg_hab_raster_list,
         target_path=quality_out_path)
 
@@ -838,8 +906,9 @@ def _calculate_total_degradation(
 
 
 def _compute_rarity_operation(
-        base_lulc_path_band, lulc_path_band, new_cover_path, rarity_path):
-    """Calculate habitat rarity.
+        base_lulc_path_band, lulc_path_band, new_cover_path,
+        rarity_raster_path, rarity_csv_path):
+    """Calculate habitat rarity and generate raster and CSV output.
 
     Output rarity values will be an index from 0 - 1 where:
        pixel > 0.5 - more rare
@@ -855,7 +924,8 @@ def _compute_rarity_operation(
         new_cover_path (tuple): a 2 tuple for the path to intermediate
             raster file for trimming ``lulc_path_band`` to
             ``base_lulc_path_band`` of the form (path, band index).
-        rarity_path (string): path to output rarity raster.
+        rarity_raster_path (string): path to output rarity raster.
+        rarity_csv_path (string): path to output rarity CSV.
 
     Returns:
         None
@@ -866,7 +936,6 @@ def _compute_rarity_operation(
         base_lulc_path_band[0])
     base_pixel_size = base_raster_info['pixel_size']
     base_area = float(abs(base_pixel_size[0]) * abs(base_pixel_size[1]))
-    base_nodata = base_raster_info['nodata'][0]
 
     lulc_code_count_b = _raster_pixel_count(base_lulc_path_band)
 
@@ -874,7 +943,6 @@ def _compute_rarity_operation(
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_path_band[0])
     lulc_pixel_size = lulc_raster_info['pixel_size']
     lulc_area = float(abs(lulc_pixel_size[0]) * abs(lulc_pixel_size[1]))
-    lulc_nodata = lulc_raster_info['nodata'][0]
 
     # Trim cover_x to the mask of base.
     pygeoprocessing.raster_map(
@@ -904,11 +972,32 @@ def _compute_rarity_operation(
             code_index[code] = 0.0
 
     pygeoprocessing.reclassify_raster(
-        new_cover_path, code_index, rarity_path, gdal.GDT_Float32,
+        new_cover_path, code_index, rarity_raster_path, gdal.GDT_Float32,
         _OUT_NODATA)
+
+    _generate_rarity_csv(code_index, rarity_csv_path)
 
     LOGGER.info('Finished rarity computation on'
                 f' {os.path.basename(lulc_path_band[0])} land cover.')
+
+
+def _generate_rarity_csv(rarity_dict, target_csv_path):
+    """Generate CSV containing rarity values by LULC code.
+
+    Args:
+        rarity_dict (dict): dictionary containing LULC codes (as keys)
+            and their associated rarity values (as values).
+        target_csv_path (string): path to output CSV.
+
+    Returns:
+        None
+    """
+    lulc_codes = sorted(rarity_dict)
+    with open(target_csv_path, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['lulc_code', 'rarity_value'])
+        for lulc_code in lulc_codes:
+            writer.writerow([lulc_code, rarity_dict[lulc_code]])
 
 
 def _raster_pixel_count(raster_path_band):

@@ -978,13 +978,13 @@ def calculate_uhi_result_vector(
         if cc_stats[feature_id]['count'] > 0:
             mean_cc = (
                 cc_stats[feature_id]['sum'] / cc_stats[feature_id]['count'])
-            feature.SetField('avg_cc', mean_cc)
+            feature.SetField('avg_cc', float(mean_cc))
         mean_t_air = None
         if t_air_stats[feature_id]['count'] > 0:
             mean_t_air = (
                 t_air_stats[feature_id]['sum'] /
                 t_air_stats[feature_id]['count'])
-            feature.SetField('avg_tmp_v', mean_t_air)
+            feature.SetField('avg_tmp_v', float(mean_t_air))
 
         if mean_t_air:
             feature.SetField(
@@ -994,7 +994,7 @@ def calculate_uhi_result_vector(
             wbgt = (
                 wbgt_stats[feature_id]['sum'] /
                 wbgt_stats[feature_id]['count'])
-            feature.SetField('avg_wbgt_v', wbgt)
+            feature.SetField('avg_wbgt_v', float(wbgt))
 
         if light_loss_stats and light_loss_stats[feature_id]['count'] > 0:
             light_loss = (
