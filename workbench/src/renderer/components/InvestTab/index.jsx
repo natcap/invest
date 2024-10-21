@@ -310,7 +310,7 @@ class InvestTab extends React.Component {
                   <SetupTab
                     pyModuleName={modelSpec.pyname}
                     userguide={modelSpec.userguide}
-                    modelName={modelRunName}
+                    modelId={modelRunName}
                     argsSpec={argsSpec}
                     uiSpec={uiSpec}
                     argsInitValues={argsValues}

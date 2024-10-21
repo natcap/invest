@@ -117,6 +117,7 @@ describe('Run status Alert renders with status from a recent run', () => {
 describe('Open Workspace button', () => {
   const spec = {
     args: {},
+    ui_spec: { order: [] },
   };
 
   const baseJob = {
@@ -127,7 +128,6 @@ describe('Open Workspace button', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    uiConfig.UI_SPEC = mockUISpec(spec);
     setupDialogs();
   });
 
@@ -217,8 +217,6 @@ describe('Sidebar Buttons', () => {
   });
 
   test('Save to JSON: requests endpoint with correct payload', async () => {
-    const response = 'saved';
-    writeParametersToFile.mockResolvedValue(response);
     const response = {
       message: 'saved',
       error: false,
