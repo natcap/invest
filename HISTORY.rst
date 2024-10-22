@@ -44,13 +44,6 @@ Unreleased Changes
       ``pygeoprocessing.get_raster_info`` and
       ``pygeoprocessing.get_vector_info``.
       https://github.com/natcap/invest/issues/1645
-* Forest Carbon Edge Effects
-    * Updating vector reprojection to allow partial reprojection.  Related to
-      https://github.com/natcap/invest/issues/1645
-* Urban Nature Access
-    * The model now works as expected when the user provides an LULC raster
-      that does not have a nodata value defined.
-      https://github.com/natcap/invest/issues/1293
 * Workbench
     * Several small updates to the model input form UI to improve usability
       and visual consistency (https://github.com/natcap/invest/issues/912).
@@ -64,6 +57,13 @@ Unreleased Changes
       (https://github.com/natcap/invest/issues/1609).
     * Improved error handling when a datastack cannot be saved with relative
       paths across drives (https://github.com/natcap/invest/issues/1608).
+* Coastal Vulnerability
+    * Fixed a regression where an AOI with multiple features could raise a
+      TypeError after intersecting with the landmass polygon.
+      https://github.com/natcap/invest/issues/1657
+* Forest Carbon Edge Effects
+    * Updating vector reprojection to allow partial reprojection.  Related to
+      https://github.com/natcap/invest/issues/1645
 * Habitat Quality
     * Access raster is now generated from the reprojected access vector
       (https://github.com/natcap/invest/issues/1615).
@@ -72,6 +72,10 @@ Unreleased Changes
 * Urban Flood Risk
     * Fields present on the input AOI vector are now retained in the output.
       (https://github.com/natcap/invest/issues/1600)
+* Urban Nature Access
+    * The model now works as expected when the user provides an LULC raster
+      that does not have a nodata value defined.
+      https://github.com/natcap/invest/issues/1293
 
 3.14.2 (2024-05-29)
 -------------------
