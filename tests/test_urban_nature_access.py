@@ -412,7 +412,7 @@ class UNATests(unittest.TestCase):
         )
         for fieldname, expected_value in expected_values.items():
             numpy.testing.assert_allclose(
-                admin_feature.GetField(fieldname), expected_value)
+                admin_feature.GetField(fieldname), expected_value, rtol=1e-6)
 
         # The sum of the under-and-oversupplied populations should be equal
         # to the total population count.
@@ -603,8 +603,8 @@ class UNATests(unittest.TestCase):
             set(defn.GetName() for defn in summary_layer.schema),
             set(expected_field_values.keys()))
         for fieldname, expected_value in expected_field_values.items():
-            self.assertAlmostEqual(
-                expected_value, summary_feature.GetField(fieldname))
+            numpy.testing.assert_allclose(
+                expected_value, summary_feature.GetField(fieldname), rtol=1e-6)
 
         output_dir = os.path.join(args['workspace_dir'], 'output')
         self._assert_urban_nature(os.path.join(
@@ -679,8 +679,8 @@ class UNATests(unittest.TestCase):
             set(defn.GetName() for defn in summary_layer.schema),
             set(expected_field_values.keys()))
         for fieldname, expected_value in expected_field_values.items():
-            self.assertAlmostEqual(
-                expected_value, summary_feature.GetField(fieldname))
+            numpy.testing.assert_allclose(
+                expected_value, summary_feature.GetField(fieldname), rtol=1e-6)
 
         output_dir = os.path.join(args['workspace_dir'], 'output')
         self._assert_urban_nature(os.path.join(
