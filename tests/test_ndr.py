@@ -380,7 +380,7 @@ class NDRTests(unittest.TestCase):
         # bowtie geometry is invalid; verify we can still create a mask.
         coordinates = []
         for pixel_x_offset, pixel_y_offset in [
-                (0, 0), (0, 1), (1, 0), (1, 1), (0, 0)]:
+                (0, 0), (0, 1), (1, 0.25), (1, 0.75), (0, 0)]:
             coordinates.append((
                 default_origin[0] + default_pixel_size[0] * pixel_x_offset,
                 default_origin[1] + default_pixel_size[1] * pixel_y_offset

@@ -1,5 +1,3 @@
-# cython: profile=False
-# cython: language_level=3
 import logging
 import os
 
@@ -196,7 +194,7 @@ cdef class _ManagedRaster:
             if dirty_itr != self.dirty_blocks.end():
                 self.dirty_blocks.erase(dirty_itr)
                 block_xi = block_index % self.block_nx
-                block_yi = block_index / self.block_nx
+                block_yi = block_index // self.block_nx
 
                 # we need the offsets to subtract from global indexes for
                 # cached array
@@ -358,13 +356,13 @@ def calculate_sediment_deposition(
 
     This algorithm outputs both sediment deposition (t_i) and flux (f_i)::
 
-        t_i  =      dr_i  * (sum over j ∈ J of f_j * p(i,j)) + E'_i
+        t_i  =      dt_i  * (sum over j ∈ J of f_j * p(j,i))
 
-        f_i  = (1 - dr_i) * (sum over j ∈ J of f_j * p(i,j)) + E'_i
+        f_i  = (1 - dt_i) * (sum over j ∈ J of f_j * p(j,i)) + E'_i
 
 
                 (sum over k ∈ K of SDR_k * p(i,k)) - SDR_i
-        dr_i = --------------------------------------------
+        dt_i = --------------------------------------------
                               (1 - SDR_i)
 
     where:
@@ -436,17 +434,17 @@ def calculate_sediment_deposition(
     flow_dir_info = pygeoprocessing.get_raster_info(mfd_flow_direction_path)
     n_cols, n_rows = flow_dir_info['raster_size']
     cdef int mfd_nodata = 0
-    cdef stack[int] processing_stack
+    cdef stack[long] processing_stack
     cdef float sdr_nodata = pygeoprocessing.get_raster_info(
         sdr_path)['nodata'][0]
     cdef float e_prime_nodata = pygeoprocessing.get_raster_info(
         e_prime_path)['nodata'][0]
     cdef long col_index, row_index, win_xsize, win_ysize, xoff, yoff
     cdef long global_col, global_row, j, k
-    cdef unsigned long flat_index
+    cdef long flat_index
     cdef long seed_col = 0
     cdef long seed_row = 0
-    cdef long neighbor_row, neighbor_col
+    cdef long neighbor_row, neighbor_col, ds_neighbor_row, ds_neighbor_col
     cdef int flow_val, neighbor_flow_val, ds_neighbor_flow_val
     cdef int flow_weight, neighbor_flow_weight
     cdef float flow_sum, neighbor_flow_sum
@@ -647,21 +645,21 @@ def calculate_sediment_deposition(
                     if sdr_i == 1:
                         # This reflects property B in the user's guide and is
                         # an edge case to avoid division-by-zero.
-                        dr_i = 1
+                        dt_i = 1
                     else:
-                        dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
+                        dt_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
 
                     # Lisa's modified equations
-                    t_i = dr_i * f_j_weighted_sum  # deposition, a.k.a trapped sediment
-                    f_i = (1 - dr_i) * f_j_weighted_sum + e_prime_i  # flux
+                    t_i = dt_i * f_j_weighted_sum  # deposition, a.k.a trapped sediment
+                    f_i = (1 - dt_i) * f_j_weighted_sum + e_prime_i  # flux
 
-                    # On large flow paths, it's possible for dr_i, f_i and t_i
+                    # On large flow paths, it's possible for dt_i, f_i and t_i
                     # to have very small negative values that are numerically
                     # equivalent to 0. These negative values were raising
                     # questions on the forums and it's easier to clamp the
                     # values here than to explain IEEE 754.
-                    if dr_i < 0:
-                        dr_i = 0
+                    if dt_i < 0:
+                        dt_i = 0
                     if t_i < 0:
                         t_i = 0
                     if f_i < 0:

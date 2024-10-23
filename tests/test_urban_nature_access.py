@@ -217,14 +217,19 @@ class UNATests(unittest.TestCase):
             [nodata, 100.5],
             [75, 100]], dtype=numpy.float32)
         urban_nature_demand = 50
+        supply_path = os.path.join(self.workspace_dir, 'supply.path')
+        target_path = os.path.join(self.workspace_dir, 'target.path')
 
-        population = numpy.array([
-            [50, 100],
-            [40.75, nodata]], dtype=numpy.float32)
+        pygeoprocessing.numpy_array_to_raster(
+            urban_nature_supply_percapita, nodata, _DEFAULT_PIXEL_SIZE,
+            _DEFAULT_ORIGIN, _DEFAULT_SRS.ExportToWkt(), supply_path)
 
-        urban_nature_budget = (
-            urban_nature_access._urban_nature_balance_percapita_op(
-                urban_nature_supply_percapita, urban_nature_demand))
+        urban_nature_access._calculate_urban_nature_balance_percapita(
+            supply_path, urban_nature_demand, target_path)
+
+        urban_nature_budget = pygeoprocessing.raster_to_numpy_array(
+            target_path)
+
         expected_urban_nature_budget = numpy.array([
             [nodata, 50.5],
             [25, 50]], dtype=numpy.float32)
@@ -353,6 +358,21 @@ class UNATests(unittest.TestCase):
         self.assertAlmostEqual(numpy.min(valid_pixels), 1171.7352294921875)
         self.assertAlmostEqual(numpy.max(valid_pixels), 11898.0712890625)
 
+    def test_no_lulc_nodata(self):
+        """UNA: verify behavior when the LULC has no nodata value."""
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = 100
+
+        raster = gdal.OpenEx(args['lulc_raster_path'], gdal.OF_RASTER)
+        band = raster.GetRasterBand(1)
+        band.DeleteNoDataValue()
+        band = None
+        raster = None
+        urban_nature_access.execute(args)
+
     def test_split_urban_nature(self):
         from natcap.invest import urban_nature_access
 
@@ -392,7 +412,7 @@ class UNATests(unittest.TestCase):
         )
         for fieldname, expected_value in expected_values.items():
             numpy.testing.assert_allclose(
-                admin_feature.GetField(fieldname), expected_value)
+                admin_feature.GetField(fieldname), expected_value, rtol=1e-6)
 
         # The sum of the under-and-oversupplied populations should be equal
         # to the total population count.
@@ -583,8 +603,8 @@ class UNATests(unittest.TestCase):
             set(defn.GetName() for defn in summary_layer.schema),
             set(expected_field_values.keys()))
         for fieldname, expected_value in expected_field_values.items():
-            self.assertAlmostEqual(
-                expected_value, summary_feature.GetField(fieldname))
+            numpy.testing.assert_allclose(
+                expected_value, summary_feature.GetField(fieldname), rtol=1e-6)
 
         output_dir = os.path.join(args['workspace_dir'], 'output')
         self._assert_urban_nature(os.path.join(
@@ -659,8 +679,8 @@ class UNATests(unittest.TestCase):
             set(defn.GetName() for defn in summary_layer.schema),
             set(expected_field_values.keys()))
         for fieldname, expected_value in expected_field_values.items():
-            self.assertAlmostEqual(
-                expected_value, summary_feature.GetField(fieldname))
+            numpy.testing.assert_allclose(
+                expected_value, summary_feature.GetField(fieldname), rtol=1e-6)
 
         output_dir = os.path.join(args['workspace_dir'], 'output')
         self._assert_urban_nature(os.path.join(
@@ -1030,3 +1050,16 @@ class UNATests(unittest.TestCase):
         args['search_radius_mode'] = (
             urban_nature_access.RADIUS_OPT_URBAN_NATURE)
         self.assertEqual(urban_nature_access.validate(args), [])
+
+    def test_validate_uniform_search_radius(self):
+        """UNA: Search radius is required when using uniform search radii."""
+        from natcap.invest import urban_nature_access
+        from natcap.invest import validation
+
+        args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = ''
+
+        warnings = urban_nature_access.validate(args)
+        self.assertEqual(warnings, [(['search_radius'],
+                                     validation.MESSAGES['MISSING_VALUE'])])

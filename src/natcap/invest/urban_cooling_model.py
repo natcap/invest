@@ -71,7 +71,7 @@ MODEL_SPEC = {
                         "considered a green area.")},
                 "shade":  {
                     "type": "ratio",
-                    "required": "cc_method == factors",
+                    "required": "cc_method == 'factors'",
                     "about": gettext(
                         "The proportion of area in this LULC class that is "
                         "covered by tree canopy at least 2 meters high. "
@@ -79,7 +79,7 @@ MODEL_SPEC = {
                         "the Cooling Capacity Calculation Method.")},
                 "albedo": {
                     "type": "ratio",
-                    "required": "cc_method == factors",
+                    "required": "cc_method == 'factors'",
                     "about": gettext(
                         "The proportion of solar radiation that is directly "
                         "reflected by this LULC class. Required if the "
@@ -87,7 +87,7 @@ MODEL_SPEC = {
                         "Capacity Calculation Method.")},
                 "building_intensity": {
                     "type": "ratio",
-                    "required": "cc_method == intensity",
+                    "required": "cc_method == 'intensity'",
                     "about": gettext(
                         "The ratio of building floor area to footprint "
                         "area, with all values in this column normalized "
@@ -963,13 +963,13 @@ def calculate_uhi_result_vector(
         if cc_stats[feature_id]['count'] > 0:
             mean_cc = (
                 cc_stats[feature_id]['sum'] / cc_stats[feature_id]['count'])
-            feature.SetField('avg_cc', mean_cc)
+            feature.SetField('avg_cc', float(mean_cc))
         mean_t_air = None
         if t_air_stats[feature_id]['count'] > 0:
             mean_t_air = (
                 t_air_stats[feature_id]['sum'] /
                 t_air_stats[feature_id]['count'])
-            feature.SetField('avg_tmp_v', mean_t_air)
+            feature.SetField('avg_tmp_v', float(mean_t_air))
 
         if mean_t_air:
             feature.SetField(
@@ -979,7 +979,7 @@ def calculate_uhi_result_vector(
             wbgt = (
                 wbgt_stats[feature_id]['sum'] /
                 wbgt_stats[feature_id]['count'])
-            feature.SetField('avg_wbgt_v', wbgt)
+            feature.SetField('avg_wbgt_v', float(wbgt))
 
         if light_loss_stats and light_loss_stats[feature_id]['count'] > 0:
             light_loss = (

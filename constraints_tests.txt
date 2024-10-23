@@ -1,0 +1,12 @@
+# This file contains package constraints needed to run the invest test suite.
+# It follows the pip constraints file format:
+# https://pip.pypa.io/en/stable/user_guide/#constraints-files
+
+# A gdal bug caused our test suite to fail, but this issue is unlikely to
+# occur with regular use of invest. https://github.com/OSGeo/gdal/issues/8497
+GDAL!=3.6.*,!=3.7.*
+
+# Pyinstaller 6.10 breaks our windows builds.  Until we can figure out the
+# root cause, let's cap the versions to those that work.
+# https://github.com/natcap/invest/issues/1622
+#pyinstaller<6.10

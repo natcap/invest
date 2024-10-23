@@ -187,6 +187,7 @@ describe('createWindow', () => {
       ipcMainChannels.GET_N_CPUS,
       ipcMainChannels.INVEST_VERSION,
       ipcMainChannels.IS_FIRST_RUN,
+      ipcMainChannels.OPEN_PATH,
       ipcMainChannels.SHOW_OPEN_DIALOG,
       ipcMainChannels.SHOW_SAVE_DIALOG,
     ];

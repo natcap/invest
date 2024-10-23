@@ -145,7 +145,7 @@ describe('InVEST subprocess testing', () => {
     );
     await userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
-      `${spec.args.workspace_dir.name}`
+      (content) => content.startsWith(spec.args.workspace_dir.name)
     );
     await userEvent.type(workspaceInput, fakeWorkspace);
     const execute = await findByRole('button', { name: /Run/ });
@@ -195,7 +195,7 @@ describe('InVEST subprocess testing', () => {
     );
     await userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
-      `${spec.args.workspace_dir.name}`
+      (content) => content.startsWith(spec.args.workspace_dir.name)
     );
     await userEvent.type(workspaceInput, fakeWorkspace);
 
@@ -250,7 +250,7 @@ describe('InVEST subprocess testing', () => {
     );
     await userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
-      `${spec.args.workspace_dir.name}`
+      (content) => content.startsWith(spec.args.workspace_dir.name)
     );
     await userEvent.type(workspaceInput, fakeWorkspace);
 
@@ -301,7 +301,7 @@ describe('InVEST subprocess testing', () => {
     );
     await userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
-      `${spec.args.workspace_dir.name}`
+      (content) => content.startsWith(spec.args.workspace_dir.name)
     );
     await userEvent.type(workspaceInput, fakeWorkspace);
 
