@@ -226,7 +226,7 @@ Example: Saving model log messages to a file
 
 When you save a model run to a python script, InVEST will automatically include
 code to write all logging to your console while it executes.  But sometimes,
-it's useful to save log messages from th emodel to a file.  This can be done by
+it's useful to save log messages from the model to a file.  This can be done by
 adding a few lines of code to the script, just after the existing logging
 code:
 
