@@ -44,8 +44,6 @@ public:
         this->y = y;
         this->flow_proportion = flow_proportion;
     }
-
-    ~NeighborTuple () {}
 };
 
 
@@ -138,7 +136,7 @@ class ManagedRaster {
                 }
             }
 
-            this->lru_cache = new LRUCache<int, double*>(MANAGED_RASTER_N_BLOCKS);
+            lru_cache = new LRUCache<int, double*>(MANAGED_RASTER_N_BLOCKS);
             closed = 0;
         }
 
@@ -333,6 +331,8 @@ class ManagedRaster {
                 CPLFree(double_buffer);
             }
             GDALClose( (GDALDatasetH) dataset );
+            delete lru_cache;
+            free(actualBlockWidths);
         }
 };
 
