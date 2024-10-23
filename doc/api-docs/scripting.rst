@@ -33,11 +33,11 @@ Alternate installation methods are available. Please see the :ref:`installing`
 guide for further instructions on setting up your python environment and
 installing the ``natcap.invest`` package.
 
-.. _CreatingSamplePythonScripts:
+.. _CreatingPythonScripts:
 
-==============================
-Creating Sample Python Scripts
-==============================
+=======================
+Creating Python Scripts
+=======================
 
 1. **Launch InVEST Workbench and Open the Selected Model**
 
@@ -53,7 +53,7 @@ Creating Sample Python Scripts
    several InVEST model runs in sequence, it would be reasonable to populate
    the user interface with data for the first run in the sequence.
 
-3. **Generate a sample Python Script from the User Interface**
+3. **Generate a Python Script from the User Interface**
 
    In the model interface, select *"Save as..."* in the left-hand menu bar,
    *"Python script"* in the dialog box, and then save the file to a known location.
