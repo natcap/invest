@@ -595,12 +595,9 @@ public:
     }
 };
 
-bool is_close(double x, double y) {
+inline bool is_close(double x, double y) {
     if (isnan(x) and isnan(y)) {
         return true;
     }
     return abs(x - y) <= (pow(10, -8) + pow(10, -05) * abs(y));
 }
-
-
-
