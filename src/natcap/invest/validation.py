@@ -642,7 +642,7 @@ def get_validated_dataframe(
             patterns.append(f'{groups[0]}(.+){groups[2]}')
         else:
             # for regular column names, use the exact name as the pattern
-            patterns.append(column.replace('(', '\\(').replace(')', '\\)'))
+            patterns.append(column.replace('(', r'\(').replace(')', r'\)'))
 
     # select only the columns that match a pattern
     df = df[[col for col in df.columns if any(
