@@ -433,8 +433,18 @@ public:
             return next();
         }
     }
+};
 
-    NeighborTuple next_no_skip() {
+class DownslopeNeighborIteratorNoSkip: public DownslopeNeighborIterator {
+public:
+
+    DownslopeNeighborIteratorNoSkip() {}
+
+    DownslopeNeighborIteratorNoSkip(ManagedFlowDirRaster managed_raster, int x, int y)
+        : DownslopeNeighborIterator(managed_raster, x, y)   // Call the superclass constructor in the subclass' initialization list.
+        { }
+
+    NeighborTuple next() {
         NeighborTuple n;
         long xj, yj;
         int flow_ij;
@@ -455,7 +465,7 @@ public:
             return n;
         } else {
             n_dir += 1;
-            return next_no_skip();
+            return next();
         }
     }
 };
@@ -518,8 +528,18 @@ public:
             return next();
         }
     }
+};
 
-    NeighborTuple next_no_divide() {
+class UpslopeNeighborIteratorNoDivide: public UpslopeNeighborIterator {
+public:
+
+    UpslopeNeighborIteratorNoDivide() { }
+
+    UpslopeNeighborIteratorNoDivide(ManagedFlowDirRaster managed_raster, int x, int y)
+        : UpslopeNeighborIterator(managed_raster, x, y)
+    {}
+
+    NeighborTuple next() {
 
         NeighborTuple n;
         long xj, yj;
@@ -537,7 +557,7 @@ public:
         if (xj < 0 or xj >= raster.raster_x_size or
                 yj < 0 or yj >= raster.raster_y_size) {
             n_dir += 1;
-            return next_no_divide();
+            return next();
         }
 
         flow_dir_j = raster.get(xj, yj);
@@ -549,11 +569,25 @@ public:
             return n;
         } else {
             n_dir += 1;
-            return next_no_divide();
+            return next();
         }
     }
+};
 
-    NeighborTuple next_skip(int skip) {
+
+class UpslopeNeighborIteratorSkip: public UpslopeNeighborIterator {
+public:
+    int skip;
+
+    UpslopeNeighborIteratorSkip() { }
+
+    UpslopeNeighborIteratorSkip(ManagedFlowDirRaster managed_raster, int x, int y, int skip)
+        : UpslopeNeighborIterator(managed_raster, x, y)
+    {
+        this->skip = skip;
+    }
+
+    NeighborTuple next() {
 
         NeighborTuple n;
         long xj, yj;
@@ -573,7 +607,7 @@ public:
                 yj < 0 or yj >= raster.raster_y_size or
                 INFLOW_OFFSETS[n_dir] == skip) {
             n_dir += 1;
-            return next_skip(skip);
+            return next();
         }
 
         flow_dir_j = raster.get(xj, yj);
@@ -590,10 +624,11 @@ public:
             return n;
         } else {
             n_dir += 1;
-            return next_skip(skip);
+            return next();
         }
     }
 };
+
 
 inline bool is_close(double x, double y) {
     if (isnan(x) and isnan(y)) {

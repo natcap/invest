@@ -21,6 +21,7 @@ from ..managed_raster.managed_raster cimport ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport DownslopeNeighborIterator
 from ..managed_raster.managed_raster cimport UpslopeNeighborIterator
+from ..managed_raster.managed_raster cimport UpslopeNeighborIteratorNoDivide
 from ..managed_raster.managed_raster cimport NeighborTuple
 from ..managed_raster.managed_raster cimport is_close
 
@@ -217,8 +218,8 @@ cpdef calculate_local_recharge(
                     # initialize to 0 so we indicate we haven't tracked any
                     # mfd values yet
                     l_sum_avail_i = 0.0
-                    up_iterator = UpslopeNeighborIterator(flow_raster, xi, yi)
-                    neighbor = up_iterator.next_no_divide()
+                    up_iterator = UpslopeNeighborIteratorNoDivide(flow_raster, xi, yi)
+                    neighbor = up_iterator.next()
                     mfd_dir_sum = 0
                     while neighbor.direction < 8:
                         # pixel flows inward, check upslope
@@ -233,7 +234,7 @@ cpdef calculate_local_recharge(
                         l_sum_avail_i += (
                             l_sum_avail_j + l_avail_j) * neighbor.flow_proportion
                         mfd_dir_sum += <int>neighbor.flow_proportion
-                        neighbor = up_iterator.next_no_divide()
+                        neighbor = up_iterator.next()
                     # calculate l_sum_avail_i by summing all the valid
                     # directions then normalizing by the sum of the mfd
                     # direction weights (Equation 8)

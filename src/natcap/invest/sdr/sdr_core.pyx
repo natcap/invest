@@ -13,6 +13,7 @@ from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport is_close
 from ..managed_raster.managed_raster cimport DownslopeNeighborIterator
 from ..managed_raster.managed_raster cimport UpslopeNeighborIterator
+from ..managed_raster.managed_raster cimport UpslopeNeighborIteratorSkip
 
 
 cdef extern from "time.h" nogil:
@@ -118,6 +119,8 @@ def calculate_sediment_deposition(
     cdef time_t last_log_time = ctime(NULL)
     cdef float f_j_weighted_sum
     cdef NeighborTuple neighbor
+    cdef UpslopeNeighborIterator up_iterator
+    cdef UpslopeNeighborIteratorSkip up_iterator_skip
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
@@ -205,16 +208,16 @@ def calculate_sediment_deposition(
                         # completed
                         upslope_neighbors_processed = 1
                         # iterate over each neighbor-of-neighbor
-                        up_iterator = UpslopeNeighborIterator(
-                            mfd_flow_direction_raster, neighbor.x, neighbor.y)
-                        neighbor_of_neighbor = up_iterator.next_skip(neighbor.direction)
+                        up_iterator_skip = UpslopeNeighborIteratorSkip(
+                            mfd_flow_direction_raster, neighbor.x, neighbor.y, neighbor.direction)
+                        neighbor_of_neighbor = up_iterator_skip.next()
                         while neighbor_of_neighbor.direction < 8:
                             if is_close(sediment_deposition_raster.get(
                                 neighbor_of_neighbor.x, neighbor_of_neighbor.y
                             ), target_nodata):
                                 upslope_neighbors_processed = 0
                                 break
-                            neighbor_of_neighbor = up_iterator.next_skip(neighbor.direction)
+                            neighbor_of_neighbor = up_iterator_skip.next()
                         # if all upslope neighbors of neighbor j are
                         # processed, we can push j onto the stack.
                         if upslope_neighbors_processed:
