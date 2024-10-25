@@ -11,6 +11,7 @@
 #include <list>
 #include <utility>
 #include <iterator>
+#include <cstddef>  // For std::ptrdiff_t
 
 #include "LRUCache.h"
 
@@ -378,6 +379,73 @@ public:
         }
         return true;
 
+    }
+
+};
+
+class Neighbors {
+public:
+    ManagedFlowDirRaster raster;
+    int x;
+    int y;
+    static inline NeighborTuple endVal = NeighborTuple(8, -1, -1, -1);
+
+    Neighbors() {}
+
+    Neighbors(ManagedFlowDirRaster raster, int x, int y)
+        : raster(raster)
+        , x(x)
+        , y(y) {}
+
+    struct NeighborIterator {
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type   = std::ptrdiff_t;
+        using value_type        = NeighborTuple;
+        using pointer           = NeighborTuple*;  // or also value_type*
+        using reference         = NeighborTuple&;  // or also value_type&
+
+        NeighborIterator() {}
+        NeighborIterator(NeighborTuple* n) : m_ptr(n) {
+            std::cout << "n dir 2 " << (*n).direction << std::endl;
+            currentVal = *n;
+        }
+
+        reference operator*() const { return *m_ptr; }
+        pointer operator->() { return m_ptr; }
+
+        // Prefix increment
+        NeighborIterator& operator++() { next(); return *this; }
+
+        // Postfix increment
+        NeighborIterator operator++(int) { NeighborIterator tmp = *this; ++(*this); return tmp; }
+
+        friend bool operator== (const NeighborIterator& a, const NeighborIterator& b) { return a.m_ptr == b.m_ptr; };
+        friend bool operator!= (const NeighborIterator& a, const NeighborIterator& b) { return a.m_ptr != b.m_ptr; };
+
+        void next() {
+            if (i == 8) {
+                std::cout << "returning end " << endVal.direction << std::endl;
+                m_ptr = &endVal;
+            } else {
+                currentVal = NeighborTuple(i, 0, 0, 0);
+                m_ptr = &currentVal;
+            }
+            i++;
+        }
+
+    private:
+        pointer m_ptr;
+        NeighborTuple currentVal;
+        int i = 0;
+    };
+
+    NeighborIterator begin() {
+        NeighborTuple n = NeighborTuple(0, 0, 0, 0);
+        std::cout << "n dir " << n.direction << std::endl;
+        return NeighborIterator(&n);
+    }
+    NeighborIterator end()   {
+        return NeighborIterator(&endVal);
     }
 };
 
