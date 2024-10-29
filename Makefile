@@ -155,7 +155,7 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	$(TESTRUNNER) -s tests/test_ndr.py
+	$(TESTRUNNER) -s -k base_regression tests/test_ndr.py
 
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)

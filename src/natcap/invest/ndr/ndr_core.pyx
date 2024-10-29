@@ -119,8 +119,6 @@ def ndr_eff_calculation(
     cdef int outflow_dirs, dir_mask
     cdef NeighborTuple neighbor
 
-    print('a')
-
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
         # use cython variables to avoid python overhead of dict values
@@ -159,8 +157,10 @@ def ndr_eff_calculation(
 
                 if should_seed:
                     # mark all outflow directions processed
+                    print('set to process', outflow_dirs)
                     to_process_flow_directions_raster.set(
                         global_col, global_row, outflow_dirs)
+                    print('push', global_col, global_row)
                     processing_stack.push(global_row * n_cols + global_col)
 
         while processing_stack.size() > 0:
@@ -172,6 +172,7 @@ def ndr_eff_calculation(
             global_col = flat_index % n_cols
 
             print('b')
+            print('processing', global_col, global_row)
 
             crit_len = <float>crit_len_raster.get(global_col, global_row)
             retention_eff_lulc = retention_eff_lulc_raster.get(
@@ -180,11 +181,13 @@ def ndr_eff_calculation(
                     global_col, global_row)
             if stream_raster.get(global_col, global_row) == 1:
                 # if it's a stream, effective retention is 0.
+                print('set eff stream')
                 effective_retention_raster.set(global_col, global_row, STREAM_EFFECTIVE_RETENTION)
             elif (is_close(crit_len, crit_len_nodata) or
                   is_close(retention_eff_lulc, retention_eff_nodata) or
                   flow_dir == 0):
                 # if it's nodata, effective retention is nodata.
+                print('set eff nodata')
                 effective_retention_raster.set(
                     global_col, global_row, effective_retention_nodata)
             else:
@@ -192,7 +195,6 @@ def ndr_eff_calculation(
                 print('c')
                 dn_neighbors = DownslopeNeighborsNoSkip(
                     Pixel(mfd_flow_direction_raster, global_col, global_row))
-                print('d')
                 has_outflow = False
                 flow_dir_sum = 0
                 for neighbor in dn_neighbors:
@@ -236,6 +238,7 @@ def ndr_eff_calculation(
 
                 if has_outflow:
                     working_retention_eff /= flow_dir_sum
+                    print('set eff', working_retention_eff)
                     effective_retention_raster.set(
                         global_col, global_row, working_retention_eff)
                 else:
@@ -245,7 +248,6 @@ def ndr_eff_calculation(
             print('e')
             up_neighbors = UpslopeNeighbors(
                 Pixel(mfd_flow_direction_raster, global_col, global_row))
-            print('f')
             for neighbor in up_neighbors:
                 neighbor_outflow_dir = INFLOW_OFFSETS[neighbor.direction]
                 neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir
@@ -260,14 +262,15 @@ def ndr_eff_calculation(
                     continue
                 # mask out the outflow dir that this iteration processed
                 neighbor_process_flow_dir &= ~neighbor_outflow_dir_mask
+                print('set to_process', neighbor_process_flow_dir)
                 to_process_flow_directions_raster.set(
                     neighbor.x, neighbor.y, neighbor_process_flow_dir)
                 if neighbor_process_flow_dir == 0:
                     # if 0 then all downslope have been processed,
                     # push on stack, otherwise another downslope pixel will
                     # pick it up
+                    print('pushing', neighbor.x, neighbor.y)
                     processing_stack.push(neighbor.y * n_cols + neighbor.x)
-            print('g')
 
     stream_raster.close()
     crit_len_raster.close()
