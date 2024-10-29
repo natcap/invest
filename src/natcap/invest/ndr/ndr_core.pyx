@@ -198,6 +198,7 @@ def ndr_eff_calculation(
                 has_outflow = False
                 flow_dir_sum = 0
                 for neighbor in dn_neighbors:
+                    print(neighbor.direction, neighbor.x, neighbor.y, neighbor.flow_proportion)
                     has_outflow = True
                     flow_dir_sum += neighbor.flow_proportion
                     if (neighbor.x < 0 or neighbor.x >= n_cols or
