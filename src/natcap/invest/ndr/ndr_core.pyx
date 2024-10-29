@@ -237,8 +237,8 @@ def ndr_eff_calculation(
                         intermediate_retention * neighbor.flow_proportion)
 
                 if has_outflow:
+                    print('set eff', working_retention_eff, flow_dir_sum, working_retention_eff / flow_dir_sum)
                     working_retention_eff /= flow_dir_sum
-                    print('set eff', working_retention_eff)
                     effective_retention_raster.set(
                         global_col, global_row, working_retention_eff)
                 else:
