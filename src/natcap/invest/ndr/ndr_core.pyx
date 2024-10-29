@@ -119,6 +119,8 @@ def ndr_eff_calculation(
     cdef int outflow_dirs, dir_mask
     cdef NeighborTuple neighbor
 
+    print('a')
+
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
         # use cython variables to avoid python overhead of dict values
@@ -169,6 +171,8 @@ def ndr_eff_calculation(
             global_row = flat_index // n_cols
             global_col = flat_index % n_cols
 
+            print('b')
+
             crit_len = <float>crit_len_raster.get(global_col, global_row)
             retention_eff_lulc = retention_eff_lulc_raster.get(
                 global_col, global_row)
@@ -185,9 +189,10 @@ def ndr_eff_calculation(
                     global_col, global_row, effective_retention_nodata)
             else:
                 working_retention_eff = 0.0
-
+                print('c')
                 dn_neighbors = DownslopeNeighborsNoSkip(
                     Pixel(mfd_flow_direction_raster, global_col, global_row))
+                print('d')
                 has_outflow = False
                 flow_dir_sum = 0
                 for neighbor in dn_neighbors:
@@ -237,8 +242,10 @@ def ndr_eff_calculation(
                     raise Exception("got to a cell that has no outflow!")
             # search upslope to see if we need to push a cell on the stack
             # for i in range(8):
+            print('e')
             up_neighbors = UpslopeNeighbors(
                 Pixel(mfd_flow_direction_raster, global_col, global_row))
+            print('f')
             for neighbor in up_neighbors:
                 neighbor_outflow_dir = INFLOW_OFFSETS[neighbor.direction]
                 neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir
@@ -260,6 +267,7 @@ def ndr_eff_calculation(
                     # push on stack, otherwise another downslope pixel will
                     # pick it up
                     processing_stack.push(neighbor.y * n_cols + neighbor.x)
+            print('g')
 
     stream_raster.close()
     crit_len_raster.close()
