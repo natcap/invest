@@ -15,7 +15,7 @@ from ..managed_raster.managed_raster cimport ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport DownslopeNeighborsNoSkip
 from ..managed_raster.managed_raster cimport Pixel
-from ..managed_raster.managed_raster cimport UpslopeNeighborIterator
+from ..managed_raster.managed_raster cimport UpslopeNeighbors
 from ..managed_raster.managed_raster cimport NeighborTuple
 from ..managed_raster.managed_raster cimport is_close
 from ..managed_raster.managed_raster cimport INFLOW_OFFSETS
@@ -237,10 +237,9 @@ def ndr_eff_calculation(
                     raise Exception("got to a cell that has no outflow!")
             # search upslope to see if we need to push a cell on the stack
             # for i in range(8):
-            up_iterator = UpslopeNeighborIterator(
-                mfd_flow_direction_raster, global_col, global_row)
-            neighbor = up_iterator.next()
-            while neighbor.direction < 8:
+            up_neighbors = UpslopeNeighbors(
+                Pixel(mfd_flow_direction_raster, global_col, global_row))
+            for neighbor in up_neighbors:
                 neighbor_outflow_dir = INFLOW_OFFSETS[neighbor.direction]
                 neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir
                 neighbor_process_flow_dir = <int>(
@@ -248,11 +247,9 @@ def ndr_eff_calculation(
                         neighbor.x, neighbor.y))
                 if neighbor_process_flow_dir == 0:
                     # skip, due to loop invariant this must be a nodata pixel
-                    neighbor = up_iterator.next()
                     continue
                 if neighbor_process_flow_dir & neighbor_outflow_dir_mask == 0:
                     # no outflow
-                    neighbor = up_iterator.next()
                     continue
                 # mask out the outflow dir that this iteration processed
                 neighbor_process_flow_dir &= ~neighbor_outflow_dir_mask
@@ -263,7 +260,6 @@ def ndr_eff_calculation(
                     # push on stack, otherwise another downslope pixel will
                     # pick it up
                     processing_stack.push(neighbor.y * n_cols + neighbor.x)
-                neighbor = up_iterator.next()
 
     stream_raster.close()
     crit_len_raster.close()

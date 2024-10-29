@@ -21,8 +21,8 @@ from ..managed_raster.managed_raster cimport ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
 from ..managed_raster.managed_raster cimport Pixel
 from ..managed_raster.managed_raster cimport DownslopeNeighbors
-from ..managed_raster.managed_raster cimport UpslopeNeighborIterator
-from ..managed_raster.managed_raster cimport UpslopeNeighborIteratorNoDivide
+from ..managed_raster.managed_raster cimport UpslopeNeighbors
+from ..managed_raster.managed_raster cimport UpslopeNeighborsNoDivide
 from ..managed_raster.managed_raster cimport NeighborTuple
 from ..managed_raster.managed_raster cimport is_close
 
@@ -219,10 +219,9 @@ cpdef calculate_local_recharge(
                     # initialize to 0 so we indicate we haven't tracked any
                     # mfd values yet
                     l_sum_avail_i = 0.0
-                    up_iterator = UpslopeNeighborIteratorNoDivide(flow_raster, xi, yi)
-                    neighbor = up_iterator.next()
                     mfd_dir_sum = 0
-                    while neighbor.direction < 8:
+                    up_neighbors = UpslopeNeighborsNoDivide(Pixel(flow_raster, xi, yi))
+                    for neighbor in up_neighbors:
                         # pixel flows inward, check upslope
                         l_sum_avail_j = target_l_sum_avail_raster.get(
                             neighbor.x, neighbor.y)
@@ -235,7 +234,6 @@ cpdef calculate_local_recharge(
                         l_sum_avail_i += (
                             l_sum_avail_j + l_avail_j) * neighbor.flow_proportion
                         mfd_dir_sum += <int>neighbor.flow_proportion
-                        neighbor = up_iterator.next()
                     # calculate l_sum_avail_i by summing all the valid
                     # directions then normalizing by the sum of the mfd
                     # direction weights (Equation 8)
@@ -469,11 +467,9 @@ def route_baseflow_sum(
                     target_b_sum_raster.set(xi, yi, b_sum_i)
 
                     current_pixel += 1
-                    up_iterator = UpslopeNeighborIterator(flow_dir_mfd_raster, xi, yi)
-                    neighbor = up_iterator.next()
-                    while neighbor.direction < 8:
+                    up_neighbors = UpslopeNeighbors(Pixel(flow_dir_mfd_raster, xi, yi))
+                    for neighbor in up_neighbors:
                         work_stack.push(pair[long, long](neighbor.x, neighbor.y))
-                        neighbor = up_iterator.next()
 
     target_b_sum_raster.close()
     target_b_raster.close()

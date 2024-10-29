@@ -472,7 +472,6 @@ public:
 };
 
 class DownslopeNeighborIterator {
-
 public:
     // using NeighborIterator::operator++;
 
@@ -602,6 +601,160 @@ public:
     }
 };
 
+class UpslopeNeighborIterator {
+public:
+    // using NeighborIterator::operator++;
+
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type   = std::ptrdiff_t;
+    using value_type        = NeighborTuple;
+    using pointer           = NeighborTuple*;  // or also value_type*
+    using reference         = NeighborTuple&;  // or also value_type&
+
+    Pixel pixel;
+    pointer m_ptr;
+    NeighborTuple currentVal;
+    int i = 0;
+
+    UpslopeNeighborIterator() {}
+    UpslopeNeighborIterator(NeighborTuple* n) {
+        currentVal = *n;
+        m_ptr = n;
+    }
+    UpslopeNeighborIterator(Pixel p) {
+        pixel = p;
+        next();
+    }
+
+    reference operator*() const { return *m_ptr; }
+    pointer operator->() { return m_ptr; }
+
+    // Prefix increment
+    UpslopeNeighborIterator& operator++() { next(); return *this; }
+
+    // Postfix increment
+    UpslopeNeighborIterator operator++(int) { UpslopeNeighborIterator tmp = *this; ++(*this); return tmp; }
+
+    friend bool operator== (const UpslopeNeighborIterator a, const UpslopeNeighborIterator b) {
+        return a.m_ptr == b.m_ptr;
+    };
+    friend bool operator!= (const UpslopeNeighborIterator a, const UpslopeNeighborIterator b) {
+        return a.m_ptr != b.m_ptr;
+    };
+
+    void next() {
+        long xj, yj;
+        int flow_dir_j;
+        int flow_ji;
+        long flow_dir_j_sum;
+        if (i == 8) {
+            currentVal = endVal;
+            m_ptr = &endVal;
+            return;
+        }
+        xj = pixel.x + COL_OFFSETS[i];
+        yj = pixel.y + ROW_OFFSETS[i];
+        if (xj < 0 or xj >= pixel.raster.raster_x_size or
+                yj < 0 or yj >= pixel.raster.raster_y_size) {
+            i++;
+            next();
+            return;
+        }
+        flow_dir_j = pixel.raster.get(xj, yj);
+        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[i])));
+        if (flow_ji) {
+            flow_dir_j_sum = 0;
+            for (int idx = 0; idx < 8; idx++) {
+                flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF;
+            }
+            currentVal = NeighborTuple(i, xj, yj, static_cast<float>(flow_ji) / static_cast<float>(flow_dir_j_sum));
+            m_ptr = &currentVal;
+            i++;
+            return;
+        } else {
+            i++;
+            next();
+        }
+    }
+};
+
+class UpslopeNeighborNoDivideIterator {
+public:
+    // using NeighborIterator::operator++;
+
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type   = std::ptrdiff_t;
+    using value_type        = NeighborTuple;
+    using pointer           = NeighborTuple*;  // or also value_type*
+    using reference         = NeighborTuple&;  // or also value_type&
+
+    Pixel pixel;
+    pointer m_ptr;
+    NeighborTuple currentVal;
+    int i = 0;
+
+    UpslopeNeighborNoDivideIterator() {}
+    UpslopeNeighborNoDivideIterator(NeighborTuple* n) {
+        currentVal = *n;
+        m_ptr = n;
+    }
+    UpslopeNeighborNoDivideIterator(Pixel p) {
+        pixel = p;
+        next();
+    }
+
+    reference operator*() const { return *m_ptr; }
+    pointer operator->() { return m_ptr; }
+
+    // Prefix increment
+    UpslopeNeighborNoDivideIterator& operator++() { next(); return *this; }
+
+    // Postfix increment
+    UpslopeNeighborNoDivideIterator operator++(int) { UpslopeNeighborNoDivideIterator tmp = *this; ++(*this); return tmp; }
+
+    friend bool operator== (const UpslopeNeighborNoDivideIterator a, const UpslopeNeighborNoDivideIterator b) {
+        return a.m_ptr == b.m_ptr;
+    };
+    friend bool operator!= (const UpslopeNeighborNoDivideIterator a, const UpslopeNeighborNoDivideIterator b) {
+        return a.m_ptr != b.m_ptr;
+    };
+
+    void next() {
+        long xj, yj;
+        int flow_dir_j;
+        int flow_ji;
+        long flow_dir_j_sum;
+        if (i == 8) {
+            currentVal = endVal;
+            m_ptr = &endVal;
+            return;
+        }
+        xj = pixel.x + COL_OFFSETS[i];
+        yj = pixel.y + ROW_OFFSETS[i];
+        if (xj < 0 or xj >= pixel.raster.raster_x_size or
+                yj < 0 or yj >= pixel.raster.raster_y_size) {
+            i++;
+            next();
+            return;
+        }
+        flow_dir_j = pixel.raster.get(xj, yj);
+        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[i])));
+        if (flow_ji) {
+            flow_dir_j_sum = 0;
+            for (int idx = 0; idx < 8; idx++) {
+                flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF;
+            }
+            currentVal = NeighborTuple(i, xj, yj, flow_ji);
+            m_ptr = &currentVal;
+            i++;
+            return;
+        } else {
+            i++;
+            next();
+        }
+    }
+};
+
 class DownslopeNeighbors: public Neighbors {
 public:
     using Neighbors::Neighbors;
@@ -616,166 +769,19 @@ public:
     DownslopeNeighborNoSkipIterator end() { return DownslopeNeighborNoSkipIterator(&endVal); }
 };
 
-
-class UpslopeNeighborIterator {
+class UpslopeNeighbors: public Neighbors {
 public:
-
-    ManagedFlowDirRaster raster;
-    int col;
-    int row;
-    int n_dir;
-    int flow_dir;
-
-    UpslopeNeighborIterator() { }
-
-    UpslopeNeighborIterator(ManagedFlowDirRaster managed_raster, int x, int y)
-        : raster { managed_raster}
-        , col { x }
-        , row { y }
-    {
-        n_dir = 0;
-    }
-
-    NeighborTuple next() {
-
-        NeighborTuple n;
-        long xj, yj;
-        int flow_dir_j;
-        int flow_ji;
-        long flow_dir_j_sum;
-
-        if (n_dir == 8) {
-            n = NeighborTuple(8, -1, -1, -1);
-            return n;
-        }
-
-        xj = col + COL_OFFSETS[n_dir];
-        yj = row + ROW_OFFSETS[n_dir];
-
-        if (xj < 0 or xj >= raster.raster_x_size or
-                yj < 0 or yj >= raster.raster_y_size) {
-            n_dir += 1;
-            return next();
-        }
-
-        flow_dir_j = raster.get(xj, yj);
-        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])));
-
-        if (flow_ji) {
-            flow_dir_j_sum = 0;
-            for (int idx = 0; idx < 8; idx++) {
-                flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF;
-            }
-
-            n = NeighborTuple(n_dir, xj, yj, static_cast<float>(flow_ji) / static_cast<float>(flow_dir_j_sum));
-            n_dir += 1;
-            return n;
-        } else {
-            n_dir += 1;
-            return next();
-        }
-    }
+    using Neighbors::Neighbors;
+    UpslopeNeighborIterator begin() { return UpslopeNeighborIterator(pixel); }
+    UpslopeNeighborIterator end() { return UpslopeNeighborIterator(&endVal); }
 };
 
-class UpslopeNeighborIteratorNoDivide: public UpslopeNeighborIterator {
+class UpslopeNeighborsNoDivide: public Neighbors {
 public:
-
-    UpslopeNeighborIteratorNoDivide() { }
-
-    UpslopeNeighborIteratorNoDivide(ManagedFlowDirRaster managed_raster, int x, int y)
-        : UpslopeNeighborIterator(managed_raster, x, y)
-    {}
-
-    NeighborTuple next() {
-
-        NeighborTuple n;
-        long xj, yj;
-        int flow_dir_j;
-        int flow_ji;
-
-        if (n_dir == 8) {
-            n = NeighborTuple(8, -1, -1, -1);
-            return n;
-        }
-
-        xj = col + COL_OFFSETS[n_dir];
-        yj = row + ROW_OFFSETS[n_dir];
-
-        if (xj < 0 or xj >= raster.raster_x_size or
-                yj < 0 or yj >= raster.raster_y_size) {
-            n_dir += 1;
-            return next();
-        }
-
-        flow_dir_j = raster.get(xj, yj);
-        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])));
-
-        if (flow_ji) {
-            n = NeighborTuple(n_dir, xj, yj, static_cast<float>(flow_ji));
-            n_dir += 1;
-            return n;
-        } else {
-            n_dir += 1;
-            return next();
-        }
-    }
+    using Neighbors::Neighbors;
+    UpslopeNeighborNoDivideIterator begin() { return UpslopeNeighborNoDivideIterator(pixel); }
+    UpslopeNeighborNoDivideIterator end() { return UpslopeNeighborNoDivideIterator(&endVal); }
 };
-
-
-class UpslopeNeighborIteratorSkip: public UpslopeNeighborIterator {
-public:
-    int skip;
-
-    UpslopeNeighborIteratorSkip() { }
-
-    UpslopeNeighborIteratorSkip(ManagedFlowDirRaster managed_raster, int x, int y, int skip)
-        : UpslopeNeighborIterator(managed_raster, x, y)
-    {
-        this->skip = skip;
-    }
-
-    NeighborTuple next() {
-
-        NeighborTuple n;
-        long xj, yj;
-        int flow_dir_j;
-        int flow_ji;
-        long flow_dir_j_sum;
-
-        if (n_dir == 8) {
-            n = NeighborTuple(8, -1, -1, -1);
-            return n;
-        }
-
-        xj = col + COL_OFFSETS[n_dir];
-        yj = row + ROW_OFFSETS[n_dir];
-
-        if (xj < 0 or xj >= raster.raster_x_size or
-                yj < 0 or yj >= raster.raster_y_size or
-                INFLOW_OFFSETS[n_dir] == skip) {
-            n_dir += 1;
-            return next();
-        }
-
-        flow_dir_j = raster.get(xj, yj);
-        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])));
-
-        if (flow_ji) {
-            flow_dir_j_sum = 0;
-            for (int idx = 0; idx < 8; idx++) {
-                flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF;
-            }
-
-            n = NeighborTuple(n_dir, xj, yj, static_cast<float>(flow_ji) / static_cast<float>(flow_dir_j_sum));
-            n_dir += 1;
-            return n;
-        } else {
-            n_dir += 1;
-            return next();
-        }
-    }
-};
-
 
 inline bool is_close(double x, double y) {
     if (isnan(x) and isnan(y)) {

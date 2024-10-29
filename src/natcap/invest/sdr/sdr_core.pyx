@@ -8,18 +8,13 @@ from osgeo import gdal
 from libc.time cimport time as ctime
 from libcpp.stack cimport stack
 from ..managed_raster.managed_raster cimport ManagedRaster
-from ..managed_raster.managed_raster cimport NeighborTuple
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
+from ..managed_raster.managed_raster cimport NeighborTuple
 from ..managed_raster.managed_raster cimport is_close
 from ..managed_raster.managed_raster cimport DownslopeNeighbors
-from ..managed_raster.managed_raster cimport UpslopeNeighborIterator
-from ..managed_raster.managed_raster cimport UpslopeNeighborIteratorSkip
-from ..managed_raster.managed_raster cimport Neighbors
+from ..managed_raster.managed_raster cimport UpslopeNeighbors
 from ..managed_raster.managed_raster cimport Pixel
-from ..managed_raster.managed_raster cimport NeighborIterator
-
-from cython.operator cimport preincrement, dereference
-
+from ..managed_raster.managed_raster cimport INFLOW_OFFSETS
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -124,9 +119,7 @@ def calculate_sediment_deposition(
     cdef time_t last_log_time = ctime(NULL)
     cdef float f_j_weighted_sum
     cdef NeighborTuple neighbor
-    cdef UpslopeNeighborIterator up_iterator
-    cdef UpslopeNeighborIteratorSkip up_iterator_skip
-
+    cdef UpslopeNeighbors up_neighbors
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
@@ -169,20 +162,15 @@ def calculate_sediment_deposition(
                     # the weighted sum of flux flowing onto this pixel from
                     # all neighbors
                     f_j_weighted_sum = 0
-                    up_iterator = UpslopeNeighborIterator(
-                        mfd_flow_direction_raster, global_col, global_row)
-                    neighbor = up_iterator.next()
-                    while neighbor.direction < 8:
-
+                    up_neighbors = UpslopeNeighbors(
+                        Pixel(mfd_flow_direction_raster, global_col, global_row))
+                    for neighbor in up_neighbors:
                         f_j = f_raster.get(neighbor.x, neighbor.y)
                         if is_close(f_j, target_nodata):
-                            neighbor = up_iterator.next()
                             continue
-
                         # add the neighbor's flux value, weighted by the
                         # flow proportion
                         f_j_weighted_sum += neighbor.flow_proportion * f_j
-                        neighbor = up_iterator.next()
 
                     # calculate sum of SDR values of immediate downslope
                     # neighbors, weighted by proportion of flow into each
@@ -214,16 +202,16 @@ def calculate_sediment_deposition(
                         # completed
                         upslope_neighbors_processed = 1
                         # iterate over each neighbor-of-neighbor
-                        up_iterator_skip = UpslopeNeighborIteratorSkip(
-                            mfd_flow_direction_raster, neighbor.x, neighbor.y, neighbor.direction)
-                        neighbor_of_neighbor = up_iterator_skip.next()
-                        while neighbor_of_neighbor.direction < 8:
+                        up_neighbors = UpslopeNeighbors(
+                            Pixel(mfd_flow_direction_raster, neighbor.x, neighbor.y))
+                        for neighbor_of_neighbor in up_neighbors:
+                            if INFLOW_OFFSETS[neighbor_of_neighbor.direction] == neighbor.direction:
+                                continue
                             if is_close(sediment_deposition_raster.get(
                                 neighbor_of_neighbor.x, neighbor_of_neighbor.y
                             ), target_nodata):
                                 upslope_neighbors_processed = 0
                                 break
-                            neighbor_of_neighbor = up_iterator_skip.next()
                         # if all upslope neighbors of neighbor j are
                         # processed, we can push j onto the stack.
                         if upslope_neighbors_processed:
