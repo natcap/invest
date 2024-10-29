@@ -26,4 +26,10 @@ export default function setupDialogs() {
       shell.showItemInFolder(filepath);
     }
   );
+
+  ipcMain.handle(
+    ipcMainChannels.OPEN_PATH, async (event, dirpath) => {
+      return await shell.openPath(dirpath);
+    }
+  );
 }

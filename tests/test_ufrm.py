@@ -59,6 +59,11 @@ class UFRMTests(unittest.TestCase):
         """UFRM: regression test."""
         from natcap.invest import urban_flood_risk_mitigation
         args = self._make_args()
+        input_vector = gdal.OpenEx(args['aoi_watersheds_path'],
+                                   gdal.OF_VECTOR)
+        input_layer = input_vector.GetLayer()
+        input_fields = [field.GetName() for field in input_layer.schema]
+
         urban_flood_risk_mitigation.execute(args)
 
         result_vector = gdal.OpenEx(os.path.join(
@@ -66,13 +71,15 @@ class UFRMTests(unittest.TestCase):
             gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
 
-        # Check that all four expected fields are there.
+        # Check that all expected fields are there.
+        output_fields = ['aff_bld', 'serv_blt', 'rnf_rt_idx',
+                         'rnf_rt_m3', 'flood_vol']
+        output_fields += input_fields
         self.assertEqual(
-            set(('aff_bld', 'serv_blt', 'rnf_rt_idx', 'rnf_rt_m3',
-                 'flood_vol')),
+            set(output_fields),
             set(field.GetName() for field in result_layer.schema))
 
-        result_feature = result_layer.GetFeature(0)
+        result_feature = result_layer.GetNextFeature()
         for fieldname, expected_value in (
                 ('aff_bld', 187010830.32202843),
                 ('serv_blt', 13253546667257.65),
@@ -85,6 +92,11 @@ class UFRMTests(unittest.TestCase):
             self.assertAlmostEqual(
                 result_val, expected_value, places=-places_to_round)
 
+        input_feature = input_layer.GetNextFeature()
+        for fieldname in input_fields:
+            self.assertEqual(result_feature.GetField(fieldname),
+                             input_feature.GetField(fieldname))
+
         result_feature = None
         result_layer = None
         result_vector = None
@@ -94,6 +106,11 @@ class UFRMTests(unittest.TestCase):
         from natcap.invest import urban_flood_risk_mitigation
         args = self._make_args()
         del args['built_infrastructure_vector_path']
+        input_vector = gdal.OpenEx(args['aoi_watersheds_path'],
+                                   gdal.OF_VECTOR)
+        input_layer = input_vector.GetLayer()
+        input_fields = [field.GetName() for field in input_layer.schema]
+
         urban_flood_risk_mitigation.execute(args)
 
         result_raster = gdal.OpenEx(os.path.join(
@@ -115,9 +132,11 @@ class UFRMTests(unittest.TestCase):
         result_layer = result_vector.GetLayer()
         result_feature = result_layer.GetFeature(0)
 
-        # Check that only the two expected fields are there.
+        # Check that only the expected fields are there.
+        output_fields = ['rnf_rt_idx', 'rnf_rt_m3', 'flood_vol']
+        output_fields += input_fields
         self.assertEqual(
-            set(('rnf_rt_idx', 'rnf_rt_m3', 'flood_vol')),
+            set(output_fields),
             set(field.GetName() for field in result_layer.schema))
 
         for fieldname, expected_value in (
@@ -217,7 +236,6 @@ class UFRMTests(unittest.TestCase):
             urban_flood_risk_mitigation.execute(args)
         except ValueError:
             self.fail('unexpected ValueError when testing curve number row with all zeros')
-
 
     def test_ufrm_string_damage_to_infrastructure(self):
         """UFRM: handle str(int) structure indices.

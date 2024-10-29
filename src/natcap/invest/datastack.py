@@ -535,6 +535,9 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
 
     Returns:
         ``None``
+
+    Raises:
+        ValueError if creating a relative path fails.
     """
     def _recurse(args_param):
         if isinstance(args_param, dict):
@@ -552,8 +555,16 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
                     if (normalized_path == '.' or
                             os.path.dirname(paramset_path) == normalized_path):
                         return '.'
-                    temp_rel_path = os.path.relpath(
-                        normalized_path, os.path.dirname(paramset_path))
+                    try:
+                        temp_rel_path = os.path.relpath(
+                            normalized_path, os.path.dirname(paramset_path))
+                    except ValueError:
+                        # On Windows, ValueError is raised when ``path`` and
+                        # ``start`` are on different drives
+                        raise ValueError(
+                            """Error: Cannot save datastack with relative
+                            paths across drives. Choose a different save
+                            location, or use absolute paths.""")
                     # Always save unix paths.
                     linux_style_path = temp_rel_path.replace('\\', '/')
                 else:

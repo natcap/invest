@@ -6,10 +6,10 @@ import os
 import pprint
 import shutil
 import sys
-import tarfile
 import tempfile
 import textwrap
 import unittest
+from unittest.mock import patch
 
 import numpy
 import pandas
@@ -397,6 +397,25 @@ class DatastackArchiveTests(unittest.TestCase):
             os.path.join(spatial_csv_dir, spatial_csv_dict[4]['path']),
             target_csv_vector_path)
 
+    def test_relative_path_failure(self):
+        """Datastack: raise error when relative path creation fails."""
+        from natcap.invest import datastack
+        params = {
+            'workspace_dir': os.path.join(self.workspace),
+        }
+
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+
+        # Call build_datastack_archive and force build_parameter_set
+        # to raise an error
+        error_message = 'Error saving datastack'
+        with self.assertRaises(ValueError):
+            with patch('natcap.invest.datastack.build_parameter_set',
+                       side_effect=ValueError(error_message)):
+                datastack.build_datastack_archive(
+                    params, 'test_datastack_modules.simple_parameters',
+                    archive_path)
+
 
 class ParameterSetTest(unittest.TestCase):
     """Test Datastack."""
@@ -505,6 +524,26 @@ class ParameterSetTest(unittest.TestCase):
         self.assertEqual(args, params)
         self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
+
+    def test_relative_path_failure(self):
+        """Datastack: raise error when relative path creation fails."""
+        from natcap.invest import datastack
+
+        params = {
+            'data_dir': os.path.join(self.workspace, 'data_dir'),
+        }
+        modelname = 'natcap.invest.foo'
+        paramset_filename = os.path.join(self.workspace, 'paramset.json')
+
+        # make the sample data so filepaths are interpreted correctly
+        os.makedirs(params['data_dir'])
+
+        # Call build_parameter_set and force it into an error state
+        with self.assertRaises(ValueError):
+            with patch('natcap.invest.os.path.relpath',
+                       side_effect=ValueError):
+                datastack.build_parameter_set(
+                    params, modelname, paramset_filename, relative=True)
 
     @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
     def test_relative_parameter_set_windows(self):
