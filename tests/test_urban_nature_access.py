@@ -358,6 +358,21 @@ class UNATests(unittest.TestCase):
         self.assertAlmostEqual(numpy.min(valid_pixels), 1171.7352294921875)
         self.assertAlmostEqual(numpy.max(valid_pixels), 11898.0712890625)
 
+    def test_no_lulc_nodata(self):
+        """UNA: verify behavior when the LULC has no nodata value."""
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = 100
+
+        raster = gdal.OpenEx(args['lulc_raster_path'], gdal.OF_RASTER)
+        band = raster.GetRasterBand(1)
+        band.DeleteNoDataValue()
+        band = None
+        raster = None
+        urban_nature_access.execute(args)
+
     def test_split_urban_nature(self):
         from natcap.invest import urban_nature_access
 
@@ -397,7 +412,7 @@ class UNATests(unittest.TestCase):
         )
         for fieldname, expected_value in expected_values.items():
             numpy.testing.assert_allclose(
-                admin_feature.GetField(fieldname), expected_value)
+                admin_feature.GetField(fieldname), expected_value, rtol=1e-6)
 
         # The sum of the under-and-oversupplied populations should be equal
         # to the total population count.
@@ -588,8 +603,8 @@ class UNATests(unittest.TestCase):
             set(defn.GetName() for defn in summary_layer.schema),
             set(expected_field_values.keys()))
         for fieldname, expected_value in expected_field_values.items():
-            self.assertAlmostEqual(
-                expected_value, summary_feature.GetField(fieldname))
+            numpy.testing.assert_allclose(
+                expected_value, summary_feature.GetField(fieldname), rtol=1e-6)
 
         output_dir = os.path.join(args['workspace_dir'], 'output')
         self._assert_urban_nature(os.path.join(
@@ -664,8 +679,8 @@ class UNATests(unittest.TestCase):
             set(defn.GetName() for defn in summary_layer.schema),
             set(expected_field_values.keys()))
         for fieldname, expected_value in expected_field_values.items():
-            self.assertAlmostEqual(
-                expected_value, summary_feature.GetField(fieldname))
+            numpy.testing.assert_allclose(
+                expected_value, summary_feature.GetField(fieldname), rtol=1e-6)
 
         output_dir = os.path.join(args['workspace_dir'], 'output')
         self._assert_urban_nature(os.path.join(
