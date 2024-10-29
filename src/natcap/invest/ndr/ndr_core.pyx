@@ -113,7 +113,7 @@ def ndr_eff_calculation(
     cdef unsigned long flat_index
     cdef long outflow_weight, flow_dir
     cdef long ds_col, ds_row, i
-    cdef float current_step_factor, step_size, crit_len
+    cdef float current_step_factor, step_size, crit_len, flow_dir_sum
     cdef long neighbor_row, neighbor_col
     cdef int neighbor_outflow_dir, neighbor_outflow_dir_mask, neighbor_process_flow_dir
     cdef int outflow_dirs, dir_mask
