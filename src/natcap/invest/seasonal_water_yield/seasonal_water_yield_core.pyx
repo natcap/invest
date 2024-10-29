@@ -19,7 +19,8 @@ from libcpp.vector cimport vector
 from libc.time cimport time as ctime
 from ..managed_raster.managed_raster cimport ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
-from ..managed_raster.managed_raster cimport DownslopeNeighborIterator
+from ..managed_raster.managed_raster cimport Pixel
+from ..managed_raster.managed_raster cimport DownslopeNeighbors
 from ..managed_raster.managed_raster cimport UpslopeNeighborIterator
 from ..managed_raster.managed_raster cimport UpslopeNeighborIteratorNoDivide
 from ..managed_raster.managed_raster cimport NeighborTuple
@@ -301,11 +302,9 @@ cpdef calculate_local_recharge(
                     target_li_raster.set(xi, yi, l_i)
                     target_li_avail_raster.set(xi, yi, l_avail_i)
 
-                    dn_iterator = DownslopeNeighborIterator(flow_raster, xi, yi)
-                    neighbor = dn_iterator.next()
-                    while neighbor.direction < 8:
+                    dn_neighbors = DownslopeNeighbors(Pixel(flow_raster, xi, yi))
+                    for neighbor in dn_neighbors:
                         work_queue.push(pair[long, long](neighbor.x, neighbor.y))
-                        neighbor = dn_iterator.next()
 
     flow_raster.close()
     target_li_raster.close()
@@ -405,15 +404,13 @@ def route_baseflow_sum(
                 # search for a pixel that has no downslope neighbors,
                 # or whose downslope neighbors all have nodata in the stream raster (?)
                 outlet = 1
-                dn_iterator = DownslopeNeighborIterator(
-                    flow_dir_mfd_raster, xs_root, ys_root)
-                neighbor = dn_iterator.next()
-                while neighbor.direction < 8:
+                dn_neighbors = DownslopeNeighbors(
+                    Pixel(flow_dir_mfd_raster, xs_root, ys_root))
+                for neighbor in dn_neighbors:
                     stream_val = <int>stream_raster.get(neighbor.x, neighbor.y)
                     if stream_val != stream_nodata:
                         outlet = 0
                         break
-                    neighbor = dn_iterator.next()
                 if not outlet:
                     continue
                 work_stack.push(pair[long, long](xs_root, ys_root))
@@ -435,9 +432,8 @@ def route_baseflow_sum(
 
                     b_sum_i = 0.0
                     downslope_defined = 1
-                    dn_iterator = DownslopeNeighborIterator(flow_dir_mfd_raster, xi, yi)
-                    neighbor = dn_iterator.next()
-                    while neighbor.direction < 8:
+                    dn_neighbors = DownslopeNeighbors(Pixel(flow_dir_mfd_raster, xi, yi))
+                    for neighbor in dn_neighbors:
                         stream_val = <int>stream_raster.get(neighbor.x, neighbor.y)
                         if stream_val:
                             b_sum_i += neighbor.flow_proportion
@@ -456,7 +452,6 @@ def route_baseflow_sum(
                                         b_sum_j / (l_sum_j - l_j)))
                             else:
                                 b_sum_i += neighbor.flow_proportion
-                        neighbor = dn_iterator.next()
 
                     if not downslope_defined:
                         continue

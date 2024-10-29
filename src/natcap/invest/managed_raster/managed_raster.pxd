@@ -139,12 +139,6 @@ cdef extern from "ManagedRaster.h":
         bint operator==(NeighborIterator)
         bint operator!=(NeighborIterator)
 
-    cdef cppclass Neighbors:
-        Neighbors()
-        Neighbors(Pixel)
-        NeighborIterator begin()
-        NeighborIterator end()
-
     cdef cppclass DownslopeNeighborIterator:
         DownslopeNeighborIterator()
         DownslopeNeighborIterator(NeighborTuple* n)
@@ -154,11 +148,32 @@ cdef extern from "ManagedRaster.h":
         bint operator==(DownslopeNeighborIterator)
         bint operator!=(DownslopeNeighborIterator)
 
+    cdef cppclass DownslopeNeighborNoSkipIterator:
+        DownslopeNeighborNoSkipIterator()
+        DownslopeNeighborNoSkipIterator(NeighborTuple* n)
+        DownslopeNeighborNoSkipIterator(Pixel)
+        NeighborTuple operator*()
+        DownslopeNeighborNoSkipIterator operator++()
+        bint operator==(DownslopeNeighborNoSkipIterator)
+        bint operator!=(DownslopeNeighborNoSkipIterator)
+
+    cdef cppclass Neighbors:
+        Neighbors()
+        Neighbors(Pixel)
+        NeighborIterator begin()
+        NeighborIterator end()
+
     cdef cppclass DownslopeNeighbors:
         DownslopeNeighbors()
         DownslopeNeighbors(Pixel)
         DownslopeNeighborIterator begin()
         DownslopeNeighborIterator end()
+
+    cdef cppclass DownslopeNeighborsNoSkip:
+        DownslopeNeighborsNoSkip()
+        DownslopeNeighborsNoSkip(Pixel)
+        DownslopeNeighborNoSkipIterator begin()
+        DownslopeNeighborNoSkipIterator end()
 
     bint is_close(double, double)
 

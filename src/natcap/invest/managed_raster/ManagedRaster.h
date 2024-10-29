@@ -541,22 +541,60 @@ public:
     }
 };
 
-class DownslopeNeighborNoSkipIterator: public NeighborIterator {
+class DownslopeNeighborNoSkipIterator {
 public:
-    using NeighborIterator::NeighborIterator;
-    using NeighborIterator::operator++;
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type   = std::ptrdiff_t;
+    using value_type        = NeighborTuple;
+    using pointer           = NeighborTuple*;  // or also value_type*
+    using reference         = NeighborTuple&;  // or also value_type&
 
-    void next() override {
+    Pixel pixel;
+    pointer m_ptr;
+    NeighborTuple currentVal;
+    int i = 0;
+
+    DownslopeNeighborNoSkipIterator() {}
+    DownslopeNeighborNoSkipIterator(NeighborTuple* n) {
+        currentVal = *n;
+        m_ptr = n;
+    }
+    DownslopeNeighborNoSkipIterator(Pixel p) {
+        pixel = p;
+        next();
+    }
+
+    reference operator*() const { return *m_ptr; }
+    pointer operator->() { return m_ptr; }
+
+    // Prefix increment
+    DownslopeNeighborNoSkipIterator& operator++() { next(); return *this; }
+
+    // Postfix increment
+    DownslopeNeighborNoSkipIterator operator++(int) { DownslopeNeighborNoSkipIterator tmp = *this; ++(*this); return tmp; }
+
+    friend bool operator== (const DownslopeNeighborNoSkipIterator a, const DownslopeNeighborNoSkipIterator b) {
+        return a.m_ptr == b.m_ptr;
+    };
+    friend bool operator!= (const DownslopeNeighborNoSkipIterator a, const DownslopeNeighborNoSkipIterator b) {
+        return a.m_ptr != b.m_ptr;
+    };
+
+    void next() {
         long xj, yj, flow;
         if (i == 8) {
+            currentVal = endVal;
             m_ptr = &endVal;
+            return;
         }
         xj = pixel.x + COL_OFFSETS[i];
         yj = pixel.y + ROW_OFFSETS[i];
         flow = (pixel.val >> (i * 4)) & 0xF;
         if (flow) {
             currentVal = NeighborTuple(i, xj, yj, flow);
+            m_ptr = &currentVal;
             i++;
+            return;
         } else {
             i++;
             next();

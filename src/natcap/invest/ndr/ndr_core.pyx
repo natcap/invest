@@ -13,7 +13,8 @@ from libcpp.stack cimport stack
 from libc.math cimport exp
 from ..managed_raster.managed_raster cimport ManagedRaster
 from ..managed_raster.managed_raster cimport ManagedFlowDirRaster
-from ..managed_raster.managed_raster cimport DownslopeNeighborIteratorNoSkip
+from ..managed_raster.managed_raster cimport DownslopeNeighborsNoSkip
+from ..managed_raster.managed_raster cimport Pixel
 from ..managed_raster.managed_raster cimport UpslopeNeighborIterator
 from ..managed_raster.managed_raster cimport NeighborTuple
 from ..managed_raster.managed_raster cimport is_close
@@ -185,15 +186,15 @@ def ndr_eff_calculation(
             else:
                 working_retention_eff = 0.0
 
-                dn_iterator = DownslopeNeighborIteratorNoSkip(
-                    mfd_flow_direction_raster, global_col, global_row)
+                dn_neighbors = DownslopeNeighborsNoSkip(
+                    Pixel(mfd_flow_direction_raster, global_col, global_row))
                 has_outflow = False
-                neighbor = dn_iterator.next()
-                while neighbor.direction < 8:
+                flow_dir_sum = 0
+                for neighbor in dn_neighbors:
                     has_outflow = True
+                    flow_dir_sum += neighbor.flow_proportion
                     if (neighbor.x < 0 or neighbor.x >= n_cols or
                         neighbor.y < 0 or neighbor.y >= n_rows):
-                        neighbor = dn_iterator.next()
                         continue
                     if neighbor.direction % 2 == 1:
                         step_size = <float>(cell_size * 1.41421356237)
@@ -227,10 +228,9 @@ def ndr_eff_calculation(
 
                     working_retention_eff += (
                         intermediate_retention * neighbor.flow_proportion)
-                    neighbor = dn_iterator.next()
 
                 if has_outflow:
-                    working_retention_eff /= dn_iterator.flow_dir_sum
+                    working_retention_eff /= flow_dir_sum
                     effective_retention_raster.set(
                         global_col, global_row, working_retention_eff)
                 else:

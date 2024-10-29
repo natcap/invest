@@ -192,14 +192,11 @@ def calculate_sediment_deposition(
                     dn_neighbors = DownslopeNeighbors(
                         Pixel(mfd_flow_direction_raster, global_col, global_row))
 
-                    # neighbor = dn_iterator.next()
                     flow_dir_sum = 0
                     for neighbor in dn_neighbors:
-                    # while neighbor.direction < 8:
                         flow_dir_sum += neighbor.flow_proportion
                         sdr_j = sdr_raster.get(neighbor.x, neighbor.y)
                         if is_close(sdr_j, sdr_nodata):
-                            # neighbor = dn_iterator.next()
                             continue
                         if sdr_j == 0:
                             # this means it's a stream, for SDR deposition
@@ -232,9 +229,6 @@ def calculate_sediment_deposition(
                         if upslope_neighbors_processed:
                             processing_stack.push(
                                 neighbor.y * n_cols + neighbor.x)
-
-                        # neighbor = dn_iterator.next()
-                        #
 
                     # nodata pixels should propagate to the results
                     sdr_i = sdr_raster.get(global_col, global_row)
