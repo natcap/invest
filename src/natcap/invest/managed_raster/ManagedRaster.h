@@ -383,160 +383,201 @@ public:
 
 };
 
-class Neighbors {
-public:
+struct Pixel {
     ManagedFlowDirRaster raster;
     int x;
     int y;
-    static inline NeighborTuple endVal = NeighborTuple(8, -1, -1, -1);
+    int val;
+
+    Pixel() {}
+
+    Pixel(ManagedFlowDirRaster raster, int x, int y) : raster(raster), x(x), y(y) {
+        double v = raster.get(x, y);
+        val = static_cast<int>(v);
+    }
+};
+
+static inline NeighborTuple endVal = NeighborTuple(8, -1, -1, -1);
+
+
+struct NeighborIterator {
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type   = std::ptrdiff_t;
+    using value_type        = NeighborTuple;
+    using pointer           = NeighborTuple*;  // or also value_type*
+    using reference         = NeighborTuple&;  // or also value_type&
+
+    Pixel pixel;
+    pointer m_ptr;
+    NeighborTuple currentVal;
+    int i = 0;
+
+    NeighborIterator() {}
+    NeighborIterator(NeighborTuple* n) {
+        currentVal = *n;
+        m_ptr = n;
+    }
+    NeighborIterator(Pixel pixel) : pixel(pixel) {
+        next();
+    }
+
+    reference operator*() const { return *m_ptr; }
+    pointer operator->() { return m_ptr; }
+
+    // Prefix increment
+    NeighborIterator& operator++() { this->next(); return *this; }
+
+    // Postfix increment
+    NeighborIterator operator++(int) { NeighborIterator tmp = *this; ++(*this); return tmp; }
+
+    friend bool operator== (const NeighborIterator& a, const NeighborIterator& b) {
+        return a.m_ptr == b.m_ptr;
+    };
+    friend bool operator!= (const NeighborIterator& a, const NeighborIterator& b) {
+        return a.m_ptr != b.m_ptr;
+    };
+
+    virtual void next() {
+        long xj, yj, flow;
+        if (i == 8) {
+            currentVal = endVal;
+            m_ptr = &endVal;
+            return;
+        }
+        xj = pixel.x + COL_OFFSETS[i];
+        yj = pixel.y + ROW_OFFSETS[i];
+        flow = (pixel.val >> (i * 4)) & 0xF;
+        currentVal = NeighborTuple(i, xj, yj, flow);
+        m_ptr = &currentVal;
+        i++;
+    }
+};
+
+
+class Neighbors {
+public:
+    Pixel pixel;
 
     Neighbors() {}
 
-    Neighbors(ManagedFlowDirRaster raster, int x, int y)
-        : raster(raster)
-        , x(x)
-        , y(y) {}
-
-    struct NeighborIterator {
-        using iterator_category = std::forward_iterator_tag;
-        using difference_type   = std::ptrdiff_t;
-        using value_type        = NeighborTuple;
-        using pointer           = NeighborTuple*;  // or also value_type*
-        using reference         = NeighborTuple&;  // or also value_type&
-
-        NeighborIterator() {}
-        NeighborIterator(NeighborTuple* n) : m_ptr(n) {
-            std::cout << "n dir 2 " << (*n).direction << std::endl;
-            currentVal = *n;
-        }
-
-        reference operator*() const { return *m_ptr; }
-        pointer operator->() { return m_ptr; }
-
-        // Prefix increment
-        NeighborIterator& operator++() { next(); return *this; }
-
-        // Postfix increment
-        NeighborIterator operator++(int) { NeighborIterator tmp = *this; ++(*this); return tmp; }
-
-        friend bool operator== (const NeighborIterator& a, const NeighborIterator& b) { return a.m_ptr == b.m_ptr; };
-        friend bool operator!= (const NeighborIterator& a, const NeighborIterator& b) { return a.m_ptr != b.m_ptr; };
-
-        void next() {
-            if (i == 8) {
-                std::cout << "returning end " << endVal.direction << std::endl;
-                m_ptr = &endVal;
-            } else {
-                currentVal = NeighborTuple(i, 0, 0, 0);
-                m_ptr = &currentVal;
-            }
-            i++;
-        }
-
-    private:
-        pointer m_ptr;
-        NeighborTuple currentVal;
-        int i = 0;
-    };
+    Neighbors(Pixel pixel)
+        : pixel(pixel) {}
 
     NeighborIterator begin() {
-        NeighborTuple n = NeighborTuple(0, 0, 0, 0);
-        std::cout << "n dir " << n.direction << std::endl;
-        return NeighborIterator(&n);
+        return NeighborIterator(pixel);
     }
-    NeighborIterator end()   {
+    NeighborIterator end() {
         return NeighborIterator(&endVal);
     }
 };
 
-
 class DownslopeNeighborIterator {
+
 public:
+    // using NeighborIterator::operator++;
 
-    ManagedFlowDirRaster raster;
-    int col;
-    int row;
-    int n_dir;
-    int flow_dir;
-    int flow_dir_sum;
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type   = std::ptrdiff_t;
+    using value_type        = NeighborTuple;
+    using pointer           = NeighborTuple*;  // or also value_type*
+    using reference         = NeighborTuple&;  // or also value_type&
 
-    DownslopeNeighborIterator() { }
+    Pixel pixel;
+    pointer m_ptr;
+    NeighborTuple currentVal;
+    int i = 0;
 
-    DownslopeNeighborIterator(ManagedFlowDirRaster managed_raster, int x, int y)
-        : raster { managed_raster }
-        , col { x }
-        , row { y }
-    {
-        n_dir = 0;
-        flow_dir = raster.get(col, row);
-        flow_dir_sum = 0;
+    DownslopeNeighborIterator() {}
+    DownslopeNeighborIterator(NeighborTuple* n) {
+        currentVal = *n;
+        m_ptr = n;
+    }
+    DownslopeNeighborIterator(Pixel p) {
+        pixel = p;
+        next();
     }
 
-    NeighborTuple next() {
-        NeighborTuple n;
-        long xj, yj;
-        int flow_ij;
+    reference operator*() const { return *m_ptr; }
+    pointer operator->() { return m_ptr; }
 
-        if (n_dir == 8) {
-            n = NeighborTuple(8, -1, -1, -1);
-            return n;
+    // Prefix increment
+    DownslopeNeighborIterator& operator++() { next(); return *this; }
+
+    // Postfix increment
+    DownslopeNeighborIterator operator++(int) { DownslopeNeighborIterator tmp = *this; ++(*this); return tmp; }
+
+    friend bool operator== (const DownslopeNeighborIterator a, const DownslopeNeighborIterator b) {
+        return a.m_ptr == b.m_ptr;
+    };
+    friend bool operator!= (const DownslopeNeighborIterator a, const DownslopeNeighborIterator b) {
+        return a.m_ptr != b.m_ptr;
+    };
+
+    void next() {
+        long xj, yj, flow;
+        if (i == 8) {
+            currentVal = endVal;
+            m_ptr = &endVal;
+            return;
         }
-
-        xj = col + COL_OFFSETS[n_dir];
-        yj = row + ROW_OFFSETS[n_dir];
-
-        if (xj < 0 or xj >= raster.raster_x_size or
-                yj < 0 or yj >= raster.raster_y_size) {
-            n_dir += 1;
-            return next();
+        xj = pixel.x + COL_OFFSETS[i];
+        yj = pixel.y + ROW_OFFSETS[i];
+        if (xj < 0 or xj >= pixel.raster.raster_x_size or
+                yj < 0 or yj >= pixel.raster.raster_y_size) {
+            i++;
+            next();
+            return;
         }
-        flow_ij = (flow_dir >> (n_dir * 4)) & 0xF;
-        if (flow_ij) {
-            flow_dir_sum += flow_ij;
-            n = NeighborTuple(n_dir, xj, yj, flow_ij);
-            n_dir += 1;
-            return n;
+        flow = (pixel.val >> (i * 4)) & 0xF;
+        if (flow) {
+            currentVal = NeighborTuple(i, xj, yj, flow);
+            m_ptr = &currentVal;
+            i++;
+            return;
         } else {
-            n_dir += 1;
-            return next();
+            i++;
+            next();
         }
     }
 };
 
-class DownslopeNeighborIteratorNoSkip: public DownslopeNeighborIterator {
+class DownslopeNeighborNoSkipIterator: public NeighborIterator {
 public:
+    using NeighborIterator::NeighborIterator;
+    using NeighborIterator::operator++;
 
-    DownslopeNeighborIteratorNoSkip() {}
-
-    DownslopeNeighborIteratorNoSkip(ManagedFlowDirRaster managed_raster, int x, int y)
-        : DownslopeNeighborIterator(managed_raster, x, y)   // Call the superclass constructor in the subclass' initialization list.
-        { }
-
-    NeighborTuple next() {
-        NeighborTuple n;
-        long xj, yj;
-        int flow_ij;
-
-        if (n_dir == 8) {
-            n = NeighborTuple(8, -1, -1, -1);
-            return n;
+    void next() override {
+        long xj, yj, flow;
+        if (i == 8) {
+            m_ptr = &endVal;
         }
-
-        xj = col + COL_OFFSETS[n_dir];
-        yj = row + ROW_OFFSETS[n_dir];
-
-        flow_ij = (flow_dir >> (n_dir * 4)) & 0xF;
-        if (flow_ij) {
-            flow_dir_sum += flow_ij;
-            n = NeighborTuple(n_dir, xj, yj, flow_ij);
-            n_dir += 1;
-            return n;
+        xj = pixel.x + COL_OFFSETS[i];
+        yj = pixel.y + ROW_OFFSETS[i];
+        flow = (pixel.val >> (i * 4)) & 0xF;
+        if (flow) {
+            currentVal = NeighborTuple(i, xj, yj, flow);
+            i++;
         } else {
-            n_dir += 1;
-            return next();
+            i++;
+            next();
         }
     }
 };
+
+class DownslopeNeighbors: public Neighbors {
+public:
+    using Neighbors::Neighbors;
+    DownslopeNeighborIterator begin() { return DownslopeNeighborIterator(pixel); }
+    DownslopeNeighborIterator end() { return DownslopeNeighborIterator(&endVal); }
+};
+
+class DownslopeNeighborsNoSkip: public Neighbors {
+public:
+    using Neighbors::Neighbors;
+    DownslopeNeighborNoSkipIterator begin() { return DownslopeNeighborNoSkipIterator(pixel); }
+    DownslopeNeighborNoSkipIterator end() { return DownslopeNeighborNoSkipIterator(&endVal); }
+};
+
 
 class UpslopeNeighborIterator {
 public:

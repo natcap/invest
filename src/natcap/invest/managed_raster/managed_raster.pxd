@@ -76,18 +76,6 @@ cdef extern from "ManagedRaster.h":
         int direction, x, y
         float flow_proportion
 
-    cdef cppclass DownslopeNeighborIterator:
-        ManagedFlowDirRaster raster
-        int col
-        int row
-        int n_dir
-        int flow_dir
-        int flow_dir_sum
-
-        DownslopeNeighborIterator()
-        DownslopeNeighborIterator(ManagedFlowDirRaster, int, int)
-        NeighborTuple next()
-
     cdef cppclass DownslopeNeighborIteratorNoSkip:
         ManagedFlowDirRaster raster
         int col
@@ -132,6 +120,45 @@ cdef extern from "ManagedRaster.h":
         UpslopeNeighborIteratorSkip()
         UpslopeNeighborIteratorSkip(ManagedFlowDirRaster, int, int, int)
         NeighborTuple next()
+
+    cdef cppclass Pixel:
+        ManagedFlowDirRaster raster
+        int x
+        int y
+        int val
+
+        Pixel()
+        Pixel(ManagedFlowDirRaster, int, int)
+
+    cdef cppclass NeighborIterator:
+        NeighborIterator()
+        NeighborIterator(NeighborTuple* n)
+        NeighborIterator(Pixel)
+        NeighborTuple operator*()
+        NeighborIterator operator++()
+        bint operator==(NeighborIterator)
+        bint operator!=(NeighborIterator)
+
+    cdef cppclass Neighbors:
+        Neighbors()
+        Neighbors(Pixel)
+        NeighborIterator begin()
+        NeighborIterator end()
+
+    cdef cppclass DownslopeNeighborIterator:
+        DownslopeNeighborIterator()
+        DownslopeNeighborIterator(NeighborTuple* n)
+        DownslopeNeighborIterator(Pixel)
+        NeighborTuple operator*()
+        DownslopeNeighborIterator operator++()
+        bint operator==(DownslopeNeighborIterator)
+        bint operator!=(DownslopeNeighborIterator)
+
+    cdef cppclass DownslopeNeighbors:
+        DownslopeNeighbors()
+        DownslopeNeighbors(Pixel)
+        DownslopeNeighborIterator begin()
+        DownslopeNeighborIterator end()
 
     bint is_close(double, double)
 
