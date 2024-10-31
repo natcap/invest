@@ -409,12 +409,10 @@ struct NeighborIterator {
 
     Pixel pixel;
     pointer m_ptr;
-    NeighborTuple currentVal;
     int i = 0;
 
     NeighborIterator() {}
     NeighborIterator(NeighborTuple* n) {
-        currentVal = *n;
         m_ptr = n;
     }
     NeighborIterator(Pixel pixel) : pixel(pixel) {
@@ -440,15 +438,13 @@ struct NeighborIterator {
     virtual void next() {
         long xj, yj, flow;
         if (i == 8) {
-            currentVal = endVal;
             m_ptr = &endVal;
             return;
         }
         xj = pixel.x + COL_OFFSETS[i];
         yj = pixel.y + ROW_OFFSETS[i];
         flow = (pixel.val >> (i * 4)) & 0xF;
-        currentVal = NeighborTuple(i, xj, yj, flow);
-        m_ptr = &currentVal;
+        m_ptr = new NeighborTuple(i, xj, yj, flow);
         i++;
     }
 };
@@ -482,13 +478,11 @@ public:
     using reference         = NeighborTuple&;  // or also value_type&
 
     Pixel pixel;
-    pointer m_ptr;
-    NeighborTuple currentVal;
+    pointer m_ptr = nullptr;
     int i = 0;
 
     DownslopeNeighborIterator() {}
     DownslopeNeighborIterator(NeighborTuple* n) {
-        currentVal = *n;
         m_ptr = n;
     }
     DownslopeNeighborIterator(Pixel p) {
@@ -514,8 +508,11 @@ public:
 
     void next() {
         long xj, yj, flow;
+        std::cout << "next " << i << std::endl;
+        delete m_ptr;
+        m_ptr = nullptr;
+        std::cout << "deleted" << std::endl;
         if (i == 8) {
-            currentVal = endVal;
             m_ptr = &endVal;
             return;
         }
@@ -529,8 +526,7 @@ public:
         }
         flow = (pixel.val >> (i * 4)) & 0xF;
         if (flow) {
-            currentVal = NeighborTuple(i, xj, yj, flow);
-            m_ptr = &currentVal;
+            m_ptr = new NeighborTuple(i, xj, yj, flow);
             i++;
             return;
         } else {
@@ -550,13 +546,11 @@ public:
 
     Pixel pixel;
     pointer m_ptr;
-    NeighborTuple currentVal;
     int i = 0;
 
     DownslopeNeighborNoSkipIterator() {}
     DownslopeNeighborNoSkipIterator(NeighborTuple* n) {
         std::cout << "initialize iterator" << std::endl;
-        // currentVal = *n;
         m_ptr = n;
     }
     DownslopeNeighborNoSkipIterator(Pixel p) {
@@ -583,8 +577,9 @@ public:
 
     void next() {
         long xj, yj, flow;
+        delete m_ptr;
+        m_ptr = nullptr;
         if (i == 8) {
-            currentVal = endVal;
             m_ptr = &endVal;
             return;
         }
@@ -592,8 +587,7 @@ public:
         yj = pixel.y + ROW_OFFSETS[i];
         flow = (pixel.val >> (i * 4)) & 0xF;
         if (flow) {
-            currentVal = NeighborTuple(i, xj, yj, flow);
-            m_ptr = &currentVal;
+            m_ptr = new NeighborTuple(i, xj, yj, flow);
             i++;
             return;
         } else {
