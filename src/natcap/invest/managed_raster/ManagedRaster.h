@@ -467,20 +467,8 @@ public:
     }
 };
 
-class DownslopeNeighborIterator {
+class DownslopeNeighborIterator: public NeighborIterator {
 public:
-    // using NeighborIterator::operator++;
-
-    using iterator_category = std::forward_iterator_tag;
-    using difference_type   = std::ptrdiff_t;
-    using value_type        = NeighborTuple;
-    using pointer           = NeighborTuple*;  // or also value_type*
-    using reference         = NeighborTuple&;  // or also value_type&
-
-    Pixel pixel;
-    pointer m_ptr = nullptr;
-    int i = 0;
-
     DownslopeNeighborIterator() {}
     DownslopeNeighborIterator(NeighborTuple* n) {
         m_ptr = n;
@@ -536,18 +524,8 @@ public:
     }
 };
 
-class DownslopeNeighborNoSkipIterator {
+class DownslopeNeighborNoSkipIterator: public NeighborIterator {
 public:
-    using iterator_category = std::forward_iterator_tag;
-    using difference_type   = std::ptrdiff_t;
-    using value_type        = NeighborTuple;
-    using pointer           = NeighborTuple*;  // or also value_type*
-    using reference         = NeighborTuple&;  // or also value_type&
-
-    Pixel pixel;
-    pointer m_ptr = nullptr;
-    int i = 0;
-
     DownslopeNeighborNoSkipIterator() {}
     DownslopeNeighborNoSkipIterator(NeighborTuple* n) {
         std::cout << "initialize iterator" << std::endl;
@@ -597,20 +575,8 @@ public:
     }
 };
 
-class UpslopeNeighborIterator {
+class UpslopeNeighborIterator: public NeighborIterator {
 public:
-    // using NeighborIterator::operator++;
-
-    using iterator_category = std::forward_iterator_tag;
-    using difference_type   = std::ptrdiff_t;
-    using value_type        = NeighborTuple;
-    using pointer           = NeighborTuple*;  // or also value_type*
-    using reference         = NeighborTuple&;  // or also value_type&
-
-    Pixel pixel;
-    pointer m_ptr = nullptr;
-    int i = 0;
-
     UpslopeNeighborIterator() {}
     UpslopeNeighborIterator(NeighborTuple* n) {
         m_ptr = n;
@@ -672,20 +638,8 @@ public:
     }
 };
 
-class UpslopeNeighborNoDivideIterator {
+class UpslopeNeighborNoDivideIterator: public NeighborIterator {
 public:
-    // using NeighborIterator::operator++;
-
-    using iterator_category = std::forward_iterator_tag;
-    using difference_type   = std::ptrdiff_t;
-    using value_type        = NeighborTuple;
-    using pointer           = NeighborTuple*;  // or also value_type*
-    using reference         = NeighborTuple&;  // or also value_type&
-
-    Pixel pixel;
-    pointer m_ptr = nullptr;
-    int i = 0;
-
     UpslopeNeighborNoDivideIterator() {}
     UpslopeNeighborNoDivideIterator(NeighborTuple* n) {
         m_ptr = n;
