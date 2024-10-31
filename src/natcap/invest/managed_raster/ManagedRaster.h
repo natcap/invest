@@ -499,10 +499,10 @@ public:
     // Postfix increment
     DownslopeNeighborIterator operator++(int) { DownslopeNeighborIterator tmp = *this; ++(*this); return tmp; }
 
-    friend bool operator== (const DownslopeNeighborIterator a, const DownslopeNeighborIterator b) {
+    friend bool operator== (const DownslopeNeighborIterator& a, const DownslopeNeighborIterator& b) {
         return a.m_ptr == b.m_ptr;
     };
-    friend bool operator!= (const DownslopeNeighborIterator a, const DownslopeNeighborIterator b) {
+    friend bool operator!= (const DownslopeNeighborIterator& a, const DownslopeNeighborIterator& b) {
         return a.m_ptr != b.m_ptr;
     };
 
@@ -567,10 +567,10 @@ public:
     // Postfix increment
     DownslopeNeighborNoSkipIterator operator++(int) { DownslopeNeighborNoSkipIterator tmp = *this; ++(*this); return tmp; }
 
-    friend bool operator== (const DownslopeNeighborNoSkipIterator a, const DownslopeNeighborNoSkipIterator b) {
+    friend bool operator== (const DownslopeNeighborNoSkipIterator& a, const DownslopeNeighborNoSkipIterator& b) {
         return a.m_ptr == b.m_ptr;
     };
-    friend bool operator!= (const DownslopeNeighborNoSkipIterator a, const DownslopeNeighborNoSkipIterator b) {
+    friend bool operator!= (const DownslopeNeighborNoSkipIterator& a, const DownslopeNeighborNoSkipIterator& b) {
         std::cout << "inequality" << std::endl;
         return a.m_ptr != b.m_ptr;
     };
@@ -629,10 +629,10 @@ public:
     // Postfix increment
     UpslopeNeighborIterator operator++(int) { UpslopeNeighborIterator tmp = *this; ++(*this); return tmp; }
 
-    friend bool operator== (const UpslopeNeighborIterator a, const UpslopeNeighborIterator b) {
+    friend bool operator== (const UpslopeNeighborIterator& a, const UpslopeNeighborIterator& b) {
         return a.m_ptr == b.m_ptr;
     };
-    friend bool operator!= (const UpslopeNeighborIterator a, const UpslopeNeighborIterator b) {
+    friend bool operator!= (const UpslopeNeighborIterator& a, const UpslopeNeighborIterator& b) {
         return a.m_ptr != b.m_ptr;
     };
 
@@ -704,10 +704,10 @@ public:
     // Postfix increment
     UpslopeNeighborNoDivideIterator operator++(int) { UpslopeNeighborNoDivideIterator tmp = *this; ++(*this); return tmp; }
 
-    friend bool operator== (const UpslopeNeighborNoDivideIterator a, const UpslopeNeighborNoDivideIterator b) {
+    friend bool operator== (const UpslopeNeighborNoDivideIterator& a, const UpslopeNeighborNoDivideIterator& b) {
         return a.m_ptr == b.m_ptr;
     };
-    friend bool operator!= (const UpslopeNeighborNoDivideIterator a, const UpslopeNeighborNoDivideIterator b) {
+    friend bool operator!= (const UpslopeNeighborNoDivideIterator& a, const UpslopeNeighborNoDivideIterator& b) {
         return a.m_ptr != b.m_ptr;
     };
 
