@@ -576,6 +576,7 @@ public:
         return a.m_ptr == b.m_ptr;
     };
     friend bool operator!= (const DownslopeNeighborNoSkipIterator a, const DownslopeNeighborNoSkipIterator b) {
+        std::cout << "inequality" << std::endl;
         return a.m_ptr != b.m_ptr;
     };
 

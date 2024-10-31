@@ -22,6 +22,8 @@ from ..managed_raster.managed_raster cimport INFLOW_OFFSETS
 from ..managed_raster.managed_raster cimport COL_OFFSETS
 from ..managed_raster.managed_raster cimport ROW_OFFSETS
 
+from cython.operator import dereference
+
 cdef extern from "time.h" nogil:
     ctypedef int time_t
     time_t time(time_t*)
@@ -118,6 +120,16 @@ def ndr_eff_calculation(
     cdef int neighbor_outflow_dir, neighbor_outflow_dir_mask, neighbor_process_flow_dir
     cdef int outflow_dirs, dir_mask
     cdef NeighborTuple neighbor
+
+    dn_neighbors = DownslopeNeighborsNoSkip(
+                    Pixel(mfd_flow_direction_raster, 158, 142))
+    f = dereference(dn_neighbors.begin())
+    print('f', f.direction)
+    g = dereference(dn_neighbors.end())
+    print('f2', f.direction)
+    print('g', g.direction)
+    print(f != g)
+    print('f3', f.direction)
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
