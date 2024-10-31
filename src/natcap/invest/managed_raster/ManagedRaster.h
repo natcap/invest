@@ -408,7 +408,7 @@ struct NeighborIterator {
     using reference         = NeighborTuple&;  // or also value_type&
 
     Pixel pixel;
-    pointer m_ptr;
+    pointer m_ptr = nullptr;
     int i = 0;
 
     NeighborIterator() {}
@@ -608,13 +608,11 @@ public:
     using reference         = NeighborTuple&;  // or also value_type&
 
     Pixel pixel;
-    pointer m_ptr;
-    NeighborTuple currentVal;
+    pointer m_ptr = nullptr;
     int i = 0;
 
     UpslopeNeighborIterator() {}
     UpslopeNeighborIterator(NeighborTuple* n) {
-        currentVal = *n;
         m_ptr = n;
     }
     UpslopeNeighborIterator(Pixel p) {
@@ -643,8 +641,9 @@ public:
         int flow_dir_j;
         int flow_ji;
         long flow_dir_j_sum;
+        delete m_ptr;
+        m_ptr = nullptr;
         if (i == 8) {
-            currentVal = endVal;
             m_ptr = &endVal;
             return;
         }
@@ -663,8 +662,7 @@ public:
             for (int idx = 0; idx < 8; idx++) {
                 flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF;
             }
-            currentVal = NeighborTuple(i, xj, yj, static_cast<float>(flow_ji) / static_cast<float>(flow_dir_j_sum));
-            m_ptr = &currentVal;
+            m_ptr = new NeighborTuple(i, xj, yj, static_cast<float>(flow_ji) / static_cast<float>(flow_dir_j_sum));
             i++;
             return;
         } else {
@@ -685,13 +683,11 @@ public:
     using reference         = NeighborTuple&;  // or also value_type&
 
     Pixel pixel;
-    pointer m_ptr;
-    NeighborTuple currentVal;
+    pointer m_ptr = nullptr;
     int i = 0;
 
     UpslopeNeighborNoDivideIterator() {}
     UpslopeNeighborNoDivideIterator(NeighborTuple* n) {
-        currentVal = *n;
         m_ptr = n;
     }
     UpslopeNeighborNoDivideIterator(Pixel p) {
@@ -720,8 +716,9 @@ public:
         int flow_dir_j;
         int flow_ji;
         long flow_dir_j_sum;
+        delete m_ptr;
+        m_ptr = nullptr;
         if (i == 8) {
-            currentVal = endVal;
             m_ptr = &endVal;
             return;
         }
@@ -740,8 +737,7 @@ public:
             for (int idx = 0; idx < 8; idx++) {
                 flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF;
             }
-            currentVal = NeighborTuple(i, xj, yj, flow_ji);
-            m_ptr = &currentVal;
+            m_ptr = new NeighborTuple(i, xj, yj, flow_ji);
             i++;
             return;
         } else {

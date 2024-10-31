@@ -123,9 +123,6 @@ jobs:
           ls -la dist
           pip install $(find dist -name "natcap.invest*.whl")
 
-      - name: cat generated cpp
-        run: cat src/natcap/invest/ndr/ndr_core.cpp
-
       - name: Run model tests
         run: make test
 
