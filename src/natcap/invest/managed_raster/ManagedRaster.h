@@ -555,7 +555,8 @@ public:
 
     DownslopeNeighborNoSkipIterator() {}
     DownslopeNeighborNoSkipIterator(NeighborTuple* n) {
-        currentVal = *n;
+        std::cout << "initialize iterator" << std::endl;
+        // currentVal = *n;
         m_ptr = n;
     }
     DownslopeNeighborNoSkipIterator(Pixel p) {
@@ -767,7 +768,7 @@ class DownslopeNeighborsNoSkip: public Neighbors {
 public:
     using Neighbors::Neighbors;
     DownslopeNeighborNoSkipIterator begin() { return DownslopeNeighborNoSkipIterator(pixel); }
-    DownslopeNeighborNoSkipIterator end() { return DownslopeNeighborNoSkipIterator(&endVal); }
+    DownslopeNeighborNoSkipIterator end() { std::cout << "end" << std::endl; return DownslopeNeighborNoSkipIterator(&endVal); }
 };
 
 class UpslopeNeighbors: public Neighbors {
