@@ -123,13 +123,13 @@ def ndr_eff_calculation(
 
     dn_neighbors = DownslopeNeighborsNoSkip(
                     Pixel(mfd_flow_direction_raster, 158, 142))
-    f = dereference(dn_neighbors.begin())
-    print('f', f.direction)
-    g = dereference(dn_neighbors.end())
-    print('f2', f.direction)
-    print('g', g.direction)
+    f = dn_neighbors.begin()
+    print('f', dereference(f).direction)
+    g = dn_neighbors.end()
+    print('f2', dereference(f).direction)
+    print('g', dereference(g).direction)
     print(f != g)
-    print('f3', f.direction)
+    print('f3', dereference(f).direction)
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
