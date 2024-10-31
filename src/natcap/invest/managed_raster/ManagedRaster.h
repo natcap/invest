@@ -545,7 +545,7 @@ public:
     using reference         = NeighborTuple&;  // or also value_type&
 
     Pixel pixel;
-    pointer m_ptr;
+    pointer m_ptr = nullptr;
     int i = 0;
 
     DownslopeNeighborNoSkipIterator() {}
