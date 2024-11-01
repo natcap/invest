@@ -41,6 +41,7 @@ export default class App extends React.Component {
       investList: null,
       recentJobs: [],
       showDownloadModal: false,
+      isNewVersion: false,
       downloadedNofN: null,
     };
     this.switchTabs = this.switchTabs.bind(this);
@@ -65,6 +66,7 @@ export default class App extends React.Component {
           .includes(job.modelRunName)
       )),
       showDownloadModal: this.props.isFirstRun,
+      isNewVersion: this.props.isNewVersion,
     });
     await i18n.changeLanguage(window.Workbench.LANGUAGE);
     ipcRenderer.on('download-status', (downloadedNofN) => {
@@ -183,6 +185,7 @@ export default class App extends React.Component {
       openTabIDs,
       activeTab,
       showDownloadModal,
+      isNewVersion,
       downloadedNofN,
     } = this.state;
 
@@ -291,7 +294,7 @@ export default class App extends React.Component {
                     eventKey="home"
                   >
                     <MdHome />
-                    InVEST
+                    InVEST {isNewVersion && ' (new version!)'}
                   </Nav.Link>
                 </Navbar.Brand>
                 <AiOutlineTrademarkCircle className="rtm" />
@@ -357,6 +360,7 @@ export default class App extends React.Component {
 
 App.propTypes = {
   isFirstRun: PropTypes.bool,
+  isNewVersion: PropTypes.bool,
   nCPU: PropTypes.number,
 };
 
@@ -364,5 +368,6 @@ App.propTypes = {
 // can be undefined for unrelated tests.
 App.defaultProps = {
   isFirstRun: false,
+  isNewVersion: false,
   nCPU: 1,
 };

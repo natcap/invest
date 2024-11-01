@@ -12,6 +12,7 @@ export const ipcMainChannels = {
   INVEST_RUN: 'invest-run',
   INVEST_VERSION: 'invest-version',
   IS_FIRST_RUN: 'is-first-run',
+  IS_NEW_VERSION: 'is-new-version',
   LOGGER: 'logger',
   OPEN_EXTERNAL_URL: 'open-external-url',
   OPEN_PATH: 'open-path',

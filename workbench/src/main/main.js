@@ -38,6 +38,7 @@ import BASE_URL from './baseUrl';
 import { getLogger } from './logger';
 import i18n from './i18n/i18n';
 import pkg from '../../package.json';
+import { setupIsNewVersion } from './setupIsNewVersion';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -87,6 +88,7 @@ export const createWindow = async () => {
   setupDialogs();
   setupCheckFilePermissions();
   setupCheckFirstRun();
+  setupIsNewVersion();
   setupCheckStorageToken();
   setupSettingsHandlers();
   setupGetElectronPaths();

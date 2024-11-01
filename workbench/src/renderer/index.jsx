@@ -9,6 +9,8 @@ import { ipcMainChannels } from '../main/ipcMainChannels';
 const { ipcRenderer } = window.Workbench.electron;
 
 const isFirstRun = await ipcRenderer.invoke(ipcMainChannels.IS_FIRST_RUN);
+const isNewVersion = await ipcRenderer.invoke(ipcMainChannels.IS_NEW_VERSION);
+console.log({isNewVersion});
 const nCPU = await ipcRenderer.invoke(ipcMainChannels.GET_N_CPUS);
 
 const root = createRoot(document.getElementById('App'));
@@ -16,6 +18,7 @@ root.render(
   <ErrorBoundary>
     <App
       isFirstRun={isFirstRun}
+      isNewVersion={isNewVersion}
       nCPU={nCPU}
     />
   </ErrorBoundary>
