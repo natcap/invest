@@ -478,9 +478,6 @@ public:
         next();
     }
 
-    reference operator*() const { return *m_ptr; }
-    pointer operator->() { return m_ptr; }
-
     // Prefix increment
     DownslopeNeighborIterator& operator++() { next(); return *this; }
 
@@ -536,9 +533,6 @@ public:
         next();
     }
 
-    reference operator*() const { return *m_ptr; }
-    pointer operator->() { return m_ptr; }
-
     // Prefix increment
     DownslopeNeighborNoSkipIterator& operator++() { next(); return *this; }
 
@@ -585,9 +579,6 @@ public:
         pixel = p;
         next();
     }
-
-    reference operator*() const { return *m_ptr; }
-    pointer operator->() { return m_ptr; }
 
     // Prefix increment
     UpslopeNeighborIterator& operator++() { next(); return *this; }
@@ -648,9 +639,6 @@ public:
         pixel = p;
         next();
     }
-
-    reference operator*() const { return *m_ptr; }
-    pointer operator->() { return m_ptr; }
 
     // Prefix increment
     UpslopeNeighborNoDivideIterator& operator++() { next(); return *this; }
