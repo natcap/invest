@@ -449,30 +449,10 @@ struct NeighborIterator {
     }
 };
 
-
-class Neighbors {
-public:
-    Pixel pixel;
-
-    Neighbors() {}
-
-    Neighbors(Pixel pixel)
-        : pixel(pixel) {}
-
-    NeighborIterator begin() {
-        return NeighborIterator(pixel);
-    }
-    NeighborIterator end() {
-        return NeighborIterator(&endVal);
-    }
-};
-
 class DownslopeNeighborIterator: public NeighborIterator {
 public:
-    DownslopeNeighborIterator() {}
-    DownslopeNeighborIterator(NeighborTuple* n) {
-        m_ptr = n;
-    }
+    DownslopeNeighborIterator(): NeighborIterator() {}
+    DownslopeNeighborIterator(NeighborTuple* n): NeighborIterator(n) {}
     DownslopeNeighborIterator(Pixel p) {
         pixel = p;
         next();
@@ -480,10 +460,8 @@ public:
 
     void next() {
         long xj, yj, flow;
-        std::cout << "next " << i << std::endl;
         delete m_ptr;
         m_ptr = nullptr;
-        std::cout << "deleted" << std::endl;
         if (i == 8) {
             m_ptr = &endVal;
             return;
@@ -510,11 +488,8 @@ public:
 
 class DownslopeNeighborNoSkipIterator: public NeighborIterator {
 public:
-    DownslopeNeighborNoSkipIterator() {}
-    DownslopeNeighborNoSkipIterator(NeighborTuple* n) {
-        std::cout << "initialize iterator" << std::endl;
-        m_ptr = n;
-    }
+    DownslopeNeighborNoSkipIterator(): NeighborIterator() {}
+    DownslopeNeighborNoSkipIterator(NeighborTuple* n): NeighborIterator(n) {}
     DownslopeNeighborNoSkipIterator(Pixel p) {
         pixel = p;
         next();
@@ -544,10 +519,8 @@ public:
 
 class UpslopeNeighborIterator: public NeighborIterator {
 public:
-    UpslopeNeighborIterator() {}
-    UpslopeNeighborIterator(NeighborTuple* n) {
-        m_ptr = n;
-    }
+    UpslopeNeighborIterator(): NeighborIterator() {}
+    UpslopeNeighborIterator(NeighborTuple* n): NeighborIterator(n) {}
     UpslopeNeighborIterator(Pixel p) {
         pixel = p;
         next();
@@ -591,10 +564,8 @@ public:
 
 class UpslopeNeighborNoDivideIterator: public NeighborIterator {
 public:
-    UpslopeNeighborNoDivideIterator() {}
-    UpslopeNeighborNoDivideIterator(NeighborTuple* n) {
-        m_ptr = n;
-    }
+    UpslopeNeighborNoDivideIterator(): NeighborIterator() {}
+    UpslopeNeighborNoDivideIterator(NeighborTuple* n): NeighborIterator(n) {}
     UpslopeNeighborNoDivideIterator(Pixel p) {
         pixel = p;
         next();
@@ -636,6 +607,15 @@ public:
     }
 };
 
+class Neighbors {
+public:
+    Pixel pixel;
+    Neighbors() {}
+    Neighbors(Pixel pixel): pixel(pixel) {}
+    NeighborIterator begin() { return NeighborIterator(pixel); }
+    NeighborIterator end() { return NeighborIterator(&endVal); }
+};
+
 class DownslopeNeighbors: public Neighbors {
 public:
     using Neighbors::Neighbors;
@@ -647,7 +627,7 @@ class DownslopeNeighborsNoSkip: public Neighbors {
 public:
     using Neighbors::Neighbors;
     DownslopeNeighborNoSkipIterator begin() { return DownslopeNeighborNoSkipIterator(pixel); }
-    DownslopeNeighborNoSkipIterator end() { std::cout << "end" << std::endl; return DownslopeNeighborNoSkipIterator(&endVal); }
+    DownslopeNeighborNoSkipIterator end() { return DownslopeNeighborNoSkipIterator(&endVal); }
 };
 
 class UpslopeNeighbors: public Neighbors {
