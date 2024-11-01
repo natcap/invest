@@ -1,11 +1,10 @@
 """InVEST specific code utils."""
 import codecs
 import contextlib
-import importlib
-import inspect
 import logging
 import os
 import platform
+import pprint
 import re
 import shutil
 import tempfile
@@ -791,12 +790,20 @@ def matches_format_string(test_string, format_string):
     return False
 
 
-def write_metadata_file(datasource_path, spec):
-    print(datasource_path)
+def write_metadata_file(datasource_path, spec, lineage_statement):
+    """Write a metadata sidecar file for an invest output dataset.
+
+    Args:
+        datasource_path (str) - filepath to the invest output
+        spec (dict) -  the invest specification for ``datasource_path``
+        lineage_statement (str) - string to describe origin of the dataset.
+
+    Returns:
+        None
+
+    """
     resource = geometamaker.describe(datasource_path)
-    # mc.set_contact(**CONTACT)
-    # mc.set_license(**LICENSE)
-    # mc.set_lineage(LINEAGE_STATEMENT)
+    resource.set_lineage(lineage_statement)
 
     if 'about' in spec:
         resource.set_description(spec['about'])
@@ -816,6 +823,8 @@ def write_metadata_file(datasource_path, spec):
                 resource.set_field_description(
                     key, description=about, units=units)
             except KeyError as error:
+                # fields that are in the spec but missing
+                # from model results because they are conditional.
                 LOGGER.warning(error)
     if 'bands' in spec:
         for idx, value in spec['bands'].items():
@@ -825,26 +834,45 @@ def write_metadata_file(datasource_path, spec):
                 units = ''
             resource.set_band_description(idx, units=units)
 
-    # resource.validate()
     resource.write()
 
 
-def generate_metadata(output_spec, workspace, file_suffix):
-    for filename, data in output_spec.items():
-        # print(filename)
-        if 'type' in data and data['type'] == 'directory':
-            if 'taskgraph.db' in data['contents']:
-                continue
-            print(data['contents'])
-            generate_metadata(
-                data['contents'], os.path.join(workspace, filename), file_suffix)
-        else:
-            pre, post = os.path.splitext(filename)
-            full_path = os.path.join(workspace, pre+file_suffix+post)
-            print(full_path)
-            if os.path.exists(full_path):
-                try:
-                    write_metadata_file(full_path, data)
-                except ValueError as error:
-                    # Some unsupported file formats, e.g. html
-                    LOGGER.warning(error)
+def generate_metadata(model_module, args_dict):
+    """Create metadata for all items in an invest model output workspace.
+
+    Args:
+        model_module (object) - the natcap.invest module containing
+            the MODEL_SPEC attribute
+        args_dict (dict) - the arguments dictionary passed to the
+            model's ``execute`` function.
+
+    Returns:
+        None
+
+    """
+    file_suffix = make_suffix_string(args_dict, 'results_suffix')
+    formatted_args = pprint.pformat(args_dict)
+    lineage_statement = (
+        f'Created by {model_module.__name__}.execute(\n{formatted_args})\n'
+        f'Version {natcap.invest.__version__}')
+
+    def _walk_spec(output_spec, workspace):
+        for filename, spec_data in output_spec.items():
+            if 'type' in spec_data and spec_data['type'] == 'directory':
+                if 'taskgraph.db' in spec_data['contents']:
+                    continue
+                _walk_spec(
+                    spec_data['contents'],
+                    os.path.join(workspace, filename))
+            else:
+                pre, post = os.path.splitext(filename)
+                full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
+                if os.path.exists(full_path):
+                    try:
+                        write_metadata_file(
+                            full_path, spec_data, lineage_statement)
+                    except ValueError as error:
+                        # Some unsupported file formats, e.g. html
+                        LOGGER.warning(error)
+
+    _walk_spec(model_module.MODEL_SPEC['outputs'], args_dict['workspace_dir'])

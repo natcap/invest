@@ -468,12 +468,8 @@ def main(user_args=None):
             # written to stdout if this exception is uncaught.  This is by
             # design.
             model_module.execute(parsed_datastack.args)
-            suffix = utils.make_suffix_string(
-                parsed_datastack.args, 'results_suffix')
-            utils.generate_metadata(
-                model_module.MODEL_SPEC['outputs'],
-                parsed_datastack.args['workspace_dir'],
-                suffix)
+            LOGGER.info('Generating metadata for results')
+            utils.generate_metadata(model_module, parsed_datastack.args)
 
     if args.subcommand == 'serve':
         ui_server.app.run(port=args.port)
