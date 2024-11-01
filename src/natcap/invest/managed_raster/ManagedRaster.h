@@ -478,12 +478,6 @@ public:
         next();
     }
 
-    // Prefix increment
-    DownslopeNeighborIterator& operator++() { next(); return *this; }
-
-    // Postfix increment
-    DownslopeNeighborIterator operator++(int) { DownslopeNeighborIterator tmp = *this; ++(*this); return tmp; }
-
     void next() {
         long xj, yj, flow;
         std::cout << "next " << i << std::endl;
@@ -526,12 +520,6 @@ public:
         next();
     }
 
-    // Prefix increment
-    DownslopeNeighborNoSkipIterator& operator++() { next(); return *this; }
-
-    // Postfix increment
-    DownslopeNeighborNoSkipIterator operator++(int) { DownslopeNeighborNoSkipIterator tmp = *this; ++(*this); return tmp; }
-
     void next() {
         long xj, yj, flow;
         delete m_ptr;
@@ -564,12 +552,6 @@ public:
         pixel = p;
         next();
     }
-
-    // Prefix increment
-    UpslopeNeighborIterator& operator++() { next(); return *this; }
-
-    // Postfix increment
-    UpslopeNeighborIterator operator++(int) { UpslopeNeighborIterator tmp = *this; ++(*this); return tmp; }
 
     void next() {
         long xj, yj;
@@ -617,12 +599,6 @@ public:
         pixel = p;
         next();
     }
-
-    // Prefix increment
-    UpslopeNeighborNoDivideIterator& operator++() { next(); return *this; }
-
-    // Postfix increment
-    UpslopeNeighborNoDivideIterator operator++(int) { UpslopeNeighborNoDivideIterator tmp = *this; ++(*this); return tmp; }
 
     void next() {
         long xj, yj;
