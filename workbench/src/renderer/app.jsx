@@ -24,6 +24,7 @@ import DownloadProgressBar from './components/DownloadProgressBar';
 import { getInvestModelNames } from './server_requests';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
+import Changelog from './components/Changelog';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -41,7 +42,7 @@ export default class App extends React.Component {
       investList: null,
       recentJobs: [],
       showDownloadModal: false,
-      isNewVersion: false,
+      showChangelog: false,
       downloadedNofN: null,
     };
     this.switchTabs = this.switchTabs.bind(this);
@@ -66,7 +67,7 @@ export default class App extends React.Component {
           .includes(job.modelRunName)
       )),
       showDownloadModal: this.props.isFirstRun,
-      isNewVersion: this.props.isNewVersion,
+      showChangelog: this.props.isNewVersion,
     });
     await i18n.changeLanguage(window.Workbench.LANGUAGE);
     ipcRenderer.on('download-status', (downloadedNofN) => {
@@ -93,6 +94,12 @@ export default class App extends React.Component {
   showDownloadModal(shouldShow) {
     this.setState({
       showDownloadModal: shouldShow,
+    });
+  }
+
+  closeChangelogModal() {
+    this.setState({
+      showChangelog: false,
     });
   }
 
@@ -185,7 +192,7 @@ export default class App extends React.Component {
       openTabIDs,
       activeTab,
       showDownloadModal,
-      isNewVersion,
+      showChangelog,
       downloadedNofN,
     } = this.state;
 
@@ -280,6 +287,10 @@ export default class App extends React.Component {
           show={showDownloadModal}
           closeModal={() => this.showDownloadModal(false)}
         />
+        <Changelog
+          show={showChangelog}
+          close={() => this.closeChangelogModal()}
+        />
         <TabContainer activeKey={activeTab}>
           <Navbar
             onDragOver={dragOverHandlerNone}
@@ -294,7 +305,7 @@ export default class App extends React.Component {
                     eventKey="home"
                   >
                     <MdHome />
-                    InVEST {isNewVersion && ' (new version!)'}
+                    InVEST
                   </Nav.Link>
                 </Navbar.Brand>
                 <AiOutlineTrademarkCircle className="rtm" />
@@ -360,7 +371,7 @@ export default class App extends React.Component {
 
 App.propTypes = {
   isFirstRun: PropTypes.bool,
-  isNewVersion: PropTypes.bool,
+  showChangelog: PropTypes.bool,
   nCPU: PropTypes.number,
 };
 
@@ -368,6 +379,6 @@ App.propTypes = {
 // can be undefined for unrelated tests.
 App.defaultProps = {
   isFirstRun: false,
-  isNewVersion: false,
+  showChangelog: false,
   nCPU: 1,
 };
