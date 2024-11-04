@@ -469,7 +469,13 @@ def main(user_args=None):
             # design.
             model_module.execute(parsed_datastack.args)
             LOGGER.info('Generating metadata for results')
-            utils.generate_metadata(model_module, parsed_datastack.args)
+            try:
+                # TODO: if there's an exception here, do we really want to
+                # indicate a model run failure? Maybe not
+                spec_utils.generate_metadata(model_module, parsed_datastack.args)
+            except Exception as exc:
+                LOGGER.warning(
+                    'Something went wrong while generating metadata', exc_info=exc)
 
     if args.subcommand == 'serve':
         ui_server.app.run(port=args.port)
