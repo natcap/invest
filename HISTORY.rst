@@ -44,6 +44,10 @@ Unreleased Changes
       ``pygeoprocessing.get_raster_info`` and
       ``pygeoprocessing.get_vector_info``.
       https://github.com/natcap/invest/issues/1645
+    * The scripting page of the InVEST API documentation has been updated to
+      reflect changes in how InVEST is installed on modern systems, and also to
+      include images of the InVEST workbench instead of just broken links.
+      https://github.com/natcap/invest/issues/1660
 * Coastal Vulnerability
     * Fixed a regression where an AOI with multiple features could raise a
       TypeError after intersecting with the landmass polygon.
