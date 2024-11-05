@@ -21,18 +21,17 @@ _REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
 # older system.  Tested and it works on Mac OSX Catalina.
 compiler_and_linker_args = []
 include_dirs = [numpy.get_include(), 'src/natcap/invest/managed_raster']
-if platform.system() == 'Darwin':
+if platform.system() == 'Windows':
+    compiler_args = ['/std:c++20']
+    library_dirs = [f'{os.environ["CONDA_PREFIX"]}/Library/lib']
+    include_dirs.append(f'{os.environ["CONDA_PREFIX"]}/Library/include')
+else:
     library_dirs = []
     compiler_args = []
     compiler_and_linker_args = ['-stdlib=libc++', '-std=c++20']
     library_dirs = [subprocess.run(
         ['gdal-config', '--libs'], capture_output=True, text=True
     ).stdout.split()[0][2:]]  # get the first argument which is the library path
-else:
-    compiler_args = ['/std:c++20']
-    library_dirs = [f'{os.environ["CONDA_PREFIX"]}/Library/lib']
-    include_dirs.append(f'{os.environ["CONDA_PREFIX"]}/Library/include')
-
 
 class build_py(_build_py):
     """Command to compile translation message catalogs before building."""
