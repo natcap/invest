@@ -630,7 +630,7 @@ def write_metadata_file(datasource_path, spec, lineage_statement):
             except KeyError as error:
                 # fields that are in the spec but missing
                 # from model results because they are conditional.
-                LOGGER.warning(error)
+                LOGGER.debug(error)
     if 'bands' in spec:
         for idx, value in spec['bands'].items():
             try:
