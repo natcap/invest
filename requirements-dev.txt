@@ -26,3 +26,4 @@ requests
 coverage
 xlwt
 build  # pip-only
+rst2html5
