@@ -369,20 +369,20 @@ jobs:
 
       - name: Download mamba installer for distribution (MacOS)
         if: matrix.os == 'macos-13'
-        run: curl -fsSLo Miniforge-pypy3-MacOSX-x86_64.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge-pypy3-MacOSX-x86_64.sh"
+        run: curl -fsSLo Miniforge3-MacOSX-x86_64.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-x86_64.sh"
 
       - name: Install mamba for MacOS
         if: matrix.os == 'macos-13'
-        run: bash Miniforge-pypy3-MacOSX-x86_64.sh -b -p dist/miniforge3
+        run: bash Miniforge3-MacOSX-x86_64.sh -b -p dist/miniforge3
 
       - name: Download mamba installer for distribution (Windows)
         if: matrix.os == 'windows-latest'
-        run: curl -fsSLo Miniforge-pypy3-Windows-x86_64.exe "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge-pypy3-Windows-x86_64.exe"
+        run: curl -fsSLo Miniforge3-Windows-x86_64.exe "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe"
 
       - name: Install mamba for Windows
         if: matrix.os == 'windows-latest'
         shell: cmd
-        run: Miniforge-pypy3-Windows-x86_64.exe /InstallationType=JustMe /RegisterPython=0 /S /D=%cd%\dist\miniforge3
+        run: Miniforge3-Windows-x86_64.exe /InstallationType=JustMe /RegisterPython=0 /S /D=%cd%\dist\miniforge3
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
