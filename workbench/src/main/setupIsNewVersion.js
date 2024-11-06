@@ -21,12 +21,6 @@ export const APP_VERSION_TOKEN = 'app-version-token.txt';
 export async function isNewVersion() {
   // Getting version from package.json is simplest because there is no need to
   // spawn an invest process simply to get the version of the installed binary.
-
-  // In production, pkg.version is overwritten by electron-builder-config.js.
-  // In dev, pkg.version is NOT overwritten. For consistency in dev mode,
-  // we should keep package.json in sync with the invest version,
-  // which _should_ be straightforward with this GHA:
-  // https://github.com/marketplace/actions/update-local-package-json-version-from-release-tag.
   const investVersion = pkg.version;
   const userDataPath = app.getPath('userData');
   const tokenPath = path.join(userDataPath, APP_VERSION_TOKEN);
