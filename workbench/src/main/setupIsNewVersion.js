@@ -21,20 +21,24 @@ export const APP_VERSION_TOKEN = 'app-version-token.txt';
 export async function isNewVersion() {
   // Getting version from package.json is simplest because there is no need to
   // spawn an invest process simply to get the version of the installed binary.
-  const investVersion = pkg.version;
+  const currentVersion = pkg.version;
   const userDataPath = app.getPath('userData');
   const tokenPath = path.join(userDataPath, APP_VERSION_TOKEN);
   try {
     if (fs.existsSync(tokenPath)) {
-      const tokenContents = fs.readFileSync(tokenPath, {encoding: 'utf8'});
-      if (tokenContents === investVersion) {
-        return false;
+      const tokenString = fs.readFileSync(tokenPath, {encoding: 'utf8'});
+      if (tokenString) {
+        const installedVersionList = tokenString.split(',');
+        if (installedVersionList.includes(currentVersion)) {
+          return false;
+        }
+        // If current version not found, add it
+        fs.writeFileSync(tokenPath, `${tokenString},${currentVersion}`);
+        return true;
       }
-      // If mismatch, overwrite with current version
-      fs.writeFileSync(tokenPath, investVersion);
     }
     // If file does not exist, create it
-    fs.writeFileSync(tokenPath, investVersion);
+    fs.writeFileSync(tokenPath, currentVersion);
   } catch (error) {
     logger.warn(`Unable to write app-version token: ${error}`);
   }
