@@ -50,9 +50,12 @@ export default function Changelog(props) {
             show={props.show && htmlContent !== ''}
             onHide={props.close}
             size="lg"
+            aria-labelledby="changelog-modal-title"
         >
             <Modal.Header>
-                <Modal.Title>{t('New in this version')}</Modal.Title>
+                <Modal.Title id="changelog-modal-title">
+                    {t('New in this version')}
+                </Modal.Title>
                 <Button
                     variant="secondary-outline"
                     onClick={props.close}
