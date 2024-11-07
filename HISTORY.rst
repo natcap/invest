@@ -61,6 +61,8 @@ Unreleased Changes
       (https://github.com/natcap/invest/issues/1609).
     * Improved error handling when a datastack cannot be saved with relative
       paths across drives (https://github.com/natcap/invest/issues/1608).
+    * The InVEST changelog now displays in the Workbench the first time a new
+      version is launched (https://github.com/natcap/invest/issues/1368).
 * Coastal Vulnerability
     * Fixed a regression where an AOI with multiple features could raise a
       TypeError after intersecting with the landmass polygon.
