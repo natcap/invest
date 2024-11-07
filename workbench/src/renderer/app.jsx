@@ -298,10 +298,13 @@ export default class App extends React.Component {
           show={showDownloadModal}
           closeModal={() => this.showDownloadModal(false)}
         />
-        <Changelog
-          show={showChangelog}
-          close={() => this.closeChangelogModal()}
-        />
+        {
+          showChangelog &&
+          <Changelog
+            show={showChangelog}
+            close={() => this.closeChangelogModal()}
+          />
+        }
         <TabContainer activeKey={activeTab}>
           <Navbar
             onDragOver={dragOverHandlerNone}
