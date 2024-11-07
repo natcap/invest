@@ -42,8 +42,9 @@ export default class App extends React.Component {
       investList: null,
       recentJobs: [],
       showDownloadModal: false,
-      showChangelog: false,
       downloadedNofN: null,
+      showChangelog: false,
+      changelogDismissed: false,
     };
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
@@ -67,7 +68,9 @@ export default class App extends React.Component {
           .includes(job.modelRunName)
       )),
       showDownloadModal: this.props.isFirstRun,
-      showChangelog: this.props.isNewVersion,
+      // Show changelog if this is a new version,
+      // but if it's the first run ever, wait until after download modal closes.
+      showChangelog: this.props.isNewVersion && !this.props.isFirstRun,
     });
     await i18n.changeLanguage(window.Workbench.LANGUAGE);
     ipcRenderer.on('download-status', (downloadedNofN) => {
@@ -95,11 +98,19 @@ export default class App extends React.Component {
     this.setState({
       showDownloadModal: shouldShow,
     });
+    // After close, show changelog if new version and app has just launched
+    // (i.e., show changelog only once, after the first time the download modal closes).
+    if (!shouldShow && this.props.isNewVersion && !this.state.changelogDismissed) {
+      this.setState({
+        showChangelog: true,
+      });
+    }
   }
 
   closeChangelogModal() {
     this.setState({
       showChangelog: false,
+      changelogDismissed: true,
     });
   }
 
