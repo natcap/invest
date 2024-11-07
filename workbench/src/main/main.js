@@ -39,6 +39,7 @@ import { getLogger } from './logger';
 import i18n from './i18n/i18n';
 import pkg from '../../package.json';
 import { setupIsNewVersion } from './setupIsNewVersion';
+import { setupBaseUrl } from './setupBaseUrl';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -96,6 +97,7 @@ export const createWindow = async () => {
   setupInvestLogReaderHandler();
   setupOpenExternalUrl();
   setupRendererLogger();
+  setupBaseUrl();
   await getFlaskIsReady();
 
   const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';
