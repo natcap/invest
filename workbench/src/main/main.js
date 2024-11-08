@@ -54,7 +54,7 @@ process.on('unhandledRejection', (err, promise) => {
 });
 
 if (!process.env.PORT) {
-  process.env.PORT = '5678';
+  process.env.PORT = '56789';
 }
 
 // Keep a global reference of the window object, if you don't, the window will
