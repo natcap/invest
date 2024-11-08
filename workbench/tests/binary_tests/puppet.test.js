@@ -253,11 +253,22 @@ test('Check local userguide links', async () => {
   page.on('error', (err) => {
     console.log(err);
   });
-  const downloadModal = await page.waitForSelector('.modal-dialog');
+
+  const downloadModal = await page.waitForSelector(
+    'aria/[name="Download InVEST sample data"][role="dialog"]'
+  );
   const downloadModalCancel = await downloadModal.waitForSelector(
     'aria/[name="Cancel"][role="button"]');
   await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
   await downloadModalCancel.click();
+
+  const changelogModal = await page.waitForSelector(
+    'aria/[name="New in this version"][role="dialog"]'
+  );
+  const changelogModalClose = await changelogModal.waitForSelector(
+    'aria/[name="Close modal"][role="button"]');
+  await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
+  await changelogModalClose.click();
 
   const investList = await page.waitForSelector('.invest-list-group');
   const modelButtons = await investList.$$('aria/[role="button"]');
