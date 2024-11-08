@@ -385,7 +385,7 @@ export default class App extends React.Component {
 
 App.propTypes = {
   isFirstRun: PropTypes.bool,
-  showChangelog: PropTypes.bool,
+  isNewVersion: PropTypes.bool,
   nCPU: PropTypes.number,
 };
 
@@ -393,6 +393,6 @@ App.propTypes = {
 // can be undefined for unrelated tests.
 App.defaultProps = {
   isFirstRun: false,
-  showChangelog: false,
+  isNewVersion: false,
   nCPU: 1,
 };
