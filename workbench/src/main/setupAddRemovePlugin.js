@@ -19,6 +19,10 @@ function spawnWithLogging(cmd, args, options) {
     cmdProcess.stdout.on('data', (data) => logger.info(data.toString()));
   }
   return new Promise((resolve, reject) => {
+    cmdProcess.on('error', (err) => {
+      logger.error(err);
+      reject(err);
+    });
     cmdProcess.on('close', (code) => {
       if (code === 0) {
         resolve(code);
