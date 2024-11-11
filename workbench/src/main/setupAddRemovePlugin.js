@@ -60,7 +60,7 @@ export function setupAddPlugin() {
             pyname: pluginPyName,
             type: 'plugin',
             source: pluginURL,
-            env: envPath,
+            env: `\"{envPath}\"`,
           }
         );
         logger.info('successfully added plugin');
