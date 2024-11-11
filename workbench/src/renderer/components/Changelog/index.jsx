@@ -45,6 +45,20 @@ export default function Changelog(props) {
     loadHtml();
   }, []);
 
+  // Once HTML content has loaded, set up links to open in browser
+  // (instead of in an Electron window).
+  useEffect(() => {
+    const openLinkInBrowser = (event) => {
+      event.preventDefault();
+      ipcRenderer.send(
+        ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
+      );
+    };
+    document.querySelectorAll('.link-external').forEach(link => {
+      link.addEventListener('click', openLinkInBrowser);
+    });
+  }, [htmlContent]);
+
   return (
     <Modal
       show={props.show && htmlContent !== ''}
