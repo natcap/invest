@@ -13,7 +13,7 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 function spawnWithLogging(cmd, args, options) {
   logger.info(cmd, args);
-  const cmdProcess = spawn(cmd, args, options);
+  const cmdProcess = spawn(cmd, args, { ...options, windowsHide: true });
   if (cmdProcess.stdout) {
     cmdProcess.stderr.on('data', (data) => logger.info(data.toString()));
     cmdProcess.stdout.on('data', (data) => logger.info(data.toString()));
@@ -46,13 +46,12 @@ export function setupAddPlugin() {
         const tmpPluginDir = fs.mkdtempSync(upath.join(tmpdir(), 'natcap-invest-'));
         await spawnWithLogging(
           'git',
-          ['clone', '--depth', '1', '--no-checkout', pluginURL, tmpPluginDir],
-          { windowsHide: true }
+          ['clone', '--depth', '1', '--no-checkout', pluginURL, tmpPluginDir]
         ).then(async () => {
           await spawnWithLogging(
             'git',
             ['checkout', 'HEAD', 'pyproject.toml'],
-            { cwd: tmpPluginDir, windowsHide: true }
+            { cwd: tmpPluginDir }
           );
         }).then(async () => {
           // Read in the plugin's pyproject.toml, then delete it
@@ -70,15 +69,13 @@ export function setupAddPlugin() {
           envName = `invest_plugin_${pluginID}`;
           await spawnWithLogging(
             mamba,
-            ['createe', '--yes', '--name', envName, '-c', 'conda-forge', '"python<3.12"', '"gdal<3.6"'],
-            { windowsHide: true }
+            ['create', '--yes', '--name', envName, '-c', 'conda-forge', '"python<3.12"', '"gdal<3.6"']
           );
           logger.info('created mamba env for plugin');
         }).then(async () => {
           await spawnWithLogging(
             mamba,
-            ['run', '--verbose', '--no-capture-output', '--name', envName, 'pip', 'install', `git+${pluginURL}`],
-            { windowsHide: true }
+            ['run', '--verbose', '--no-capture-output', '--name', envName, 'pip', 'install', `git+${pluginURL}`]
           );
           logger.info('installed plugin into its env');
         })
@@ -86,10 +83,8 @@ export function setupAddPlugin() {
             // Write plugin metadata to the workbench's config.json
             const envInfo = execSync(`${mamba} info --envs`, { windowsHide: true }).toString();
             logger.info(`env info:\n${envInfo}`);
-
             const regex = new RegExp(String.raw`^${envName} +(.+)$`, 'm');
             const envPath = envInfo.match(regex)[1];
-
             logger.info(`env path:\n${envPath}`);
             logger.info('writing plugin info to settings store');
             settingsStore.set(
@@ -114,16 +109,13 @@ export function setupAddPlugin() {
 export function setupRemovePlugin() {
   ipcMain.handle(
     ipcMainChannels.REMOVE_PLUGIN,
-    (e, pluginID) => {
+    async (e, pluginID) => {
       logger.info('removing plugin', pluginID);
       try {
         // Delete the plugin's conda env
         const env = settingsStore.get(`plugins.${pluginID}.env`);
         const mamba = settingsStore.get('mamba');
-        execSync(
-          `${mamba} remove --yes --prefix ${env} --all`,
-          { stdio: 'inherit' }
-        );
+        await spawnWithLogging(mamba, ['remove', '--yes', '--prefix', env, '--all']);
         // Delete the plugin's data from storage
         settingsStore.delete(`plugins.${pluginID}`);
         logger.info('successfully removed plugin');
