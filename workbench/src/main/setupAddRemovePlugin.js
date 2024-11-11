@@ -11,7 +11,7 @@ import { settingsStore } from './settingsStore';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
-function customSpawn(cmd, args, options) {
+function spawnWithLogging(cmd, args, options) {
   logger.info(cmd, args);
   const cmdProcess = spawn(cmd, args, options);
   if (cmdProcess.stdout) {
@@ -19,14 +19,20 @@ function customSpawn(cmd, args, options) {
     cmdProcess.stdout.on('data', (data) => logger.info(data.toString()));
   }
   return new Promise((resolve, reject) => {
-    cmdProcess.on('close', (code) => { resolve(code); });
+    cmdProcess.on('close', (code) => {
+      if (code === 0) {
+        resolve(code);
+      } else {
+        reject(code);
+      }
+    });
   });
 }
 
 export function setupAddPlugin() {
   ipcMain.handle(
     ipcMainChannels.ADD_PLUGIN,
-    (e, pluginURL) => {
+    async (e, pluginURL) => {
       logger.info('adding plugin at', pluginURL);
 
       const mamba = settingsStore.get('mamba');
@@ -38,12 +44,12 @@ export function setupAddPlugin() {
       try {
         // Create a temporary directory and check out the plugin's pyproject.toml
         const tmpPluginDir = fs.mkdtempSync(upath.join(tmpdir(), 'natcap-invest-'));
-        customSpawn(
+        await spawnWithLogging(
           'git',
           ['clone', '--depth', '1', '--no-checkout', pluginURL, tmpPluginDir],
           { windowsHide: true }
         ).then(async () => {
-          await customSpawn(
+          await spawnWithLogging(
             'git',
             ['checkout', 'HEAD', 'pyproject.toml'],
             { cwd: tmpPluginDir, windowsHide: true }
@@ -62,14 +68,14 @@ export function setupAddPlugin() {
 
           // Create a conda env containing the plugin and its dependencies
           envName = `invest_plugin_${pluginID}`;
-          await customSpawn(
+          await spawnWithLogging(
             mamba,
-            ['create', '--yes', '--name', envName, '-c', 'conda-forge', '"python<3.12"', '"gdal<3.6"'],
+            ['createe', '--yes', '--name', envName, '-c', 'conda-forge', '"python<3.12"', '"gdal<3.6"'],
             { windowsHide: true }
           );
           logger.info('created mamba env for plugin');
         }).then(async () => {
-          await customSpawn(
+          await spawnWithLogging(
             mamba,
             ['run', '--verbose', '--no-capture-output', '--name', envName, 'pip', 'install', `git+${pluginURL}`],
             { windowsHide: true }
