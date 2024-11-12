@@ -12,6 +12,7 @@ describe('Changelog', () => {
   beforeEach(() => {
     jest.spyOn(window, 'fetch')
       .mockResolvedValue({
+        ok: true,
         text: () => `
             <html>
               <head></head>
