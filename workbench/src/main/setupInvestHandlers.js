@@ -93,7 +93,7 @@ export function setupInvestRunHandlers() {
       cmd = settingsStore.get('mamba');
       cmdArgs = [
         'run',
-        `--prefix ${settingsStore.get(`plugins.${modelRunName}.env`)}`,
+        `--prefix "${settingsStore.get(`plugins.${modelRunName}.env`)}"`,
         '--live-stream',
         'invest',
         LOGLEVELMAP[loggingLevel],
