@@ -11,6 +11,20 @@ import { settingsStore } from './settingsStore';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
+/**
+ * Spawn a child process and log its stdout, stderr, and any error in spawning.
+ *
+ * child_process.spawn is called with the provided cmd, args, and options,
+ * and the windowsHide option set to true.
+ *
+ * Required properties missing from the store are initialized with defaults.
+ * Invalid properties are reset to defaults.
+ * @param  {string} cmd - command to pass to spawn
+ * @param  {Array} args - command arguments to pass to spawn
+ * @param  {object} options - options to pass to spawn.
+ * @returns {Promise} resolves when the command finishes with exit code 0.
+ *                    Rejects with error otherwise.
+ */
 function spawnWithLogging(cmd, args, options) {
   logger.info(cmd, args);
   const cmdProcess = spawn(cmd, args, { ...options, windowsHide: true });
