@@ -60,7 +60,7 @@ export function setupAddPlugin() {
             pyname: pluginPyName,
             type: 'plugin',
             source: pluginURL,
-            env: `\"{envPath}\"`,
+            env: envPath,
           }
         );
         logger.info('successfully added plugin');
@@ -81,7 +81,7 @@ export function setupRemovePlugin() {
         const env = settingsStore.get(`plugins.${pluginID}.env`);
         const mamba = settingsStore.get('mamba');
         execSync(
-          `${mamba} remove --yes --prefix ${env} --all`,
+          `${mamba} remove --yes --prefix "${env}" --all`,
           { stdio: 'inherit' }
         );
         // Delete the plugin's data from storage
