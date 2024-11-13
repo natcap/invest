@@ -48,6 +48,21 @@ Unreleased Changes
       reflect changes in how InVEST is installed on modern systems, and also to
       include images of the InVEST workbench instead of just broken links.
       https://github.com/natcap/invest/issues/1660
+* Workbench
+    * Several small updates to the model input form UI to improve usability
+      and visual consistency (https://github.com/natcap/invest/issues/912).
+    * Fixed a bug that caused the application to crash when attempting to
+      open a workspace without a valid logfile
+      (https://github.com/natcap/invest/issues/1598).
+    * Fixed a bug that was allowing readonly workspace directories on Windows
+      (https://github.com/natcap/invest/issues/1599).
+    * Fixed a bug that, in certain scenarios, caused a datastack to be saved
+      with relative paths when the Relative Paths checkbox was left unchecked
+      (https://github.com/natcap/invest/issues/1609).
+    * Improved error handling when a datastack cannot be saved with relative
+      paths across drives (https://github.com/natcap/invest/issues/1608).
+    * The InVEST changelog now displays in the Workbench the first time a new
+      version is launched (https://github.com/natcap/invest/issues/1368).
 * Coastal Vulnerability
     * Fixed a regression where an AOI with multiple features could raise a
       TypeError after intersecting with the landmass polygon.
@@ -75,19 +90,6 @@ Unreleased Changes
     * The model now works as expected when the user provides an LULC raster
       that does not have a nodata value defined.
       https://github.com/natcap/invest/issues/1293
-* Workbench
-    * Several small updates to the model input form UI to improve usability
-      and visual consistency (https://github.com/natcap/invest/issues/912).
-    * Fixed a bug that caused the application to crash when attempting to
-      open a workspace without a valid logfile
-      (https://github.com/natcap/invest/issues/1598).
-    * Fixed a bug that was allowing readonly workspace directories on Windows
-      (https://github.com/natcap/invest/issues/1599).
-    * Fixed a bug that, in certain scenarios, caused a datastack to be saved
-      with relative paths when the Relative Paths checkbox was left unchecked
-      (https://github.com/natcap/invest/issues/1609).
-    * Improved error handling when a datastack cannot be saved with relative
-      paths across drives (https://github.com/natcap/invest/issues/1608).
 
 3.14.2 (2024-05-29)
 -------------------

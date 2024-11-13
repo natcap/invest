@@ -24,6 +24,7 @@ export default defineConfig({
         path.resolve(PROJECT_ROOT, 'splash.html'),
         path.resolve(PROJECT_ROOT, 'report_a_problem.html'),
         path.resolve(PROJECT_ROOT, 'about.html'),
+        path.resolve(PROJECT_ROOT, 'changelog.html'),
       ],
     },
     emptyOutDir: true,

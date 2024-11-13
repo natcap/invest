@@ -53,7 +53,24 @@ jobs:
           perl -0777 -i -pe \
               "s/Unreleased Changes\n------------------/..\n  Unreleased Changes\n  ------------------\n\n${HEADER}\n${UNDERLINE}/g" \
               HISTORY.rst
+
+      - name: Install dependencies
+        run: pip install rst2html5
+
+      - name: Generate changelog.html
+        run: rst2html5 HISTORY.rst workbench/changelog.html
+
+      - name: Update package.json version
+        uses: BellCubeDev/update-package-version-by-release-tag@v2
+        with:
+          version: ${{ inputs.version }}
+          package-json-path: workbench/package.json
+
+      - name: Commit updated HISTORY.rst, changelog.html, and package.json
+        run: |
           git add HISTORY.rst
+          git add workbench/changelog.html
+          git add workbench/package.json
           git commit -m "Committing the $VERSION release."
 
       - name: Tag and push
