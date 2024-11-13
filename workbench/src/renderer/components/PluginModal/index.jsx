@@ -32,7 +32,7 @@ export default function PluginModal(props) {
       setLoading(false);
       updateInvestList();
       if (addPluginErr) {
-        setErr(addPluginErr);
+        setErr(true);
       } else {
         setShowPluginModal(false);
       }
@@ -119,10 +119,7 @@ export default function PluginModal(props) {
   if (err) {
     modalBody = (
       <Modal.Body>
-        <span>{t('Plugin installation failed')}</span>
-        <br />
-        <br />
-        <span>{err.toString()}</span>
+        {t('Plugin installation failed. Check the workbench log for details.')}
       </Modal.Body>
     );
   }
