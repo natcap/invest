@@ -122,7 +122,7 @@ export function setupRemovePlugin() {
         // Delete the plugin's conda env
         const env = settingsStore.get(`plugins.${pluginID}.env`);
         const mamba = settingsStore.get('mamba');
-        await spawnWithLogging(mamba, ['remove', '--yes', '--prefix', env, '--all']);
+        await spawnWithLogging(mamba, ['remove', '--yes', '--prefix', `"${env}"`, '--all']);
         // Delete the plugin's data from storage
         settingsStore.delete(`plugins.${pluginID}`);
         logger.info('successfully removed plugin');
