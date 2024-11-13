@@ -35,7 +35,6 @@ General Information
 Dependencies
 ------------
 
-Run ``make check`` to test if all required dependencies are installed on your system.
 OS-specific installation instructions are found either online at
 http://invest.readthedocs.io/en/latest/installing.html or locally at ``doc/api-docs/installing.rst``.
 
@@ -57,10 +56,7 @@ Or on Windows, use the following instead from a CMD prompt::
     > make env
     > .\env\bin\activate
 
-This makefile target is included for convenience ... you may of course choose to
-manage your own virtual environment.  ``requirements.txt``,
-``requirements-dev.txt`` and ``requirements-docs.txt`` list the python
-dependencies needed.
+This makefile target is included for convenience. It uses ``conda`` and installs packages from ``conda-forge``.
 
 Using a different environment name
 """"""""""""""""""""""""""""""""""
@@ -74,13 +70,25 @@ You could then activate the environment created at ``myEnv``.
 
 Using a different environment management tool
 """""""""""""""""""""""""""""""""""""""""""""
-The InVEST Makefile uses ``virtualenv`` to set up an environment, but this is
-not the only `environment management tool out there
-<https://packaging.python.org/tutorials/installing-packages/#creating-virtual-environments>`_.
-You may elect to manage your virtual environment a different way, independent
-of ``make env``.  The only requirement for the build process is that the required
-tools are available on your PATH and the required python packages can be imported.
+You may of course choose to manage your own virtual environment without using the Makefile.
 
+We suggest using ``conda`` or ``mamba`` and ``conda-forge``.
+
+``requirements.txt``, ``requirements-dev.txt`` and ``requirements-docs.txt`` list the python
+dependencies needed.
+
+Installing ``natcap.invest`` from local source code
+"""""""""""""""""""""""""""""""""""""""""""""""""""
+From an activated virtual environment::
+
+    $ make install
+
+In practice, it can be convenient to use an "editable install" instead to avoid needing
+to re-install after making changes to source code::
+
+   $ pip install -e .
+
+But note that any changes to non-Python files will still require compilation.
 
 Building InVEST Distributions
 -----------------------------
