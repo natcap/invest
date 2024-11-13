@@ -51,72 +51,61 @@ export function setupAddPlugin() {
   ipcMain.handle(
     ipcMainChannels.ADD_PLUGIN,
     async (e, pluginURL) => {
-      logger.info('adding plugin at', pluginURL);
-
-      const mamba = settingsStore.get('mamba');
-      let envName;
-      let pluginID;
-      let pluginName;
-      let pluginPyName;
-
       try {
+        logger.info('adding plugin at', pluginURL);
+        const mamba = settingsStore.get('mamba');
         // Create a temporary directory and check out the plugin's pyproject.toml
         const tmpPluginDir = fs.mkdtempSync(upath.join(tmpdir(), 'natcap-invest-'));
         await spawnWithLogging(
           'git',
           ['clone', '--depth', '1', '--no-checkout', pluginURL, tmpPluginDir]
-        ).then(async () => {
-          await spawnWithLogging(
-            'git',
-            ['checkout', 'HEAD', 'pyproject.toml'],
-            { cwd: tmpPluginDir }
-          );
-        }).then(async () => {
-          // Read in the plugin's pyproject.toml, then delete it
-          const pyprojectTOML = toml.parse(fs.readFileSync(
-            upath.join(tmpPluginDir, 'pyproject.toml')
-          ).toString());
-          fs.rmSync(tmpPluginDir, { recursive: true, force: true });
+        );
+        await spawnWithLogging(
+          'git',
+          ['checkout', 'HEAD', 'pyproject.toml'],
+          { cwd: tmpPluginDir }
+        );
+        // Read in the plugin's pyproject.toml, then delete it
+        const pyprojectTOML = toml.parse(fs.readFileSync(
+          upath.join(tmpPluginDir, 'pyproject.toml')
+        ).toString());
+        fs.rmSync(tmpPluginDir, { recursive: true, force: true });
 
-          // Access plugin metadata from the pyproject.toml
-          pluginID = pyprojectTOML.tool.natcap.invest.model_id;
-          pluginName = pyprojectTOML.tool.natcap.invest.model_name;
-          pluginPyName = pyprojectTOML.tool.natcap.invest.pyname;
+        // Access plugin metadata from the pyproject.toml
+        const pluginID = pyprojectTOML.tool.natcap.invest.model_id;
+        const pluginName = pyprojectTOML.tool.natcap.invest.model_name;
+        const pluginPyName = pyprojectTOML.tool.natcap.invest.pyname;
 
-          // Create a conda env containing the plugin and its dependencies
-          envName = `invest_plugin_${pluginID}`;
-          await spawnWithLogging(
-            mamba,
-            ['create', '--yes', '--name', envName, '-c', 'conda-forge', '"python<3.12"', '"gdal<3.6"']
-          );
-          logger.info('created mamba env for plugin');
-        }).then(async () => {
-          await spawnWithLogging(
-            mamba,
-            ['run', '--verbose', '--no-capture-output', '--name', envName, 'pip', 'install', `git+${pluginURL}`]
-          );
-          logger.info('installed plugin into its env');
-        })
-          .then(() => {
-            // Write plugin metadata to the workbench's config.json
-            const envInfo = execSync(`${mamba} info --envs`, { windowsHide: true }).toString();
-            logger.info(`env info:\n${envInfo}`);
-            const regex = new RegExp(String.raw`^${envName} +(.+)$`, 'm');
-            const envPath = envInfo.match(regex)[1];
-            logger.info(`env path:\n${envPath}`);
-            logger.info('writing plugin info to settings store');
-            settingsStore.set(
-              `plugins.${pluginID}`,
-              {
-                model_name: pluginName,
-                pyname: pluginPyName,
-                type: 'plugin',
-                source: pluginURL,
-                env: envPath,
-              }
-            );
-            logger.info('successfully added plugin');
-          });
+        // Create a conda env containing the plugin and its dependencies
+        const envName = `invest_plugin_${pluginID}`;
+        await spawnWithLogging(
+          mamba,
+          ['create', '--yes', '--name', envName, '-c', 'conda-forge', '"python<3.12"', '"gdal<3.6"']
+        );
+        logger.info('created mamba env for plugin');
+        await spawnWithLogging(
+          mamba,
+          ['run', '--verbose', '--no-capture-output', '--name', envName, 'pip', 'install', `git+${pluginURL}`]
+        );
+        logger.info('installed plugin into its env');
+        // Write plugin metadata to the workbench's config.json
+        const envInfo = execSync(`${mamba} info --envs`, { windowsHide: true }).toString();
+        logger.info(`env info:\n${envInfo}`);
+        const regex = new RegExp(String.raw`^${envName} +(.+)$`, 'm');
+        const envPath = envInfo.match(regex)[1];
+        logger.info(`env path:\n${envPath}`);
+        logger.info('writing plugin info to settings store');
+        settingsStore.set(
+          `plugins.${pluginID}`,
+          {
+            model_name: pluginName,
+            pyname: pluginPyName,
+            type: 'plugin',
+            source: pluginURL,
+            env: envPath,
+          }
+        );
+        logger.info('successfully added plugin');
       } catch (error) {
         return error;
       }
