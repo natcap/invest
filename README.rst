@@ -153,6 +153,13 @@ To build the user's guide::
 This will build HTML and PDF documentation, writing them to ``dist/userguide``
 and ``dist/InVEST_*_Documentation.pdf``, respectively.
 
+The User's Guide is maintained in a separate git reporsitory. InVEST will build
+the User's Guide with the commit defined in the ``Makefile``::
+
+   GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
+   GIT_UG_REPO_PATH            := doc/users-guide
+   GIT_UG_REPO_REV             := f203ec069f9f03560c9a85b268e67ebb6b994953
+
 
 API Documentation
 +++++++++++++++++
@@ -176,22 +183,12 @@ build zip archives of the sample data::
 
 This will write the data zipfiles to ``dist/data``. ``git`` command is needed.
 
-Single archive of sample data
-+++++++++++++++++++++++++++++
+Sample data is tracked in a ``git-lfs`` repo and will be packaged based on the commit
+defined in the ``Makefile``::
 
-For trainings, it is especially convenient to distribute all sample data as a
-single zip archive.  As an added bonus, this single zip archive can be provided
-to the InVEST installer for Windows as either the 'Advanced' input on the front
-page of the installer, or by a CLI flag, thus preventing the installer from
-downloading datasets from the internet.  See
-``installer/windows/invest_installer.nsi`` for more details.  To build a single
-archive of all InVEST sample data::
-
-    $ make sampledata_single
-
-This will write the single sampledata archive to
-``dist/InVEST_*_sample_data.zip``.
-
+   GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
+   GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
+   GIT_SAMPLE_DATA_REPO_REV    := 0f8b41557753dad3670ba8220f41650b51435a93
 
 Tests
 -----
@@ -204,6 +201,16 @@ Model tests
 To run tests on the suite of Ecosystem Service models in InVEST::
 
     $ make test
+
+Tests depend on test data that is tracked in a ``git-lfs`` repo defined in the ``Makefile``::
+
+   GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
+   GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
+   GIT_TEST_DATA_REPO_REV      := 324abde73e1d770ad75921466ecafd1ec6297752
+
+Test data (and Sample Data) can be retrieved using::
+
+   $ make fetch
 
 
 Changing how GNU make runs tests
