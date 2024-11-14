@@ -79,16 +79,26 @@ dependencies needed.
 
 Installing ``natcap.invest`` from local source code
 """""""""""""""""""""""""""""""""""""""""""""""""""
-From an activated virtual environment::
+From an activated virtual environment, it's safest to uninstall any existing installation
+and then install `natcap.invest`::
 
+    $ pip uninstall natcap.invest
     $ make install
 
 In practice, it can be convenient to use an "editable install" instead to avoid needing
-to re-install after making changes to source code::
+to uninstall & re-install after making changes to source code::
 
    $ pip install -e .
 
-But note that any changes to non-Python files will still require compilation.
+Note that with an editable install any changes to non-Python (Cython, C++) files will
+require compilation using one of the above installation methods.
+
+*The Workbench is not part of the* ``natcap.invest`` *Python package. See*
+``workbench/readme.md`` *for developer details.*
+
+A successful ``natcap.invest`` installation will include the InVEST CLI::
+
+    $ invest list
 
 Building InVEST Distributions
 -----------------------------
@@ -153,7 +163,7 @@ To build the user's guide::
 This will build HTML and PDF documentation, writing them to ``dist/userguide``
 and ``dist/InVEST_*_Documentation.pdf``, respectively.
 
-The User's Guide is maintained in a separate git reporsitory. InVEST will build
+The User's Guide is maintained in a separate git repository. InVEST will build
 the User's Guide with the commit defined in the ``Makefile``::
 
    GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
