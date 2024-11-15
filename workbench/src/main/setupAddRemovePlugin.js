@@ -27,7 +27,8 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
  */
 function spawnWithLogging(cmd, args, options) {
   logger.info(cmd, args);
-  const cmdProcess = spawn(cmd, args, { ...options, windowsHide: true });
+  const cmdProcess = spawn(
+    cmd, args, { ...options, shell: true, windowsHide: true });
   if (cmdProcess.stdout) {
     cmdProcess.stderr.on('data', (data) => logger.info(data.toString()));
     cmdProcess.stdout.on('data', (data) => logger.info(data.toString()));
