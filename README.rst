@@ -57,15 +57,16 @@ Or on Windows, use the following instead from a CMD prompt::
     > .\env\bin\activate
 
 This makefile target is included for convenience. It uses ``conda`` and installs packages from ``conda-forge``.
+It also uses the `-p` flag with `conda create`, creating a `./env` folder containing the environment.
 
-Using a different environment name
-""""""""""""""""""""""""""""""""""
-If you prefer a different name for your environment, you may pass the environment name as
+Using a different environment folder name
+"""""""""""""""""""""""""""""""""""""""""
+If you prefer a different path for your environment, you may pass the environment path as
 a parameter to make::
 
     $ make ENV=myEnv env
 
-You could then activate the environment created at ``myEnv``.
+You could then activate the environment created at ``./myEnv``.
 
 
 Using a different environment management tool
