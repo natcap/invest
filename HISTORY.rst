@@ -48,6 +48,8 @@ Unreleased Changes
       reflect changes in how InVEST is installed on modern systems, and also to
       include images of the InVEST workbench instead of just broken links.
       https://github.com/natcap/invest/issues/1660
+    * natcap.invest now works with (and requires) ``gdal.UseExceptions``. A
+      ``FutureWarning`` is raised on import if GDAL exceptions are not enabled.
 * Workbench
     * Several small updates to the model input form UI to improve usability
       and visual consistency (https://github.com/natcap/invest/issues/912).
