@@ -13,6 +13,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+gdal.UseExceptions()
 
 class UFRMTests(unittest.TestCase):
     """Tests for the Urban Flood Risk Mitigation Model."""

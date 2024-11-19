@@ -4,7 +4,9 @@ import unittest
 
 import pint
 from natcap.invest.model_metadata import MODEL_METADATA
+from osgeo import gdal
 
+gdal.UseExceptions()
 valid_nested_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
         'boolean',

@@ -50,7 +50,9 @@ def _log_gdal_errors(*args, **kwargs):
     """Log error messages to osgeo.
 
     All error messages are logged with reasonable ``logging`` levels based
-    on the GDAL error level.
+    on the GDAL error level. While we are now using ``gdal.UseExceptions()``,
+    we still need this to handle GDAL logging that does not get raised as
+    an exception.
 
     Note:
         This function is designed to accept any number of positional and

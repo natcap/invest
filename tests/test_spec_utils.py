@@ -2,7 +2,9 @@ import unittest
 
 from natcap.invest import spec_utils
 from natcap.invest.unit_registry import u
+from osgeo import gdal
 
+gdal.UseExceptions()
 
 class TestSpecUtils(unittest.TestCase):
 
