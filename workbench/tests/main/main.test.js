@@ -225,6 +225,7 @@ describe('createWindow', () => {
 });
 
 describe('investUsageLogger', () => {
+  // PORT is not used, but set the URL port 
   const PORT = 3000;
   const expectedURL = `http://127.0.0.1:${PORT}/api/log_model_start`;
   beforeEach(() => {
