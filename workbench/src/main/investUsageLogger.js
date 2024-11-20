@@ -13,9 +13,9 @@ const PREFIX = 'api';
 export default function investUsageLogger() {
   const sessionId = crypto.randomUUID();
 
-  function start(modelPyName, args) {
+  function start(modelPyName, args, port) {
     logger.debug('logging model start');
-    fetch(`${HOSTNAME}:${process.env.PORT}/${PREFIX}/log_model_start`, {
+    fetch(`${HOSTNAME}:${port}/${PREFIX}/log_model_start`, {
       method: 'post',
       body: JSON.stringify({
         model_pyname: modelPyName,
@@ -31,9 +31,9 @@ export default function investUsageLogger() {
       .catch((error) => logger.error(error));
   }
 
-  function exit(status) {
+  function exit(status, port) {
     logger.debug('logging model exit');
-    fetch(`${HOSTNAME}:${process.env.PORT}/${PREFIX}/log_model_exit`, {
+    fetch(`${HOSTNAME}:${port}/${PREFIX}/log_model_exit`, {
       method: 'post',
       body: JSON.stringify({
         session_id: sessionId,
