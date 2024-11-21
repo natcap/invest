@@ -15,7 +15,8 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
  * Spawn a child process and log its stdout, stderr, and any error in spawning.
  *
  * child_process.spawn is called with the provided cmd, args, and options,
- * and the windowsHide option set to true.
+ * and the windowsHide option set to true. The shell option is set to true
+ * because spawn by default sets shell to false.
  *
  * Required properties missing from the store are initialized with defaults.
  * Invalid properties are reset to defaults.
