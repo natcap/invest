@@ -243,6 +243,7 @@ class DataDownloadModal extends React.Component {
         show={this.props.show}
         onHide={this.closeDialog}
         size="lg"
+        aria-labelledby="download-modal-title"
       >
         <Form>
           <Modal.Header>
@@ -262,7 +263,9 @@ class DataDownloadModal extends React.Component {
                     <p className="mb-0"><em>{this.state.alertPath}</em></p>
                   </Alert>
                 )
-                : <Modal.Title>{t("Download InVEST sample data")}</Modal.Title>
+                : <Modal.Title id="download-modal-title">
+                    {t("Download InVEST sample data")}
+                  </Modal.Title>
             }
           </Modal.Header>
           <Modal.Body>

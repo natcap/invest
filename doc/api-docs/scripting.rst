@@ -20,98 +20,71 @@ InVEST models from the command-line.
 Setting up your Python environment
 ==================================
 
-1. **Install Python 3.6 or later.**
+We recommend using the ``conda`` or ``mamba`` package manager to create an
+environment.  The easiest way to do so is to execute the following command::
 
-   Python can be `downloaded from here <https://www.python.org/downloads/>`_.  When installing,
-   be sure to allow ``python.exe`` to be added to the path in the installation options.
+        mamba create -n invest-env -c conda-forge natcap.invest
 
+This will create a new environment called ``invest-env`` with the latest
+released versions of python and ``natcap.invest``, as well as all dependencies
+needed to execute ``natcap.invest``.
 
-2. **Put pip on the PATH.**
+Alternate installation methods are available. Please see the :ref:`installing`
+guide for further instructions on setting up your python environment and
+installing the ``natcap.invest`` package.
 
-   The ``pip`` utility for installing python packages is already included with
-   Python 2.7.9 and later. Be sure to add ``C:\Python37\Scripts`` (or your custom
-   install location) to the Windows PATH environment variable so that ``pip`` can
-   be called from the command line without needing to use its full path.
+.. _CreatingPythonScripts:
 
-   After this is done (and you've opened a new command-line window), you will be
-   able to use ``pip`` at the command-line to install packages like so::
+=======================
+Creating Python Scripts
+=======================
 
-    > pip install <packagename>
+1. **Launch InVEST Workbench and Open the Selected Model**
 
-3. **Install packages needed to run InVEST.**
-
-   Most (maybe even all) of these packages can be downloaded as precompiled
-   wheels from `Christoph Gohlke's build page <http://www.lfd.uci.edu/~gohlke/pythonlibs/>`_.
-   Others should be able to be installed via ``pip install <packagename>``.
-
-    .. This ..include:: part will automatically pull the contents of requirements.txt
-       and include the file from line 9 through the end.
-
-    .. include:: ../../requirements.txt
-        :literal:
-        :start-line: 9
-
-
-4. **Install the InVEST python package**
-
-   4a. Download a release of the ``natcap.invest`` python package.
-
-       * `Releases on the python package index <https://pypi.org/project/natcap.invest/#files>`_
-
-   4b. Install the downloaded python package..
-
-       * ``win32.whl`` files are prebuilt binary distributions and can be
-         installed via pip.
-         See the `pip docs for installing a package from a wheel
-         <https://pip.pypa.io/en/stable/user_guide/#installing-from-wheels>`_
-       * ``.zip`` and ``.tar.gz`` files are source archives.
-         See :ref:`installing` for details, including how to
-         install specific development versions of ``natcap.invest``.
-
-
-.. _CreatingSamplePythonScripts:
-
-==============================
-Creating Sample Python Scripts
-==============================
-
-1. **Launch InVEST Model**
-
-   Once an InVEST model is selected for scripting,
-   launch that model from the Windows Start menu.  This example in this guide
-   follows the NDR model.
+   Once you have selected an InVEST model to script, launch the workbench and
+   select the model from the list of available models.  This guide will follow
+   the Nutrient Delivery Ratio (NDR) model.
 
 2. **Fill in InVEST Model Input Parameters**
 
    Once the user interface loads, populate the inputs in the model likely to
    be used in the Python script.  For testing purposes the default InVEST’s
-   data is appropriate.  However, if a user wishes to write a batch for several
-   InVEST runs, it would be reasonable to populate the user interface with
-   data for the first run.
+   data is appropriate.  However, if you wish to write a script to execute
+   several InVEST model runs in sequence, it would be reasonable to populate
+   the user interface with data for the first run in the sequence.
 
-3. **Generate a sample Python Script from the User Interface**
+3. **Generate a Python Script from the User Interface**
 
-   Open the Development menu at the top of the user interface and select
-   *"Save to python script..."* and save the file to a known location.
+   In the model interface, select *"Save as..."* in the left-hand menu bar,
+   *"Python script"* in the dialog box, and then save the file to a known location.
 
-|2w7pilj.png|
+   |workbench_save_as.png|
+   |modal_save_as.png|
 
-.. |2w7pilj.png| image:: https://bitbucket.org/repo/ag8qdk/images/3205488039-2w7pilj.png
+.. |workbench_save_as.png| image:: scripting/workbench_save_as.png
+.. |modal_save_as.png| image:: scripting/modal_save_as.png
 
 4. **Execute the script in the InVEST Python Environment**
 
-   Launch a Windows PowerShell from the Start menu (type “powershell” in the
-   search box), then invoke the Python interpreter on the InVEST Python
-   script from that shell.  In this example the Python interpreter is
-   installed in ``C:\Python37\python.exe`` and the script was saved in
-   ``C:\Users\rpsharp\Desktop\ndr.py``, thus the command to invoke the
-   interpreter is::
+   Launch a shell of your choice and activate your InVEST environment you
+   created earlier. We will use the Windows command prompt ``cmd.exe`` for an
+   example, but the same commands should work on Powershell, bash and zsh.  If
+   you created an environment called ``invest-env``, you would activate it with
+   ``conda`` like so::
 
-    > C:\Python37\python.exe C:\Users\rpsharp\Desktop\ndr.py
+        > conda activate invest-env
 
-|34ecba0.png|
+   You will know your environment activated correctly when you see the
+   environment name at the beginning of your shell prompt.  For example::
 
-.. |34ecba0.png| image:: https://bitbucket.org/repo/ag8qdk/images/2939811460-34ecba0.png
+        (invest-env) C:\Users\demo >
+
+   Once the environment has been activated, we can run the python script we
+   saved in the previous step.  Suppose we're on Windows and the script was
+   saved to ``C:\Users\demo\Desktop\ndr.py``, the command to run the script
+   would be::
+
+        (invest-env) C:\Users\demo > python C:\Users\demo\Desktop\ndr.py
 
 5. **Output Results**
 
@@ -133,50 +106,68 @@ For reference, consider the following script generated by the Nutrient model wit
 
 .. code-block:: python
 
-    """
-    This is a saved model run from natcap.invest.ndr.ndr.
-    Generated: Mon 16 May 2016 03:52:59 PM
-    InVEST version: 3.3.0
-    """
+    # coding=UTF-8
+    # -----------------------------------------------
+    # Generated by InVEST 3.14.2 on Wed Oct 23 10:49:40 2024
+    # Model: Nutrient Delivery Ratio
+
+    import logging
+    import sys
 
     import natcap.invest.ndr.ndr
+    import natcap.invest.utils
+
+    LOGGER = logging.getLogger(__name__)
+    root_logger = logging.getLogger()
+
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter(
+        fmt=natcap.invest.utils.LOG_FMT,
+        datefmt='%m/%d/%Y %H:%M:%S ')
+    handler.setFormatter(formatter)
+    logging.basicConfig(level=logging.INFO, handlers=[handler])
 
     args = {
-            u'k_param': u'2',
-            u'runoff_proxy_uri': u'C:\InVEST_3.3.0_x86\Base_Data\Freshwater\precip',
-            u'subsurface_critical_length_n': u'150',
-            u'subsurface_critical_length_p': u'150',
-            u'subsurface_eff_n': u'0.8',
-            u'subsurface_eff_p': u'0.8',
-            u'threshold_flow_accumulation': u'1000',
-            u'biophysical_table_uri': u'C:\InVEST_3.3.0_x86\WP_Nutrient_Retention\Input\water_biophysical_table.csv',
-            u'calc_n': True,
-            u'calc_p': True,
-            u'suffix': '',
-            u'dem_uri': u'C:\InVEST_3.3.0_x86\Base_Data\Freshwater\dem',
-            u'lulc_uri': u'C:\InVEST_3.3.0_x86\Base_Data\Freshwater\landuse_90',
-            u'watersheds_uri': u'C:\InVEST_3.3.0_x86\Base_Data\Freshwater\watersheds.shp',
-            u'workspace_dir': u'C:\InVEST_3.3.0_x86\ndr_workspace',
+        'biophysical_table_path': 'C:\\Users\demo\invest-sample-data\\NDR\\biophysical_table_gura.csv',
+        'calc_n': True,
+        'calc_p': True,
+        'dem_path': 'C:\\Users\demo\invest-sample-data\\NDR\\DEM_gura.tif',
+        'k_param': '2',
+        'lulc_path': 'C:\\Users\demo\invest-sample-data\\NDR\land_use_gura.tif',
+        'results_suffix': 'gura',
+        'runoff_proxy_path': 'C:\\Users\demo\invest-sample-data\\NDR\precipitation_gura.tif',
+        'subsurface_critical_length_n': '200',
+        'subsurface_eff_n': '0.8',
+        'threshold_flow_accumulation': '1000',
+        'watersheds_path': 'C:\\Users\demo\invest-sample-data\\NDR\watershed_gura.shp',
+        'workspace_dir': 'C:\\Users\demo\invest-sample-data\\NDR\workspace',
     }
 
     if __name__ == '__main__':
         natcap.invest.ndr.ndr.execute(args)
 
+
 Elements to note:
 
-* *Parameter Python Dictionary*: Key elements include the ``‘args’`` dictionary.  Note the similarities between the key values such as ``‘workspace_dir’`` and the equivalent “Workspace” input parameter in the user interface.  Every key in the ``‘args’`` dictionary has a corresponding reference in the user interface.
+* *Parameter Python Dictionary*: Key elements include the ``'args'``
+  dictionary.  Note the similarities between the key values such as
+  ``'workspace_dir'`` and the equivalent "Workspace" input parameter in the
+  user interface.  Every key in the ``'args'`` dictionary has a corresponding
+  reference in the user interface.
 
-|95zj7p.png|
+  In the example below we’ll modify the script to execute the nutrient model
+  for a parameter study of ``'threshold_flow_accumulation'``.
 
-.. |95zj7p.png| image:: https://bitbucket.org/repo/ag8qdk/images/22613179-95zj7p.png
+* *Execution of the InVEST model*: The InVEST API invokes models with a
+  consistent syntax where the module name that contains the InVEST model is
+  listed first and is followed by a function called ‘execute’ that takes a
+  single parameter called ``'args'``. This parameter is the dictionary of input
+  parameters discussed above.  In this example, the line ::
 
-In the example below we’ll modify the script to execute the nutrient model for a parameter study of ``‘threshold_flow_accumulation’.``
+        natcap.invest.ndr.ndr.execute(args)
 
-* *Execution of the InVEST model*: The InVEST API invokes models with a consistent syntax where the module name that contains the InVEST model is listed first and is followed by a function called ‘execute’ that takes a single parameter called ``‘args’``. This parameter is the dictionary of input parameters discussed above.  In this example, the line
-
-``natcap.invest.ndr.ndr.execute(args)``
-
-executes the nutrient model end-to-end.  If the user wishes to make batch calls to InVEST, this line will likely be placed inside a loop.
+  executes the nutrient model end-to-end.  If the user wishes to make batch
+  calls to InVEST, this line will likely be placed inside a loop.
 
 ====================================================
 Example: Threshold Flow Accumulation Parameter Study
@@ -212,7 +203,7 @@ example, replace the last line in the UI generated Python script with:
 .. code-block:: python
 
     import os
-    landcover_dir = r'C:\User\Rich\Desktop\landcover_data'
+    landcover_dir = r'C:\User\demo\Desktop\landcover_data'
 
     if __name__ == '__main__':
         #Loop over all the filenames in the landcover dir
@@ -225,43 +216,31 @@ example, replace the last line in the UI generated Python script with:
             natcap.invest.ndr.ndr.execute(args)
 
 This loop covers all the files located in
-``C:\User\Rich\Desktop\landcover_data``
-and updates the relevant ``lulc_uri`` key in the args dictionary to each
-of those files during execution as well as making a useful suffix so output
-files can be distinguished from each other.
+``C:\User\demo\Desktop\landcover_data`` and updates the relevant ``lulc_uri``
+key in the args dictionary to each of those files during execution as well as
+making a useful suffix so output files can be distinguished from each other.
 
 ============================================
 Example: Saving model log messages to a file
 ============================================
 
-There are many cases where you may want or need to capture all of the log
-messages generated by the model.  When we run models through the InVEST user
-interface application, the UI captures all of this logging and saves it to a
-logfile.  We can replicate this behavior through the python logging package,
-by adding the following code just after the ``import`` statements in the
-example script.
-
+When you save a model run to a python script, InVEST will automatically include
+code to write all logging to your console while it executes.  But sometimes,
+it's useful to save log messages from the model to a file.  This can be done by
+adding a few lines of code to the script, just after the existing logging
+code:
 
 .. code-block:: python
 
-    import logging
-    import pygeoprocessing
+    file_handler = logging.FileHandler('logfile.txt')
+    root_logger.addHandler(file_handler)
 
-    # Write all NDR log messages to logfile.txt
-    MODEL_LOGGER = logging.getLogger('natcap.invest.ndr')
-    handler = logging.FileHandler('logfile.txt')
-    MODEL_LOGGER.addHandler(handler)
-
-    # log pygeoprocessing messages to the same logfile
-    PYGEO_LOGGER = logging.getLogger('pygeoprocessing')
-    PYGEO_LOGGER.addHandler(handler)
-
-This will capture all logging generated by the ``ndr`` model and by
-``pygeoprocessing``, writing all messages to ``logfile.txt``.  While
+This will capture all logging generated by any python package that executes
+while running the ``ndr`` model writing all messages to ``logfile.txt``.  While
 this is a common use case, the ``logging`` package provides functionality
 for many more complex logging features.  For more
 advanced use of the python logging module, refer to the Python project's
-`Logging Cookbook <https://docs.python.org/2/howto/logging-cookbook.html>`_
+`Logging Cookbook <https://docs.python.org/3/howto/logging-cookbook.html>`_
 
 =====================================
 Example: Enabling Parallel Processing
@@ -306,7 +285,8 @@ Using the parameter study example, this might look like:
 Internationalization
 ====================
 
-If you use the InVEST python API to access model names, ``MODEL_SPEC``s, or validation messages, you can translate those strings using ``gettext``:
+If you use the InVEST python API to access model names, ``MODEL_SPEC`` s, or
+validation messages, you can translate those strings using ``gettext``:
 
 .. code-block:: python
 
