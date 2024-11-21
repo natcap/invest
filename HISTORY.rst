@@ -48,6 +48,8 @@ Unreleased Changes
     * Fixed a bug that, in certain scenarios, caused a datastack to be saved
       with relative paths when the Relative Paths checkbox was left unchecked
       (https://github.com/natcap/invest/issues/1609)
+* General
+    * Updated translations for Spanish and Chinese
 
 3.14.2 (2024-05-29)
 -------------------
