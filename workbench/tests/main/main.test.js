@@ -225,7 +225,9 @@ describe('createWindow', () => {
 });
 
 describe('investUsageLogger', () => {
-  const expectedURL = `http://127.0.0.1:${process.env.PORT}/api/log_model_start`;
+  // Set default PORT for URL, but it's not used by the test.
+  const PORT = 3000;
+  const expectedURL = `http://127.0.0.1:${PORT}/api/log_model_start`;
   beforeEach(() => {
     // the expected response
     const response = {
@@ -244,12 +246,12 @@ describe('investUsageLogger', () => {
     const investStdErr = '';
     const usageLogger = investUsageLogger();
 
-    usageLogger.start(modelPyname, args);
+    usageLogger.start(modelPyname, args, PORT);
     expect(fetch.mock.calls).toHaveLength(1);
     expect(fetch.mock.calls[0][0]).toBe(expectedURL);
     const startPayload = JSON.parse(fetch.mock.calls[0][1].body);
 
-    usageLogger.exit(investStdErr);
+    usageLogger.exit(investStdErr, PORT);
     expect(fetch.mock.calls).toHaveLength(2);
     const exitPayload = JSON.parse(fetch.mock.calls[1][1].body);
 

@@ -88,6 +88,7 @@ export function setupInvestRunHandlers() {
     await writeInvestParameters(payload);
     let cmd;
     let cmdArgs;
+    let port;
     const plugins = settingsStore.get('plugins');
     if (plugins && Object.keys(plugins).includes(modelRunName)) {
       cmd = settingsStore.get('mamba');
@@ -103,6 +104,7 @@ export function setupInvestRunHandlers() {
         modelRunName,
         `-d "${datastackPath}"`,
       ];
+      port = settingsStore.get(`plugins.${modelRunName}.port`);
     } else {
       cmd = settingsStore.get('investExe');
       cmdArgs = [
@@ -112,6 +114,7 @@ export function setupInvestRunHandlers() {
         'run',
         modelRunName,
         `-d "${datastackPath}"`];
+      port = settingsStore.get('core.port');
     }
 
     logger.debug(`about to run model with command: ${cmd} ${cmdArgs}`);
@@ -141,7 +144,7 @@ export function setupInvestRunHandlers() {
           );
           event.reply(`invest-logging-${tabID}`, path.resolve(investLogfile));
           if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
-            usageLogger.start(pyModuleName, args);
+            usageLogger.start(pyModuleName, args, port);
           }
         }
       }
@@ -176,7 +179,7 @@ export function setupInvestRunHandlers() {
         });
       });
       if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
-        usageLogger.exit(investStdErr);
+        usageLogger.exit(investStdErr, port);
       }
     });
   });
