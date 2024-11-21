@@ -1758,10 +1758,9 @@ def _calculate_land_to_grid_distance(
     # Copy the point vector
     _, driver_name = _get_file_ext_and_driver_name(
         target_land_vector_path)
-    base_land_vector = ogr.Open(base_land_vector_path, gdal.OF_VECTOR)
-    driver = ogr.GetDriverByName(driver_name)
-    driver.CopyDataSource(base_land_vector, target_land_vector_path)
-    base_land_vector = None
+    gdal.VectorTranslate(
+        target_land_vector_path, base_land_vector_path,
+        format=driver_name)
 
     target_land_vector = gdal.OpenEx(
         target_land_vector_path, gdal.OF_VECTOR | gdal.GA_Update)

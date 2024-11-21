@@ -1,4 +1,5 @@
 export const ipcMainChannels = {
+  BASE_URL: 'base-url',
   CHANGE_LANGUAGE: 'change-language',
   CHECK_FILE_PERMISSIONS: 'check-file-permissions',
   CHECK_STORAGE_TOKEN: 'check-storage-token',
@@ -12,6 +13,7 @@ export const ipcMainChannels = {
   INVEST_RUN: 'invest-run',
   INVEST_VERSION: 'invest-version',
   IS_FIRST_RUN: 'is-first-run',
+  IS_NEW_VERSION: 'is-new-version',
   LOGGER: 'logger',
   OPEN_EXTERNAL_URL: 'open-external-url',
   OPEN_PATH: 'open-path',

@@ -46,7 +46,8 @@ invest = "natcap.invest.cli:main"
 # available at runtime.
 requires = [
     'setuptools>=61', 'wheel', 'setuptools_scm>=8.0', 'cython>=3.0.0', 'babel',
-    'oldest-supported-numpy'
+    'oldest-supported-numpy; python_version<="3.8"',
+    'numpy>=2; python_version>="3.9"',  # numpy 2 only available for 3.9+
 ]
 build-backend = "setuptools.build_meta"
 

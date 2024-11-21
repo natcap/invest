@@ -855,6 +855,7 @@ def execute(args):
                             floral_resources_index_path_map[species],
                             convolve_ps_path],
                         target_path=pollinator_abundance_path,
+                        target_dtype=numpy.float32,
                         target_nodata=_INDEX_NODATA),
                     dependent_task_list=[
                         foraged_flowers_index_task_map[(species, season)],
@@ -935,7 +936,9 @@ def execute(args):
                 rasters=[
                     half_saturation_raster_path,
                     total_pollinator_abundance_index_path],
-                target_path=farm_pollinator_season_path),
+                target_path=farm_pollinator_season_path,
+                target_dtype=numpy.float32,
+                target_nodata=_INDEX_NODATA),
             dependent_task_list=[
                 half_saturation_task, total_pollinator_abundance_task[season]],
             target_path_list=[farm_pollinator_season_path]))
@@ -976,7 +979,9 @@ def execute(args):
         kwargs=dict(
             op=pyt_op,
             rasters=[managed_pollinator_path, farm_pollinator_path],
-            target_path=total_pollinator_yield_path),
+            target_path=total_pollinator_yield_path,
+            target_dtype=numpy.float32,
+            target_nodata=_INDEX_NODATA),
         dependent_task_list=[farm_pollinator_task, managed_pollinator_task],
         target_path_list=[total_pollinator_yield_path])
 
@@ -984,12 +989,14 @@ def execute(args):
     wild_pollinator_yield_path = os.path.join(
         output_dir, _WILD_POLLINATOR_YIELD_FILE_PATTERN % file_suffix)
     wild_pollinator_task = task_graph.add_task(
-        task_name='calcualte_wild_pollinators',
+        task_name='calculate_wild_pollinators',
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=pyw_op,
             rasters=[managed_pollinator_path, total_pollinator_yield_path],
-            target_path=wild_pollinator_yield_path),
+            target_path=wild_pollinator_yield_path,
+            target_dtype=numpy.float32,
+            target_nodata=_INDEX_NODATA),
         dependent_task_list=[pyt_task, managed_pollinator_task],
         target_path_list=[wild_pollinator_yield_path])
 
@@ -1036,28 +1043,28 @@ def execute(args):
             # this is YT from the user's guide (y_tot)
             farm_feature.SetField(
                 _TOTAL_FARM_YIELD_FIELD_ID,
-                1 - nu * (
+                float(1 - nu * (
                     1 - total_farm_results[fid]['sum'] /
-                    float(total_farm_results[fid]['count'])))
+                    float(total_farm_results[fid]['count']))))
 
             # this is PYW ('pdep_y_w')
             farm_feature.SetField(
                 _POLLINATOR_PROPORTION_FARM_YIELD_FIELD_ID,
-                (wild_pollinator_yield_aggregate[fid]['sum'] /
+                float(wild_pollinator_yield_aggregate[fid]['sum'] /
                  float(wild_pollinator_yield_aggregate[fid]['count'])))
 
             # this is YW ('y_wild')
             farm_feature.SetField(
                 _WILD_POLLINATOR_FARM_YIELD_FIELD_ID,
-                nu * (wild_pollinator_yield_aggregate[fid]['sum'] /
-                      float(wild_pollinator_yield_aggregate[fid]['count'])))
+                float(nu * (wild_pollinator_yield_aggregate[fid]['sum'] /
+                      float(wild_pollinator_yield_aggregate[fid]['count']))))
 
             # this is PAT ('p_abund')
             farm_season = farm_feature.GetField(_FARM_SEASON_FIELD)
             farm_feature.SetField(
                 _POLLINATOR_ABUNDANCE_FARM_FIELD_ID,
-                pollinator_abundance_results[farm_season][fid]['sum'] /
-                float(pollinator_abundance_results[farm_season][fid]['count']))
+                float(pollinator_abundance_results[farm_season][fid]['sum'] /
+                float(pollinator_abundance_results[farm_season][fid]['count'])))
 
         target_farm_layer.SetFeature(farm_feature)
     target_farm_layer.SyncToDisk()
@@ -1392,7 +1399,8 @@ def _sum_arrays(*array_list):
     result = numpy.empty_like(array_list[0])
     result[:] = 0
     for array in array_list:
-        local_valid_mask = ~pygeoprocessing.array_equals_nodata(array, _INDEX_NODATA)
+        local_valid_mask = ~pygeoprocessing.array_equals_nodata(
+            array, _INDEX_NODATA)
         result[local_valid_mask] += array[local_valid_mask]
         valid_mask |= local_valid_mask
     result[~valid_mask] = _INDEX_NODATA
@@ -1423,6 +1431,7 @@ def _calculate_habitat_nesting_index(
     pygeoprocessing.raster_map(
         op=max_op,
         rasters=substrate_path_list,
+        target_dtype=numpy.float32,
         target_path=target_habitat_nesting_index_path)
 
 
@@ -1432,6 +1441,7 @@ def _multiply_by_scalar(raster_path, scalar, target_path):
         op=lambda array: array * scalar,
         rasters=[raster_path],
         target_path=target_path,
+        target_dtype=numpy.float32,
         target_nodata=_INDEX_NODATA,
     )
 
@@ -1455,6 +1465,7 @@ def _calculate_pollinator_supply_index(
         op=lambda f_r, h_n: species_abundance * f_r * h_n,
         rasters=[habitat_nesting_suitability_path, floral_resources_path],
         target_path=target_path,
+        target_dtype=numpy.float32,
         target_nodata=_INDEX_NODATA
     )
 

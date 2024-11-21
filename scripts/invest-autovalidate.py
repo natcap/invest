@@ -1,14 +1,14 @@
 #!python
 
-import os
-import tempfile
-import logging
 import argparse
-import unittest
 import glob
 import importlib
-import shutil
+import logging
+import os
 import pprint
+import shutil
+import tempfile
+import unittest
 
 from natcap.invest import datastack
 
@@ -81,7 +81,7 @@ def main(sampledatadir):
 
         model_warnings = []  # define here in case of uncaught exception.
         try:
-            LOGGER.info('validating %s ', datastack_path)
+            LOGGER.info('validating %s ', os.path.abspath(datastack_path))
             model_warnings = getattr(
                 model_module, 'validate')(paramset.args)
         except AttributeError as err:
