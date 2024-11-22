@@ -318,6 +318,26 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         """Delete workspace after test is done."""
         shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
+    def test_zeropadded_monthly_filenames(self):
+        """test filenames with zero-padded months in 
+        _get_monthly_file_lists function
+        """
+        from natcap.invest.seasonal_water_yield import _get_monthly_file_lists
+        n_months = 12
+        
+        # Make fake paths with file names with zero-padded months
+        padded_et0_dir_list = [os.path.join("/fake/path", 
+            "et0_" + str(mo).zfill(2) + ".tif") for mo in range(1, n_months+1)]
+        padded_precip_dir_list = [os.path.join("/fake/path", 
+                                               "Precip" + str(mo).zfill(2) + ".tif") for mo in range(1, n_months+1)]
+
+        et0_path_list, precip_path_list = _get_monthly_file_lists(
+            n_months, padded_et0_dir_list, padded_precip_dir_list)
+
+        # Verify that the returned lists match the input
+        self.assertEqual(et0_path_list, padded_et0_dir_list)
+        self.assertEqual(precip_path_list, padded_precip_dir_list)
+
     def test_ambiguous_precip_data(self):
         """SWY test case where there are more than 12 precipitation files."""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
