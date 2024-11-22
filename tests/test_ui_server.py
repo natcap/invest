@@ -6,7 +6,9 @@ import unittest
 from unittest.mock import Mock, patch
 
 from natcap.invest import ui_server
+from osgeo import gdal
 
+gdal.UseExceptions()
 TEST_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data')
 

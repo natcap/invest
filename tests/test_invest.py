@@ -3,6 +3,8 @@
 import unittest
 import os
 
+from osgeo import gdal
+gdal.UseExceptions()
 
 class FileRegistryTests(unittest.TestCase):
     """Tests for the InVEST file registry builder."""

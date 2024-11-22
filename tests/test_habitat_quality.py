@@ -12,6 +12,7 @@ from osgeo import ogr
 from osgeo import osr
 from shapely.geometry import Polygon
 
+gdal.UseExceptions()
 
 def make_raster_from_array(
         base_array, base_raster_path, nodata_val=-1, gdal_type=gdal.GDT_Int32):
