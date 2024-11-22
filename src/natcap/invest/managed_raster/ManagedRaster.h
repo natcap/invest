@@ -344,10 +344,7 @@ public:
     ManagedFlowDirRaster() {}
 
     ManagedFlowDirRaster(char* raster_path, int band_id, bool write_mode)
-        : ManagedRaster(raster_path, band_id, write_mode)   // Call the superclass constructor in the subclass' initialization list.
-        {
-            // do something with bar
-        }
+        : ManagedRaster(raster_path, band_id, write_mode) {}
 
     bool is_local_high_point(int xi, int yi) {
         // """Check if a given pixel is a local high point.
