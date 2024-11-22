@@ -121,18 +121,24 @@ These instructions assume you have defined the two-letter locale code in an envi
    git add src/main/i18n/$LL.json src/renderer/i18n/$LL.json
    git commit -m "add new messages into $LL translation files"
    ```
-3. (if the translator uses PO format) Convert JSON to PO
+3. Convert JSON to PO using [i18next-gettext-converter](https://github.com/i18next/i18next-gettext-converter):
+   ```
+   i18next-conv -l $LL -s src/main/i18n/$LL.json -t src/main/i18n/$LL.po
+   i18next-conv -l $LL -s src/renderer/i18n/$LL.json -t src/renderer/i18n/$LL.po
 
-4. Send `src/main/i18n/$LL.[json,po]` and `src/renderer/i18n/$LL.[json,po]` to the translator and wait to receive a copy with translations added.
+   ```
 
-5. (if the translator uses PO format) Convert PO to JSON
-   If the translator works with PO files, we can convert them to JSON using this tool: https://github.com/i18next/i18next-gettext-converter
+4. Send `src/main/i18n/$LL.po` and `src/renderer/i18n/$LL.po` to the translator and wait to receive a copy with translations added.
 
-6. Replace `src/main/i18n/$LL.[json,po]` and `src/renderer/i18n/$LL.json` with the updated versions received from the translator
+5. Receive the updated PO files from the translator, then convert PO to JSON using [i18next-gettext-converter](https://github.com/i18next/i18next-gettext-converter). Replace `src/main/i18n/$LL.json` and `src/renderer/i18n/$LL.json` with the updated versions:
+   ```
+   i18next-conv -l $LL -s new_main_translations.po -t src/main/i18n/$LL.json
+   i18next-conv -l $LL -s new_renderer_translations.po -t src/renderer/i18n/$LL.json
 
-7. Commit the changes:
+   ```
+
+6. Commit the changes:
    ```
    git add src/main/i18n/$LL.json src/renderer/i18n/$LL.json
    git commit -m "add new translations for $LL"
    ```
-
