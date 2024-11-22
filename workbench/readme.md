@@ -137,7 +137,7 @@ These instructions assume you have defined the two-letter locale code in an envi
 
    ```
 
-7. Commit the changes:
+6. Commit the changes:
    ```
    git add src/main/i18n/$LL.json src/renderer/i18n/$LL.json
    git commit -m "add new translations for $LL"
