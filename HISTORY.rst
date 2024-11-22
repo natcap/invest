@@ -49,6 +49,8 @@ Unreleased Changes
       include images of the InVEST workbench instead of just broken links.
       https://github.com/natcap/invest/issues/1660
     * Updated translations for Spanish and Chinese
+    * natcap.invest now works with (and requires) ``gdal.UseExceptions``. A
+      ``FutureWarning`` is raised on import if GDAL exceptions are not enabled.
 * Workbench
     * Several small updates to the model input form UI to improve usability
       and visual consistency (https://github.com/natcap/invest/issues/912).

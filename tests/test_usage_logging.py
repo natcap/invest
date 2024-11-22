@@ -13,6 +13,7 @@ import shapely.geometry
 import numpy
 import numpy.testing
 
+gdal.UseExceptions()
 
 class UsageLoggingTests(unittest.TestCase):
     """Tests for the InVEST usage logging framework."""

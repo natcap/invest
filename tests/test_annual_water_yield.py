@@ -6,13 +6,14 @@ import os
 
 import pandas
 import numpy
+from osgeo import gdal
 import pygeoprocessing
 
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'annual_water_yield')
 SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
-
+gdal.UseExceptions()
 
 class AnnualWaterYieldTests(unittest.TestCase):
     """Regression Tests for Annual Water Yield Model."""
