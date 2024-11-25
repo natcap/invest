@@ -548,10 +548,8 @@ def _generate_carbon_map(
     Returns:
         None.
     """
-    lulc_info = pygeoprocessing.get_raster_info(lulc_path)
-    pixel_area = abs(numpy.prod(lulc_info['pixel_size']))
     carbon_stock_by_type = dict([
-        (lulcid, stock * pixel_area / 10**4)
+        (lulcid, stock)
         for lulcid, stock in carbon_pool_by_type.items()])
 
     reclass_error_details = {
