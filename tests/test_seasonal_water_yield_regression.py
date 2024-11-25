@@ -322,7 +322,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         """test filenames with zero-padded months in 
         _get_monthly_file_lists function
         """
-        from natcap.invest.seasonal_water_yield import _get_monthly_file_lists
+        from natcap.invest.seasonal_water_yield.seasonal_water_yield import _get_monthly_file_lists
         n_months = 12
         
         # Make fake paths with file names with zero-padded months
