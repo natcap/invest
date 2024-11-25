@@ -89,6 +89,7 @@ Unreleased Changes
 * Seasonal Water Yield
     * Added support for zero padding in month numbers in ET and precipitation
       file names (i.e., users can now name their file Precip_01.tif).
+      (https://github.com/natcap/invest/issues/1166)
 * Urban Flood Risk
     * Fields present on the input AOI vector are now retained in the output.
       (https://github.com/natcap/invest/issues/1600)
