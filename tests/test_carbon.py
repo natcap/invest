@@ -10,9 +10,9 @@ from osgeo import osr
 import numpy
 import numpy.random
 import numpy.testing
-import pygeoprocessing
 
 gdal.UseExceptions()
+
 
 def make_simple_raster(base_raster_path, fill_val, nodata_val):
     """Create a 10x10 raster on designated path with fill value.
@@ -68,7 +68,8 @@ def assert_raster_equal_value(base_raster_path, val_to_compare):
 
     array_to_compare = numpy.empty(base_array.shape)
     array_to_compare.fill(val_to_compare)
-    numpy.testing.assert_allclose(base_array, array_to_compare, rtol=0, atol=1e-6)
+    numpy.testing.assert_allclose(base_array, array_to_compare,
+                                  rtol=0, atol=1e-3)
 
 
 def make_pools_csv(pools_csv_path):
@@ -131,12 +132,31 @@ class CarbonTests(unittest.TestCase):
 
         carbon.execute(args)
 
-        # Add assertions for npv for future and REDD scenarios.
-        # The npv was calculated based on _calculate_npv in carbon.py.
+        # Ensure totals are correct.
+        # Current: 15 + 10 + 60 + 1 = 86 Mg
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422078)
+            os.path.join(args['workspace_dir'], 'tot_c_cur.tif'), 86)
+        # Future: 5 + 3 + 20 + 0 = 28 Mg
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.4602106)
+            os.path.join(args['workspace_dir'], 'tot_c_fut.tif'), 28)
+        # REDD: 2 + 1 + 5 + 0 = 8 Mg
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'tot_c_redd.tif'), 8)
+
+        # Ensure deltas are correct.
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'delta_cur_fut.tif'), -58)
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'delta_cur_redd.tif'), -78)
+
+        # Ensure NPV calculations are correct.
+        # Valuation constant based on provided args is 59.00136.
+        # Future: 59.00136 * -58 Mg/ha = -3422.079 Mg/ha
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -3422.079)
+        # REDD: 59.00136 * -78 Mg/ha = -4602.106 Mg/ha
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -4602.106)
 
     def test_carbon_zero_rates(self):
         """Carbon: test with 0 discount and rate change."""
@@ -168,16 +188,16 @@ class CarbonTests(unittest.TestCase):
 
         # Add assertions for npv for future and REDD scenarios.
         # carbon change from cur to fut:
-        # -58 Mg/ha * .0001 ha/pixel * 43 $/Mg = -0.2494 $/pixel
+        # -58 Mg/ha * 43 $/Mg = -2494 $/ha
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.2494)
+            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -2494)
         # carbon change from cur to redd:
-        # -78 Mg/ha * .0001 ha/pixel * 43 $/Mg = -0.3354 $/pixel
+        # -78 Mg/ha * 43 $/Mg = -3354 $/ha
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.3354)
+            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -3354)
 
-    def test_carbon_future(self):
-        """Carbon: regression testing future scenario."""
+    def test_carbon_without_redd(self):
+        """Carbon: regression testing for future scenario only (no REDD)."""
         from natcap.invest import carbon
         args = {
             'workspace_dir': self.workspace_dir,
@@ -201,10 +221,12 @@ class CarbonTests(unittest.TestCase):
         make_pools_csv(args['carbon_pools_path'])
 
         carbon.execute(args)
-        # Add assertions for npv for the future scenario.
-        # The npv was calculated based on _calculate_npv in carbon.py.
+
+        # Ensure NPV calculations are correct.
+        # Valuation constant based on provided args is 59.00136.
+        # Future: 59.00136 * -58 Mg/ha = -3422.079 Mg/ha
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422078)
+            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -3422.079)
 
     def test_carbon_missing_landcover_values(self):
         """Carbon: testing expected exception on missing LULC codes."""
@@ -261,12 +283,14 @@ class CarbonTests(unittest.TestCase):
 
         carbon.execute(args)
 
-        # Add assertions for npv for future and REDD scenarios.
-        # The npv was calculated based on _calculate_npv in carbon.py.
+        # Ensure NPV calculations are correct.
+        # Valuation constant based on provided args is 59.00136.
+        # Future: 59.00136 * -58 Mg/ha = -3422.079 Mg/ha
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422078)
+            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -3422.079)
+        # REDD: 59.00136 * -78 Mg/ha = -4602.106 Mg/ha
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.4602106)
+            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -4602.106)
 
 
 class CarbonValidationTests(unittest.TestCase):
