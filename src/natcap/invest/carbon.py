@@ -4,7 +4,6 @@ import codecs
 import logging
 import os
 import time
-from functools import reduce
 
 from osgeo import gdal
 import numpy
@@ -154,7 +153,7 @@ MODEL_SPEC = {
             "about": gettext(
                 "The calendar year of the future scenario depicted in the "
                 "future LULC map. Required if Run Valuation model is selected."),
-            "name": f"future LULC year"
+            "name": gettext("future LULC year")
         },
         "do_valuation": {
             "type": "boolean",
@@ -296,6 +295,7 @@ _TMP_BASE_FILES = {
 
 # -1.0 since carbon stocks are 0 or greater
 _CARBON_NODATA = -1.0
+
 
 def execute(args):
     """Carbon.
