@@ -154,6 +154,7 @@ def make_precip_rasters(precip_dir_path):
 
     Args:
         precip_dir_path (str): path to the directory for saving the rasters.
+        file_prefix (str): prefix of new files to create.
 
     Returns:
         None.
@@ -322,25 +323,77 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         """test filenames with zero-padded months in
         _get_monthly_file_lists function
         """
-        from natcap.invest.seasonal_water_yield.seasonal_water_yield import (
-            _get_monthly_file_lists)
+        from natcap.invest.seasonal_water_yield.seasonal_water_yield import _get_monthly_file_lists
 
         n_months = 12
 
-        # Make fake paths with file names with zero-padded months
-        padded_et0_dir_list = [
-            os.path.join("/fake/path", "et0_" + str(mo).zfill(2) + ".tif")
-            for mo in range(1, n_months+1)]
-        padded_precip_dir_list = [
-            os.path.join("/fake/path", "Precip" + str(mo).zfill(2) + ".tif")
-            for mo in range(1, n_months + 1)]
+        # Make directory and file names with zero-padded months
+        precip_dir_path = os.path.join(self.workspace_dir, 'precip_dir')
+        test_precip_dir_path = os.path.join(self.workspace_dir,
+                                            'test_0pad_precip_dir')
+        os.makedirs(precip_dir_path)
+        os.makedirs(test_precip_dir_path)
+        make_precip_rasters(precip_dir_path)
+        precip_file_list = [os.path.join(precip_dir_path, f)
+                            for f in os.listdir(precip_dir_path)]
+        for raster, month in zip(precip_file_list, range(1, n_months+1)):
+            shutil.copy(raster, os.path.join(
+                test_precip_dir_path, "precip"+str(month).zfill(2)+".tif"))
 
-        et0_path_list, precip_path_list = _get_monthly_file_lists(
-            n_months, padded_et0_dir_list, padded_precip_dir_list)
+        eto_dir_path = os.path.join(self.workspace_dir, "eto_dir")
+        test_eto_dir_path = os.path.join(self.workspace_dir,
+                                         'test_0pad_eto_dir')
+        os.makedirs(eto_dir_path)
+        os.makedirs(test_eto_dir_path)
+        make_eto_rasters(eto_dir_path)
+        eto_file_list = [os.path.join(eto_dir_path, f) 
+                         for f in os.listdir(eto_dir_path)]
+        for raster, month in zip(eto_file_list, range(1, n_months+1)):
+            shutil.copy(raster, os.path.join(
+                test_eto_dir_path, "et0_"+str(month).zfill(2)+".tif"))
+
+        # Create list of monthly files for data_type
+        eto_path_list = _get_monthly_file_lists(
+            n_months, test_eto_dir_path)
+        
+        precip_path_list = _get_monthly_file_lists(
+            n_months, test_precip_dir_path)
+        
+        # Create lists of monthly filenames to which to compare function output
+        match_precip = sorted([os.path.join(test_precip_dir_path, f)
+                               for f in os.listdir(test_precip_dir_path)])
+        match_eto = sorted([os.path.join(test_eto_dir_path, f)
+                            for f in os.listdir(test_eto_dir_path)])
+        
+        print(match_precip)
 
         # Verify that the returned lists match the input
-        self.assertEqual(et0_path_list, padded_et0_dir_list)
-        self.assertEqual(precip_path_list, padded_precip_dir_list)
+        self.assertEqual(precip_path_list, match_precip)
+        self.assertEqual(eto_path_list, match_eto)
+
+    def test_nonpadded_monthly_filenames(self):
+        """test filenames without zero-padded months in
+        _get_monthly_file_lists function
+        """
+        from natcap.invest.seasonal_water_yield.seasonal_water_yield import _get_monthly_file_lists
+
+        n_months = 12
+
+        # Make directory and file names with (non-zero-padded) months
+        precip_dir_path = os.path.join(self.workspace_dir, 'precip_dir')
+        os.makedirs(precip_dir_path)
+        make_precip_rasters(precip_dir_path)
+
+        precip_path_list = _get_monthly_file_lists(
+            n_months, precip_dir_path)
+        
+        # Create lists of monthly filenames to which to compare function output
+        match_precip = [os.path.join(precip_dir_path,
+                                     "precip_mm_" + str(m) + ".tif")
+                                     for m in range(1, n_months + 1)]
+        
+        # Verify that the returned lists match the input
+        self.assertEqual(precip_path_list, match_precip)
 
     def test_ambiguous_precip_data(self):
         """SWY test case where there are more than 12 precipitation files."""
