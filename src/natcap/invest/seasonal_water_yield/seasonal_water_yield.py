@@ -659,15 +659,8 @@ def execute(args):
     output_align_list = [
         file_registry['lulc_aligned_path'], file_registry['dem_aligned_path']]
     if not args['user_defined_local_recharge']:
-        et0_dir_list = [
-            os.path.join(args['et0_dir'], f) for f in os.listdir(
-                args['et0_dir'])]
-        precip_dir_list = [
-            os.path.join(args['precip_dir'], f) for f in os.listdir(
-                args['precip_dir'])]
-
-        et0_path_list, precip_path_list = _get_monthly_file_lists(
-            N_MONTHS, et0_dir_list, precip_dir_list)
+        precip_path_list = _get_monthly_file_lists(N_MONTHS, args['precip_dir'])
+        et0_path_list = _get_monthly_file_lists(N_MONTHS, args['et0_dir'])
 
         input_align_list = (
             precip_path_list + [args['soil_group_path']] + et0_path_list +
@@ -1362,44 +1355,40 @@ def _aggregate_recharge(
     aggregate_vector = None
 
 
-def _get_monthly_file_lists(n_months, et0_dir_list, precip_dir_list):
-    """Create lists of monthly files for precipitation and evapotranspiration.
+def _get_monthly_file_lists(n_months, in_dir):
+    """Create list of monthly files for data_type
 
     Parameters:
-        n_months (int): The number of months to iterate over (should be 12)
-        et0_dir_list (list): List of file paths in evapotranspiration directory
-        precip_dir_list (list): List of file paths in precipitation directory
+        n_months (int): Number of months to iterate over (should be 12)
+        in_dir (string): Path to directory of monthly files (for specific
+                         variable)
 
     Raises:
-        ValueError: If no file or multiple files are found for a month for
-                    precipitation or et data.
+        ValueError: If no file or multiple files are found for a month
 
     Returns:
-        tuple: Two lists containing the monthly file paths
-               for evapotranspiration and precipitation, respectively.
+        list: contains monthly file paths for specific variable
     """
-    et0_path_list = []
-    precip_path_list = []
-    
+    in_path_list = [os.path.join(in_dir, f) for f in os.listdir(in_dir)]
+    out_path_list = []
+
     for month_index in range(1, n_months + 1):
         month_file_pattern = re.compile(r'.*[^\d]0?%d\.[^.]+$' % month_index)
+        file_list = [
+            month_file_path for month_file_path in in_path_list
+            if month_file_pattern.match(month_file_path)]
+        if len(file_list) == 0:
+            raise ValueError(
+                "No files found in %s for month %d. Please ensure that \
+                filenames end in the month number (e.g., precip_1.tif)."
+                % (in_dir, month_index))
+        if len(file_list) > 1:
+            raise ValueError(
+                "Ambiguous set of files found for month %d: %s" %
+                (month_index, file_list))
+        out_path_list.append(file_list[0])
 
-        for data_type, dir_list, path_list in [
-                ('et0', et0_dir_list, et0_path_list),
-                ('Precip', precip_dir_list, precip_path_list)]:
-            file_list = [
-                month_file_path for month_file_path in dir_list
-                if month_file_pattern.match(month_file_path)]
-            if len(file_list) == 0:
-                raise ValueError(
-                    "No %s found for month %d" % (data_type, month_index))
-            if len(file_list) > 1:
-                raise ValueError(
-                    "Ambiguous set of files found for month %d: %s" %
-                    (month_index, file_list))
-            path_list.append(file_list[0])
-
-    return et0_path_list, precip_path_list
+    return out_path_list
 
 
 @validation.invest_validator
