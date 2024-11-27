@@ -673,11 +673,17 @@ def _generate_report(raster_file_set, model_args, file_registry):
 
         for raster_uri, description, units in report:
             if raster_uri in raster_file_set:
-                summary_stat = _accumulate_totals(raster_uri)
+                total = _accumulate_totals(raster_uri)
+                raster_info = pygeoprocessing.get_raster_info(raster_uri)
+                pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+                # Since each pixel value is in Mg/ha, ``total`` is in (Mg/ha * px) = Mg•px/ha.
+                # Adjusted sum = ([total] Mg•px/ha) * ([pixel_area] m^2 / 1 px) * (1 ha / 10000 m^2) = Mg.
+                summary_stat = total * pixel_area / 10000
                 report_doc.write(
-                    '<tr><td>%s</td><td class="number">%.2f</td><td>%s</td>'
-                    '<td>%s</td></tr>' % (
-                        description, summary_stat, units, raster_uri))
+                    '<tr><td>%s</td><td class="number" data-summary-stat="%s">'
+                    '%.2f</td><td>%s</td><td>%s</td></tr>' % (
+                        description, description, summary_stat, units,
+                        raster_uri))
         report_doc.write('</body></html>')
 
 
