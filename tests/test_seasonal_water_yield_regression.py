@@ -154,7 +154,6 @@ def make_precip_rasters(precip_dir_path):
 
     Args:
         precip_dir_path (str): path to the directory for saving the rasters.
-        file_prefix (str): prefix of new files to create.
 
     Returns:
         None.
@@ -165,6 +164,30 @@ def make_precip_rasters(precip_dir_path):
             precip_dir_path, 'precip_mm_' + str(month) + '.tif')
         precip_array = numpy.full((size, size), month + 10, dtype=numpy.int32)
         make_raster_from_array(precip_array, precip_raster_path)
+
+
+def make_zeropadded_rasters(dir_path, prefix):
+    """Make twelve 1x1 raster files with filenames ending in zero-padded
+    month number.
+
+    Args:
+        dir_path (str): path to the directory for saving the rasters.
+        file_prefix (str): prefix of new files to create.
+
+    Returns:
+        list: monthly raster filenames
+    """
+    size = 1
+    monthly_raster_list = []
+
+    for month in range(1, 13):
+        raster_path = os.path.join(
+            dir_path, prefix + str(month).zfill(2) + '.tif')
+        temp_array = numpy.full((size, size), 1, dtype=numpy.int8)
+        make_raster_from_array(temp_array, raster_path)
+        monthly_raster_list.append(raster_path)
+
+    return monthly_raster_list
 
 
 def make_recharge_raster(recharge_ras_path):
@@ -328,29 +351,15 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         n_months = 12
 
         # Make directory and file names with zero-padded months
-        precip_dir_path = os.path.join(self.workspace_dir, 'precip_dir')
         test_precip_dir_path = os.path.join(self.workspace_dir,
                                             'test_0pad_precip_dir')
-        os.makedirs(precip_dir_path)
         os.makedirs(test_precip_dir_path)
-        make_precip_rasters(precip_dir_path)
-        precip_file_list = [os.path.join(precip_dir_path, f)
-                            for f in os.listdir(precip_dir_path)]
-        for raster, month in zip(precip_file_list, range(1, n_months+1)):
-            shutil.copy(raster, os.path.join(
-                test_precip_dir_path, "precip"+str(month).zfill(2)+".tif"))
+        precip_file_list = make_zeropadded_rasters(test_precip_dir_path, 'Prcp')
 
-        eto_dir_path = os.path.join(self.workspace_dir, "eto_dir")
         test_eto_dir_path = os.path.join(self.workspace_dir,
                                          'test_0pad_eto_dir')
-        os.makedirs(eto_dir_path)
         os.makedirs(test_eto_dir_path)
-        make_eto_rasters(eto_dir_path)
-        eto_file_list = [os.path.join(eto_dir_path, f) 
-                         for f in os.listdir(eto_dir_path)]
-        for raster, month in zip(eto_file_list, range(1, n_months+1)):
-            shutil.copy(raster, os.path.join(
-                test_eto_dir_path, "et0_"+str(month).zfill(2)+".tif"))
+        eto_file_list = make_zeropadded_rasters(test_eto_dir_path, 'et0_')
 
         # Create list of monthly files for data_type
         eto_path_list = _get_monthly_file_lists(
@@ -359,17 +368,9 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         precip_path_list = _get_monthly_file_lists(
             n_months, test_precip_dir_path)
         
-        # Create lists of monthly filenames to which to compare function output
-        match_precip = sorted([os.path.join(test_precip_dir_path, f)
-                               for f in os.listdir(test_precip_dir_path)])
-        match_eto = sorted([os.path.join(test_eto_dir_path, f)
-                            for f in os.listdir(test_eto_dir_path)])
-        
-        print(match_precip)
-
         # Verify that the returned lists match the input
-        self.assertEqual(precip_path_list, match_precip)
-        self.assertEqual(eto_path_list, match_eto)
+        self.assertEqual(precip_path_list, precip_file_list)
+        self.assertEqual(eto_path_list, eto_file_list)
 
     def test_nonpadded_monthly_filenames(self):
         """test filenames without zero-padded months in
@@ -388,6 +389,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             n_months, precip_dir_path)
         
         # Create lists of monthly filenames to which to compare function output
+        # Note this is hardcoded to match the filenames created in make_precip_rasters
         match_precip = [os.path.join(precip_dir_path,
                                      "precip_mm_" + str(m) + ".tif")
                                      for m in range(1, n_months + 1)]
