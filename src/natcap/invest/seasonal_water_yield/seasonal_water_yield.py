@@ -1356,18 +1356,18 @@ def _aggregate_recharge(
 
 
 def _get_monthly_file_lists(n_months, in_dir):
-    """Create list of monthly files for data_type
+    """Create list of monthly files for data type
 
     Parameters:
         n_months (int): Number of months to iterate over (should be 12)
         in_dir (string): Path to directory of monthly files (for specific
-                         variable)
+                         data type)
 
     Raises:
         ValueError: If no file or multiple files are found for a month
 
     Returns:
-        list: contains monthly file paths for specific variable
+        list: contains monthly file paths for data type
     """
     in_path_list = [os.path.join(in_dir, f) for f in os.listdir(in_dir)]
     out_path_list = []
@@ -1380,7 +1380,7 @@ def _get_monthly_file_lists(n_months, in_dir):
         if len(file_list) == 0:
             raise ValueError(
                 "No files found in %s for month %d. Please ensure that \
-                filenames end in the month number (e.g., precip_1.tif)."
+                    filenames end in the month number (e.g., precip_1.tif)."
                 % (in_dir, month_index))
         if len(file_list) > 1:
             raise ValueError(
