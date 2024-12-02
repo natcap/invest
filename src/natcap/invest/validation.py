@@ -65,7 +65,9 @@ MESSAGES = {
     'BBOX_NOT_INTERSECT': gettext(
         'Not all of the spatial layers overlap each '
         'other. All bounding boxes must intersect: {bboxes}'),
-    'NEED_PERMISSION': gettext(
+    'NEED_PERMISSION_DIRECTORY': gettext(
+        'You must have {permission} access to this directory'),
+    'NEED_PERMISSION_FILE': gettext(
         'You must have {permission} access to this file'),
     'WRONG_GEOM_TYPE': gettext('Geometry type must be one of {allowed}')
 }
@@ -164,9 +166,8 @@ def check_directory(dirpath, must_exist=True, permissions='rx', **kwargs):
         must_exist=True (bool): If ``True``, the directory at ``dirpath``
             must already exist on the filesystem.
         permissions='rx' (string): A string that includes the lowercase
-            characters ``r``, ``w`` and/or ``x`` indicating required
-            permissions for this folder .  See ``check_permissions`` for
-            details.
+            characters ``r``, ``w`` and/or ``x``, indicating read, write, and
+            execute permissions (respectively) required for this directory.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -191,9 +192,33 @@ def check_directory(dirpath, must_exist=True, permissions='rx', **kwargs):
                 dirpath = parent
                 break
 
-    permissions_warning = check_permissions(dirpath, permissions)
-    if permissions_warning:
-        return permissions_warning
+    MESSAGE_KEY = 'NEED_PERMISSION_DIRECTORY'
+
+    if 'r' in permissions:
+        try:
+            os.scandir(dirpath).close()
+        except OSError:
+            return MESSAGES[MESSAGE_KEY].format(permission='read')
+
+    # Check for x access before checking for w,
+    # since w operations to a dir are dependent on x access
+    if 'x' in permissions:
+        try:
+            cwd = os.getcwd()
+            os.chdir(dirpath)
+        except OSError:
+            return MESSAGES[MESSAGE_KEY].format(permission='execute')
+        finally:
+            os.chdir(cwd)
+
+    if 'w' in permissions:
+        try:
+            temp_path = os.path.join(dirpath, 'temp__workspace_validation.txt')
+            with open(temp_path, 'w') as temp:
+                temp.close()
+                os.remove(temp_path)
+        except OSError:
+            return MESSAGES[MESSAGE_KEY].format(permission='write')
 
 
 def check_file(filepath, permissions='r', **kwargs):
@@ -202,9 +227,8 @@ def check_file(filepath, permissions='r', **kwargs):
     Args:
         filepath (string): The filepath to validate.
         permissions='r' (string): A string that includes the lowercase
-            characters ``r``, ``w`` and/or ``x`` indicating required
-            permissions for this file.  See ``check_permissions`` for
-            details.
+            characters ``r``, ``w`` and/or ``x``, indicating read, write, and
+            execute permissions (respectively) required for this file.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -213,33 +237,12 @@ def check_file(filepath, permissions='r', **kwargs):
     if not os.path.exists(filepath):
         return MESSAGES['FILE_NOT_FOUND']
 
-    permissions_warning = check_permissions(filepath, permissions)
-    if permissions_warning:
-        return permissions_warning
-
-
-def check_permissions(path, permissions):
-    """Validate permissions on a filesystem object.
-
-    This function uses ``os.access`` to determine permissions access.
-
-    Args:
-        path (string): The path to examine for permissions.
-        permissions (string): a string including the characters ``r``, ``w``
-            and/or ``x`` (lowercase), indicating read, write, and execute
-            permissions (respectively) that the filesystem object at ``path``
-            must have.
-
-    Returns:
-        A string error message if an error was found.  ``None`` otherwise.
-
-    """
     for letter, mode, descriptor in (
             ('r', os.R_OK, 'read'),
             ('w', os.W_OK, 'write'),
             ('x', os.X_OK, 'execute')):
-        if letter in permissions and not os.access(path, mode):
-            return MESSAGES['NEED_PERMISSION'].format(permission=letter)
+        if letter in permissions and not os.access(filepath, mode):
+            return MESSAGES['NEED_PERMISSION_FILE'].format(permission=descriptor)
 
 
 def _check_projection(srs, projected, projection_units):
@@ -301,19 +304,16 @@ def check_raster(filepath, projected=False, projection_units=None, **kwargs):
     if file_warning:
         return file_warning
 
-    gdal.PushErrorHandler('CPLQuietErrorHandler')
-    gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
-    gdal.PopErrorHandler()
-
-    if gdal_dataset is None:
+    try:
+        gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
+    except RuntimeError:
         return MESSAGES['NOT_GDAL_RASTER']
+
     # Check that an overview .ovr file wasn't opened.
     if os.path.splitext(filepath)[1] == '.ovr':
         return MESSAGES['OVR_FILE']
 
-    srs = osr.SpatialReference()
-    srs.ImportFromWkt(gdal_dataset.GetProjection())
-
+    srs = gdal_dataset.GetSpatialRef()
     projection_warning = _check_projection(srs, projected, projection_units)
     if projection_warning:
         gdal_dataset = None
@@ -375,9 +375,10 @@ def check_vector(filepath, geometries, fields=None, projected=False,
     if file_warning:
         return file_warning
 
-    gdal.PushErrorHandler('CPLQuietErrorHandler')
-    gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
-    gdal.PopErrorHandler()
+    try:
+        gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
+    except RuntimeError:
+        return MESSAGES['NOT_GDAL_VECTOR']
 
     geom_map = {
         'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM,
@@ -398,9 +399,6 @@ def check_vector(filepath, geometries, fields=None, projected=False,
     allowed_geom_types = []
     for geom in geometries:
         allowed_geom_types += geom_map[geom]
-
-    if gdal_dataset is None:
-        return MESSAGES['NOT_GDAL_VECTOR']
 
     # NOTE: this only checks the layer geometry type, not the types of the
     # actual geometries (layer.GetGeometryTypes()). This is probably equivalent
@@ -639,7 +637,7 @@ def get_validated_dataframe(
             patterns.append(f'{groups[0]}(.+){groups[2]}')
         else:
             # for regular column names, use the exact name as the pattern
-            patterns.append(column.replace('(', '\(').replace(')', '\)'))
+            patterns.append(column.replace('(', r'\(').replace(')', r'\)'))
 
     # select only the columns that match a pattern
     df = df[[col for col in df.columns if any(
@@ -796,7 +794,11 @@ def check_spatial_overlap(spatial_filepaths_list,
     for filepath in spatial_filepaths_list:
         try:
             info = pygeoprocessing.get_raster_info(filepath)
-        except ValueError:
+        except (ValueError, RuntimeError):
+            # ValueError is raised by PyGeoprocessing < 3.4.4 when the file is
+            # not a raster.
+            # RuntimeError is raised by GDAL in PyGeoprocessing >= 3.4.4 when
+            # the file is not a raster.
             info = pygeoprocessing.get_vector_info(filepath)
 
         if info['projection_wkt'] is None:

@@ -13,6 +13,7 @@ import puppeteer from 'puppeteer-core';
 
 import pkg from '../../package.json';
 import { APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
+import { APP_VERSION_TOKEN } from '../../src/main/setupIsNewVersion';
 
 jest.setTimeout(240000);
 const PORT = 9009;
@@ -26,9 +27,10 @@ let BINARY_PATH;
 // append to this prefix and the image will be uploaded to github artifacts
 // E.g. page.screenshot({ path: `${SCREENSHOT_PREFIX}screenshot.png` })
 let SCREENSHOT_PREFIX;
-// We'll clear this token before launching the app so we can have a
+// We'll clear these tokens before launching the app so we can have a
 // predictable startup page.
 let APP_HAS_RUN_TOKEN_PATH;
+let APP_VERSION_TOKEN_PATH;
 
 // On GHA macos, invest validation can time-out reading from os.tmpdir
 // So on GHA, use the homedir instead.
@@ -38,12 +40,15 @@ const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
 
 if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
-  [BINARY_PATH] = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*');
+  [BINARY_PATH] = glob.sync('./dist/mac*/*.app/Contents/MacOS/InVEST*');
   SCREENSHOT_PREFIX = path.join(
     os.homedir(), 'Library/Logs', pkg.name, 'invest-workbench-'
   );
   APP_HAS_RUN_TOKEN_PATH = path.join(
     os.homedir(), 'Library/Application Support', pkg.name, APP_HAS_RUN_TOKEN
+  );
+  APP_VERSION_TOKEN_PATH = path.join(
+    os.homedir(), 'Library/Application Support', pkg.name, APP_VERSION_TOKEN
   );
 } else if (process.platform === 'win32') {
   [BINARY_PATH] = glob.sync('./dist/win-unpacked/InVEST*.exe');
@@ -52,6 +57,9 @@ if (process.platform === 'darwin') {
   );
   APP_HAS_RUN_TOKEN_PATH = path.join(
     os.homedir(), 'AppData/Roaming', pkg.name, APP_HAS_RUN_TOKEN
+  );
+  APP_VERSION_TOKEN_PATH = path.join(
+    os.homedir(), 'AppData/Roaming', pkg.name, APP_VERSION_TOKEN
   );
 }
 
@@ -97,6 +105,7 @@ afterAll(() => {
 // https://github.com/facebook/jest/issues/8688
 beforeEach(() => {
   try { fs.unlinkSync(APP_HAS_RUN_TOKEN_PATH); } catch {}
+  try { fs.unlinkSync(APP_VERSION_TOKEN_PATH); } catch {}
   // start the invest app and forward stderr to console
   ELECTRON_PROCESS = spawn(
     `"${BINARY_PATH}"`,
@@ -164,11 +173,22 @@ test('Run a real invest model', async () => {
   });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
 
-  const downloadModal = await page.waitForSelector('.modal-dialog');
+  const downloadModal = await page.waitForSelector(
+    'aria/[name="Download InVEST sample data"][role="dialog"]'
+  );
   const downloadModalCancel = await downloadModal.waitForSelector(
     'aria/[name="Cancel"][role="button"]');
   await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
   await downloadModalCancel.click();
+
+  const changelogModal = await page.waitForSelector(
+    'aria/[name="New in this version"][role="dialog"]'
+  );
+  const changelogModalClose = await changelogModal.waitForSelector(
+    'aria/[name="Close modal"][role="button"]');
+  await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
+  await changelogModalClose.click();
+
   // We need to get the modelButton from w/in this list-group because there
   // are buttons with the same name in the Recent Jobs container.
   const investModels = await page.waitForSelector('.invest-list-group');
@@ -183,16 +203,16 @@ test('Run a real invest model', async () => {
   const argsForm = await page.waitForSelector('.args-form');
   const typeDelay = 10;
   const workspace = await argsForm.waitForSelector(
-    'aria/[name="Workspace"][role="textbox"]');
+    'aria/[name="Workspace (directory)"][role="textbox"]');
   await workspace.type(TMP_DIR, { delay: typeDelay });
   const aoi = await argsForm.waitForSelector(
-    'aria/[name="Area Of Interest"][role="textbox"]');
+    'aria/[name="Area Of Interest (vector)"][role="textbox"]');
   await aoi.type(TMP_AOI_PATH, { delay: typeDelay });
   const startYear = await argsForm.waitForSelector(
-    'aria/[name="Start Year"][role="textbox"]');
+    'aria/[name="Start Year (number)"][role="textbox"]');
   await startYear.type('2008', { delay: typeDelay });
   const endYear = await argsForm.waitForSelector(
-    'aria/[name="End Year"][role="textbox"]');
+    'aria/[name="End Year (number)"][role="textbox"]');
   await endYear.type('2012', { delay: typeDelay });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
 
@@ -233,11 +253,22 @@ test('Check local userguide links', async () => {
   page.on('error', (err) => {
     console.log(err);
   });
-  const downloadModal = await page.waitForSelector('.modal-dialog');
+
+  const downloadModal = await page.waitForSelector(
+    'aria/[name="Download InVEST sample data"][role="dialog"]'
+  );
   const downloadModalCancel = await downloadModal.waitForSelector(
     'aria/[name="Cancel"][role="button"]');
   await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
   await downloadModalCancel.click();
+
+  const changelogModal = await page.waitForSelector(
+    'aria/[name="New in this version"][role="dialog"]'
+  );
+  const changelogModalClose = await changelogModal.waitForSelector(
+    'aria/[name="Close modal"][role="button"]');
+  await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
+  await changelogModalClose.click();
 
   const investList = await page.waitForSelector('.invest-list-group');
   const modelButtons = await investList.$$('aria/[role="button"]');

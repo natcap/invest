@@ -1,10 +1,10 @@
 {
-  "File": "",
-  "Edit": "",
-  "Speech": "",
-  "View": "",
-  "Window": "",
-  "About": "",
-  "About InVEST": "",
-  "Report a problem": ""
+    "File": "Archivo",
+    "Edit": "Edición",
+    "Speech": "Dicción",
+    "View": "Vista",
+    "Window": "Ventana",
+    "About": "Acerca de",
+    "About InVEST": "Acerca de InVEST",
+    "Report a problem": "Informe de un problema"
 }

@@ -41,7 +41,7 @@ describe('Sample Data Download Form', () => {
   });
 
   test('Modal does not display when app has been run before', async () => {
-    const { findByText, queryByText } = render(<App isFirstRun />);
+    const { findByText, queryByText } = render(<App />);
     await findByText('InVEST'); // wait for page to load before querying
     const modalTitle = queryByText('Download InVEST sample data');
     expect(modalTitle).toBeNull();

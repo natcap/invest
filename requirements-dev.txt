@@ -9,17 +9,21 @@
 # Any lines with "# pip-only" at the end will be processed by
 # scripts/convert-requirements-to-conda-yml.py as though it can only be found
 # on pip.
+# Sometimes conda-forge does not install the latest available version,
+# pip-only can be a workaround for that.
 
-Cython<3.0.0
 virtualenv>=12.0.1
 pytest
 pytest-subtests
 wheel>=0.27.0
 pypiwin32; sys_platform == 'win32'  # pip-only
-setuptools>=8.0,<60.7.0 # https://github.com/pyinstaller/pyinstaller/issues/6564
-PyInstaller>=4.10
+
+# 60.7.0 exception because of https://github.com/pyinstaller/pyinstaller/issues/6564
+setuptools>=8.0,!=60.7.0
+PyInstaller>=4.10  # pip-only
 setuptools_scm>=6.4.0
 requests
 coverage
 xlwt
 build  # pip-only
+rst2html5
