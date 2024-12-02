@@ -86,6 +86,10 @@ Unreleased Changes
       updated the stated dtype of most pollination model outputs to be float32
       instead of the float64 dtype that was being assumed previously.  This
       will result in smaller output filesizes with minimal loss of precision.
+* Seasonal Water Yield
+    * Added support for zero padding in month numbers in ET and precipitation
+      file names (i.e., users can now name their file Precip_01.tif).
+      (https://github.com/natcap/invest/issues/1166)
 * Urban Flood Risk
     * Fields present on the input AOI vector are now retained in the output.
       (https://github.com/natcap/invest/issues/1600)
