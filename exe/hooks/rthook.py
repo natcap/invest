@@ -16,3 +16,10 @@ if platform.system() == 'Darwin':
     # sys._MEIPASS is the path to where the pyinstaller entrypoint bundle
     # lives.  See the pyinstaller docs for more details.
     os.environ['SPATIALINDEX_C_LIBRARY'] = sys._MEIPASS
+
+if platform.system() == 'Windows':
+    # sys._MEIPASS contains gdal DLLs. It does not otherwise end
+    # up on the PATH, which means that gdal can discover
+    # incompatible DLLs from some other place on the PATH, such
+    # as an anaconda gdal installation.
+    os.environ['PATH'] = f"{sys._MEIPASS};{os.environ['PATH']}"
