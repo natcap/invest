@@ -17,4 +17,5 @@ if platform.system() == 'Windows':
     # up on the PATH, which means that gdal can discover
     # incompatible DLLs from some other place on the PATH, such
     # as an anaconda gdal installation.
-    os.environ['PATH'] = f"{sys._MEIPASS};{os.environ['PATH']}"
+    if 'PATH' in os.environ:
+        os.environ['PATH'] = f"{sys._MEIPASS};{os.environ['PATH']}"
