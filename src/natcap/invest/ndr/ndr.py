@@ -77,6 +77,23 @@ MODEL_SPEC = {
             "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "nut_load_type": {
+                    "type": "option_string",
+                    "required": True,
+                    "options": {
+                        "application-rate": {
+                            "description": gettext(
+                                "Treat the load values as an application rate."
+                                "applied_nutrient * (1-retention_efficiency)")},
+                        "measured-runoff": {
+                            "description": gettext(
+                                "Treat the load values as measured runoff.")},
+                    },
+                    "about": gettext(
+                        "Whether the nutrient load in column "
+                        "load_[NUTRIENT] should be treated as an "
+                        "application rate or measured runoff. "
+                        "'application_rate' | 'measured_runoff'")},
                 "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
@@ -107,23 +124,6 @@ MODEL_SPEC = {
                         "value should be set to 0, indicating that all "
                         "nutrients are delivered via surface flow. There is "
                         "no equivalent of this for phosphorus.")},
-                "nut_load_type": {
-                    "type": "option_string",
-                    "required": True,
-                    "options": {
-                        "application-rate": {
-                            "description": gettext(
-                                "Treat the load values as an application rate."
-                                "applied_nutrient * (1-retention_efficiency)")},
-                        "measured-runoff": {
-                            "description": gettext(
-                                "Treat the load values as measured runoff.")},
-                    },
-                    "about": gettext(
-                        "Whether the nutrient load in column "
-                        "load_[NUTRIENT] should be treated as an "
-                        "application rate or measured runoff. "
-                        "'application_rate' | 'measured_runoff'")},
             },
             "about": gettext(
                 "A table mapping each LULC class to its biophysical "
@@ -1242,10 +1242,13 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
 def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
     """Calculate load raster by mapping landcover and multiplying by area.
 
+    If load type is 'application-rate' adjust by ``1 - efficiency``.
+
     Args:
         lulc_raster_path (string): path to integer landcover raster.
         lucode_to_load (dict): a mapping of landcover IDs to nutrient load,
-            efficiency, and type.
+            efficiency, and type. The type value can be one of:
+            [ 'measured-runoff' | 'appliation-rate' ].
         target_load_raster (string): path to target raster that will have
             total load per pixel.
 
