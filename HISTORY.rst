@@ -51,6 +51,9 @@ Unreleased Changes
     * Updated translations for Spanish and Chinese
     * natcap.invest now works with (and requires) ``gdal.UseExceptions``. A
       ``FutureWarning`` is raised on import if GDAL exceptions are not enabled.
+    * Fixed an issue on Windows where GDAL fails to find its DLLs due to
+      an interfering GDAL installation on the PATH, such as from anaconda.
+      https://github.com/natcap/invest/issues/1643
 * Workbench
     * Several small updates to the model input form UI to improve usability
       and visual consistency (https://github.com/natcap/invest/issues/912).
