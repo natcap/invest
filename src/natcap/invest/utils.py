@@ -754,7 +754,7 @@ def reclassify_raster(
 
     # check keys in value map to ensure none are NA or None
     if any((key is pandas.NA or key is None)
-           for key in value_map.keys()):
+           for key in value_map):
         error_message = (f"Missing or NA value in '{column_name}' column"
                          f" in {table_name} table.")
         raise TypeError(error_message)
