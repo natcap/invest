@@ -741,13 +741,23 @@ def reclassify_raster(
         None
 
     Raises:
-        ValueError if ``values_required`` is ``True`` and a pixel value from
-        ``raster_path_band`` is not a key in ``value_map``.
+        ValueError:
+            - if ``values_required`` is ``True`` and a pixel value from 
+            ``raster_path_band`` is not a key in ``value_map``.
+            - if there is a missing or invalid key in ``value_map``, such
+            as `None`, `NA`, or other values representing missing data.
     """
     # Error early if 'error_details' keys are invalid
     raster_name = error_details['raster_name']
     column_name = error_details['column_name']
     table_name = error_details['table_name']
+
+    # check keys in value map to ensure none are NA or None
+    if any((key is pandas.NA or key is None)
+           for key in value_map.keys()):
+        error_message = (f"Missing or NA value in '{column_name}' column"
+                         f" in {table_name} table.")
+        raise TypeError(error_message)
 
     try:
         pygeoprocessing.reclassify_raster(
