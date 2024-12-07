@@ -2133,3 +2133,55 @@ class HabitatQualityTests(unittest.TestCase):
                 header='column', header_name='fut_path')
         )]
         self.assertEqual(validate_result, expected)
+
+    def test_habitat_quality_missing_lulc_val_in_sens_table(self):
+        """Habitat Quality: test for empty value in LULC column of
+        sensitivity table. Expects TypeError"""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        with open(args['sensitivity_table_path'], 'w') as open_table:
+            open_table.write('LULC,NAME,HABITAT,threat_1,threat_2\n')
+            open_table.write('1,"lulc 1",1,1,1\n')
+            open_table.write(',"lulc 2",0.5,0.5,1\n')  # missing LULC value
+            open_table.write('3,"lulc 3",0,0.3,1\n')
+
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32, nodata_val=None)
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        # create the threat CSV table
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                'threat_2_f.tif\n')
+
+        with self.assertRaises(TypeError):
+            habitat_quality.execute(args)
