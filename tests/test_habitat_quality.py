@@ -2145,18 +2145,11 @@ class HabitatQualityTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        args['access_vector_path'] = os.path.join(
-            args['workspace_dir'], 'access_samp.shp')
-        make_access_shp(args['access_vector_path'])
-
-        scenarios = ['_bas_', '_cur_', '_fut_']
-        for lulc_val, scenario in enumerate(scenarios, start=1):
-            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
-            lulc_array[50:, :] = lulc_val
-            args['lulc' + scenario + 'path'] = os.path.join(
-                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
-            make_raster_from_array(
-                lulc_array, args['lulc' + scenario + 'path'])
+        lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+        args['lulc_cur_path'] = os.path.join(
+            args['workspace_dir'], 'lc_samp_cur_b.tif')
+        make_raster_from_array(
+            lulc_array, args['lulc_cur_path'])
 
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')

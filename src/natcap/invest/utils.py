@@ -742,10 +742,10 @@ def reclassify_raster(
 
     Raises:
         ValueError:
-            - if ``values_required`` is ``True`` and a pixel value from 
+            - if ``values_required`` is ``True`` and a pixel value from
             ``raster_path_band`` is not a key in ``value_map``.
-            - if there is a missing or invalid key in ``value_map``, such
-            as `None`, `NA`, or other values representing missing data.
+        TypeError:
+            - if there is a ``None`` or ``NA`` key in ``value_map``.
     """
     # Error early if 'error_details' keys are invalid
     raster_name = error_details['raster_name']
