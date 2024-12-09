@@ -83,7 +83,7 @@ Unreleased Changes
       (https://github.com/natcap/invest/issues/1615).
     * Rarity values are now output in CSV format (as well as in raster format)
       (https://github.com/natcap/invest/issues/721).
-    * Improved error handling when there is a missing LULC value in the 
+    * Improved error handling when there is a missing LULC value in the
       sensitivity table (https://github.com/natcap/invest/issues/1671).
 * Pollination
     * Fixed an issue with nodata handling that was causing some outputs to be
