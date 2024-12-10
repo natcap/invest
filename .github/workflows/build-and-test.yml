@@ -185,7 +185,7 @@ jobs:
       - name: Install from source distribution
         run : |
           # Install natcap.invest from the sdist in dist/
-          pip install $(find dist -name "natcap[._-]invest*")
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" pip install $(find dist -name "natcap[._-]invest*")
 
           # Model tests should cover model functionality, we just want
           # to be sure that we can import `natcap.invest` here.
