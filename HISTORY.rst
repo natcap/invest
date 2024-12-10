@@ -54,6 +54,8 @@ Unreleased Changes
     * Fixed an issue on Windows where GDAL fails to find its DLLs due to
       an interfering GDAL installation on the PATH, such as from anaconda.
       https://github.com/natcap/invest/issues/1643
+    * Improved error handling of NA values in raster reclassification to provide
+      a more descriptive message.
 * Workbench
     * Several small updates to the model input form UI to improve usability
       and visual consistency (https://github.com/natcap/invest/issues/912).
@@ -81,6 +83,8 @@ Unreleased Changes
       (https://github.com/natcap/invest/issues/1615).
     * Rarity values are now output in CSV format (as well as in raster format)
       (https://github.com/natcap/invest/issues/721).
+    * Improved error handling when there is a missing LULC value in the
+      sensitivity table (https://github.com/natcap/invest/issues/1671).
 * Pollination
     * Fixed an issue with nodata handling that was causing some outputs to be
       filled either with the float32 value for positive infinity, or else with
