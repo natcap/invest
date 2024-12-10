@@ -22,7 +22,7 @@ _REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
 compiler_and_linker_args = []
 include_dirs = [numpy.get_include(), 'src/natcap/invest/managed_raster']
 if platform.system() == 'Windows':
-    compiler_args = ['/std:c++17']
+    compiler_args = ['/std:c++20']
     if 'NATCAP_INVEST_GDAL_LIB_PATH' not in os.environ:
         raise RuntimeError(
             'env variable NATCAP_INVEST_GDAL_LIB_PATH is not defined. '
@@ -34,7 +34,7 @@ if platform.system() == 'Windows':
 else:
     library_dirs = []
     compiler_args = []
-    compiler_and_linker_args = ['-stdlib=libc++', '-std=c++17']
+    compiler_and_linker_args = ['-stdlib=libc++', '-std=c++20']
     library_dirs = [subprocess.run(
         ['gdal-config', '--libs'], capture_output=True, text=True
     ).stdout.split()[0][2:]]  # get the first argument which is the library path
