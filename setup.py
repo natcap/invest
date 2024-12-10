@@ -23,8 +23,14 @@ compiler_and_linker_args = []
 include_dirs = [numpy.get_include(), 'src/natcap/invest/managed_raster']
 if platform.system() == 'Windows':
     compiler_args = ['/std:c++17']
-    library_dirs = [f'{os.environ["CONDA_PREFIX"]}/Library/lib']
-    include_dirs.append(f'{os.environ["CONDA_PREFIX"]}/Library/include')
+    if 'NATCAP_INVEST_GDAL_LIB_PATH' not in os.environ:
+        raise RuntimeError(
+            'env variable NATCAP_INVEST_GDAL_LIB_PATH is not defined. '
+            'This env variable is required when building on Windows. If '
+            'using conda to manage your gdal installation, you may set '
+            'NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library".')
+    library_dirs = [f'{os.environ["NATCAP_INVEST_GDAL_LIB_PATH"]}/lib']
+    include_dirs.append(f'{os.environ["NATCAP_INVEST_GDAL_LIB_PATH"]}/include')
 else:
     library_dirs = []
     compiler_args = []

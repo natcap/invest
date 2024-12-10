@@ -86,6 +86,11 @@ Building InVEST Distributions
 -----------------------------
 
 Once the required tools and packages are available, we can build InVEST.
+On Windows, you must indicate the location of the GDAL libraries with the environment
+variable ``NATCAP_INVEST_GDAL_LIB_PATH``. If you are using conda to manage dependencies
+as we recommend, you can add ``NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library"`` to
+the commands below. (On Mac and Linux, the gdal library path is determined for you
+automatically using ``gdal-config``, which isn't available on Windows.)
 
 
 Building ``natcap.invest`` python package
