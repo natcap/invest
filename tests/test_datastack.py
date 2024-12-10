@@ -18,6 +18,7 @@ import shapely.geometry
 from osgeo import gdal
 from osgeo import ogr
 
+gdal.UseExceptions()
 _TEST_FILE_CWD = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(_TEST_FILE_CWD,
                         '..', 'data', 'invest-test-data', 'data_stack')

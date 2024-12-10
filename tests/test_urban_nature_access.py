@@ -18,6 +18,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+gdal.UseExceptions()
 _DEFAULT_ORIGIN = (444720, 3751320)
 _DEFAULT_PIXEL_SIZE = (30, -30)
 _DEFAULT_EPSG = 3116
@@ -904,8 +905,14 @@ class UNATests(unittest.TestCase):
         from natcap.invest import urban_nature_access
         args = _build_model_args(self.workspace_dir)
 
+        admin_vector = gdal.OpenEx(args['admin_boundaries_vector_path'])
+        admin_layer = admin_vector.GetLayer()
+        fid = admin_layer.GetNextFeature().GetFID()
+        admin_layer = None
+        admin_vector = None
+
         feature_attrs = {
-            0: {
+            fid: {
                 'my-field-1': float(1.2345),
                 'my-field-2': numpy.float32(2.34567),
                 'my-field-3': numpy.float64(3.45678),
@@ -924,10 +931,10 @@ class UNATests(unittest.TestCase):
             vector = gdal.OpenEx(target_vector_path)
             self.assertEqual(vector.GetLayerCount(), 1)
             layer = vector.GetLayer()
-            self.assertEqual(len(layer.schema), len(feature_attrs[0]))
+            self.assertEqual(len(layer.schema), len(feature_attrs[fid]))
             self.assertEqual(layer.GetFeatureCount(), 1)
-            feature = layer.GetFeature(0)
-            for field_name, expected_field_value in feature_attrs[0].items():
+            feature = layer.GetFeature(fid)
+            for field_name, expected_field_value in feature_attrs[fid].items():
                 self.assertEqual(
                     feature.GetField(field_name), expected_field_value)
         finally:

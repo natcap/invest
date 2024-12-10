@@ -9,6 +9,7 @@ from osgeo import gdal
 import pandas
 import pygeoprocessing
 
+gdal.UseExceptions()
 MODEL_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'crop_production_model', 'model_data')

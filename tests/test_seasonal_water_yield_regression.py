@@ -10,6 +10,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'seasonal_water_yield')
@@ -165,6 +166,30 @@ def make_precip_rasters(precip_dir_path):
         make_raster_from_array(precip_array, precip_raster_path)
 
 
+def make_zeropadded_rasters(dir_path, prefix):
+    """Make twelve 1x1 raster files with filenames ending in zero-padded
+    month number.
+
+    Args:
+        dir_path (str): path to the directory for saving the rasters.
+        file_prefix (str): prefix of new files to create.
+
+    Returns:
+        list: monthly raster filenames
+    """
+    size = 1
+    monthly_raster_list = []
+
+    for month in range(1, 13):
+        raster_path = os.path.join(
+            dir_path, prefix + str(month).zfill(2) + '.tif')
+        temp_array = numpy.full((size, size), 1, dtype=numpy.int8)
+        make_raster_from_array(temp_array, raster_path)
+        monthly_raster_list.append(raster_path)
+
+    return monthly_raster_list
+
+
 def make_recharge_raster(recharge_ras_path):
     """Make a 100x100 raster of user defined recharge.
 
@@ -316,6 +341,61 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
     def tearDown(self):
         """Delete workspace after test is done."""
         shutil.rmtree(self.workspace_dir, ignore_errors=True)
+
+    def test_zeropadded_monthly_filenames(self):
+        """test filenames with zero-padded months in
+        _get_monthly_file_lists function
+        """
+        from natcap.invest.seasonal_water_yield.seasonal_water_yield import _get_monthly_file_lists
+
+        n_months = 12
+
+        # Make directory and file names with zero-padded months
+        test_precip_dir_path = os.path.join(self.workspace_dir,
+                                            'test_0pad_precip_dir')
+        os.makedirs(test_precip_dir_path)
+        precip_file_list = make_zeropadded_rasters(test_precip_dir_path, 'Prcp')
+
+        test_eto_dir_path = os.path.join(self.workspace_dir,
+                                         'test_0pad_eto_dir')
+        os.makedirs(test_eto_dir_path)
+        eto_file_list = make_zeropadded_rasters(test_eto_dir_path, 'et0_')
+
+        # Create list of monthly files for data_type
+        eto_path_list = _get_monthly_file_lists(
+            n_months, test_eto_dir_path)
+        
+        precip_path_list = _get_monthly_file_lists(
+            n_months, test_precip_dir_path)
+        
+        # Verify that the returned lists match the input
+        self.assertEqual(precip_path_list, precip_file_list)
+        self.assertEqual(eto_path_list, eto_file_list)
+
+    def test_nonpadded_monthly_filenames(self):
+        """test filenames without zero-padded months in
+        _get_monthly_file_lists function
+        """
+        from natcap.invest.seasonal_water_yield.seasonal_water_yield import _get_monthly_file_lists
+
+        n_months = 12
+
+        # Make directory and file names with (non-zero-padded) months
+        precip_dir_path = os.path.join(self.workspace_dir, 'precip_dir')
+        os.makedirs(precip_dir_path)
+        make_precip_rasters(precip_dir_path)
+
+        precip_path_list = _get_monthly_file_lists(
+            n_months, precip_dir_path)
+        
+        # Create lists of monthly filenames to which to compare function output
+        # Note this is hardcoded to match the filenames created in make_precip_rasters
+        match_precip = [os.path.join(precip_dir_path,
+                                     "precip_mm_" + str(m) + ".tif")
+                                     for m in range(1, n_months + 1)]
+        
+        # Verify that the returned lists match the input
+        self.assertEqual(precip_path_list, match_precip)
 
     def test_ambiguous_precip_data(self):
         """SWY test case where there are more than 12 precipitation files."""

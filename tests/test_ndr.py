@@ -12,6 +12,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ndr')
 

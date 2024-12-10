@@ -18,6 +18,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+gdal.UseExceptions()
 ORIGIN = (1180000.0, 690000.0)
 _SRS = osr.SpatialReference()
 _SRS.ImportFromEPSG(26910)  # UTM zone 10N

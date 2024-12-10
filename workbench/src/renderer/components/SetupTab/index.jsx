@@ -312,15 +312,12 @@ class SetupTab extends React.Component {
           return;
         }
       } else {
-          datastack = await fetchDatastackFromFile({ filepath: filepath });
+        datastack = await fetchDatastackFromFile({ filepath: filepath });
       }
     } catch (error) {
       logger.error(error);
       alert( // eslint-disable-line no-alert
-        t(
-          'No InVEST model data can be parsed from the file:\n {{filepath}}',
-          { filepath: filepath }
-        )
+        `${t('No InVEST model data can be parsed from the file:')}\n${filepath}`
       );
       return;
     }

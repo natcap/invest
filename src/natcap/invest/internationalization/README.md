@@ -27,7 +27,8 @@ When we are ready to get a new batch of translations, here is the process. These
 pybabel extract \
    --no-wrap \
    --project InVEST \
-   --msgid-bugs-address esoth@stanford.edu \
+   --version $(python -m setuptools_scm) \
+   --msgid-bugs-address natcap-software@lists.stanford.edu \
    --copyright-holder "Natural Capital Project" \
    --output src/natcap/invest/internationalization/messages.pot \
    src/
@@ -38,6 +39,7 @@ pybabel update \
    --input-file src/natcap/invest/internationalization/messages.pot \
    --output-file src/natcap/invest/internationalization/locales/$LL/LC_MESSAGES/messages.po
 ```
+This looks through the source code for strings wrapped in the `gettext(...)` function and writes them to the message catalog template. Then it updates the message catalog for the specificed language. New strings that don't yet have a translation will have an empty `msgstr` value. Previously translated messages that are no longer needed will be commented out but remain in the file. This will save translator time if they're needed again in the future.
 
 2. Check that the changes look correct, then commit:
 ```
@@ -45,7 +47,6 @@ git diff
 git add src/natcap/invest/internationalization/messages.pot src/natcap/invest/internationalization/locales/$LL/LC_MESSAGES/messages.po
 git commit -m "extract message catalog template and update $LL catalog from it"
 ```
-This looks through the source code for strings wrapped in the `gettext(...)` function and writes them to the message catalog template. Then it updates the message catalog for the specificed language. New strings that don't yet have a translation will have an empty `msgstr` value. Previously translated messages that are no longer needed will be commented out but remain in the file. This will save translator time if they're needed again in the future.
 
 3. Send `src/natcap/invest/internationalization/locales/$LL/LC_MESSAGES/messages.po` to the translator and wait to get it back. The translator will fill in the `msgstr` values for any new or edited messages.
 

@@ -24,6 +24,7 @@ import DownloadProgressBar from './components/DownloadProgressBar';
 import { getInvestModelNames } from './server_requests';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
+import Changelog from './components/Changelog';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -42,6 +43,8 @@ export default class App extends React.Component {
       recentJobs: [],
       showDownloadModal: false,
       downloadedNofN: null,
+      showChangelog: false,
+      changelogDismissed: false,
     };
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
@@ -65,6 +68,9 @@ export default class App extends React.Component {
           .includes(job.modelRunName)
       )),
       showDownloadModal: this.props.isFirstRun,
+      // Show changelog if this is a new version,
+      // but if it's the first run ever, wait until after download modal closes.
+      showChangelog: this.props.isNewVersion && !this.props.isFirstRun,
     });
     await i18n.changeLanguage(window.Workbench.LANGUAGE);
     ipcRenderer.on('download-status', (downloadedNofN) => {
@@ -91,6 +97,20 @@ export default class App extends React.Component {
   showDownloadModal(shouldShow) {
     this.setState({
       showDownloadModal: shouldShow,
+    });
+    // After close, show changelog if new version and app has just launched
+    // (i.e., show changelog only once, after the first time the download modal closes).
+    if (!shouldShow && this.props.isNewVersion && !this.state.changelogDismissed) {
+      this.setState({
+        showChangelog: true,
+      });
+    }
+  }
+
+  closeChangelogModal() {
+    this.setState({
+      showChangelog: false,
+      changelogDismissed: true,
     });
   }
 
@@ -183,6 +203,7 @@ export default class App extends React.Component {
       openTabIDs,
       activeTab,
       showDownloadModal,
+      showChangelog,
       downloadedNofN,
     } = this.state;
 
@@ -277,6 +298,13 @@ export default class App extends React.Component {
           show={showDownloadModal}
           closeModal={() => this.showDownloadModal(false)}
         />
+        {
+          showChangelog &&
+          <Changelog
+            show={showChangelog}
+            close={() => this.closeChangelogModal()}
+          />
+        }
         <TabContainer activeKey={activeTab}>
           <Navbar
             onDragOver={dragOverHandlerNone}
@@ -357,6 +385,7 @@ export default class App extends React.Component {
 
 App.propTypes = {
   isFirstRun: PropTypes.bool,
+  isNewVersion: PropTypes.bool,
   nCPU: PropTypes.number,
 };
 
@@ -364,5 +393,6 @@ App.propTypes = {
 // can be undefined for unrelated tests.
 App.defaultProps = {
   isFirstRun: false,
+  isNewVersion: false,
   nCPU: 1,
 };
