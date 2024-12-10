@@ -18,6 +18,7 @@ from shapely.geometry import Point
 from natcap.invest import utils
 import pygeoprocessing
 
+gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy')
 SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')

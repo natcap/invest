@@ -99,7 +99,7 @@ jobs:
           twine upload \
             --username="__token__" \
             --password=${{ secrets.PYPI_NATCAP_INVEST_TOKEN }} \
-            artifacts/natcap.invest*
+            artifacts/natcap.invest* artifacts/natcap_invest*
 
       - name: Roll back on failure
         if: failure()

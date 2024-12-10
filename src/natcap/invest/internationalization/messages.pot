@@ -1,958 +1,944 @@
 # Translations template for InVEST.
-# Copyright (C) 2023 Natural Capital Project
+# Copyright (C) 2024 Natural Capital Project
 # This file is distributed under the same license as the InVEST project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: InVEST 3.12.1.post164+gd33ae165f.d20230303\n"
+"Project-Id-Version: InVEST VERSION\n"
 "Report-Msgid-Bugs-To: esoth@stanford.edu\n"
-"POT-Creation-Date: 2023-03-03 12:40-0800\n"
+"POT-Creation-Date: 2024-03-26 09:24-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.10.3\n"
+"Generated-By: Babel 2.14.0\n"
 
-#: src/natcap/invest/annual_water_yield.py:43
-#: src/natcap/invest/forest_carbon_edge_effect.py:113
-#: src/natcap/invest/sdr/sdr.py:73
-msgid "All values in this raster must have corresponding entries in the Biophysical Table."
-msgstr ""
-
-#: src/natcap/invest/annual_water_yield.py:54
-msgid "Map of root restricting layer depth, the soil depth at which root penetration is strongly inhibited because of physical or chemical characteristics."
-msgstr ""
-
-#: src/natcap/invest/annual_water_yield.py:58
-msgid "root restricting layer depth"
-msgstr ""
-
-#: src/natcap/invest/annual_water_yield.py:68
-msgid "Map of plant available water content, the fraction of water that can be stored in the soil profile that is available to plants."
-msgstr ""
-
-#: src/natcap/invest/annual_water_yield.py:72
-msgid "plant available water content"
-msgstr ""
-
-#: src/natcap/invest/annual_water_yield.py:84
-msgid "Unique identifier for each watershed."
-msgstr ""
-
-#: src/natcap/invest/annual_water_yield.py:88
-msgid "Map of watershed boundaries, such that each watershed drains to a point of interest where hydropower production will be analyzed."
-msgstr ""
-
-#: src/natcap/invest/annual_water_yield.py:92 src/natcap/invest/ndr/ndr.py:72
-msgid "watersheds"
-msgstr ""
-
-#: src/natcap/invest/annual_water_yield.py:100
+#: src/natcap/invest/annual_water_yield.py:92
+#: src/natcap/invest/annual_water_yield.py:186
 msgid "Unique identifier for each subwatershed."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:105
+#: src/natcap/invest/annual_water_yield.py:101
+#: src/natcap/invest/annual_water_yield.py:170
+msgid "Unique identifier for each watershed."
+msgstr ""
+
+#: src/natcap/invest/annual_water_yield.py:129
+#: src/natcap/invest/forest_carbon_edge_effect.py:115
+#: src/natcap/invest/sdr/sdr.py:74
+msgid "All values in this raster must have corresponding entries in the Biophysical Table."
+msgstr ""
+
+#: src/natcap/invest/annual_water_yield.py:140
+msgid "Map of root restricting layer depth, the soil depth at which root penetration is strongly inhibited because of physical or chemical characteristics."
+msgstr ""
+
+#: src/natcap/invest/annual_water_yield.py:144
+msgid "root restricting layer depth"
+msgstr ""
+
+#: src/natcap/invest/annual_water_yield.py:154
+msgid "Map of plant available water content, the fraction of water that can be stored in the soil profile that is available to plants."
+msgstr ""
+
+#: src/natcap/invest/annual_water_yield.py:158
+msgid "plant available water content"
+msgstr ""
+
+#: src/natcap/invest/annual_water_yield.py:174
+msgid "Map of watershed boundaries, such that each watershed drains to a point of interest where hydropower production will be analyzed."
+msgstr ""
+
+#: src/natcap/invest/annual_water_yield.py:178 src/natcap/invest/ndr/ndr.py:73
+msgid "watersheds"
+msgstr ""
+
+#: src/natcap/invest/annual_water_yield.py:191
 msgid "Map of subwatershed boundaries within each watershed in the Watersheds map."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:108
+#: src/natcap/invest/annual_water_yield.py:194
 msgid "sub-watersheds"
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:116
+#: src/natcap/invest/annual_water_yield.py:202
 msgid "Code indicating whether the the LULC class is vegetated for the purpose of AET. Enter 1 for all vegetated classes except wetlands, and 0 for all other classes, including wetlands, urban areas, water bodies, etc."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:126
+#: src/natcap/invest/annual_water_yield.py:212
 msgid "Maximum root depth for plants in this LULC class. Only used for classes with a 'lulc_veg' value of 1."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:133
-#: src/natcap/invest/urban_cooling_model.py:63
+#: src/natcap/invest/annual_water_yield.py:219
+#: src/natcap/invest/urban_cooling_model.py:65
 msgid "Crop coefficient for this LULC class."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:135
+#: src/natcap/invest/annual_water_yield.py:222
 msgid "Table of biophysical parameters for each LULC class. All values in the LULC raster must have corresponding entries in this table."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:139
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:205
-#: src/natcap/invest/forest_carbon_edge_effect.py:109
-#: src/natcap/invest/ndr/ndr.py:118 src/natcap/invest/pollination.py:116
-#: src/natcap/invest/sdr/sdr.py:103
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:138
-#: src/natcap/invest/urban_cooling_model.py:56
-#: src/natcap/invest/urban_flood_risk_mitigation.py:76
+#: src/natcap/invest/annual_water_yield.py:226
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:208
+#: src/natcap/invest/forest_carbon_edge_effect.py:111
+#: src/natcap/invest/ndr/ndr.py:120 src/natcap/invest/pollination.py:118
+#: src/natcap/invest/sdr/sdr.py:105
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:137
+#: src/natcap/invest/urban_cooling_model.py:57
+#: src/natcap/invest/urban_flood_risk_mitigation.py:77
 msgid "biophysical table"
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:145
+#: src/natcap/invest/annual_water_yield.py:232
 msgid "The seasonality factor, representing hydrogeological characterisitics and the seasonal distribution of precipitation. Values typically range from 1 - 30."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:149
+#: src/natcap/invest/annual_water_yield.py:236
 msgid "z parameter"
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:155
+#: src/natcap/invest/annual_water_yield.py:242
 msgid "LULC code corresponding to the LULC raster"
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:159
+#: src/natcap/invest/annual_water_yield.py:246
 msgid "Average consumptive water use in this LULC class."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:166
+#: src/natcap/invest/annual_water_yield.py:254
 msgid "A table of water demand for each LULC class. Each LULC code in the LULC raster must have a corresponding row in this table."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:170
+#: src/natcap/invest/annual_water_yield.py:258
 msgid "water demand table"
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:177
+#: src/natcap/invest/annual_water_yield.py:265
 msgid "Unique identifier for the hydropower station. This must match the 'ws_id' value for the corresponding watershed in the Watersheds vector. Each watershed in the Watersheds vector must have its 'ws_id' entered in this column."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:186
+#: src/natcap/invest/annual_water_yield.py:274
 msgid "Turbine efficiency, the proportion of potential energy captured and converted to electricity by the turbine."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:193
+#: src/natcap/invest/annual_water_yield.py:281
 msgid "The proportion of inflow water volume that is used to generate energy."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:200
+#: src/natcap/invest/annual_water_yield.py:288
 msgid "The head, measured as the average annual effective height of water behind each dam at the turbine intake."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:208
+#: src/natcap/invest/annual_water_yield.py:296
 msgid "The price of power produced by the station. Must be in the same currency used in the 'cost' column."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:215
+#: src/natcap/invest/annual_water_yield.py:303
 msgid "Annual maintenance and operations cost of running the hydropower station. Must be in the same currency used in the 'kw_price' column."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:223
+#: src/natcap/invest/annual_water_yield.py:311
 msgid "Number of years over which to value the hydropower station. This is either the station's expected lifespan or the duration of the land use scenario of interest."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:231
+#: src/natcap/invest/annual_water_yield.py:319
 msgid "The annual discount rate, applied for each year in the time span."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:237
+#: src/natcap/invest/annual_water_yield.py:326
 msgid "A table mapping each watershed to the associated valuation parameters for its hydropower station."
 msgstr ""
 
-#: src/natcap/invest/annual_water_yield.py:240
+#: src/natcap/invest/annual_water_yield.py:329
 msgid "hydropower valuation table"
 msgstr ""
 
-#: src/natcap/invest/carbon.py:38
+#: src/natcap/invest/carbon.py:59
 msgid "A map of LULC for the current scenario. All values in this raster must have corresponding entries in the Carbon Pools table."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:42
+#: src/natcap/invest/carbon.py:63
 msgid "current LULC"
 msgstr ""
 
-#: src/natcap/invest/carbon.py:47
+#: src/natcap/invest/carbon.py:68
 msgid "Run sequestration analysis. This requires inputs of LULC maps for both current and future scenarios. Required if REDD scenario analysis or run valuation model is selected."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:52
+#: src/natcap/invest/carbon.py:73
 msgid "calculate sequestration"
 msgstr ""
 
-#: src/natcap/invest/carbon.py:59
+#: src/natcap/invest/carbon.py:80
 msgid "A map of LULC for the future scenario. If run valuation model is selected, this should be the reference, or baseline, future scenario against which to compare the REDD policy scenario. All values in this raster must have corresponding entries in the Carbon Pools table. Required if Calculate Sequestration is selected."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:67
+#: src/natcap/invest/carbon.py:88
 msgid "future LULC"
 msgstr ""
 
-#: src/natcap/invest/carbon.py:72
+#: src/natcap/invest/carbon.py:93
 msgid "Run REDD scenario analysis. This requires three LULC maps: one for the current scenario, one for the future baseline scenario, and one for the future REDD policy scenario."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:77
+#: src/natcap/invest/carbon.py:98
 msgid "REDD scenario analysis"
 msgstr ""
 
-#: src/natcap/invest/carbon.py:84
+#: src/natcap/invest/carbon.py:105
 msgid "A map of LULC for the REDD policy scenario. All values in this raster must have corresponding entries in the Carbon Pools table. Required if REDD Scenario Analysis is selected."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:89
+#: src/natcap/invest/carbon.py:110
 msgid "REDD LULC"
 msgstr ""
 
-#: src/natcap/invest/carbon.py:98
+#: src/natcap/invest/carbon.py:119
 msgid "Carbon density of aboveground biomass."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:102
+#: src/natcap/invest/carbon.py:123
 msgid "Carbon density of belowground biomass."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:106
+#: src/natcap/invest/carbon.py:127
 msgid "Carbon density of soil."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:110
+#: src/natcap/invest/carbon.py:131
 msgid "Carbon density of dead matter."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:112
+#: src/natcap/invest/carbon.py:134
 msgid "A table that maps each LULC code to carbon pool data for that LULC type."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:115
+#: src/natcap/invest/carbon.py:137
 msgid "carbon pools"
 msgstr ""
 
-#: src/natcap/invest/carbon.py:122
+#: src/natcap/invest/carbon.py:144
 msgid "The calendar year of the current scenario depicted in the current LULC map. Required if Run Valuation model is selected."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:125
+#: src/natcap/invest/carbon.py:147
 msgid "current LULC year"
 msgstr ""
 
-#: src/natcap/invest/carbon.py:132
+#: src/natcap/invest/carbon.py:154
 msgid "The calendar year of the future scenario depicted in the future LULC map. Required if Run Valuation model is selected."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:140
+#: src/natcap/invest/carbon.py:162
 msgid "Calculate net present value for the future scenario, and the REDD scenario if provided, and report it in the final HTML document."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:144
+#: src/natcap/invest/carbon.py:166
 msgid "run valuation model"
 msgstr ""
 
-#: src/natcap/invest/carbon.py:150
+#: src/natcap/invest/carbon.py:172
 msgid "The present value of carbon. Required if Run Valuation model is selected."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:153
+#: src/natcap/invest/carbon.py:175
 msgid "price of carbon"
 msgstr ""
 
-#: src/natcap/invest/carbon.py:158
+#: src/natcap/invest/carbon.py:180
 msgid "The annual market discount rate in the price of carbon, which reflects society's preference for immediate benefits over future benefits. Required if Run Valuation model is selected."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:163
+#: src/natcap/invest/carbon.py:185
 msgid "annual market discount rate"
 msgstr ""
 
-#: src/natcap/invest/carbon.py:168
+#: src/natcap/invest/carbon.py:190
 msgid "The relative annual increase of the price of carbon. Required if Run Valuation model is selected."
 msgstr ""
 
-#: src/natcap/invest/carbon.py:171
+#: src/natcap/invest/carbon.py:193
 msgid "annual price change"
 msgstr ""
 
-#: src/natcap/invest/cli.py:55
+#: src/natcap/invest/cli.py:56
 msgid "Available models:"
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:33
+#: src/natcap/invest/coastal_vulnerability.py:36
 msgid "Must be a polyline vector"
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:34
+#: src/natcap/invest/coastal_vulnerability.py:37
 msgid "Must be a point or multipoint geometry."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:60
-msgid "Map of the region over which to run the model."
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:66
-msgid "Interval at which to space shore points along the coastline."
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:68
-msgid "model resolution"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:74
-msgid "Map of all landmasses in and around the region of interest. It is not recommended to clip this landmass to the AOI polygon because some functions in the model require searching for landmasses around shore points up to the distance defined in Maximum Fetch Distance, which likely extends beyond the AOI polygon."
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:81
-msgid "landmasses"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:88
+#: src/natcap/invest/coastal_vulnerability.py:93
 #, python-format
 msgid "Proportion of the highest 10% of wind speeds in the record of interest that blow in the direction of each sector."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:95
+#: src/natcap/invest/coastal_vulnerability.py:100
 #, python-format
 msgid "Average of the highest 10% of wind speeds that blow in the direction of each sector."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:100
+#: src/natcap/invest/coastal_vulnerability.py:105
 #, python-format
 msgid "Proportion of the highest 10% of wave power values on record that are in each sector."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:106
+#: src/natcap/invest/coastal_vulnerability.py:111
 #, python-format
 msgid "Average of the highest 10% of wave power values on record in the direction of each sector."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:111
+#: src/natcap/invest/coastal_vulnerability.py:116
 #, python-format
 msgid "Average of the highest 10% of wind speeds that are centered on each main sector direction X."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:116
-msgid "Map of gridded wind and wave data that represent storm conditions. This global dataset is provided with the InVEST sample data. There are 80 required columns; each of the 5 types is repeated for each sixteenth sector of the 360° compass: [0,22,45,67,90,112,135,157,180,202,225,247,270,292,315,337]. For example: REI_PCT0, V10PCT_90."
+#: src/natcap/invest/coastal_vulnerability.py:145
+msgid "Map of the region over which to run the model."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:124
-msgid "WaveWatchIII"
+#: src/natcap/invest/coastal_vulnerability.py:151
+msgid "Interval at which to space shore points along the coastline."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:130
-msgid "Maximum distance in meters to extend rays from shore points. Points with rays equal to this distance accumulate ocean- driven wave exposure along those rays and local-wind-driven wave exposure along the shorter rays."
+#: src/natcap/invest/coastal_vulnerability.py:153
+msgid "model resolution"
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:135
-msgid "maximum fetch distance"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:143
-msgid "Map of bathymetry (ocean depth). Bathymetry values should be negative, and any positive values will be ignored. This should cover the area extending beyond the AOI to the maximum fetch distance."
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:149
-msgid "Bathymetry"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:155
-msgid "Map of the edges of the continental shelf or other locally relevant bathymetry contour."
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:158
-msgid "continental shelf contour"
+#: src/natcap/invest/coastal_vulnerability.py:159
+msgid "Map of all landmasses in and around the region of interest. It is not recommended to clip this landmass to the AOI polygon because some functions in the model require searching for landmasses around shore points up to the distance defined in Maximum Fetch Distance, which likely extends beyond the AOI polygon."
 msgstr ""
 
 #: src/natcap/invest/coastal_vulnerability.py:166
-msgid "Map of elevation above sea level on land. This should cover the area extending beyond the AOI by at least the elevation averaging radius. Elevation may be measured in any unit."
+msgid "landmasses"
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:175
-msgid "A radius around each shore point within which to average the elevation values in the DEM raster."
+#: src/natcap/invest/coastal_vulnerability.py:172
+msgid "Map of gridded wind and wave data that represent storm conditions. This global dataset is provided with the InVEST sample data. There are 80 required columns; each of the 5 types is repeated for each sixteenth sector of the 360° compass: [0,22,45,67,90,112,135,157,180,202,225,247,270,292,315,337]. For example: REI_PCT0, V10PCT_90."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:178
-msgid "elevation averaging radius"
+#: src/natcap/invest/coastal_vulnerability.py:180
+msgid "WaveWatchIII"
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:185
-msgid "Unique name for the habitat. No spaces allowed."
+#: src/natcap/invest/coastal_vulnerability.py:186
+msgid "Maximum distance in meters to extend rays from shore points. Points with rays equal to this distance accumulate ocean- driven wave exposure along those rays and local-wind-driven wave exposure along the shorter rays."
 msgstr ""
 
 #: src/natcap/invest/coastal_vulnerability.py:191
-msgid "Map of area(s) where the habitat is present. If raster, presence of the habitat can be represented by any value and absence of the habitat can be represented by 0 and nodata values."
+msgid "maximum fetch distance"
 msgstr ""
 
 #: src/natcap/invest/coastal_vulnerability.py:199
-msgid "very high protection"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:200
-msgid "high protection"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:201
-msgid "moderate protection"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:202
-msgid "low protection"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:203
-msgid "very low protection"
+msgid "Map of bathymetry (ocean depth). Bathymetry values should be negative, and any positive values will be ignored. This should cover the area extending beyond the AOI to the maximum fetch distance."
 msgstr ""
 
 #: src/natcap/invest/coastal_vulnerability.py:205
-msgid "Relative amount of coastline protection this habitat provides."
+msgid "Bathymetry"
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:213
-msgid "The distance beyond which this habitat will provide no protection to the coastline."
+#: src/natcap/invest/coastal_vulnerability.py:211
+msgid "Map of the edges of the continental shelf or other locally relevant bathymetry contour."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:218
-msgid "Table that specifies spatial habitat data and parameters."
+#: src/natcap/invest/coastal_vulnerability.py:214
+msgid "continental shelf contour"
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:220
-msgid "habitats table"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:228
-msgid "very low exposure"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:229
-msgid "low exposure"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:230
-msgid "moderate exposure"
+#: src/natcap/invest/coastal_vulnerability.py:222
+msgid "Map of elevation above sea level on land. This should cover the area extending beyond the AOI by at least the elevation averaging radius. Elevation may be measured in any unit."
 msgstr ""
 
 #: src/natcap/invest/coastal_vulnerability.py:231
-msgid "high exposure"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:232
-msgid "very high exposure"
+msgid "A radius around each shore point within which to average the elevation values in the DEM raster."
 msgstr ""
 
 #: src/natcap/invest/coastal_vulnerability.py:234
-msgid "Relative exposure of the segment of coastline."
+msgid "elevation averaging radius"
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:239
-msgid "Map of relative exposure of each segment of coastline."
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:240
-msgid "geomorphology"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:245
-msgid "1: very low exposure"
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:246
-msgid "2: low exposure"
+#: src/natcap/invest/coastal_vulnerability.py:241
+msgid "Unique name for the habitat. No spaces allowed."
 msgstr ""
 
 #: src/natcap/invest/coastal_vulnerability.py:247
-msgid "3: moderate exposure"
+msgid "Map of area(s) where the habitat is present. If raster, presence of the habitat can be represented by any value and absence of the habitat can be represented by 0 and nodata values."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:248
-msgid "4: high exposure"
+#: src/natcap/invest/coastal_vulnerability.py:254
+msgid "Relative amount of coastline protection this habitat provides, from 1 (very high protection) to 5 (very low protection."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:249
-msgid "5: very high exposure"
+#: src/natcap/invest/coastal_vulnerability.py:263
+msgid "The distance beyond which this habitat will provide no protection to the coastline."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:252
-msgid "Exposure rank to assign to any shore points that are not near to any segment in the geomorphology vector. Required if a Geomorphology vector is provided."
+#: src/natcap/invest/coastal_vulnerability.py:269
+msgid "Table that specifies spatial habitat data and parameters."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:256
-msgid "geomorphology fill value"
+#: src/natcap/invest/coastal_vulnerability.py:271
+msgid "habitats table"
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:264
-msgid "Map of total human population on each pixel."
+#: src/natcap/invest/coastal_vulnerability.py:279
+#: src/natcap/invest/coastal_vulnerability.py:416
+msgid "very low exposure"
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:265
-msgid "human population"
+#: src/natcap/invest/coastal_vulnerability.py:280
+#: src/natcap/invest/coastal_vulnerability.py:417
+msgid "low exposure"
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:272
-msgid "The radius around each shore point within which to compute the average population density. Required if a Human Population map is provided."
-msgstr ""
-
-#: src/natcap/invest/coastal_vulnerability.py:276
-msgid "population search radius"
+#: src/natcap/invest/coastal_vulnerability.py:281
+#: src/natcap/invest/coastal_vulnerability.py:418
+msgid "moderate exposure"
 msgstr ""
 
 #: src/natcap/invest/coastal_vulnerability.py:282
-msgid "Sea level rise rate or amount. This field name must be chosen as the Sea Level Rise Field."
+#: src/natcap/invest/coastal_vulnerability.py:419
+msgid "high exposure"
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:283
+#: src/natcap/invest/coastal_vulnerability.py:420
+msgid "very high exposure"
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:285
+#: src/natcap/invest/coastal_vulnerability.py:422
+msgid "Relative exposure of the segment of coastline."
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:290
+msgid "Map of relative exposure of each segment of coastline."
 msgstr ""
 
 #: src/natcap/invest/coastal_vulnerability.py:291
-msgid "Map of sea level rise rates or amounts. May be any sea level rise metric of interest, such as rate, or net rise/fall."
+msgid "geomorphology"
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:294
-msgid "sea level rise"
+#: src/natcap/invest/coastal_vulnerability.py:296
+msgid "1: very low exposure"
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:297
+msgid "2: low exposure"
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:298
+msgid "3: moderate exposure"
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:299
+msgid "4: high exposure"
 msgstr ""
 
 #: src/natcap/invest/coastal_vulnerability.py:300
+msgid "5: very high exposure"
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:303
+msgid "Exposure rank to assign to any shore points that are not near to any segment in the geomorphology vector. Required if a Geomorphology vector is provided."
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:307
+msgid "geomorphology fill value"
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:315
+msgid "Map of total human population on each pixel."
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:316
+msgid "human population"
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:323
+msgid "The radius around each shore point within which to compute the average population density. Required if a Human Population map is provided."
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:327
+msgid "population search radius"
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:333
+msgid "Sea level rise rate or amount. This field name must be chosen as the Sea Level Rise Field."
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:342
+msgid "Map of sea level rise rates or amounts. May be any sea level rise metric of interest, such as rate, or net rise/fall."
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:345
+msgid "sea level rise"
+msgstr ""
+
+#: src/natcap/invest/coastal_vulnerability.py:351
 msgid "Name of the field in the sea level rise vector which contains the sea level rise metric of interest. Required if a Sea Level Rise vector is provided."
 msgstr ""
 
-#: src/natcap/invest/coastal_vulnerability.py:304
+#: src/natcap/invest/coastal_vulnerability.py:355
 msgid "sea level rise field"
 msgstr ""
 
-#: src/natcap/invest/crop_production_percentile.py:96
+#: src/natcap/invest/crop_production_percentile.py:135
 msgid "A table that maps each LULC code from the LULC map to one of the 175 canonical crop names representing the crop grown in that LULC class."
 msgstr ""
 
-#: src/natcap/invest/crop_production_percentile.py:100
+#: src/natcap/invest/crop_production_percentile.py:139
 msgid "LULC to Crop Table"
 msgstr ""
 
-#: src/natcap/invest/crop_production_percentile.py:112
+#: src/natcap/invest/crop_production_percentile.py:151
 msgid "Table mapping each climate bin to yield percentiles for each crop."
 msgstr ""
 
-#: src/natcap/invest/crop_production_percentile.py:142
+#: src/natcap/invest/crop_production_percentile.py:182
+#: src/natcap/invest/crop_production_regression.py:169
 msgid "Maps of climate bins for each crop."
 msgstr ""
 
-#: src/natcap/invest/crop_production_percentile.py:152
+#: src/natcap/invest/crop_production_percentile.py:192
+#: src/natcap/invest/crop_production_regression.py:179
 msgid "Maps of actual observed yield for each crop."
 msgstr ""
 
-#: src/natcap/invest/crop_production_percentile.py:207
+#: src/natcap/invest/crop_production_percentile.py:221
 msgid "Path to the InVEST Crop Production Data directory."
 msgstr ""
 
-#: src/natcap/invest/crop_production_percentile.py:208
+#: src/natcap/invest/crop_production_percentile.py:222
 msgid "model data directory"
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:23
+#: src/natcap/invest/crop_production_regression.py:22
 msgid "barley"
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:24
+#: src/natcap/invest/crop_production_regression.py:23
 msgid "maize"
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:25
+#: src/natcap/invest/crop_production_regression.py:24
 msgid "oil palm"
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:26
+#: src/natcap/invest/crop_production_regression.py:25
 msgid "potato"
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:27
+#: src/natcap/invest/crop_production_regression.py:26
 msgid "rice"
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:28
+#: src/natcap/invest/crop_production_regression.py:27
 msgid "soybean"
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:29
+#: src/natcap/invest/crop_production_regression.py:28
 msgid "sugar beet"
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:30
+#: src/natcap/invest/crop_production_regression.py:29
 msgid "sugarcane"
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:31
+#: src/natcap/invest/crop_production_regression.py:30
 msgid "wheat"
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:61
+#: src/natcap/invest/crop_production_regression.py:96
 msgid "A table that maps each LULC code from the LULC map to one of the 10 canonical crop names representing the crop grown in that LULC class."
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:65
+#: src/natcap/invest/crop_production_regression.py:100
 msgid "LULC to crop table"
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:73
+#: src/natcap/invest/crop_production_regression.py:109
 msgid "One of the supported crop types."
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:81
+#: src/natcap/invest/crop_production_regression.py:117
 msgid "A table that maps crops to fertilizer application rates."
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:83
+#: src/natcap/invest/crop_production_regression.py:119
 msgid "fertilization rate table"
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:156
+#: src/natcap/invest/crop_production_regression.py:191
 msgid "The Crop Production datasets provided with the model."
 msgstr ""
 
-#: src/natcap/invest/crop_production_regression.py:157
+#: src/natcap/invest/crop_production_regression.py:192
 msgid "model data"
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:50
+#: src/natcap/invest/forest_carbon_edge_effect.py:51
 msgid "Number of closest regression models that are used when calculating the total biomass. Each local model is linearly weighted by distance such that the pixel's biomass is a function of each of these points with the closest point having the largest effect. Must be an integer greater than 0. Required if Compute Forest Edge Effects is selected."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:58
+#: src/natcap/invest/forest_carbon_edge_effect.py:59
 msgid "number of points to average"
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:71
+#: src/natcap/invest/forest_carbon_edge_effect.py:73
 msgid "Enter 1 if the LULC class is tropical forest, 0 if it is not tropical forest."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:77
+#: src/natcap/invest/forest_carbon_edge_effect.py:79
 msgid "Carbon density value for the aboveground carbon pool."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:85
+#: src/natcap/invest/forest_carbon_edge_effect.py:87
 msgid "Carbon density value for the belowground carbon pool. Required if calculating all pools."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:93
+#: src/natcap/invest/forest_carbon_edge_effect.py:95
 msgid "Carbon density value for the soil carbon pool. Required if calculating all pools."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:101
+#: src/natcap/invest/forest_carbon_edge_effect.py:103
 msgid "Carbon density value for the dead matter carbon pool. Required if calculating all pools."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:106
+#: src/natcap/invest/forest_carbon_edge_effect.py:108
 msgid "A table mapping each LULC code from the LULC map to biophysical data for that LULC class."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:122
+#: src/natcap/invest/forest_carbon_edge_effect.py:124
 msgid "all"
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:123
+#: src/natcap/invest/forest_carbon_edge_effect.py:125
 msgid "Use all pools (aboveground, belowground, soil, and dead matter) in the carbon pool calculation."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:127
+#: src/natcap/invest/forest_carbon_edge_effect.py:129
 msgid "aboveground only"
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:128
+#: src/natcap/invest/forest_carbon_edge_effect.py:130
 msgid "Only use the aboveground pool in the carbon pool calculation."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:132
+#: src/natcap/invest/forest_carbon_edge_effect.py:134
 msgid "Which carbon pools to consider."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:133
+#: src/natcap/invest/forest_carbon_edge_effect.py:135
 msgid "carbon pools to calculate"
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:137
+#: src/natcap/invest/forest_carbon_edge_effect.py:139
 msgid "Account for forest edge effects on aboveground carbon."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:138
+#: src/natcap/invest/forest_carbon_edge_effect.py:140
 msgid "compute forest edge effects"
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:146
+#: src/natcap/invest/forest_carbon_edge_effect.py:148
 msgid "asymptotic"
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:147
+#: src/natcap/invest/forest_carbon_edge_effect.py:149
 msgid "logarithmic"
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:148
+#: src/natcap/invest/forest_carbon_edge_effect.py:150
 msgid "linear"
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:150
+#: src/natcap/invest/forest_carbon_edge_effect.py:152
 msgid "Optimal regression model for the area."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:155
+#: src/natcap/invest/forest_carbon_edge_effect.py:157
 msgid "θ₁ parameter for the regression equation."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:159
+#: src/natcap/invest/forest_carbon_edge_effect.py:161
 msgid "θ₂ parameter for the regression equation."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:163
+#: src/natcap/invest/forest_carbon_edge_effect.py:165
 msgid "θ₃ parameter for the regression equation. Used only for the asymptotic model."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:169
+#: src/natcap/invest/forest_carbon_edge_effect.py:171
 msgid "Map storing the optimal regression model for each tropical subregion and the corresponding theta parameters for that regression equation. Default data is provided. Required if Compute Forest Edge Effects is selected."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:174
+#: src/natcap/invest/forest_carbon_edge_effect.py:176
 msgid "global regression models"
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:179
+#: src/natcap/invest/forest_carbon_edge_effect.py:181
 msgid "Proportion of forest edge biomass that is elemental carbon. Required if Compute Forest Edge Effects is selected."
 msgstr ""
 
-#: src/natcap/invest/forest_carbon_edge_effect.py:182
+#: src/natcap/invest/forest_carbon_edge_effect.py:184
 msgid "forest edge biomass to carbon conversion factor"
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:22
+#: src/natcap/invest/habitat_quality.py:21
 msgid "Threats {threats} does not match any column in the sensitivity table. Sensitivity columns: {column_names}"
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:25
-msgid "The column '{column_name}' was not found in the Threat Data table for the corresponding input LULC scenario."
-msgstr ""
-
-#: src/natcap/invest/habitat_quality.py:28
+#: src/natcap/invest/habitat_quality.py:24
 msgid "A threat raster for threats: {threat_list} was not found or it could not be opened by GDAL."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:31
+#: src/natcap/invest/habitat_quality.py:27
 msgid "Threat paths must be unique. Duplicates: "
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:50
+#: src/natcap/invest/habitat_quality.py:46
 msgid "Map of LULC at present. All values in this raster must have corresponding entries in the Sensitivity table."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:53
+#: src/natcap/invest/habitat_quality.py:49
 msgid "current land cover"
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:59
+#: src/natcap/invest/habitat_quality.py:55
 msgid "Map of LULC in a future scenario. All values in this raster must have corresponding entries in the Sensitivity Table. Must use the same classification scheme and codes as in the Current LULC map."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:64
+#: src/natcap/invest/habitat_quality.py:60
 msgid "future land cover"
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:70
+#: src/natcap/invest/habitat_quality.py:66
 msgid "Map of LULC in a baseline scenario, when intensive landscape management was relatively rare. All values in this raster must have corresponding entries in the Sensitivity table. Must use the same classification scheme and codes as in the Current LULC map."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:76
+#: src/natcap/invest/habitat_quality.py:72
 msgid "baseline land cover"
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:83
+#: src/natcap/invest/habitat_quality.py:80
 msgid "Name of the threat. Each threat name must have a corresponding column in the Sensitivity table."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:89
+#: src/natcap/invest/habitat_quality.py:86
 msgid "The maximum distance over which each threat affects habitat quality. The impact of each degradation source will decline to zero at this maximum distance. This value must be greater than or equal to the pixel size of your LULC raster(s)."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:98
+#: src/natcap/invest/habitat_quality.py:95
 msgid "The impact of each threat on habitat quality, relative to other threats."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:106
+#: src/natcap/invest/habitat_quality.py:103
 msgid "Effects of the threat decay linearly with distance from the threat."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:110
+#: src/natcap/invest/habitat_quality.py:107
 msgid "Effects of the threat decay exponentially with distance from the threat."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:114
+#: src/natcap/invest/habitat_quality.py:111
 msgid "The type of decay over space for each threat."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:119
-msgid "Map of the threat's distribution in the current scenario. Each pixel value is the relative intensity of the threat at that location. "
+#: src/natcap/invest/habitat_quality.py:116
+msgid "Path to a raster of the threat's distribution in the current scenario. Each pixel value in this raster is the relative intensity of the threat at that location, with values between 0 and 1."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:128
-msgid "Map of the threat's distribution in the future scenario. Each pixel value is the relative intensity of the threat at that location. Required if Future LULC is provided."
+#: src/natcap/invest/habitat_quality.py:127
+msgid "Path to a raster of the threat's distribution in a future scenario. Each pixel value in this raster is the relative intensity of the threat at that location, with values between 0 and 1."
 msgstr ""
 
 #: src/natcap/invest/habitat_quality.py:138
-msgid "Map of the threat's distribution in the baseline scenario. Each pixel value is the relative intensity of the threat at that location. Required if Baseline LULC is provided."
+msgid "Path to a raster of the threat's distribution in the baseline scenario. Each pixel value in this raster is the relative intensity of the threat at that location, with values between 0 and 1. Required if Baseline LULC is provided."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:145
+#: src/natcap/invest/habitat_quality.py:146
 msgid "Table mapping each threat of interest to its properties and distribution maps. Paths are relative to the threats table path."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:149
+#: src/natcap/invest/habitat_quality.py:150
 msgid "threats table"
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:157
+#: src/natcap/invest/habitat_quality.py:158
 msgid "The region's relative accessibility to threats, where 0 represents completely inaccessible and 1 represents completely accessible."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:165
+#: src/natcap/invest/habitat_quality.py:166
 msgid "Map of the relative protection that legal, institutional, social, and physical barriers provide against threats. Any cells not covered by a polygon will be set to 1."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:169
+#: src/natcap/invest/habitat_quality.py:170
 msgid "accessibility to threats"
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:177
+#: src/natcap/invest/habitat_quality.py:183
 msgid "Suitability of this LULC class as habitat, where 0 is not suitable and 1 is completely suitable."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:183
+#: src/natcap/invest/habitat_quality.py:189
 msgid "The relative sensitivity of each LULC class to each type of threat, where 1 represents high sensitivity and 0 represents that it is unaffected. There must be one threat column for each threat name in the 'threats' column of the Threats Table."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:191
+#: src/natcap/invest/habitat_quality.py:197
 msgid "Table mapping each LULC class to data about the species' habitat preference and threat sensitivity in areas with that LULC."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:195
+#: src/natcap/invest/habitat_quality.py:201
 msgid "sensitivity table"
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:201
+#: src/natcap/invest/habitat_quality.py:207
 msgid "Half-saturation constant used in the degradation equation."
 msgstr ""
 
-#: src/natcap/invest/habitat_quality.py:203
+#: src/natcap/invest/habitat_quality.py:209
 msgid "half-saturation constant"
 msgstr ""
 
-#: src/natcap/invest/hra.py:66
+#: src/natcap/invest/hra.py:61
 msgid "habitat stressor table"
 msgstr ""
 
-#: src/natcap/invest/hra.py:67
+#: src/natcap/invest/hra.py:62
 msgid "A table describing each habitat and stressor."
 msgstr ""
 
-#: src/natcap/invest/hra.py:72
+#: src/natcap/invest/hra.py:68
 msgid "A unique name for each habitat or stressor. These names must match the habitat and stressor names in the Criteria Scores Table."
 msgstr ""
 
-#: src/natcap/invest/hra.py:81
+#: src/natcap/invest/hra.py:77
 msgid "Pixel values are 1, indicating presence of the habitat/stressor, or 0 indicating absence. Any values besides 0 or 1 will be treated as 0."
 msgstr ""
 
-#: src/natcap/invest/hra.py:88
+#: src/natcap/invest/hra.py:84
 msgid "Map of where the habitat or stressor exists. For rasters, a pixel value of 1 indicates presence of the habitat or stressor. 0 (or any other value) indicates absence of the habitat or stressor. For vectors, a polygon indicates an area where the habitat or stressor is present."
 msgstr ""
 
-#: src/natcap/invest/hra.py:99
+#: src/natcap/invest/hra.py:95
 msgid "habitat"
 msgstr ""
 
-#: src/natcap/invest/hra.py:100
+#: src/natcap/invest/hra.py:96
 msgid "stressor"
 msgstr ""
 
-#: src/natcap/invest/hra.py:102
+#: src/natcap/invest/hra.py:98
 msgid "Whether this row is for a habitat or a stressor."
 msgstr ""
 
-#: src/natcap/invest/hra.py:108
+#: src/natcap/invest/hra.py:104
 msgid "The desired buffer distance used to expand a given stressor’s influence or footprint. This should be left blank for habitats, but must be filled in for stressors. Enter 0 if no buffering is desired for a given stressor. The model will round down this buffer distance to the nearest cell unit. e.g., a buffer distance of 600m will buffer a stressor’s footprint by two grid cells if the resolution of analysis is 250m."
 msgstr ""
 
-#: src/natcap/invest/hra.py:123
+#: src/natcap/invest/hra.py:118
 msgid "criteria scores table"
 msgstr ""
 
-#: src/natcap/invest/hra.py:124
+#: src/natcap/invest/hra.py:119
 msgid "A table of criteria scores for all habitats and stressors."
 msgstr ""
 
-#: src/natcap/invest/hra.py:130
+#: src/natcap/invest/hra.py:124
 msgid "resolution of analysis"
 msgstr ""
 
-#: src/natcap/invest/hra.py:131
+#: src/natcap/invest/hra.py:125
 msgid "The resolution at which to run the analysis. The model outputs will have this resolution."
 msgstr ""
 
-#: src/natcap/invest/hra.py:139
+#: src/natcap/invest/hra.py:133
 msgid "maximum criteria score"
 msgstr ""
 
-#: src/natcap/invest/hra.py:140
+#: src/natcap/invest/hra.py:134
 msgid "The highest possible criteria score in the scoring system."
 msgstr ""
 
-#: src/natcap/invest/hra.py:147
+#: src/natcap/invest/hra.py:141
 msgid "risk equation"
 msgstr ""
 
-#: src/natcap/invest/hra.py:148
+#: src/natcap/invest/hra.py:142
 msgid "The equation to use to calculate risk from exposure and consequence."
 msgstr ""
 
-#: src/natcap/invest/hra.py:153
+#: src/natcap/invest/hra.py:147
 msgid "Multiplicative"
 msgstr ""
 
-#: src/natcap/invest/hra.py:154
+#: src/natcap/invest/hra.py:148
 msgid "Euclidean"
 msgstr ""
 
-#: src/natcap/invest/hra.py:158
+#: src/natcap/invest/hra.py:152
 msgid "decay equation"
 msgstr ""
 
-#: src/natcap/invest/hra.py:159
+#: src/natcap/invest/hra.py:153
 msgid "The equation to model effects of stressors in buffer areas."
 msgstr ""
 
-#: src/natcap/invest/hra.py:164
+#: src/natcap/invest/hra.py:158
 msgid "None"
 msgstr ""
 
-#: src/natcap/invest/hra.py:165
+#: src/natcap/invest/hra.py:159
 msgid "No decay. Stressor has full effect in the buffer area."
 msgstr ""
 
-#: src/natcap/invest/hra.py:169
+#: src/natcap/invest/hra.py:163
 msgid "Linear"
 msgstr ""
 
-#: src/natcap/invest/hra.py:170
+#: src/natcap/invest/hra.py:164
 msgid "Stressor effects in the buffer area decay linearly with distance from the stressor."
 msgstr ""
 
-#: src/natcap/invest/hra.py:174
+#: src/natcap/invest/hra.py:168
 msgid "Exponential"
 msgstr ""
 
-#: src/natcap/invest/hra.py:175
+#: src/natcap/invest/hra.py:169
 msgid "Stressor effects in the buffer area decay exponentially with distance from the stressor."
 msgstr ""
 
-#: src/natcap/invest/hra.py:188
+#: src/natcap/invest/hra.py:182
 msgid "Uniquely identifies each feature. Required if the vector contains more than one feature."
 msgstr ""
 
-#: src/natcap/invest/hra.py:193
+#: src/natcap/invest/hra.py:187
 msgid "A GDAL-supported vector file containing features representing one or more planning regions or subregions."
 msgstr ""
 
-#: src/natcap/invest/hra.py:198
+#: src/natcap/invest/hra.py:192
 msgid "Number of Overlapping Stressors"
 msgstr ""
 
-#: src/natcap/invest/hra.py:201
+#: src/natcap/invest/hra.py:195
 msgid "The number of overlapping stressors to consider as 'maximum' when reclassifying risk scores into high/medium/low.  Affects the breaks between risk classifications."
 msgstr ""
 
-#: src/natcap/invest/hra.py:210
+#: src/natcap/invest/hra.py:204
 msgid "Generate GeoJSONs"
 msgstr ""
 
-#: src/natcap/invest/hra.py:211
+#: src/natcap/invest/hra.py:205
 msgid "Generate GeoJSON outputs for web visualization."
 msgstr ""
 
@@ -1052,228 +1038,301 @@ msgstr ""
 msgid "Urban Cooling"
 msgstr ""
 
+#: src/natcap/invest/model_metadata.py:162
+msgid "Urban Nature Access"
+msgstr ""
+
 #: src/natcap/invest/pollination.py:37
 msgid "Map of LULC codes. All values in this raster must have corresponding entries in the Biophysical Table."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:46
+#: src/natcap/invest/pollination.py:47
 msgid "Unique name or identifier for each pollinator species or guild of interest."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:52
+#: src/natcap/invest/pollination.py:53
 msgid "Utilization of the substrate by this species, where 1 indicates the nesting substrate is fully utilized and 0 indicates it is not utilized at all. Replace [SUBSTRATE] with substrate names matching those in the Biophysical Table, so that there is a column for each substrate."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:62
+#: src/natcap/invest/pollination.py:63
 msgid "Pollinator activity for this species/guild in each season. 1 indicates maximum activity for the species/guild, and 0 indicates no activity. Replace [SEASON] with season names matching those in the biophysical table, so that there is a column for each season."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:73
+#: src/natcap/invest/pollination.py:74
 msgid "Average distance that this species or guild travels to forage on flowers."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:79
+#: src/natcap/invest/pollination.py:80
 msgid "The proportion of total pollinator abundance that consists of this species/guild."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:84
+#: src/natcap/invest/pollination.py:85
 msgid "A table mapping each pollinator species or guild of interest to its pollination-related parameters."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:87
+#: src/natcap/invest/pollination.py:88
 msgid "Guild Table"
 msgstr ""
 
-#: src/natcap/invest/pollination.py:95
+#: src/natcap/invest/pollination.py:97
 msgid "Index of availability of the given substrate in this LULC class. Replace [SUBSTRATE] with substrate names matching those in the Guild Table, so that there is a column for each substrate."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:102
+#: src/natcap/invest/pollination.py:104
 msgid "Abundance of flowers during the given season in this LULC class. This is the proportion of land area covered by flowers, multiplied by the proportion of the season for which there is that coverage. Replace [SEASON] with season names matching those in the Guild Table, so that there is a column for each season."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:111
+#: src/natcap/invest/pollination.py:113
 msgid "A table mapping each LULC class to nesting availability and floral abundance data for each substrate and season in that LULC class. All values in the LULC raster must have corresponding entries in this table."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:123
+#: src/natcap/invest/pollination.py:125
 msgid "Name of the crop grown on each polygon, e.g. 'blueberries', 'almonds', etc."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:128
+#: src/natcap/invest/pollination.py:130
 msgid "The half saturation coefficient for the crop grown in this area. This is the wild pollinator abundance (i.e. the proportion of all pollinators that are wild) needed to reach half of the total potential pollinator-dependent yield."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:136
+#: src/natcap/invest/pollination.py:138
 msgid "The season in which the crop is pollinated. Season names must match those in the Guild Table and Biophysical Table."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:142
+#: src/natcap/invest/pollination.py:144
 msgid "The floral resources available at this farm for the given season. Replace [SEASON] with season names matching those in the Guild Table and Biophysical Table, so that there is one field for each season."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:150
+#: src/natcap/invest/pollination.py:152
 msgid "The nesting suitability for the given substrate at this farm. given substrate. Replace [SUBSTRATE] with substrate names matching those in the Guild Table and Biophysical Table, so that there is one field for each substrate."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:158
+#: src/natcap/invest/pollination.py:160
 msgid "The proportion of crop dependent on pollinators."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:163
+#: src/natcap/invest/pollination.py:165
 msgid "The proportion of pollination required on the farm that is provided by managed pollinators."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:169
+#: src/natcap/invest/pollination.py:171
 msgid "Map of farm sites to be analyzed, with pollination data specific to each farm."
 msgstr ""
 
-#: src/natcap/invest/pollination.py:172
+#: src/natcap/invest/pollination.py:174
 msgid "farms map"
 msgstr ""
 
-#: src/natcap/invest/routedem.py:20
+#: src/natcap/invest/pollination.py:180
+msgid "A copy of the input farm polygon vector file with additional fields"
+msgstr ""
+
+#: src/natcap/invest/pollination.py:212
+msgid "Total pollinator abundance across all species per season, clipped to the geometry of the farm vector’s polygons."
+msgstr ""
+
+#: src/natcap/invest/pollination.py:218
+msgid "Abundance of pollinator SPECIES in season SEASON."
+msgstr ""
+
+#: src/natcap/invest/pollination.py:222
+msgid "Index of pollinator SPECIES that could be on a pixel given its arbitrary abundance factor from the table, multiplied by the habitat suitability for that species at that pixel, multiplied by the available floral resources that a pollinator could fly to from that pixel."
+msgstr ""
+
+#: src/natcap/invest/pollination.py:232
+msgid "Total pollinator abundance across all species per season."
+msgstr ""
+
+#: src/natcap/invest/pollination.py:238
+msgid "Total pollinator yield index for pixels that overlap farms, including wild and managed pollinators."
+msgstr ""
+
+#: src/natcap/invest/pollination.py:245
+msgid "Pollinator yield index for pixels that overlap farms, for wild pollinators only."
+msgstr ""
+
+#: src/natcap/invest/routedem.py:18
 msgid "Must be between 1 and {maximum}"
 msgstr ""
 
-#: src/natcap/invest/routedem.py:36
+#: src/natcap/invest/routedem.py:34
 msgid "Index of the raster band to use, for multi-band rasters."
 msgstr ""
 
-#: src/natcap/invest/routedem.py:38
+#: src/natcap/invest/routedem.py:36
 msgid "band index"
 msgstr ""
 
-#: src/natcap/invest/routedem.py:45
+#: src/natcap/invest/routedem.py:43
 msgid "All water on a pixel flows into the most downhill of its 8 surrounding pixels"
 msgstr ""
 
-#: src/natcap/invest/routedem.py:50
+#: src/natcap/invest/routedem.py:48
 msgid "Flow off a pixel is modeled fractionally so that water is split among multiple downslope pixels"
 msgstr ""
 
-#: src/natcap/invest/routedem.py:54
+#: src/natcap/invest/routedem.py:52
 msgid "The routing algorithm to use."
 msgstr ""
 
-#: src/natcap/invest/routedem.py:55
+#: src/natcap/invest/routedem.py:53
 msgid "routing algorithm"
 msgstr ""
 
-#: src/natcap/invest/routedem.py:60
+#: src/natcap/invest/routedem.py:58
 msgid "Calculate flow direction from the provided DEM."
 msgstr ""
 
-#: src/natcap/invest/routedem.py:61
+#: src/natcap/invest/routedem.py:59
 msgid "calculate flow direction"
 msgstr ""
 
-#: src/natcap/invest/routedem.py:66
+#: src/natcap/invest/routedem.py:64
 msgid "Calculate flow accumulation from the flow direction output."
 msgstr ""
 
-#: src/natcap/invest/routedem.py:68
+#: src/natcap/invest/routedem.py:66
 msgid "calculate flow accumulation"
 msgstr ""
 
-#: src/natcap/invest/routedem.py:73
+#: src/natcap/invest/routedem.py:71
 msgid "Calculate streams from the flow accumulation output. "
 msgstr ""
 
-#: src/natcap/invest/routedem.py:75
+#: src/natcap/invest/routedem.py:73
 msgid "calculate streams"
 msgstr ""
 
-#: src/natcap/invest/routedem.py:82
+#: src/natcap/invest/routedem.py:80
 msgid "Required if Calculate Streams is selected."
 msgstr ""
 
-#: src/natcap/invest/routedem.py:87
+#: src/natcap/invest/routedem.py:85
 msgid "Calculate flow distance from each pixel to a stream as defined in the Calculate Streams output."
 msgstr ""
 
-#: src/natcap/invest/routedem.py:90
+#: src/natcap/invest/routedem.py:88
 msgid "calculate distance to stream"
 msgstr ""
 
-#: src/natcap/invest/routedem.py:95
+#: src/natcap/invest/routedem.py:93
 msgid "Calculate percent slope from the provided DEM."
 msgstr ""
 
-#: src/natcap/invest/routedem.py:96
+#: src/natcap/invest/routedem.py:94
 msgid "calculate slope"
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:29
+#: src/natcap/invest/routedem.py:99
+msgid "Calculate the Strahler Stream order."
+msgstr ""
+
+#: src/natcap/invest/routedem.py:100
+msgid "calculate strahler stream orders (D8 only)"
+msgstr ""
+
+#: src/natcap/invest/routedem.py:105
+msgid "Determine subwatersheds from the stream order."
+msgstr ""
+
+#: src/natcap/invest/routedem.py:106
+msgid "calculate subwatersheds (D8 only)"
+msgstr ""
+
+#: src/natcap/invest/scenario_gen_proximity.py:28
 msgid "One or more of \"convert_nearest_to_edge\" or \"convert_farthest_from_edge\" must be selected"
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:44
+#: src/natcap/invest/scenario_gen_proximity.py:43
 msgid "Base map from which to generate scenarios."
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:45
+#: src/natcap/invest/scenario_gen_proximity.py:44
 msgid "base LULC map"
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:49
+#: src/natcap/invest/scenario_gen_proximity.py:48
 msgid "The LULC code to which habitat will be converted."
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:50
+#: src/natcap/invest/scenario_gen_proximity.py:49
 msgid "replacement landcover code"
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:56
+#: src/natcap/invest/scenario_gen_proximity.py:55
 msgid "Maximum area to be converted to agriculture."
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:57
+#: src/natcap/invest/scenario_gen_proximity.py:56
 msgid "maximum area to convert"
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:62
+#: src/natcap/invest/scenario_gen_proximity.py:61
 msgid "A space-separated list of LULC codes that are used to determine the proximity when referring to 'towards' or 'away' from the base landcover codes"
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:66
+#: src/natcap/invest/scenario_gen_proximity.py:65
 msgid "focal landcover codes"
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:71
+#: src/natcap/invest/scenario_gen_proximity.py:70
 msgid "A space-separated list of LULC codes that can be converted to be converted to agriculture."
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:74
+#: src/natcap/invest/scenario_gen_proximity.py:73
 msgid "convertible landcover codes"
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:80
+#: src/natcap/invest/scenario_gen_proximity.py:79
 msgid "The number of steps that the simulation should take to fragment the habitat of interest in the fragmentation scenario. This parameter is used to divide the conversion simulation into equal subareas of the requested max area. During each sub-step the distance transform is recalculated from the base landcover codes.  This can affect the final result if the base types are also convertible types."
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:88
+#: src/natcap/invest/scenario_gen_proximity.py:87
 msgid "number of conversion steps"
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:93
+#: src/natcap/invest/scenario_gen_proximity.py:92
 msgid "Area over which to run the conversion. Provide this input if change is only desired in a subregion of the Base LULC map."
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:99
+#: src/natcap/invest/scenario_gen_proximity.py:98
 msgid "Convert the 'convertible' landcover codes starting at the furthest pixel from the 'focal' land cover areas and working inwards."
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:103
+#: src/natcap/invest/scenario_gen_proximity.py:102
 msgid "convert farthest from edge"
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:107
+#: src/natcap/invest/scenario_gen_proximity.py:106
 msgid "Convert the 'convertible' landcover codes starting at the nearest pixels to the 'focal' land cover areas and working outwards."
 msgstr ""
 
-#: src/natcap/invest/scenario_gen_proximity.py:111
+#: src/natcap/invest/scenario_gen_proximity.py:110
 msgid "convert nearest to edge"
+msgstr ""
+
+#: src/natcap/invest/scenario_gen_proximity.py:115
+msgid "Map of the nearest-to-edge conversion scenario."
+msgstr ""
+
+#: src/natcap/invest/scenario_gen_proximity.py:119
+msgid "Map of the farthest-from-edge conversion scenario."
+msgstr ""
+
+#: src/natcap/invest/scenario_gen_proximity.py:123
+#: src/natcap/invest/scenario_gen_proximity.py:143
+msgid "Table of land cover classes and the amount of each that was converted for the nearest-to-edge conversion scenario."
+msgstr ""
+
+#: src/natcap/invest/scenario_gen_proximity.py:166
+msgid "Copy of the LULC raster masked to the AOI extent."
+msgstr ""
+
+#: src/natcap/invest/scenario_gen_proximity.py:171
+msgid "Map of the distance from each pixel to the farthest edge of the focal landcover."
+msgstr ""
+
+#: src/natcap/invest/scenario_gen_proximity.py:177
+msgid "Map of the distance from each pixel to the nearest edge of the focal landcover."
 msgstr ""
 
 #: src/natcap/invest/spec_utils.py:12
@@ -1357,323 +1416,463 @@ msgid "threshold flow accumulation"
 msgstr ""
 
 #: src/natcap/invest/spec_utils.py:125
-#: src/natcap/invest/urban_flood_risk_mitigation.py:63
+#: src/natcap/invest/urban_flood_risk_mitigation.py:64
 msgid "LULC codes from the LULC raster. Each code must be a unique integer."
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:173
+#: src/natcap/invest/spec_utils.py:141
+msgid "Map of elevation after any pits are filled"
+msgstr ""
+
+#: src/natcap/invest/spec_utils.py:148
+msgid "Map of flow accumulation"
+msgstr ""
+
+#: src/natcap/invest/spec_utils.py:155
+msgid "MFD flow direction. Note: the pixel values should not be interpreted directly. Each 32-bit number consists of 8 4-bit numbers. Each 4-bit number represents the proportion of flow into one of the eight neighboring pixels."
+msgstr ""
+
+#: src/natcap/invest/spec_utils.py:164
+msgid "D8 flow direction."
+msgstr ""
+
+#: src/natcap/invest/spec_utils.py:169
+msgid "Percent slope, calculated from the pit-filled DEM. 100 is equivalent to a 45 degree slope."
+msgstr ""
+
+#: src/natcap/invest/spec_utils.py:222
 msgid "number of pixels"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:174
-msgid "currency units"
-msgstr ""
-
-#: src/natcap/invest/spec_utils.py:183
+#: src/natcap/invest/spec_utils.py:231
 msgid "unitless"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:254
+#: src/natcap/invest/spec_utils.py:251
+msgid "currency units"
+msgstr ""
+
+#: src/natcap/invest/spec_utils.py:306
 msgid "required"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:256
+#: src/natcap/invest/spec_utils.py:308
 msgid "optional"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:259
+#: src/natcap/invest/spec_utils.py:311
 msgid "conditionally required"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:289
+#: src/natcap/invest/spec_utils.py:341
 msgid "read"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:291
+#: src/natcap/invest/spec_utils.py:343
 msgid "write"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:293
+#: src/natcap/invest/spec_utils.py:345
 msgid "execute"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:366
+#: src/natcap/invest/spec_utils.py:422
 msgid "true/false"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:367
+#: src/natcap/invest/spec_utils.py:423
 msgid "CSV"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:368
+#: src/natcap/invest/spec_utils.py:424
 msgid "directory"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:369
+#: src/natcap/invest/spec_utils.py:425
 msgid "file"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:370
+#: src/natcap/invest/spec_utils.py:426
 msgid "text"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:371
+#: src/natcap/invest/spec_utils.py:427
 msgid "integer"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:372
+#: src/natcap/invest/spec_utils.py:428
 msgid "number"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:373
+#: src/natcap/invest/spec_utils.py:429
 msgid "option"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:374
+#: src/natcap/invest/spec_utils.py:430
 msgid "percent"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:375
+#: src/natcap/invest/spec_utils.py:431
 msgid "raster"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:376
+#: src/natcap/invest/spec_utils.py:432
 msgid "ratio"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:377
+#: src/natcap/invest/spec_utils.py:433
 msgid "vector"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:448
+#: src/natcap/invest/spec_utils.py:504
 msgid "units"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:476 src/natcap/invest/spec_utils.py:480
+#: src/natcap/invest/spec_utils.py:533 src/natcap/invest/spec_utils.py:537
 msgid "Options:"
 msgstr ""
 
-#: src/natcap/invest/spec_utils.py:484
+#: src/natcap/invest/spec_utils.py:541
 msgid " Please see the sample data table for details on the format."
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:54
+#: src/natcap/invest/stormwater.py:56
 msgid "Event mean concentration of the pollutant in stormwater. You may include any number of these columns for different pollutants, or none at all."
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:63
+#: src/natcap/invest/stormwater.py:65
 msgid "Stormwater runoff coefficient for soil group"
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:72
+#: src/natcap/invest/stormwater.py:74
 msgid "Stormwater percolation coefficient for soil group"
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:82
+#: src/natcap/invest/stormwater.py:84
 msgid "Enter 1 if the LULC class is a connected impervious surface, 0 if not. This column is only used if the 'adjust retention ratios' option is selected. If 'adjust retention ratios' is selected and this column exists, the adjustment algorithm takes into account the LULC as well as road centerlines. If this column does not exist, only the road centerlines are used."
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:93
+#: src/natcap/invest/stormwater.py:95
 msgid "Table mapping each LULC code found in the LULC raster to biophysical data about that LULC class. If you provide the percolation coefficient column (PE_[X]) for any soil group, you must provide it for all four soil groups."
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:98
+#: src/natcap/invest/stormwater.py:100
 msgid "Biophysical table"
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:102
+#: src/natcap/invest/stormwater.py:104
 msgid "If true, adjust retention ratios. The adjustment algorithm accounts for drainage effects of nearby impervious surfaces which are directly connected to artifical urban drainage channels (typically roads, parking lots, etc.) Connected impervious surfaces are indicated by the is_connected columnin the biophysical table and/or the road centerlines vector."
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:109
+#: src/natcap/invest/stormwater.py:111
 msgid "Adjust retention ratios"
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:115
+#: src/natcap/invest/stormwater.py:117
 msgid "Radius around each pixel to adjust retention ratios. Measured in raster coordinate system units. For the adjustment algorithm, a pixel is 'near' a connected impervious surface if its centerpoint is within this radius of connected-impervious LULC and/or a road centerline."
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:121
+#: src/natcap/invest/stormwater.py:123
 msgid "Retention radius"
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:128
+#: src/natcap/invest/stormwater.py:130
 msgid "Map of road centerlines"
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:129
+#: src/natcap/invest/stormwater.py:131
 msgid "Road centerlines"
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:134
+#: src/natcap/invest/stormwater.py:136
 msgid "Areas over which to aggregate results (typically watersheds or sewersheds). The aggregated data are: average retention ratio and total retention volume; average percolation ratio and total percolation volume if percolation data was provided; total retention value if replacement cost was provided; and total avoided pollutant load for each pollutant provided."
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:147
+#: src/natcap/invest/stormwater.py:149
 msgid "Replacement cost of stormwater retention devices"
 msgstr ""
 
-#: src/natcap/invest/stormwater.py:148
+#: src/natcap/invest/stormwater.py:150
 msgid "Replacement cost"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:48
+#: src/natcap/invest/stormwater.py:155
+msgid "Map of the stormwater retention ratio, derived from the LULC raster and biophysical table RC_x columns."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:162
+msgid "Map of the adjusted retention ratio, calculated according to equation (124) from the ‘retention_ratio, ratio_average, near_road’, and ‘near_impervious_lulc’ intermediate outputs."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:169
+msgid "Map of retention volume."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:177
+msgid "Map of percolation ratio derived by cross-referencing the LULC and soil group rasters with the biophysical table."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:184
+msgid "Map of percolation (potential aquifer recharge) volume."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:191
+msgid "Map of the stormwater runoff ratio. This is the inverse of ‘retention_ratio.tif’"
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:197
+msgid "Map of runoff volume."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:205
+msgid "Map of the value of water retained."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:213
+msgid "Map of aggregate data. This is identical to the aggregate areas input vector, but each polygon is given additional fields with the aggregate data."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:221
+msgid "Average retention ratio over this polygon"
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:226
+msgid "Total retention volume over this polygon"
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:230
+msgid "Average runoff coefficient over this polygon"
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:235
+msgid "Total runoff volume over this polygon"
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:239
+msgid "Average percolation (recharge) ratio over this polygon"
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:244
+msgid "Total volume of potential aquifer recharge over this polygon"
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:249
+msgid "Total avoided (retained) amount of pollutant over this polygon"
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:254
+msgid "Total amount of pollutant in runoff over this polygon"
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:260
+msgid "Total value of the retained volume of water over this polygon"
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:270
+msgid "Copy of the soil group raster input, cropped to the intersection of the three raster inputs."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:276
+msgid "Copy of the soil group raster input, aligned to the LULC raster and cropped to the intersection of the three raster inputs."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:283
+msgid "Copy of the precipitation raster input, aligned to the LULC raster and cropped to the intersection of the three raster inputs."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:295
+msgid "Copy of the road centerlines vector input, reprojected to the LULC raster projection."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:303
+msgid "A rasterized version of the reprojected centerlines vector, where 1 means the pixel is a road and 0 means it isn’t."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:310
+msgid "A binary raster derived from the LULC raster and biophysical table is_connected column, where 1 means the pixel has a directly-connected impervious LULC type, and 0 means it does not."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:318
+msgid "A raster derived from the rasterized centerlines map, where each pixel’s value is its minimum distance to a road pixel (measured centerpoint-to-centerpoint)."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:328
+msgid "A raster derived from the is_connected_lulc map, where each pixel’s value is its minimum distance to a connected impervious LULC pixel (measured centerpoint-to-centerpoint)."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:339
+msgid "A binary raster derived from the road_distance map, where 1 means the pixel is within the retention radius of a road pixel, and 0 means it isn’t."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:346
+msgid "A binary raster derived from the connected_lulc_distance map, where 1 means the pixel is within the retention radius of a connected impervious LULC pixel, and 0 means it isn’t."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:354
+msgid "A binary raster representing the search kernel that is convolved with the retention_ratio raster to calculate the averaged retention ratio within the retention radius of each pixel."
+msgstr ""
+
+#: src/natcap/invest/stormwater.py:362
+msgid "A raster where each pixel’s value is the average of its neighborhood of pixels in the retention_ratio map, calculated by convolving the search kernel with the retention ratio raster."
+msgstr ""
+
+#: src/natcap/invest/urban_cooling_model.py:49
 msgid "Map of LULC for the area of interest. All values in this raster must have corresponding entries in the Biophysical Table."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:66
+#: src/natcap/invest/urban_cooling_model.py:68
 msgid "Enter 1 to indicate that the LULC is considered a green area. Enter 0 to indicate that the LULC is not considered a green area."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:73
+#: src/natcap/invest/urban_cooling_model.py:75
 msgid "The proportion of area in this LULC class that is covered by tree canopy at least 2 meters high. Required if the 'factors' option is selected for the Cooling Capacity Calculation Method."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:81
+#: src/natcap/invest/urban_cooling_model.py:83
 msgid "The proportion of solar radiation that is directly reflected by this LULC class. Required if the 'factors' option is selected for the Cooling Capacity Calculation Method."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:89
+#: src/natcap/invest/urban_cooling_model.py:91
 msgid "The ratio of building floor area to footprint area, with all values in this column normalized between 0 and 1. Required if the 'intensity' option is selected for the Cooling Capacity Calculation Method."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:96
+#: src/natcap/invest/urban_cooling_model.py:98
 msgid "A table mapping each LULC code to biophysical data for that LULC class. All values in the LULC raster must have corresponding entries in this table."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:105
+#: src/natcap/invest/urban_cooling_model.py:107
 msgid "maximum cooling distance"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:106
+#: src/natcap/invest/urban_cooling_model.py:108
 msgid "Distance over which green areas larger than 2 hectares have a cooling effect."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:114
+#: src/natcap/invest/urban_cooling_model.py:116
 msgid "air blending distance"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:115
+#: src/natcap/invest/urban_cooling_model.py:117
 msgid "Radius over which to average air temperatures to account for air mixing."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:120
+#: src/natcap/invest/urban_cooling_model.py:122
 msgid "reference air temperature"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:123
+#: src/natcap/invest/urban_cooling_model.py:125
 msgid "Air temperature in a rural reference area where the urban heat island effect is not observed."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:128
+#: src/natcap/invest/urban_cooling_model.py:130
 msgid "UHI effect"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:131
+#: src/natcap/invest/urban_cooling_model.py:133
 msgid "The magnitude of the urban heat island effect, i.e., the difference between the rural reference temperature and the maximum temperature observed in the city."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:137
+#: src/natcap/invest/urban_cooling_model.py:139
 msgid "run energy savings valuation"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:139
+#: src/natcap/invest/urban_cooling_model.py:141
 msgid "Run the energy savings valuation model."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:142
+#: src/natcap/invest/urban_cooling_model.py:144
 msgid "run work productivity valuation"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:144
+#: src/natcap/invest/urban_cooling_model.py:146
 msgid "Run the work productivity valuation model."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:147
+#: src/natcap/invest/urban_cooling_model.py:149
 msgid "average relative humidity"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:150
+#: src/natcap/invest/urban_cooling_model.py:152
 msgid "The average relative humidity over the time period of interest. Required if Run Work Productivity Valuation is selected."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:156
+#: src/natcap/invest/urban_cooling_model.py:158
 msgid "buildings"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:161
+#: src/natcap/invest/urban_cooling_model.py:163
 msgid "Code indicating the building type. These codes must match those in the Energy Consumption Table."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:166
+#: src/natcap/invest/urban_cooling_model.py:168
 msgid "A map of built infrastructure footprints. Required if Run Energy Savings Valuation is selected."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:171
+#: src/natcap/invest/urban_cooling_model.py:173
 msgid "energy consumption table"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:176
+#: src/natcap/invest/urban_cooling_model.py:179
 msgid "Building type codes matching those in the Buildings vector."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:183
+#: src/natcap/invest/urban_cooling_model.py:186
 msgid "Energy consumption by footprint area for this building type."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:191
+#: src/natcap/invest/urban_cooling_model.py:194
 msgid "The cost of electricity for this building type. If this column is provided, the energy savings outputs will be in the this currency unit rather than kWh."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:199
+#: src/natcap/invest/urban_cooling_model.py:202
 msgid "A table of energy consumption data for each building type. Required if Run Energy Savings Valuation is selected."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:204
+#: src/natcap/invest/urban_cooling_model.py:207
 msgid "cooling capacity calculation method"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:208
+#: src/natcap/invest/urban_cooling_model.py:211
 msgid "factors"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:209
+#: src/natcap/invest/urban_cooling_model.py:212
 msgid "Use the weighted shade, albedo, and ETI factors as a temperature predictor (for daytime temperatures)."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:213
+#: src/natcap/invest/urban_cooling_model.py:216
 msgid "intensity"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:214
+#: src/natcap/invest/urban_cooling_model.py:217
 msgid "Use building intensity as a temperature predictor (for nighttime temperatures)."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:218
+#: src/natcap/invest/urban_cooling_model.py:221
 msgid "The air temperature predictor method to use."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:221
+#: src/natcap/invest/urban_cooling_model.py:224
 msgid "shade weight"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:224
+#: src/natcap/invest/urban_cooling_model.py:227
 msgid "The relative weight to apply to shade when calculating the cooling capacity index. If not provided, defaults to 0.6."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:229
+#: src/natcap/invest/urban_cooling_model.py:232
 msgid "albedo weight"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:232
+#: src/natcap/invest/urban_cooling_model.py:235
 msgid "The relative weight to apply to albedo when calculating the cooling capacity index. If not provided, defaults to 0.2."
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:237
+#: src/natcap/invest/urban_cooling_model.py:240
 msgid "evapotranspiration weight"
 msgstr ""
 
-#: src/natcap/invest/urban_cooling_model.py:240
+#: src/natcap/invest/urban_cooling_model.py:243
 msgid "The relative weight to apply to ETI when calculating the cooling capacity index. If not provided, defaults to 0.2."
 msgstr ""
 
@@ -1689,873 +1888,1103 @@ msgstr ""
 msgid "Map of LULC. All values in this raster must have corresponding entries in the Biophysical Table."
 msgstr ""
 
-#: src/natcap/invest/urban_flood_risk_mitigation.py:67
+#: src/natcap/invest/urban_flood_risk_mitigation.py:68
 msgid "The curve number value for this LULC type in the soil group code"
 msgstr ""
 
-#: src/natcap/invest/urban_flood_risk_mitigation.py:72
+#: src/natcap/invest/urban_flood_risk_mitigation.py:73
 msgid "Table of curve number data for each LULC class. All LULC codes in the LULC raster must have corresponding entries in this table for each soil group."
 msgstr ""
 
-#: src/natcap/invest/urban_flood_risk_mitigation.py:83
+#: src/natcap/invest/urban_flood_risk_mitigation.py:84
 msgid "Code indicating the building type. These codes must match those in the Damage Loss Table."
 msgstr ""
 
-#: src/natcap/invest/urban_flood_risk_mitigation.py:89
+#: src/natcap/invest/urban_flood_risk_mitigation.py:90
 msgid "Map of building footprints."
 msgstr ""
 
-#: src/natcap/invest/urban_flood_risk_mitigation.py:90
+#: src/natcap/invest/urban_flood_risk_mitigation.py:91
 msgid "built infrastructure"
 msgstr ""
 
-#: src/natcap/invest/urban_flood_risk_mitigation.py:97
+#: src/natcap/invest/urban_flood_risk_mitigation.py:99
 msgid "Building type code."
 msgstr ""
 
-#: src/natcap/invest/urban_flood_risk_mitigation.py:101
+#: src/natcap/invest/urban_flood_risk_mitigation.py:103
 msgid "Potential damage loss for this building type."
 msgstr ""
 
-#: src/natcap/invest/urban_flood_risk_mitigation.py:104
+#: src/natcap/invest/urban_flood_risk_mitigation.py:106
 msgid "Table of potential damage loss data for each building type. All values in the Built Infrastructure vector 'type' field must have corresponding entries in this table. Required if the Built Infrastructure vector is provided."
 msgstr ""
 
-#: src/natcap/invest/urban_flood_risk_mitigation.py:109
+#: src/natcap/invest/urban_flood_risk_mitigation.py:111
 msgid "damage loss table"
 msgstr ""
 
-#: src/natcap/invest/validation.py:30
+#: src/natcap/invest/urban_nature_access.py:130
+msgid "The proportion of the population within each administrative unit belonging to the identified population group (POP_GROUP). At least one column with the prefix 'pop_' is required when aggregating output by population groups."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:139
+msgid "A vector representing administrative units. Polygons representing administrative units should not overlap. Overlapping administrative geometries may cause unexpected results and for this reason should not overlap."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:151
+msgid "The amount of urban nature that each resident should have access to. This is often defined by local urban planning documents."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:163
+msgid "All pixels within the search radius contribute equally to an urban nature pixel."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:169
+msgid "Contributions to an urban nature pixel decrease exponentially, where \"weight = e^(-pixel_dist / search_radius)\""
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:176
+msgid "Contributions to an urban nature pixel decrease according to a normal (\"gaussian\") distribution with a sigma of 3."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:183
+msgid "Contributions to an urban nature pixel decrease faster as distances approach the search radius. Weights are calculated by \"weight = 0.75 * (1-(pixel_dist / search_radius)^2)\""
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:210
+msgid "The type of search radius to use."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:216
+msgid "The search radius is the same for all types of urban nature."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:222
+msgid "The search radius is defined for each distinct urban nature LULC classification."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:228
+msgid "The search radius is defined for each distinct population group."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:238
+msgid "Whether to aggregate statistics by population group within each administrative unit. If selected, population groups will be read from the fields of the user-defined administrative boundaries vector. This option is implied if the search radii are defined by population groups."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:252
+msgid "The search radius to use when running the model under a uniform search radius. Required when running the model with a uniform search radius. Units are in meters."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:266
+msgid "The name of the population group. Names must match the names defined in the administrative boundaries vector."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:276
+msgid "The search radius in meters to use for this population group.  Values must be >= 0."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:282
+msgid "A table associating population groups with the distance in meters that members of the population group will, on average, travel to find urban nature.  Required when running the model with search radii defined per population group."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:418
+msgid "Positive pixel values indicate an oversupply of urban nature for the population group POP_GROUP relative to the stated urban nature demand. Negative values indicate an undersupply of urban nature for the population group POP_GROUP relative to the stated urban nature demand."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:432
+msgid "The area of greenspace available within the defined radius, weighted by the selected decay function."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:442
+msgid "The area of greenspace available within the radius associated with urban nature class LUCODE, weighted by the selected decay function."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:453
+msgid "The area of greenspace available within the radius associated with group POP_GROUP, weighted by the selected decay function."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:467
+msgid "A copy of the user's land use land cover raster. If the user-supplied LULC has non-square pixels, they will be resampled to square pixels in this raster."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:475
+msgid "The user's population raster, aligned to the same resolution and dimensions as the aligned LULC."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:481
+msgid "The population experiencing an urban nature deficit."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:487
+msgid "The population experiencing an urban nature surplus."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:495
+msgid "A sum of the population within the given search radius SEARCH_RADIUS, weighted by the user's decay function."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:505
+msgid "The area of urban nature (in square meters) represented in each pixel."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:514
+msgid "The calculated urban nature/population ratio."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:523
+msgid "Pixel values represent the ares of urban nature (in square meters) represented in each pixel for the urban nature class represented by the land use land cover code LUCODE."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:533
+msgid "The urban nature supplied to populations due to the land use land cover code LUCODE"
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:541
+msgid "The calculated urban nature/population ratio for the urban nature class represented by the land use land cover code LUCODE."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:552
+msgid "Each pixel represents the population of a pixel belonging to the population in the population group POP_GROUP."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:561
+msgid "Each pixel represents the proportion of the total population that belongs to the population group POP_GROUP."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:570
+msgid "Each pixel represents the total number of people within the search radius for the population group POP_GROUP, weighted by the user's selection of decay function."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:580
+msgid "The total population, weighted by the appropriate decay function."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:588
+msgid "The urban nature supply per capita to population group POP_GROUP."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:596
+msgid "The population in population group POP_GROUP that are experiencing an urban nature deficit."
+msgstr ""
+
+#: src/natcap/invest/urban_nature_access.py:604
+msgid "The population in population group POP_GROUP that are experiencing an urban nature surplus."
+msgstr ""
+
+#: src/natcap/invest/validation.py:33
 msgid "Key is missing from the args dict"
 msgstr ""
 
-#: src/natcap/invest/validation.py:31
+#: src/natcap/invest/validation.py:34
 msgid "Input is required but has no value"
 msgstr ""
 
-#: src/natcap/invest/validation.py:32
+#: src/natcap/invest/validation.py:35
 msgid "Expected the {header} \"{header_name}\" but did not find it"
 msgstr ""
 
-#: src/natcap/invest/validation.py:34
-msgid "Expected the {header} \"{header_name}\" only once but found it {number} times"
-msgstr ""
-
-#: src/natcap/invest/validation.py:36
-msgid "Value \"{value}\" could not be interpreted as a number"
-msgstr ""
-
 #: src/natcap/invest/validation.py:37
-msgid "Layer must be projected in this unit: \"{unit_a}\" but found this unit: \"{unit_b}\""
-msgstr ""
-
-#: src/natcap/invest/validation.py:39
-msgid "An unexpected error occurred in validation"
+msgid "Expected to find at least one {header} matching the pattern \"{header_name}\" but found none"
 msgstr ""
 
 #: src/natcap/invest/validation.py:40
-msgid "Directory not found"
-msgstr ""
-
-#: src/natcap/invest/validation.py:41
-msgid "Path must be a directory"
-msgstr ""
-
-#: src/natcap/invest/validation.py:42
-msgid "File not found"
+msgid "Expected the {header} \"{header_name}\" only once but found it {number} times"
 msgstr ""
 
 #: src/natcap/invest/validation.py:43
-msgid "Dataset must have a valid projection."
-msgstr ""
-
-#: src/natcap/invest/validation.py:44
-msgid "Dataset must be projected in linear units."
+msgid "Value \"{value}\" could not be interpreted as a number"
 msgstr ""
 
 #: src/natcap/invest/validation.py:45
-msgid "File could not be opened as a GDAL raster"
-msgstr ""
-
-#: src/natcap/invest/validation.py:46
-msgid "File found to be an overview \".ovr\" file."
-msgstr ""
-
-#: src/natcap/invest/validation.py:47
-msgid "File could not be opened as a GDAL vector"
+msgid "Layer must be projected in this unit: \"{unit_a}\" but found this unit: \"{unit_b}\""
 msgstr ""
 
 #: src/natcap/invest/validation.py:48
-msgid "File could not be opened as a CSV or Excel file."
+msgid "An unexpected error occurred in validation"
 msgstr ""
 
 #: src/natcap/invest/validation.py:49
-msgid "File could not be opened as a CSV. File must be encoded as a UTF-8 CSV."
+msgid "Directory not found"
+msgstr ""
+
+#: src/natcap/invest/validation.py:50
+msgid "Path must be a directory"
 msgstr ""
 
 #: src/natcap/invest/validation.py:51
-msgid "Value did not match expected pattern {regexp}"
+msgid "File not found"
 msgstr ""
 
 #: src/natcap/invest/validation.py:52
-msgid "Value must be one of: {option_list}"
+msgid "Dataset must have a valid projection."
 msgstr ""
 
 #: src/natcap/invest/validation.py:53
-msgid "Value does not meet condition {condition}"
+msgid "Dataset must be projected in linear units."
 msgstr ""
 
 #: src/natcap/invest/validation.py:54
-msgid "Value {value} is not in the range {range}"
+msgid "File could not be opened as a GDAL raster"
 msgstr ""
 
 #: src/natcap/invest/validation.py:55
-msgid "Value \"{value}\" does not represent an integer"
+msgid "File found to be an overview \".ovr\" file."
 msgstr ""
 
 #: src/natcap/invest/validation.py:56
-msgid "Value must be either True or False, not {value}"
+msgid "File could not be opened as a GDAL vector"
 msgstr ""
 
 #: src/natcap/invest/validation.py:57
-msgid "Spatial file {filepath} has no projection"
-msgstr ""
-
-#: src/natcap/invest/validation.py:58
-msgid "Bounding boxes do not intersect: {bboxes}"
+msgid "Value did not match expected pattern {regexp}"
 msgstr ""
 
 #: src/natcap/invest/validation.py:59
+msgid "Value must be one of: {option_list}"
+msgstr ""
+
+#: src/natcap/invest/validation.py:60
+msgid "Value does not meet condition {condition}"
+msgstr ""
+
+#: src/natcap/invest/validation.py:61
+msgid "Value {value} is not in the range {range}"
+msgstr ""
+
+#: src/natcap/invest/validation.py:62
+msgid "Value \"{value}\" does not represent an integer"
+msgstr ""
+
+#: src/natcap/invest/validation.py:63
+msgid "Value must be either True or False, not {value}"
+msgstr ""
+
+#: src/natcap/invest/validation.py:64
+msgid "Spatial file {filepath} has no projection"
+msgstr ""
+
+#: src/natcap/invest/validation.py:65
+msgid "Not all of the spatial layers overlap each other. All bounding boxes must intersect: {bboxes}"
+msgstr ""
+
+#: src/natcap/invest/validation.py:68
 msgid "You must have {permission} access to this file"
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:45
-msgid "Point vector for the west coast of North America and Hawaii."
+#: src/natcap/invest/validation.py:70
+msgid "Geometry type must be one of {allowed}"
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:52
-msgid "Extract vector for the west coast of North America and Hawaii."
+#: src/natcap/invest/wave_energy.py:34
+msgid "Index of this percentile bin."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:57
-msgid "WaveWatchIII data for the west coast of North America and Hawaii."
+#: src/natcap/invest/wave_energy.py:38
+msgid "Percentile range within this bin."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:64
-msgid "Point vector for the East Coast of North America and Puerto Rico."
+#: src/natcap/invest/wave_energy.py:42
+msgid "Number of pixels whose wave energy values fall into this percentile bin."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:71
-msgid "Extract vector for the East Coast of North America and Puerto Rico."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:76
-msgid "WaveWatchIII data for the East Coast of North America and Puerto Rico."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:83
-msgid "Point vector for the North Sea 4 meter resolution."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:89
-msgid "Extract vector for the North Sea 4 meter resolution."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:93
-msgid "WaveWatchIII data for the North Sea 4 meter resolution."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:100
-msgid "Point vector for the North Sea 10 meter resolution."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:106
-msgid "Extract vector for the North Sea 10 meter resolution."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:110
-msgid "WaveWatchIII data for the North Sea 10 meter resolution."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:117
-msgid "Point vector for Australia."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:122
-msgid "Extract vector for Australia."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:125
-msgid "WaveWatchIII data for Australia."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:130
-msgid "Global point vector."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:135
-msgid "Global extract vector."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:138
-msgid "Global WaveWatchIII data."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:140
-msgid "Pre-packaged wave energy data directory. This is provided with the sample data."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:143
-msgid "wave base data"
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:148
-msgid "West Coast of North America and Hawaii"
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:150
-msgid "East Coast of North America and Puerto Rico"
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:153
-msgid "North Sea 4 meter resolution"
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:155
-msgid "North Sea 10 meter resolution"
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:156
-msgid "Australia"
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:157
-msgid "Global"
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:159
-msgid "The analysis area over which to run the model."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:161
-msgid "analysis area"
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:171
-msgid "A matrix of the wave machine performance, or ability to capture wave energy, in different sea state conditions. The first column contains wave height values (in meters, increasing from top to bottom), and the first row contains wave period values (in seconds, increasing from left to right). Values within the matrix are the machine performance in kilowatts at that sea state condition, described by the wave height (row) and wave period (column). The model linearly interpolates sea state data from the base wave dataset onto this matrix to determine performance."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:182
-msgid "machine performance table"
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:188
-msgid "Maximum capacity for device."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:193
-msgid "Upper limit of wave height for device operation. The device shuts down when waves are higher than this."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:200
-msgid "Upper limit of wave period for device operation. The device shuts down when the wave period is longer than this."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:208
-msgid "Table of parameters for the wave energy machine in use."
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:209
-msgid "machine parameter table"
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:212 src/natcap/invest/wind_energy.py:100
-msgid "bathymetry"
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:215 src/natcap/invest/wind_energy.py:99
-msgid "Map of ocean depth. Values should be negative."
-msgstr ""
-
-#: src/natcap/invest/scenic_quality/scenic_quality.py:122
-#: src/natcap/invest/wave_energy.py:220
-msgid "Run the valuation model."
-msgstr ""
-
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:348
-#: src/natcap/invest/scenic_quality/scenic_quality.py:119
-#: src/natcap/invest/wave_energy.py:221 src/natcap/invest/wind_energy.py:282
-msgid "run valuation"
-msgstr ""
-
-#: src/natcap/invest/wave_energy.py:228 src/natcap/invest/wind_energy.py:302
+#: src/natcap/invest/wave_energy.py:51 src/natcap/invest/wind_energy.py:331
 msgid "Unique identifier for each point."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:232 src/natcap/invest/wind_energy.py:306
+#: src/natcap/invest/wave_energy.py:55 src/natcap/invest/wind_energy.py:335
 msgid "This is a land connection point"
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:234 src/natcap/invest/wind_energy.py:308
+#: src/natcap/invest/wave_energy.py:57 src/natcap/invest/wind_energy.py:337
 msgid "This is a grid connection point"
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:237 src/natcap/invest/wind_energy.py:311
+#: src/natcap/invest/wave_energy.py:60 src/natcap/invest/wind_energy.py:340
 msgid "The type of connection at this point."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:242 src/natcap/invest/wind_energy.py:316
+#: src/natcap/invest/wave_energy.py:65 src/natcap/invest/wind_energy.py:345
 msgid "Latitude of the connection point."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:247 src/natcap/invest/wind_energy.py:321
+#: src/natcap/invest/wave_energy.py:70 src/natcap/invest/wind_energy.py:350
 msgid "Longitude of the connection point."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:251
+#: src/natcap/invest/wave_energy.py:74
 msgid "Name for the connection point location."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:255
-msgid "A table of data for each connection point. Required if Run Valuation is selected."
+#: src/natcap/invest/wave_energy.py:149
+msgid "Point vector for the west coast of North America and Hawaii."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:258
-msgid "grid connection points table"
+#: src/natcap/invest/wave_energy.py:156
+msgid "Extract vector for the west coast of North America and Hawaii."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:266
-msgid "Maximum capacity of the device."
+#: src/natcap/invest/wave_energy.py:161
+msgid "WaveWatchIII data for the west coast of North America and Hawaii."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:271
-msgid "Capital cost per device installed."
+#: src/natcap/invest/wave_energy.py:168
+msgid "Point vector for the East Coast of North America and Puerto Rico."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:276
-msgid "Cost of mooring lines."
+#: src/natcap/invest/wave_energy.py:175
+msgid "Extract vector for the East Coast of North America and Puerto Rico."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:281
-msgid "Cost of underwater cable."
+#: src/natcap/invest/wave_energy.py:180
+msgid "WaveWatchIII data for the East Coast of North America and Puerto Rico."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:187
+msgid "Point vector for the North Sea 4 meter resolution."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:193
+msgid "Extract vector for the North Sea 4 meter resolution."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:197
+msgid "WaveWatchIII data for the North Sea 4 meter resolution."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:204
+msgid "Point vector for the North Sea 10 meter resolution."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:210
+msgid "Extract vector for the North Sea 10 meter resolution."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:214
+msgid "WaveWatchIII data for the North Sea 10 meter resolution."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:221
+msgid "Point vector for Australia."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:226
+msgid "Extract vector for Australia."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:229
+msgid "WaveWatchIII data for Australia."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:234
+msgid "Global point vector."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:239
+msgid "Global extract vector."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:242
+msgid "Global WaveWatchIII data."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:244
+msgid "Pre-packaged wave energy data directory. This is provided with the sample data."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:247
+msgid "wave base data"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:252
+msgid "West Coast of North America and Hawaii"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:254
+msgid "East Coast of North America and Puerto Rico"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:257
+msgid "North Sea 4 meter resolution"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:259
+msgid "North Sea 10 meter resolution"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:260
+msgid "Australia"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:261
+msgid "Global"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:263
+msgid "The analysis area over which to run the model."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:265
+msgid "analysis area"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:275
+msgid "A matrix of the wave machine performance, or ability to capture wave energy, in different sea state conditions. The first column contains wave height values (in meters, increasing from top to bottom), and the first row contains wave period values (in seconds, increasing from left to right). Values within the matrix are the machine performance in kilowatts at that sea state condition, described by the wave height (row) and wave period (column). The model linearly interpolates sea state data from the base wave dataset onto this matrix to determine performance."
 msgstr ""
 
 #: src/natcap/invest/wave_energy.py:286
-msgid "Cost of overland transmission lines."
+msgid "machine performance table"
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:291
-msgid "Operating and maintenance cost."
+#: src/natcap/invest/wave_energy.py:295
+msgid "Name of the machine parameter. Expected parameters are: 'capmax' (maximum capacity for device, in kilowatts), 'hsmax' (upper limit of wave height for device operation, in meters), and 'tpmax' (upper limit of wave period for device operation, in seconds)."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:296
-msgid "Price of electricity."
+#: src/natcap/invest/wave_energy.py:305 src/natcap/invest/wave_energy.py:354
+msgid "Value of the machine parameter."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:300
-msgid "Discount rate."
+#: src/natcap/invest/wave_energy.py:308
+msgid "Table of parameters for the wave energy machine in use."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:305
-msgid "Number of slack lines required per machine."
+#: src/natcap/invest/wave_energy.py:309
+msgid "machine parameter table"
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:310
+#: src/natcap/invest/wave_energy.py:312 src/natcap/invest/wind_energy.py:128
+msgid "bathymetry"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:315 src/natcap/invest/wind_energy.py:127
+msgid "Map of ocean depth. Values should be negative."
+msgstr ""
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:121
+#: src/natcap/invest/wave_energy.py:320
+msgid "Run the valuation model."
+msgstr ""
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:353
+#: src/natcap/invest/scenic_quality/scenic_quality.py:118
+#: src/natcap/invest/wave_energy.py:321 src/natcap/invest/wind_energy.py:310
+msgid "run valuation"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:327
+msgid "A table of data for each connection point. Required if Run Valuation is selected."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:330
+msgid "grid connection points table"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:339
+msgid "Name of the machine parameter. Expected parameters are: 'capmax' (maximum capacity for device, in kilowatts), 'cc' (capital cost per device installed, $/kilowatt), 'cml' (cost of mooring lines, $/kilometer), 'cul' (cost of underwater cable, $/kilometer), 'col' (cost of overland transmission lines, $/kilometer), 'omc' (operating and maintenance cost, $/kilowatt hour), 'p' (price of electricity, $/kilowatt hour), 'r' (discount rate, between 0 and 1), 'smlpm' (number of slack lines required per machine)"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:358
 msgid "Table of economic parameters for the wave energy machine. Required if Run Valuation is selected."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:313
+#: src/natcap/invest/wave_energy.py:361
 msgid "machine economic table"
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:320
+#: src/natcap/invest/wave_energy.py:368
 msgid "Number of wave machines to model. Required if Run Valuation is selected."
 msgstr ""
 
-#: src/natcap/invest/wave_energy.py:323
+#: src/natcap/invest/wave_energy.py:371
 msgid "number of machines"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:55
+#: src/natcap/invest/wave_energy.py:379
+msgid "Map of captured wave energy per WEC device."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:387
+msgid "Map of captured wave energy per WEC device reclassified by quantiles (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%)."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:394
+msgid "Table of value ranges for each captured wave energy quantile group as well as the number of pixels for each group."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:404
+msgid "Range of wave energy values within this percentile bin."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:412
+msgid "Vector map of the provided grid points"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:418
+msgid "Vector map of the provided land points"
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:423
+msgid "Map of positive values of net present value over the 25-year lifespan of a wave energy facility, reclassified by quantiles (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%)."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:431
+msgid "Table of value ranges for each net present value quantile group as well as the number of pixels for each group."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:441
+msgid "Range of net present values within this percentile bin."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:448
+msgid "Map of net present value over the 25-year lifespan of a wave energy facility."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:457
+msgid "Map of potential wave power."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:464
+msgid "Map of potential wave power classified into quantiles (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%)."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:471
+msgid "Table of value ranges for each wave power quantile group as well as the number of pixels for each group."
+msgstr ""
+
+#: src/natcap/invest/wave_energy.py:480
+msgid "Range of potential wave power values within this percentile bin."
+msgstr ""
+
+#: src/natcap/invest/wind_energy.py:36
 msgid "Longitude of the data point."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:60
+#: src/natcap/invest/wind_energy.py:41
 msgid "Latitude of the data point."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:65
+#: src/natcap/invest/wind_energy.py:46 src/natcap/invest/wind_energy.py:76
 msgid "Weibull scale factor at the reference hub height at this point."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:72
+#: src/natcap/invest/wind_energy.py:53
 msgid "Weibull shape factor at this point."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:77
+#: src/natcap/invest/wind_energy.py:58
 msgid "The reference hub height at this point, at which wind speed data was collected and LAM was estimated."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:82
-msgid "Table of Weibull parameters for each wind data point."
+#: src/natcap/invest/wind_energy.py:69
+msgid "Weibull scale factor calculated for the proposed hub height at this point."
 msgstr ""
 
 #: src/natcap/invest/wind_energy.py:83
-msgid "wind data points"
+msgid "Power density at this point."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:90
-msgid "Map of the area(s) of interest over which to run the model and aggregate valuation results. Required if Run Valuation is selected and the Grid Connection Points table is provided."
+#: src/natcap/invest/wind_energy.py:88
+msgid "Predicted energy harvested from a wind farm centered on this point."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:107
-msgid "Map of the coastlines of landmasses in the area of interest. Required if the Minimum Distance and Maximum Distance inputs are provided."
+#: src/natcap/invest/wind_energy.py:110
+msgid "Table of Weibull parameters for each wind data point."
 msgstr ""
 
 #: src/natcap/invest/wind_energy.py:111
+msgid "wind data points"
+msgstr ""
+
+#: src/natcap/invest/wind_energy.py:118
+msgid "Map of the area(s) of interest over which to run the model and aggregate valuation results. Required if Run Valuation is selected and the Grid Connection Points table is provided."
+msgstr ""
+
+#: src/natcap/invest/wind_energy.py:135
+msgid "Map of the coastlines of landmasses in the area of interest. Required if the Minimum Distance and Maximum Distance inputs are provided."
+msgstr ""
+
+#: src/natcap/invest/wind_energy.py:139
 msgid "land polygon"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:119
+#: src/natcap/invest/wind_energy.py:147
 msgid "Standard atmosphere air density."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:123
+#: src/natcap/invest/wind_energy.py:151
 msgid "Exponent to use in the power curve function."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:126
+#: src/natcap/invest/wind_energy.py:154
 msgid "Cost to decommission a turbine as a proportion of the total upfront costs (cables, foundations, installation?)"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:133
+#: src/natcap/invest/wind_energy.py:161
 msgid "The operations and maintenance costs as a proportion of capex_arr"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:138
+#: src/natcap/invest/wind_energy.py:166
 msgid "The miscellaneous costs as a proportion of capex_arr"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:143
+#: src/natcap/invest/wind_energy.py:171
 msgid "The installation costs as a proportion of capex_arr"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:149
+#: src/natcap/invest/wind_energy.py:177
 msgid "The length of infield cable."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:153
+#: src/natcap/invest/wind_energy.py:181
 msgid "The cost of infield cable."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:157
+#: src/natcap/invest/wind_energy.py:185
 msgid "Cost of AC cable that scales with capacity."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:161
+#: src/natcap/invest/wind_energy.py:189
 msgid "Cost of DC cable that scales with capacity."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:165
+#: src/natcap/invest/wind_energy.py:193
 msgid "Cost of AC cable that scales with length."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:169
+#: src/natcap/invest/wind_energy.py:197
 msgid "Cost of DC cable that scales with length."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:173
+#: src/natcap/invest/wind_energy.py:201
 msgid "The threshold above which a wind farm’s distance from the grid requires a switch from AC to DC power to overcome line losses which reduce the amount of energy delivered"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:181
+#: src/natcap/invest/wind_energy.py:209
 msgid "The expected lifetime of the facility"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:185
+#: src/natcap/invest/wind_energy.py:213
 msgid "Factor that translates carbon-free wind power to a corresponding amount of avoided CO2 emissions"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:191
+#: src/natcap/invest/wind_energy.py:219
 msgid "The reduction in air density per meter above sea level"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:196
+#: src/natcap/invest/wind_energy.py:224
 msgid "The fraction of energy lost due to downtime, power conversion inefficiency, and electrical grid losses"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:200
+#: src/natcap/invest/wind_energy.py:228
 msgid "A table of wind energy infrastructure parameters."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:202
+#: src/natcap/invest/wind_energy.py:230
 msgid "global wind energy parameters"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:210
+#: src/natcap/invest/wind_energy.py:238
 msgid "Height of the turbine hub above sea level."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:214
+#: src/natcap/invest/wind_energy.py:242
 msgid "Wind speed at which the turbine begins producing power."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:220
+#: src/natcap/invest/wind_energy.py:248
 msgid "Minimum wind speed at which the turbine reaches its rated power output."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:226
+#: src/natcap/invest/wind_energy.py:254
 msgid "Wind speed above which the turbine stops generating power for safety reasons."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:232
+#: src/natcap/invest/wind_energy.py:260
 msgid "The turbine's rated power output."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:236
+#: src/natcap/invest/wind_energy.py:264
 msgid "The cost of one turbine."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:238
+#: src/natcap/invest/wind_energy.py:266
 msgid "A table of parameters specific to the type of turbine."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:239
+#: src/natcap/invest/wind_energy.py:267
 msgid "turbine parameters"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:245
+#: src/natcap/invest/wind_energy.py:273
 msgid "The number of wind turbines per wind farm."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:246
+#: src/natcap/invest/wind_energy.py:274
 msgid "number of turbines"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:251
+#: src/natcap/invest/wind_energy.py:279
 msgid "Minimum depth for offshore wind farm installation."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:252
+#: src/natcap/invest/wind_energy.py:280
 msgid "minimum depth"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:257
+#: src/natcap/invest/wind_energy.py:285
 msgid "Maximum depth for offshore wind farm installation."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:258
+#: src/natcap/invest/wind_energy.py:286
 msgid "maximum depth"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:264
+#: src/natcap/invest/wind_energy.py:292
 msgid "Minimum distance from shore for offshore wind farm installation. Required if Run Valuation is selected."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:267
+#: src/natcap/invest/wind_energy.py:295
 msgid "minimum distance"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:273
+#: src/natcap/invest/wind_energy.py:301
 msgid "Maximum distance from shore for offshore wind farm installation. Required if Run Valuation is selected."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:276
+#: src/natcap/invest/wind_energy.py:304
 msgid "maximum distance"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:281
+#: src/natcap/invest/wind_energy.py:309
 msgid "Run the valuation component of the model."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:288
+#: src/natcap/invest/wind_energy.py:316
 msgid "The cost of the foundation for one turbine."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:289
+#: src/natcap/invest/wind_energy.py:317
 msgid "foundation cost"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:294
+#: src/natcap/invest/wind_energy.py:322
 msgid "Annual discount rate to apply to valuation."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:402
-#: src/natcap/invest/wind_energy.py:295
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:408
+#: src/natcap/invest/wind_energy.py:323
 msgid "discount rate"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:325
+#: src/natcap/invest/wind_energy.py:354
 msgid "Table of grid and land connection points to which cables will connect. Required if Run Valuation is selected and Average Shore-to-Grid Distance is not provided."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:329
+#: src/natcap/invest/wind_energy.py:358
 msgid "grid connection points"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:336
+#: src/natcap/invest/wind_energy.py:365
 msgid "Average distance to the onshore grid from coastal cable landing points. Required if Run Valuation is selected and the Grid Connection Points table is not provided."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:340
+#: src/natcap/invest/wind_energy.py:369
 msgid "average shore-to-grid distance"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:345
+#: src/natcap/invest/wind_energy.py:374
 msgid "Use a Wind Energy Price Table instead of calculating annual prices from the initial Energy Price and Rate of Price Change inputs."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:357
-#: src/natcap/invest/wind_energy.py:349
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:362
+#: src/natcap/invest/wind_energy.py:378
 msgid "use price table"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:357
+#: src/natcap/invest/wind_energy.py:387
 msgid "Consecutive years for each year in the lifespan of the wind farm. These may be the actual years: 2010, 2011, 2012..., or the number of the years after the starting date: 1, 2, 3,..."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:366
+#: src/natcap/invest/wind_energy.py:396
 msgid "Price of energy for each year."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:370
+#: src/natcap/invest/wind_energy.py:400
 msgid "Table of yearly prices for wind energy. There must be a row for each year in the lifespan given in the 'time_period' column in the Global Wind Energy Parameters table. Required if Run Valuation and Use Price Table are selected."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:375
+#: src/natcap/invest/wind_energy.py:405
 msgid "wind energy price table"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:381
+#: src/natcap/invest/wind_energy.py:411
 msgid "The initial price of wind energy, at the first year in the wind energy farm lifespan. Required if Run Valuation is selected and Use Price Table is not selected."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:385
+#: src/natcap/invest/wind_energy.py:415
 msgid "price of energy"
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:390
+#: src/natcap/invest/wind_energy.py:420
 msgid "The annual rate of change in the price of wind energy. Required if Run Valuation is selected and Use Price Table is not selected."
 msgstr ""
 
-#: src/natcap/invest/wind_energy.py:394
+#: src/natcap/invest/wind_energy.py:424
 msgid "rate of price change"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:115
+#: src/natcap/invest/wind_energy.py:432
+msgid "Map of offset carbon emissions for a farm centered on each pixel"
+msgstr ""
+
+#: src/natcap/invest/wind_energy.py:441
+msgid "Map of power density."
+msgstr ""
+
+#: src/natcap/invest/wind_energy.py:448
+msgid "Map of energy harvested from a farm centered on each pixel."
+msgstr ""
+
+#: src/natcap/invest/wind_energy.py:456
+msgid "Map of the energy price that would be required to set the present value of a farm centered on each pixel equal to zero."
+msgstr ""
+
+#: src/natcap/invest/wind_energy.py:466
+msgid "Map of the net present value of a farm centered on each pixel."
+msgstr ""
+
+#: src/natcap/invest/wind_energy.py:471
+msgid "Map of summarized data at each point."
+msgstr ""
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:116
 msgid "Analysis year {analysis_year} must be >= the latest snapshot year ({latest_year})"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:118
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:119
 msgid "Raster for snapshot {snapshot_year} could not be validated."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:174
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:121
+msgid "The transition table expects values of {model_transitions} but found values of {transition_values}."
+msgstr ""
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:177
 msgid "The snapshot year that this row's LULC raster represents. Each year in this table must be unique."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:181
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:184
 msgid "Map of LULC in the given snapshot year. All values in this raster must have corresponding entries in the Biophysical Table and Landcover Transitions Table."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:188
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:191
 msgid "A table mapping snapshot years to corresponding LULC maps."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:190
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:193
 msgid "landcover snapshots table"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:196
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:199
 msgid "analysis year"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:197
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:200
 msgid "A year that may be used to extend the analysis beyond the last snapshot year. If used, the model assumes that carbon will continue to accumulate or emit after the last snapshot year until the analysis year. This value must be greater than the final snapshot year."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:210
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:214
 msgid "The LULC code that represents this LULC class in the LULC snapshot rasters."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:215
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:219
 msgid "Name of the LULC class. This label must be unique among the all the LULC classes."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:221
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:225
 msgid "The initial carbon stocks in the biomass pool for this LULC class."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:227
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:231
 msgid "The initial carbon stocks in the soil pool for this LULC class."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:233
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:237
 msgid "The initial carbon stocks in the litter pool for this LULC class."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:240
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:244
 msgid "The half-life of carbon in the biomass pool."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:243
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:247
 msgid "Proportion of carbon stock in the biomass pool that is disturbed when a cell transitions away from this  LULC class in a low-impact disturbance."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:249
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:253
 msgid "Proportion of carbon stock in the biomass pool that is disturbed when a cell transitions away from this LULC class in a medium-impact disturbance."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:255
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:259
 msgid "Proportion of carbon stock in the biomass pool that is disturbed when a cell transitions away from this LULC class in a high-impact disturbance."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:262
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:266
 msgid "Annual rate of CO2E accumulation in the biomass pool."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:268
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:272
 msgid "The half-life of carbon in the soil pool."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:271
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:275
 msgid "Proportion of carbon stock in the soil pool that is disturbed when a cell transitions away from this LULC class in a low-impact disturbance."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:277
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:281
 msgid "Proportion of carbon stock in the soil pool that is disturbed when a cell transitions away from this LULC class in a medium-impact disturbance."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:283
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:287
 msgid "Proportion of carbon stock in the soil pool that is disturbed when a cell transitions away from this LULC class in a high-impact disturbance."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:290
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:294
 msgid "Annual rate of CO2E accumulation in the soil pool."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:295
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:299
 msgid "Annual rate of CO2E accumulation in the litter pool."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:298
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:302
 msgid "Table of biophysical properties for each LULC class."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:301
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:305
 msgid "landcover transitions table"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:306
-msgid "LULC codes matching the codes in the biophysical table."
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:311
+msgid "LULC class names matching those in the biophysical table."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:313
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:318
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:97
 msgid "a state of carbon accumulation"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:316
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:321
 msgid "high carbon disturbance rate"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:319
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:324
 msgid "medium carbon disturbance rate"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:322
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:327
 msgid "low carbon disturbance rate"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:325
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:330
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:106
 msgid "no change in carbon"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:328
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:333
 msgid "A transition matrix describing the type of carbon action that occurs when each LULC type transitions to each other type. Values in the first column, 'lulc-class', represents the original LULC class that is transitioned away from. Values in the first row represents the LULC class that is transitioned to. Each cell in the matrix is filled with an option indicating the effect on carbon when transitioning from that cell's row's LULC class to that cell's column's LULC class. The classes in this table must exactly match the classes in the Biophysical Table 'lulc-class' column. A cell may be left empty if the transition never occurs."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:343
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:348
 msgid "A transition matrix mapping the type of carbon action undergone when one LULC type transitions to another."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:351
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:356
 msgid "Enable net present valuation analysis based on carbon prices from either a yearly price table, or an initial price and yearly interest rate."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:360
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:365
 msgid "Use a yearly price table, rather than an initial price and interest rate, to indicate carbon value over time."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:365
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:370
 msgid "price"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:369
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:374
 msgid "The price of CO2E at the baseline year. Required if Do Valuation is selected and Use Price Table is not selected."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:374
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:379
 msgid "interest rate"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:377
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:382
 msgid "Annual increase in the price of CO2E. Required if Do Valuation is selected and Use Price Table is not selected."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:382
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:387
 msgid "price table"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:389
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:395
 msgid "Each year from the snapshot year to analysis year."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:394
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:400
 msgid "Price of CO2E in that year."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:396
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:402
 msgid "Table of annual CO2E prices for each year from the baseline year to the final snapshot or analysis year. Required if Do Valuation is selected and Use Price Table is selected."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:405
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:411
 msgid "Annual discount rate on the price of carbon. This is compounded each year after the baseline year. Required if Run Valuation is selected."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:30
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:33
 msgid "LULC lookup table"
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:32
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:35
 msgid "A table mapping LULC codes from the snapshot rasters to the corresponding LULC class names, and whether or not the class is a coastal blue carbon habitat."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:39
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:43
 msgid "LULC code. Every value in the snapshot LULC maps must have a corresponding entry in this column."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:45
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:49
 msgid "Name of the LULC class."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:48
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:52
 msgid "Enter TRUE if this LULC class is a coastal blue carbon habitat, FALSE if not."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:59
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:63
 msgid "Year to snapshot."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:63
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:67
 msgid "Map of LULC in the snapshot year. All values in this raster must have corresponding entries in the LULC Lookup table."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:69
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:73
 msgid "A table mapping snapshot years to corresponding LULC maps for each year."
 msgstr ""
 
-#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:72
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:76
 msgid "LULC snapshots table"
+msgstr ""
+
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:90
+msgid "LULC codes matching the codes in the biophysical table."
+msgstr ""
+
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:100
+msgid "Carbon disturbance occurred. Replace this with one of ‘low-impact-disturb’, ‘med-impact-disturb’, or ‘high-impact-disturb’ to indicate the degree of disturbance."
 msgstr ""
 
 #: src/natcap/invest/delineateit/delineateit.py:46
@@ -2602,83 +3031,83 @@ msgstr ""
 msgid "skip invalid geometries"
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:25
+#: src/natcap/invest/ndr/ndr.py:26
 msgid "Either calc_n or calc_p must be True"
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:47
+#: src/natcap/invest/ndr/ndr.py:48
 msgid "All values in this raster must have corresponding entries in the Biophysical table."
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:57
+#: src/natcap/invest/ndr/ndr.py:58
 msgid "Map of runoff potential, the capacity to transport nutrients downslope. This can be a quickflow index or annual precipitation. Any units are allowed since the values will be normalized by their average."
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:62
+#: src/natcap/invest/ndr/ndr.py:63
 msgid "nutrient runoff proxy"
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:69
+#: src/natcap/invest/ndr/ndr.py:70
 msgid "Map of the boundaries of the watershed(s) over which to aggregate the model results."
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:81
+#: src/natcap/invest/ndr/ndr.py:83
 msgid "The nutrient loading for this land use class."
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:85
+#: src/natcap/invest/ndr/ndr.py:87
 msgid "Maximum nutrient retention efficiency. This is the maximum proportion of the nutrient that is retained on this LULC class."
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:92
+#: src/natcap/invest/ndr/ndr.py:94
 msgid "The distance after which it is assumed that this LULC type retains the nutrient at its maximum capacity. If nutrients travel a shorter distance that this, the retention efficiency will be less than the maximum value eff_x, following an exponential decay."
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:102
+#: src/natcap/invest/ndr/ndr.py:104
 msgid "The proportion of the total amount of nitrogen that are dissolved into the subsurface. By default, this value should be set to 0, indicating that all nutrients are delivered via surface flow. There is no equivalent of this for phosphorus."
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:109
+#: src/natcap/invest/ndr/ndr.py:111
 msgid "A table mapping each LULC class to its biophysical properties related to nutrient load and retention. Replace '[NUTRIENT]' in the column names with 'n' or 'p' for nitrogen or phosphorus respectively. Nitrogen data must be provided if Calculate Nitrogen is selected. Phosphorus data must be provided if Calculate Phosphorus is selected. All LULC codes in the LULC raster must have corresponding entries in this table."
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:122
+#: src/natcap/invest/ndr/ndr.py:124
 msgid "Calculate phosphorus retention and export."
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:123
+#: src/natcap/invest/ndr/ndr.py:125
 msgid "calculate phosphorus"
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:127
+#: src/natcap/invest/ndr/ndr.py:129
 msgid "Calculate nitrogen retention and export."
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:128
+#: src/natcap/invest/ndr/ndr.py:130
 msgid "calculate nitrogen"
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:136
+#: src/natcap/invest/ndr/ndr.py:138
 msgid "Calibration parameter that determines the shape of the relationship between hydrologic connectivity (the degree of connection from patches of land to the stream) and the nutrient delivery ratio (percentage of nutrient that actually reaches the stream)."
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:142 src/natcap/invest/sdr/sdr.py:110
+#: src/natcap/invest/ndr/ndr.py:144 src/natcap/invest/sdr/sdr.py:112
 msgid "Borselli k parameter"
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:148
+#: src/natcap/invest/ndr/ndr.py:150
 msgid "subsurface critical length (nitrogen)"
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:149
+#: src/natcap/invest/ndr/ndr.py:151
 msgid "The distance traveled (subsurface and downslope) after which it is assumed that soil retains nitrogen at its maximum capacity. Required if Calculate Nitrogen is selected."
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:157
+#: src/natcap/invest/ndr/ndr.py:159
 msgid "subsurface maximum retention efficiency (nitrogen)"
 msgstr ""
 
-#: src/natcap/invest/ndr/ndr.py:158
+#: src/natcap/invest/ndr/ndr.py:160
 msgid "The maximum nitrogen retention efficiency that can be reached through subsurface flow. This characterizes the retention due to biochemical degradation in soils. Required if Calculate Nitrogen is selected."
 msgstr ""
 
@@ -2707,7 +3136,7 @@ msgid "Predictor is a point vector. Metric is the number of points within each A
 msgstr ""
 
 #: src/natcap/invest/recreation/recmodel_client.py:78
-msgid "Predictor is a point vector. Metric is the Euclidean distance between the center of each AOI grid cell and the nearest point in this layer."
+msgid "Predictor is a point vector. Metric is the Euclidean distance between the centroid of each AOI grid cell and the nearest point in this layer."
 msgstr ""
 
 #: src/natcap/invest/recreation/recmodel_client.py:83
@@ -2798,203 +3227,432 @@ msgstr ""
 msgid "compute regression"
 msgstr ""
 
-#: src/natcap/invest/recreation/recmodel_client.py:197
+#: src/natcap/invest/recreation/recmodel_client.py:198
 msgid "A table that maps predictor IDs to spatial files and their predictor metric types. The file paths can be absolute or relative to the table."
 msgstr ""
 
-#: src/natcap/invest/recreation/recmodel_client.py:201
+#: src/natcap/invest/recreation/recmodel_client.py:202
 msgid "predictor table"
 msgstr ""
 
-#: src/natcap/invest/recreation/recmodel_client.py:207
+#: src/natcap/invest/recreation/recmodel_client.py:209
 msgid "A table of future or alternative scenario predictors. Maps IDs to files and their types. The file paths can be absolute or relative to the table."
 msgstr ""
 
-#: src/natcap/invest/recreation/recmodel_client.py:211
+#: src/natcap/invest/recreation/recmodel_client.py:213
 msgid "scenario predictor table"
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:67
+#: src/natcap/invest/recreation/recmodel_client.py:218
+msgid "Copy of the the AOI vector with aggregate attributes added."
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:223
+msgid "The average photo-user-days per year"
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:229
+msgid "The average photo-user-days for each month."
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:237
+msgid "Table of monthly photo-user-days."
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:242
+msgid "Polygon ID"
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:245
+msgid "Total photo-user-days counted in each cell in the given month."
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:255
+msgid "AOI polygons with their corresponding predictor attributes."
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:262
+#: src/natcap/invest/recreation/recmodel_client.py:287
+msgid "Predictor attribute value for each polygon."
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:269
+msgid "This is a text file output of the regression analysis. It includes estimates for each predictor variable. It also contains a “server id hash” value which can be used to correlate the PUD result with the data available on the PUD server. If these results are used in publication this hash should be included with the results for reproducibility."
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:279
+msgid "AOI polygons with their corresponding predictor attributes in the scenario."
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:293
+msgid "The estimated PUD_YR_AVG per polygon."
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:301
+msgid "Copy of the input AOI, gridded if applicable."
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:307
+msgid "Compressed AOI"
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:310
+msgid "aggregated predictor values within each polygon"
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:314
+msgid "Predictor estimates"
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:317
+msgid "Compressed photo-user-day data"
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:319
+msgid "Pickled dictionary mapping FIDs to shapely geometries"
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:326
+msgid "aggregated scenario predictor values within each polygon"
+msgstr ""
+
+#: src/natcap/invest/recreation/recmodel_client.py:333
+msgid "Server version info"
+msgstr ""
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:66
 msgid "features impacting scenic quality"
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:75
+#: src/natcap/invest/scenic_quality/scenic_quality.py:74
 msgid "Maximum length of the line of sight originating from a viewpoint. The value can either be positive (preferred) or negative (kept for backwards compatibility), but is converted to a positive number. If this field is not provided, the model will include all pixels in the DEM in the visibility analysis. RADIUS preferred, but may also be called RADIUS2 for backwards compatibility."
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:88
+#: src/natcap/invest/scenic_quality/scenic_quality.py:87
 msgid "Viewshed importance coefficient. If this field is provided, the values are used to weight each feature's viewshed impacts. If not provided, all viewsheds are equally weighted with a weight of 1."
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:97
+#: src/natcap/invest/scenic_quality/scenic_quality.py:96
 msgid "Viewpoint height, the elevation above the ground of each feature. If this field is not provided, defaults to 0."
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:102
+#: src/natcap/invest/scenic_quality/scenic_quality.py:101
 msgid "Map of locations of objects that negatively affect scenic quality. This must have the same projection as the DEM."
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:112
+#: src/natcap/invest/scenic_quality/scenic_quality.py:111
 msgid "refractivity coefficient"
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:114
+#: src/natcap/invest/scenic_quality/scenic_quality.py:113
 msgid "The refractivity coefficient corrects for the curvature of the earth and refraction of visible light in air."
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:125
+#: src/natcap/invest/scenic_quality/scenic_quality.py:124
 msgid "Valuation function"
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:129
+#: src/natcap/invest/scenic_quality/scenic_quality.py:128
 msgid "linear: a + bx"
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:130
+#: src/natcap/invest/scenic_quality/scenic_quality.py:129
 msgid "logarithmic: a + b log(x+1)"
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:132
+#: src/natcap/invest/scenic_quality/scenic_quality.py:131
 msgid "exponential: a * e^(-bx)"
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:134
+#: src/natcap/invest/scenic_quality/scenic_quality.py:133
 msgid "Valuation function used to calculate the visual impact of each feature, given distance from the feature 'x' and parameters 'a' and 'b'."
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:140
+#: src/natcap/invest/scenic_quality/scenic_quality.py:139
 msgid "coefficient a"
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:144
+#: src/natcap/invest/scenic_quality/scenic_quality.py:143
 msgid "First coefficient ('a') used by the valuation function"
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:147
+#: src/natcap/invest/scenic_quality/scenic_quality.py:146
 msgid "coefficient b"
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:151
+#: src/natcap/invest/scenic_quality/scenic_quality.py:150
 msgid "Second coefficient ('b') used by the valuation function"
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:154
+#: src/natcap/invest/scenic_quality/scenic_quality.py:153
 msgid "maximum valuation radius"
 msgstr ""
 
-#: src/natcap/invest/scenic_quality/scenic_quality.py:159
+#: src/natcap/invest/scenic_quality/scenic_quality.py:158
 msgid "Valuation will only be computed for cells that fall within this radius of a feature impacting scenic quality."
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:53
+#: src/natcap/invest/scenic_quality/scenic_quality.py:168
+msgid "Map of visual quality classified into quartiles."
+msgstr ""
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:173
+msgid "This raster layer contains the weighted sum of all visibility rasters. If no weight column is provided in the structures point vector, this raster will represent a count of the number of structure points that are visible from each pixel."
+msgstr ""
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:177
+msgid "This raster layer contains the weighted sum of the valuation rasters created for each point."
+msgstr ""
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:186
+msgid "This vector is the AOI, reprojected to the DEM’s spatial reference and projection."
+msgstr ""
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:191
+msgid "This raster layer is a version of the DEM that has been clipped and masked to the AOI and tiled. This is the DEM file that is used for the viewshed analysis."
+msgstr ""
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:195
+msgid "Copy of the structures vector, clipped to the AOI extent."
+msgstr ""
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:201
+msgid "Copy of the structures vector, reprojected to the DEM’s spatial reference and projection."
+msgstr ""
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:206
+msgid "The calculated value of the viewshed amenity/disamenity given the distances of pixels from the structure's viewpoint, the weight of the viewpoint, the valuation function, and the a and b coefficients. The viewshed’s value is only evaluated for visible pixels."
+msgstr ""
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:210
+msgid "Map of visibility for a given structure's viewpoint. This raster has pixel values of 0 (not visible), 1 (visible), or nodata (where the DEM is nodata)."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:54
 msgid "Map of rainfall erosivity, reflecting the intensity and duration of rainfall in the area of interest."
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:56
+#: src/natcap/invest/sdr/sdr.py:57
 msgid "erosivity"
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:64
+#: src/natcap/invest/sdr/sdr.py:65
 msgid "Map of soil erodibility, the susceptibility of soil particles to detachment and transport by rainfall and runoff."
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:68
+#: src/natcap/invest/sdr/sdr.py:69
 msgid "soil erodibility"
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:82
+#: src/natcap/invest/sdr/sdr.py:83
 msgid "Map of the boundaries of the watershed(s) over which to aggregate results. Each watershed should contribute to a point of interest where water quality will be analyzed."
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:86
+#: src/natcap/invest/sdr/sdr.py:87
 msgid "Watersheds"
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:94
+#: src/natcap/invest/sdr/sdr.py:96
 msgid "Cover-management factor for the USLE"
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:97
+#: src/natcap/invest/sdr/sdr.py:99
 msgid "Support practice factor for the USLE"
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:99
+#: src/natcap/invest/sdr/sdr.py:101
 msgid "A table mapping each LULC code to biophysical properties of that LULC class. All values in the LULC raster must have corresponding entries in this table."
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:109
+#: src/natcap/invest/sdr/sdr.py:111
 msgid "Borselli k parameter."
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:114
+#: src/natcap/invest/sdr/sdr.py:116
 msgid "The maximum SDR value that a pixel can have."
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:115
+#: src/natcap/invest/sdr/sdr.py:117
 msgid "maximum SDR value"
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:120
+#: src/natcap/invest/sdr/sdr.py:122
 msgid "Borselli IC0 parameter."
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:121
+#: src/natcap/invest/sdr/sdr.py:123
 msgid "Borselli IC0 parameter"
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:127
+#: src/natcap/invest/sdr/sdr.py:129
 msgid "The maximum allowed value of the slope length parameter (L) in the LS factor."
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:130
+#: src/natcap/invest/sdr/sdr.py:132
 msgid "maximum l value"
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:136
+#: src/natcap/invest/sdr/sdr.py:138
 msgid "Map of locations of artificial drainages that drain to the watershed. Pixels with 1 are drainages and are treated like streams. Pixels with 0 are not drainages."
 msgstr ""
 
-#: src/natcap/invest/sdr/sdr.py:140
+#: src/natcap/invest/sdr/sdr.py:142
 msgid "drainages"
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:55
+#: src/natcap/invest/sdr/sdr.py:229
+msgid "CP factor derived by mapping usle_c and usle_p from the biophysical table to the LULC raster."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:235
+msgid "Downslope factor of the index of connectivity (Eq. (74))"
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:240
+msgid "Upslope factor of the index of connectivity (Eq. (73))"
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:245
+msgid "Sediment downslope deposition, the amount of sediment from a given pixel that does not reach a stream (Eq. (78))"
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:254
+msgid "Map of sediment flux for sediment that does not reach the stream (Eq. (81))"
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:265
+msgid "Index of connectivity (Eq. (70))"
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:272
+msgid "LS factor for USLE (Eq. (69))"
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:280
+msgid "Flow accumulation weighted by the thresholded slope. Used in calculating s_bar."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:289
+msgid "Mean thresholded slope gradient of the upslope contributing area (in eq. (73))"
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:298
+msgid "Sediment delivery ratio (Eq. (75))"
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:303
+msgid "Percent slope, thresholded to be no less than 0.005 and no greater than 1 (eq. (71)). 1 is equivalent to a 45 degree slope."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:310
+msgid "Flow accumulation weighted by the thresholded cover-management factor. Used in calculating w_bar."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:319
+msgid "Mean thresholded cover-management factor for upslope contributing area (in eq. (73))"
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:325
+msgid "Cover-management factor derived by mapping usle_c from the biophysical table to the LULC raster."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:331
+msgid "Cover-management factor thresholded to be no less than 0.001 (eq. (72))"
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:337
+msgid "Average aspect weighted by flow direction (in eq. (69))"
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:342
+msgid "Map of which pixels drain to a stream. A value of 1 means that at least some of the runoff from that pixel drains to a stream in stream.tif. A value of 0 means that it does not drain at all to any stream in stream.tif."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:351
+msgid "Inverse of the thresholded cover-management factor times the thresholded slope (in eq. (74))"
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:357
+msgid "Copy of the input DEM, clipped to the extent of the other raster inputs."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:366
+msgid "Copy of the input drainage map, clipped to the extent of the other raster inputs and aligned to the DEM."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:373
+msgid "Copy of the input erodibility map, clipped to the extent of the other raster inputs and aligned to the DEM."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:383
+msgid "Copy of the input erosivity map, clipped to the extent of the other raster inputs and aligned to the DEM."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:393
+msgid "Copy of the input Land Use Land Cover map, clipped to the extent of the other raster inputs and aligned to the DEM."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:400
+msgid "A raster aligned to the DEM and clipped to the extent of the other raster inputs. Pixel values indicate where a nodata value exists in the stack of aligned rasters (pixel value of 0), or if all values in the stack of rasters at this pixel location are valid."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:410
+msgid "A copy of the aligned DEM, masked using the mask raster."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:418
+msgid "A copy of the aligned drainage map, masked using the mask raster."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:425
+msgid "A copy of the aligned erodibility map, masked using the mask raster."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:435
+msgid "A copy of the aligned erosivity map, masked using the mask raster."
+msgstr ""
+
+#: src/natcap/invest/sdr/sdr.py:444
+msgid "A copy of the aligned Land Use Land Cover map, masked using the mask raster."
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:53
 msgid "Twelve files, one for each month. File names must end with the month number (1-12). For example, the filenames 'et0_1.tif' 'evapotranspiration1.tif' are both valid for the month of January."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:64
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:62
 msgid "Directory containing maps of reference evapotranspiration for each month. Only .tif files should be in this folder (no .tfw, .xml, etc files)."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:68
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:66
 msgid "ET0 directory"
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:76
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:74
 msgid "Twelve files, one for each month. File names must end with the month number (1-12). For example, the filenames 'precip_1.tif' and 'precip1.tif' are both valid names for the month of January."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:84
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:82
 msgid "Directory containing maps of monthly precipitation for each month. Only .tif files should be in this folder (no .tfw, .xml, etc files)."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:88
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:86
 msgid "precipitation directory"
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:97
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:95
 msgid "All values in this raster MUST have corresponding entries in the Biophysical Table."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:117
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:116
 msgid "Curve number values for each combination of soil group and LULC class. Replace [SOIL_GROUP] with each soil group code A, B, C, D so that there is one column for each soil group. Curve number values must be greater than 0."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:127
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:126
 msgid "Crop/vegetation coefficient (Kc) values for this LULC class in each month. Replace [MONTH] with the numbers 1 to 12 so that there is one column for each month."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:134
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:133
 msgid "A table mapping each LULC code to biophysical properties of the corresponding LULC class. All values in the LULC raster must have corresponding entries in this table."
 msgstr ""
 
@@ -3062,51 +3720,163 @@ msgstr ""
 msgid "climate zones (advanced)"
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:220
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:221
 msgid "Climate zone ID numbers, corresponding to the values in the Climate Zones map."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:226
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:227
 msgid "The number of rain events that occur in each month in this climate zone. Replace [MONTH] with the month abbreviations: jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec, so that there is a column for each month."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:234
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:235
 msgid "Table of monthly precipitation events for each climate zone. Required if User-Defined Climate Zones is selected."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:237
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:238
 msgid "climate zone table"
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:244
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:245
 msgid "Map of climate zones. All values in this raster must have corresponding entries in the Climate Zone Table."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:247
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:248
 msgid "climate zone map"
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:251
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:252
 msgid "Use montly alpha values instead of a single value for the whole year."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:254
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:255
 msgid "use monthly alpha table (advanced)"
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:262
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:264
 msgid "Values are the numbers 1-12 corresponding to each month."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:269
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:271
 msgid "The alpha value for that month."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:273
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:275
 msgid "Table of alpha values for each month. Required if Use Monthly Alpha Table is selected."
 msgstr ""
 
-#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:276
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:278
 msgid "monthly alpha table"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:283
+msgid "Map of baseflow values, the contribution of a pixel to slow release flow (which is not evapotranspired before it reaches the stream)."
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:293
+msgid "Map of B_sum values, the flow through a pixel, contributed by all upslope pixels, that is not evapotranspirated before it reaches the stream."
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:303
+msgid "Map of curve number values."
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:310
+msgid "Map of available local recharge"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:317
+msgid "Map of local recharge values"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:324
+msgid "Map of total available water, contributed by all upslope pixels, that is available for evapotranspiration by this pixel."
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:333
+msgid "Map of cumulative upstream recharge: the flow through a pixel, contributed by all upslope pixels, that is available for evapotranspiration to downslope pixels."
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:343
+msgid "Map of quickflow"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:350
+msgid "The total precipitation across all months on this pixel."
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:357
+msgid "Map of the values of recharge (contribution, positive or negative), to the total recharge."
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:366
+msgid "Table of biophysical values for each watershed"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:370
+msgid "Mean local recharge value within the watershed"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:376
+msgid "Total recharge contribution, (positive or negative) within the watershed."
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:388
+msgid "Map of actual evapotranspiration"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:395
+msgid "Map of multiple flow direction. Values are encoded in a binary format and should not be used directly."
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:401
+msgid "Maps of monthly quickflow (1 = January… 12 = December)"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:409
+msgid "Stream network map generated from the input DEM and Threshold Flow Accumulation. Values of 1 represent streams, values of 0 are non-stream pixels."
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:418
+msgid "Map of the S_i factor derived from CN"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:422
+msgid "Copy of LULC input, aligned and clipped to match the other spatial inputs"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:427
+msgid "Copy of DEM input, aligned and clipped to match the other spatial inputs"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:432
+msgid "Pit filled DEM"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:436
+msgid "Copy of soil groups input, aligned and clipped to match the other spatial inputs"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:443
+msgid "Monthly precipitation rasters, aligned and clipped to match the other spatial inputs"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:447
+msgid "Map of monthly rain events"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:452
+msgid "Monthly ET0 rasters, aligned and clipped to match the other spatial inputs"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:456
+msgid "Map of monthly KC values"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:460
+msgid "Copy of user-defined local recharge input, aligned and clipped to match the other spatial inputs"
+msgstr ""
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:465
+msgid "Copy of user-defined climate zones raster, aligned and clipped to match the other spatial inputs"
 msgstr ""
 

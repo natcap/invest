@@ -25,6 +25,7 @@ from osgeo import osr
 from shapely.geometry import Point
 from shapely.geometry import Polygon
 
+gdal.UseExceptions()
 
 class SuffixUtilsTests(unittest.TestCase):
     """Tests for natcap.invest.utils.make_suffix_string."""
@@ -412,17 +413,22 @@ class GDALWarningsLoggingTests(unittest.TestCase):
 
         logfile = os.path.join(self.workspace, 'logfile.txt')
 
-        # this warning should go to stdout.
-        gdal.Open('this_file_should_not_exist.tif')
+        invalid_polygon = ogr.CreateGeometryFromWkt(
+            'POLYGON ((-20 -20, -16 -20, -20 -16, -16 -16, -20 -20))')
+
+        # This produces a GDAL warning that does not raise an
+        # exception with UseExceptions(). Without capture_gdal_logging,
+        # it will be printed directly to stderr
+        invalid_polygon.IsValid()
 
         with utils.log_to_file(logfile) as handler:
             with utils.capture_gdal_logging():
                 # warning should be captured.
-                gdal.Open('file_file_should_also_not_exist.tif')
+                invalid_polygon.IsValid()
             handler.flush()
 
-        # warning should go to stdout
-        gdal.Open('this_file_should_not_exist.tif')
+        # warning should go to stderr
+        invalid_polygon.IsValid()
 
         with open(logfile) as opened_logfile:
             messages = [msg for msg in opened_logfile.read().split('\n')
@@ -499,7 +505,11 @@ class PrepareWorkspaceTests(unittest.TestCase):
             with utils.prepare_workspace(workspace,
                                          'some_model'):
                 warnings.warn('deprecated', UserWarning)
-                gdal.Open('file should not exist')
+                invalid_polygon = ogr.CreateGeometryFromWkt(
+                    'POLYGON ((-20 -20, -16 -20, -20 -16, -16 -16, -20 -20))')
+                # This produces a GDAL warning that does not raise an
+                # exception with UseExceptions()
+                invalid_polygon.IsValid()
 
         self.assertTrue(os.path.exists(workspace))
         logfile_glob = glob.glob(os.path.join(workspace, '*.txt'))
@@ -509,11 +519,9 @@ class PrepareWorkspaceTests(unittest.TestCase):
         with open(logfile_glob[0]) as logfile:
             logfile_text = logfile.read()
             # all the following strings should be in the logfile.
-            expected_string = (
-                'file should not exist: No such file or directory')
-            self.assertTrue(
-                expected_string in logfile_text)  # gdal error captured
-            self.assertEqual(len(re.findall('WARNING', logfile_text)), 1)
+            self.assertTrue(  # gdal logging captured
+                'Self-intersection at or near point -18 -18' in logfile_text)
+            self.assertEqual(len(re.findall('WARNING', logfile_text)), 2)
             self.assertTrue('Elapsed time:' in logfile_text)
 
 

@@ -1,5 +1,5 @@
 import path from 'path';
-
+import i18n from './i18n/i18n';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {
   app,
@@ -9,35 +9,37 @@ import {
   ipcMain
 } from 'electron';
 
+import BASE_URL from './baseUrl';
 import {
   createPythonFlaskProcess,
   getFlaskIsReady,
-  shutdownPythonProcess
+  shutdownPythonProcess,
 } from './createPythonFlaskProcess';
 import findInvestBinaries from './findInvestBinaries';
-import setupDownloadHandlers from './setupDownloadHandlers';
-import setupDialogs from './setupDialogs';
-import setupContextMenu from './setupContextMenu';
+import { ipcMainChannels } from './ipcMainChannels';
+import ELECTRON_DEV_MODE from './isDevMode';
+import { getLogger } from './logger';
+import menuTemplate from './menubar';
+import pkg from '../../package.json';
+import { settingsStore, setupSettingsHandlers } from './settingsStore';
+import { setupBaseUrl } from './setupBaseUrl';
 import setupCheckFilePermissions from './setupCheckFilePermissions';
 import { setupCheckFirstRun } from './setupCheckFirstRun';
 import { setupCheckStorageToken } from './setupCheckStorageToken';
-import {
-  setupInvestRunHandlers,
-  setupInvestLogReaderHandler
-} from './setupInvestHandlers';
+import setupContextMenu from './setupContextMenu';
+import setupDialogs from './setupDialogs';
+import setupDownloadHandlers from './setupDownloadHandlers';
+import setupGetElectronPaths from './setupGetElectronPaths';
 import setupGetNCPUs from './setupGetNCPUs';
+import {
+  setupInvestLogReaderHandler,
+  setupInvestRunHandlers,
+} from './setupInvestHandlers';
+import { setupIsNewVersion } from './setupIsNewVersion';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
-import { settingsStore, setupSettingsHandlers } from './settingsStore';
-import setupGetElectronPaths from './setupGetElectronPaths';
 import setupRendererLogger from './setupRendererLogger';
-import { ipcMainChannels } from './ipcMainChannels';
-import menuTemplate from './menubar';
-import ELECTRON_DEV_MODE from './isDevMode';
-import BASE_URL from './baseUrl';
-import { getLogger } from './logger';
-import i18n from './i18n/i18n';
-import pkg from '../../package.json';
+
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -87,6 +89,7 @@ export const createWindow = async () => {
   setupDialogs();
   setupCheckFilePermissions();
   setupCheckFirstRun();
+  setupIsNewVersion();
   setupCheckStorageToken();
   setupSettingsHandlers();
   setupGetElectronPaths();
@@ -94,6 +97,7 @@ export const createWindow = async () => {
   setupInvestLogReaderHandler();
   setupOpenExternalUrl();
   setupRendererLogger();
+  setupBaseUrl();
   await getFlaskIsReady();
 
   const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';

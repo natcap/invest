@@ -48,6 +48,12 @@ Unreleased Changes
       reflect changes in how InVEST is installed on modern systems, and also to
       include images of the InVEST workbench instead of just broken links.
       https://github.com/natcap/invest/issues/1660
+    * Updated translations for Spanish and Chinese
+    * natcap.invest now works with (and requires) ``gdal.UseExceptions``. A
+      ``FutureWarning`` is raised on import if GDAL exceptions are not enabled.
+    * Fixed an issue on Windows where GDAL fails to find its DLLs due to
+      an interfering GDAL installation on the PATH, such as from anaconda.
+      https://github.com/natcap/invest/issues/1643
 * Workbench
     * Several small updates to the model input form UI to improve usability
       and visual consistency (https://github.com/natcap/invest/issues/912).
@@ -61,6 +67,8 @@ Unreleased Changes
       (https://github.com/natcap/invest/issues/1609).
     * Improved error handling when a datastack cannot be saved with relative
       paths across drives (https://github.com/natcap/invest/issues/1608).
+    * The InVEST changelog now displays in the Workbench the first time a new
+      version is launched (https://github.com/natcap/invest/issues/1368).
 * Coastal Vulnerability
     * Fixed a regression where an AOI with multiple features could raise a
       TypeError after intersecting with the landmass polygon.
@@ -73,6 +81,18 @@ Unreleased Changes
       (https://github.com/natcap/invest/issues/1615).
     * Rarity values are now output in CSV format (as well as in raster format)
       (https://github.com/natcap/invest/issues/721).
+* Pollination
+    * Fixed an issue with nodata handling that was causing some outputs to be
+      filled either with the float32 value for positive infinity, or else with
+      a value very close to it. https://github.com/natcap/invest/issues/1635
+    * While working on https://github.com/natcap/invest/issues/1635, we also
+      updated the stated dtype of most pollination model outputs to be float32
+      instead of the float64 dtype that was being assumed previously.  This
+      will result in smaller output filesizes with minimal loss of precision.
+* Seasonal Water Yield
+    * Added support for zero padding in month numbers in ET and precipitation
+      file names (i.e., users can now name their file Precip_01.tif).
+      (https://github.com/natcap/invest/issues/1166)
 * Urban Flood Risk
     * Fields present on the input AOI vector are now retained in the output.
       (https://github.com/natcap/invest/issues/1600)

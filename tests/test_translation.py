@@ -10,7 +10,9 @@ from unittest.mock import patch
 from babel.messages import Catalog, mofile
 import natcap.invest
 from natcap.invest import validation
+from osgeo import gdal
 
+gdal.UseExceptions()
 TEST_LANG = 'll'
 
 # assign to local variable so that it won't be changed by translation

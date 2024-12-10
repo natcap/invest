@@ -8,6 +8,7 @@ import numpy
 import pandas
 from osgeo import gdal
 
+gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ucm')
 
