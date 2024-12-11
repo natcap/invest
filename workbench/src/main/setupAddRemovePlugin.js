@@ -87,13 +87,13 @@ export function setupAddPlugin() {
         logger.info('created mamba env for plugin');
         await spawnWithLogging(
           mamba,
-          ['run', '--verbose', '--no-capture-output', '--name', envName, 'pip', 'install', `git+${pluginURL}`]
+          ['run', '--name', envName, 'pip', 'install', `git+${pluginURL}`]
         );
         logger.info('installed plugin into its env');
         // Write plugin metadata to the workbench's config.json
-        const envInfo = execSync(`${mamba} info --envs`, { windowsHide: true }).toString();
+        const envInfo = execSync(`${mamba} info --name ${envName}`, { windowsHide: true }).toString();
         logger.info(`env info:\n${envInfo}`);
-        const regex = new RegExp(String.raw`^${envName} +(.+)$`, 'm');
+        const regex = /env location : (.+)/;
         const envPath = envInfo.match(regex)[1];
         logger.info(`env path:\n${envPath}`);
         logger.info('writing plugin info to settings store');

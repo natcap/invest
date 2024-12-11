@@ -54,7 +54,6 @@ export function findInvestBinaries(isDevMode) {
   return investExe;
 }
 
-
 /**
  * Return the available mamba executable.
  *
@@ -64,13 +63,13 @@ export function findInvestBinaries(isDevMode) {
 export function findMambaExecutable(isDevMode) {
   let mambaExe;
   if (isDevMode) {
-    mambaExe = 'mamba'; // assume that mamba is available
+    mambaExe = 'micromamba'; // assume that micromamba is available
   } else {
     if (process.platform === 'win32') {
-      mambaExe = `"${upath.join(process.resourcesPath, 'miniforge3', 'condabin', 'mamba.bat')}"`;
+      mambaExe = `"${upath.join(process.resourcesPath, 'micromamba.exe')}"`;
     } else {
       // Quote the path in case of spaces
-      mambaExe = `"${upath.join(process.resourcesPath, 'miniforge3', 'condabin', 'mamba')}"`;
+      mambaExe = `"${upath.join(process.resourcesPath, 'micromamba')}"`;
     }
   }
   // Check that the executable is working

@@ -36,8 +36,12 @@ const config = {
       to: 'invest',
     },
     {
-      from: '../dist/Miniforge3',
-      to: 'Miniforge3',
+      from: '../dist/bin/micromamba', // mac
+      to: 'micromamba',
+    },
+    {
+      from: '../dist/micromamba.exe', // windows
+      to: 'micromamba',
     },
     {
       from: '../dist/userguide',
