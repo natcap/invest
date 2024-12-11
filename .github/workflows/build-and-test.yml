@@ -373,7 +373,7 @@ jobs:
 
       - name: Download micromamba installer for distribution (Windows)
         if: matrix.os == 'windows-latest'
-        run: curl -Ls https://micro.mamba.pm/api/micromamba/win-64/2.0.5.rc0 | tar -xvj bin/micromamba
+        run: curl -Ls https://micro.mamba.pm/api/micromamba/win-64/2.0.5.rc0 | tar -xf micromamba.tar.bz2
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
