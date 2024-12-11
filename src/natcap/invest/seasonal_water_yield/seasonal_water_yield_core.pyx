@@ -16,6 +16,7 @@ from cython.operator cimport dereference as deref
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cython.operator cimport dereference as deref
 from cython.operator cimport preincrement as inc
+from libc.math cimport isnan
 from libcpp.list cimport list as clist
 from libcpp.set cimport set as cset
 from libcpp.pair cimport pair
@@ -28,6 +29,8 @@ cdef extern from "time.h" nogil:
     time_t time(time_t*)
 
 cdef int is_close(double x, double y):
+    if isnan(x) and isnan(y):
+        return 1
     return abs(x-y) <= (1e-8+1e-05*abs(y))
 
 cdef extern from "LRUCache.h":

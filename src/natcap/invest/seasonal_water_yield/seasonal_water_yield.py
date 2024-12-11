@@ -982,6 +982,7 @@ def _calculate_vri(l_path, target_vri_path):
         valid_mask = (
             ~pygeoprocessing.array_equals_nodata(block, l_nodata) &
             (~numpy.isinf(block)))
+        # TODO: should numpy.sum ignore numpy.nan?
         qb_sum += numpy.sum(block[valid_mask])
         qb_valid_count += numpy.count_nonzero(valid_mask)
     li_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
