@@ -69,7 +69,8 @@ MODEL_SPEC = {
             'projection_units': u.meter,
             'about': (
                 "A map of LULC codes. "
-                "All values in this raster must have corresponding entries "
+                "Each land use/land cover type must be assigned a unique integer "
+                "code. All values in this raster must have corresponding entries "
                 "in the LULC attribute table. For this model in particular, "
                 "the urban nature types are of importance.  Non-nature types "
                 "are not required to be uniquely identified. All outputs "
