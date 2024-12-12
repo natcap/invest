@@ -3,19 +3,12 @@
 from libcpp.list cimport list as clist
 from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
+from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libc.math cimport isnan
 
-cdef struct s_neighborTuple:
-    int direction
-    int x
-    int y
-    float flow_proportion
-
-ctypedef s_neighborTuple NeighborTuple
-
 # this is a least recently used cache written in C++ in an external file,
-# exposing here so _ManagedRaster can use it
+# exposing here so ManagedRaster can use it
 cdef extern from "LRUCache.h" nogil:
     cdef cppclass LRUCache[KEY_T, VAL_T]:
         LRUCache(int)
@@ -25,48 +18,162 @@ cdef extern from "LRUCache.h" nogil:
         bint exist(KEY_T &)
         VAL_T get(KEY_T &)
 
-cdef class _ManagedRaster:
-    cdef LRUCache[int, double*]* lru_cache
-    cdef cset[int] dirty_blocks
-    cdef int block_xsize
-    cdef int block_ysize
-    cdef int block_xmod
-    cdef int block_ymod
-    cdef int block_xbits
-    cdef int block_ybits
-    cdef long raster_x_size
-    cdef long raster_y_size
-    cdef int block_nx
-    cdef int block_ny
-    cdef int write_mode
-    cdef bytes raster_path
-    cdef int band_id
-    cdef int closed
+cdef extern from "ManagedRaster.h":
+    cdef cppclass ManagedRaster:
+        LRUCache[int, double*]* lru_cache
+        cset[int] dirty_blocks
+        int block_xsize
+        int block_ysize
+        int block_xmod
+        int block_ymod
+        int block_xbits
+        int block_ybits
+        long raster_x_size
+        long raster_y_size
+        int block_nx
+        int block_ny
+        int write_mode
+        string raster_path
+        int band_id
+        int closed
 
-    cdef inline void set(_ManagedRaster self, long xi, long yi, double value)
-    cdef inline double get(_ManagedRaster self, long xi, long yi)
-    cdef void _load_block(_ManagedRaster self, int block_index) except *
+        ManagedRaster() except +
+        ManagedRaster(char*, int, bool) except +
+        void set(long xi, long yi, double value)
+        double get(long xi, long yi)
+        void _load_block(int block_index) except *
+        void close()
 
+    cdef cppclass ManagedFlowDirRaster:
+        LRUCache[int, double*]* lru_cache
+        cset[int] dirty_blocks
+        int block_xsize
+        int block_ysize
+        int block_xmod
+        int block_ymod
+        int block_xbits
+        int block_ybits
+        long raster_x_size
+        long raster_y_size
+        int block_nx
+        int block_ny
+        int write_mode
+        string raster_path
+        int band_id
+        int closed
 
-cdef class ManagedFlowDirRaster(_ManagedRaster):
+        bint is_local_high_point(int xi, int yi)
 
-    cdef bint is_local_high_point(ManagedFlowDirRaster self, long xi, long yi)
+        ManagedFlowDirRaster() except +
+        ManagedFlowDirRaster(char*, int, bool) except +
+        void set(long xi, long yi, double value)
+        double get(long xi, long yi)
+        void close()
 
-    cdef vector[NeighborTuple] get_upslope_neighbors(ManagedFlowDirRaster self, long xi, long yi)
+    cdef cppclass NeighborTuple:
+        NeighborTuple() except +
+        NeighborTuple(int, int, int, float) except +
+        int direction, x, y
+        float flow_proportion
 
-    cdef vector[NeighborTuple] get_downslope_neighbors(ManagedFlowDirRaster self, long xi, long yi, bint skip_oob=*)
+    cdef cppclass UpslopeNeighborIteratorSkip:
+        ManagedFlowDirRaster raster
+        int col
+        int row
+        int n_dir
+        int flow_dir
 
+        UpslopeNeighborIteratorSkip()
+        UpslopeNeighborIteratorSkip(ManagedFlowDirRaster, int, int, int)
+        NeighborTuple next()
 
-# These offsets are for the neighbor rows and columns according to the
-# ordering: 3 2 1
-#           4 x 0
-#           5 6 7
-cdef int *ROW_OFFSETS
-cdef int *COL_OFFSETS
-cdef int *FLOW_DIR_REVERSE_DIRECTION
-cdef int *INFLOW_OFFSETS
+    cdef cppclass Pixel:
+        ManagedFlowDirRaster raster
+        int x
+        int y
+        int val
 
-cdef inline int is_close(double x, double y):
-    if isnan(x) and isnan(y):
-        return 1
-    return abs(x - y) <= (1e-8 + 1e-05 * abs(y))
+        Pixel()
+        Pixel(ManagedFlowDirRaster, int, int)
+
+    cdef cppclass NeighborIterator:
+        NeighborIterator()
+        NeighborIterator(NeighborTuple* n)
+        NeighborIterator(Pixel)
+        NeighborTuple operator*()
+        NeighborIterator operator++()
+        bint operator==(NeighborIterator)
+        bint operator!=(NeighborIterator)
+
+    cdef cppclass DownslopeNeighborIterator:
+        DownslopeNeighborIterator()
+        DownslopeNeighborIterator(NeighborTuple* n)
+        DownslopeNeighborIterator(Pixel)
+        NeighborTuple operator*()
+        DownslopeNeighborIterator operator++()
+        bint operator==(DownslopeNeighborIterator)
+        bint operator!=(DownslopeNeighborIterator)
+
+    cdef cppclass DownslopeNeighborNoSkipIterator:
+        DownslopeNeighborNoSkipIterator()
+        DownslopeNeighborNoSkipIterator(NeighborTuple* n)
+        DownslopeNeighborNoSkipIterator(Pixel)
+        NeighborTuple operator*()
+        DownslopeNeighborNoSkipIterator operator++()
+        bint operator==(DownslopeNeighborNoSkipIterator)
+        bint operator!=(DownslopeNeighborNoSkipIterator)
+
+    cdef cppclass UpslopeNeighborIterator:
+        UpslopeNeighborIterator()
+        UpslopeNeighborIterator(NeighborTuple* n)
+        UpslopeNeighborIterator(Pixel)
+        NeighborTuple operator*()
+        UpslopeNeighborIterator operator++()
+        bint operator==(UpslopeNeighborIterator)
+        bint operator!=(UpslopeNeighborIterator)
+
+    cdef cppclass UpslopeNeighborNoDivideIterator:
+        UpslopeNeighborNoDivideIterator()
+        UpslopeNeighborNoDivideIterator(NeighborTuple* n)
+        UpslopeNeighborNoDivideIterator(Pixel)
+        NeighborTuple operator*()
+        UpslopeNeighborNoDivideIterator operator++()
+        bint operator==(UpslopeNeighborNoDivideIterator)
+        bint operator!=(UpslopeNeighborNoDivideIterator)
+
+    cdef cppclass Neighbors:
+        Neighbors()
+        Neighbors(Pixel)
+        NeighborIterator begin()
+        NeighborIterator end()
+
+    cdef cppclass DownslopeNeighbors:
+        DownslopeNeighbors()
+        DownslopeNeighbors(Pixel)
+        DownslopeNeighborIterator begin()
+        DownslopeNeighborIterator end()
+
+    cdef cppclass DownslopeNeighborsNoSkip:
+        DownslopeNeighborsNoSkip()
+        DownslopeNeighborsNoSkip(Pixel)
+        DownslopeNeighborNoSkipIterator begin()
+        DownslopeNeighborNoSkipIterator end()
+
+    cdef cppclass UpslopeNeighbors:
+        UpslopeNeighbors()
+        UpslopeNeighbors(Pixel)
+        UpslopeNeighborIterator begin()
+        UpslopeNeighborIterator end()
+
+    cdef cppclass UpslopeNeighborsNoDivide:
+        UpslopeNeighborsNoDivide()
+        UpslopeNeighborsNoDivide(Pixel)
+        UpslopeNeighborNoDivideIterator begin()
+        UpslopeNeighborNoDivideIterator end()
+
+    bint is_close(double, double)
+
+    int[8] INFLOW_OFFSETS
+    int[8] COL_OFFSETS
+    int[8] ROW_OFFSETS
+    int[8] FLOW_DIR_REVERSE_DIRECTION
