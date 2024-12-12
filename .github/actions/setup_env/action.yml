@@ -71,10 +71,6 @@ runs:
         cache-environment: true
         cache-environment-key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
 
-    - name: test
-      shell: bash
-      run: echo ${{ hashFiles('environment.yml') }}
-
     - name: List conda environment
       shell: bash -l {0}
       run: micromamba list
