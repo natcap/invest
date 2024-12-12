@@ -174,6 +174,38 @@ class DataDownloadModal extends React.Component {
     // Don't render until registry is loaded, since it loads async
     if (!dataRegistry) { return <div />; }
 
+    const displayNames = {
+      'Annual Water Yield': t('Annual Water Yield'),
+      'Carbon Storage and Sequestration': t('Carbon Storage and Sequestration'),
+      'Coastal Blue Carbon': t('Coastal Blue Carbon'),
+      'Coastal Vulnerability': t('Coastal Vulnerability'),
+      'Crop Pollination': t('Crop Pollination'),
+      'Crop Production': t('Crop Production'),
+      'DelineateIt': t('DelineateIt'),
+      'Forest Carbon Edge Effect': t('Forest Carbon Edge Effect'),
+      'Habitat Quality': t('Habitat Quality'),
+      'Habitat Risk Assessment': t('Habitat Risk Assessment'),
+      'Nutrient Delivery Ratio': t('Nutrient Delivery Ratio'),
+      'RouteDEM': t('RouteDEM'),
+      'Scenario Generator: Proximity Based': t('Scenario Generator: Proximity Based'),
+      'Scenic Quality': t('Scenic Quality'),
+      'Seasonal Water Yield': t('Seasonal Water Yield'),
+      'Sediment Delivery Ratio': t('Sediment Delivery Ratio'),
+      'Urban Stormwater Retention': t('Urban Stormwater Retention'),
+      'Urban Cooling': t('Urban Cooling'),
+      'Urban Flood Risk Mitigation': t('Urban Flood Risk Mitigation'),
+      'Urban Nature Access': t('Urban Nature Access'),
+      'Visitation: Recreation and Tourism': t('Visitation: Recreation and Tourism'),
+      'Wave Energy Production': t('Wave Energy Production'),
+      'Wind Energy Production': t('Wind Energy Production'),
+      'Global DEM & Landmass Polygon': t('Global DEM & Landmass Polygon'),
+    };
+    const displayNotes = {
+      '(recommended to run model)': t('(recommended to run model)'),
+      '(required to run model)': t('(required to run model)'),
+      '(required for Wind & Wave Energy)': t('(required for Wind & Wave Energy)'),
+    };
+
     const downloadEnabled = Boolean(selectedLinksArray.length);
     const DatasetCheckboxRows = [];
     Object.keys(modelCheckBoxState)
@@ -196,11 +228,11 @@ class DataDownloadModal extends React.Component {
                   )}
                 />
                 <Form.Check.Label>
-                  {modelName}
+                  {displayNames[modelName]}
                 </Form.Check.Label>
               </Form.Check>
             </td>
-            <td><em>{note}</em></td>
+            <td><em>{displayNotes[note]}</em></td>
             <td>{filesizeStr}</td>
           </tr>
         );
@@ -211,6 +243,7 @@ class DataDownloadModal extends React.Component {
         show={this.props.show}
         onHide={this.closeDialog}
         size="lg"
+        aria-labelledby="download-modal-title"
       >
         <Form>
           <Modal.Header>
@@ -230,7 +263,9 @@ class DataDownloadModal extends React.Component {
                     <p className="mb-0"><em>{this.state.alertPath}</em></p>
                   </Alert>
                 )
-                : <Modal.Title>{t("Download InVEST sample data")}</Modal.Title>
+                : <Modal.Title id="download-modal-title">
+                    {t("Download InVEST sample data")}
+                  </Modal.Title>
             }
           </Modal.Header>
           <Modal.Body>

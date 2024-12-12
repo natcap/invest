@@ -1161,23 +1161,18 @@ def _copy_vector_or_raster(base_file_path, target_file_path):
         ValueError if the base file can't be opened by GDAL.
 
     """
-    # Open the file as raster first
-    source_dataset = gdal.OpenEx(base_file_path, gdal.OF_RASTER)
-    target_driver_name = _RASTER_DRIVER_NAME
-    if source_dataset is None:
-        # File didn't open as a raster; assume it's a vector
+    gis_type = pygeoprocessing.get_gis_type(base_file_path)
+    if gis_type == pygeoprocessing.RASTER_TYPE:
+        source_dataset = gdal.OpenEx(base_file_path, gdal.OF_RASTER)
+        target_driver_name = _RASTER_DRIVER_NAME
+    elif gis_type == pygeoprocessing.VECTOR_TYPE:
         source_dataset = gdal.OpenEx(base_file_path, gdal.OF_VECTOR)
         target_driver_name = _VECTOR_DRIVER_NAME
-
-        # Raise an exception if the file can't be opened by GDAL
-        if source_dataset is None:
-            raise ValueError(
-                'File %s is neither a GDAL-compatible raster nor vector.'
-                % base_file_path)
-
+    else:
+        raise ValueError(f'File {base_file_path} is neither a GDAL-compatible '
+                         'raster nor vector.')
     driver = gdal.GetDriverByName(target_driver_name)
     driver.CreateCopy(target_file_path, source_dataset)
-    source_dataset = None
 
 
 def _interpolate_vector_field_onto_raster(

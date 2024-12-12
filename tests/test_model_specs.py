@@ -5,10 +5,13 @@ import unittest
 
 import pint
 from natcap.invest.models import model_id_to_pyname
+from osgeo import gdal
 
 PLUGIN_URL = 'git+https://github.com/emlys/demo-invest-plugin.git'
 PLUGIN_NAME = 'foo-model'
 
+
+gdal.UseExceptions()
 valid_nested_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
         'boolean',

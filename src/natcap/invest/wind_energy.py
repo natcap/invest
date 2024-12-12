@@ -1779,10 +1779,9 @@ def _calculate_land_to_grid_distance(
     # Copy the point vector
     _, driver_name = _get_file_ext_and_driver_name(
         target_land_vector_path)
-    base_land_vector = ogr.Open(base_land_vector_path, gdal.OF_VECTOR)
-    driver = ogr.GetDriverByName(driver_name)
-    driver.CopyDataSource(base_land_vector, target_land_vector_path)
-    base_land_vector = None
+    gdal.VectorTranslate(
+        target_land_vector_path, base_land_vector_path,
+        format=driver_name)
 
     target_land_vector = gdal.OpenEx(
         target_land_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
@@ -1867,7 +1866,7 @@ def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
 
 
 def _create_distance_raster(base_raster_path, base_vector_path,
-                            target_dist_raster_path, work_dir):
+                            target_dist_raster_path, work_dir, where_clause=None):
     """Create and rasterize vector onto a raster, and calculate dist transform.
 
     Create a raster where the pixel values represent the euclidean distance to
@@ -1879,6 +1878,9 @@ def _create_distance_raster(base_raster_path, base_vector_path,
         base_vector_path (str): path to vector to be rasterized.
         target_dist_raster_path (str): path to raster with distance transform.
         work_dir (str): path to create a temp folder for saving files.
+        where_clause (str): If not None, is an SQL query-like string to filter
+            which features are rasterized. This kwarg is passed to
+            ``pygeoprocessing.rasterize``.
 
     Returns:
         None
@@ -1906,7 +1908,8 @@ def _create_distance_raster(base_raster_path, base_vector_path,
         base_vector_path,
         rasterized_raster_path,
         burn_values=[1],
-        option_list=["ALL_TOUCHED=TRUE"])
+        option_list=["ALL_TOUCHED=TRUE"],
+        where_clause=where_clause)
 
     # Calculate euclidean distance transform
     pygeoprocessing.distance_transform_edt(
@@ -2611,67 +2614,25 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     # A list to hold the land to grid distances in order for each point
     # features 'L2G' field
     l2g_dist = []
-    # A list to hold the individual distance transform path's in order
+    # A list to hold the individual distance transform paths in order
     land_point_dist_raster_path_list = []
 
-    # Get the original layer definition which holds needed attribute values
-    base_layer_defn = base_point_layer.GetLayerDefn()
-    file_ext, driver_name = _get_file_ext_and_driver_name(
-        base_point_vector_path)
-    output_driver = ogr.GetDriverByName(driver_name)
-    single_feature_vector_path = os.path.join(
-        temp_dir, 'single_feature' + file_ext)
-    target_vector = output_driver.CreateDataSource(single_feature_vector_path)
-
-    # Create the new layer for target_vector using same name and
-    # geometry type from base_vector as well as spatial reference
-    target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
-                                             base_point_layer.GetSpatialRef(),
-                                             base_layer_defn.GetGeomType())
-
-    # Get the number of fields in original_layer
-    base_field_count = base_layer_defn.GetFieldCount()
-
-    # For every field, create a duplicate field and add it to the new
-    # shapefiles layer
-    for fld_index in range(base_field_count):
-        base_field = base_layer_defn.GetFieldDefn(fld_index)
-        target_field = ogr.FieldDefn(base_field.GetName(),
-                                     base_field.GetType())
-        # NOT setting the WIDTH or PRECISION because that seems to be
-        # unneeded and causes interesting OGR conflicts
-        target_layer.CreateField(target_field)
-
+    fid_field = base_point_layer.GetFIDColumn()
+    if not fid_field:
+        fid_field = 'FID'
     # Create a new shapefile with only one feature to burn onto a raster
     # in order to get the distance transform based on that one feature
     for feature_index, point_feature in enumerate(base_point_layer):
         # Get the point features land to grid value and add it to the list
-        field_index = point_feature.GetFieldIndex('L2G')
-        l2g_dist.append(float(point_feature.GetField(field_index)))
+        l2g_dist.append(float(point_feature.GetField('L2G')))
 
-        # Copy original_datasource's feature and set as new shapes feature
-        output_feature = ogr.Feature(feature_def=target_layer.GetLayerDefn())
-
-        # Since the original feature is of interest add its fields and
-        # Values to the new feature from the intersecting geometries
-        # The False in SetFrom() signifies that the fields must match
-        # exactly
-        output_feature.SetFrom(point_feature, False)
-        target_layer.CreateFeature(output_feature)
-        target_vector.SyncToDisk()
-        target_layer.DeleteFeature(point_feature.GetFID())
-
-        dist_raster_path = os.path.join(temp_dir,
-                                        'dist_%s.tif' % feature_index)
-        _create_distance_raster(base_raster_path, single_feature_vector_path,
-                                dist_raster_path, work_dir)
+        dist_raster_path = os.path.join(temp_dir, f'dist_{feature_index}.tif')
+        _create_distance_raster(
+            base_raster_path, base_point_vector_path, dist_raster_path,
+            work_dir, where_clause=f'{fid_field}={point_feature.GetFID()}')
         # Add each features distance transform result to list
         land_point_dist_raster_path_list.append(dist_raster_path)
 
-    target_layer = None
-    target_vector = None
-    base_point_layer = None
-    base_point_vector = None
     l2g_dist_array = numpy.array(l2g_dist)
 
     def _min_land_ocean_dist(*grid_distances):

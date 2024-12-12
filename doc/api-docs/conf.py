@@ -187,7 +187,7 @@ like
     natcap.invest.carbon.execute(args)
 
 For examples of scripting a model run, or multiple successive model runs,
-see :ref:`CreatingSamplePythonScripts`.
+see :ref:`CreatingPythonScripts`.
 
 
 .. contents:: Available Models and Tools:

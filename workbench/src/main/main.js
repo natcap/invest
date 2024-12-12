@@ -1,5 +1,4 @@
 import path from 'path';
-
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {
   app,
@@ -9,6 +8,8 @@ import {
   ipcMain
 } from 'electron';
 
+import i18n from './i18n/i18n';
+import BASE_URL from './baseUrl';
 import {
   createCoreServerProcess,
   shutdownPythonProcess
@@ -26,19 +27,19 @@ import {
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
 import { setupAddPlugin, setupRemovePlugin } from './setupAddRemovePlugin';
+import { ipcMainChannels } from './ipcMainChannels';
+import ELECTRON_DEV_MODE from './isDevMode';
+import { getLogger } from './logger';
+import menuTemplate from './menubar';
+import pkg from '../../package.json';
+import { settingsStore, setupSettingsHandlers } from './settingsStore';
+import { setupBaseUrl } from './setupBaseUrl';
+import setupGetElectronPaths from './setupGetElectronPaths';
 import setupGetNCPUs from './setupGetNCPUs';
+import { setupIsNewVersion } from './setupIsNewVersion';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
-import { settingsStore, setupSettingsHandlers } from './settingsStore';
-import setupGetElectronPaths from './setupGetElectronPaths';
 import setupRendererLogger from './setupRendererLogger';
-import { ipcMainChannels } from './ipcMainChannels';
-import menuTemplate from './menubar';
-import ELECTRON_DEV_MODE from './isDevMode';
-import BASE_URL from './baseUrl';
-import { getLogger } from './logger';
-import i18n from './i18n/i18n';
-import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -94,6 +95,7 @@ export const createWindow = async () => {
   setupDialogs();
   setupCheckFilePermissions();
   setupCheckFirstRun();
+  setupIsNewVersion();
   setupCheckStorageToken();
   setupSettingsHandlers();
   setupGetElectronPaths();
@@ -103,6 +105,7 @@ export const createWindow = async () => {
   setupRendererLogger();
   setupAddPlugin();
   setupRemovePlugin();
+  setupBaseUrl();
 
   const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';
   // Create the browser window.

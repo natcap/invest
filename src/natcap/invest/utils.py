@@ -50,7 +50,9 @@ def _log_gdal_errors(*args, **kwargs):
     """Log error messages to osgeo.
 
     All error messages are logged with reasonable ``logging`` levels based
-    on the GDAL error level.
+    on the GDAL error level. While we are now using ``gdal.UseExceptions()``,
+    we still need this to handle GDAL logging that does not get raised as
+    an exception.
 
     Note:
         This function is designed to accept any number of positional and
@@ -739,13 +741,23 @@ def reclassify_raster(
         None
 
     Raises:
-        ValueError if ``values_required`` is ``True`` and a pixel value from
-        ``raster_path_band`` is not a key in ``value_map``.
+        ValueError:
+            - if ``values_required`` is ``True`` and a pixel value from
+            ``raster_path_band`` is not a key in ``value_map``.
+        TypeError:
+            - if there is a ``None`` or ``NA`` key in ``value_map``.
     """
     # Error early if 'error_details' keys are invalid
     raster_name = error_details['raster_name']
     column_name = error_details['column_name']
     table_name = error_details['table_name']
+
+    # check keys in value map to ensure none are NA or None
+    if any((key is pandas.NA or key is None)
+           for key in value_map):
+        error_message = (f"Missing or NA value in '{column_name}' column"
+                         f" in {table_name} table.")
+        raise TypeError(error_message)
 
     try:
         pygeoprocessing.reclassify_raster(

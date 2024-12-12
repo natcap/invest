@@ -795,14 +795,17 @@ def _build_spatial_index(
     # put all the polygons in the kd_tree because it's fast and simple
     for poly_feature in model_layer:
         poly_geom = poly_feature.GetGeometryRef()
-        poly_centroid = poly_geom.Centroid()
-        # put in row/col order since rasters are row/col indexed
-        kd_points.append([poly_centroid.GetY(), poly_centroid.GetX()])
+        if poly_geom.IsValid():
+            poly_centroid = poly_geom.Centroid()
+            # put in row/col order since rasters are row/col indexed
+            kd_points.append([poly_centroid.GetY(), poly_centroid.GetX()])
 
-        theta_model_parameters.append([
-            poly_feature.GetField(feature_id) for feature_id in
-            ['theta1', 'theta2', 'theta3']])
-        method_model_parameter.append(poly_feature.GetField('method'))
+            theta_model_parameters.append([
+                poly_feature.GetField(feature_id) for feature_id in
+                ['theta1', 'theta2', 'theta3']])
+            method_model_parameter.append(poly_feature.GetField('method'))
+        else:
+            LOGGER.warning(f'skipping invalid geometry {poly_geom}')
 
     method_model_parameter = numpy.array(
         method_model_parameter, dtype=numpy.int32)
