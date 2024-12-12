@@ -72,6 +72,7 @@ runs:
         cache-environment-key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
 
     - name: test
+      shell: bash
       run: echo ${{ hashFiles('environment.yml') }}
 
     - name: List conda environment
