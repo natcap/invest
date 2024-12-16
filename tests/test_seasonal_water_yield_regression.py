@@ -423,6 +423,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
+            'algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(args['workspace_dir'],
@@ -484,6 +485,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
+            'algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(args['workspace_dir'],
@@ -584,6 +586,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
+            'algorithm': 'MFD'
         }
 
         biophysical_csv_path = os.path.join(args['workspace_dir'],
@@ -643,6 +646,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             'results_suffix': '',
             'threshold_flow_accumulation': '50',
             'workspace_dir': workspace_dir,
+            'algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(workspace_dir, 'watershed.shp')
@@ -717,6 +721,54 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['user_defined_local_recharge'] = False
         args['monthly_alpha'] = False
         args['results_suffix'] = ''
+
+        seasonal_water_yield.execute(args)
+
+        # generate aggregated results csv table for assertion
+        agg_results_csv_path = os.path.join(
+            args['workspace_dir'], 'agg_results_base.csv')
+        make_agg_results_csv(agg_results_csv_path)
+
+        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
+            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
+            agg_results_csv_path)
+
+    def test_base_regression_d8(self):
+        """SWY base regression test on sample data in D8 mode.
+
+        Executes SWY in default mode and checks that the output files are
+        generated and that the aggregate shapefile fields are the same as the
+        regression case.
+        """
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # use predefined directory so test can clean up files during teardown
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir)
+
+        # Ensure the model can pass when a nodata value is not defined.
+        size = 100
+        lulc_array = numpy.zeros((size, size), dtype=numpy.int8)
+        lulc_array[size // 2:, :] = 1
+
+        driver = gdal.GetDriverByName('GTiff')
+        new_raster = driver.Create(
+            args['lulc_raster_path'], lulc_array.shape[0],
+            lulc_array.shape[1], 1, gdal.GDT_Byte)
+        band = new_raster.GetRasterBand(1)
+        band.WriteArray(lulc_array)
+        geotransform = [1180000, 1, 0, 690000, 0, -1]
+        new_raster.SetGeoTransform(geotransform)
+        band = None
+        new_raster = None
+        driver = None
+
+        # make args explicit that this is a base run of SWY
+        args['user_defined_climate_zones'] = False
+        args['user_defined_local_recharge'] = False
+        args['monthly_alpha'] = False
+        args['results_suffix'] = ''
+        args['algorithm'] = 'D8'
 
         seasonal_water_yield.execute(args)
 
@@ -1263,13 +1315,14 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         seasonal_water_yield_core.calculate_local_recharge(
             [precip_path for i in range(12)], [et0_path for i in range(12)],
             [quickflow_path for i in range(12)], flow_dir_path,
-            [kc_path for i in range(12)], {i: 0.5 for i in range(12)}, 0.5,
+            [kc_path for i in range(12)], {i: 0.5 for i in range(1, 13)}, 0.5,
             0.5, stream_path,
             os.path.join(self.workspace_dir, 'target_li_path.tif'),
             os.path.join(self.workspace_dir, 'target_li_avail_path.tif'),
             os.path.join(self.workspace_dir, 'target_l_sum_avail_path.tif'),
             os.path.join(self.workspace_dir, 'target_aet_path.tif'),
-            os.path.join(self.workspace_dir, 'target_precip_path.tif'))
+            os.path.join(self.workspace_dir, 'target_precip_path.tif'),
+            algorithm='MFD')
 
 
 class SWYValidationTests(unittest.TestCase):
@@ -1295,6 +1348,7 @@ class SWYValidationTests(unittest.TestCase):
             'precip_dir',
             'threshold_flow_accumulation',
             'user_defined_local_recharge',
+            'algorithm'
         ]
 
     def tearDown(self):

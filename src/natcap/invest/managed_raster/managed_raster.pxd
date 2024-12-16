@@ -3,6 +3,7 @@
 from libcpp.list cimport list as clist
 from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
+from libcpp.stack cimport stack
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libc.math cimport isnan
@@ -36,6 +37,7 @@ cdef extern from "ManagedRaster.h":
         string raster_path
         int band_id
         int closed
+        double nodata
 
         ManagedRaster() except +
         ManagedRaster(char*, int, bool) except +
@@ -44,7 +46,7 @@ cdef extern from "ManagedRaster.h":
         void _load_block(int block_index) except *
         void close()
 
-    cdef cppclass ManagedFlowDirRaster:
+    cdef cppclass ManagedFlowDirRaster[T]:
         LRUCache[int, double*]* lru_cache
         cset[int] dirty_blocks
         int block_xsize
@@ -61,6 +63,7 @@ cdef extern from "ManagedRaster.h":
         string raster_path
         int band_id
         int closed
+        double nodata
 
         bint is_local_high_point(int xi, int yi)
 
@@ -70,106 +73,60 @@ cdef extern from "ManagedRaster.h":
         double get(long xi, long yi)
         void close()
 
+    cdef cppclass D8
+    cdef cppclass MFD
+
     cdef cppclass NeighborTuple:
         NeighborTuple() except +
         NeighborTuple(int, int, int, float) except +
         int direction, x, y
         float flow_proportion
 
-    cdef cppclass UpslopeNeighborIteratorSkip:
-        ManagedFlowDirRaster raster
+    cdef cppclass DownslopeNeighborIterator[T]:
+        ManagedFlowDirRaster[T] raster
+        int col
+        int row
+        int n_dir
+        int flow_dir
+        int flow_dir_sum
+
+        DownslopeNeighborIterator()
+        DownslopeNeighborIterator(ManagedFlowDirRaster[T], int, int)
+        void next()
+
+    cdef cppclass DownslopeNeighborNoSkipIterator[T]:
+        ManagedFlowDirRaster[T] raster
+        int col
+        int row
+        int n_dir
+        int flow_dir
+        int flow_dir_sum
+
+        DownslopeNeighborNoSkipIterator()
+        DownslopeNeighborNoSkipIterator(ManagedFlowDirRaster[T], int, int)
+        void next()
+
+    cdef cppclass UpslopeNeighborIterator[T]:
+        ManagedFlowDirRaster[T] raster
         int col
         int row
         int n_dir
         int flow_dir
 
-        UpslopeNeighborIteratorSkip()
-        UpslopeNeighborIteratorSkip(ManagedFlowDirRaster, int, int, int)
-        NeighborTuple next()
-
-    cdef cppclass Pixel:
-        ManagedFlowDirRaster raster
-        int x
-        int y
-        int val
-
-        Pixel()
-        Pixel(ManagedFlowDirRaster, int, int)
-
-    cdef cppclass NeighborIterator:
-        NeighborIterator()
-        NeighborIterator(NeighborTuple* n)
-        NeighborIterator(Pixel)
-        NeighborTuple operator*()
-        NeighborIterator operator++()
-        bint operator==(NeighborIterator)
-        bint operator!=(NeighborIterator)
-
-    cdef cppclass DownslopeNeighborIterator:
-        DownslopeNeighborIterator()
-        DownslopeNeighborIterator(NeighborTuple* n)
-        DownslopeNeighborIterator(Pixel)
-        NeighborTuple operator*()
-        DownslopeNeighborIterator operator++()
-        bint operator==(DownslopeNeighborIterator)
-        bint operator!=(DownslopeNeighborIterator)
-
-    cdef cppclass DownslopeNeighborNoSkipIterator:
-        DownslopeNeighborNoSkipIterator()
-        DownslopeNeighborNoSkipIterator(NeighborTuple* n)
-        DownslopeNeighborNoSkipIterator(Pixel)
-        NeighborTuple operator*()
-        DownslopeNeighborNoSkipIterator operator++()
-        bint operator==(DownslopeNeighborNoSkipIterator)
-        bint operator!=(DownslopeNeighborNoSkipIterator)
-
-    cdef cppclass UpslopeNeighborIterator:
         UpslopeNeighborIterator()
-        UpslopeNeighborIterator(NeighborTuple* n)
-        UpslopeNeighborIterator(Pixel)
-        NeighborTuple operator*()
-        UpslopeNeighborIterator operator++()
-        bint operator==(UpslopeNeighborIterator)
-        bint operator!=(UpslopeNeighborIterator)
+        UpslopeNeighborIterator(ManagedFlowDirRaster[T], int, int)
+        void next()
 
-    cdef cppclass UpslopeNeighborNoDivideIterator:
+    cdef cppclass UpslopeNeighborNoDivideIterator[T]:
+        ManagedFlowDirRaster[T] raster
+        int col
+        int row
+        int n_dir
+        int flow_dir
+
         UpslopeNeighborNoDivideIterator()
-        UpslopeNeighborNoDivideIterator(NeighborTuple* n)
-        UpslopeNeighborNoDivideIterator(Pixel)
-        NeighborTuple operator*()
-        UpslopeNeighborNoDivideIterator operator++()
-        bint operator==(UpslopeNeighborNoDivideIterator)
-        bint operator!=(UpslopeNeighborNoDivideIterator)
-
-    cdef cppclass Neighbors:
-        Neighbors()
-        Neighbors(Pixel)
-        NeighborIterator begin()
-        NeighborIterator end()
-
-    cdef cppclass DownslopeNeighbors:
-        DownslopeNeighbors()
-        DownslopeNeighbors(Pixel)
-        DownslopeNeighborIterator begin()
-        DownslopeNeighborIterator end()
-
-    cdef cppclass DownslopeNeighborsNoSkip:
-        DownslopeNeighborsNoSkip()
-        DownslopeNeighborsNoSkip(Pixel)
-        DownslopeNeighborNoSkipIterator begin()
-        DownslopeNeighborNoSkipIterator end()
-
-    cdef cppclass UpslopeNeighbors:
-        UpslopeNeighbors()
-        UpslopeNeighbors(Pixel)
-        UpslopeNeighborIterator begin()
-        UpslopeNeighborIterator end()
-
-    cdef cppclass UpslopeNeighborsNoDivide:
-        UpslopeNeighborsNoDivide()
-        UpslopeNeighborsNoDivide(Pixel)
-        UpslopeNeighborNoDivideIterator begin()
-        UpslopeNeighborNoDivideIterator end()
+        UpslopeNeighborNoDivideIterator(ManagedFlowDirRaster[T], int, int)
+        void next()
 
     bint is_close(double, double)
 
