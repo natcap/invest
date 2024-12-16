@@ -1,4 +1,5 @@
 """Module for Regression Testing the InVEST Habitat Quality model."""
+import csv
 import os
 import shutil
 import tempfile
@@ -11,6 +12,7 @@ from osgeo import ogr
 from osgeo import osr
 from shapely.geometry import Polygon
 
+gdal.UseExceptions()
 
 def make_raster_from_array(
         base_array, base_raster_path, nodata_val=-1, gdal_type=gdal.GDT_Int32):
@@ -244,6 +246,33 @@ class HabitatQualityTests(unittest.TestCase):
             # expanded to be beyond the bounds of the original threat values,
             # so we should exclude those new nodata pixel values.
             assert_array_sum(raster_path, assert_value, include_nodata=False)
+
+        # Based on the scenarios used to generate the rasters above,
+        # rarity values are calculated as follows:
+        # For LULC 1, rarity = 1.0 - (5000 / (10000 + 5000)) = 0.6667.
+        # For LULC 2 and 3, rarity = 0.0 because they are not in the baseline.
+        expected_csv_values = {
+            'rarity_c_regression.csv': [
+                (1, 0.6667, 4),
+                (2, 0.0, 0),
+            ],
+            'rarity_f_regression.csv': [
+                (1, 0.6667, 4),
+                (3, 0.0, 0),
+            ],
+        }
+        for csv_filename in expected_csv_values.keys():
+            csv_path = os.path.join(args['workspace_dir'], csv_filename)
+            with open(csv_path, newline='') as csvfile:
+                reader = csv.DictReader(csvfile, delimiter=',')
+                self.assertEqual(reader.fieldnames,
+                                 ['lulc_code', 'rarity_value'])
+                for (exp_lulc, exp_rarity,
+                     places_to_round) in expected_csv_values[csv_filename]:
+                    row = next(reader)
+                    self.assertEqual(int(row['lulc_code']), exp_lulc)
+                    self.assertAlmostEqual(float(row['rarity_value']),
+                                           exp_rarity, places_to_round)
 
     def test_habitat_quality_regression_different_projections(self):
         """Habitat Quality: base regression test with simplified data."""
@@ -1047,7 +1076,6 @@ class HabitatQualityTests(unittest.TestCase):
         habitat_quality.execute(args)
 
         # Reasonable to just check quality out in this case
-        #assert_array_sum(
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'quality_c.tif'),
             5852.088)
@@ -2105,3 +2133,48 @@ class HabitatQualityTests(unittest.TestCase):
                 header='column', header_name='fut_path')
         )]
         self.assertEqual(validate_result, expected)
+
+    def test_habitat_quality_missing_lulc_val_in_sens_table(self):
+        """Habitat Quality: test for empty value in LULC column of
+        sensitivity table. Expects TypeError"""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+        args['lulc_cur_path'] = os.path.join(
+            args['workspace_dir'], 'lc_samp_cur_b.tif')
+        make_raster_from_array(
+            lulc_array, args['lulc_cur_path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        with open(args['sensitivity_table_path'], 'w') as open_table:
+            open_table.write('LULC,NAME,HABITAT,threat_1,threat_2\n')
+            open_table.write('1,"lulc 1",1,1,1\n')
+            open_table.write(',"lulc 2",0.5,0.5,1\n')  # missing LULC value
+            open_table.write('3,"lulc 3",0,0.3,1\n')
+
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[1, 1],
+            dtype=numpy.int8, gdal_type=gdal.GDT_Int32, nodata_val=None)
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        # create the threat CSV table
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                'threat_2_f.tif\n')
+
+        with self.assertRaises(TypeError):
+            habitat_quality.execute(args)

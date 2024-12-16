@@ -68,8 +68,8 @@ void run_calculate_local_recharge(
 
     queue<pair<long, long>> work_queue;
 
-    UpslopeNeighborIterator<T> up_iterator;
-    DownslopeNeighborIterator<T> dn_iterator;
+    UpslopeNeighborsNoDivide<T> up_neighbors;
+    DownslopeNeighbors<T> dn_neighbors;
 
     // # used for time-delayed logging
     // cdef time_t last_log_time
@@ -179,10 +179,9 @@ void run_calculate_local_recharge(
                         // initialize to 0 so we indicate we haven't tracked any
                         // mfd values yet
                         l_sum_avail_i = 0.0;
-                        up_iterator = UpslopeNeighborIterator<T>(flow_dir_raster, xi, yi);
-                        neighbor = up_iterator.next_no_divide();
                         mfd_dir_sum = 0;
-                        while (neighbor.direction < 8) {
+                        up_neighbors = UpslopeNeighborsNoDivide<T>(Pixel<T>(flow_dir_raster, xi, yi));
+                        for (auto neighbor: up_neighbors) {
                             // pixel flows inward, check upslope
                             l_sum_avail_j = target_l_sum_avail_raster.get(
                                 neighbor.x, neighbor.y);
@@ -196,7 +195,6 @@ void run_calculate_local_recharge(
                             l_sum_avail_i += (
                                 l_sum_avail_j + l_avail_j) * neighbor.flow_proportion;
                             mfd_dir_sum += static_cast<int>(neighbor.flow_proportion);
-                            neighbor = up_iterator.next_no_divide();
                         }
                         // calculate l_sum_avail_i by summing all the valid
                         // directions then normalizing by the sum of the mfd
@@ -255,11 +253,9 @@ void run_calculate_local_recharge(
                         target_li_raster.set(xi, yi, l_i);
                         target_li_avail_raster.set(xi, yi, l_avail_i);
 
-                        dn_iterator = DownslopeNeighborIterator<T>(flow_dir_raster, xi, yi);
-                        neighbor = dn_iterator.next();
-                        while (neighbor.direction < 8) {
+                        dn_neighbors = DownslopeNeighbors<T>(Pixel<T>(flow_dir_raster, xi, yi));
+                        for (auto neighbor: dn_neighbors) {
                             work_queue.push(pair<long, long>(neighbor.x, neighbor.y));
-                            neighbor = dn_iterator.next();
                         }
                     }
                 }
@@ -330,8 +326,9 @@ void run_route_baseflow_sum(
     ManagedFlowDirRaster<T> flow_dir_raster = ManagedFlowDirRaster<T>(flow_dir_path, 1, 0);
     ManagedRaster stream_raster = ManagedRaster(stream_path, 1, 0);
 
-    UpslopeNeighborIterator<T> up_iterator;
-    DownslopeNeighborIterator<T> dn_iterator;
+    UpslopeNeighbors<T> up_neighbors;
+    DownslopeNeighbors<T> dn_neighbors;
+    DownslopeNeighborsNoSkip<T> dn_neighbors_no_skip;
     NeighborTuple neighbor;
 
     // int current_pixel = 0;
@@ -375,15 +372,13 @@ void run_route_baseflow_sum(
                     // search for a pixel that has no downslope neighbors,
                     // or whose downslope neighbors all have nodata in the stream raster (?)
                     outlet = true;
-                    dn_iterator = DownslopeNeighborIterator(flow_dir_raster, xs_root, ys_root);
-                    neighbor = dn_iterator.next();
-                    while (neighbor.direction < 8) {
+                    dn_neighbors = DownslopeNeighbors<T>(Pixel<T>(flow_dir_raster, xs_root, ys_root));
+                    for (auto neighbor: dn_neighbors) {
                         if (static_cast<int>(stream_raster.get(neighbor.x, neighbor.y)) !=
                                 static_cast<int>(stream_raster.nodata)) {
                             outlet = 0;
                             break;
                         }
-                        neighbor = dn_iterator.next();
                     }
                     if (not outlet) {
                         continue;
@@ -408,15 +403,13 @@ void run_route_baseflow_sum(
 
                         b_sum_i = 0;
                         downslope_defined = true;
-                        dn_iterator = DownslopeNeighborIterator(flow_dir_raster, xi, yi);
-                        neighbor = dn_iterator.next_no_skip();
+                        dn_neighbors_no_skip = DownslopeNeighborsNoSkip<T>(Pixel<T>(flow_dir_raster, xi, yi));
                         flow_dir_sum = 0;
-                        while (neighbor.direction < 8) {
+                        for (auto neighbor: dn_neighbors_no_skip) {
                             flow_dir_sum += neighbor.flow_proportion;
 
                             if (neighbor.x < 0 or neighbor.x >= flow_dir_raster.raster_x_size or
                                 neighbor.y < 0 or neighbor.y >= flow_dir_raster.raster_y_size) {
-                                neighbor = dn_iterator.next_no_skip();
                                 continue;
                             }
 
@@ -440,7 +433,6 @@ void run_route_baseflow_sum(
                                     b_sum_i += neighbor.flow_proportion;
                                 }
                             }
-                            neighbor = dn_iterator.next_no_skip();
                         }
 
                         if (not downslope_defined) {
@@ -464,11 +456,9 @@ void run_route_baseflow_sum(
                         target_b_sum_raster.set(xi, yi, b_sum_i);
 
                         // current_pixel += 1;
-                        up_iterator = UpslopeNeighborIterator<T>(flow_dir_raster, xi, yi);
-                        neighbor = up_iterator.next();
-                        while (neighbor.direction < 8) {
+                        up_neighbors = UpslopeNeighbors<T>(Pixel<T>(flow_dir_raster, xi, yi));
+                        for (auto neighbor: up_neighbors) {
                             work_stack.push(pair<long, long>(neighbor.x, neighbor.y));
-                            neighbor = up_iterator.next();
                         }
                     }
                 }

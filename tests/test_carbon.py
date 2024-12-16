@@ -12,6 +12,7 @@ import numpy.random
 import numpy.testing
 import pygeoprocessing
 
+gdal.UseExceptions()
 
 def make_simple_raster(base_raster_path, fill_val, nodata_val):
     """Create a 10x10 raster on designated path with fill value.

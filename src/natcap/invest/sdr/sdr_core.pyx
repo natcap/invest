@@ -8,6 +8,7 @@ from ..managed_raster.managed_raster cimport D8
 from ..managed_raster.managed_raster cimport MFD
 from .sediment_deposition cimport run_sediment_deposition
 
+
 LOGGER = logging.getLogger(__name__)
 
 def calculate_sediment_deposition(
@@ -17,13 +18,13 @@ def calculate_sediment_deposition(
 
     This algorithm outputs both sediment deposition (t_i) and flux (f_i)::
 
-        t_i  =      dr_i  * (sum over j ∈ J of f_j * p(i,j)) + E'_i
+        t_i  =      dt_i  * (sum over j ∈ J of f_j * p(j,i))
 
-        f_i  = (1 - dr_i) * (sum over j ∈ J of f_j * p(i,j)) + E'_i
+        f_i  = (1 - dt_i) * (sum over j ∈ J of f_j * p(j,i)) + E'_i
 
 
                 (sum over k ∈ K of SDR_k * p(i,k)) - SDR_i
-        dr_i = --------------------------------------------
+        dt_i = --------------------------------------------
                               (1 - SDR_i)
 
     where:

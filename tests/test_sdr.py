@@ -9,6 +9,7 @@ import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
 
+gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr')
 SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')

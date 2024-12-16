@@ -583,13 +583,14 @@ def _aggregate_carbon_map(
     for poly_feat in target_aggregate_layer:
         poly_fid = poly_feat.GetFID()
         poly_feat.SetField(
-            'c_sum', serviceshed_stats[poly_fid]['sum'])
+            'c_sum', float(serviceshed_stats[poly_fid]['sum']))
         # calculates mean pixel value per ha in for each feature in AOI
         poly_geom = poly_feat.GetGeometryRef()
         poly_area_ha = poly_geom.GetArea() / 1e4  # converts m^2 to hectare
         poly_geom = None
         poly_feat.SetField(
-            'c_ha_mean', serviceshed_stats[poly_fid]['sum']/poly_area_ha)
+            'c_ha_mean',
+            float(serviceshed_stats[poly_fid]['sum'] / poly_area_ha))
 
         target_aggregate_layer.SetFeature(poly_feat)
     target_aggregate_layer.CommitTransaction()
@@ -765,9 +766,11 @@ def _build_spatial_index(
         local_model_dir, 'local_carbon_shape.shp')
     lulc_projection_wkt = pygeoprocessing.get_raster_info(
         base_raster_path)['projection_wkt']
-    pygeoprocessing.reproject_vector(
-        tropical_forest_edge_carbon_model_vector_path, lulc_projection_wkt,
-        carbon_model_reproject_path)
+
+    with utils._set_gdal_configuration('OGR_ENABLE_PARTIAL_REPROJECTION', 'TRUE'):
+        pygeoprocessing.reproject_vector(
+            tropical_forest_edge_carbon_model_vector_path, lulc_projection_wkt,
+            carbon_model_reproject_path)
 
     model_vector = gdal.OpenEx(carbon_model_reproject_path)
     model_layer = model_vector.GetLayer()
@@ -779,14 +782,17 @@ def _build_spatial_index(
     # put all the polygons in the kd_tree because it's fast and simple
     for poly_feature in model_layer:
         poly_geom = poly_feature.GetGeometryRef()
-        poly_centroid = poly_geom.Centroid()
-        # put in row/col order since rasters are row/col indexed
-        kd_points.append([poly_centroid.GetY(), poly_centroid.GetX()])
+        if poly_geom.IsValid():
+            poly_centroid = poly_geom.Centroid()
+            # put in row/col order since rasters are row/col indexed
+            kd_points.append([poly_centroid.GetY(), poly_centroid.GetX()])
 
-        theta_model_parameters.append([
-            poly_feature.GetField(feature_id) for feature_id in
-            ['theta1', 'theta2', 'theta3']])
-        method_model_parameter.append(poly_feature.GetField('method'))
+            theta_model_parameters.append([
+                poly_feature.GetField(feature_id) for feature_id in
+                ['theta1', 'theta2', 'theta3']])
+            method_model_parameter.append(poly_feature.GetField('method'))
+        else:
+            LOGGER.warning(f'skipping invalid geometry {poly_geom}')
 
     method_model_parameter = numpy.array(
         method_model_parameter, dtype=numpy.int32)

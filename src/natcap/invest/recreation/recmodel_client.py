@@ -1029,10 +1029,12 @@ def _raster_sum_mean(
             numpy.array(fid_raster_values['sum']) /
             numpy.array(fid_raster_values['count']))
         predictor_results = dict(
-            zip(fid_raster_values['fid'], mean_results))
+            zip(fid_raster_values['fid'],
+                (i.item() for i in mean_results)))
     else:
         predictor_results = dict(
-            zip(fid_raster_values['fid'], fid_raster_values['sum']))
+            zip(fid_raster_values['fid'],
+                (i.item() for i in fid_raster_values['sum'])))
     with open(predictor_target_path, 'w') as jsonfile:
         json.dump(predictor_results, jsonfile)
 
@@ -1601,26 +1603,18 @@ def _validate_same_projection(base_vector_path, table_path):
 
     invalid_projections = False
     for path in data_paths:
-
-        def error_handler(err_level, err_no, err_msg):
-            """Empty error handler to avoid stderr output."""
-            pass
-        gdal.PushErrorHandler(error_handler)
-        raster = gdal.OpenEx(path, gdal.OF_RASTER)
-        gdal.PopErrorHandler()
-        if raster is not None:
+        gis_type = pygeoprocessing.get_gis_type(path)
+        if gis_type == pygeoprocessing.UNKNOWN_TYPE:
+            return f"{path} did not load"
+        elif gis_type == pygeoprocessing.RASTER_TYPE:
+            raster = gdal.OpenEx(path, gdal.OF_RASTER)
             projection_as_str = raster.GetProjection()
             ref = osr.SpatialReference()
             ref.ImportFromWkt(projection_as_str)
-            raster = None
         else:
             vector = gdal.OpenEx(path, gdal.OF_VECTOR)
-            if vector is None:
-                return f"{path} did not load"
             layer = vector.GetLayer()
             ref = osr.SpatialReference(layer.GetSpatialRef().ExportToWkt())
-            layer = None
-            vector = None
         if not base_ref.IsSame(ref):
             invalid_projections = True
     if invalid_projections:

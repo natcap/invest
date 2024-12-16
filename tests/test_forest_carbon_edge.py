@@ -7,7 +7,7 @@ import os
 from osgeo import gdal
 import numpy
 
-
+gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'forest_carbon_edge_effect')

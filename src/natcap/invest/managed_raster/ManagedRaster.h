@@ -16,6 +16,7 @@
 #include <list>
 #include <utility>
 #include <iterator>
+#include <cstddef>  // For std::ptrdiff_t
 
 #include "LRUCache.h"
 
@@ -52,8 +53,6 @@ public:
         this->y = y;
         this->flow_proportion = flow_proportion;
     }
-
-    ~NeighborTuple () {}
 };
 
 
@@ -126,20 +125,12 @@ class ManagedRaster {
             geotransform = (double *) CPLMalloc(sizeof(double) * 6);
             dataset->GetGeoTransform(geotransform);
 
-            // if (self.block_xsize & (self.block_xsize - 1) != 0) or (
-            //         self.block_ysize & (self.block_ysize - 1) != 0):
-            //     # If inputs are not a power of two, this will at least print
-            //     # an error message. Unfortunately with Cython, the exception will
-            //     # present itself as a hard seg-fault, but I'm leaving the
-            //     # ValueError in here at least for readability.
-            //     err_msg = (
-            //         "Error: Block size is not a power of two: "
-            //         "block_xsize: %d, %d, %s. This exception is happening"
-            //         "in Cython, so it will cause a hard seg-fault, but it's"
-            //         "otherwise meant to be a ValueError." % (
-            //             self.block_xsize, self.block_ysize, raster_path))
-            //     print(err_msg)
-            //     raise ValueError(err_msg)
+            if (((block_xsize & (block_xsize - 1)) != 0) or (
+                    (block_ysize & (block_ysize - 1)) != 0)) {
+                throw std::invalid_argument(
+                    "Error: Block size is not a power of two. "
+                    "This error is happening in the ManagedRaster.h extension.");
+            }
 
             block_xbits = log2(block_xsize);
             block_ybits = log2(block_ysize);
@@ -159,11 +150,11 @@ class ManagedRaster {
                 }
             }
 
-            this->lru_cache = new LRUCache<int, double*>(MANAGED_RASTER_N_BLOCKS);
+            lru_cache = new LRUCache<int, double*>(MANAGED_RASTER_N_BLOCKS);
             closed = 0;
         }
 
-        void set(long xi, long yi, double value) {
+        void inline set(long xi, long yi, double value) {
             // Set the pixel at `xi,yi` to `value`
             int block_xi = xi / block_xsize;
             int block_yi = yi / block_ysize;
@@ -178,7 +169,6 @@ class ManagedRaster {
             int idx = ((yi & block_ymod) * actualBlockWidths[block_index]) + (xi & block_xmod);
             lru_cache->get(block_index)[idx] = value;
             if (write_mode) {
-
                 std::set<int>::iterator dirty_itr = dirty_blocks.find(block_index);
                 if (dirty_itr == dirty_blocks.end()) {
                     dirty_blocks.insert(block_index);
@@ -186,7 +176,7 @@ class ManagedRaster {
             }
         }
 
-        double get(long xi, long yi) {
+        double inline get(long xi, long yi) {
             // Return the value of the pixel at `xi,yi`
             int block_xi = xi / block_xsize;
             int block_yi = yi / block_ysize;
@@ -241,7 +231,7 @@ class ManagedRaster {
                         0, 0 );
 
             if (err != CE_None) {
-                std::cout << "Error reading block\n";
+                std::cerr << "Error reading block\n";
             }
             lru_cache->put(block_index, pafScanline, removed_value_list);
             while (not removed_value_list.empty()) {
@@ -274,7 +264,7 @@ class ManagedRaster {
                         err = band->RasterIO( GF_Write, xoff, yoff, win_xsize, win_ysize,
                             double_buffer, win_xsize, win_ysize, GDT_Float64, 0, 0 );
                         if (err != CE_None) {
-                            std::cout << "Error writing block\n";
+                            std::cerr << "Error writing block\n";
                         }
                     }
                 }
@@ -351,12 +341,14 @@ class ManagedRaster {
                     CPLErr err = band->RasterIO( GF_Write, xoff, yoff, win_xsize, win_ysize,
                         double_buffer, win_xsize, win_ysize, GDT_Float64, 0, 0 );
                     if (err != CE_None) {
-                        std::cout << "Error writing block\n";
+                        std::cerr << "Error writing block\n";
                     }
                 }
                 CPLFree(double_buffer);
             }
             GDALClose( (GDALDatasetH) dataset );
+            delete lru_cache;
+            free(actualBlockWidths);
         }
 };
 
@@ -373,10 +365,7 @@ public:
     ManagedFlowDirRaster<T>() {}
 
     ManagedFlowDirRaster<T>(char* raster_path, int band_id, bool write_mode)
-        : ManagedRaster(raster_path, band_id, write_mode)   // Call the superclass constructor in the subclass' initialization list.
-        {
-            // do something with bar
-        }
+        : ManagedRaster(raster_path, band_id, write_mode) {}
 
     bool is_local_high_point(int xi, int yi) {
         // """Check if a given pixel is a local high point.
@@ -409,260 +398,391 @@ public:
         return true;
 
     }
+
+};
+
+template<class T>
+class Pixel {
+public:
+    ManagedFlowDirRaster<T> raster;
+    int x;
+    int y;
+    int val;
+
+    Pixel<T>() {}
+
+    Pixel<T>(ManagedFlowDirRaster<T> raster, int x, int y) : raster(raster), x(x), y(y) {
+        double v = raster.get(x, y);
+        val = static_cast<int>(v);
+    }
+};
+
+static inline NeighborTuple endVal = NeighborTuple(8, -1, -1, -1);
+
+template<class T>
+class NeighborIterator {
+public:
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type   = std::ptrdiff_t;
+    using value_type        = NeighborTuple;
+    using pointer           = NeighborTuple*;  // or also value_type*
+    using reference         = NeighborTuple&;  // or also value_type&
+
+    Pixel<T> pixel;
+    pointer m_ptr = nullptr;
+    int i = 0;
+
+    NeighborIterator<T>() {}
+    NeighborIterator<T>(NeighborTuple* n) {
+        m_ptr = n;
+    }
+    NeighborIterator<T>(Pixel<T> pixel) : pixel(pixel) {
+        next();
+    }
+
+    reference operator*() const { return *m_ptr; }
+    pointer operator->() { return m_ptr; }
+
+    // Prefix increment
+    NeighborIterator& operator++() { this->next(); return *this; }
+
+    // Postfix increment
+    NeighborIterator operator++(int) { NeighborIterator tmp = *this; ++(*this); return tmp; }
+
+    friend bool operator== (const NeighborIterator& a, const NeighborIterator& b) {
+        return a.m_ptr == b.m_ptr;
+    };
+    friend bool operator!= (const NeighborIterator& a, const NeighborIterator& b) {
+        return a.m_ptr != b.m_ptr;
+    };
+
+    virtual void next() {
+        long xj, yj, flow;
+        if (i == 8) {
+            m_ptr = &endVal;
+            return;
+        }
+        xj = pixel.x + COL_OFFSETS[i];
+        yj = pixel.y + ROW_OFFSETS[i];
+        flow = (pixel.val >> (i * 4)) & 0xF;
+        m_ptr = new NeighborTuple(i, xj, yj, flow);
+        i++;
+    }
 };
 
 
-
-
-
 template<class T>
-class DownslopeNeighborIterator {
+class DownslopeNeighborIterator: public NeighborIterator<T> {
 public:
 
-    ManagedFlowDirRaster<T> raster;
-    int col;
-    int row;
-    int n_dir;
-    int flow_dir;
-    int flow_dir_sum;
-
-    DownslopeNeighborIterator<T>() { }
-
-    DownslopeNeighborIterator<T>(ManagedFlowDirRaster<T> managed_raster, int x, int y)
-        : raster { managed_raster }
-        , col { x }
-        , row { y }
-    {
-        n_dir = 0;
-        flow_dir = int(raster.get(col, row));
-        flow_dir_sum = 0;
+    DownslopeNeighborIterator<T>(): NeighborIterator<T>() {}
+    DownslopeNeighborIterator<T>(NeighborTuple* n): NeighborIterator<T>(n) {}
+    DownslopeNeighborIterator<T>(Pixel<T> p) {
+        this->pixel = p;
+        next();
     }
 
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
-    NeighborTuple next() {
-        NeighborTuple n;
-        long xj, yj;
-        int flow_ij;
-
-        if (n_dir == 8) {
-            n = NeighborTuple(8, -1, -1, -1);
-            return n;
+    void next() {
+        long xj, yj, flow;
+        delete this->m_ptr;
+        this->m_ptr = nullptr;
+        if (this->i == 8) {
+            this->m_ptr = &endVal;
+            return;
         }
-
-        xj = col + COL_OFFSETS[n_dir];
-        yj = row + ROW_OFFSETS[n_dir];
-
-        if (xj < 0 or xj >= raster.raster_x_size or
-                yj < 0 or yj >= raster.raster_y_size) {
-            n_dir += 1;
-            return next();
+        xj = this->pixel.x + COL_OFFSETS[this->i];
+        yj = this->pixel.y + ROW_OFFSETS[this->i];
+        if (xj < 0 or xj >= this->pixel.raster.raster_x_size or
+                yj < 0 or yj >= this->pixel.raster.raster_y_size) {
+            this->i++;
+            next();
+            return;
         }
-        flow_ij = (flow_dir >> (n_dir * 4)) & 0xF;
-        if (flow_ij) {
-            flow_dir_sum += flow_ij;
-            n = NeighborTuple(n_dir, xj, yj, flow_ij);
-            n_dir += 1;
-            return n;
+        flow = (this->pixel.val >> (this->i * 4)) & 0xF;
+        if (flow) {
+            this->m_ptr = new NeighborTuple(this->i, xj, yj, flow);
+            this->i++;
+            return;
         } else {
-            n_dir += 1;
-            return next();
+            this->i++;
+            next();
         }
     }
 
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
-    NeighborTuple next() {
-        flow_dir_sum = 1;
-        if (n_dir == 8) {
-            return NeighborTuple(8, -1, -1, -1);
+    void next() {
+        long xj, yj;
+        delete this->m_ptr;
+        this->m_ptr = nullptr;
+
+        if (this->i == 8) {
+            this->m_ptr = &endVal;
+            return;
         }
-        long xj = col + COL_OFFSETS[flow_dir];
-        long yj = row + ROW_OFFSETS[flow_dir];
-        if (xj < 0 or xj >= raster.raster_x_size or
-                yj < 0 or yj >= raster.raster_y_size) {
-            n_dir = 8;
-            return NeighborTuple(8, -1, -1, -1);
+        xj = this->pixel.x + COL_OFFSETS[this->pixel.val];
+        yj = this->pixel.y + ROW_OFFSETS[this->pixel.val];
+        if (xj < 0 or xj >= this->pixel.raster.raster_x_size or
+                yj < 0 or yj >= this->pixel.raster.raster_y_size) {
+            this->m_ptr = &endVal;
+            return;
         }
-        n_dir = 8;
-        return NeighborTuple(flow_dir, xj, yj, 1);
+        this->i = 8;
+        this->m_ptr = new NeighborTuple(this->pixel.val, xj, yj, 1);
+        return;
+    }
+};
+
+
+template<class T>
+class DownslopeNeighborNoSkipIterator: public NeighborIterator<T> {
+public:
+
+    DownslopeNeighborNoSkipIterator<T>(): NeighborIterator<T>() {}
+    DownslopeNeighborNoSkipIterator<T>(NeighborTuple* n): NeighborIterator<T>(n) {}
+    DownslopeNeighborNoSkipIterator<T>(Pixel<T> p) {
+        this->pixel = p;
+        next();
     }
 
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
-    NeighborTuple next_no_skip() {
-        NeighborTuple n;
-        long xj, yj;
-        int flow_ij;
-
-        if (n_dir == 8) {
-            return NeighborTuple(8, -1, -1, -1);
+    void next() {
+        long xj, yj, flow;
+        delete this->m_ptr;
+        this->m_ptr = nullptr;
+        if (this->i == 8) {
+            this->m_ptr = &endVal;
+            return;
         }
-
-        xj = col + COL_OFFSETS[n_dir];
-        yj = row + ROW_OFFSETS[n_dir];
-
-        flow_ij = (flow_dir >> (n_dir * 4)) & 0xF;
-        if (flow_ij) {
-            flow_dir_sum += flow_ij;
-            n = NeighborTuple(n_dir, xj, yj, flow_ij);
-            n_dir += 1;
-            return n;
+        xj = this->pixel.x + COL_OFFSETS[this->i];
+        yj = this->pixel.y + ROW_OFFSETS[this->i];
+        flow = (this->pixel.val >> (this->i * 4)) & 0xF;
+        if (flow) {
+            this->m_ptr = new NeighborTuple(this->i, xj, yj, flow);
+            this->i++;
+            return;
         } else {
-            n_dir += 1;
-            return next_no_skip();
+            this->i++;
+            next();
         }
     }
 
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
-    NeighborTuple next_no_skip() {
-        flow_dir_sum = 1;
-        if (n_dir == 8) {
-            return NeighborTuple(8, -1, -1, -1);
-        }
-        long xj = col + COL_OFFSETS[flow_dir];
-        long yj = row + ROW_OFFSETS[flow_dir];
+    void next() {
+        long xj, yj;
+        delete this->m_ptr;
+        this->m_ptr = nullptr;
 
-        n_dir = 8;
-        return NeighborTuple(flow_dir, xj, yj, 1);
+        if (this->i == 8) {
+            this->m_ptr = &endVal;
+            return;
+        }
+        xj = this->pixel.x + COL_OFFSETS[this->pixel.val];
+        yj = this->pixel.y + ROW_OFFSETS[this->pixel.val];
+        this->i = 8;
+        this->m_ptr = new NeighborTuple(this->pixel.val, xj, yj, 1);
+        return;
     }
 };
 
 template<class T>
-class UpslopeNeighborIterator {
+class UpslopeNeighborIterator: public NeighborIterator<T> {
 public:
 
-    ManagedFlowDirRaster<T> raster;
-    int col;
-    int row;
-    int n_dir;
-    int flow_dir;
-
-    UpslopeNeighborIterator<T>() { }
-
-    UpslopeNeighborIterator<T>(ManagedFlowDirRaster<T> managed_raster, int x, int y)
-        : raster { managed_raster}
-        , col { x }
-        , row { y }
-    {
-        n_dir = 0;
+    UpslopeNeighborIterator<T>(): NeighborIterator<T>() {}
+    UpslopeNeighborIterator<T>(NeighborTuple* n): NeighborIterator<T>(n) {}
+    UpslopeNeighborIterator<T>(Pixel<T> p) {
+        this->pixel = p;
+        next();
     }
 
-    NeighborTuple next() {
-
-        NeighborTuple n;
+    template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
+    void next() {
         long xj, yj;
         int flow_dir_j;
         int flow_ji;
         long flow_dir_j_sum;
-
-        if (n_dir == 8) {
-            n = NeighborTuple(8, -1, -1, -1);
-            return n;
+        delete this->m_ptr;
+        this->m_ptr = nullptr;
+        if (this->i == 8) {
+            this->m_ptr = &endVal;
+            return;
+        }
+        xj = this->pixel.x + COL_OFFSETS[this->i];
+        yj = this->pixel.y + ROW_OFFSETS[this->i];
+        if (xj < 0 or xj >= this->pixel.raster.raster_x_size or
+                yj < 0 or yj >= this->pixel.raster.raster_y_size) {
+            this->i++;
+            next();
+            return;
         }
 
-        xj = col + COL_OFFSETS[n_dir];
-        yj = row + ROW_OFFSETS[n_dir];
-
-        if (xj < 0 or xj >= raster.raster_x_size or
-                yj < 0 or yj >= raster.raster_y_size) {
-            n_dir += 1;
-            return next();
-        }
-
-        flow_dir_j = int(raster.get(xj, yj));
-        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])));
-
+        flow_dir_j = this->pixel.raster.get(xj, yj);
+        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[this->i])));
         if (flow_ji) {
             flow_dir_j_sum = 0;
             for (int idx = 0; idx < 8; idx++) {
                 flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF;
             }
-
-            n = NeighborTuple(n_dir, xj, yj, static_cast<float>(flow_ji) / static_cast<float>(flow_dir_j_sum));
-            n_dir += 1;
-            return n;
+            this->m_ptr = new NeighborTuple(
+                this->i, xj, yj,
+                static_cast<float>(flow_ji) / static_cast<float>(flow_dir_j_sum));
+            this->i++;
+            return;
         } else {
-            n_dir += 1;
-            return next();
+            this->i++;
+            next();
         }
     }
 
-    NeighborTuple next_no_divide() {
-
-        NeighborTuple n;
+    template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
+    void next() {
         long xj, yj;
         int flow_dir_j;
-        int flow_ji;
-
-        if (n_dir == 8) {
-            n = NeighborTuple(8, -1, -1, -1);
-            return n;
+        delete this->m_ptr;
+        this->m_ptr = nullptr;
+        if (this->i == 8) {
+            this->m_ptr = &endVal;
+            return;
+        }
+        xj = this->pixel.x + COL_OFFSETS[this->i];
+        yj = this->pixel.y + ROW_OFFSETS[this->i];
+        if (xj < 0 or xj >= this->pixel.raster.raster_x_size or
+                yj < 0 or yj >= this->pixel.raster.raster_y_size) {
+            this->i++;
+            next();
+            return;
         }
 
-        xj = col + COL_OFFSETS[n_dir];
-        yj = row + ROW_OFFSETS[n_dir];
-
-        if (xj < 0 or xj >= raster.raster_x_size or
-                yj < 0 or yj >= raster.raster_y_size) {
-            n_dir += 1;
-            return next_no_divide();
-        }
-
-        flow_dir_j = int(raster.get(xj, yj));
-        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])));
-
-        if (flow_ji) {
-            n = NeighborTuple(n_dir, xj, yj, static_cast<float>(flow_ji));
-            n_dir += 1;
-            return n;
+        flow_dir_j = this->pixel.raster.get(xj, yj);
+        if (flow_dir_j == FLOW_DIR_REVERSE_DIRECTION[this->i]) {
+            this->m_ptr = new NeighborTuple(this->i, xj, yj, 1);
+            this->i++;
+            return;
         } else {
-            n_dir += 1;
-            return next_no_divide();
-        }
-    }
-
-    NeighborTuple next_skip(int skip) {
-
-        NeighborTuple n;
-        long xj, yj;
-        int flow_dir_j;
-        int flow_ji;
-        long flow_dir_j_sum;
-
-        if (n_dir == 8) {
-            n = NeighborTuple(8, -1, -1, -1);
-            return n;
-        }
-
-        xj = col + COL_OFFSETS[n_dir];
-        yj = row + ROW_OFFSETS[n_dir];
-
-        if (xj < 0 or xj >= raster.raster_x_size or
-                yj < 0 or yj >= raster.raster_y_size or
-                INFLOW_OFFSETS[n_dir] == skip) {
-            n_dir += 1;
-            return next_skip(skip);
-        }
-
-        flow_dir_j = int(raster.get(xj, yj));
-        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])));
-
-        if (flow_ji) {
-            flow_dir_j_sum = 0;
-            for (int idx = 0; idx < 8; idx++) {
-                flow_dir_j_sum += (flow_dir_j >> (idx * 4)) & 0xF;
-            }
-
-            n = NeighborTuple(n_dir, xj, yj, static_cast<float>(flow_ji) / static_cast<float>(flow_dir_j_sum));
-            n_dir += 1;
-            return n;
-        } else {
-            n_dir += 1;
-            return next_skip(skip);
+            this->i++;
+            next();
         }
     }
 };
 
 
-bool is_close(double x, double y) {
+template<class T>
+class UpslopeNeighborNoDivideIterator: public NeighborIterator<T> {
+public:
+
+    UpslopeNeighborNoDivideIterator<T>(): NeighborIterator<T>() {}
+    UpslopeNeighborNoDivideIterator<T>(NeighborTuple* n): NeighborIterator<T>(n) {}
+    UpslopeNeighborNoDivideIterator<T>(Pixel<T> p) {
+        this->pixel = p;
+        next();
+    }
+
+    template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
+    void next() {
+        long xj, yj;
+        int flow_dir_j;
+        int flow_ji;
+        delete this->m_ptr;
+        this->m_ptr = nullptr;
+        if (this->i == 8) {
+            this->m_ptr = &endVal;
+            return;
+        }
+        xj = this->pixel.x + COL_OFFSETS[this->i];
+        yj = this->pixel.y + ROW_OFFSETS[this->i];
+        if (xj < 0 or xj >= this->pixel.raster.raster_x_size or
+                yj < 0 or yj >= this->pixel.raster.raster_y_size) {
+            this->i++;
+            next();
+            return;
+        }
+        flow_dir_j = this->pixel.raster.get(xj, yj);
+        flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[this->i])));
+        if (flow_ji) {
+            this->m_ptr = new NeighborTuple(this->i, xj, yj, flow_ji);
+            this->i++;
+            return;
+        } else {
+            this->i++;
+            next();
+        }
+    }
+
+    template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
+    void next() {
+        long xj, yj;
+        int flow_dir_j;
+        delete this->m_ptr;
+        this->m_ptr = nullptr;
+        if (this->i == 8) {
+            this->m_ptr = &endVal;
+            return;
+        }
+        xj = this->pixel.x + COL_OFFSETS[this->i];
+        yj = this->pixel.y + ROW_OFFSETS[this->i];
+        if (xj < 0 or xj >= this->pixel.raster.raster_x_size or
+                yj < 0 or yj >= this->pixel.raster.raster_y_size) {
+            this->i++;
+            next();
+            return;
+        }
+
+        flow_dir_j = this->pixel.raster.get(xj, yj);
+        if (flow_dir_j == FLOW_DIR_REVERSE_DIRECTION[this->i]) {
+            this->m_ptr = new NeighborTuple(this->i, xj, yj, 1);
+            this->i++;
+            return;
+        } else {
+            this->i++;
+            next();
+        }
+    }
+};
+
+template<class T>
+class Neighbors {
+public:
+    Pixel<T> pixel;
+    Neighbors<T>() {}
+    Neighbors<T>(Pixel<T> pixel): pixel(pixel) {}
+    NeighborIterator<T> begin() { return NeighborIterator<T>(pixel); }
+    NeighborIterator<T> end() { return NeighborIterator<T>(&endVal); }
+};
+
+template<class T>
+class DownslopeNeighbors: public Neighbors<T> {
+public:
+    using Neighbors<T>::Neighbors;
+    DownslopeNeighborIterator<T> begin() { return DownslopeNeighborIterator<T>(this->pixel); }
+    DownslopeNeighborIterator<T> end() { return DownslopeNeighborIterator<T>(&endVal); }
+};
+
+template<class T>
+class DownslopeNeighborsNoSkip: public Neighbors<T> {
+public:
+    using Neighbors<T>::Neighbors;
+    DownslopeNeighborNoSkipIterator<T> begin() { return DownslopeNeighborNoSkipIterator<T>(this->pixel); }
+    DownslopeNeighborNoSkipIterator<T> end() { return DownslopeNeighborNoSkipIterator<T>(&endVal); }
+};
+
+template<class T>
+class UpslopeNeighbors: public Neighbors<T> {
+public:
+    using Neighbors<T>::Neighbors;
+    UpslopeNeighborIterator<T> begin() { return UpslopeNeighborIterator<T>(this->pixel); }
+    UpslopeNeighborIterator<T> end() { return UpslopeNeighborIterator<T>(&endVal); }
+};
+
+template<class T>
+class UpslopeNeighborsNoDivide: public Neighbors<T> {
+public:
+    using Neighbors<T>::Neighbors;
+    UpslopeNeighborNoDivideIterator<T> begin() { return UpslopeNeighborNoDivideIterator<T>(this->pixel); }
+    UpslopeNeighborNoDivideIterator<T> end() { return UpslopeNeighborNoDivideIterator<T>(&endVal); }
+};
+
+inline bool is_close(double x, double y) {
     if (isnan(x) and isnan(y)) {
         return true;
     }

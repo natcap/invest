@@ -9,6 +9,7 @@ import numpy
 from osgeo import gdal
 from osgeo import osr
 
+gdal.UseExceptions()
 
 class RouteDEMTests(unittest.TestCase):
     """Tests for RouteDEM with Pygeoprocessing 1.x routing API."""

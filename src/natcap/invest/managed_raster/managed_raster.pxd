@@ -76,8 +76,6 @@ cdef extern from "ManagedRaster.h":
     cdef cppclass D8
     cdef cppclass MFD
 
-
-
     cdef cppclass NeighborTuple:
         NeighborTuple() except +
         NeighborTuple(int, int, int, float) except +
@@ -94,8 +92,19 @@ cdef extern from "ManagedRaster.h":
 
         DownslopeNeighborIterator()
         DownslopeNeighborIterator(ManagedFlowDirRaster[T], int, int)
-        NeighborTuple next()
-        NeighborTuple next_no_skip()
+        void next()
+
+    cdef cppclass DownslopeNeighborNoSkipIterator[T]:
+        ManagedFlowDirRaster[T] raster
+        int col
+        int row
+        int n_dir
+        int flow_dir
+        int flow_dir_sum
+
+        DownslopeNeighborNoSkipIterator()
+        DownslopeNeighborNoSkipIterator(ManagedFlowDirRaster[T], int, int)
+        void next()
 
     cdef cppclass UpslopeNeighborIterator[T]:
         ManagedFlowDirRaster[T] raster
@@ -106,9 +115,18 @@ cdef extern from "ManagedRaster.h":
 
         UpslopeNeighborIterator()
         UpslopeNeighborIterator(ManagedFlowDirRaster[T], int, int)
-        NeighborTuple next()
-        NeighborTuple next_no_divide()
-        NeighborTuple next_skip(int skip)
+        void next()
+
+    cdef cppclass UpslopeNeighborNoDivideIterator[T]:
+        ManagedFlowDirRaster[T] raster
+        int col
+        int row
+        int n_dir
+        int flow_dir
+
+        UpslopeNeighborNoDivideIterator()
+        UpslopeNeighborNoDivideIterator(ManagedFlowDirRaster[T], int, int)
+        void next()
 
     bint is_close(double, double)
 

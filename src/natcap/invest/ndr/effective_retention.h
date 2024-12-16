@@ -78,12 +78,13 @@ void run_effective_retention(
     NeighborTuple neighbor;
     bool should_seed;
     double working_retention_eff;
-    DownslopeNeighborIterator<T> dn_iterator;
-    UpslopeNeighborIterator<T> up_iterator;
+    DownslopeNeighborsNoSkip<T> dn_neighbors;
+    UpslopeNeighbors<T> up_neighbors;
     bool has_outflow;
     double neighbor_effective_retention;
     double intermediate_retention;
     string s;
+    long flow_dir_sum;
 
     // efficient way to calculate ceiling division:
     // a divided by b rounded up = (a + (b - 1)) / b
@@ -174,15 +175,15 @@ void run_effective_retention(
                 } else {
                     working_retention_eff = 0;
 
-                    dn_iterator = DownslopeNeighborIterator<T>(
-                        flow_dir_raster, global_col, global_row);
+                    dn_neighbors = DownslopeNeighborsNoSkip<T>(
+                        Pixel<T>(flow_dir_raster, global_col, global_row));
                     has_outflow = false;
-                    neighbor = dn_iterator.next_no_skip();
-                    while (neighbor.direction < 8) {
+                    flow_dir_sum = 0;
+                    for (auto neighbor: dn_neighbors) {
                         has_outflow = true;
+                        flow_dir_sum += neighbor.flow_proportion;
                         if (neighbor.x < 0 or neighbor.x >= n_cols or
                             neighbor.y < 0 or neighbor.y >= n_rows) {
-                            neighbor = dn_iterator.next_no_skip();
                             continue;
                         }
                         if (neighbor.direction % 2 == 1) {
@@ -217,11 +218,10 @@ void run_effective_retention(
 
                         working_retention_eff += (
                             intermediate_retention * neighbor.flow_proportion);
-                        neighbor = dn_iterator.next_no_skip();
                     }
 
                     if (has_outflow) {
-                        double v = working_retention_eff / dn_iterator.flow_dir_sum;
+                        double v = working_retention_eff / flow_dir_sum;
                         effective_retention_raster.set(
                             global_col, global_row, v);
                     } else {
@@ -232,10 +232,8 @@ void run_effective_retention(
                 }
                 // search upslope to see if we need to push a cell on the stack
                 // for i in range(8):
-                up_iterator = UpslopeNeighborIterator<T>(
-                    flow_dir_raster, global_col, global_row);
-                neighbor = up_iterator.next();
-                while (neighbor.direction < 8) {
+                up_neighbors = UpslopeNeighbors<T>(Pixel<T>(flow_dir_raster, global_col, global_row));
+                for (auto neighbor: up_neighbors) {
                     neighbor_outflow_dir = INFLOW_OFFSETS[neighbor.direction];
                     neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir;
                     neighbor_process_flow_dir = int(
@@ -243,12 +241,10 @@ void run_effective_retention(
                             neighbor.x, neighbor.y));
                     if (neighbor_process_flow_dir == 0) {
                         // skip, due to loop invariant this must be a nodata pixel
-                        neighbor = up_iterator.next();
                         continue;
                     }
                     if ((neighbor_process_flow_dir & neighbor_outflow_dir_mask )== 0) {
                         // no outflow
-                        neighbor = up_iterator.next();
                         continue;
                     }
                     // mask out the outflow dir that this iteration processed
@@ -261,7 +257,6 @@ void run_effective_retention(
                         // pick it up
                         processing_stack.push(neighbor.y * n_cols + neighbor.x);
                     }
-                    neighbor = up_iterator.next();
                 }
             }
         }
