@@ -367,13 +367,18 @@ jobs:
           yarn config set network-timeout 600000 -g
           yarn install
 
-      - name: Download micromamba installer for distribution (MacOS)
+      - name: Download micromamba for distribution (MacOS)
         if: matrix.os == 'macos-13'
         run: curl -Ls https://micro.mamba.pm/api/micromamba/osx-64/2.0.5.rc0 | tar -xvj bin/micromamba
 
-      - name: Download micromamba installer for distribution (Windows)
+      - name: Download micromamba for distribution (Windows)
         if: matrix.os == 'windows-latest'
-        run: curl -Ls https://micro.mamba.pm/api/micromamba/win-64/2.0.5.rc0 | tar -xf micromamba.tar.bz2
+        shell: pwsh
+        run: |
+          Invoke-Webrequest -URI https://micro.mamba.pm/api/micromamba/win-64/latest -OutFile micromamba.tar.bz2
+          tar xf micromamba.tar.bz2
+          MOVE -Force Library\bin\micromamba.exe micromamba.exe
+          .\micromamba.exe --help
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
