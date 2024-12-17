@@ -14,7 +14,7 @@
 
 virtualenv>=12.0.1
 pytest
-pytest-subtests
+pytest-subtests!=0.14.0  # https://github.com/pytest-dev/pytest-subtests/issues/173
 wheel>=0.27.0
 pypiwin32; sys_platform == 'win32'  # pip-only
 
@@ -26,3 +26,4 @@ requests
 coverage
 xlwt
 build  # pip-only
+rst2html5

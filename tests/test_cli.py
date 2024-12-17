@@ -10,12 +10,13 @@ import json
 import importlib
 import uuid
 
-
 try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
 
+from osgeo import gdal
+gdal.UseExceptions()
 
 @contextlib.contextmanager
 def redirect_stdout():

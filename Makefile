@@ -2,7 +2,7 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := ab8c74a62a93fd0019de2bca064abc0a5a07afab
+GIT_SAMPLE_DATA_REPO_REV    := 0f8b41557753dad3670ba8220f41650b51435a93
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 324abde73e1d770ad75921466ecafd1ec6297752
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := f203ec069f9f03560c9a85b268e67ebb6b994953
+GIT_UG_REPO_REV             := 5ee3616d4549baf3b1e44e0fcef485145389e29a
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -66,6 +66,7 @@ PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2
 
 GSUTIL := gsutil
 SIGNTOOL := SignTool
+RST2HTML5 := rst2html5
 
 # local directory names
 DIST_DIR := dist
@@ -73,6 +74,8 @@ DIST_DATA_DIR := $(DIST_DIR)/data
 BUILD_DIR := build
 WORKBENCH := workbench
 WORKBENCH_DIST_DIR := $(WORKBENCH)/dist
+CHANGELOG_SRC := HISTORY.rst
+CHANGELOG_DEST := $(WORKBENCH)/changelog.html
 
 # The fork name and user here are derived from the git path on github.
 # The fork name will need to be set manually (e.g. make FORKNAME=natcap/invest)
@@ -141,6 +144,7 @@ help:
 	@echo "  binaries          to build pyinstaller binaries"
 	@echo "  apidocs           to build HTML API documentation"
 	@echo "  userguide         to build HTML version of the users guide"
+	@echo "  changelog         to build HTML version of the changelog"
 	@echo "  python_packages   to build natcap.invest wheel and source distributions"
 	@echo "  codesign_mac      to sign the mac disk image using the codesign utility"
 	@echo "  codesign_windows  to sign the windows installer using the SignTool utility"
@@ -365,6 +369,9 @@ deploy:
 	-$(GSUTIL) -m rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
 	@echo "Application binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)"
+
+changelog:
+	$(RST2HTML5) $(CHANGELOG_SRC) $(CHANGELOG_DEST)
 
 # Notes on Makefile development
 #

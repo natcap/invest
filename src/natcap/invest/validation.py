@@ -304,19 +304,16 @@ def check_raster(filepath, projected=False, projection_units=None, **kwargs):
     if file_warning:
         return file_warning
 
-    gdal.PushErrorHandler('CPLQuietErrorHandler')
-    gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
-    gdal.PopErrorHandler()
-
-    if gdal_dataset is None:
+    try:
+        gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
+    except RuntimeError:
         return MESSAGES['NOT_GDAL_RASTER']
+
     # Check that an overview .ovr file wasn't opened.
     if os.path.splitext(filepath)[1] == '.ovr':
         return MESSAGES['OVR_FILE']
 
-    srs = osr.SpatialReference()
-    srs.ImportFromWkt(gdal_dataset.GetProjection())
-
+    srs = gdal_dataset.GetSpatialRef()
     projection_warning = _check_projection(srs, projected, projection_units)
     if projection_warning:
         gdal_dataset = None
@@ -378,9 +375,10 @@ def check_vector(filepath, geometries, fields=None, projected=False,
     if file_warning:
         return file_warning
 
-    gdal.PushErrorHandler('CPLQuietErrorHandler')
-    gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
-    gdal.PopErrorHandler()
+    try:
+        gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
+    except RuntimeError:
+        return MESSAGES['NOT_GDAL_VECTOR']
 
     geom_map = {
         'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM,
@@ -401,9 +399,6 @@ def check_vector(filepath, geometries, fields=None, projected=False,
     allowed_geom_types = []
     for geom in geometries:
         allowed_geom_types += geom_map[geom]
-
-    if gdal_dataset is None:
-        return MESSAGES['NOT_GDAL_VECTOR']
 
     # NOTE: this only checks the layer geometry type, not the types of the
     # actual geometries (layer.GetGeometryTypes()). This is probably equivalent
@@ -642,7 +637,7 @@ def get_validated_dataframe(
             patterns.append(f'{groups[0]}(.+){groups[2]}')
         else:
             # for regular column names, use the exact name as the pattern
-            patterns.append(column.replace('(', '\(').replace(')', '\)'))
+            patterns.append(column.replace('(', r'\(').replace(')', r'\)'))
 
     # select only the columns that match a pattern
     df = df[[col for col in df.columns if any(

@@ -17,6 +17,7 @@ from osgeo import osr
 
 import pygeoprocessing
 
+gdal.UseExceptions()
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wind_energy',
     'input')

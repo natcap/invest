@@ -5,7 +5,9 @@ import shutil
 import os
 
 import pandas
+from osgeo import gdal
 
+gdal.UseExceptions()
 TEST_DATA_DIR = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'scenario_gen_proximity')

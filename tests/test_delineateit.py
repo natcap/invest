@@ -19,6 +19,7 @@ from shapely.geometry import box
 from shapely.geometry import MultiPoint
 from shapely.geometry import Point
 
+gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'delineateit')

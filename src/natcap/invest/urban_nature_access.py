@@ -69,7 +69,8 @@ MODEL_SPEC = {
             'projection_units': u.meter,
             'about': (
                 "A map of LULC codes. "
-                "All values in this raster must have corresponding entries "
+                "Each land use/land cover type must be assigned a unique integer "
+                "code. All values in this raster must have corresponding entries "
                 "in the LULC attribute table. For this model in particular, "
                 "the urban nature types are of importance.  Non-nature types "
                 "are not required to be uniquely identified. All outputs "
@@ -2105,11 +2106,10 @@ def _write_supply_demand_vector(source_aoi_vector_path, feature_attrs,
     Returns:
         ``None``
     """
-    source_vector = ogr.Open(source_aoi_vector_path)
-    driver = ogr.GetDriverByName('GPKG')
-    driver.CopyDataSource(source_vector, target_aoi_vector_path)
-    source_vector = None
-    driver = None
+    gdal.VectorTranslate(
+        target_aoi_vector_path, source_aoi_vector_path,
+        format='GPKG',
+        preserveFID=True)
 
     target_vector = gdal.OpenEx(target_aoi_vector_path, gdal.GA_Update)
     target_layer = target_vector.GetLayer()
