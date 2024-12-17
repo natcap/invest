@@ -50,7 +50,6 @@ MODEL_SPEC = {
                 # monthly et0 maps, each file ending in a number 1-12
                 "[MONTH]": {
                     **spec_utils.ET0,
-                    "units": u.millimeter/u.month,
                     "about": gettext(
                         "Twelve files, one for each month. File names must "
                         "end with the month number (1-12). For example, "
