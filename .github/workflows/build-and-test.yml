@@ -371,8 +371,8 @@ jobs:
         if: matrix.os == 'macos-13'
         run: |
           curl -Ls https://micro.mamba.pm/api/micromamba/osx-64/latest | tar -xvj bin/micromamba
-          mv bin/micromamba .
-          ./micromamba --help
+          mv bin/micromamba dist/
+          ./dist/micromamba --help
 
       - name: Download micromamba for distribution (Windows)
         if: matrix.os == 'windows-latest'
@@ -380,8 +380,8 @@ jobs:
         run: |
           Invoke-Webrequest -URI https://micro.mamba.pm/api/micromamba/win-64/latest -OutFile micromamba.tar.bz2
           tar xf micromamba.tar.bz2
-          MOVE -Force Library\bin\micromamba.exe micromamba.exe
-          .\micromamba.exe --help
+          MOVE -Force Library\bin\micromamba.exe dist\micromamba.exe
+          .\dist\micromamba.exe --help
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
