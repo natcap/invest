@@ -97,6 +97,9 @@ Unreleased Changes
     * Added support for zero padding in month numbers in ET and precipitation
       file names (i.e., users can now name their file Precip_01.tif).
       (https://github.com/natcap/invest/issues/1166)
+    * Fixed a bug where ``numpy.nan`` pixel values would not be correctly
+      detected as nodata in local recharge and baseflow routing functions.
+      (https://github.com/natcap/invest/issues/1705)
 * Urban Flood Risk
     * Fields present on the input AOI vector are now retained in the output.
       (https://github.com/natcap/invest/issues/1600)
