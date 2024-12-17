@@ -369,7 +369,7 @@ jobs:
 
       - name: Download micromamba for distribution (MacOS)
         if: matrix.os == 'macos-13'
-        run: curl -Ls https://micro.mamba.pm/api/micromamba/osx-64/2.0.5.rc0 | tar -xvj bin/micromamba
+        run: curl -Ls https://micro.mamba.pm/api/micromamba/osx-64/latest | tar -xvj bin/micromamba
 
       - name: Download micromamba for distribution (Windows)
         if: matrix.os == 'windows-latest'
