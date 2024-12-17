@@ -36,7 +36,11 @@ const config = {
       to: 'invest',
     },
     {
-      from: '../dist/micromamba*',
+      from: '../dist/micromamba', // mac
+      to: 'micromamba',
+    },
+    {
+      from: '../dist/micromamba.exe', // windows
       to: 'micromamba',
     },
     {
