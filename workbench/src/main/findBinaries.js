@@ -54,32 +54,26 @@ export function findInvestBinaries(isDevMode) {
   return investExe;
 }
 
-
 /**
- * Return the available mamba executable.
+ * Return the available micromamba executable.
  *
  * @param {boolean} isDevMode - a boolean designating dev mode or not.
- * @returns {string} mamba executable.
+ * @returns {string} micromamba executable.
  */
-export function findMambaExecutable(isDevMode) {
-  let mambaExe;
+export function findMicromambaExecutable(isDevMode) {
+  let micromambaExe;
   if (isDevMode) {
-    mambaExe = 'mamba'; // assume that mamba is available
+    micromambaExe = 'micromamba'; // assume that micromamba is available
   } else {
-    if (process.platform === 'win32') {
-      mambaExe = `"${upath.join(process.resourcesPath, 'miniforge3', 'condabin', 'mamba.bat')}"`;
-    } else {
-      // Quote the path in case of spaces
-      mambaExe = `"${upath.join(process.resourcesPath, 'miniforge3', 'condabin', 'mamba')}"`;
-    }
+    micromambaExe = `"${upath.join(process.resourcesPath, 'micromamba')}"`;
   }
   // Check that the executable is working
-  const { stderr, error } = spawnSync(mambaExe, ['--help'], { shell: true });
+  const { stderr, error } = spawnSync(micromambaExe, ['--help'], { shell: true });
   if (error) {
     logger.error(stderr.toString());
-    logger.error('mamba executable is not where we expected it.');
+    logger.error('micromamba executable is not where we expected it.');
     throw error;
   }
-  logger.info(`using mamba executable '${mambaExe}'`);
-  return mambaExe;
+  logger.info(`using micromamba executable '${micromambaExe}'`);
+  return micromambaExe;
 }
