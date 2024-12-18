@@ -270,9 +270,6 @@ class CropProductionTests(unittest.TestCase):
             'model_data_path': MODEL_DATA_PATH,
             'fertilization_rate_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'crop_fertilization_rates.csv'),
-            'nitrogen_fertilization_rate': 29.6,
-            'phosphorus_fertilization_rate': 8.4,
-            'potassium_fertilization_rate': 14.2,
             'n_workers': '-1'
         }
 
@@ -301,9 +298,6 @@ class CropProductionTests(unittest.TestCase):
             'model_data_path': MODEL_DATA_PATH,
             'fertilization_rate_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'crop_fertilization_rates.csv'),
-            'nitrogen_fertilization_rate': 29.6,
-            'phosphorus_fertilization_rate': 8.4,
-            'potassium_fertilization_rate': 14.2,
             'n_workers': '-1'
         }
 
@@ -355,15 +349,13 @@ class CropProductionTests(unittest.TestCase):
             'model_data_path': MODEL_DATA_PATH,
             'fertilization_rate_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'crop_fertilization_rates.csv'),
-            'nitrogen_fertilization_rate': 29.6,
-            'phosphorus_fertilization_rate': 8.4,
-            'potassium_fertilization_rate': 14.2,
         }
 
         crop_production_regression.execute(args)
 
         expected_agg_result_table = pandas.read_csv(
-            os.path.join(TEST_DATA_PATH, 'expected_regression_aggregate_results.csv'))
+            os.path.join(TEST_DATA_PATH,
+                         'expected_regression_aggregate_results.csv'))
         agg_result_table = pandas.read_csv(
             os.path.join(args['workspace_dir'], 'aggregate_results.csv'))
         pandas.testing.assert_frame_equal(
@@ -380,6 +372,38 @@ class CropProductionTests(unittest.TestCase):
             result_table_path)
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
+
+        # Check raster outputs to make sure values are in Mg/ha.
+        # Raster sum is (Mg•px)/(ha•yr).
+        # Result table reports totals in Mg/yr.
+        # To convert from Mg/yr to (Mg•px)/(ha•yr), multiply by px/ha.
+        expected_raster_sums = {}
+        for (index, crop) in [(0, 'barley'), (1, 'soybean'), (2, 'wheat')]:
+            filename = crop + '_observed_production.tif'
+            pixels_per_hectare = _get_pixels_per_hectare(
+                os.path.join(args['workspace_dir'], filename))
+            expected_raster_sums[filename] = (
+                expected_result_table.loc[index]['production_observed']
+                * pixels_per_hectare)
+            filename = crop + '_regression_production.tif'
+            pixels_per_hectare = _get_pixels_per_hectare(
+                os.path.join(args['workspace_dir'], filename))
+            expected_raster_sums[filename] = (
+                expected_result_table.loc[index]['production_modeled']
+                * pixels_per_hectare)
+
+        for filename in expected_raster_sums:
+            raster_path = os.path.join(args['workspace_dir'], filename)
+            raster_info = pygeoprocessing.get_raster_info(raster_path)
+            nodata = raster_info['nodata'][0]
+            raster_sum = 0.0
+            for _, block in pygeoprocessing.iterblocks((raster_path, 1)):
+                raster_sum += numpy.sum(
+                    block[~pygeoprocessing.array_equals_nodata(
+                            block, nodata)], dtype=numpy.float32)
+            expected_sum = expected_raster_sums[filename]
+            numpy.testing.assert_allclose(raster_sum, expected_sum,
+                                          rtol=0, atol=0.001)
 
     def test_crop_production_regression_no_nodata(self):
         """Crop Production: test regression model with undefined nodata raster.
@@ -399,9 +423,6 @@ class CropProductionTests(unittest.TestCase):
             'model_data_path': MODEL_DATA_PATH,
             'fertilization_rate_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'crop_fertilization_rates.csv'),
-            'nitrogen_fertilization_rate': 29.6,
-            'phosphorus_fertilization_rate': 8.4,
-            'potassium_fertilization_rate': 14.2,
         }
 
         # Create a raster based on the test data geotransform, but smaller and
