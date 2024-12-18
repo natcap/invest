@@ -65,12 +65,7 @@ export function findMicromambaExecutable(isDevMode) {
   if (isDevMode) {
     micromambaExe = 'micromamba'; // assume that micromamba is available
   } else {
-    if (process.platform === 'win32') {
-      micromambaExe = `"${upath.join(process.resourcesPath, 'micromamba.exe')}"`;
-    } else {
-      // Quote the path in case of spaces
-      micromambaExe = `"${upath.join(process.resourcesPath, 'micromamba')}"`;
-    }
+    micromambaExe = `"${upath.join(process.resourcesPath, 'micromamba')}"`;
   }
   // Check that the executable is working
   const { stderr, error } = spawnSync(micromambaExe, ['--help'], { shell: true });
