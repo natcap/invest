@@ -21,6 +21,20 @@ TEST_DATA_PATH = os.path.join(
     'crop_production_model')
 
 
+def _get_pixels_per_hectare(raster_path):
+    """Calculate number of pixels per hectare for a given raster.
+
+    Args:
+        raster_path (str): full path to the raster.
+
+    Returns:
+        A float representing the number of pixels per hectare.
+    """
+    raster_info = pygeoprocessing.get_raster_info(raster_path)
+    pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+    return 10000 / pixel_area
+
+
 class CropProductionTests(unittest.TestCase):
     """Tests for the Crop Production model."""
 
@@ -72,6 +86,41 @@ class CropProductionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'result_table.csv'))
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
+
+        # Check raster outputs to make sure values are in Mg/ha.
+        # Raster sum is (Mg•px)/(ha•yr).
+        # Result table reports totals in Mg/yr.
+        # To convert from Mg/yr to (Mg•px)/(ha•yr), multiply by px/ha.
+        expected_raster_sums = {}
+        for (index, crop) in [(0, 'barley'), (1, 'soybean'), (2, 'wheat')]:
+            filename = crop + '_observed_production.tif'
+            pixels_per_hectare = _get_pixels_per_hectare(
+                os.path.join(args['workspace_dir'], filename))
+            expected_raster_sums[filename] = (
+                expected_result_table.loc[index]['production_observed']
+                * pixels_per_hectare)
+            for percentile in ['25', '50', '75', '95']:
+                filename = (
+                    crop + '_yield_' + percentile + 'th_production.tif')
+                col_name = 'production_' + percentile + 'th'
+                pixels_per_hectare = _get_pixels_per_hectare(
+                    os.path.join(args['workspace_dir'], filename))
+                expected_raster_sums[filename] = (
+                    expected_result_table.loc[index][col_name]
+                    * pixels_per_hectare)
+
+        for filename in expected_raster_sums:
+            raster_path = os.path.join(args['workspace_dir'], filename)
+            raster_info = pygeoprocessing.get_raster_info(raster_path)
+            nodata = raster_info['nodata'][0]
+            raster_sum = 0.0
+            for _, block in pygeoprocessing.iterblocks((raster_path, 1)):
+                raster_sum += numpy.sum(
+                    block[~pygeoprocessing.array_equals_nodata(
+                            block, nodata)], dtype=numpy.float32)
+            expected_sum = expected_raster_sums[filename]
+            numpy.testing.assert_allclose(raster_sum, expected_sum,
+                                          rtol=0, atol=0.1)
 
     def test_crop_production_percentile_no_nodata(self):
         """Crop Production: test percentile model with undefined nodata raster.
