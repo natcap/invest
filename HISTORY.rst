@@ -35,8 +35,12 @@
 
 .. :changelog:
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.14.3 (2024-12-19)
+-------------------
 * General
     * InVEST has been updated to build against numpy 2.
       https://github.com/natcap/invest/issues/1641
