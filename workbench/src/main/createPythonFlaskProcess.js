@@ -123,14 +123,14 @@ export async function createPluginServerProcess(modelName, _port = undefined) {
   }
 
   logger.debug('creating invest plugin server process');
-  const mamba = settingsStore.get('mamba');
+  const micromamba = settingsStore.get('micromamba');
   const modelEnvPath = settingsStore.get(`plugins.${modelName}.env`);
   const args = [
     'run', '--prefix', `"${modelEnvPath}"`,
     'invest', '--debug', 'serve', '--port', port];
-  logger.debug('spawning command:', mamba, args);
+  logger.debug('spawning command:', micromamba, args);
   // shell mode is necessary in dev mode & relying on a conda env
-  const pythonServerProcess = spawn(mamba, args, { shell: true });
+  const pythonServerProcess = spawn(micromamba, args, { shell: true });
   settingsStore.set(`plugins.${modelName}.port`, port);
   settingsStore.set(`plugins.${modelName}.pid`, pythonServerProcess.pid);
 

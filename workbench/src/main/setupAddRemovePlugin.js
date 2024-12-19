@@ -55,7 +55,7 @@ export function setupAddPlugin() {
     async (e, pluginURL) => {
       try {
         logger.info('adding plugin at', pluginURL);
-        const mamba = settingsStore.get('mamba');
+        const micromamba = settingsStore.get('micromamba');
         // Create a temporary directory and check out the plugin's pyproject.toml
         const tmpPluginDir = fs.mkdtempSync(upath.join(tmpdir(), 'natcap-invest-'));
         await spawnWithLogging(
@@ -81,19 +81,19 @@ export function setupAddPlugin() {
         // Create a conda env containing the plugin and its dependencies
         const envName = `invest_plugin_${pluginID}`;
         await spawnWithLogging(
-          mamba,
+          micromamba,
           ['create', '--yes', '--name', envName, '-c', 'conda-forge', '"python<3.12"', '"gdal<3.6"']
         );
-        logger.info('created mamba env for plugin');
+        logger.info('created micromamba env for plugin');
         await spawnWithLogging(
-          mamba,
-          ['run', '--verbose', '--no-capture-output', '--name', envName, 'pip', 'install', `git+${pluginURL}`]
+          micromamba,
+          ['run', '--name', envName, 'pip', 'install', `git+${pluginURL}`]
         );
         logger.info('installed plugin into its env');
         // Write plugin metadata to the workbench's config.json
-        const envInfo = execSync(`${mamba} info --envs`, { windowsHide: true }).toString();
+        const envInfo = execSync(`${micromamba} info --name ${envName}`, { windowsHide: true }).toString();
         logger.info(`env info:\n${envInfo}`);
-        const regex = new RegExp(String.raw`^${envName} +(.+)$`, 'm');
+        const regex = /env location : (.+)/;
         const envPath = envInfo.match(regex)[1];
         logger.info(`env path:\n${envPath}`);
         logger.info('writing plugin info to settings store');
@@ -123,8 +123,8 @@ export function setupRemovePlugin() {
       try {
         // Delete the plugin's conda env
         const env = settingsStore.get(`plugins.${pluginID}.env`);
-        const mamba = settingsStore.get('mamba');
-        await spawnWithLogging(mamba, ['remove', '--yes', '--prefix', `"${env}"`, '--all']);
+        const micromamba = settingsStore.get('micromamba');
+        await spawnWithLogging(micromamba, ['remove', '--yes', '--prefix', `"${env}"`, '--all']);
         // Delete the plugin's data from storage
         settingsStore.delete(`plugins.${pluginID}`);
         logger.info('successfully removed plugin');
