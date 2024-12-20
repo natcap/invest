@@ -41,7 +41,7 @@ const config = {
     },
     {
       from: '../dist/micromamba.exe', // windows
-      to: 'micromamba',
+      to: 'micromamba.exe',
     },
     {
       from: '../dist/userguide',
