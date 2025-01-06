@@ -91,11 +91,10 @@ export function setupInvestRunHandlers() {
     let port;
     const plugins = settingsStore.get('plugins');
     if (plugins && Object.keys(plugins).includes(modelRunName)) {
-      cmd = settingsStore.get('mamba');
+      cmd = settingsStore.get('micromamba');
       cmdArgs = [
         'run',
         `--prefix "${settingsStore.get(`plugins.${modelRunName}.env`)}"`,
-        '--live-stream',
         'invest',
         LOGLEVELMAP[loggingLevel],
         TGLOGLEVELMAP[taskgraphLoggingLevel],
