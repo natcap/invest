@@ -76,7 +76,7 @@ jobs:
                           Workbench-macOS-binary \
                           InVEST-sample-data \
                           InVEST-user-guide \
-                          "Source distribution"
+                          "Source distribution macos-13 3.12"
           do
             gh run download $RUN_ID --dir artifacts --name "$artifact"
           done
