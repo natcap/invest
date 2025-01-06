@@ -172,9 +172,9 @@ MODEL_SPEC = {
         },
         "sensitivity_table_path": {
             "type": "csv",
-            "index_col": "lulc",
+            "index_col": "lucode",
             "columns": {
-                "lulc": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "name": {
                     "type": "freestyle_string",
                     "required": False
