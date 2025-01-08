@@ -1,22 +1,10 @@
 #ifndef NATCAP_INVEST_MANAGEDRASTER_H_
 #define NATCAP_INVEST_MANAGEDRASTER_H_
 
-#include <iostream>
-
 #include "gdal.h"
 #include "gdal_priv.h"
-#include <stdint.h>
 
-#include <errno.h>
-#include <format>
-#include <string>
-#include <set>
-#include <stack>
-#include <cmath>
-#include <list>
-#include <utility>
-#include <iterator>
-#include <cstddef>  // For std::ptrdiff_t
+#include <iostream>
 
 #include "LRUCache.h"
 
