@@ -359,7 +359,6 @@ class MFD;
 
 template<class T>
 class ManagedFlowDirRaster: public ManagedRaster {
-
 public:
 
     ManagedFlowDirRaster<T>() {}
@@ -367,6 +366,7 @@ public:
     ManagedFlowDirRaster<T>(char* raster_path, int band_id, bool write_mode)
         : ManagedRaster(raster_path, band_id, write_mode) {}
 
+    template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
     bool is_local_high_point(int xi, int yi) {
         // """Check if a given pixel is a local high point.
 
@@ -396,9 +396,36 @@ public:
             }
         }
         return true;
-
     }
 
+    template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
+    bool is_local_high_point(int xi, int yi) {
+        // """Check if a given pixel is a local high point.
+
+        // Args:
+        //     xi (int): x coord in pixel space of the pixel to consider
+        //     yi (int): y coord in pixel space of the pixel to consider
+
+        // Returns:
+        //     True if the pixel is a local high point, i.e. it has no
+        //     upslope neighbors; False otherwise.
+        // """
+        int flow_dir_j;
+        long xj, yj;
+
+        for (int n_dir = 0; n_dir < 8; n_dir++) {
+            xj = xi + COL_OFFSETS[n_dir];
+            yj = yi + ROW_OFFSETS[n_dir];
+            if (xj < 0 or xj >= raster_x_size or yj < 0 or yj >= raster_y_size) {
+                continue;
+            }
+            flow_dir_j = get(xj, yj);
+            if (flow_dir_j == FLOW_DIR_REVERSE_DIRECTION[n_dir]) {
+                return false;
+            }
+        }
+        return true;
+    }
 };
 
 template<class T>
@@ -425,29 +452,25 @@ public:
     using iterator_category = std::forward_iterator_tag;
     using difference_type   = std::ptrdiff_t;
     using value_type        = NeighborTuple;
-    using pointer           = NeighborTuple*;  // or also value_type*
-    using reference         = NeighborTuple&;  // or also value_type&
+    using pointer           = NeighborTuple*;
+    using reference         = NeighborTuple&;
 
     Pixel<T> pixel;
     pointer m_ptr = nullptr;
     int i = 0;
 
     NeighborIterator<T>() {}
-    NeighborIterator<T>(NeighborTuple* n) {
-        m_ptr = n;
-    }
-    NeighborIterator<T>(Pixel<T> pixel) : pixel(pixel) {
-        next();
-    }
+    NeighborIterator<T>(NeighborTuple* n) { m_ptr = n; }
+    NeighborIterator<T>(Pixel<T> pixel) : pixel(pixel) { next(); }
 
     reference operator*() const { return *m_ptr; }
     pointer operator->() { return m_ptr; }
 
     // Prefix increment
-    NeighborIterator& operator++() { this->next(); return *this; }
+    NeighborIterator<T>& operator++() { next(); return *this; }
 
     // Postfix increment
-    NeighborIterator operator++(int) { NeighborIterator tmp = *this; ++(*this); return tmp; }
+    NeighborIterator<T> operator++(int) { NeighborIterator<T> tmp = *this; ++(*this); return tmp; }
 
     friend bool operator== (const NeighborIterator& a, const NeighborIterator& b) {
         return a.m_ptr == b.m_ptr;
@@ -481,6 +504,8 @@ public:
         this->pixel = p;
         next();
     }
+    DownslopeNeighborIterator<T>& operator++() { next(); return *this; }
+    DownslopeNeighborIterator<T> operator++(int) { DownslopeNeighborIterator<T> tmp = *this; ++(*this); return tmp; }
 
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
     void next() {
@@ -544,6 +569,8 @@ public:
         this->pixel = p;
         next();
     }
+    DownslopeNeighborNoSkipIterator<T>& operator++() { next(); return *this; }
+    DownslopeNeighborNoSkipIterator<T> operator++(int) { DownslopeNeighborNoSkipIterator<T> tmp = *this; ++(*this); return tmp; }
 
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
     void next() {
@@ -595,6 +622,8 @@ public:
         this->pixel = p;
         next();
     }
+    UpslopeNeighborIterator<T>& operator++() { next(); return *this; }
+    UpslopeNeighborIterator<T> operator++(int) { UpslopeNeighborIterator<T> tmp = *this; ++(*this); return tmp; }
 
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
     void next() {
@@ -677,6 +706,8 @@ public:
         this->pixel = p;
         next();
     }
+    UpslopeNeighborNoDivideIterator<T>& operator++() { next(); return *this; }
+    UpslopeNeighborNoDivideIterator<T> operator++(int) { UpslopeNeighborNoDivideIterator<T> tmp = *this; ++(*this); return tmp; }
 
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
     void next() {
