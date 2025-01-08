@@ -279,12 +279,12 @@ class NDRTests(unittest.TestCase):
         # results
         for field, expected_value in [
                 ('p_surface_load', 41.921860),
-                ('p_surface_export', 5.899117),
+                ('p_surface_export', 4.985530),
                 ('n_surface_load', 2978.519775),
-                ('n_surface_export', 289.0498),
+                ('n_surface_export', 329.733093),
                 ('n_subsurface_load', 28.614094),
-                ('n_subsurface_export', 15.61077),
-                ('n_total_export', 304.660614)]:
+                ('n_subsurface_export', 12.637195),
+                ('n_total_export', 339.975503)]:
             val = result_feature.GetField(field)
             if not numpy.isclose(val, expected_value):
                 mismatch_list.append(

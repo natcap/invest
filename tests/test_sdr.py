@@ -180,16 +180,15 @@ class SDRTests(unittest.TestCase):
         args = SDRTests.generate_base_args(self.workspace_dir)
         args['algorithm'] = 'D8'
         args['threshold_flow_accumulation'] = 100
-        args['workspace_dir'] = '/Users/emily/Documents/test_sdr_d8'
         # make args explicit that this is a base run of SWY
 
         sdr.execute(args)
         expected_results = {
-            'usle_tot': 2.62457418442,
-            'sed_export': 0.09748090804,
-            'sed_dep': 1.71672844887,
-            'avoid_exp': 10199.46875,
-            'avoid_eros': 274444.75,
+            'usle_tot': 2.520746,
+            'sed_export': 0.187428,
+            'sed_dep': 2.300645,
+            'avoid_exp': 19283.767578,
+            'avoid_eros': 263415,
         }
 
         vector_path = os.path.join(

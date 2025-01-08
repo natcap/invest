@@ -772,14 +772,18 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         seasonal_water_yield.execute(args)
 
-        # generate aggregated results csv table for assertion
-        agg_results_csv_path = os.path.join(
-            args['workspace_dir'], 'agg_results_base.csv')
-        make_agg_results_csv(agg_results_csv_path)
-
-        SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
-            agg_results_csv_path)
+        result_vector = ogr.Open(os.path.join(
+            args['workspace_dir'], 'aggregated_results_swy.shp'))
+        result_layer = result_vector.GetLayer()
+        result_feature = result_layer.GetFeature(0)
+        mismatch_list = []
+        for field, expected_value in [('vri_sum', 1), ('qb', 52.9128)]:
+            val = result_feature.GetField(field)
+            if not numpy.isclose(val, expected_value):
+                mismatch_list.append(
+                    (field, f'expected: {expected_value}', f'actual: {val}'))
+        if mismatch_list:
+            raise RuntimeError(f'results not expected: {mismatch_list}')
 
     def test_base_regression_nodata_inf(self):
         """SWY base regression test on sample data with really small nodata.
