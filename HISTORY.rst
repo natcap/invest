@@ -35,9 +35,20 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* Coastal Blue Carbon
+    * The ``code`` column in the model's biophysical table input, as well as
+      the ``code`` column in the preprocessor's LULC lookup table input and
+      ``carbon_pool_transient_template`` output, have been renamed ``lucode``,
+      for consistency with other InVEST models (`InVEST #1249
+      <https://github.com/natcap/invest/issues/1249>`_).
+* Habitat Quality
+    * The ``lulc`` column in the sensitivity table input, and the ``lulc_code``
+      column in the rarity table outputs, have been renamed ``lucode``, for
+      consistency with other InVEST models (`InVEST #1249
+      <https://github.com/natcap/invest/issues/1249>`_).
 
 3.14.3 (2024-12-19)
 -------------------
