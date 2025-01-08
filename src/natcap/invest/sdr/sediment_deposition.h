@@ -96,7 +96,6 @@ void run_sediment_deposition(
                         up_neighbors = UpslopeNeighbors<T>(
                             Pixel<T>(flow_dir_raster, global_col, global_row));
                         for (auto neighbor: up_neighbors) {
-                            std::cout << "upslope " << neighbor.x << " " << neighbor.y << std::endl;
                             f_j = f_raster.get(neighbor.x, neighbor.y);
                             if (is_close(f_j, target_nodata)) {
                                 continue;
@@ -115,7 +114,6 @@ void run_sediment_deposition(
                             Pixel<T>(flow_dir_raster, global_col, global_row));
                         flow_dir_sum = 0;
                         for (auto neighbor: dn_neighbors) {
-                            std::cout << "downslope " << neighbor.x << " " << neighbor.y << std::endl;
                             flow_dir_sum += neighbor.flow_proportion;
                             sdr_j = sdr_raster.get(neighbor.x, neighbor.y);
                             if (is_close(sdr_j, sdr_raster.nodata)) {
@@ -141,7 +139,6 @@ void run_sediment_deposition(
                             up_neighbors = UpslopeNeighbors<T>(
                                 Pixel<T>(flow_dir_raster, neighbor.x, neighbor.y));
                             for (auto neighbor_of_neighbor: up_neighbors) {
-                                std::cout << "upslope2 " << neighbor_of_neighbor.x << " " << neighbor_of_neighbor.y << std::endl;
                                 if (INFLOW_OFFSETS[neighbor_of_neighbor.direction] == neighbor.direction) {
                                     continue;
                                 }
