@@ -418,9 +418,9 @@ public:
     int y;
     int val;
 
-    Pixel<T>() {}
+    Pixel() {}
 
-    Pixel<T>(ManagedFlowDirRaster<T> raster, int x, int y) : raster(raster), x(x), y(y) {
+    Pixel(ManagedFlowDirRaster raster, int x, int y) : raster(raster), x(x), y(y) {
         double v = raster.get(x, y);
         val = static_cast<int>(v);
     }
@@ -441,9 +441,9 @@ public:
     pointer m_ptr = nullptr;
     int i = 0;
 
-    NeighborIterator<T>() {}
-    NeighborIterator<T>(NeighborTuple* n) { m_ptr = n; }
-    NeighborIterator<T>(Pixel<T> pixel) : pixel(pixel) { next(); }
+    NeighborIterator() {}
+    NeighborIterator(NeighborTuple* n) { m_ptr = n; }
+    NeighborIterator(Pixel pixel) : pixel(pixel) { next(); }
 
     reference operator*() const { return *m_ptr; }
     pointer operator->() { return m_ptr; }
