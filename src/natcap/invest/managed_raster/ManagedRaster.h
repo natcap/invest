@@ -345,7 +345,7 @@ class ManagedFlowDirRaster: public ManagedRaster {
 public:
     ManagedFlowDirRaster() {}
 
-    ManagedFlowDirRaster<T>(char* raster_path, int band_id, bool write_mode)
+    ManagedFlowDirRaster(char* raster_path, int band_id, bool write_mode)
         : ManagedRaster(raster_path, band_id, write_mode) {}
 
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
