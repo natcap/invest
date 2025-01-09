@@ -30,7 +30,7 @@ void run_sediment_deposition(
     // unsigned long n_pixels_processed = 0;
     bool upslope_neighbors_processed;
     // time_t last_log_time = ctime(NULL)
-    float f_j_weighted_sum;
+    double f_j_weighted_sum;
     NeighborTuple neighbor;
     NeighborTuple neighbor_of_neighbor;
     double dr_i, t_i, f_i;

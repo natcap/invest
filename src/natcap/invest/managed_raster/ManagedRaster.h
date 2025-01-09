@@ -369,7 +369,7 @@ public:
             if (xj < 0 or xj >= raster_x_size or yj < 0 or yj >= raster_y_size) {
                 continue;
             }
-            flow_dir_j = get(xj, yj);
+            flow_dir_j = static_cast<int>(get(xj, yj));
             flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])));
 
             if (flow_ji) {
@@ -709,10 +709,10 @@ public:
             next();
             return;
         }
-        flow_dir_j = this->pixel.raster.get(xj, yj);
+        flow_dir_j = static_cast<int>(this->pixel.raster.get(xj, yj));
         flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[this->i])));
         if (flow_ji) {
-            this->m_ptr = new NeighborTuple(this->i, xj, yj, flow_ji);
+            this->m_ptr = new NeighborTuple(this->i, xj, yj, static_cast<float>(flow_ji));
             this->i++;
             return;
         } else {
@@ -740,7 +740,7 @@ public:
             return;
         }
 
-        flow_dir_j = this->pixel.raster.get(xj, yj);
+        flow_dir_j = static_cast<int>(this->pixel.raster.get(xj, yj));
         if (flow_dir_j == FLOW_DIR_REVERSE_DIRECTION[this->i]) {
             this->m_ptr = new NeighborTuple(this->i, xj, yj, 1);
             this->i++;
