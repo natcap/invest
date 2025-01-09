@@ -310,8 +310,8 @@ void run_route_baseflow_sum(
     // cdef time_t last_log_time
     // last_log_time = ctime(NULL)
 
-    float target_nodata = -1e32;
-    float b_i, b_sum_i, b_sum_j, l_j, l_avail_j, l_sum_j;
+    float target_nodata = static_cast<float>(-1e32);
+    double b_i, b_sum_i, b_sum_j, l_j, l_avail_j, l_sum_j;
     double l_i, l_sum_i;
     long xi, yi, flow_dir_sum;
     long xs_root, ys_root, xoff, yoff;
@@ -407,7 +407,7 @@ void run_route_baseflow_sum(
                         dn_neighbors_no_skip = DownslopeNeighborsNoSkip<T>(Pixel<T>(flow_dir_raster, xi, yi));
                         flow_dir_sum = 0;
                         for (auto neighbor: dn_neighbors_no_skip) {
-                            flow_dir_sum += neighbor.flow_proportion;
+                            flow_dir_sum += static_cast<long>(neighbor.flow_proportion);
 
                             if (neighbor.x < 0 or neighbor.x >= flow_dir_raster.raster_x_size or
                                 neighbor.y < 0 or neighbor.y >= flow_dir_raster.raster_y_size) {

@@ -360,9 +360,8 @@ public:
         //     True if the pixel is a local high point, i.e. it has no
         //     upslope neighbors; False otherwise.
         // """
-        int flow_dir_j;
+        int flow_dir_j, flow_ji;
         long xj, yj;
-        float flow_ji;
 
         for (int n_dir = 0; n_dir < 8; n_dir++) {
             xj = xi + COL_OFFSETS[n_dir];
@@ -401,7 +400,7 @@ public:
             if (xj < 0 or xj >= raster_x_size or yj < 0 or yj >= raster_y_size) {
                 continue;
             }
-            flow_dir_j = get(xj, yj);
+            flow_dir_j = static_cast<int>(get(xj, yj));
             if (flow_dir_j == FLOW_DIR_REVERSE_DIRECTION[n_dir]) {
                 return false;
             }
@@ -508,7 +507,7 @@ public:
         }
         flow = (this->pixel.val >> (this->i * 4)) & 0xF;
         if (flow) {
-            this->m_ptr = new NeighborTuple(this->i, xj, yj, flow);
+            this->m_ptr = new NeighborTuple(this->i, xj, yj, static_cast<float>(flow));
             this->i++;
             return;
         } else {

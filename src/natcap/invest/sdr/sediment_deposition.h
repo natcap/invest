@@ -23,7 +23,7 @@ void run_sediment_deposition(
     long global_col, global_row;
     int xs, ys;
     long flat_index;
-    float downslope_sdr_weighted_sum;
+    double downslope_sdr_weighted_sum;
     double sdr_i, e_prime_i, sdr_j, f_j;
     long flow_dir_sum;
 
@@ -33,7 +33,7 @@ void run_sediment_deposition(
     float f_j_weighted_sum;
     NeighborTuple neighbor;
     NeighborTuple neighbor_of_neighbor;
-    float dr_i, t_i, f_i;
+    double dr_i, t_i, f_i;
 
     UpslopeNeighbors<T> up_neighbors;
     DownslopeNeighbors<T> dn_neighbors;
@@ -114,7 +114,7 @@ void run_sediment_deposition(
                             Pixel<T>(flow_dir_raster, global_col, global_row));
                         flow_dir_sum = 0;
                         for (auto neighbor: dn_neighbors) {
-                            flow_dir_sum += neighbor.flow_proportion;
+                            flow_dir_sum += static_cast<long>(neighbor.flow_proportion);
                             sdr_j = sdr_raster.get(neighbor.x, neighbor.y);
                             if (is_close(sdr_j, sdr_raster.nodata)) {
                                 continue;
