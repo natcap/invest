@@ -340,15 +340,9 @@ class ManagedRaster {
         }
 };
 
-
-class D8;
-class MFD;
-
-
 template<class T>
 class ManagedFlowDirRaster: public ManagedRaster {
 public:
-
     ManagedFlowDirRaster<T>() {}
 
     ManagedFlowDirRaster<T>(char* raster_path, int band_id, bool write_mode)
