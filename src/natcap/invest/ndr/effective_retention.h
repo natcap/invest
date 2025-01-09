@@ -181,7 +181,7 @@ void run_effective_retention(
                     flow_dir_sum = 0;
                     for (auto neighbor: dn_neighbors) {
                         has_outflow = true;
-                        flow_dir_sum += neighbor.flow_proportion;
+                        flow_dir_sum += static_cast<long>(neighbor.flow_proportion);
                         if (neighbor.x < 0 or neighbor.x >= n_cols or
                             neighbor.y < 0 or neighbor.y >= n_rows) {
                             continue;

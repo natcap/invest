@@ -8,7 +8,7 @@
 
 #include "LRUCache.h"
 
-int MANAGED_RASTER_N_BLOCKS = pow(2, 6);
+int MANAGED_RASTER_N_BLOCKS = static_cast<int>(pow(2, 6));
 // given the pixel neighbor numbering system
 //  3 2 1
 //  4 x 0
@@ -120,8 +120,8 @@ class ManagedRaster {
                     "This error is happening in the ManagedRaster.h extension.");
             }
 
-            block_xbits = log2(block_xsize);
-            block_ybits = log2(block_ysize);
+            block_xbits = static_cast<int>(log2(block_xsize));
+            block_ybits = static_cast<int>(log2(block_ysize));
 
             // integer floor division
             block_nx = (raster_x_size + block_xsize - 1) / block_xsize;
@@ -470,7 +470,7 @@ public:
         xj = pixel.x + COL_OFFSETS[i];
         yj = pixel.y + ROW_OFFSETS[i];
         flow = (pixel.val >> (i * 4)) & 0xF;
-        m_ptr = new NeighborTuple(i, xj, yj, flow);
+        m_ptr = new NeighborTuple(i, xj, yj, static_cast<float>(flow));
         i++;
     }
 };
@@ -567,7 +567,7 @@ public:
         yj = this->pixel.y + ROW_OFFSETS[this->i];
         flow = (this->pixel.val >> (this->i * 4)) & 0xF;
         if (flow) {
-            this->m_ptr = new NeighborTuple(this->i, xj, yj, flow);
+            this->m_ptr = new NeighborTuple(this->i, xj, yj, static_cast<float>(flow));
             this->i++;
             return;
         } else {
@@ -628,7 +628,7 @@ public:
             return;
         }
 
-        flow_dir_j = this->pixel.raster.get(xj, yj);
+        flow_dir_j = static_cast<int>(this->pixel.raster.get(xj, yj));
         flow_ji = (0xF & (flow_dir_j >> (4 * FLOW_DIR_REVERSE_DIRECTION[this->i])));
         if (flow_ji) {
             flow_dir_j_sum = 0;
@@ -665,7 +665,7 @@ public:
             return;
         }
 
-        flow_dir_j = this->pixel.raster.get(xj, yj);
+        flow_dir_j = static_cast<int>(this->pixel.raster.get(xj, yj));
         if (flow_dir_j == FLOW_DIR_REVERSE_DIRECTION[this->i]) {
             this->m_ptr = new NeighborTuple(this->i, xj, yj, 1);
             this->i++;
