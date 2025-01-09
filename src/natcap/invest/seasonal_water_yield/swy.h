@@ -85,10 +85,11 @@ void run_calculate_local_recharge(
     // always be non-negative
     vector<ManagedRaster> et0_m_rasters;
     vector<double> et0_m_nodata_list;
-    for (int i = 0; i < et0_paths.size(); i++) {
-        et0_m_rasters.push_back(ManagedRaster(et0_paths[i], 1, 0));
-        if (et0_m_rasters[i].hasNodata) {
-            et0_m_nodata_list.push_back(et0_m_rasters[i].nodata);
+    for (auto et0_m_path: et0_paths) {
+        ManagedRaster et0_raster = ManagedRaster(et0_m_path, 1, 0);
+        et0_m_rasters.push_back(et0_raster);
+        if (et0_raster.hasNodata) {
+            et0_m_nodata_list.push_back(et0_raster.nodata);
         } else {
             et0_m_nodata_list.push_back(-1);
         }
