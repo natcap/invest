@@ -482,7 +482,7 @@ public:
 
     DownslopeNeighborIterator(): NeighborIterator<T>() {}
     DownslopeNeighborIterator(NeighborTuple* n): NeighborIterator<T>(n) {}
-    DownslopeNeighborIterator<T>(const Pixel<T> p) {
+    DownslopeNeighborIterator(const Pixel<T> p) {
         this->pixel = p;
         next();
     }
@@ -547,7 +547,7 @@ public:
 
     DownslopeNeighborNoSkipIterator(): NeighborIterator<T>() {}
     DownslopeNeighborNoSkipIterator(NeighborTuple* n): NeighborIterator<T>(n) {}
-    DownslopeNeighborNoSkipIterator<T>(const Pixel<T> p) {
+    DownslopeNeighborNoSkipIterator(const Pixel<T> p) {
         this->pixel = p;
         next();
     }
@@ -600,7 +600,7 @@ public:
 
     UpslopeNeighborIterator(): NeighborIterator<T>() {}
     UpslopeNeighborIterator(NeighborTuple* n): NeighborIterator<T>(n) {}
-    UpslopeNeighborIterator<T>(const Pixel<T> p) {
+    UpslopeNeighborIterator(const Pixel<T> p) {
         this->pixel = p;
         next();
     }
@@ -684,7 +684,7 @@ public:
 
     UpslopeNeighborNoDivideIterator(): NeighborIterator<T>() {}
     UpslopeNeighborNoDivideIterator(NeighborTuple* n): NeighborIterator<T>(n) {}
-    UpslopeNeighborNoDivideIterator<T>(const Pixel<T> p) {
+    UpslopeNeighborNoDivideIterator(const Pixel<T> p) {
         this->pixel = p;
         next();
     }
@@ -758,7 +758,7 @@ class Neighbors {
 public:
     Pixel<T> pixel;
     Neighbors() {}
-    Neighbors<T>(const Pixel<T> pixel): pixel(pixel) {}
+    Neighbors(const Pixel<T> pixel): pixel(pixel) {}
     NeighborIterator<T> begin() { return NeighborIterator<T>(pixel); }
     NeighborIterator<T> end() { return NeighborIterator<T>(&endVal); }
 };
