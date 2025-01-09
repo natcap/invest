@@ -343,7 +343,7 @@ class ManagedRaster {
 template<class T>
 class ManagedFlowDirRaster: public ManagedRaster {
 public:
-    ManagedFlowDirRaster<T>() {}
+    ManagedFlowDirRaster() {}
 
     ManagedFlowDirRaster<T>(char* raster_path, int band_id, bool write_mode)
         : ManagedRaster(raster_path, band_id, write_mode) {}
