@@ -198,6 +198,9 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          # NOTE: if you change this name, make sure the source distribution
+          # pattern defined in .github/workflows/release-part-2.yml will still
+          # grab it!
           name: Source distribution ${{ matrix.os }} ${{ matrix.python-version }}
           path: dist
 
