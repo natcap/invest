@@ -71,25 +71,22 @@ class ManagedRaster {
 
         ManagedRaster() { }
 
+        // Creates new instance of ManagedRaster. Opens the raster with GDAL,
+        // stores important information about the dataset, and creates a cache
+        // that will be used to efficiently read blocks from the raster.
+        // Args:
+        //   raster_path: path to raster that has block sizes that are
+        //       powers of 2. If not, an exception is raised.
+        //   band_id: which band in `raster_path` to index. Uses GDAL
+        //       notation that starts at 1.
+        //   write_mode: if true, this raster is writable and dirty
+        //       memory blocks will be written back to the raster as blocks
+        //       are swapped out of the cache or when the object deconstructs.
         ManagedRaster(char* raster_path, int band_id, bool write_mode)
             : raster_path { raster_path }
             , band_id { band_id }
             , write_mode { write_mode }
         {
-            // """Create new instance of Managed Raster.
-
-            // Args:
-            //     raster_path (char*): path to raster that has block sizes that are
-            //         powers of 2. If not, an exception is raised.
-            //     band_id (int): which band in `raster_path` to index. Uses GDAL
-            //         notation that starts at 1.
-            //     write_mode (boolean): if true, this raster is writable and dirty
-            //         memory blocks will be written back to the raster as blocks
-            //         are swapped out of the cache or when the object deconstructs.
-
-            // Returns:
-            //     None.
-            //         """
             GDALAllRegister();
 
             dataset = (GDALDataset *) GDALOpen( raster_path, GA_Update );
@@ -142,8 +139,8 @@ class ManagedRaster {
             closed = 0;
         }
 
+        // Sets the pixel at `xi,yi` to `value`
         void inline set(long xi, long yi, double value) {
-            // Set the pixel at `xi,yi` to `value`
             int block_xi = xi / block_xsize;
             int block_yi = yi / block_ysize;
 
@@ -164,8 +161,8 @@ class ManagedRaster {
             }
         }
 
+        // Returns the value of the pixel at `xi,yi`.
         double inline get(long xi, long yi) {
-            // Return the value of the pixel at `xi,yi`
             int block_xi = xi / block_xsize;
             int block_yi = yi / block_ysize;
 
@@ -187,6 +184,9 @@ class ManagedRaster {
             return value;
         }
 
+        // Reads a block from the raster and saves it to the cache.
+        // Args:
+        //   block_index: Index of the block to read, counted from the top-left
         void _load_block(int block_index) {
             int block_xi = block_index % block_nx;
             int block_yi = block_index / block_nx;
@@ -262,15 +262,12 @@ class ManagedRaster {
             }
         }
 
+        // Closes the ManagedRaster and frees up resources.
+        // This call writes any dirty blocks to disk, frees up the memory
+        // allocated as part of the cache, and frees all GDAL references.
+        // Any subsequent calls to any other functions in _ManagedRaster will
+        // have undefined behavior.
         void close() {
-        // """Close the _ManagedRaster and free up resources.
-
-        //     This call writes any dirty blocks to disk, frees up the memory
-        //     allocated as part of the cache, and frees all GDAL references.
-
-        //     Any subsequent calls to any other functions in _ManagedRaster will
-        //     have undefined behavior.
-        // """
             if (closed) {
                 return;
             }
@@ -340,6 +337,7 @@ class ManagedRaster {
         }
 };
 
+// Represents a flow direction raster, which may be of type MFD or D8
 template<class T>
 class ManagedFlowDirRaster: public ManagedRaster {
 public:
@@ -348,18 +346,15 @@ public:
     ManagedFlowDirRaster(char* raster_path, int band_id, bool write_mode)
         : ManagedRaster(raster_path, band_id, write_mode) {}
 
+    // Checks if a given pixel is a local high point. (MFD implementation)
+    // Args:
+    //     xi: x coord in pixel space of the pixel to consider
+    //     yi: y coord in pixel space of the pixel to consider
+    // Returns:
+    //     true if the pixel is a local high point, i.e. it has no
+    //     upslope neighbors; false otherwise.
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
     bool is_local_high_point(int xi, int yi) {
-        // """Check if a given pixel is a local high point.
-
-        // Args:
-        //     xi (int): x coord in pixel space of the pixel to consider
-        //     yi (int): y coord in pixel space of the pixel to consider
-
-        // Returns:
-        //     True if the pixel is a local high point, i.e. it has no
-        //     upslope neighbors; False otherwise.
-        // """
         int flow_dir_j, flow_ji;
         long xj, yj;
 
@@ -379,18 +374,15 @@ public:
         return true;
     }
 
+    // Checks if a given pixel is a local high point. (D8 implementation)
+    // Args:
+    //     xi: x coord in pixel space of the pixel to consider
+    //     yi: y coord in pixel space of the pixel to consider
+    // Returns:
+    //     true if the pixel is a local high point, i.e. it has no
+    //     upslope neighbors; false otherwise.
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
     bool is_local_high_point(int xi, int yi) {
-        // """Check if a given pixel is a local high point.
-
-        // Args:
-        //     xi (int): x coord in pixel space of the pixel to consider
-        //     yi (int): y coord in pixel space of the pixel to consider
-
-        // Returns:
-        //     True if the pixel is a local high point, i.e. it has no
-        //     upslope neighbors; False otherwise.
-        // """
         int flow_dir_j;
         long xj, yj;
 
@@ -409,6 +401,7 @@ public:
     }
 };
 
+// Represents a pixel in a ManagedFlowDirectionRaster
 template<class T>
 class Pixel {
 public:
@@ -425,8 +418,12 @@ public:
     }
 };
 
+// Returned by the `.end()` method of Neighbor iterable classes
 static inline NeighborTuple endVal = NeighborTuple(8, -1, -1, -1);
 
+// Iterates over all eight neighboring pixels of a given pixel
+// This and subsequent iterator classes were written with a lot of help from
+// https://internalpointers.com/post/writing-custom-iterators-modern-cpp
 template<class T>
 class NeighborIterator {
 public:
@@ -460,6 +457,7 @@ public:
         return a.m_ptr != b.m_ptr;
     };
 
+    // Increments the pointer to the next neighbor
     virtual void next() {
         long xj, yj, flow;
         if (i == 8) {
@@ -474,7 +472,8 @@ public:
     }
 };
 
-
+// Iterates over neighbor pixels that are downslope of a given pixel,
+// in either MFD or D8 mode
 template<class T>
 class DownslopeNeighborIterator: public NeighborIterator<T> {
 public:
@@ -488,6 +487,7 @@ public:
     DownslopeNeighborIterator<T>& operator++() { next(); return *this; }
     DownslopeNeighborIterator<T> operator++(int) { DownslopeNeighborIterator<T> tmp = *this; ++(*this); return tmp; }
 
+    // Increments the pointer to the next downslope neighbor (MFD)
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
     void next() {
         long xj, yj, flow;
@@ -516,6 +516,7 @@ public:
         }
     }
 
+    // Increments the pointer to the next downslope neighbor (D8)
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
     void next() {
         long xj, yj;
@@ -539,11 +540,12 @@ public:
     }
 };
 
-
+// Iterates over neighbor pixels that are downslope of a given pixel,
+// without skipping pixels that are out-of-bounds of the raster,
+// in either MFD or D8 mode
 template<class T>
 class DownslopeNeighborNoSkipIterator: public NeighborIterator<T> {
 public:
-
     DownslopeNeighborNoSkipIterator(): NeighborIterator<T>() {}
     DownslopeNeighborNoSkipIterator(NeighborTuple* n): NeighborIterator<T>(n) {}
     DownslopeNeighborNoSkipIterator(const Pixel<T> p) {
@@ -553,6 +555,7 @@ public:
     DownslopeNeighborNoSkipIterator<T>& operator++() { next(); return *this; }
     DownslopeNeighborNoSkipIterator<T> operator++(int) { DownslopeNeighborNoSkipIterator<T> tmp = *this; ++(*this); return tmp; }
 
+    // Increments the pointer to the next downslope neighbor (MFD)
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
     void next() {
         long xj, yj, flow;
@@ -575,6 +578,7 @@ public:
         }
     }
 
+    // Increments the pointer to the next downslope neighbor (D8)
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
     void next() {
         long xj, yj;
@@ -593,6 +597,8 @@ public:
     }
 };
 
+// Iterates over neighbor pixels that are upslope of a given pixel,
+// in either MFD or D8 mode
 template<class T>
 class UpslopeNeighborIterator: public NeighborIterator<T> {
 public:
@@ -606,6 +612,7 @@ public:
     UpslopeNeighborIterator<T>& operator++() { next(); return *this; }
     UpslopeNeighborIterator<T> operator++(int) { UpslopeNeighborIterator<T> tmp = *this; ++(*this); return tmp; }
 
+    // Increments the pointer to the next upslope neighbor (MFD)
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
     void next() {
         long xj, yj;
@@ -645,6 +652,7 @@ public:
         }
     }
 
+    // Increments the pointer to the next upslope neighbor (D8)
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
     void next() {
         long xj, yj;
@@ -677,6 +685,8 @@ public:
 };
 
 
+// Iterates over neighbor pixels that are upslope of a given pixel,
+// without dividing the flow_proportion, in either MFD or D8 mode
 template<class T>
 class UpslopeNeighborNoDivideIterator: public NeighborIterator<T> {
 public:
@@ -690,6 +700,7 @@ public:
     UpslopeNeighborNoDivideIterator<T>& operator++() { next(); return *this; }
     UpslopeNeighborNoDivideIterator<T> operator++(int) { UpslopeNeighborNoDivideIterator<T> tmp = *this; ++(*this); return tmp; }
 
+    // Increments the pointer to the next upslope neighbor (MFD)
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, MFD>::value>* = nullptr>
     void next() {
         long xj, yj;
@@ -721,6 +732,7 @@ public:
         }
     }
 
+    // Increments the pointer to the next upslope neighbor (D8)
     template<typename T_ = T, std::enable_if_t<std::is_same<T_, D8>::value>* = nullptr>
     void next() {
         long xj, yj;

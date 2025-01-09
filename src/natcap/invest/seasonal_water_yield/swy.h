@@ -4,6 +4,37 @@
 
 #include "ManagedRaster.h"
 
+// Calculate the rasters defined by equations [3]-[7].
+//
+// Note all input rasters must be in the same coordinate system and
+// have the same dimensions.
+//
+// Args:
+//     precip_paths: paths to monthly precipitation rasters. (model input)
+//     et0_paths: paths to monthly ET0 rasters. (model input)
+//     qf_m_paths: paths to monthly quickflow rasters calculated by
+//         Equation [1].
+//     flow_dir_path: path to a flow direction raster (MFD or D8). Indicate MFD
+//        or D8 with the template argument.
+//     kc_paths: list of rasters of the monthly crop factor for the pixel.
+//     alpha_values: list of monthly alpha values (fraction of upslope annual
+//         available recharge that is available in each month)
+//     beta_i:  fraction of the upgradient subsidy that is available
+//         for downgradient evapotranspiration.
+//     gamma: the fraction of pixel recharge that is available to
+//         downgradient pixels.
+//     stream_path: path to the stream raster where 1 is a stream,
+//         0 is not, and nodata is outside of the DEM.
+//     target_li_path: created by this call, path to local recharge
+//         derived from the annual water budget. (Equation 3).
+//     target_li_avail_path: created by this call, path to raster
+//         indicating available recharge to a pixel.
+//     target_l_sum_avail_path: created by this call, the recursive
+//         upslope accumulation of target_li_avail_path.
+//     target_aet_path: created by this call, the annual actual
+//         evapotranspiration.
+//     target_pi_path: created by this call, the annual precipitation on
+//         a pixel.
 template<class T>
 void run_calculate_local_recharge(
         vector<char*> precip_paths,
@@ -20,45 +51,6 @@ void run_calculate_local_recharge(
         char* target_l_sum_avail_path,
         char* target_aet_path,
         char* target_pi_path) {
-    // """
-    // Calculate the rasters defined by equations [3]-[7].
-
-    // Note all input rasters must be in the same coordinate system and
-    // have the same dimensions.
-
-    // Args:
-    //     precip_path_list (list): list of paths to monthly precipitation
-    //         rasters. (model input)
-    //     et0_path_list (list): path to monthly ET0 rasters. (model input)
-    //     qf_m_path_list (list): path to monthly quickflow rasters calculated by
-    //         Equation [1].
-    //     flow_dir_path (str): path to a PyGeoprocessing Multiple Flow
-    //         Direction raster indicating flow directions for this analysis.
-    //     alpha_month_map (dict): fraction of upslope annual available recharge
-    //         that is available in month m (indexed from 1).
-    //     beta_i (float):  fraction of the upgradient subsidy that is available
-    //         for downgradient evapotranspiration.
-    //     gamma (float): the fraction of pixel recharge that is available to
-    //         downgradient pixels.
-    //     stream_path (str): path to the stream raster where 1 is a stream,
-    //         0 is not, and nodata is outside of the DEM.
-    //     kc_path_list (str): list of rasters of the monthly crop factor for the
-    //         pixel.
-    //     target_li_path (str): created by this call, path to local recharge
-    //         derived from the annual water budget. (Equation 3).
-    //     target_li_avail_path (str): created by this call, path to raster
-    //         indicating available recharge to a pixel.
-    //     target_l_sum_avail_path (str): created by this call, the recursive
-    //         upslope accumulation of target_li_avail_path.
-    //     target_aet_path (str): created by this call, the annual actual
-    //         evapotranspiration.
-    //     target_pi_path (str): created by this call, the annual precipitation on
-    //         a pixel.
-
-    //     Returns:
-    //         None.
-
-    // """
     long xs_root, ys_root, xoff, yoff;
     long xi, yi, mfd_dir_sum;
     long win_xsize, win_ysize;
@@ -278,6 +270,18 @@ void run_calculate_local_recharge(
     }
 }
 
+// Route Baseflow as described in Equation 11.
+// Args:
+//     flow_dir_path: path to a MFD or D8 flow direction raster.
+//     l_path: path to local recharge raster.
+//     l_avail_path: path to local recharge raster that shows
+//         recharge available to the pixel.
+//     l_sum_path: path to upslope sum of l_path.
+//     stream_path: path to stream raster, 1 stream, 0 no stream,
+//         and nodata.
+//     target_b_path: path to created raster for per-pixel baseflow.
+//     target_b_sum_path: path to created raster for per-pixel
+//         upslope sum of baseflow.
 template<class T>
 void run_route_baseflow_sum(
         char* flow_dir_path,
@@ -287,24 +291,6 @@ void run_route_baseflow_sum(
         char* stream_path,
         char* target_b_path,
         char* target_b_sum_path) {
-    // """Route Baseflow through MFD as described in Equation 11.
-
-    // Args:
-    //     flow_dir_path (string): path to a pygeoprocessing multiple flow
-    //         direction raster.
-    //     l_path (string): path to local recharge raster.
-    //     l_avail_path (string): path to local recharge raster that shows
-    //         recharge available to the pixel.
-    //     l_sum_path (string): path to upslope sum of l_path.
-    //     stream_path (string): path to stream raster, 1 stream, 0 no stream,
-    //         and nodata.
-    //     target_b_path (string): path to created raster for per-pixel baseflow.
-    //     target_b_sum_path (string): path to created raster for per-pixel
-    //         upslope sum of baseflow.
-
-    // Returns:
-    //     None.
-    // """
 
     // used for time-delayed logging
     // cdef time_t last_log_time
