@@ -88,15 +88,16 @@ export function setupAddPlugin() {
         const pluginID = pyprojectTOML.tool.natcap.invest.model_id;
         const pluginName = pyprojectTOML.tool.natcap.invest.model_name;
         const pluginPyName = pyprojectTOML.tool.natcap.invest.pyname;
+        const condaDeps = pyprojectTOML.tool.natcap.invest.conda_dependencies;
 
         // Create a conda env containing the plugin and its dependencies
         const envName = `invest_plugin_${pluginID}`;
         const pluginEnvPrefix = upath.join(rootPrefix, envName)
-        await spawnWithLogging(
-          micromamba,
-          ['create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
-           '-c', 'conda-forge', '"python<3.12"', '"gdal<3.6"']
-        );
+        const createCommand = [
+          'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
+          '-c', 'conda-forge']; // include dependencies read from pyproject.toml
+        condaDeps.forEach((dep) => createCommand.push(`"${dep}"`))
+        await spawnWithLogging(micromamba, createCommand);
         logger.info('created micromamba env for plugin');
         await spawnWithLogging(
           micromamba,
