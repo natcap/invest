@@ -104,11 +104,6 @@ export function setupAddPlugin() {
         );
         logger.info('installed plugin into its env');
         // Write plugin metadata to the workbench's config.json
-        // const envInfo = execSync(`${micromamba} info --name ${envName}`, { windowsHide: true }).toString();
-        // logger.info(`env info:\n${envInfo}`);
-        // const regex = /env location : (.+)/;
-        // const envPath = envInfo.match(regex)[1];
-        // logger.info(`env path:\n${envPath}`);
         logger.info('writing plugin info to settings store');
         settingsStore.set(
           `plugins.${pluginID}`,
