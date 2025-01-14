@@ -49,6 +49,12 @@ Unreleased Changes
       column in the rarity table outputs, have been renamed ``lucode``, for
       consistency with other InVEST models (`InVEST #1249
       <https://github.com/natcap/invest/issues/1249>`_).
+* NDR
+    * Align rasters to the grid of the DEM raster
+      (`#1488 <https://github.com/natcap/invest/issues/1488>`_).
+* Urban Cooling
+    * Align rasters to the grid of the LULC raster, rather than the ET0 raster
+      (`#1488 <https://github.com/natcap/invest/issues/1488>`_).
 
 3.14.3 (2024-12-19)
 -------------------
