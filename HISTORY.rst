@@ -38,6 +38,10 @@
 
 Unreleased Changes
 ------------------
+* Workbench
+    * Auto-scrolling of log output is halted on user-initiated scrolling,
+      enabling easier inspection of log output while a model is running
+      (`InVEST #1533 <https://github.com/natcap/invest/issues/1533>`_).
 * Coastal Blue Carbon
     * The ``code`` column in the model's biophysical table input, as well as
       the ``code`` column in the preprocessor's LULC lookup table input and

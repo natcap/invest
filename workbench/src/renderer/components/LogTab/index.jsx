@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReactDom from 'react-dom';
 import PropTypes from 'prop-types';
 
@@ -13,15 +13,32 @@ const { ipcRenderer } = window.Workbench.electron;
 function LogDisplay(props) {
   const ref = useRef();
 
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [prevScrollTop, setPrevScrollTop] = useState(0);
+
   useEffect(() => {
-    ref.current.scrollTop = ref.current.scrollHeight;
+    if (autoScroll) {
+      ref.current.scrollTop = ref.current.scrollHeight;
+    }
   }, [props.logdata]);
+
+  // Listen for scroll events. If scroll direction is up,
+  // assume scrolling was user-initiated, and halt auto-scrolling.
+  const checkScrollDirection = () => {
+    const currentScrollTop = ref.current.scrollTop;
+    const scrollingUp = (currentScrollTop < prevScrollTop);
+    if (scrollingUp) {
+      setAutoScroll(false);
+    }
+    setPrevScrollTop(currentScrollTop);
+  };
 
   return (
     <Col
       className="text-break"
       id="log-display"
       ref={ref}
+      onScroll={checkScrollDirection}
     >
       {
         props.logdata.map(([line, cls], idx) => (
