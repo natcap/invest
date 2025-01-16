@@ -15,22 +15,46 @@ function LogDisplay(props) {
 
   const [autoScroll, setAutoScroll] = useState(true);
   const [prevScrollTop, setPrevScrollTop] = useState(0);
+  const [userInitiatedScroll, setUserInitiatedScroll] = useState(true);
+  let scrollHandlerTimer;
+
+  // `scrollOffsetThreshold` is used to determine when user has scrolled to bottom of window.
+  // It includes a buffer to account for imprecision stemming from rounding errors and/or
+  // scroll event throttling. 24px (the height of one line of log output) seems to be
+  // large enough to detect scroll events we want, and small enough to avoid false positives.
+  const scrollOffsetThreshold = 24;
 
   useEffect(() => {
     if (autoScroll) {
+      setUserInitiatedScroll(false);
       ref.current.scrollTop = ref.current.scrollHeight;
     }
   }, [props.logdata]);
 
-  // Listen for scroll events. If scroll direction is up,
-  // assume scrolling was user-initiated, and halt auto-scrolling.
-  const checkScrollDirection = () => {
-    const currentScrollTop = ref.current.scrollTop;
-    const scrollingUp = (currentScrollTop < prevScrollTop);
-    if (scrollingUp) {
-      setAutoScroll(false);
+  const handleScroll = () => {
+    if (scrollHandlerTimer) {
+      clearTimeout(scrollHandlerTimer);
     }
-    setPrevScrollTop(currentScrollTop);
+    scrollHandlerTimer = setTimeout(() => {
+      const currentScrollTop = ref.current.scrollTop;
+      if (userInitiatedScroll) {
+        if (autoScroll) {
+          // If user has scrolled up, halt auto-scrolling.
+          const scrollingUp = (currentScrollTop < prevScrollTop);
+          if (scrollingUp) {
+            setAutoScroll(false);
+          }
+        } else {
+          // If user has scrolled back to the bottom, resume auto-scrolling.
+          const currentScrollOffset = ref.current.scrollHeight - currentScrollTop;
+          if (Math.abs(ref.current.offsetHeight - currentScrollOffset) <= scrollOffsetThreshold) {
+            setAutoScroll(true);
+          }
+        }
+      }
+      setPrevScrollTop(currentScrollTop);
+      setUserInitiatedScroll(true);
+    }, 10);
   };
 
   return (
@@ -38,7 +62,7 @@ function LogDisplay(props) {
       className="text-break"
       id="log-display"
       ref={ref}
-      onScroll={checkScrollDirection}
+      onScroll={handleScroll}
     >
       {
         props.logdata.map(([line, cls], idx) => (
