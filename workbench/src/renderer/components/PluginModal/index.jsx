@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
+import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import Spinner from 'react-bootstrap/Spinner';
@@ -15,20 +16,30 @@ export default function PluginModal(props) {
   const { updateInvestList } = props;
   const [showPluginModal, setShowPluginModal] = useState(false);
   const [url, setURL] = useState(undefined);
+  const [branch, setBranch] = useState(undefined);
+  const [path, setPath] = useState(undefined);
   const [err, setErr] = useState(undefined);
   const [pluginToRemove, setPluginToRemove] = useState(undefined);
   const [loading, setLoading] = useState(false);
   const [plugins, setPlugins] = useState({});
+  const [installFrom, setInstallFrom] = useState('Git URL');
 
   const handleModalClose = () => {
     setURL(undefined);
+    setBranch(undefined);
     setErr(false);
     setShowPluginModal(false);
   };
   const handleModalOpen = () => setShowPluginModal(true);
+
   const addPlugin = () => {
     setLoading(true);
-    ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, url).then((addPluginErr) => {
+    ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, {
+      installFrom: installFrom,
+      url: url,
+      branch: branch,
+      path: path,
+    }).then((addPluginErr) => {
       setLoading(false);
       updateInvestList();
       if (addPluginErr) {
@@ -61,20 +72,71 @@ export default function PluginModal(props) {
 
   const { t } = useTranslation();
 
+  let pluginFields;
+  if (installFrom === 'Git URL') {
+    pluginFields = (
+      <>
+        <Form.Row>
+          <Form.Group as={Col} xs={7} className="mb-1">
+            <Form.Label>Git URL</Form.Label>
+            <Form.Control
+              id="url"
+              type="text"
+              placeholder={t('https://github.com/foo/bar.git')}
+              onChange={(event) => setURL(event.currentTarget.value)}
+            />
+          </Form.Group>
+          <Form.Group as={Col} className="mb-1">
+            <Form.Label>Branch or ref</Form.Label>
+            <Form.Control
+              id="branch"
+              type="text"
+              placeholder={t('default')}
+              onChange={(event) => setBranch(event.currentTarget.value)}
+            />
+          </Form.Group>
+        </Form.Row>
+        <Form.Text className="text-muted mt-0">
+          {t('Default branch is used unless a branch or ref is specified')}
+        </Form.Text>
+      </>
+    );
+  } else {
+    pluginFields = (
+      <Form.Group className="px-0 mb-1">
+        <Form.Label>Local path</Form.Label>
+        <Form.Control
+          id="path"
+          type="text"
+          onChange={(event) => setPath(event.currentTarget.value)}
+        />
+        <Form.Text className="text-muted mt-0">
+          {t('Must be an absolute path')}
+        </Form.Text>
+      </Form.Group>
+    );
+  }
+
   let modalBody = (
     <Modal.Body>
       <Form>
         <Form.Group className="mb-3">
-          <Form.Label htmlFor="url">{t('Add a plugin')}</Form.Label>
-          <Form.Control
-            id="url"
-            type="text"
-            placeholder={t('Enter Git URL')}
-            onChange={(event) => setURL(event.currentTarget.value)}
-          />
-          <Form.Text className="text-muted">
-            {t('This may take several minutes')}
-          </Form.Text>
+          <Form.Label className="col-form-label-lg" htmlFor="url">{t('Add a plugin')}</Form.Label>
+          <Form.Group>
+            <Form.Row>
+              <Col>
+                <Form.Control
+                  as="select"
+                  onChange={(event) => setInstallFrom(event.target.value)}
+                  className="w-auto"
+                >
+                  <option value="Git URL">Install from Git URL</option>
+                  <option value="local path">Install from local path</option>
+                </Form.Control>
+              </Col>
+            </Form.Row>
+          </Form.Group>
+          {pluginFields}
           <Button
             disabled={loading}
             className="mt-2"
@@ -85,7 +147,7 @@ export default function PluginModal(props) {
         </Form.Group>
         <hr />
         <Form.Group className="mb-3">
-          <Form.Label htmlFor="plugin-select">{t('Remove a plugin')}</Form.Label>
+          <Form.Label className="col-form-label-lg" htmlFor="plugin-select">{t('Remove a plugin')}</Form.Label>
           <Form.Control
             id="plugin-select"
             as="select"
@@ -130,12 +192,15 @@ export default function PluginModal(props) {
         {t('Manage plugins')}
       </Button>
 
-      <Modal show={showPluginModal} onHide={handleModalClose}>
+      <Modal show={showPluginModal} onHide={handleModalClose} >
         <Modal.Header>
           <Modal.Title>{t('Manage plugins')}</Modal.Title>
           {loading && (
             <Spinner animation="border" role="status" className="m-2">
-              <span className="sr-only">Loading...</span>
+              <span className="sr-only">{t('Loading...')}</span>
+              <Form.Text className="text-muted">
+                {t('This may take several minutes')}
+              </Form.Text>
             </Spinner>
           )}
         </Modal.Header>
