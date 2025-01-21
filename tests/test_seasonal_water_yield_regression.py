@@ -1271,6 +1271,155 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(self.workspace_dir, 'target_aet_path.tif'),
             os.path.join(self.workspace_dir, 'target_precip_path.tif'))
 
+    def test_caculate_local_recharge(self):
+        """Test that `calculate_local_recharge` creates correct li,
+        li_avail, l_sum_avail, and aet rasters (intermediate data)"""
+        from natcap.invest.seasonal_water_yield import \
+            seasonal_water_yield_core
+
+        # set up tiny raster arrays to test
+        precip_array = numpy.array([
+            [10, 1, 5],
+            [100, 15, 70]], dtype=numpy.float32)
+        et0_array = numpy.array([
+            [5, 100, 1],
+            [200, 20, 100]], dtype=numpy.float32)
+        quickflow_array = numpy.array([
+            [0, 1, 0],
+            [0.61, 0.61, 1]], dtype=numpy.float32)
+        flow_dir_array = numpy.array([
+            [15, 25, 25],
+            [50, 50, 10]], dtype=numpy.float32)
+        kc_array = numpy.array([
+            [1, .75, 1],
+            [1, .4, 0]], dtype=numpy.float32)
+        stream_mask = numpy.array([
+            [0, 0, 0],
+            [0, 0, 0]], dtype=numpy.float32)
+
+        precip_path = os.path.join(self.workspace_dir, 'precip.tif')
+        et0_path = os.path.join(self.workspace_dir, 'et0.tif')
+        quickflow_path = os.path.join(self.workspace_dir, 'quickflow.tif')
+        flow_dir_path = os.path.join(self.workspace_dir, 'flow_dir.tif')
+        kc_path = os.path.join(self.workspace_dir, 'kc.tif')
+        stream_path = os.path.join(self.workspace_dir, 'stream.tif')
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        project_wkt = srs.ExportToWkt()
+
+        # write all the test arrays to raster files
+        for array, path in [(precip_array, precip_path),
+                            (et0_array, et0_path),
+                            (quickflow_array, quickflow_path),
+                            (flow_dir_array, flow_dir_path),
+                            (kc_array, kc_path),
+                            (stream_mask, stream_path)]:
+            pygeoprocessing.numpy_array_to_raster(
+                array, -999, (1, -1), (1180000, 690000), project_wkt, path)
+
+        # arbitrary values for alpha, beta, gamma
+        alpha = .6
+        beta = .4
+        gamma = .5
+        alpha_month_map = {i: alpha for i in range(1, 13)}
+
+        target_li_path = os.path.join(self.workspace_dir, 'target_li_path.tif')
+        target_li_avail_path = os.path.join(self.workspace_dir,
+                                            'target_li_avail_path.tif')
+        target_l_sum_avail_path = os.path.join(self.workspace_dir,
+                                               'target_l_sum_avail_path.tif')
+        target_aet_path = os.path.join(self.workspace_dir,
+                                       'target_aet_path.tif')
+
+        seasonal_water_yield_core.calculate_local_recharge(
+            [precip_path for i in range(12)], [et0_path for i in range(12)],
+            [quickflow_path for i in range(12)], flow_dir_path,
+            [kc_path for i in range(12)], alpha_month_map, beta,
+            gamma, stream_path, target_li_path, target_li_avail_path,
+            target_l_sum_avail_path, target_aet_path,
+            os.path.join(self.workspace_dir, 'target_precip_path.tif'))
+
+        li = pygeoprocessing.raster_to_numpy_array(target_li_path)
+        li_avail = pygeoprocessing.raster_to_numpy_array(target_li_avail_path)
+        l_sum_avail = pygeoprocessing.raster_to_numpy_array(target_l_sum_avail_path)
+        aet = pygeoprocessing.raster_to_numpy_array(target_aet_path)
+
+        # note: obtained these arrays by running `calculate_local_recharge`
+        expected_li = numpy.array([[60., -72., 73.915215],
+                                   [0, 76.68, 828.]])
+        expected_li_avail = numpy.array([[30., -72., 36.957607],
+                                         [0, 38.34, 414.]])
+        expected_l_sum_avail = numpy.array([[0, 25., -25.665003],
+                                            [0, 0, 38.34]])
+        expected_aet = numpy.array([[60., 72., -13.915211],
+                                    [1192.68, 96., 0.]])
+
+        # assert li is same as expected li from function
+        assert (numpy.allclose(li, expected_li, equal_nan=True))
+        assert (numpy.allclose(li_avail, expected_li_avail, equal_nan=True))
+        assert (numpy.allclose(l_sum_avail, expected_l_sum_avail, equal_nan=True))
+        assert (numpy.allclose(aet, expected_aet))
+
+    def test_route_baseflow_sum(self):
+        """Test `test_route_baseflow_sum`"""
+        from natcap.invest.seasonal_water_yield import \
+            seasonal_water_yield_core
+
+        # set up tiny raster arrays to test
+        flow_dir_mfd = numpy.array([
+            [1409286196, 1409286196, 1677721604],
+            [1678770180, 838861365, 1677721604]], dtype=numpy.float32)
+        l = numpy.array([
+            [18, 15, 12.5],
+            [2, 17, 8]], dtype=numpy.float32)
+        l_avail = numpy.array([
+            [15.6, 12, 11],
+            [1, 15, 6]], dtype=numpy.float32)
+        l_sum = numpy.array([
+            [29, 28, 19],
+            [2, 19, 99]], dtype=numpy.float32)
+        stream_mask = numpy.array([
+            [0, 1, 0],
+            [0, 0, 0]], dtype=numpy.int32)
+
+        flow_dir_mfd_path = os.path.join(self.workspace_dir, 'flow_dir_mfd.tif')
+        l_path = os.path.join(self.workspace_dir, 'l.tif')
+        l_avail_path = os.path.join(self.workspace_dir, 'l_avail.tif')
+        l_sum_path = os.path.join(self.workspace_dir, 'l_sum.tif')
+        stream_path = os.path.join(self.workspace_dir, 'stream.tif')
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        project_wkt = srs.ExportToWkt()
+
+        # write all the test arrays to raster files
+        for array, path in [(flow_dir_mfd, flow_dir_mfd_path),
+                            (l, l_path),
+                            (l_avail, l_avail_path),
+                            (l_sum, l_sum_path),
+                            (stream_mask, stream_path)]:
+            pygeoprocessing.numpy_array_to_raster(
+                array, None, (1, -1), (1180000, 690000), project_wkt, path)
+
+        target_b_path = os.path.join(self.workspace_dir, 'b.tif')
+        target_b_sum_path = os.path.join(self.workspace_dir, 'b_sum.tif')
+
+        seasonal_water_yield_core.route_baseflow_sum(flow_dir_mfd_path, l_path,
+                                                     l_avail_path, l_sum_path,
+                                                     stream_path, target_b_path,
+                                                     target_b_sum_path)
+
+        b = pygeoprocessing.raster_to_numpy_array(target_b_path)
+        b_sum = pygeoprocessing.raster_to_numpy_array(target_b_sum_path)
+
+        # note: obtained these arrays by running `calculate_local_recharge`
+        expected_b = numpy.array([[11.636364, 2.424242, 0], [0, 3.0909092, 0]])
+        expected_b_sum = numpy.array([[18.747475, 4.525252, 0], [0, 3.4545455, 0]])
+
+        assert numpy.allclose(b, expected_b, equal_nan=True)
+        assert numpy.allclose(b_sum, expected_b_sum, equal_nan=True)
+
 
 class SWYValidationTests(unittest.TestCase):
     """Tests for the SWY Model MODEL_SPEC and validation."""
