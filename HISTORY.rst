@@ -35,12 +35,12 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
 * General
     * Fixed an issue where a user's PROJ_DATA environment variable could
-    trigger a RuntimeError about a missing proj.db file.
+      trigger a RuntimeError about a missing proj.db file.
 
 3.14.3 (2024-12-19)
 -------------------
