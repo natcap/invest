@@ -16,17 +16,17 @@ export default function PluginModal(props) {
   const { updateInvestList } = props;
   const [showPluginModal, setShowPluginModal] = useState(false);
   const [url, setURL] = useState(undefined);
-  const [branch, setBranch] = useState(undefined);
+  const [revision, setRevision] = useState(undefined);
   const [path, setPath] = useState(undefined);
   const [err, setErr] = useState(undefined);
   const [pluginToRemove, setPluginToRemove] = useState(undefined);
   const [loading, setLoading] = useState(false);
   const [plugins, setPlugins] = useState({});
-  const [installFrom, setInstallFrom] = useState('Git URL');
+  const [installFrom, setInstallFrom] = useState('url');
 
   const handleModalClose = () => {
     setURL(undefined);
-    setBranch(undefined);
+    setRevision(undefined);
     setErr(false);
     setShowPluginModal(false);
   };
@@ -34,12 +34,12 @@ export default function PluginModal(props) {
 
   const addPlugin = () => {
     setLoading(true);
-    ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, {
-      installFrom: installFrom,
-      url: url,
-      branch: branch,
-      path: path,
-    }).then((addPluginErr) => {
+    ipcRenderer.invoke(
+      ipcMainChannels.ADD_PLUGIN,
+      installFrom === 'url' ? url : undefined, // url
+      installFrom === 'url' ? revision : undefined, // revision
+      installFrom === 'path' ? path : undefined // path
+    ).then((addPluginErr) => {
       setLoading(false);
       updateInvestList();
       if (addPluginErr) {
@@ -73,7 +73,7 @@ export default function PluginModal(props) {
   const { t } = useTranslation();
 
   let pluginFields;
-  if (installFrom === 'Git URL') {
+  if (installFrom === 'url') {
     pluginFields = (
       <>
         <Form.Row>
@@ -87,17 +87,17 @@ export default function PluginModal(props) {
             />
           </Form.Group>
           <Form.Group as={Col} className="mb-1">
-            <Form.Label>Branch or ref</Form.Label>
+            <Form.Label>Branch, tag, or commit</Form.Label>
             <Form.Control
               id="branch"
               type="text"
               placeholder={t('default')}
-              onChange={(event) => setBranch(event.currentTarget.value)}
+              onChange={(event) => setRevision(event.currentTarget.value)}
             />
           </Form.Group>
         </Form.Row>
         <Form.Text className="text-muted mt-0">
-          {t('Default branch is used unless a branch or ref is specified')}
+          {t('Default branch is used unless otherwise specified')}
         </Form.Text>
       </>
     );
@@ -130,8 +130,8 @@ export default function PluginModal(props) {
                   onChange={(event) => setInstallFrom(event.target.value)}
                   className="w-auto"
                 >
-                  <option value="Git URL">Install from Git URL</option>
-                  <option value="local path">Install from local path</option>
+                  <option value="URL">Install from git URL</option>
+                  <option value="path">Install from local path</option>
                 </Form.Control>
               </Col>
             </Form.Row>
