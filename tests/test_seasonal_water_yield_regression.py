@@ -230,7 +230,7 @@ def make_biophysical_csv(biophysical_csv_path):
     """
     with open(biophysical_csv_path, 'w') as open_table:
         open_table.write(
-            'lucode,Description,cn_a,CN_B,CN_C,CN_D,Kc_1,Kc_2,Kc_3,Kc_4,')
+            'lucode,Description,CN_A,CN_B,CN_C,CN_D,Kc_1,Kc_2,Kc_3,Kc_4,')
         open_table.write('Kc_5,Kc_6,Kc_7,Kc_8,Kc_9,Kc_10,Kc_11,Kc_12\n')
 
         open_table.write('0,"lulc 1",50,50,0,0,0.7,0.7,0.7,0.7,0.7,0.7,0.7,')
@@ -1256,7 +1256,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                             (stream_mask, stream_path)]:
             # define a nodata value for intermediate outputs
             pygeoprocessing.numpy_array_to_raster(
-                array, -9999, (1, -1), (1180000, 690000), project_wkt, path)
+                array, -1, (1, -1), (1180000, 690000), project_wkt, path)
 
         # arbitrary values for alpha, beta, gamma, etc.
         # not verifying the output, just making sure there are no errors
