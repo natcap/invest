@@ -144,6 +144,9 @@ export default function PluginModal(props) {
           >
             {t('Add')}
           </Button>
+          <Form.Text className="text-muted">
+            {t('This may take several minutes')}
+          </Form.Text>
         </Form.Group>
         <hr />
         <Form.Group className="mb-3">
@@ -192,16 +195,15 @@ export default function PluginModal(props) {
         {t('Manage plugins')}
       </Button>
 
-      <Modal show={showPluginModal} onHide={handleModalClose} >
+      <Modal show={showPluginModal} onHide={handleModalClose}>
         <Modal.Header>
           <Modal.Title>{t('Manage plugins')}</Modal.Title>
           {loading && (
-            <Spinner animation="border" role="status" className="m-2">
-              <span className="sr-only">{t('Loading...')}</span>
-              <Form.Text className="text-muted">
-                {t('This may take several minutes')}
-              </Form.Text>
-            </Spinner>
+            <Form.Group>
+              <Spinner animation="border" role="status" className="m-2">
+                <span className="sr-only">{t('Loading...')}</span>
+              </Spinner>
+            </Form.Group>
           )}
         </Modal.Header>
         {modalBody}

@@ -90,6 +90,7 @@ export function setupAddPlugin() {
           fs.rmSync(tmpPluginDir, { recursive: true, force: true });
         } else { // install from local path
           logger.info(`adding plugin from ${path}`);
+          installString = path;
           // Read in the plugin's pyproject.toml, then delete it
           pyprojectTOML = toml.parse(fs.readFileSync(
             upath.join(path, 'pyproject.toml')
