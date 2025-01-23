@@ -18,6 +18,7 @@ import { withTranslation } from 'react-i18next';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import { getSupportedLanguages } from '../../server_requests';
+import MetadataForm from './MetadataForm';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -288,6 +289,21 @@ class SettingsModal extends React.Component {
               {t('Clear Recent Jobs')}
             </Button>
             <span>{t('no invest workspaces will be deleted')}</span>
+            <hr />
+            <Accordion>
+              <Accordion.Toggle
+                as={Button}
+                variant="secondary-outline"
+                eventKey="0"
+                className="pt-0"
+              >
+                <BsChevronExpand className="mx-1" />
+                <span><u>{t('Configure Metadata')}</u></span>
+              </Accordion.Toggle>
+              <Accordion.Collapse eventKey="0" className="pr-1">
+                <MetadataForm />
+              </Accordion.Collapse>
+            </Accordion>
           </Modal.Body>
         </Modal>
         {
