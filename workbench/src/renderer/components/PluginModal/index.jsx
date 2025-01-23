@@ -82,7 +82,7 @@ export default function PluginModal(props) {
             <Form.Control
               id="url"
               type="text"
-              placeholder={t('https://github.com/foo/bar.git')}
+              placeholder="https://github.com/foo/bar.git"
               onChange={(event) => setURL(event.currentTarget.value)}
             />
           </Form.Group>
@@ -104,15 +104,15 @@ export default function PluginModal(props) {
   } else {
     pluginFields = (
       <Form.Group className="px-0 mb-1">
-        <Form.Label>Local path</Form.Label>
+        <Form.Label>Local absolute path</Form.Label>
         <Form.Control
           id="path"
           type="text"
+          placeholder={
+            window.Workbench.OS === 'darwin' ? '/Users/natcap/foo/bar/' : 'C:\\Documents\\foo\\bar\\'
+          }
           onChange={(event) => setPath(event.currentTarget.value)}
         />
-        <Form.Text className="text-muted mt-0">
-          {t('Must be an absolute path')}
-        </Form.Text>
       </Form.Group>
     );
   }
@@ -130,7 +130,7 @@ export default function PluginModal(props) {
                   onChange={(event) => setInstallFrom(event.target.value)}
                   className="w-auto"
                 >
-                  <option value="URL">Install from git URL</option>
+                  <option value="url">Install from git URL</option>
                   <option value="path">Install from local path</option>
                 </Form.Control>
               </Col>
