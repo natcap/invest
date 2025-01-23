@@ -35,9 +35,13 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* Urban Cooling
+    * Updated the documentation for the ``mean_t_air`` attribute of the
+      ``buildings_with_stats.shp`` output to clarify how the value is
+      calculated.  https://github.com/natcap/invest/issues/1746
 
 3.14.3 (2024-12-19)
 -------------------
