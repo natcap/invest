@@ -1,11 +1,19 @@
 import importlib
 import json
+import logging
 import os
+import pprint
 
+import geometamaker
+import natcap.invest
 import pint
 
+from natcap.invest import utils
 from . import gettext
 from .unit_registry import u
+
+
+LOGGER = logging.getLogger(__name__)
 
 # Specs for common arg types ##################################################
 WORKSPACE = {
@@ -585,3 +593,91 @@ def describe_arg_from_name(module_name, *arg_keys):
     anchor_name = '-'.join(arg_keys).replace('_', '-')
     rst_description = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
     return f'.. _{anchor_name}:\n\n{rst_description}'
+
+
+def write_metadata_file(datasource_path, spec, lineage_statement):
+    """Write a metadata sidecar file for an invest output dataset.
+
+    Args:
+        datasource_path (str) - filepath to the invest output
+        spec (dict) -  the invest specification for ``datasource_path``
+        lineage_statement (str) - string to describe origin of the dataset.
+
+    Returns:
+        None
+
+    """
+    resource = geometamaker.describe(datasource_path)
+    resource.set_lineage(lineage_statement)
+
+    if 'about' in spec:
+        resource.set_description(spec['about'])
+    attr_spec = None
+    if 'columns' in spec:
+        attr_spec = spec['columns']
+    if 'fields' in spec:
+        attr_spec = spec['fields']
+    if attr_spec:
+        for key, value in attr_spec.items():
+            about = value['about'] if 'about' in value else ''
+            if 'units' in value:
+                units = format_unit(value['units'])
+            else:
+                units = ''
+            try:
+                resource.set_field_description(
+                    key, description=about, units=units)
+            except KeyError as error:
+                # fields that are in the spec but missing
+                # from model results because they are conditional.
+                LOGGER.debug(error)
+    if 'bands' in spec:
+        for idx, value in spec['bands'].items():
+            try:
+                units = format_unit(spec['bands'][idx]['units'])
+            except KeyError:
+                units = ''
+            resource.set_band_description(idx, units=units)
+
+    resource.write()
+
+
+def generate_metadata(model_module, args_dict):
+    """Create metadata for all items in an invest model output workspace.
+
+    Args:
+        model_module (object) - the natcap.invest module containing
+            the MODEL_SPEC attribute
+        args_dict (dict) - the arguments dictionary passed to the
+            model's ``execute`` function.
+
+    Returns:
+        None
+
+    """
+    file_suffix = utils.make_suffix_string(args_dict, 'results_suffix')
+    formatted_args = pprint.pformat(args_dict)
+    lineage_statement = (
+        f'Created by {model_module.__name__}.execute(\n{formatted_args})\n'
+        f'Version {natcap.invest.__version__}')
+
+    def _walk_spec(output_spec, workspace):
+        for filename, spec_data in output_spec.items():
+            if 'type' in spec_data and spec_data['type'] == 'directory':
+                if 'taskgraph.db' in spec_data['contents']:
+                    continue
+                _walk_spec(
+                    spec_data['contents'],
+                    os.path.join(workspace, filename))
+            else:
+                pre, post = os.path.splitext(filename)
+                full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
+                if os.path.exists(full_path):
+                    try:
+                        write_metadata_file(
+                            full_path, spec_data, lineage_statement)
+                    except ValueError as error:
+                        # Some unsupported file formats, e.g. html
+                        LOGGER.warning(error)
+
+    _walk_spec(model_module.MODEL_SPEC['outputs'], args_dict['workspace_dir'])
