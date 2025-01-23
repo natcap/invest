@@ -38,6 +38,23 @@ jobs:
         with:
           token: ${{ secrets.AUTORELEASE_BOT_PAT }}
 
+      - name: Install dependencies
+        if: ${{ env.RUN }}
+        run: pip install rst2html5 setuptools_scm
+
+      - name: Get current version number (scheduled runs only)
+        if: github.event_name == 'schedule'
+        run: echo "CURRENT_VERSION=$(python -m setuptools_scm)" > $GITHUB_ENV
+
+      - name: Get next bugfix version number (scheduled runs only)
+        if: github.event_name == 'schedule'
+        shell: python
+        run: |
+          import os
+          major, minor, bugfix, *_ = os.environ['CURRENT_VERSION'].split('.')
+          with open(os.environ['GITHUB_ENV']) as env_file:
+            env_file.write(f'VERSION={major}.{minor}.{bugfix + 1}')
+
       - name: Configure git
         if: ${{ env.RUN }}
         run: |
@@ -72,10 +89,6 @@ jobs:
           perl -0777 -i -pe \
               "s/Unreleased Changes\n------------------/..\n  Unreleased Changes\n  ------------------\n\n${HEADER}\n${UNDERLINE}/g" \
               HISTORY.rst
-
-      - name: Install dependencies
-        if: ${{ env.RUN }}
-        run: pip install rst2html5
 
       - name: Generate changelog.html
         if: ${{ env.RUN }}
