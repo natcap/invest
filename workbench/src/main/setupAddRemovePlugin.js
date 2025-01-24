@@ -56,7 +56,7 @@ export function setupAddPlugin() {
       try {
         logger.info('adding plugin at', pluginURL);
         const micromamba = settingsStore.get('micromamba');
-        const rootPrefix = upath.join(process.resourcesPath, 'micromamba_envs')
+        const rootPrefix = upath.join(process.resourcesPath, 'micromamba_envs');
         const baseEnvPrefix = upath.join(rootPrefix, 'invest_base');
         // Create invest_base environment, if it doesn't already exist
         // The purpose of this environment is just to ensure that git is available
@@ -71,7 +71,7 @@ export function setupAddPlugin() {
         await spawnWithLogging(
           micromamba,
           ['run', '--prefix', `"${baseEnvPrefix}"`,
-           'git', 'clone', '--depth', '1', '--no-checkout', pluginURL, tmpPluginDir]
+            'git', 'clone', '--depth', '1', '--no-checkout', pluginURL, tmpPluginDir]
         );
         await spawnWithLogging(
           micromamba,
@@ -92,11 +92,13 @@ export function setupAddPlugin() {
 
         // Create a conda env containing the plugin and its dependencies
         const envName = `invest_plugin_${pluginID}`;
-        const pluginEnvPrefix = upath.join(rootPrefix, envName)
+        const pluginEnvPrefix = upath.join(rootPrefix, envName);
         const createCommand = [
           'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
-          '-c', 'conda-forge']; // include dependencies read from pyproject.toml
-        condaDeps.forEach((dep) => createCommand.push(`"${dep}"`))
+          '-c', 'conda-forge', 'python'];
+        if (condaDeps) { // include dependencies read from pyproject.toml
+          condaDeps.forEach((dep) => createCommand.push(`"${dep}"`));
+        }
         await spawnWithLogging(micromamba, createCommand);
         logger.info('created micromamba env for plugin');
         await spawnWithLogging(
