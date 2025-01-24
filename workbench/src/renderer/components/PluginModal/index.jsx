@@ -76,26 +76,26 @@ export default function PluginModal(props) {
   if (installFrom === 'url') {
     pluginFields = (
       <Form.Row>
-        <Form.Group as={Col} xs={7} className="mb-1">
-          <Form.Label htmlFor="url">Git URL</Form.Label>
+        <Form.Group as={Col} xs={7}>
+          <Form.Label htmlFor="url">{t('Git URL')}</Form.Label>
           <Form.Control
             id="url"
             type="text"
             placeholder="https://github.com/owner/repo.git"
             onChange={(event) => setURL(event.currentTarget.value)}
           />
-          <Form.Text className="text-muted mt-0 fst-italic">
+          <Form.Text className="text-muted">
             <i>{t('Default branch used unless otherwise specified')}</i>
           </Form.Text>
         </Form.Group>
-        <Form.Group as={Col} className="mb-1">
-          <Form.Label htmlFor="branch">Branch, tag, or commit</Form.Label>
+        <Form.Group as={Col}>
+          <Form.Label htmlFor="branch">{t('Branch, tag, or commit')}</Form.Label>
           <Form.Control
             id="branch"
             type="text"
             onChange={(event) => setRevision(event.currentTarget.value)}
           />
-          <Form.Text className="text-muted mt-0">
+          <Form.Text className="text-muted">
             <i>{t('Optional')}</i>
           </Form.Text>
         </Form.Group>
@@ -103,8 +103,8 @@ export default function PluginModal(props) {
     );
   } else {
     pluginFields = (
-      <Form.Group className="px-0 mb-1">
-        <Form.Label htmlFor="path">Local absolute path</Form.Label>
+      <Form.Group>
+        <Form.Label htmlFor="path">{t('Local absolute path')}</Form.Label>
         <Form.Control
           id="path"
           type="text"
@@ -120,26 +120,23 @@ export default function PluginModal(props) {
   let modalBody = (
     <Modal.Body>
       <Form>
-        <Form.Group className="mb-3">
+        <Form.Group>
           <h5 className="mb-3">{t('Add a plugin')}</h5>
           <Form.Group>
-            <Form.Row>
-              <Form.Label htmlFor="installFrom" className="mt-2 mx-1">{t('Install from')}</Form.Label>
-              <Form.Control
-                id="installFrom"
-                as="select"
-                onChange={(event) => setInstallFrom(event.target.value)}
-                className="w-auto"
-              >
-                <option value="url">{t('git URL')}</option>
-                <option value="path">{t('local path')}</option>
-              </Form.Control>
-            </Form.Row>
+            <Form.Label htmlFor="installFrom">{t('Install from')}</Form.Label>
+            <Form.Control
+              id="installFrom"
+              as="select"
+              onChange={(event) => setInstallFrom(event.target.value)}
+              className="w-auto"
+            >
+              <option value="url">{t('git URL')}</option>
+              <option value="path">{t('local path')}</option>
+            </Form.Control>
           </Form.Group>
           {pluginFields}
           <Button
             disabled={loading}
-            className="mt-2"
             onClick={addPlugin}
           >
             {t('Add')}
@@ -149,10 +146,11 @@ export default function PluginModal(props) {
           </Form.Text>
         </Form.Group>
         <hr />
-        <Form.Group className="mb-3">
+        <Form.Group>
           <h5 className="mb-3">{t('Remove a plugin')}</h5>
+          <Form.Label htmlFor="selectPluginToRemove">{t('Plugin name')}</Form.Label>
           <Form.Control
-            id="plugin-select"
+            id="selectPluginToRemove"
             as="select"
             value={pluginToRemove}
             onChange={(event) => setPluginToRemove(event.currentTarget.value)}
@@ -172,7 +170,7 @@ export default function PluginModal(props) {
           </Form.Control>
           <Button
             disabled={loading || !Object.keys(plugins).length}
-            className="mt-2"
+            className="mt-3"
             onClick={removePlugin}
           >
             {t('Remove')}
