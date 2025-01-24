@@ -91,7 +91,7 @@ export function setupAddPlugin() {
         } else { // install from local path
           logger.info(`adding plugin from ${path}`);
           installString = path;
-          // Read in the plugin's pyproject.toml, then delete it
+          // Read in the plugin's pyproject.toml
           pyprojectTOML = toml.parse(fs.readFileSync(
             upath.join(path, 'pyproject.toml')
           ).toString());
