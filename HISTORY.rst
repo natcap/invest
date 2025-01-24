@@ -42,6 +42,10 @@ Unreleased Changes
     * Updated the documentation for the ``mean_t_air`` attribute of the
       ``buildings_with_stats.shp`` output to clarify how the value is
       calculated.  https://github.com/natcap/invest/issues/1746
+* Wind Energy
+    * Fixed a bug that could cause the Workbench to crash when running the Wind
+      Energy model with ``Taskgraph`` logging set to ``DEBUG`` (`InVEST #1497
+      <https://github.com/natcap/invest/issues/1497>`_).
 
 3.14.3 (2024-12-19)
 -------------------
