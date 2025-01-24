@@ -77,7 +77,7 @@ export default function PluginModal(props) {
     pluginFields = (
       <Form.Row>
         <Form.Group as={Col} xs={7} className="mb-1">
-          <Form.Label>Git URL</Form.Label>
+          <Form.Label htmlFor="url">Git URL</Form.Label>
           <Form.Control
             id="url"
             type="text"
@@ -89,7 +89,7 @@ export default function PluginModal(props) {
           </Form.Text>
         </Form.Group>
         <Form.Group as={Col} className="mb-1">
-          <Form.Label>Branch, tag, or commit</Form.Label>
+          <Form.Label htmlFor="branch">Branch, tag, or commit</Form.Label>
           <Form.Control
             id="branch"
             type="text"
@@ -104,7 +104,7 @@ export default function PluginModal(props) {
   } else {
     pluginFields = (
       <Form.Group className="px-0 mb-1">
-        <Form.Label>Local absolute path</Form.Label>
+        <Form.Label htmlFor="path">Local absolute path</Form.Label>
         <Form.Control
           id="path"
           type="text"
@@ -121,19 +121,19 @@ export default function PluginModal(props) {
     <Modal.Body>
       <Form>
         <Form.Group className="mb-3">
-          <Form.Label className="col-form-label-lg" htmlFor="url">{t('Add a plugin')}</Form.Label>
+          <h5 className="mb-3">{t('Add a plugin')}</h5>
           <Form.Group>
             <Form.Row>
-              <Col>
-                <Form.Control
-                  as="select"
-                  onChange={(event) => setInstallFrom(event.target.value)}
-                  className="w-auto"
-                >
-                  <option value="url">Install from git URL</option>
-                  <option value="path">Install from local path</option>
-                </Form.Control>
-              </Col>
+              <Form.Label htmlFor="installFrom" className="mt-2 mx-1">{t('Install from')}</Form.Label>
+              <Form.Control
+                id="installFrom"
+                as="select"
+                onChange={(event) => setInstallFrom(event.target.value)}
+                className="w-auto"
+              >
+                <option value="url">{t('git URL')}</option>
+                <option value="path">{t('local path')}</option>
+              </Form.Control>
             </Form.Row>
           </Form.Group>
           {pluginFields}
@@ -150,7 +150,7 @@ export default function PluginModal(props) {
         </Form.Group>
         <hr />
         <Form.Group className="mb-3">
-          <Form.Label className="col-form-label-lg" htmlFor="plugin-select">{t('Remove a plugin')}</Form.Label>
+          <h5 className="mb-3">{t('Remove a plugin')}</h5>
           <Form.Control
             id="plugin-select"
             as="select"
