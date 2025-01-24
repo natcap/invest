@@ -75,31 +75,31 @@ export default function PluginModal(props) {
   let pluginFields;
   if (installFrom === 'url') {
     pluginFields = (
-      <>
-        <Form.Row>
-          <Form.Group as={Col} xs={7} className="mb-1">
-            <Form.Label>Git URL</Form.Label>
-            <Form.Control
-              id="url"
-              type="text"
-              placeholder="https://github.com/foo/bar.git"
-              onChange={(event) => setURL(event.currentTarget.value)}
-            />
-          </Form.Group>
-          <Form.Group as={Col} className="mb-1">
-            <Form.Label>Branch, tag, or commit</Form.Label>
-            <Form.Control
-              id="branch"
-              type="text"
-              placeholder={t('default')}
-              onChange={(event) => setRevision(event.currentTarget.value)}
-            />
-          </Form.Group>
-        </Form.Row>
-        <Form.Text className="text-muted mt-0">
-          {t('Default branch is used unless otherwise specified')}
-        </Form.Text>
-      </>
+      <Form.Row>
+        <Form.Group as={Col} xs={7} className="mb-1">
+          <Form.Label>Git URL</Form.Label>
+          <Form.Control
+            id="url"
+            type="text"
+            placeholder="https://github.com/owner/repo.git"
+            onChange={(event) => setURL(event.currentTarget.value)}
+          />
+          <Form.Text className="text-muted mt-0 fst-italic">
+            <i>{t('Default branch used unless otherwise specified')}</i>
+          </Form.Text>
+        </Form.Group>
+        <Form.Group as={Col} className="mb-1">
+          <Form.Label>Branch, tag, or commit</Form.Label>
+          <Form.Control
+            id="branch"
+            type="text"
+            onChange={(event) => setRevision(event.currentTarget.value)}
+          />
+          <Form.Text className="text-muted mt-0">
+            <i>{t('Optional')}</i>
+          </Form.Text>
+        </Form.Group>
+      </Form.Row>
     );
   } else {
     pluginFields = (
@@ -108,9 +108,9 @@ export default function PluginModal(props) {
         <Form.Control
           id="path"
           type="text"
-          placeholder={
-            window.Workbench.OS === 'darwin' ? '/Users/natcap/foo/bar/' : 'C:\\Documents\\foo\\bar\\'
-          }
+          placeholder={window.Workbench.OS === 'darwin'
+            ? '/Users/username/path/to/plugin/'
+            : 'C:\\Documents\\path\\to\\plugin\\'}
           onChange={(event) => setPath(event.currentTarget.value)}
         />
       </Form.Group>
@@ -195,7 +195,7 @@ export default function PluginModal(props) {
         {t('Manage plugins')}
       </Button>
 
-      <Modal show={showPluginModal} onHide={handleModalClose}>
+      <Modal show={showPluginModal} onHide={handleModalClose} contentClassName="plugin-modal">
         <Modal.Header>
           <Modal.Title>{t('Manage plugins')}</Modal.Title>
           {loading && (
