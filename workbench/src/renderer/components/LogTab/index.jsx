@@ -15,7 +15,11 @@ function LogDisplay(props) {
 
   const [autoScroll, setAutoScroll] = useState(true);
   const [prevScrollTop, setPrevScrollTop] = useState(0);
+
+  // A scroll event doesn't tell us whether it was initiated by a user or by code,
+  // so we assume all scroll events are user-initiated unless otherwise specified.
   const [userInitiatedScroll, setUserInitiatedScroll] = useState(true);
+
   let scrollHandlerTimer;
 
   // `scrollOffsetThreshold` is used to determine when user has scrolled to bottom of window.
@@ -26,11 +30,16 @@ function LogDisplay(props) {
 
   useEffect(() => {
     if (autoScroll) {
+      // Setting `ref.current.scrollTop` will fire a scroll event, which will
+      // result in a call to `handleScroll`. To avoid unnecessary operations in
+      // `handleScroll`, we flag the next scroll event as _not_ user-initiated.
       setUserInitiatedScroll(false);
       ref.current.scrollTop = ref.current.scrollHeight;
     }
   }, [props.logdata]);
 
+  // Check scroll direction or position IFF scroll event was user-initiated.
+  // Always update `prevScrollTop` and reset `userInitiatedScroll` to `true`.
   const handleScroll = () => {
     if (scrollHandlerTimer) {
       clearTimeout(scrollHandlerTimer);
