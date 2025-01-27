@@ -4,7 +4,6 @@ import codecs
 import logging
 import os
 import time
-from functools import reduce
 
 from osgeo import gdal
 import numpy
@@ -154,7 +153,7 @@ MODEL_SPEC = {
             "about": gettext(
                 "The calendar year of the future scenario depicted in the "
                 "future LULC map. Required if Run Valuation model is selected."),
-            "name": f"future LULC year"
+            "name": gettext("future LULC year")
         },
         "do_valuation": {
             "type": "boolean",
@@ -296,6 +295,7 @@ _TMP_BASE_FILES = {
 
 # -1.0 since carbon stocks are 0 or greater
 _CARBON_NODATA = -1.0
+
 
 def execute(args):
     """Carbon.
@@ -548,10 +548,8 @@ def _generate_carbon_map(
     Returns:
         None.
     """
-    lulc_info = pygeoprocessing.get_raster_info(lulc_path)
-    pixel_area = abs(numpy.prod(lulc_info['pixel_size']))
     carbon_stock_by_type = dict([
-        (lulcid, stock * pixel_area / 10**4)
+        (lulcid, stock)
         for lulcid, stock in carbon_pool_by_type.items()])
 
     reclass_error_details = {
@@ -675,11 +673,17 @@ def _generate_report(raster_file_set, model_args, file_registry):
 
         for raster_uri, description, units in report:
             if raster_uri in raster_file_set:
-                summary_stat = _accumulate_totals(raster_uri)
+                total = _accumulate_totals(raster_uri)
+                raster_info = pygeoprocessing.get_raster_info(raster_uri)
+                pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+                # Since each pixel value is in Mg/ha, ``total`` is in (Mg/ha * px) = Mg•px/ha.
+                # Adjusted sum = ([total] Mg•px/ha) * ([pixel_area] m^2 / 1 px) * (1 ha / 10000 m^2) = Mg.
+                summary_stat = total * pixel_area / 10000
                 report_doc.write(
-                    '<tr><td>%s</td><td class="number">%.2f</td><td>%s</td>'
-                    '<td>%s</td></tr>' % (
-                        description, summary_stat, units, raster_uri))
+                    '<tr><td>%s</td><td class="number" data-summary-stat="%s">'
+                    '%.2f</td><td>%s</td><td>%s</td></tr>' % (
+                        description, description, summary_stat, units,
+                        raster_uri))
         report_doc.write('</body></html>')
 
 
