@@ -185,6 +185,7 @@ class SettingsModal extends React.Component {
                 </Form.Group>
               ) : <React.Fragment />
             }
+            <hr />
             <Form.Group as={Row}>
               <Form.Label column sm="6" htmlFor="logging-select">
                 {t('Logging threshold')}
@@ -293,12 +294,12 @@ class SettingsModal extends React.Component {
             <Accordion>
               <Accordion.Toggle
                 as={Button}
-                variant="secondary-outline"
+                variant="secondary"
                 eventKey="0"
-                className="pt-0"
+                className="mr-2 w-50"
               >
-                <BsChevronExpand className="mx-1" />
                 <span><u>{t('Configure Metadata')}</u></span>
+                <BsChevronExpand className="mx-1" />
               </Accordion.Toggle>
               <Accordion.Collapse eventKey="0" className="pr-1">
                 <MetadataForm />
