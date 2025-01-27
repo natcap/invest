@@ -35,7 +35,6 @@ General Information
 Dependencies
 ------------
 
-Run ``make check`` to test if all required dependencies are installed on your system.
 OS-specific installation instructions are found either online at
 http://invest.readthedocs.io/en/latest/installing.html or locally at ``doc/api-docs/installing.rst``.
 
@@ -57,30 +56,50 @@ Or on Windows, use the following instead from a CMD prompt::
     > make env
     > .\env\bin\activate
 
-This makefile target is included for convenience ... you may of course choose to
-manage your own virtual environment.  ``requirements.txt``,
-``requirements-dev.txt`` and ``requirements-docs.txt`` list the python
-dependencies needed.
+This makefile target is included for convenience. It uses ``conda`` and installs packages from ``conda-forge``.
+It also uses the `-p` flag with `conda create`, creating a `./env` folder containing the environment.
 
-Using a different environment name
-""""""""""""""""""""""""""""""""""
-If you prefer a different name for your environment, you may pass the environment name as
+Using a different environment folder name
+"""""""""""""""""""""""""""""""""""""""""
+If you prefer a different path for your environment, you may pass the environment path as
 a parameter to make::
 
     $ make ENV=myEnv env
 
-You could then activate the environment created at ``myEnv``.
+You could then activate the environment created at ``./myEnv``.
 
 
 Using a different environment management tool
 """""""""""""""""""""""""""""""""""""""""""""
-The InVEST Makefile uses ``virtualenv`` to set up an environment, but this is
-not the only `environment management tool out there
-<https://packaging.python.org/tutorials/installing-packages/#creating-virtual-environments>`_.
-You may elect to manage your virtual environment a different way, independent
-of ``make env``.  The only requirement for the build process is that the required
-tools are available on your PATH and the required python packages can be imported.
+You may of course choose to manage your own virtual environment without using the Makefile.
 
+We suggest using ``conda`` or ``mamba`` and ``conda-forge``.
+
+``requirements.txt``, ``requirements-dev.txt`` and ``requirements-docs.txt`` list the python
+dependencies needed.
+
+Installing ``natcap.invest`` from local source code
+"""""""""""""""""""""""""""""""""""""""""""""""""""
+From an activated virtual environment, it's safest to uninstall any existing installation
+and then install `natcap.invest`::
+
+    $ pip uninstall natcap.invest
+    $ make install
+
+In practice, it can be convenient to use an "editable install" instead to avoid needing
+to uninstall & re-install after making changes to source code::
+
+   $ pip install -e .
+
+Note that with an editable install any changes to non-Python (Cython, C++) files will
+require compilation using one of the above installation methods.
+
+*The Workbench is not part of the* ``natcap.invest`` *Python package. See*
+``workbench/readme.md`` *for developer details.*
+
+A successful ``natcap.invest`` installation will include the InVEST CLI::
+
+    $ invest list
 
 Building InVEST Distributions
 -----------------------------
@@ -145,6 +164,13 @@ To build the user's guide::
 This will build HTML and PDF documentation, writing them to ``dist/userguide``
 and ``dist/InVEST_*_Documentation.pdf``, respectively.
 
+The User's Guide is maintained in a separate git repository. InVEST will build
+the User's Guide with the commit defined in the ``Makefile``::
+
+   GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
+   GIT_UG_REPO_PATH            := doc/users-guide
+   GIT_UG_REPO_REV             := f203ec069f9f03560c9a85b268e67ebb6b994953
+
 
 API Documentation
 +++++++++++++++++
@@ -168,22 +194,12 @@ build zip archives of the sample data::
 
 This will write the data zipfiles to ``dist/data``. ``git`` command is needed.
 
-Single archive of sample data
-+++++++++++++++++++++++++++++
+Sample data is tracked in a ``git-lfs`` repo and will be packaged based on the commit
+defined in the ``Makefile``::
 
-For trainings, it is especially convenient to distribute all sample data as a
-single zip archive.  As an added bonus, this single zip archive can be provided
-to the InVEST installer for Windows as either the 'Advanced' input on the front
-page of the installer, or by a CLI flag, thus preventing the installer from
-downloading datasets from the internet.  See
-``installer/windows/invest_installer.nsi`` for more details.  To build a single
-archive of all InVEST sample data::
-
-    $ make sampledata_single
-
-This will write the single sampledata archive to
-``dist/InVEST_*_sample_data.zip``.
-
+   GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
+   GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
+   GIT_SAMPLE_DATA_REPO_REV    := 0f8b41557753dad3670ba8220f41650b51435a93
 
 Tests
 -----
@@ -196,6 +212,16 @@ Model tests
 To run tests on the suite of Ecosystem Service models in InVEST::
 
     $ make test
+
+Tests depend on test data that is tracked in a ``git-lfs`` repo defined in the ``Makefile``::
+
+   GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
+   GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
+   GIT_TEST_DATA_REPO_REV      := 324abde73e1d770ad75921466ecafd1ec6297752
+
+Test data (and Sample Data) can be retrieved using::
+
+   $ make fetch
 
 
 Changing how GNU make runs tests

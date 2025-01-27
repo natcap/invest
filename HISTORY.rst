@@ -35,8 +35,20 @@
 
 .. :changelog:
 
+
 Unreleased Changes
 ------------------
+* Urban Cooling
+    * Updated the documentation for the ``mean_t_air`` attribute of the
+      ``buildings_with_stats.shp`` output to clarify how the value is
+      calculated.  https://github.com/natcap/invest/issues/1746
+* Wind Energy
+    * Fixed a bug that could cause the Workbench to crash when running the Wind
+      Energy model with ``Taskgraph`` logging set to ``DEBUG`` (`InVEST #1497
+      <https://github.com/natcap/invest/issues/1497>`_).
+
+3.14.3 (2024-12-19)
+-------------------
 * General
     * InVEST has been updated to build against numpy 2.
       https://github.com/natcap/invest/issues/1641
@@ -51,6 +63,11 @@ Unreleased Changes
     * Updated translations for Spanish and Chinese
     * natcap.invest now works with (and requires) ``gdal.UseExceptions``. A
       ``FutureWarning`` is raised on import if GDAL exceptions are not enabled.
+    * Fixed an issue on Windows where GDAL fails to find its DLLs due to
+      an interfering GDAL installation on the PATH, such as from anaconda.
+      https://github.com/natcap/invest/issues/1643
+    * Improved error handling of NA values in raster reclassification to provide
+      a more descriptive message.
 * Workbench
     * Several small updates to the model input form UI to improve usability
       and visual consistency (https://github.com/natcap/invest/issues/912).
@@ -78,6 +95,8 @@ Unreleased Changes
       (https://github.com/natcap/invest/issues/1615).
     * Rarity values are now output in CSV format (as well as in raster format)
       (https://github.com/natcap/invest/issues/721).
+    * Improved error handling when there is a missing LULC value in the
+      sensitivity table (https://github.com/natcap/invest/issues/1671).
 * Pollination
     * Fixed an issue with nodata handling that was causing some outputs to be
       filled either with the float32 value for positive infinity, or else with
@@ -86,6 +105,13 @@ Unreleased Changes
       updated the stated dtype of most pollination model outputs to be float32
       instead of the float64 dtype that was being assumed previously.  This
       will result in smaller output filesizes with minimal loss of precision.
+* Seasonal Water Yield
+    * Added support for zero padding in month numbers in ET and precipitation
+      file names (i.e., users can now name their file Precip_01.tif).
+      (https://github.com/natcap/invest/issues/1166)
+    * Fixed a bug where ``numpy.nan`` pixel values would not be correctly
+      detected as nodata in local recharge and baseflow routing functions.
+      (https://github.com/natcap/invest/issues/1705)
 * Urban Flood Risk
     * Fields present on the input AOI vector are now retained in the output.
       (https://github.com/natcap/invest/issues/1600)
