@@ -68,7 +68,7 @@ describe('Add plugin modal', () => {
     const managePluginsButton = await findByText('Manage plugins');
     userEvent.click(managePluginsButton);
 
-    const urlField = await findByLabelText('Add a plugin');
+    const urlField = await findByLabelText('Git URL');
     await userEvent.type(urlField, 'fake url', { delay: 0 });
     const submitButton = await findByText('Add');
     userEvent.click(submitButton);
@@ -148,7 +148,7 @@ describe('Add plugin modal', () => {
     const managePluginsButton = await findByText('Manage plugins');
     userEvent.click(managePluginsButton);
 
-    const pluginDropdown = await findByLabelText('Remove a plugin');
+    const pluginDropdown = await findByLabelText('Plugin name');
     await userEvent.selectOptions(pluginDropdown, [getByRole('option', { name: 'Foo' })]);
 
     const submitButton = await findByText('Remove');
