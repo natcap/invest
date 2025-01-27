@@ -56,6 +56,7 @@ export function setupAddPlugin() {
       try {
         let pyprojectTOML;
         let installString;
+        const micromamba = settingsStore.get('micromamba');
         if (url) { // install from git URL
           if (revision) {
             installString = `git+${url}@${revision}`;
@@ -64,23 +65,37 @@ export function setupAddPlugin() {
             installString = `git+${url}`;
             logger.info(`adding plugin from ${installString} at default branch`);
           }
+          
+          const rootPrefix = upath.join(process.resourcesPath, 'micromamba_envs');
+          const baseEnvPrefix = upath.join(rootPrefix, 'invest_base');
+          // Create invest_base environment, if it doesn't already exist
+          // The purpose of this environment is just to ensure that git is available
+          if (!fs.existsSync(baseEnvPrefix)) {
+            await spawnWithLogging(
+              micromamba,
+              ['create', '--yes', '--prefix', `"${baseEnvPrefix}"`, '-c', 'conda-forge', 'git']
+            );
+          }
 
           // Create a temporary directory and check out the plugin's pyproject.toml,
           // without downloading any extra files or git history
           const tmpPluginDir = fs.mkdtempSync(upath.join(tmpdir(), 'natcap-invest-'));
-          await spawnWithLogging('git', ['clone', '--depth', 1, '--no-checkout', url, tmpPluginDir]);
+          await spawnWithLogging(
+            micromamba,
+            ['run', '--prefix', `"${baseEnvPrefix}"`,
+              'git', 'clone', '--depth', 1, '--no-checkout', url, tmpPluginDir]);
           let head = 'HEAD';
           if (revision) {
             head = 'FETCH_HEAD';
             await spawnWithLogging(
-              'git',
-              ['fetch', 'origin', `${revision}`],
+              micromamba,
+              ['run', '--prefix', `"${baseEnvPrefix}"`, 'git', 'fetch', 'origin', `${revision}`],
               { cwd: tmpPluginDir }
             );
           }
           await spawnWithLogging(
-            'git',
-            ['checkout', head, '--', 'pyproject.toml'],
+            micromamba,
+            ['run', '--prefix', `"${baseEnvPrefix}"`, 'git', 'checkout', head, '--', 'pyproject.toml'],
             { cwd: tmpPluginDir }
           );
           // Read in the plugin's pyproject.toml, then delete it
@@ -96,30 +111,30 @@ export function setupAddPlugin() {
             upath.join(path, 'pyproject.toml')
           ).toString());
         }
-
-        const micromamba = settingsStore.get('micromamba');
+        
         // Access plugin metadata from the pyproject.toml
         const pluginID = pyprojectTOML.tool.natcap.invest.model_id;
         const pluginName = pyprojectTOML.tool.natcap.invest.model_name;
         const pluginPyName = pyprojectTOML.tool.natcap.invest.pyname;
+        const condaDeps = pyprojectTOML.tool.natcap.invest.conda_dependencies;
+
         // Create a conda env containing the plugin and its dependencies
         const envName = `invest_plugin_${pluginID}`;
-        await spawnWithLogging(
-          micromamba,
-          ['create', '--yes', '--name', envName, '-c', 'conda-forge', '"python<3.12"', '"gdal<3.6"']
-        );
+        const pluginEnvPrefix = upath.join(rootPrefix, envName);
+        const createCommand = [
+          'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
+          '-c', 'conda-forge', 'python'];
+        if (condaDeps) { // include dependencies read from pyproject.toml
+          condaDeps.forEach((dep) => createCommand.push(`"${dep}"`));
+        }
+        await spawnWithLogging(micromamba, createCommand);
         logger.info('created micromamba env for plugin');
         await spawnWithLogging(
           micromamba,
-          ['run', '--name', envName, 'pip', 'install', installString]
+          ['run', '--prefix', `"${pluginEnvPrefix}"`, 'pip', 'install', installString]
         );
         logger.info('installed plugin into its env');
         // Write plugin metadata to the workbench's config.json
-        const envInfo = execSync(`${micromamba} info --name ${envName}`, { windowsHide: true }).toString();
-        logger.info(`env info:\n${envInfo}`);
-        const regex = /env location : (.+)/;
-        const envPath = envInfo.match(regex)[1];
-        logger.info(`env path:\n${envPath}`);
         logger.info('writing plugin info to settings store');
         settingsStore.set(
           `plugins.${pluginID}`,
@@ -128,7 +143,7 @@ export function setupAddPlugin() {
             pyname: pluginPyName,
             type: 'plugin',
             source: installString,
-            env: envPath,
+            env: pluginEnvPrefix,
           }
         );
         logger.info('successfully added plugin');
