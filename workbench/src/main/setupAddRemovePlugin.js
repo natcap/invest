@@ -57,6 +57,7 @@ export function setupAddPlugin() {
         let pyprojectTOML;
         let installString;
         const micromamba = settingsStore.get('micromamba');
+        const rootPrefix = upath.join(process.resourcesPath, 'micromamba_envs');
         if (url) { // install from git URL
           if (revision) {
             installString = `git+${url}@${revision}`;
@@ -65,8 +66,7 @@ export function setupAddPlugin() {
             installString = `git+${url}`;
             logger.info(`adding plugin from ${installString} at default branch`);
           }
-          
-          const rootPrefix = upath.join(process.resourcesPath, 'micromamba_envs');
+
           const baseEnvPrefix = upath.join(rootPrefix, 'invest_base');
           // Create invest_base environment, if it doesn't already exist
           // The purpose of this environment is just to ensure that git is available
@@ -111,7 +111,7 @@ export function setupAddPlugin() {
             upath.join(path, 'pyproject.toml')
           ).toString());
         }
-        
+
         // Access plugin metadata from the pyproject.toml
         const pluginID = pyprojectTOML.tool.natcap.invest.model_id;
         const pluginName = pyprojectTOML.tool.natcap.invest.model_name;
