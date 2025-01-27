@@ -204,3 +204,45 @@ export async function getSupportedLanguages() {
       .catch((error) => logger.error(error.stack))
   );
 }
+
+/**
+ * Get the user-profile from GeoMetaMaker.
+ *
+ * @returns {Promise} resolves object
+ */
+export async function getGeoMetaMakerProfile() {
+  return (
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/get_geometamaker_profile`, {
+      method: 'get',
+    })
+      .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
+}
+
+/**
+ * Set the user-profile for GeoMetaMaker.
+ *
+ * @returns {Promise} resolves object
+ */
+export async function setGeoMetaMakerProfile(payload) {
+  return (
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/set_geometamaker_profile`, {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.json())
+      // TODO: Do we need to send feedback messages?
+      // or maybe do form validation using geometamaker?
+      .then(({ message, error }) => {
+        if (error) {
+          logger.error(message);
+        } else {
+          logger.debug(message);
+        }
+        return { message, error };
+      })
+      .catch((error) => logger.error(error.stack))
+  );
+}
