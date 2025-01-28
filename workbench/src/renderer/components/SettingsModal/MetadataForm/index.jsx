@@ -22,7 +22,7 @@ function FormRow(label, value, handler) {
       <Col sm="8">
         <Form.Control
           type="text"
-          value={value}
+          value={value || ''}
           onChange={(e) => handler(e.currentTarget.value)}
         />
       </Col>
