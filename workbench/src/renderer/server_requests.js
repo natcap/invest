@@ -233,8 +233,6 @@ export async function setGeoMetaMakerProfile(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
-      // TODO: Do we need to send feedback messages?
-      // or maybe do form validation using geometamaker?
       .then(({ message, error }) => {
         if (error) {
           logger.error(message);

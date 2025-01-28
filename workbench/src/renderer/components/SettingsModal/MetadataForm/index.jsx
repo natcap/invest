@@ -1,11 +1,13 @@
 import React, { useState, useEffect, } from 'react';
-import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 
+import Expire from '../../Expire';
 import {
   getGeoMetaMakerProfile,
   setGeoMetaMakerProfile,
@@ -29,17 +31,21 @@ function FormRow(label, value, handler) {
 }
 
 export default function MetadataForm() {
+  const { t } = useTranslation();
+
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactOrg, setContactOrg] = useState('');
   const [contactPosition, setContactPosition] = useState('');
   const [licenseTitle, setLicenseTitle] = useState('');
   const [licenseURL, setLicenseURL] = useState('');
+  const [alertMsg, setAlertMsg] = useState('');
+  const [alertError, setAlertError] = useState(false);
+  const [alertKey, setAlertKey] = useState(0);
 
   useEffect(() => {
     async function loadProfile() {
       const profile = await getGeoMetaMakerProfile();
-      console.log(profile);
       if (profile.contact) {
         setContactName(profile.contact.individual_name);
         setContactEmail(profile.contact.email);
@@ -54,9 +60,9 @@ export default function MetadataForm() {
     loadProfile();
   }, []);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    setGeoMetaMakerProfile({
+    const { message, error } = await setGeoMetaMakerProfile({
       contact: {
         individual_name: contactName,
         email: contactEmail,
@@ -68,37 +74,62 @@ export default function MetadataForm() {
         path: licenseURL,
       },
     });
+    setAlertMsg(message);
+    setAlertError(error);
+    const key = window.crypto.getRandomValues(new Uint16Array(1))[0].toString();
+    setAlertKey(key);
   }
 
   return (
     <Form onSubmit={handleSubmit} id="metadata-form">
       <fieldset>
-        <legend>Contact Information</legend>
+        <legend>{t('Contact Information')}</legend>
         <Form.Group controlId="name">
-          {FormRow('Name', contactName, setContactName)}
+          {FormRow(t('Full name'), contactName, setContactName)}
         </Form.Group>
         <Form.Group controlId="email">
-          {FormRow('Email address', contactEmail, setContactEmail)}
+          {FormRow(t('Email address'), contactEmail, setContactEmail)}
         </Form.Group>
         <Form.Group controlId="job-title">
-          {FormRow('Job title', contactPosition, setContactPosition)}
+          {FormRow(t('Job title'), contactPosition, setContactPosition)}
         </Form.Group>
         <Form.Group controlId="organization">
-          {FormRow('Organization name', contactOrg, setContactOrg)}
+          {FormRow(t('Organization name'), contactOrg, setContactOrg)}
         </Form.Group>
       </fieldset>
       <fieldset>
-        <legend>Data License Information</legend>
+        <legend>{t('Data License Information')}</legend>
         <Form.Group controlId="license-title">
-          {FormRow('Title', licenseTitle, setLicenseTitle)}
+          {FormRow(t('Title'), licenseTitle, setLicenseTitle)}
         </Form.Group>
         <Form.Group controlId="license-url">
           {FormRow('URL', licenseURL, setLicenseURL)}
         </Form.Group>
       </fieldset>
-      <Button variant="primary" type="submit">
-        Save Metadata
-      </Button>
+      <Form.Row>
+        <Button
+          type="submit"
+          variant="primary"
+          className="my-1 py2 mx-2"
+        >
+          Save Metadata
+        </Button>
+        {
+          (alertMsg) && (
+          <Expire
+            key={alertKey}
+            delay={4000}
+          >
+            <Alert
+              className="my-1 py-2"
+              variant={alertError ? 'danger' : 'success'}
+            >
+              {t(alertMsg)}
+            </Alert>
+          </Expire>
+          )
+        }
+      </Form.Row>
     </Form>
   );
 }
