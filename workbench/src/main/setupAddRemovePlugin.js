@@ -2,8 +2,8 @@ import upath from 'upath';
 import fs from 'fs';
 import { tmpdir } from 'os';
 import toml from 'toml';
-import { execSync, spawn } from 'child_process';
-import { ipcMain } from 'electron';
+import { spawn } from 'child_process';
+import { app, ipcMain } from 'electron';
 
 import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
@@ -56,7 +56,7 @@ export function setupAddPlugin() {
       try {
         logger.info('adding plugin at', pluginURL);
         const micromamba = settingsStore.get('micromamba');
-        const rootPrefix = upath.join(process.resourcesPath, 'micromamba_envs');
+        const rootPrefix = upath.join(app.getPath('userData'), 'micromamba_envs');
         const baseEnvPrefix = upath.join(rootPrefix, 'invest_base');
         // Create invest_base environment, if it doesn't already exist
         // The purpose of this environment is just to ensure that git is available
