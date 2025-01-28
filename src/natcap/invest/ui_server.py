@@ -286,7 +286,6 @@ def get_supported_languages():
 def get_geometamaker_profile():
     """Return the user-profile from geometamaker."""
     config = geometamaker.Config()
-    print(config.profile.model_dump())
     return config.profile.model_dump()
 
 
