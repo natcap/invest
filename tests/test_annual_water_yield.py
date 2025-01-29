@@ -16,6 +16,38 @@ REGRESSION_DATA = os.path.join(
 SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
 gdal.UseExceptions()
 
+
+def make_watershed_vector(path_to_shp):
+    """
+    Generate watershed results shapefile with two polygons
+
+    Args:
+        path_to_shp (str): path to store watershed results vector
+
+    Outputs:
+        None
+    """
+    shapely_geometry_list = [
+        Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)]),
+        Polygon([(2, 2), (3, 2), (3, 3), (2, 3), (2, 2)])
+    ]
+    projection_wkt = osr.GetUserInputAsWKT("EPSG:4326")
+    vector_format = "ESRI Shapefile"
+    fields = {"hp_energy": ogr.OFTReal, "hp_val": ogr.OFTReal,
+              "ws_id": ogr.OFTReal, "rsupply_vl": ogr.OFTReal,
+              "wyield_mn": ogr.OFTReal, "wyield_vol": ogr.OFTReal,
+              "consum_mn": ogr.OFTReal, "consum_vol": ogr.OFTReal}
+    attribute_list = [
+        {"hp_energy": 1, "hp_val": 1, "ws_id": 0, "rsupply_vl": 2},
+        {"hp_energy": 11, "hp_val": 3, "ws_id": 1, "rsupply_vl": 52}
+        ]
+
+    pygeoprocessing.shapely_geometry_to_vector(shapely_geometry_list,
+                                               path_to_shp, projection_wkt,
+                                               vector_format, fields,
+                                               attribute_list)
+
+
 class AnnualWaterYieldTests(unittest.TestCase):
     """Regression Tests for Annual Water Yield Model."""
 
@@ -397,50 +429,83 @@ class AnnualWaterYieldTests(unittest.TestCase):
                                       err_msg="Fractp does not match expected")
 
     def test_compute_watershed_valuation(self):
-        """Test `compute_watershed_valuation`"""
-        from natcap.invest.annual_water_yield import compute_watershed_valuation
+        """Test `compute_watershed_valuation`, `compute_rsupply_volume`
+        and `compute_water_yield_volume`"""
+        from natcap.invest import annual_water_yield
+
+        def create_watershed_results_vector(path_to_shp):
+            """Generate a fake watershed results vector file."""
+            shapely_geometry_list = [
+                Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)]),
+                Polygon([(2, 2), (3, 2), (3, 3), (2, 3), (2, 2)])
+            ]
+            projection_wkt = osr.GetUserInputAsWKT("EPSG:4326")
+            vector_format = "ESRI Shapefile"
+            fields = {"ws_id": ogr.OFTReal, "wyield_mn": ogr.OFTReal,
+                      "consum_mn": ogr.OFTReal, "consum_vol": ogr.OFTReal}
+            attribute_list = [{"ws_id": 0, "wyield_mn": 990000,
+                               "consum_mn": 500, "consum_vol": 50},
+                              {"ws_id": 1, "wyield_mn": 800000,
+                               "consum_mn": 600, "consum_vol": 70}]
+
+            pygeoprocessing.shapely_geometry_to_vector(shapely_geometry_list,
+                                                       path_to_shp,
+                                                       projection_wkt,
+                                                       vector_format, fields,
+                                                       attribute_list)
+
+        def validate_fields(vector_path, field_name, expected_values, error_msg):
+            """
+            Validate a specific field in the watershed results vector
+            by comparing actual to expected values. Expected values generated
+            by running the function.
+
+            Args:
+                vector path (str): path to watershed shapefile
+                field_name (str): attribute field to check
+                expected values (list): list of expected values for field
+                error_msg (str): what to print if assertion fails
+
+            Returns:
+                None
+            """
+            with gdal.OpenEx(vector_path, gdal.OF_VECTOR | gdal.GA_Update) as ws_ds:
+                ws_layer = ws_ds.GetLayer()
+                actual_values = [ws_feat.GetField(field_name)
+                                 for ws_feat in ws_layer]
+                self.assertEqual(actual_values, expected_values, msg=error_msg)
 
         # generate fake watershed results vector
         watershed_results_vector_path = os.path.join(self.workspace_dir,
                                                      "watershed_results.shp")
-        shapely_geometry_list = [
-            Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)]),
-            Polygon([(2, 2), (3, 2), (3, 3), (2, 3), (2, 2)])
-        ]
-        projection_wkt = osr.GetUserInputAsWKT("EPSG:4326")
-        vector_format = "ESRI Shapefile"
-        fields = {"hp_energy": ogr.OFTReal, "hp_val": ogr.OFTReal,
-                  "ws_id": ogr.OFTReal, "rsupply_vl": ogr.OFTReal}
-        attribute_list = [
-            {"hp_energy": 1, "hp_val": 1, "ws_id": 0, "rsupply_vl": 2},
-            {"hp_energy": 11, "hp_val": 3, "ws_id": 1, "rsupply_vl": 52}
-            ]
-
-        pygeoprocessing.shapely_geometry_to_vector(shapely_geometry_list,
-                                                   watershed_results_vector_path,
-                                                   projection_wkt,
-                                                   vector_format, fields,
-                                                   attribute_list)
+        create_watershed_results_vector(watershed_results_vector_path)
 
         # generate fake val_df
-        val_df = pandas.DataFrame({'efficiency': [.7, .8], 'height': [6, 5],
-                                   'fraction': [.1, .2], 'discount': [10, 20],
-                                   'time_span': [10, 10], 'cost': [1000, 2000],
-                                   'kw_price': [10, 20]})
+        val_df = pandas.DataFrame({'efficiency': [.7, .8], 'height': [12, 50],
+                                   'fraction': [.9, .7], 'discount': [60, 20],
+                                   'time_span': [10, 10], 'cost': [100, 200],
+                                   'kw_price': [15, 20]})
 
-        compute_watershed_valuation(watershed_results_vector_path, val_df)
+        # test water yield volume
+        annual_water_yield.compute_water_yield_volume(
+            watershed_results_vector_path)
+        validate_fields(watershed_results_vector_path, "wyield_vol",
+                        [990.0, 800.0],
+                        "Error with water yield volume calculation.")
 
-        ws_ds = gdal.OpenEx(watershed_results_vector_path,
-                            gdal.OF_VECTOR | gdal.GA_Update)
-        ws_layer = ws_ds.GetLayer()
+        # test rsupply volume
+        annual_water_yield.compute_rsupply_volume(
+            watershed_results_vector_path)
+        validate_fields(watershed_results_vector_path, "rsupply_vl",
+                        [940.0, 730.0],
+                        "Error calculating total realized water supply volume.")
 
-        # calculated by running `compute_watershed_valuation`
-        expected_hp_energy = [0.0022848, 0.113152]
-        expected_npv = [-6758.869386098996, -10050.547726887671]
-
-        # compare expected to actual values
-        for row, ws_feat in enumerate(ws_layer):
-            actual_hp_energy = ws_feat.GetField('hp_energy')
-            actual_npv = ws_feat.GetField('hp_val')
-            self.assertEqual(actual_hp_energy, expected_hp_energy[row])
-            self.assertEqual(actual_npv, expected_npv[row])
+        # test compute watershed valuation
+        annual_water_yield.compute_watershed_valuation(
+            watershed_results_vector_path, val_df)
+        validate_fields(watershed_results_vector_path, "hp_energy",
+                        [19.329408, 55.5968],
+                        "Error calculating energy.")
+        validate_fields(watershed_results_vector_path, "hp_val",
+                        [501.9029748723, 4587.91946857059],
+                        "Error calculating net present value.")
