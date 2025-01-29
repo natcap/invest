@@ -1,0 +1,5 @@
+google-cloud-storage
+google-cloud-logging
+function-framework==3.*
+flask
+requests
