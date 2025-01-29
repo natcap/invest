@@ -14,7 +14,7 @@ do
     fi
 	BASENAME=$(jq ".basename" <<< $DATA)
 	wget -O $BASENAME $(jq ".https-url" <<< $DATA)
-    python3 natcap_codesign.py /opt/natcap-codesign/codesign-cert-chain.pem "$BASENAME"
+    python3 opt/natcap-codesign/natcap_codesign.py /opt/natcap-codesign/codesign-cert-chain.pem "$BASENAME"
 	gcloud storage upload $BASENAME $(jq ".gs-uri" <<< $DATA)
 	sleep 30
 done

@@ -30,4 +30,4 @@ WorkingDirectory=/tmp
 # Run in the foreground
 Type=simple
 Restart=always
-ExecStart=/opt/natcap-codesign/natcap-codesign.py
+ExecStart=/opt/natcap-codesign/natcap-codesign.sh
