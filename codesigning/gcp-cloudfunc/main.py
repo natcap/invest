@@ -60,7 +60,12 @@ def main(request):
         with get_lock():
             queuefile = bucket.blob('queue.json')
             queue_dict = json.loads(queuefile.download_as_string())
-            next_file_url = queue_dict['queue'].pop(0)
+            try:
+                next_file_url = queue_dict['queue'].pop(0)
+            except IndexError:
+                # No items in the queue!
+                return jsonify('No items in the queue'), 204
+
             queuefile.upload_from_string(json.dumps(queue_dict))
 
         data = {
