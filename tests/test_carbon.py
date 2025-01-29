@@ -127,8 +127,8 @@ class CarbonTests(unittest.TestCase):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_carbon_full(self):
-        """Carbon: full model run."""
+    def test_carbon_full_per_pixel(self):
+        """Carbon: full run with raster_output_units set to per_pixel."""
         from natcap.invest import carbon
 
         args = {
@@ -139,6 +139,78 @@ class CarbonTests(unittest.TestCase):
             'lulc_cur_year': 2016,
             'lulc_fut_year': 2030,
             'discount_rate': -7.1,
+            'raster_output_units': 'per_pixel',
+            'n_workers': -1,
+        }
+
+        # Create LULC rasters and pools csv in workspace and add them to args.
+        lulc_names = ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path']
+        for fill_val, lulc_name in enumerate(lulc_names, 1):
+            args[lulc_name] = os.path.join(args['workspace_dir'],
+                                           lulc_name + '.tif')
+            make_simple_raster(args[lulc_name], fill_val, -1)
+
+        args['carbon_pools_path'] = os.path.join(args['workspace_dir'],
+                                                 'pools.csv')
+        make_pools_csv(args['carbon_pools_path'])
+
+        carbon.execute(args)
+
+        # Ensure every pixel has the correct total C value.
+        # Pixel size is 1 m^2 = 0.0001 ha
+        # Current: 15 + 10 + 60 + 1 = 86 Mg/ha * 0.0001 ha = 0.0086 Mg
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'tot_c_cur.tif'), 0.0086)
+        # Future: 5 + 3 + 20 + 0 = 28 Mg/ha * 0.0001 ha = 0.0028 Mg
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'tot_c_fut.tif'), 0.0028)
+        # REDD: 2 + 1 + 5 + 0 = 8 Mg/ha * 0.0001 ha = 0.0008 Mg
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'tot_c_redd.tif'), 0.0008)
+
+        # Ensure deltas are correct.
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'delta_cur_fut.tif'), -0.0058)
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'delta_cur_redd.tif'), -0.0078)
+
+        # Ensure NPV calculations are correct.
+        # Valuation constant based on provided args is 59.00136.
+        # Future: 59.00136 * -58 Mg/ha = -3422.079 Mg/ha * 0.0001 ha = -0.3422079 Mg
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422079)
+        # REDD: 59.00136 * -78 Mg/ha = -4602.106 Mg/ha * 0.0001 ha = -0.4602106 Mg
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.4602106)
+
+        # Ensure aggregate results are correct.
+        report_path = os.path.join(args['workspace_dir'], 'report.html')
+        # Raster is 10 x 10; therefore, raster total is as follows:
+        # (x Mg / px) * (100 px) = (x * 100) Mg
+        for (stat, expected_value) in [
+                ('Total cur', 0.86),
+                ('Total fut', 0.28),
+                ('Total redd', 0.08),
+                ('Change in C for fut', -0.58),
+                ('Change in C for redd', -0.78),
+                ('Net present value from cur to fut', -34.22),
+                ('Net present value from cur to redd', -46.02),
+                ]:
+            assert_aggregate_result_equal(report_path, stat, expected_value)
+
+    def test_carbon_full_per_hectare(self):
+        """Carbon: full run with raster_output_units set to per_hectare."""
+        from natcap.invest import carbon
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'do_valuation': True,
+            'price_per_metric_ton_of_c': 43.0,
+            'rate_change': 2.8,
+            'lulc_cur_year': 2016,
+            'lulc_fut_year': 2030,
+            'discount_rate': -7.1,
+            'raster_output_units': 'per_hectare',
             'n_workers': -1,
         }
 
@@ -208,6 +280,7 @@ class CarbonTests(unittest.TestCase):
             'lulc_cur_year': 2016,
             'lulc_fut_year': 2030,
             'discount_rate': 0.0,
+            'raster_output_units': 'per_hectare',
             'n_workers': -1,
         }
 
@@ -245,6 +318,7 @@ class CarbonTests(unittest.TestCase):
             'lulc_cur_year': 2016,
             'lulc_fut_year': 2030,
             'discount_rate': -7.1,
+            'raster_output_units': 'per_hectare',
             'n_workers': -1,
         }
 
@@ -272,6 +346,7 @@ class CarbonTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'do_valuation': False,
+            'raster_output_units': 'per_hectare',
             'n_workers': -1,
         }
 
@@ -305,6 +380,7 @@ class CarbonTests(unittest.TestCase):
             'lulc_cur_year': 2016,
             'lulc_fut_year': 2030,
             'discount_rate': -7.1,
+            'raster_output_units': 'per_hectare',
             'n_workers': -1,
         }
 
@@ -341,6 +417,7 @@ class CarbonValidationTests(unittest.TestCase):
             'workspace_dir',
             'lulc_cur_path',
             'carbon_pools_path',
+            'raster_output_units',
         ]
 
     def tearDown(self):

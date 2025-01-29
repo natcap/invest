@@ -190,7 +190,41 @@ MODEL_SPEC = {
                 "The relative annual increase of the price of carbon. "
                 "Required if Run Valuation model is selected."),
             "name": gettext("annual price change")
-        }
+        },
+        "raster_output_units": {
+            "type": "option_string",
+            "options": {
+                "per_pixel": {
+                    "display_name": gettext(
+                        "metric tons (or currency units) per pixel"),
+                    "description": gettext(
+                        "In raster outputs reporting amounts of carbon (files "
+                        "prefixed with 'c', 'tot_c', or 'delta'), each "
+                        "pixel's value will represent metric tons of carbon "
+                        "per pixel. In raster outputs reporting economic "
+                        "value of carbon (files prefixed with 'npv'), each "
+                        "pixel's value will represent currency per pixel.")},
+                "per_hectare": {
+                    "display_name": gettext(
+                        "metric tons (or currency units) per hectare"),
+                    "description": gettext(
+                        "In raster outputs reporting amounts of carbon (files "
+                        "prefixed with 'c', 'tot_c', or 'delta'), each "
+                        "pixel's value will represent metric tons of carbon "
+                        "per hectare. In raster outputs reporting economic "
+                        "value of carbon (files prefixed with 'npv'), each "
+                        "pixel's value will represent currency per hectare.")},
+            },
+            "about": gettext(
+                "How to report values in raster outputs. In raster outputs "
+                "reporting amounts of carbon (files prefixed with 'c', "
+                "'tot_c', or 'delta'), each pixel's value will represent "
+                "metric tons of carbon per pixel or per hectare. In raster "
+                "outputs reporting economic value of carbon (files prefixed "
+                "with 'npv'), each pixel's value will represent currency per "
+                "pixel or per hectare."),
+            "name": gettext("raster output units")
+        },
     },
     "outputs": {
         "report.html": {
@@ -345,6 +379,8 @@ def execute(args):
         args['rate_change'] (float): Annual rate of change in price of carbon
             as a percentage.  Used if `args['do_valuation']` is  present and
             True.
+        args['raster_output_units'] (str): how to report values in raster
+            outputs. Options are Mg C per pixel (default) or Mg C per hectare.
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process.
@@ -421,7 +457,8 @@ def execute(args):
             carbon_map_task = graph.add_task(
                 _generate_carbon_map,
                 args=(args[lulc_key], carbon_pool_by_type,
-                      file_registry[storage_key]),
+                      file_registry[storage_key],
+                      args['raster_output_units']),
                 target_path_list=[file_registry[storage_key]],
                 task_name='carbon_map_%s' % storage_key)
             storage_path_list.append(file_registry[storage_key])
@@ -499,7 +536,8 @@ def execute(args):
                        + calculate_npv_tasks)
     _ = graph.add_task(
         _generate_report,
-        args=(tifs_to_summarize, args, file_registry),
+        args=(tifs_to_summarize, args, file_registry,
+              args['raster_output_units']),
         target_path_list=[file_registry['html_report']],
         dependent_task_list=tasks_to_report,
         task_name='generate_report')
@@ -535,22 +573,32 @@ def _accumulate_totals(raster_path):
 
 
 def _generate_carbon_map(
-        lulc_path, carbon_pool_by_type, out_carbon_stock_path):
+        lulc_path, carbon_pool_by_type, out_carbon_stock_path,
+        raster_output_units):
     """Generate carbon stock raster by mapping LULC values to carbon pools.
 
     Args:
         lulc_path (string): landcover raster with integer pixels.
-        out_carbon_stock_path (string): path to output raster that will have
-            pixels with carbon storage values in them with units of Mg*C
         carbon_pool_by_type (dict): a dictionary that maps landcover values
-            to carbon storage densities per area (Mg C/Ha).
+            to carbon storage densities per area (Mg C/ha).
+        out_carbon_stock_path (string): path to output raster that will report
+            carbon storage values.
+        raster_output_units (str): how to report values in output raster.
+            Options are Mg C per pixel (default) or Mg C per hectare.
 
     Returns:
         None.
     """
-    carbon_stock_by_type = dict([
-        (lulcid, stock)
-        for lulcid, stock in carbon_pool_by_type.items()])
+    if (raster_output_units == 'per_hectare'):
+        carbon_stock_by_type = dict([
+            (lulcid, stock)
+            for lulcid, stock in carbon_pool_by_type.items()])
+    else:
+        lulc_info = pygeoprocessing.get_raster_info(lulc_path)
+        pixel_area = abs(numpy.prod(lulc_info['pixel_size']))
+        carbon_stock_by_type = dict([
+            (lulcid, stock * pixel_area / 10**4)
+            for lulcid, stock in carbon_pool_by_type.items()])
 
     reclass_error_details = {
         'raster_name': 'LULC', 'column_name': 'lucode',
@@ -613,13 +661,16 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
         target_path=npv_out_path)
 
 
-def _generate_report(raster_file_set, model_args, file_registry):
+def _generate_report(raster_file_set, model_args, file_registry,
+                     raster_output_units):
     """Generate a human readable HTML report of summary stats of model run.
 
     Args:
         raster_file_set (set): paths to rasters that need summary stats.
         model_args (dict): InVEST argument dictionary.
         file_registry (dict): file path dictionary for InVEST workspace.
+        raster_output_units (str): units used to report values in output
+            rasters. Options are Mg C per pixel (default) or Mg C per hectare.
 
     Returns:
         None.
@@ -718,12 +769,15 @@ def _generate_report(raster_file_set, model_args, file_registry):
 
         for raster_uri, description, units in report:
             if raster_uri in raster_file_set:
-                total = _accumulate_totals(raster_uri)
-                raster_info = pygeoprocessing.get_raster_info(raster_uri)
-                pixel_area = abs(numpy.prod(raster_info['pixel_size']))
-                # Since each pixel value is in Mg/ha, ``total`` is in (Mg/ha * px) = Mg•px/ha.
-                # Adjusted sum = ([total] Mg•px/ha) * ([pixel_area] m^2 / 1 px) * (1 ha / 10000 m^2) = Mg.
-                summary_stat = total * pixel_area / 10000
+                if raster_output_units == 'per_hectare':
+                    total = _accumulate_totals(raster_uri)
+                    raster_info = pygeoprocessing.get_raster_info(raster_uri)
+                    pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+                    # Since each pixel value is in Mg/ha, ``total`` is in (Mg/ha * px) = Mg•px/ha.
+                    # Adjusted sum = ([total] Mg•px/ha) * ([pixel_area] m^2 / 1 px) * (1 ha / 10000 m^2) = Mg.
+                    summary_stat = total * pixel_area / 10000
+                else:
+                    summary_stat = _accumulate_totals(raster_uri)
                 report_doc.write(
                     '<tr><td>%s</td><td class="number" data-summary-stat="%s">'
                     '%.2f</td><td>%s</td><td>%s</td></tr>' % (
