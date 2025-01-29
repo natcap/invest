@@ -51,6 +51,38 @@ def make_simple_raster(base_raster_path, fill_val, nodata_val):
     new_raster = None
 
 
+def make_simple_lulc_raster(base_raster_path):
+    """Create a 2x2 raster on designated path with arbitrary lulc codes.
+
+    Args:
+        base_raster_path (str): the raster path for making the new raster.
+
+    Returns:
+        None.
+    """
+    array = numpy.array([[1, 1], [2, 3]], dtype=int)
+
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)  # UTM Zone 10N
+    projection_wkt = srs.ExportToWkt()
+    # origin hand-picked for this epsg:
+    geotransform = [461261, 1.0, 0.0, 4923265, 0.0, -1.0]
+
+    n = 2
+    gtiff_driver = gdal.GetDriverByName('GTiff')
+    new_raster = gtiff_driver.Create(
+        base_raster_path, n, n, 1, gdal.GDT_Int32, options=[
+            'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
+            'BLOCKXSIZE=16', 'BLOCKYSIZE=16'])
+    new_raster.SetProjection(projection_wkt)
+    new_raster.SetGeoTransform(geotransform)
+    new_band = new_raster.GetRasterBand(1)
+    new_band.WriteArray(array)
+    new_raster.FlushCache()
+    new_band = None
+    new_raster = None
+
+
 def assert_raster_equal_value(base_raster_path, val_to_compare):
     """Assert that the entire output raster has the same value as specified.
 
@@ -267,6 +299,46 @@ class CarbonTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422078)
         assert_raster_equal_value(
             os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.4602106)
+
+    def test_generate_carbon_map(self):
+        """Test `_generate_carbon_map`"""
+        from natcap.invest.carbon import _generate_carbon_map
+
+        # generate a fake lulc raster
+        lulc_path = os.path.join(self.workspace_dir, "lulc.tif")
+        make_simple_lulc_raster(lulc_path)
+
+        # make fake carbon pool dict
+        carbon_pool_by_type = {1: 5000, 2: 60, 3: 120}
+
+        out_carbon_stock_path = os.path.join(self.workspace_dir,
+                                             "carbon_stock.tif")
+
+        _generate_carbon_map(lulc_path, carbon_pool_by_type,
+                             out_carbon_stock_path)
+
+        # open output carbon stock raster and check values
+        actual_carbon_stock = gdal.Open(out_carbon_stock_path)
+        band = actual_carbon_stock.GetRasterBand(1)
+        actual_carbon_stock = band.ReadAsArray()
+
+        expected_carbon_stock = numpy.array([[0.5, 0.5], [0.006, 0.012]],
+                                            dtype=numpy.float32)
+
+        numpy.testing.assert_array_equal(actual_carbon_stock,
+                                         expected_carbon_stock)
+
+    def test_calculate_valuation_constant(self):
+        """Test `_calculate_valuation_constant`"""
+        from natcap.invest.carbon import _calculate_valuation_constant
+
+        valuation_constant = _calculate_valuation_constant(lulc_cur_year=2010,
+                                                           lulc_fut_year=2012,
+                                                           discount_rate=50,
+                                                           rate_change=5,
+                                                           price_per_metric_ton_of_c=50)
+        expected_valuation = 40.87302
+        self.assertEqual(round(valuation_constant, 5), expected_valuation)
 
 
 class CarbonValidationTests(unittest.TestCase):
