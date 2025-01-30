@@ -15,7 +15,8 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 CERTIFICATE = sys.argv[1]
 
-with open("access_token.txt") as token_file:
+TOKEN_FILE = os.path.join(os.path.dirname(__file__), "access_token.txt")
+with open(TOKEN_FILE) as token_file:
     ACCESS_TOKEN = token_file.read().strip()
 
 
