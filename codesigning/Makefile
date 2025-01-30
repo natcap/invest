@@ -4,7 +4,7 @@ deploy-cloudfunction:
 	gcloud functions deploy \
 		--project natcap-servers \
 		codesigning-queue \
-		--memory=128Mi \
+		--memory=256Mi \
 		--trigger-http \
 		--gen2 \
 		--region us-west1 \
