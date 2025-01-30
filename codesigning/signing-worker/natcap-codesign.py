@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 CERTIFICATE = sys.argv[1]
 
 
-def get_from_queue(url):
+def get_from_queue():
     response = requests.get(
         "https://us-west1-natcap-servers.cloudfunctions.net/codesigning-queue",
         data={"token": str(os.environ['ACCESS_TOKEN'])})
