@@ -29,5 +29,5 @@ WorkingDirectory=/tmp
 [Service]
 # Run in the foreground
 Type=simple
-Restart=always
+Restart=no  # change back to always
 ExecStart=python3 /opt/natcap-codesign/natcap-codesign.py /opt/natcap-codesign/codesign-cert-chain.pem

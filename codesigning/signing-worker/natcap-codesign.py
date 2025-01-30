@@ -23,7 +23,8 @@ with open(TOKEN_FILE) as token_file:
 def get_from_queue():
     response = requests.post(
         "https://us-west1-natcap-servers.cloudfunctions.net/codesigning-queue",
-        data={
+        headers={"Content-Type": "application/json"},
+        json={
             "token": ACCESS_TOKEN,
             "action": "dequeue"
         })
