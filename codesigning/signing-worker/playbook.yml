@@ -112,7 +112,7 @@
       ansible.builtin.systemd_service:
         name: natcap-codesign
         daemon_reload: true  # reload in case there are any config changes
-        state: started
+        state: restarted
         enabled: true
 
     #- install a service account key to write to GCS later
