@@ -8,7 +8,8 @@ while true
 do
     DATA=$(curl -i -H "Accept: application/json" "https://us-west1-natcap-servers.cloudfunctions.net/codesigning-queue{\"token\": \"$ACCESS_TOKEN\"}")
     # The response body will be empty when there is nothing in the queue.
-    if [ -z $(echo "$DATA" | xargs) ]; then  # echo | xargs will trim all whitespace.
+    if [ -z $(echo -e "$DATA" | tr -d '[:space:]') ]; then
+        echo "No queued requests, waiting 30 seconds..."
         continue
     else
         BASENAME=$(jq ".basename" <<< $DATA)
