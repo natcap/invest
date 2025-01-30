@@ -85,10 +85,15 @@ def main():
             if file_to_sign is None:
                 LOGGER.info('No items in the queue')
             else:
+                LOGGER.info(f"Dequeued and downloading {file_to_sign['https-url']}")
                 filename = download_file(file_to_sign['https-url'])
+                LOGGER.info(f"Signing {filename}")
                 sign_file(filename)
+                LOGGER.info(f"Uploading signed file to {file_to_sign['gs-uri']}")
                 upload_to_bucket(filename, file_to_sign['gs-uri'])
+                LOGGER.info(f"Removing {filename}")
                 os.remove(filename)
+                LOGGER.info("Signing complete.")
         except Exception as e:
             LOGGER.exception("Unexpected error signing file")
             raise e
