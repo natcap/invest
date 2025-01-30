@@ -56,8 +56,8 @@ def sign_file(file_to_sign):
 
     signcode_command = textwrap.dedent(f"""\
         osslsigncode sign \
-            -pkcs11engine /usr/lib/aarch64-linux-gnu/engines-3/pkcs11.so \
-            -pkcs11module /usr/lib/aarch64-linux-gnu/libykcs11.so.2 \
+            -pkcs11engine /usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so \
+            -pkcs11module /usr/lib/x86_64-linux-gnu/libykcs11.so \
             -key "pkcs11:id=%02;type=private" \
             -certs {CERTIFICATE} \
             -h sha256 \
