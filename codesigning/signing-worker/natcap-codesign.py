@@ -83,8 +83,9 @@ def main():
                 sign_file(filename)
                 upload_to_bucket(filename, file_to_sign['gs-uri'])
                 os.remove(filename)
-        except Exception:
+        except Exception as e:
             LOGGER.exception("Unexpected error signing file")
+            raise e
         time.sleep(15)
 
 
