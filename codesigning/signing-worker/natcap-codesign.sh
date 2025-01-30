@@ -6,7 +6,7 @@
 
 while true
 do
-    DATA=$(curl -sb -H "Accept: application/json" "https://us-west1-natcap-servers.cloudfunctions.net/codesigning-queue")
+    DATA=$(curl -i -H "Accept: application/json" "https://us-west1-natcap-servers.cloudfunctions.net/codesigning-queue{\"token\": \"$ACCESS_TOKEN\"}")
     # The response body will be empty when there is nothing in the queue.
     if [ -z "$DATA" ]; then
         sleep 30
