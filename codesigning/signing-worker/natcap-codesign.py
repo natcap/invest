@@ -15,7 +15,8 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 CERTIFICATE = sys.argv[1]
 
-TOKEN_FILE = os.path.join(os.path.dirname(__file__), "access_token.txt")
+FILE_DIR = os.path.dirname(__file__)
+TOKEN_FILE = os.path.join(FILE_DIR, "access_token.txt")
 with open(TOKEN_FILE) as token_file:
     ACCESS_TOKEN = token_file.read().strip()
 
@@ -51,6 +52,7 @@ def upload_to_bucket(filename, path_on_bucket):
 
 def sign_file(file_to_sign):
     signed_file = f"{file_to_sign}.signed"
+    pass_file = os.path.join(FILE_DIR, 'pass.txt')
 
     signcode_command = textwrap.dedent(f"""\
         osslsigncode sign \
@@ -60,14 +62,14 @@ def sign_file(file_to_sign):
             -certs {CERTIFICATE} \
             -h sha256 \
             -ts http://timestamp.sectigo.com \
-            -readpass pass.txt \
+            -readpass {pass_file} \
             -verbose \
             -in {file_to_sign} \
             -out {signed_file}""")
 
     process = pexpect.spawnu(signcode_command)
     process.expect('Enter PKCS#11 key PIN for Private key for Digital Signature:')
-    with open('pass.txt') as passfile:
+    with open(pass_file) as passfile:
         process.sendline(passfile.read().strip())
 
     # print remainder of program output for our logging.
