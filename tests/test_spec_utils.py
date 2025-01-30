@@ -1,12 +1,44 @@
+import os
+import shutil
+import tempfile
+import types
 import unittest
 
+import geometamaker
 from natcap.invest import spec_utils
 from natcap.invest.unit_registry import u
 from osgeo import gdal
+from osgeo import ogr
 
 gdal.UseExceptions()
 
-class TestSpecUtils(unittest.TestCase):
+
+class SpecUtilsUnitTests(unittest.TestCase):
+    """Unit tests for natcap.invest.spec_utils."""
+
+    def test_format_unit(self):
+        """spec_utils: test converting units to strings with format_unit."""
+        from natcap.invest import spec_utils
+        for unit_name, expected in [
+                ('meter', 'm'),
+                ('meter / second', 'm/s'),
+                ('foot * mm', 'ft · mm'),
+                ('t * hr * ha / ha / MJ / mm', 't · h · ha / (ha · MJ · mm)'),
+                ('mm^3 / year', 'mm³/year')
+        ]:
+            unit = spec_utils.u.Unit(unit_name)
+            actual = spec_utils.format_unit(unit)
+            self.assertEqual(expected, actual)
+
+    def test_format_unit_raises_error(self):
+        """spec_utils: format_unit raises TypeError if not a pint.Unit."""
+        from natcap.invest import spec_utils
+        with self.assertRaises(TypeError):
+            spec_utils.format_unit({})
+
+
+class TestDescribeArgFomSpec(unittest.TestCase):
+    """Test building RST for various invest args specifications."""
 
     def test_number_spec(self):
         spec = {
@@ -256,3 +288,108 @@ class TestSpecUtils(unittest.TestCase):
             carbon.MODEL_SPEC['args']['carbon_pools_path']['columns']['lucode']['about']
         )
         self.assertEqual(repr(out), repr(expected_rst))
+
+
+def generate_files_from_spec(output_spec, workspace):
+    for filename, spec_data in output_spec.items():
+        if 'type' in spec_data and spec_data['type'] == 'directory':
+            os.mkdir(os.path.join(workspace, filename))
+            generate_files_from_spec(
+                spec_data['contents'], os.path.join(workspace, filename))
+        else:
+            filepath = os.path.join(workspace, filename)
+            if 'bands' in spec_data:
+                driver = gdal.GetDriverByName('GTIFF')
+                n_bands = len(spec_data['bands'])
+                raster = driver.Create(
+                    filepath, 2, 2, n_bands, gdal.GDT_Byte)
+                for i in range(n_bands):
+                    band = raster.GetRasterBand(i + 1)
+                    band.SetNoDataValue(2)
+            elif 'fields' in spec_data:
+                if 'geometries' in spec_data:
+                    driver = gdal.GetDriverByName('GPKG')
+                    target_vector = driver.CreateDataSource(filepath)
+                    layer_name = os.path.basename(os.path.splitext(filepath)[0])
+                    target_layer = target_vector.CreateLayer(
+                        layer_name, geom_type=ogr.wkbPolygon)
+                    for field_name, field_data in spec_data['fields'].items():
+                        target_layer.CreateField(ogr.FieldDefn(field_name, ogr.OFTInteger))
+                else:
+                    # Write a CSV if it has fields but no geometry
+                    with open(filepath, 'w') as file:
+                        file.write(
+                            f"{','.join([field for field in spec_data['fields']])}")
+            else:
+                # Such as taskgraph.db, just create the file.
+                with open(filepath, 'w') as file:
+                    pass
+
+
+class TestMetadataFromSpec(unittest.TestCase):
+    """Tests for metadata-generation functions."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        # this lets us delete the workspace after its done no matter the
+        # the rest result
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_write_metadata(self):
+
+        # An example invest output spec
+        output_spec = {
+            'output': {
+                "type": "directory",
+                "contents": {
+                    "urban_nature_supply_percapita.tif": {
+                        "about": (
+                            "The calculated supply per capita of urban nature."),
+                        "bands": {1: {
+                            "type": "number",
+                            "units": u.m**2,
+                        }}},
+                    "admin_boundaries.gpkg": {
+                        "about": (
+                            "A copy of the user's administrative boundaries "
+                            "vector with a single layer."),
+                        "geometries": spec_utils.POLYGONS,
+                        "fields": {
+                            "SUP_DEMadm_cap": {
+                                "type": "number",
+                                "units": u.m**2/u.person,
+                                "about": (
+                                    "The average urban nature supply/demand ")
+                            }
+                        }
+                    }
+                },
+            },
+            'intermediate': {
+                'type': 'directory',
+                'contents': {
+                    'taskgraph_cache': spec_utils.TASKGRAPH_DIR,
+                }
+            }
+        }
+        # Generate an output workspace with real files, without
+        # running an invest model.
+        generate_files_from_spec(output_spec, self.workspace_dir)
+
+        model_module = types.SimpleNamespace(
+            __name__='urban_nature_access',
+            execute=lambda: None,
+            MODEL_SPEC={'outputs': output_spec})
+        args_dict = {
+            'workspace_dir': self.workspace_dir
+        }
+
+        spec_utils.generate_metadata(model_module, args_dict)
+        files, messages = geometamaker.validate_dir(
+            self.workspace_dir, recursive=True)
+        self.assertEqual(len(files), 2)
+        self.assertFalse(any(messages))

@@ -620,10 +620,7 @@ def write_metadata_file(datasource_path, spec, lineage_statement):
     if attr_spec:
         for key, value in attr_spec.items():
             about = value['about'] if 'about' in value else ''
-            if 'units' in value:
-                units = format_unit(value['units'])
-            else:
-                units = ''
+            units = format_unit(value['units']) if 'units' in value else ''
             try:
                 resource.set_field_description(
                     key, description=about, units=units)
