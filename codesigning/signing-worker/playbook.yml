@@ -110,6 +110,7 @@
     - name: Enable the natcap-codesign service
       ansible.builtin.systemd_service:
         name: natcap-codesign
+        daemon_reload: true  # reload in case there are any config changes
         state: started
         enabled: true
 
