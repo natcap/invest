@@ -15,11 +15,14 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 CERTIFICATE = sys.argv[1]
 
+with open("access_token.txt") as token_file:
+    ACCESS_TOKEN = token_file.read().strip()
+
 
 def get_from_queue():
     response = requests.get(
         "https://us-west1-natcap-servers.cloudfunctions.net/codesigning-queue",
-        data={"token": str(os.environ['ACCESS_TOKEN'])})
+        data={"token": ACCESS_TOKEN})
     if response.status_code == 204:
         return None
     else:
