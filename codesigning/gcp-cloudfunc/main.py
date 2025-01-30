@@ -51,6 +51,10 @@ def get_lock():
 
 @functions_framework.http
 def main(request):
+    data = request.get_json()
+    if data['token'] != os.environ['ACCESS_TOKEN']:
+        return jsonify('Invalid token'), 403
+
     request_method = request.method
 
     storage_client = storage.Client()
@@ -78,11 +82,6 @@ def main(request):
         return jsonify(data)
 
     elif request_method == 'POST':
-        data = request.get_json()
-
-        if data['token'] != os.environ['ACCESS_TOKEN']:
-            return jsonify('Invalid token'), 403
-
         url = data['url']
 
         if not url.endswith('.exe'):
