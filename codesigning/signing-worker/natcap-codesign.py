@@ -21,9 +21,12 @@ with open(TOKEN_FILE) as token_file:
 
 
 def get_from_queue():
-    response = requests.get(
+    response = requests.post(
         "https://us-west1-natcap-servers.cloudfunctions.net/codesigning-queue",
-        data={"token": ACCESS_TOKEN})
+        data={
+            "token": ACCESS_TOKEN,
+            "action": "dequeue"
+        })
     if response.status_code == 204:
         return None
     else:

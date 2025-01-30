@@ -55,12 +55,13 @@ def main(request):
     if data['token'] != os.environ['ACCESS_TOKEN']:
         return jsonify('Invalid token'), 403
 
-    request_method = request.method
+    if request.method != 'POST':
+        return jsonify('Invalid request method'), 405
 
     storage_client = storage.Client()
     bucket = storage_client.bucket(CODESIGN_DATA_BUCKET)
 
-    if request_method == 'GET':
+    if data['action'] == 'dequeue':
         with get_lock():
             queuefile = bucket.blob('queue.json')
             queue_dict = json.loads(queuefile.download_as_string())
@@ -81,7 +82,7 @@ def main(request):
         logging.info(f'Dequeued {next_file_url}')
         return jsonify(data)
 
-    elif request_method == 'POST':
+    elif data['action'] == 'enqueue':
         url = data['url']
 
         if not url.endswith('.exe'):
@@ -143,4 +144,4 @@ def main(request):
         return jsonify("OK"), 200
 
     else:
-        return jsonify('Invalid request method'), 405
+        return jsonify('Invalid action request'), 405
