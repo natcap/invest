@@ -90,7 +90,7 @@ def main():
         except Exception as e:
             LOGGER.exception("Unexpected error signing file")
             raise e
-        time.sleep(15)
+        time.sleep(60)
 
 
 if __name__ == '__main__':
