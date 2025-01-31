@@ -631,34 +631,79 @@ def _generate_report(raster_file_set, model_args, file_registry):
     with codecs.open(html_report_path, 'w', encoding='utf-8') as report_doc:
         # Boilerplate header that defines style and intro header.
         header = (
-            '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Carbon R'
-            'esults</title><style type="text/css">body { background-color: #E'
-            'FECCA; color: #002F2F} h1 { text-align: center } h1, h2, h3, h4,'
-            'strong, th { color: #046380; } h2 { border-bottom: 1px solid #A7'
-            'A37E; } table { border: 5px solid #A7A37E; margin-bottom: 50px; '
-            'background-color: #E6E2AF; } td, th { margin-left: 0px; margin-r'
-            'ight: 0px; padding-left: 8px; padding-right: 8px; padding-bottom'
-            ': 2px; padding-top: 2px; text-align:left; } td { border-top: 5px'
-            'solid #EFECCA; } .number {text-align: right; font-family: monosp'
-            'ace;} img { margin: 20px; }</style></head><body><h1>InVEST Carbo'
-            'n Model Results</h1><p>This document summarizes the results from'
-            'running the InVEST carbon model with the following data.</p>')
+            """
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+            <meta charset="utf-8">
+            <title>Carbon Results</title>
+            <style type="text/css">
+                body {
+                    --invest-green: #148f68;
+                    background: #ffffff;
+                    color: #000000;
+                    font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+                }
+                h1, h2, th {
+                    font-weight: bold;
+                }
+                h1, h2 {
+                    color: var(--invest-green);
+                }
+                h1 {
+                    font-size: 2rem;
+                }
+                h2 {
+                    font-size: 1.5rem;
+                }
+                table {
+                    border: 0.25rem solid var(--invest-green);
+                    border-collapse: collapse;
+                }
+                thead tr {
+                    background: #e9ecef;
+                    border-bottom: 0.1875rem solid var(--invest-green);
+                }
+                tbody tr:nth-child(even) {
+                    background: ghostwhite;
+                }
+                th {
+                    padding: 0.5rem;
+                    text-align:left;
+                }
+                td {
+                    padding: 0.375rem 0.5rem;
+                }
+                .number {
+                    text-align: right;
+                    font-family: monospace;
+                }
+            </style>
+            </head>
+            <body>
+            <h1>InVEST Carbon Model Results</h1>
+            <p>This document summarizes the results from
+            running the InVEST carbon model with the following data.</p>
+            """
+        )
 
         report_doc.write(header)
         report_doc.write('<p>Report generated at %s</p>' % (
             time.strftime("%Y-%m-%d %H:%M")))
 
         # Report input arguments
-        report_doc.write('<table><tr><th>arg id</th><th>arg value</th></tr>')
+        report_doc.write('<h2>Inputs</h2>')
+        report_doc.write('<table><thead><tr><th>arg id</th><th>arg value</th>'
+                         '</tr></thead><tbody>')
         for key, value in model_args.items():
             report_doc.write('<tr><td>%s</td><td>%s</td></tr>' % (key, value))
-        report_doc.write('</table>')
+        report_doc.write('</tbody></table>')
 
         # Report aggregate results
-        report_doc.write('<h3>Aggregate Results</h3>')
+        report_doc.write('<h2>Aggregate Results</h2>')
         report_doc.write(
-            '<table><tr><th>Description</th><th>Value</th><th>Units</th><th>R'
-            'aw File</th></tr>')
+            '<table><thead><tr><th>Description</th><th>Value</th><th>Units'
+            '</th><th>Raw File</th></tr></thead><tbody>')
 
         # value lists are [sort priority, description, statistic, units]
         report = [
@@ -681,7 +726,7 @@ def _generate_report(raster_file_set, model_args, file_registry):
                     '<tr><td>%s</td><td class="number">%.2f</td><td>%s</td>'
                     '<td>%s</td></tr>' % (
                         description, summary_stat, units, raster_uri))
-        report_doc.write('</body></html>')
+        report_doc.write('</tbody></table></body></html>')
 
 
 @validation.invest_validator

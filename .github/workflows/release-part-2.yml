@@ -75,11 +75,17 @@ jobs:
           for artifact in Workbench-Windows-binary \
                           Workbench-macOS-binary \
                           InVEST-sample-data \
-                          InVEST-user-guide \
-                          "Source distribution"
+                          InVEST-user-guide
           do
             gh run download $RUN_ID --dir artifacts --name "$artifact"
           done
+
+          # We build one sdist per combination of OS and python version, so just
+          # download and unzip all of them into an sdists directory so we can
+          # just grab the first one.  This approach is more flexible to changes
+          # in OS and python versions than just statically defining the artifact name.
+          gh run download $RUN_ID --dir sdists --pattern "Source*"
+          cp "$(find sdists -name '*.tar.gz' -print -quit)" artifacts/
 
       - name: Create Github release
         run: |

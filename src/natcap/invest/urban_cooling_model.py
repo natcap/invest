@@ -301,7 +301,10 @@ MODEL_SPEC = {
                     "units": u.none
                 },
                 "mean_t_air": {
-                    "about": "Average temperature value in building.",
+                    "about": (
+                        "Average temperature value in building. Calculated "
+                        "from the mean T_air pixel value under this building "
+                        "geometry."),
                     "type": "number",
                     "units": u.degree_Celsius
                 }
