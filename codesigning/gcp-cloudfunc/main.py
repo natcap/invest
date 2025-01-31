@@ -22,8 +22,7 @@ LOG_CLIENT.setup_logging()
 def get_lock():
     """Acquire a GCS-based mutex.
 
-    This requires that the bucket we are using has versioning
-
+    This requires that the bucket we are using has versioning.
     """
     storage_client = storage.Client()
     bucket = storage_client.bucket(CODESIGN_DATA_BUCKET)
@@ -51,6 +50,17 @@ def get_lock():
 
 @functions_framework.http
 def main(request):
+    """Handle requests to this GCP Cloud Function.
+
+    All requests must be POST requests and have a JSON body with the following
+    attributes:
+
+        * token: a secret token that matches the ACCESS_TOKEN environment
+            variable that is defined in the cloud function configuration.
+        * action: either 'enqueue' or 'dequeue'
+
+    If the action is 'enqueue', the request must also have a 'url' attribute.
+    """
     data = request.get_json()
     if data['token'] != os.environ['ACCESS_TOKEN']:
         logging.info('Rejecting request due to invalid token')
