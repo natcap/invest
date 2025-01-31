@@ -42,6 +42,9 @@ Unreleased Changes
     * Now testing and building against Python 3.13.
       No longer testing and building with Python 3.8, which reached EOL.
       https://github.com/natcap/invest/issues/1755
+    * All InVEST model output data now include metadata sidecar files.
+      These are '.yml' files with the same basename as the dataset they
+      describe. https://github.com/natcap/invest/issues/1662
 * Workbench
     * Auto-scrolling of log output is halted on user-initiated scrolling,
       enabling easier inspection of log output while a model is running
