@@ -441,6 +441,12 @@ jobs:
       #    WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.exe' | head -n 1)
       #    make WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
 
+      - name: Deploy artifacts to GCS
+        if: github.event_name != 'pull_request'
+        run: make deploy
+
+      # This relies on the file existing on GCP, so it must be run after `make
+      # deploy` is called.
       - name: Queue windows binaries for signing
         if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
         env:
@@ -448,10 +454,6 @@ jobs:
         run: |
           cd codesigning
           bash enqueue-current-windows-installer.sh
-
-      - name: Deploy artifacts to GCS
-        if: github.event_name != 'pull_request'
-        run: make deploy
 
       - name: Upload workbench binary artifact
         if: always()
