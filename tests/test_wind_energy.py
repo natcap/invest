@@ -274,7 +274,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         from natcap.invest import wind_energy
 
         srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3157) #UTM Zone 10N
+        srs.ImportFromEPSG(3157)  # UTM Zone 10N
         projection_wkt = srs.ExportToWkt()
         origin = (443723.127327877911739, 4956546.905980412848294)
         pos_x = origin[0]
@@ -284,7 +284,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         fields = {'id': ogr.OFTReal}
         attrs = [{'id': 1}]
 
-        # Square polygon that will overlap the 4 pixels of the raster in the 
+        # Square polygon that will overlap the 4 pixels of the raster in the
         # upper left corner
         poly_geometry = [box(pos_x, pos_y - 17, pos_x + 17, pos_y)]
         poly_vector_path = os.path.join(
@@ -306,7 +306,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         dist_raster_path = os.path.join(self.workspace_dir, 'dist.tif')
         # Call function to test given testing inputs
         wind_energy._create_distance_raster(
-            base_raster_path, poly_vector_path, dist_raster_path, 
+            base_raster_path, poly_vector_path, dist_raster_path,
             self.workspace_dir)
 
         # Compare the results
@@ -348,11 +348,9 @@ class WindEnergyUnitTests(unittest.TestCase):
         price_list = [0.10, 0.10, 0.10, 0.10, 0.10]
 
         srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3157) #UTM Zone 10N
+        srs.ImportFromEPSG(3157)  # UTM Zone 10N
         projection_wkt = srs.ExportToWkt()
         origin = (443723.127327877911739, 4956546.905980412848294)
-        pos_x = origin[0]
-        pos_y = origin[1]
 
         # Create harvested raster
         harvest_val = 1000000
@@ -360,8 +358,8 @@ class WindEnergyUnitTests(unittest.TestCase):
             [[harvest_val, harvest_val + 1e5, harvest_val + 2e5,
                 harvest_val + 3e5, harvest_val + 4e5],
              [harvest_val, harvest_val + 1e5, harvest_val + 2e5,
-                 harvest_val + 3e5, harvest_val + 4e5],
-            ], dtype=numpy.float32)
+                 harvest_val + 3e5, harvest_val + 4e5]],
+            dtype=numpy.float32)
         base_harvest_path = os.path.join(self.workspace_dir, 'harvest_raster.tif')
         # Create raster to use for testing input
         pygeoprocessing.numpy_array_to_raster(
@@ -386,9 +384,9 @@ class WindEnergyUnitTests(unittest.TestCase):
         # Compare the results that were "eye" tested.
         desired_npv_array = numpy.array(
             [[309332320.0, 348331200.0, 387330020.0, 426328930.0,
-               465327800.0],
+                465327800.0],
              [309332320.0, 348331200.0, 387330020.0, 426328930.0,
-               465327800.0]], dtype=numpy.float32)
+                465327800.0]], dtype=numpy.float32)
         actual_npv_array = pygeoprocessing.raster_to_numpy_array(
             target_npv_raster_path)
         numpy.testing.assert_allclose(actual_npv_array, desired_npv_array)
@@ -401,6 +399,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             target_levelized_raster_path)
         numpy.testing.assert_allclose(
             actual_levelized_array, desired_levelized_array)
+
 
 class WindEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wind Energy module."""
@@ -428,8 +427,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
             'turbine_parameters_path': os.path.join(
                 SAMPLE_DATA, '3_6_turbine.csv'),
-            'number_of_turbines': '80', # pass str to test casting
-            'min_depth': '3', # pass str to test casting
+            'number_of_turbines': '80',  # pass str to test casting
+            'min_depth': '3',  # pass str to test casting
             'max_depth': 180,
             'n_workers': -1
         }
@@ -534,13 +533,13 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['max_distance'] = 200000
         args['valuation_container'] = True
         args['foundation_cost'] = 2000000
-        args['discount_rate'] = '0.07' # pass str to test casting
+        args['discount_rate'] = '0.07'  # pass str to test casting
         # Test that only grid points are provided in grid_points_path
         args['grid_points_path'] = os.path.join(
             SAMPLE_DATA, 'resampled_grid_pts.csv')
         args['price_table'] = False
         args['wind_price'] = 0.187
-        args['rate_change'] = '0.2' # pass str to test casting
+        args['rate_change'] = '0.2'  # pass str to test casting
 
         wind_energy.execute(args)
 
