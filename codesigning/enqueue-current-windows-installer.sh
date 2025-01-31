@@ -6,7 +6,7 @@
 # NOTE: this script must be run from the directory containing this script.
 
 version=$(python -m setuptools_scm)
-url_base=$(make -C .. print-DIST_URL_BASE | awk ' { print $3 } ')
+url_base=$(make -C .. --no-print-directory print-DIST_URL_BASE | awk ' { print $3 } ')
 url="${url_base}/workbench/invest_${version}_workbench_win32_x64.exe"
 
 echo "Enqueuing URL ${url}"
