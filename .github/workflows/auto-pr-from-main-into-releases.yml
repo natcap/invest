@@ -18,7 +18,7 @@ jobs:
     name: PR main into release/**
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - run: git fetch origin +refs/tags/*:refs/tags/*
@@ -71,8 +71,8 @@ jobs:
               # the person who merged the PR that caused this commit to be
               # created.  Others could of course be assigned later.
               gh pr create \
-                  --head $GITHUB_REPOSITORY:$SOURCE_BRANCH \
-                  --base $GITHUB_REPOSITORY:$RELEASE_BRANCH \
+                  --head $SOURCE_BRANCH \
+                  --base $RELEASE_BRANCH \
                   --reviewer "$PR_USERNAME" \
                   --assignee "$PR_USERNAME" \
                   --label "auto" \
