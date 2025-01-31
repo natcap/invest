@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 import logging
 import os
 import shutil
@@ -78,6 +79,35 @@ def sign_file(file_to_sign):
     shutil.move(signed_file, file_to_sign)
 
 
+def add_file_to_signed_list(url):
+    # Since this process is the only one that should be writing to this file, we
+    # don't need to worry about race conditions.
+    remote_signed_files_path = 'gs://natcap-codesigning/signed_files.json'
+    local_signed_files_path = os.path.join(FILE_DIR, 'signed_files.json')
+
+    # Test to see if the signed files json file exists in the bucket; create it
+    # if not.
+    exists_proc = subprocess.run(
+        ['gsutil', '-q', 'stat', remote_signed_files_path], check=False)
+    if exists_proc.returncode != 0:
+        signed_files_dict = {'signed_files': []}
+    else:
+        subprocess.run(
+            ['gsutil', 'cp', remote_signed_files_path,
+             local_signed_files_path], check=True)
+        with open(local_signed_files_path, 'r') as signed_files:
+            signed_files_dict = json.load(signed_files)
+
+    with open(local_signed_files_path, 'w') as signed_files:
+        signed_files_dict['signed_files'].append(url)
+        json.dump(signed_files_dict, signed_files)
+
+    subprocess.run(
+        ['gsutil', 'cp', local_signed_files_path,
+         remote_signed_files_path], check=True)
+    LOGGER.info(f"Added {url} to {remote_signed_files_path}")
+
+
 def main():
     while True:
         try:
@@ -91,6 +121,9 @@ def main():
                 sign_file(filename)
                 LOGGER.info(f"Uploading signed file to {file_to_sign['gs-uri']}")
                 upload_to_bucket(filename, file_to_sign['gs-uri'])
+                LOGGER.info(
+                    f"Adding {file_to_sign['https-url']} to signed files list")
+                add_file_to_signed_list(file_to_sign['https-url'])
                 LOGGER.info(f"Removing {filename}")
                 os.remove(filename)
                 LOGGER.info("Signing complete.")
