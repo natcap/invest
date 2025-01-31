@@ -446,7 +446,7 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ secrets.CODESIGN_QUEUE_ACCESS_TOKEN }}
         run: |
-          cd codesign
+          cd codesigning
           bash enqueue-current-windows-installer.sh
 
       - name: Deploy artifacts to GCS
