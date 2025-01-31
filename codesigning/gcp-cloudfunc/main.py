@@ -63,6 +63,8 @@ def main(request):
     storage_client = storage.Client()
     bucket = storage_client.bucket(CODESIGN_DATA_BUCKET)
 
+    logging.debug('Data POSTed: %s', data)
+
     if data['action'] == 'dequeue':
         with get_lock():
             queuefile = bucket.blob('queue.json')
@@ -87,7 +89,7 @@ def main(request):
 
     elif data['action'] == 'enqueue':
         url = data['url']
-        logging.info('Attempting to enqueue url %s', url)
+        logging.info('Attempting to enqueue url" %s', url)
 
         if not url.endswith('.exe'):
             logging.info("Rejecting URL because it doesn't end in .exe")

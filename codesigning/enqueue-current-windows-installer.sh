@@ -9,4 +9,5 @@ version=$(python -m setuptools_scm)
 url_base=$(make -C .. print-DIST_URL_BASE | awk ' { print $3 } ')
 url="${url_base}/workbench/invest_${version}_workbench_win32_x64.exe"
 
+echo "Enqueuing URL ${url}"
 python enqueue-binary.py "${url}"
