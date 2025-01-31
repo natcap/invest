@@ -1921,8 +1921,8 @@ class TestValidationFromSpec(unittest.TestCase):
         with open(csv_path, 'w') as csv_file:
             csv_file.write(textwrap.dedent(
                 """\
-                "field_a"
-                1"""))
+                "field_a",
+                1,"""))
         args = {
             'some_number': 1,
             'csv': csv_path,
