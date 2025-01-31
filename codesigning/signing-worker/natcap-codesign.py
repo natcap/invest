@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Service script to sign InVEST windows binaries."""
 
 import json
 import logging
@@ -23,6 +24,12 @@ with open(TOKEN_FILE) as token_file:
 
 
 def get_from_queue():
+    """Get an item to sign from the queue.
+
+    Returns:
+        ``None`` if there are no items in the queue, the JSON response dict
+        otherwise.
+    """
     response = requests.post(
         "https://us-west1-natcap-servers.cloudfunctions.net/codesigning-queue",
         headers={"Content-Type": "application/json"},
@@ -36,8 +43,17 @@ def get_from_queue():
         return response.json()
 
 
-# See https://stackoverflow.com/a/16696317
 def download_file(url):
+    """Download an arbitrarily large file.
+
+    Adapted from https://stackoverflow.com/a/16696317
+
+    Args:
+        url (str): The URL to download.
+
+    Returns:
+        ``None``
+    """
     local_filename = url.split('/')[-1]
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
@@ -48,10 +64,32 @@ def download_file(url):
 
 
 def upload_to_bucket(filename, path_on_bucket):
+    """Upload a file to a GCS bucket.
+
+    Args:
+        filename (str): The local file to upload.
+        path_on_bucket (str): The path to the file on the GCS bucket, including
+            the ``gs://`` prefix.
+
+    Returns:
+        ``None``
+    """
     subprocess.run(['gsutil', 'cp', filename, path_on_bucket], check=True)
 
 
 def sign_file(file_to_sign):
+    """Sign a local .exe file.
+
+    Uses ``osslsigncode`` to sign the file using the private key stored on a
+    Yubikey, and the corresponding certificate that has been exported from the
+    PIV slot 9c.
+
+    Args:
+        file_to_sign (str): The local filepath to the file to sign.
+
+    Returns:
+        ``None``
+    """
     signed_file = f"{file_to_sign}.signed"
     pass_file = os.path.join(FILE_DIR, 'pass.txt')
 
@@ -80,6 +118,14 @@ def sign_file(file_to_sign):
 
 
 def add_file_to_signed_list(url):
+    """Add a file to the list of signed files on GCS.
+
+    Args:
+        url (str): The public HTTPS URL of the file to add to the list.
+
+    Returns:
+        ``None``
+    """
     # Since this process is the only one that should be writing to this file, we
     # don't need to worry about race conditions.
     remote_signed_files_path = 'gs://natcap-codesigning/signed_files.json'
