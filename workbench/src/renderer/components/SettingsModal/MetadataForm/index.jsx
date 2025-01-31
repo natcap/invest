@@ -1,4 +1,4 @@
-import React, { useState, useEffect, } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Row from 'react-bootstrap/Row';
@@ -30,6 +30,9 @@ function FormRow(label, value, handler) {
   );
 }
 
+/**
+ * A form for submitting GeoMetaMaker profile data.
+ */
 export default function MetadataForm() {
   const { t } = useTranslation();
 
@@ -60,7 +63,7 @@ export default function MetadataForm() {
     loadProfile();
   }, []);
 
-  async function handleSubmit(event) {
+  const handleSubmit = useCallback(async (event) => {
     event.preventDefault();
     const { message, error } = await setGeoMetaMakerProfile({
       contact: {
@@ -78,7 +81,7 @@ export default function MetadataForm() {
     setAlertError(error);
     const key = window.crypto.getRandomValues(new Uint16Array(1))[0].toString();
     setAlertKey(key);
-  }
+  }, []);
 
   return (
     <Form onSubmit={handleSubmit} id="metadata-form">
