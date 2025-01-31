@@ -67,7 +67,7 @@ NUTRIENTS = [
 
 MODEL_SPEC = {
     "model_id": "crop_production_regression",
-    "model_name": gettext("Crop Production: Regression"),
+    "model_title": gettext("Crop Production: Regression"),
     "pyname": "natcap.invest.crop_production_regression",
     "userguide": "crop_production.html",
     "aliases": ("cpr",),

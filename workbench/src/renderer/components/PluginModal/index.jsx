@@ -99,7 +99,7 @@ export default function PluginModal(props) {
                     value={pluginID}
                     key={pluginID}
                   >
-                    {plugins[pluginID].model_name}
+                    {plugins[pluginID].modelTitle}
                   </option>
                 )
               )

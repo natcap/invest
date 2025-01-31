@@ -33,7 +33,7 @@ NODATA_VALUE = -1
 
 MODEL_SPEC = {
     "model_id": "forest_carbon_edge_effect",
-    "model_name": gettext("Forest Carbon Edge Effect"),
+    "model_title": gettext("Forest Carbon Edge Effect"),
     "pyname": "natcap.invest.forest_carbon_edge_effect",
     "userguide": "carbon_edge.html",
     "aliases": ("fc",),

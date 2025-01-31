@@ -106,7 +106,7 @@ WATERSHED_OUTPUT_FIELDS = {
 
 MODEL_SPEC = {
     "model_id": "annual_water_yield",
-    "model_name": gettext("Annual Water Yield"),
+    "model_title": gettext("Annual Water Yield"),
     "pyname": "natcap.invest.annual_water_yield",
     "userguide": "annual_water_yield.html",
     "aliases": ("hwy", "awy"),

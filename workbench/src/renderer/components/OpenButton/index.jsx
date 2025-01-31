@@ -38,8 +38,8 @@ class OpenButton extends React.Component {
         return;
       }
       const job = new InvestJob({
-        modelRunName: datastack.model_run_name,
-        modelHumanName: datastack.model_human_name,
+        modelID: datastack.model_id,
+        modelTitle: datastack.model_title,
         argsValues: datastack.args,
       });
       this.props.openInvestModel(job);

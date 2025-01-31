@@ -201,7 +201,7 @@ class CLIHeadlessTests(unittest.TestCase):
         from natcap.invest import cli, validation
 
         datastack_dict = {
-            'model_name': 'natcap.invest.carbon',
+            'model_id': 'carbon',
             'invest_version': '3.10',
             'args': {}
         }
@@ -292,7 +292,7 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: Get validation results as JSON from cli."""
         from natcap.invest import cli
         datastack_dict = {
-            'model_name': 'natcap.invest.carbon',
+            'model_id': 'carbon',
             'invest_version': '3.10',
             'args': {}
         }

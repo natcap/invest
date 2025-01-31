@@ -11,14 +11,14 @@ const PREFIX = 'api';
  *
  * Server must already be started. If the model is a core invest model, the core
  * port is returned. If a plugin, the port for that plugin's server is returned.
- * @param {string} modelName - model name as given by `invest list`
+ * @param {string} modelID - model name as given by `invest list`
  * @returns {Promise} resolves object
  */
-async function getPort(modelName) {
+async function getPort(modelID) {
   let port;
   const plugins = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins');
-  if (plugins && Object.keys(plugins).includes(modelName)) {
-    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `plugins.${modelName}.port`);
+  if (plugins && Object.keys(plugins).includes(modelID)) {
+    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `plugins.${modelID}.port`);
   } else {
     port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
   }
@@ -49,15 +49,15 @@ export async function getInvestModelNames() {
 /**
  * Get the MODEL_SPEC dict from an invest model as a JSON.
  *
- * @param {string} modelName - model name as given by `invest list`
+ * @param {string} modelID - model name as given by `invest list`
  * @returns {Promise} resolves object
  */
-export async function getSpec(modelName) {
-  const port = await getPort(modelName);
+export async function getSpec(modelID) {
+  const port = await getPort(modelID);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/getspec?language=${LANGUAGE}`, {
       method: 'post',
-      body: JSON.stringify(modelName),
+      body: JSON.stringify(modelID),
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
@@ -69,7 +69,7 @@ export async function getSpec(modelName) {
  * Get the dynamically determined dropdown options for a given model.
  *
  * @param {object} payload {
- *   model_module: string (e.g. natcap.invest.carbon)
+ *   model_id: string (e.g. carbon)
  *   args: JSON string of InVEST model args keys and values
  * }
  * @returns {Promise} resolves object
@@ -91,13 +91,13 @@ export async function getDynamicDropdowns(payload) {
  * Get the enabled/disabled status of arg inputs.
  *
  * @param {object} payload {
- *   model_module: string (e.g. natcap.invest.carbon)
+ *   model_id: string (e.g. carbon)
  *   args: JSON string of InVEST model args keys and values
  * }
  * @returns {Promise} resolves object
  */
 export async function fetchArgsEnabled(payload) {
-  const port = await getPort(payload.modelId);
+  const port = await getPort(payload.modelID);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/args_enabled`, {
       method: 'post',
@@ -119,13 +119,13 @@ export async function fetchArgsEnabled(payload) {
  * Send invest arguments to a model's validate function.
  *
  * @param {object} payload {
- *   model_module: string (e.g. natcap.invest.carbon)
+ *   model_id: string (e.g. carbon)
  *   args: JSON string of InVEST model args keys and values
  * }
  * @returns {Promise} resolves array
  */
 export async function fetchValidation(payload) {
-  const port = await getPort(payload.modelId);
+  const port = await getPort(payload.modelID);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/validate?language=${LANGUAGE}`, {
       method: 'post',
@@ -147,7 +147,7 @@ export async function fetchValidation(payload) {
  * Load invest arguments from a datastack-compliant file.
  *
  * @param {string} payload - path to file
- * @returns {Promise} resolves undefined
+ * @returns {Promise} resolvees undefined
  */
 export async function fetchDatastackFromFile(payload) {
   const port = await getCorePort();
@@ -193,7 +193,7 @@ export async function saveToPython(payload) {
  *
  * @param  {object} payload {
  *   filepath: string
- *   moduleName: string (e.g. natcap.invest.carbon)
+ *   model_id: string (e.g. carbon)
  *   args_dict: JSON string of InVEST model args keys and values
  * }
  * @returns {Promise} resolves undefined
@@ -207,13 +207,13 @@ export async function archiveDatastack(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
-      .then(({message, error}) => {
+      .then(({ message, error }) => {
         if (error) {
           logger.error(message);
         } else {
           logger.debug(message);
         }
-        return {message, error};
+        return { message, error };
       })
       .catch((error) => logger.error(error.stack))
   );
@@ -224,7 +224,7 @@ export async function archiveDatastack(payload) {
  *
  * @param  {object} payload {
  *   filepath: string
- *   moduleName: string (e.g. natcap.invest.carbon)
+ *   model_id: string (e.g. carbon)
  *   args: JSON string of InVEST model args keys and values
  *   relativePaths: boolean
  * }
@@ -239,13 +239,13 @@ export async function writeParametersToFile(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
-      .then(({message, error}) => {
+      .then(({ message, error }) => {
         if (error) {
           logger.error(message);
         } else {
           logger.debug(message);
         }
-        return {message, error};
+        return { message, error };
       })
       .catch((error) => logger.error(error.stack))
   );

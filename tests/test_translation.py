@@ -99,7 +99,7 @@ class TranslationTests(unittest.TestCase):
     def test_invest_validate(self):
         """Translation: test that CLI validate output is translated."""
         datastack = {  # write datastack to a JSON file
-            'model_name': 'natcap.invest.carbon',
+            'model_id': 'carbon',
             'invest_version': '0.0',
             'args': {}
         }
@@ -124,7 +124,8 @@ class TranslationTests(unittest.TestCase):
             'api/models', query_string={'language': TEST_LANG})
         result = json.loads(response.get_data(as_text=True))
         self.assertIn(
-            TEST_MESSAGES['Carbon Storage and Sequestration'], result)
+            TEST_MESSAGES['Carbon Storage and Sequestration'],
+            [val['model_title'] for val in result.values()])
 
     def test_server_get_invest_getspec(self):
         """Translation: test that /getspec endpoint is translated."""
@@ -143,7 +144,7 @@ class TranslationTests(unittest.TestCase):
         from natcap.invest import carbon
         test_client = ui_server.app.test_client()
         payload = {
-            'model_module': carbon.MODEL_SPEC['pyname'],
+            'model_id': carbon.MODEL_SPEC['model_id'],
             'args': json.dumps({})
         }
         response = test_client.post(

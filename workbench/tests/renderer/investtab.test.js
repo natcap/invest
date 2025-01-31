@@ -27,8 +27,8 @@ import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 jest.mock('../../src/renderer/server_requests');
 
 const DEFAULT_JOB = new InvestJob({
-  modelRunName: 'carbon',
-  modelHumanName: 'Carbon Model',
+  modelID: 'carbon',
+  modelTitle: 'Carbon Model',
 });
 
 function renderInvestTab(job = DEFAULT_JOB) {
@@ -83,8 +83,8 @@ describe('Run status Alert renders with status from a recent run', () => {
     ipcRenderer.invoke.mockResolvedValueOnce('foo');
 
     const job = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Model',
+      modelID: 'carbon',
+      modelTitle: 'Carbon Model',
       status: status,
       argsValues: {},
       logfile: 'foo.txt',
@@ -101,8 +101,8 @@ describe('Run status Alert renders with status from a recent run', () => {
     // mock a defined value for ipcMainChannels.INVEST_SERVE so the tab loads
     ipcRenderer.invoke.mockResolvedValueOnce('foo');
     const job = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Model',
+      modelID: 'carbon',
+      modelTitle: 'Carbon Model',
       status: status,
       argsValues: {},
       logfile: 'foo.txt',
@@ -235,10 +235,10 @@ describe('Sidebar Buttons', () => {
 
     const payload = writeParametersToFile.mock.calls[0][0];
     expect(Object.keys(payload)).toEqual(expect.arrayContaining(
-      ['filepath', 'moduleName', 'relativePaths', 'args']
+      ['filepath', 'model_id', 'relativePaths', 'args']
     ));
     Object.keys(payload).forEach((key) => {
-      expect(payload[key]).not.toBeUndefined();
+      expect(payload[key]).toBeDefined();
     });
     const args = JSON.parse(payload.args);
     const argKeys = Object.keys(args);
@@ -267,14 +267,14 @@ describe('Sidebar Buttons', () => {
 
     const payload = saveToPython.mock.calls[0][0];
     expect(Object.keys(payload)).toEqual(expect.arrayContaining(
-      ['filepath', 'modelname', 'args']
+      ['filepath', 'model_id', 'args']
     ));
     expect(typeof payload.filepath).toBe('string');
-    expect(typeof payload.modelname).toBe('string');
+    expect(typeof payload.model_id).toBe('string');
     // guard against a common mistake of passing a model title
-    expect(payload.modelname.split(' ')).toHaveLength(1);
+    expect(payload.model_id.split(' ')).toHaveLength(1);
 
-    expect(payload.args).not.toBeUndefined();
+    expect(payload.args).toBeDefined();
     const args = JSON.parse(payload.args);
     const argKeys = Object.keys(args);
     expect(argKeys).toEqual(
@@ -295,7 +295,7 @@ describe('Sidebar Buttons', () => {
     const mockDialogData = { canceled: false, filePath: 'data.tgz' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    const { findByText, findByLabelText, findByRole, getByRole } = renderInvestTab();
+    const { findByText, findByLabelText, findByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
     await userEvent.click(saveAsButton);
     const datastackOption = await findByLabelText((content) => content.startsWith('Parameters and data'));
@@ -305,14 +305,14 @@ describe('Sidebar Buttons', () => {
 
     const payload = archiveDatastack.mock.calls[0][0];
     expect(Object.keys(payload)).toEqual(expect.arrayContaining(
-      ['filepath', 'moduleName', 'args']
+      ['filepath', 'model_id', 'args']
     ));
     expect(typeof payload.filepath).toBe('string');
-    expect(typeof payload.moduleName).toBe('string');
+    expect(typeof payload.model_id).toBe('string');
     // guard against a common mistake of passing a model title
-    expect(payload.moduleName.split(' ')).toHaveLength(1);
+    expect(payload.model_id.split(' ')).toHaveLength(1);
 
-    expect(payload.args).not.toBeUndefined();
+    expect(payload.args).toBeDefined();
     const args = JSON.parse(payload.args);
     const argKeys = Object.keys(args);
     expect(argKeys).toEqual(
@@ -460,8 +460,8 @@ describe('Sidebar Buttons', () => {
     // Render with a completed model run so we can navigate to Log Tab
     // and assert that Loading new params toggles back to Setup Tab
     const job = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Model',
+      modelID: 'carbon',
+      modelTitle: 'Carbon Model',
       status: 'success',
       argsValues: {},
       logfile: 'foo.txt',

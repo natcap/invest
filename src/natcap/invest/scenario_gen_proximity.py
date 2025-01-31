@@ -30,7 +30,7 @@ MISSING_CONVERT_OPTION_MSG = gettext(
 
 MODEL_SPEC = {
     "model_id": "scenario_generator_proximity",
-    "model_name": gettext("Scenario Generator: Proximity Based"),
+    "model_title": gettext("Scenario Generator: Proximity Based"),
     "pyname": "natcap.invest.scenario_gen_proximity",
     "userguide": "scenario_gen_proximity.html",
     "aliases": ("sgp",),
