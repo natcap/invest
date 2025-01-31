@@ -109,6 +109,9 @@ def main(request):
         mday, mmonth, myear = response.headers['Last-Modified'].split(' ')[1:4]
         modified_time = datetime.datetime.strptime(
             ' '.join((mday, mmonth, myear)), '%d %b %Y')
+        if response.status_code > 400:
+            return jsonify('Requested file does not exist'), 403
+
         if modified_time < datetime.datetime(year=2024, month=6, day=1):
             return jsonify('File is too old'), 400
 
