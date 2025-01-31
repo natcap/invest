@@ -53,9 +53,11 @@ def get_lock():
 def main(request):
     data = request.get_json()
     if data['token'] != os.environ['ACCESS_TOKEN']:
+        logging.info('Rejecting request due to invalid token')
         return jsonify('Invalid token'), 403
 
     if request.method != 'POST':
+        logging.info('Rejecting request due to invalid HTTP method')
         return jsonify('Invalid request method'), 405
 
     storage_client = storage.Client()
@@ -69,6 +71,7 @@ def main(request):
                 next_file_url = queue_dict['queue'].pop(0)
             except IndexError:
                 # No items in the queue!
+                logging.info('No binaries are currently queued for signing')
                 return jsonify('No items in the queue'), 204
 
             queuefile.upload_from_string(json.dumps(queue_dict))
@@ -84,16 +87,21 @@ def main(request):
 
     elif data['action'] == 'enqueue':
         url = data['url']
+        logging.info('Attempting to enqueue url %s', url)
 
         if not url.endswith('.exe'):
+            logging.info("Rejecting URL because it doesn't end in .exe"')
             return jsonify('Invalid URL to sign'), 400
 
         if not url.startswith(GOOGLE_PREFIX):
+            logging.info('Rejecting URL because it does not start with %s',
+                         GOOGLE_PREFIX)
             return jsonify('Invalid host'), 400
 
         if not url.startswith((
                 f'{GOOGLE_PREFIX}/releases.naturalcapitalproject.org/',
                 f'{GOOGLE_PREFIX}/natcap-dev-build-artifacts/')):
+            logging.info('Rejecting URL because the bucket is incorrect')
             return jsonify("Invalid target bucket"), 400
 
         # Remove http character quoting
@@ -106,6 +114,7 @@ def main(request):
         # If the file does not exist at this URL, reject it.
         response = requests.head(url)
         if response.status_code > 400:
+            logging.info('Rejecting URL because it does not exist')
             return jsonify('Requested file does not exist'), 403
 
         # If the file is too old, reject it.  Trying to avoid a
@@ -114,6 +123,7 @@ def main(request):
         modified_time = datetime.datetime.strptime(
             ' '.join((mday, mmonth, myear)), '%d %b %Y')
         if modified_time < datetime.datetime(year=2024, month=6, day=1):
+            logging.info('Rejecting URL because it is too old')
             return jsonify('File is too old'), 400
 
         with get_lock():
@@ -126,6 +136,8 @@ def main(request):
                     signed_files_list.download_as_string())
 
             if url in signed_files_dict['signed_files']:
+                logging.info(
+                    'Rejecting URL because it has already been signed')
                 return jsonify('File has already been signed'), 400
 
             # Since the file has not already been signed, add the file to the
