@@ -472,8 +472,8 @@ def main(user_args=None):
                 model_module.execute(parsed_datastack.args)
                 LOGGER.info('Generating metadata for results')
                 try:
-                    # TODO: if there's an exception here, do we really want to
-                    # indicate a model run failure? Maybe not
+                    # If there's an exception from creating metadata
+                    # I don't think we want to indicate a model failure
                     spec_utils.generate_metadata(model_module, parsed_datastack.args)
                 except Exception as exc:
                     LOGGER.warning(

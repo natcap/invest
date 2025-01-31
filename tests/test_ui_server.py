@@ -96,7 +96,6 @@ class EndpointFunctionTests(unittest.TestCase):
     def test_post_datastack_file(self):
         """UI server: post_datastack_file endpoint."""
         test_client = ui_server.app.test_client()
-        # self.workspace_dir = tempfile.mkdtemp()
         expected_datastack = {
             'args': {
                 'workspace_dir': 'foo'
@@ -119,7 +118,6 @@ class EndpointFunctionTests(unittest.TestCase):
     def test_write_parameter_set_file(self):
         """UI server: write_parameter_set_file endpoint."""
         test_client = ui_server.app.test_client()
-        # self.workspace_dir = tempfile.mkdtemp()
         filepath = os.path.join(self.workspace_dir, 'datastack.json')
         payload = {
             'filepath': filepath,
@@ -146,7 +144,6 @@ class EndpointFunctionTests(unittest.TestCase):
         should catch a ValueError and return an error message.
         """
         test_client = ui_server.app.test_client()
-        # self.workspace_dir = tempfile.mkdtemp()
         filepath = os.path.join(self.workspace_dir, 'datastack.json')
         payload = {
             'filepath': filepath,
@@ -169,7 +166,6 @@ class EndpointFunctionTests(unittest.TestCase):
     def test_save_to_python(self):
         """UI server: save_to_python endpoint."""
         test_client = ui_server.app.test_client()
-        # self.workspace_dir = tempfile.mkdtemp()
         filepath = os.path.join(self.workspace_dir, 'script.py')
         payload = {
             'filepath': filepath,
@@ -186,7 +182,6 @@ class EndpointFunctionTests(unittest.TestCase):
     def test_build_datastack_archive(self):
         """UI server: build_datastack_archive endpoint."""
         test_client = ui_server.app.test_client()
-        # self.workspace_dir = tempfile.mkdtemp()
         target_filepath = os.path.join(self.workspace_dir, 'data.tgz')
         data_path = os.path.join(self.workspace_dir, 'data.csv')
         with open(data_path, 'w') as file:
@@ -214,7 +209,6 @@ class EndpointFunctionTests(unittest.TestCase):
         should catch a ValueError and return an error message.
         """
         test_client = ui_server.app.test_client()
-        # self.workspace_dir = tempfile.mkdtemp()
         target_filepath = os.path.join(self.workspace_dir, 'data.tgz')
         data_path = os.path.join(self.workspace_dir, 'data.csv')
         with open(data_path, 'w') as file:

@@ -675,6 +675,6 @@ def generate_metadata(model_module, args_dict):
                             full_path, spec_data, lineage_statement)
                     except ValueError as error:
                         # Some unsupported file formats, e.g. html
-                        LOGGER.warning(error)
+                        LOGGER.debug(error)
 
     _walk_spec(model_module.MODEL_SPEC['outputs'], args_dict['workspace_dir'])

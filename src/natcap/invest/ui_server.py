@@ -291,7 +291,13 @@ def get_geometamaker_profile():
 
 @app.route(f'/{PREFIX}/set_geometamaker_profile', methods=['POST'])
 def set_geometamaker_profile():
-    """Set the user-profile for geometamaker."""
+    """Set the user-profile for geometamaker.
+
+    Body (JSON string): deserializes to a dict with keys:
+        contact
+        license
+
+    """
     payload = request.get_json()
     profile = geometamaker.Profile(**payload)
     config = geometamaker.Config()

@@ -221,8 +221,20 @@ export async function getGeoMetaMakerProfile() {
 }
 
 /**
- * Set the user-profile for GeoMetaMaker.
+ * Set the user-profile in GeoMetaMaker.
  *
+ * @param {object} payload {
+ *   contact: {
+ *     individual_name: string
+ *     email: string
+ *     organization: string
+ *     position_name: string
+ *   }
+ *   license: {
+ *     title: string
+ *     url: string
+ *   }
+ * }
  * @returns {Promise} resolves object
  */
 export async function setGeoMetaMakerProfile(payload) {

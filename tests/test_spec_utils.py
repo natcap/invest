@@ -290,7 +290,8 @@ class TestDescribeArgFomSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
 
-def generate_files_from_spec(output_spec, workspace):
+def _generate_files_from_spec(output_spec, workspace):
+    """A utility function to support the metadata test."""
     for filename, spec_data in output_spec.items():
         if 'type' in spec_data and spec_data['type'] == 'directory':
             os.mkdir(os.path.join(workspace, filename))
@@ -378,7 +379,7 @@ class TestMetadataFromSpec(unittest.TestCase):
         }
         # Generate an output workspace with real files, without
         # running an invest model.
-        generate_files_from_spec(output_spec, self.workspace_dir)
+        _generate_files_from_spec(output_spec, self.workspace_dir)
 
         model_module = types.SimpleNamespace(
             __name__='urban_nature_access',
