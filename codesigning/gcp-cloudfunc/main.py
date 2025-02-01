@@ -106,8 +106,7 @@ def main(request):
             return jsonify('Invalid URL to sign'), 400
 
         if not url.startswith(GOOGLE_PREFIX):
-            logging.info('Rejecting URL because it does not start with %s',
-                         GOOGLE_PREFIX)
+            logging.info(f'Rejecting URL because it does not start with {GOOGLE_PREFIX}')
             return jsonify('Invalid host'), 400
 
         if not url.startswith((
