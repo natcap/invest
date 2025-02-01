@@ -53,9 +53,11 @@
         update_cache: true
         default_release: "{{ ansible_distribution_release }}-backports"
         pkg:
-          # The backports version is needed because the version in bookworm has
-          # a critical bug in it that prevents it from working with our
-          # certificate.
+          # The normal debian:bookworm repos have osslsigncode 2.5, which has a
+          # bug in it that prevents it from signing our binaries.  This was
+          # fixed in osslsigncode 2.6.  The version available in
+          # bookworm-backports is 2.9.  The issue (and solution) was similar to
+          # https://stackoverflow.com/a/78308879
           - osslsigncode
 
     - name: Create the codesign directory
