@@ -60,6 +60,17 @@ def main(request):
         * action: either 'enqueue' or 'dequeue'
 
     If the action is 'enqueue', the request must also have a 'url' attribute.
+    The 'url' attribute, when provided, must be a URL to a file that meets
+    these requirements:
+        * The URL must be a publicly accessible URL
+        * The URL must be a file that ends in '.exe'
+        * The URL must be located in either the releases bucket, or else
+            in the dev builds bucket.  It doesn't necessarily have to be an
+            InVEST binary.
+        * The URL must be a file that is not older than June 1, 2024
+        * The URL must be a file that is not already in the queue
+        * The URL should be a file that is not already signed (if the file has
+            already been signed, its signature will be overwritten)
     """
     data = request.get_json()
     if data['token'] != os.environ['ACCESS_TOKEN']:
@@ -130,6 +141,9 @@ def main(request):
 
         # If the file is too old, reject it.  Trying to avoid a
         # denial-of-service by invoking the service with very old files.
+        # I just pulled June 1 out of thin air as a date that is a little while
+        # ago, but not so long ago that we could suddenly have many files
+        # enqueued.
         mday, mmonth, myear = response.headers['Last-Modified'].split(' ')[1:4]
         modified_time = datetime.datetime.strptime(
             ' '.join((mday, mmonth, myear)), '%d %b %Y')
