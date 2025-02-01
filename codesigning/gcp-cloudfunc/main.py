@@ -73,7 +73,7 @@ def main(request):
     storage_client = storage.Client()
     bucket = storage_client.bucket(CODESIGN_DATA_BUCKET)
 
-    logging.debug('Data POSTed: %s', data)
+    logging.debug(f'Data POSTed: {data}')
 
     if data['action'] == 'dequeue':
         with get_lock():
