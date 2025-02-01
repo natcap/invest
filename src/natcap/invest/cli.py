@@ -94,7 +94,6 @@ def build_model_list_json(locale_code):
 
     json_object = {}
     for model_id, model_spec in models.model_id_to_spec.items():
-        print(model_id)
         json_object[model_id] = {
             'model_title': translation.gettext(model_spec['model_title']),
             'aliases': model_spec['aliases']

@@ -147,7 +147,7 @@ export async function fetchValidation(payload) {
  * Load invest arguments from a datastack-compliant file.
  *
  * @param {string} payload - path to file
- * @returns {Promise} resolvees undefined
+ * @returns {Promise} resolves undefined
  */
 export async function fetchDatastackFromFile(payload) {
   const port = await getCorePort();
