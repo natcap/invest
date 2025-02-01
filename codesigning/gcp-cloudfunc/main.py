@@ -99,7 +99,7 @@ def main(request):
 
     elif data['action'] == 'enqueue':
         url = data['url']
-        logging.info('Attempting to enqueue url" %s', url)
+        logging.info(f'Attempting to enqueue url {url}')
 
         if not url.endswith('.exe'):
             logging.info("Rejecting URL because it doesn't end in .exe")
