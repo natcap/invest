@@ -295,7 +295,7 @@ def _generate_files_from_spec(output_spec, workspace):
     for filename, spec_data in output_spec.items():
         if 'type' in spec_data and spec_data['type'] == 'directory':
             os.mkdir(os.path.join(workspace, filename))
-            generate_files_from_spec(
+            _generate_files_from_spec(
                 spec_data['contents'], os.path.join(workspace, filename))
         else:
             filepath = os.path.join(workspace, filename)
