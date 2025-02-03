@@ -152,7 +152,7 @@ def main(request):
             return jsonify('File is too old'), 400
 
         with get_lock():
-            # first, check to see if the file has already been signed.
+            # First, check to see if the file has already been signed.
             signed_files_list = codesign_bucket.blob('signed_files.json')
             if not signed_files_list.exists():
                 signed_files_dict = {'signed_files': []}
