@@ -8,7 +8,7 @@ three key components to this service:
    storage-backed cloud function that operates as a high-latency queue.
 2. A script (`enqueue-binary.py`) that will enqueue a binary that already
    exists on one of our GCS buckets.
-3. A `systemd` service that runs on a debian:bookwork machine and periodically
+3. A `systemd` service that runs on a debian:bookworm machine and periodically
    polls the cloud function to dequeue the next item to sign.
 
 ## Deploying the Cloud Function
