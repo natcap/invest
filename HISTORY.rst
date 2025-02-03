@@ -39,6 +39,9 @@
 Unreleased Changes
 ------------------
 * General
+    * Fixed an issue where a user's PROJ_DATA environment variable could
+      trigger a RuntimeError about a missing proj.db file.
+      https://github.com/natcap/invest/issues/1742
     * Now testing and building against Python 3.13.
       No longer testing and building with Python 3.8, which reached EOL.
       https://github.com/natcap/invest/issues/1755
