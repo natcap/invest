@@ -152,7 +152,7 @@ def main(request):
             return jsonify('File is too old'), 400
 
         response = requests.head(f'{url}.signature')
-        if response.status_code >= 400:
+        if response.status_code != 404:
             logging.info('Rejecting URL because it has already been signed.')
             return jsonify('File has already been signed'), 204
 
