@@ -79,7 +79,6 @@ const UI_SPEC = {
         'discount_rate',
         'rate_change',
       ],
-      ['raster_output_units'],
     ],
     enabledFunctions: {
       lulc_fut_path: isSufficient.bind(null, 'calc_sequestration'),
