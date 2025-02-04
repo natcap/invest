@@ -200,6 +200,29 @@ def add_file_to_signed_list(url):
     LOGGER.info(f"Added {url} to {remote_signed_files_path}")
 
 
+def note_signature_complete(local_filepath, gs_uri):
+    """Create a small file next to the signed file to indicate signature.
+
+    Args:
+        gs_uri (str): The GCS URI of the signed file.
+    """
+    # Using osslsigncode to verify the output always fails for me, even though
+    # the signature is clearly valid when checked on Windows.
+    process = subprocess.run(
+        ['osslsigncode', 'verify', '-in', local_filepath], check=False,
+        capture_output=True)
+
+    temp_filepath = f'/tmp/{os.path.basename(local_filepath)}.signed'
+    with open(temp_filepath, 'w') as signature_file:
+        signature_file.write(process.stdout.decode())
+
+    try:
+        subprocess.run(
+            ['gsutil', 'cp', temp_filepath, f'{gs_uri}.signature'], check=True)
+    finally:
+        os.remove(temp_filepath)
+
+
 def main():
     while True:
         try:
@@ -216,6 +239,7 @@ def main():
                 LOGGER.info(
                     f"Adding {file_to_sign['https-url']} to signed files list")
                 add_file_to_signed_list(file_to_sign['https-url'])
+                note_signature_complete(filename, file_to_sign['gs-uri'])
                 LOGGER.info(f"Removing {filename}")
                 post_to_slack(
                     SLACK_NOTIFICATION_SUCCESS.format(
