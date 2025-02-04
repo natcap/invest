@@ -31,7 +31,7 @@ with open(SLACK_TOKEN_FILE) as token_file:
 SLACK_NOTIFICATION_SUCCESS = textwrap.dedent(
     """\
     :lower_left_fountain_pen: Successfully signed and uploaded `{filename}` to
-    [google cloud]({url})
+    <{url}|google cloud>
     """)
 
 SLACK_NOTIFICATION_FAILURE = textwrap.dedent(
