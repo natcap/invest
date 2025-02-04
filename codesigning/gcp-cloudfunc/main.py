@@ -154,7 +154,7 @@ def main(request):
         response = requests.head(f'{url}.signature')
         if response.status_code >= 400:
             logging.info('Rejecting URL because it has already been signed.')
-            return jsonify('File has already been signed'), 400
+            return jsonify('File has already been signed'), 204
 
         with get_lock():
             # Since the file has not already been signed, add the file to the
