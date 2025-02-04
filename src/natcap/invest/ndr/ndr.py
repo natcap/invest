@@ -1,6 +1,5 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
 import copy
-import itertools
 import logging
 import os
 import pickle
@@ -94,16 +93,13 @@ MODEL_SPEC = {
                     "about": gettext(
                         "The distance after which it is assumed that this "
                         "LULC type retains the nutrient at its maximum "
-                        "capacity. If nutrients travel a shorter distance "
-                        "that this, the retention "
-                        "efficiency will be less than the maximum value "
-                        "eff_x, following an exponential decay.")},
+                        "capacity.")},
                 "proportion_subsurface_n": {
                     "type": "ratio",
                     "required": "calc_n",
                     "about": gettext(
                         "The proportion of the total amount of nitrogen that "
-                        "are dissolved into the subsurface. By default, this "
+                        "is dissolved into the subsurface. By default, this "
                         "value should be set to 0, indicating that all "
                         "nutrients are delivered via surface flow. There is "
                         "no equivalent of this for phosphorus.")}
@@ -1029,11 +1025,14 @@ def execute(args):
 # raster_map equation: Multiply a series of arrays element-wise
 def _mult_op(*array_list): return numpy.prod(numpy.stack(array_list), axis=0)
 
+
 # raster_map equation: Sum a list of arrays element-wise
 def _sum_op(*array_list): return numpy.sum(array_list, axis=0)
 
+
 # raster_map equation: calculate inverse of S factor
 def _inverse_op(base_val): return numpy.where(base_val == 0, 0, 1 / base_val)
+
 
 # raster_map equation: rescale and threshold slope between 0.005 and 1
 def _slope_proportion_and_threshold_op(slope):
@@ -1135,8 +1134,13 @@ def _add_fields_to_shapefile(field_pickle_map, target_vector_path):
     for feature in target_layer:
         fid = feature.GetFID()
         for field_name in field_pickle_map:
+            # Since pixel values are kg/(ha•yr), raster sum is (kg•px)/(ha•yr).
+            # To convert to kg/yr, multiply by ha/px.
+            pixel_area = field_summaries[field_name]['pixel_area']
+            ha_per_px = pixel_area / 10000
             feature.SetField(
-                field_name, float(field_summaries[field_name][fid]['sum']))
+                field_name, float(
+                    field_summaries[field_name][fid]['sum']) * ha_per_px)
         # Save back to datasource
         target_layer.SetFeature(feature)
     target_layer = None
@@ -1204,8 +1208,8 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
 
     """
     value_sum, value_count = pygeoprocessing.raster_reduce(
-        function=lambda sum_count, block:  # calculate both in one pass
-            (sum_count[0] + numpy.sum(block), sum_count[1] + block.size),
+        function=lambda sum_count, block: (  # calculate both in one pass
+            sum_count[0] + numpy.sum(block), sum_count[1] + block.size),
         raster_path_band=base_raster_path_band,
         initializer=(0, 0))
 
@@ -1221,29 +1225,25 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
 
 
 def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
-    """Calculate load raster by mapping landcover and multiplying by area.
+    """Calculate load raster by mapping landcover.
 
     Args:
         lulc_raster_path (string): path to integer landcover raster.
         lucode_to_load (dict): a mapping of landcover IDs to per-area
             nutrient load.
         target_load_raster (string): path to target raster that will have
-            total load per pixel.
+            load values (kg/ha) mapped to pixels based on LULC.
 
     Returns:
         None.
 
     """
-    cell_area_ha = abs(numpy.prod(pygeoprocessing.get_raster_info(
-        lulc_raster_path)['pixel_size'])) * 0.0001
-
     def _map_load_op(lucode_array):
         """Convert unit load to total load & handle nodata."""
         result = numpy.empty(lucode_array.shape)
         for lucode in numpy.unique(lucode_array):
             try:
-                result[lucode_array == lucode] = (
-                    lucode_to_load[lucode] * cell_area_ha)
+                result[lucode_array == lucode] = (lucode_to_load[lucode])
             except KeyError:
                 raise KeyError(
                     'lucode: %d is present in the landuse raster but '
@@ -1438,6 +1438,12 @@ def _aggregate_and_pickle_total(
     result = pygeoprocessing.zonal_statistics(
         base_raster_path_band, aggregate_vector_path,
         working_dir=os.path.dirname(target_pickle_path))
+
+    # Write pixel area to pickle file so that _add_fields_to_shapefile
+    # can adjust totals as needed.
+    raster_info = pygeoprocessing.get_raster_info(base_raster_path_band[0])
+    pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+    result['pixel_area'] = pixel_area
 
     with open(target_pickle_path, 'wb') as target_pickle_file:
         pickle.dump(result, target_pickle_file)
