@@ -135,7 +135,7 @@ def main(request):
 
         # If the file does not exist at this URL, reject it.
         response = requests.head(url)
-        if response.status_code > 400:
+        if response.status_code >= 400:
             logging.info('Rejecting URL because it does not exist')
             return jsonify('Requested file does not exist'), 403
 
@@ -151,20 +151,12 @@ def main(request):
             logging.info('Rejecting URL because it is too old')
             return jsonify('File is too old'), 400
 
+        response = requests.head(f'{url}.signature')
+        if response.status_code >= 400:
+            logging.info('Rejecting URL because it has already been signed.')
+            return jsonify('File has already been signed'), 400
+
         with get_lock():
-            # First, check to see if the file has already been signed.
-            signed_files_list = codesign_bucket.blob('signed_files.json')
-            if not signed_files_list.exists():
-                signed_files_dict = {'signed_files': []}
-            else:
-                signed_files_dict = json.loads(
-                    signed_files_list.download_as_string())
-
-            if url in signed_files_dict['signed_files']:
-                logging.info(
-                    'Rejecting URL because it has already been signed')
-                return jsonify('File has already been signed'), 400
-
             # Since the file has not already been signed, add the file to the
             # queue
             queuefile = codesign_bucket.blob('queue.json')

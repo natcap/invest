@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Service script to sign InVEST windows binaries."""
 
-import json
 import logging
 import os
 import shutil
@@ -31,8 +30,15 @@ with open(SLACK_TOKEN_FILE) as token_file:
 SLACK_NOTIFICATION_SUCCESS = textwrap.dedent(
     """\
     :lower_left_fountain_pen: Successfully signed and uploaded `{filename}` to
-    <{url}|google cloud>
+     <{url}|google cloud>
     """)
+
+SLACK_NOTIFICATION_ALREADY_SIGNED = textwrap.dedent(
+    """\
+    :lower_left_fountain_pen: `{filename}` is already signed!
+     <{url}|google cloud>
+    """)
+
 
 SLACK_NOTIFICATION_FAILURE = textwrap.dedent(
     """\
@@ -163,44 +169,7 @@ def sign_file(file_to_sign):
     shutil.move(signed_file, file_to_sign)
 
 
-def add_file_to_signed_list(url):
-    """Add a file to the list of signed files on GCS.
-
-    Args:
-        url (str): The public HTTPS URL of the file to add to the list.
-
-    Returns:
-        ``None``
-    """
-    # Since this process is the only one that should be writing to this file, we
-    # don't need to worry about race conditions.
-    remote_signed_files_path = 'gs://natcap-codesigning/signed_files.json'
-    local_signed_files_path = os.path.join(FILE_DIR, 'signed_files.json')
-
-    # Test to see if the signed files json file exists in the bucket; create it
-    # if not.
-    exists_proc = subprocess.run(
-        ['gsutil', '-q', 'stat', remote_signed_files_path], check=False)
-    if exists_proc.returncode != 0:
-        signed_files_dict = {'signed_files': []}
-    else:
-        subprocess.run(
-            ['gsutil', 'cp', remote_signed_files_path,
-             local_signed_files_path], check=True)
-        with open(local_signed_files_path, 'r') as signed_files:
-            signed_files_dict = json.load(signed_files)
-
-    with open(local_signed_files_path, 'w') as signed_files:
-        signed_files_dict['signed_files'].append(url)
-        json.dump(signed_files_dict, signed_files)
-
-    subprocess.run(
-        ['gsutil', 'cp', local_signed_files_path,
-         remote_signed_files_path], check=True)
-    LOGGER.info(f"Added {url} to {remote_signed_files_path}")
-
-
-def note_signature_complete(local_filepath, gs_uri):
+def note_signature_complete(local_filepath, target_gs_uri):
     """Create a small file next to the signed file to indicate signature.
 
     Args:
@@ -217,10 +186,29 @@ def note_signature_complete(local_filepath, gs_uri):
         signature_file.write(process.stdout.decode())
 
     try:
+        # Upload alongside the original file
         subprocess.run(
-            ['gsutil', 'cp', temp_filepath, f'{gs_uri}.signature'], check=True)
+            ['gsutil', 'cp', temp_filepath, f'{target_gs_uri}.signature'],
+            check=True)
     finally:
         os.remove(temp_filepath)
+
+
+def has_signature(filename):
+    """Check if a file is already signed.
+
+    Args:
+        filename (str): The local filepath to the file to check.
+
+    Returns:
+        ``True`` if the file is signed, ``False`` otherwise.
+    """
+    process = subprocess.run(
+        ['osslsigncode', 'verify', '-in', filename, '2>&1', '|', 'grep',
+         'No signature found'], check=False)
+    if process.returncode == 0:
+        return False
+    return True
 
 
 def main():
@@ -232,21 +220,30 @@ def main():
             else:
                 LOGGER.info(f"Dequeued and downloading {file_to_sign['https-url']}")
                 filename = download_file(file_to_sign['https-url'])
-                LOGGER.info(f"Signing {filename}")
-                sign_file(filename)
-                LOGGER.info(f"Uploading signed file to {file_to_sign['gs-uri']}")
-                upload_to_bucket(filename, file_to_sign['gs-uri'])
-                LOGGER.info(
-                    f"Adding {file_to_sign['https-url']} to signed files list")
-                add_file_to_signed_list(file_to_sign['https-url'])
-                note_signature_complete(filename, file_to_sign['gs-uri'])
-                LOGGER.info(f"Removing {filename}")
-                post_to_slack(
-                    SLACK_NOTIFICATION_SUCCESS.format(
-                        filename=filename,
-                        url=file_to_sign['https-url']))
+
+                LOGGER.info(f"Checking if {filename} is already signed")
+                if has_signature(filename):
+                    LOGGER.info(f"{filename} is already signed, skipping")
+                    post_to_slack(
+                        SLACK_NOTIFICATION_ALREADY_SIGNED.format(
+                            filename=filename,
+                            url=file_to_sign['https-url']))
+                    note_signature_complete(filename, file_to_sign['gs-uri'])
+                else:
+                    LOGGER.info(f"Signing {filename}")
+                    sign_file(filename)
+                    LOGGER.info(f"Uploading signed file to {file_to_sign['gs-uri']}")
+                    upload_to_bucket(filename, file_to_sign['gs-uri'])
+                    LOGGER.info(
+                        f"Adding {file_to_sign['https-url']} to signed files list")
+                    note_signature_complete(filename, file_to_sign['gs-uri'])
+                    LOGGER.info(f"Removing {filename}")
+                    post_to_slack(
+                        SLACK_NOTIFICATION_SUCCESS.format(
+                            filename=filename,
+                            url=file_to_sign['https-url']))
+                    LOGGER.info("Signing complete.")
                 os.remove(filename)
-                LOGGER.info("Signing complete.")
         except Exception as e:
             LOGGER.exception(f"Unexpected error signing file: {e}")
             post_to_slack(
