@@ -204,11 +204,17 @@ def has_signature(filename):
         ``True`` if the file is signed, ``False`` otherwise.
     """
     process = subprocess.run(
-        ['osslsigncode', 'verify', '-in', filename], check=False)
+        ['osslsigncode', 'verify', '-in', filename], capture_output=True,
+        check=False)
 
-    process_stderr = process.stderr.decode()
+    # Handle the case where it's possible there might not be any stdout or
+    # stderr to decode.
+    process_output = ""
+    for output in (process.stdout, process.stderr):
+        if output is not None:
+            process_output += output.decode()
 
-    if 'No signature found' in process_stderr:
+    if 'No signature found' in process_output:
         return False
     return True
 
