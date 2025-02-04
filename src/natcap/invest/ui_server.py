@@ -302,6 +302,7 @@ def set_geometamaker_profile():
     profile = geometamaker.Profile(**payload)
     config = geometamaker.Config()
     config.save(profile)
+    LOGGER.debug(config)
     return {
         'message': 'Metadata profile saved',
         'error': False
