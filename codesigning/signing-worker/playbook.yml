@@ -98,12 +98,6 @@
         dest: /opt/natcap-codesign/natcap-codesign.py
         mode: 0755
 
-    - name: Install codesigning shell script
-      ansible.builtin.copy:
-        src: natcap-codesign.sh
-        dest: /opt/natcap-codesign/natcap-codesign.sh
-        mode: 0755
-
     - name: Install the codesign service
       ansible.builtin.copy:
         src: natcap-codesign.service
