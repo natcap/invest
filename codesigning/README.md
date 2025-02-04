@@ -46,6 +46,8 @@ workspace, which is located at `/opt/natcap-codesign':
   for the yubikey
 * `/opt/natcap-codesign/access_token.txt` is a plain text file containing the
   access token shared with the cloud function, systemd service and enqueue script.
+* `/opt/natcap-codesign/slack_token.txt` is a plain text file containing the
+  slack token used to post messages to our slack workspace.
 * `/opt/natcap-codesign/natcap-servers-1732552f0202.json` is a GCP service
   account key used to authenticate to google cloud storage.  This file must be
   available in the `gcp-cloudfunc/` directory at the time of deployment.

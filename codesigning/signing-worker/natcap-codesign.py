@@ -9,6 +9,7 @@ import subprocess
 import sys
 import textwrap
 import time
+import traceback
 
 import pexpect  # apt install python3-pexpect
 import requests  # apt install python3-requests
@@ -18,9 +19,54 @@ logging.basicConfig(level=logging.INFO)
 CERTIFICATE = sys.argv[1]
 
 FILE_DIR = os.path.dirname(__file__)
-TOKEN_FILE = os.path.join(FILE_DIR, "access_token.txt")
-with open(TOKEN_FILE) as token_file:
+QUEUE_TOKEN_FILE = os.path.join(FILE_DIR, "access_token.txt")
+with open(QUEUE_TOKEN_FILE) as token_file:
     ACCESS_TOKEN = token_file.read().strip()
+
+SLACK_TOKEN_FILE = os.path.join(FILE_DIR, "slack_token.txt")
+with open(SLACK_TOKEN_FILE) as token_file:
+    SLACK_ACCESS_TOKEN = token_file.read().strip()
+
+
+SLACK_NOTIFICATION_SUCCESS = textwrap.dedent(
+    """\
+    :lower_left_fountain_pen: Successfully signed and uploaded `{filename}` to
+    [google cloud]({url})
+    """)
+
+SLACK_NOTIFICATION_FAILURE = textwrap.dedent(
+    """\
+    :red-flag: Something went wrong while signing {filename}:
+    ```
+    {traceback}
+    ```
+    Please investigate on ncp-inkwell using:
+    ```
+    sudo journalctl -u natcap-codesign.service
+    ```
+    """)
+
+
+def post_to_slack(message):
+    """Post a message to the slack channel.
+
+    Args:
+        message (str): The message to post.
+
+    Returns:
+        ``None``
+    """
+    resp = requests.post(
+        "https://slack.com/api/chat.postMessage",
+        headers={
+            "Authorization": f"Bearer {SLACK_ACCESS_TOKEN}",
+            "Content-Type": "application/json; charset=utf-8"
+        },
+        json={
+            "channel": "CESG428BH",  # sw-invest
+            "text": message
+        })
+    resp.raise_for_status()
 
 
 def get_from_queue():
@@ -171,11 +217,18 @@ def main():
                     f"Adding {file_to_sign['https-url']} to signed files list")
                 add_file_to_signed_list(file_to_sign['https-url'])
                 LOGGER.info(f"Removing {filename}")
+                post_to_slack(
+                    SLACK_NOTIFICATION_SUCCESS.format(
+                        filename=filename,
+                        url=file_to_sign['https-url']))
                 os.remove(filename)
                 LOGGER.info("Signing complete.")
         except Exception as e:
-            LOGGER.exception("Unexpected error signing file")
-            raise e
+            LOGGER.exception(f"Unexpected error signing file: {e}")
+            post_to_slack(
+                SLACK_NOTIFICATION_FAILURE.format(
+                    filename=file_to_sign['https-url'],
+                    traceback=traceback.format_exc()))
         time.sleep(60)
 
 
