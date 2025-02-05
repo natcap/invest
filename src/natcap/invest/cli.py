@@ -470,6 +470,14 @@ def main(user_args=None):
                 # written to stdout if this exception is uncaught.  This is by
                 # design.
                 model_module.execute(parsed_datastack.args)
+                LOGGER.info('Generating metadata for results')
+                try:
+                    # If there's an exception from creating metadata
+                    # I don't think we want to indicate a model failure
+                    spec_utils.generate_metadata(model_module, parsed_datastack.args)
+                except Exception as exc:
+                    LOGGER.warning(
+                        'Something went wrong while generating metadata', exc_info=exc)
 
         if args.subcommand == 'serve':
             ui_server.app.run(port=args.port)

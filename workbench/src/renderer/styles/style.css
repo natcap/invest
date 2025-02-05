@@ -632,3 +632,23 @@ input[type=text]::placeholder {
     background-size: 1rem 1rem;
   }
 }
+
+#metadata-form {
+  background-color: ghostwhite;
+  border: dotted;
+  border-width: thin;
+  padding: 0.5rem;
+}
+
+#metadata-form legend {
+  font-size: 1.1rem;
+  text-decoration-line: underline;
+}
+
+#metadata-form fieldset {
+}
+
+#metadata-form .form-group {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}

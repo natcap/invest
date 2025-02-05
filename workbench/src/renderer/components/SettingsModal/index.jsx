@@ -18,6 +18,7 @@ import { withTranslation } from 'react-i18next';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import { getSupportedLanguages } from '../../server_requests';
+import MetadataForm from './MetadataForm';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -184,6 +185,7 @@ class SettingsModal extends React.Component {
                 </Form.Group>
               ) : <React.Fragment />
             }
+            <hr />
             <Form.Group as={Row}>
               <Form.Label column sm="6" htmlFor="logging-select">
                 {t('Logging threshold')}
@@ -288,6 +290,21 @@ class SettingsModal extends React.Component {
               {t('Clear Recent Jobs')}
             </Button>
             <span>{t('no invest workspaces will be deleted')}</span>
+            <hr />
+            <Accordion>
+              <Accordion.Toggle
+                as={Button}
+                variant="secondary"
+                eventKey="0"
+                className="mr-2 w-50"
+              >
+                <span><u>{t('Configure Metadata')}</u></span>
+                <BsChevronExpand className="mx-1" />
+              </Accordion.Toggle>
+              <Accordion.Collapse eventKey="0" className="pr-1">
+                <MetadataForm />
+              </Accordion.Collapse>
+            </Accordion>
           </Modal.Body>
         </Modal>
         {
