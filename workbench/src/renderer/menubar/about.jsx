@@ -97,13 +97,13 @@ ReactDom.render(
           <table>
             <tbody>
               <tr>
-                <td>PyInstaller</td>
-                <td>GPL</td>
+                <td>geometamaker</td>
+                <td>Apache 2.0</td>
                 <td>
                   <a
-                    href="http://pyinstaller.org"
+                    href="https://github.com/natcap/geometamaker"
                   >
-                    http://pyinstaller.org
+                    https://github.com/natcap/geometamaker
                   </a>
                 </td>
               </tr>
@@ -137,6 +137,17 @@ ReactDom.render(
                     href="https://github.com/natcap/pygeoprocessing"
                   >
                     https://github.com/natcap/pygeoprocessing
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td>PyInstaller</td>
+                <td>GPL</td>
+                <td>
+                  <a
+                    href="http://pyinstaller.org"
+                  >
+                    http://pyinstaller.org
                   </a>
                 </td>
               </tr>
