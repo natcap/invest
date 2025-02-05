@@ -13,6 +13,41 @@ import {
   setGeoMetaMakerProfile,
 } from '../../../server_requests';
 
+import { openLinkInBrowser } from '../../../utils';
+
+function AboutMetadataDiv() {
+  return (
+    <div>
+      <p>
+        InVEST models create metadata files that describe each dataset
+        created by the model. These are the "*.yml", or YAML, files that
+        you will find in the output workspace after running a model.
+      </p>
+      <p>
+        Open a YAML file in a text editor to read the metadata. It includes
+        useful information such as descriptions of fields in tables,
+        or of the bands of a raster, for example.
+      </p>
+      <p>
+        Some properties of the metadata are configureable here. You may wish
+        to save information about the data author (you) and data license
+        information. These details will be included in all metadata documents
+        created by InVEST and by GeoMetaMaker. This information is optional and
+        it never leaves your computer unless you share your data and metadata.
+      </p>
+      <p>
+        InVEST uses GeoMetaMaker to generate metadata.
+      </p>
+      <a
+        href="https://github.com/natcap/geometamaker"
+        onClick={openLinkInBrowser}
+      >
+        https://github.com/natcap/geometamaker
+      </a>
+    </div>
+  );
+}
+
 function FormRow(label, value, handler) {
   return (
     <Row>
@@ -45,6 +80,7 @@ export default function MetadataForm() {
   const [alertMsg, setAlertMsg] = useState('');
   const [alertError, setAlertError] = useState(false);
   const [alertKey, setAlertKey] = useState(0);
+  const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
@@ -84,55 +120,81 @@ export default function MetadataForm() {
   };
 
   return (
-    <Form onSubmit={handleSubmit} id="metadata-form">
-      <fieldset>
-        <legend>{t('Contact Information')}</legend>
-        <Form.Group controlId="name">
-          {FormRow(t('Full name'), contactName, setContactName)}
-        </Form.Group>
-        <Form.Group controlId="email">
-          {FormRow(t('Email address'), contactEmail, setContactEmail)}
-        </Form.Group>
-        <Form.Group controlId="job-title">
-          {FormRow(t('Job title'), contactPosition, setContactPosition)}
-        </Form.Group>
-        <Form.Group controlId="organization">
-          {FormRow(t('Organization name'), contactOrg, setContactOrg)}
-        </Form.Group>
-      </fieldset>
-      <fieldset>
-        <legend>{t('Data License Information')}</legend>
-        <Form.Group controlId="license-title">
-          {FormRow(t('Title'), licenseTitle, setLicenseTitle)}
-        </Form.Group>
-        <Form.Group controlId="license-url">
-          {FormRow('URL', licenseURL, setLicenseURL)}
-        </Form.Group>
-      </fieldset>
-      <Form.Row>
-        <Button
-          type="submit"
-          variant="primary"
-          className="my-1 py2 mx-2"
-        >
-          Save Metadata
-        </Button>
-        {
-          (alertMsg) && (
-          <Expire
-            key={alertKey}
-            delay={4000}
-          >
-            <Alert
-              className="my-1 py-2"
-              variant={alertError ? 'danger' : 'success'}
-            >
-              {t(alertMsg)}
-            </Alert>
-          </Expire>
+    <div
+      id="metadata-form"
+      style={{
+        position: 'relative',
+        height: '460px'
+      }}
+    >
+      {
+        (showInfo)
+          ? <AboutMetadataDiv />
+          : (
+            <Form onSubmit={handleSubmit}>
+              <fieldset>
+                <legend>{t('Contact Information')}</legend>
+                <Form.Group controlId="name">
+                  {FormRow(t('Full name'), contactName, setContactName)}
+                </Form.Group>
+                <Form.Group controlId="email">
+                  {FormRow(t('Email address'), contactEmail, setContactEmail)}
+                </Form.Group>
+                <Form.Group controlId="job-title">
+                  {FormRow(t('Job title'), contactPosition, setContactPosition)}
+                </Form.Group>
+                <Form.Group controlId="organization">
+                  {FormRow(t('Organization name'), contactOrg, setContactOrg)}
+                </Form.Group>
+              </fieldset>
+              <fieldset>
+                <legend>{t('Data License Information')}</legend>
+                <Form.Group controlId="license-title">
+                  {FormRow(t('Title'), licenseTitle, setLicenseTitle)}
+                </Form.Group>
+                <Form.Group controlId="license-url">
+                  {FormRow('URL', licenseURL, setLicenseURL)}
+                </Form.Group>
+              </fieldset>
+              <Form.Row>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="my-1 py2 mx-2"
+                >
+                  Save Metadata
+                </Button>
+                {
+                  (alertMsg) && (
+                  <Expire
+                    key={alertKey}
+                    delay={4000}
+                  >
+                    <Alert
+                      className="my-1 py-2"
+                      variant={alertError ? 'danger' : 'success'}
+                    >
+                      {t(alertMsg)}
+                    </Alert>
+                  </Expire>
+                  )
+                }
+              </Form.Row>
+            </Form>
           )
-        }
-      </Form.Row>
-    </Form>
+      }
+      <Button
+        style={{
+          position: 'absolute',
+          bottom: '10px',
+          right: '10px'
+        }}
+        variant="primary"
+        className="my-1 py2 mx-2"
+        onClick={() => setShowInfo((prevState) => !prevState)}
+      >
+        {showInfo ? 'Hide Info' : 'More Info'}
+      </Button>
+    </div>
   );
 }
