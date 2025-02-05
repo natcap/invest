@@ -32,7 +32,7 @@ test('Metadata form interact and submit', async () => {
   });
 
   const user = userEvent.setup();
-  const { findByRole, getByLabelText, getByRole } = render(
+  const { findByRole, getByLabelText, getByRole, getByText } = render(
     <MetadataForm />
   );
   // The form should render with content from an existing profile
@@ -51,7 +51,13 @@ test('Metadata form interact and submit', async () => {
   await user.clear(licenseInput);
   await user.type(nameInput, name);
   await user.type(licenseInput, license);
-  const submit = getByRole('button', { name: 'Save Metadata' });
+
+  // Exercise the "more info" button
+  await user.click(getByRole('button', { name: /more info/i }));
+  expect(getByText('Metadata for InVEST results')).toBeInTheDocument();
+  await user.click(getByRole('button', { name: /hide info/i }));
+
+  const submit = getByRole('button', { name: /save metadata/i });
   await user.click(submit);
 
   expect(await findByRole('alert'))

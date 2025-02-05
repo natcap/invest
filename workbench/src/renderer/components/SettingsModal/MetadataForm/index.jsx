@@ -18,22 +18,24 @@ import { openLinkInBrowser } from '../../../utils';
 function AboutMetadataDiv() {
   return (
     <div>
+      <h4>Metadata for InVEST results</h4>
       <p>
         InVEST models create metadata files that describe each dataset
-        created by the model. These are the "*.yml", or YAML, files that
-        you will find in the output workspace after running a model.
+        created by the model. These are the <em>"*.yml"</em>, or YAML, files
+        in the output workspace after running a model.
       </p>
       <p>
         Open a YAML file in a text editor to read the metadata. It includes
-        useful information such as descriptions of fields in tables,
-        or of the bands of a raster, for example.
+        descriptions of fields in tables, of the bands in a raster, and
+        other useful information.
       </p>
       <p>
-        Some properties of the metadata are configureable here. You may wish
-        to save information about the data author (you) and data license
-        information. These details will be included in all metadata documents
-        created by InVEST and by GeoMetaMaker. This information is optional and
-        it never leaves your computer unless you share your data and metadata.
+        Some properties of the metadata are configureable here. You may
+        save information about the data author (you) and data license
+        information. These details are included in all metadata documents
+        created by InVEST and by GeoMetaMaker. This information is optional,
+        it never leaves your computer unless you share your data and metadata,
+        and you may modify it here anytime.
       </p>
       <p>
         InVEST uses GeoMetaMaker to generate metadata.
@@ -189,7 +191,7 @@ export default function MetadataForm() {
           bottom: '10px',
           right: '10px'
         }}
-        variant="primary"
+        variant="outline-secondary"
         className="my-1 py2 mx-2"
         onClick={() => setShowInfo((prevState) => !prevState)}
       >
