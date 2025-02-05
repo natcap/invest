@@ -26,4 +26,4 @@ Babel
 Flask
 flask_cors
 requests
-geometamaker @ git+https://github.com/davemfish/geometamaker@4e66b129f42c94a905e112adda77669a2f87798b
+geometamaker
