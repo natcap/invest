@@ -36,6 +36,7 @@ jobs:
       - uses: actions/checkout@v4
         if: env.RUN == 'true'
         with:
+          fetch-depth: 0  # fetch entire history, for versioning
           token: ${{ secrets.AUTORELEASE_BOT_PAT }}
 
       - name: Install dependencies
