@@ -68,6 +68,10 @@ def main(sampledatadir):
 
     for datastack_path in datastacks:
         paramset = datastack.extract_parameter_set(datastack_path)
+        if paramset.model_name.split(".")[-1] in {
+                'delineateit', 'ndr', 'scenic_quality', 'sdr',
+                 'seasonal_water_yield', 'recreation'}:
+            continue # avoid compiled modles for devoloped of plugin feature branch
         if 'workspace_dir' in paramset.args and \
                 paramset.args['workspace_dir'] != '':
             msg = (
