@@ -66,15 +66,15 @@ function handleUGClick(event) {
  * e.g. https://community.naturalcapitalproject.org/tag/carbon
  */
 export default function ResourcesTab(props) {
-  const { docs, moduleName } = props;
+  const { docs, modelID } = props;
 
   let forumURL = FORUM_ROOT;
-  const tagName = FORUM_TAGS[moduleName];
+  const tagName = FORUM_TAGS[modelID];
   if (tagName) {
     forumURL = `${FORUM_ROOT}/tag/${tagName}`;
   }
 
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const userGuideURL = `${window.Workbench.USERGUIDE_PATH}/${window.Workbench.LANGUAGE}/${docs}`;
 
   return (
@@ -95,17 +95,17 @@ export default function ResourcesTab(props) {
         onClick={handleForumClick}
       >
         <MdOpenInNew className="mr-1" />
-        {t("Frequently Asked Questions")}
+        {t('Frequently Asked Questions')}
       </a>
     </React.Fragment>
   );
 }
 
 ResourcesTab.propTypes = {
-  moduleName: PropTypes.string,
+  modelID: PropTypes.string,
   docs: PropTypes.string,
 };
 ResourcesTab.defaultProps = {
-  moduleName: undefined,
+  modelID: undefined,
   docs: '',
 };

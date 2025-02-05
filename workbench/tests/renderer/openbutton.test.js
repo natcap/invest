@@ -29,8 +29,8 @@ test('Open File: displays a tooltip on hover', async () => {
 
 test('Open File: sends correct payload', async () => {
   const mockDatastack = {
-    model_run_name: 'foo',
-    model_human_name: 'Foo',
+    model_id: 'foo',
+    model_title: 'Foo',
     args: {},
   };
   const filename = 'data.json';

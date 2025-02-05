@@ -30,7 +30,7 @@ _LOGGING_PERIOD = 5
 
 MODEL_SPEC = {
     "model_id": "urban_cooling_model",
-    "model_name": gettext("Urban Cooling"),
+    "model_title": gettext("Urban Cooling"),
     "pyname": "natcap.invest.urban_cooling_model",
     "userguide": "urban_cooling_model.html",
     "aliases": ("ucm",),

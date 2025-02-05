@@ -27,7 +27,7 @@ NONINTEGER_SOILS_RASTER_MESSAGE = 'Soil group raster data type must be integer'
 
 MODEL_SPEC = {
     "model_id": "stormwater",
-    "model_name": gettext("Urban Stormwater Retention"),
+    "model_title": gettext("Urban Stormwater Retention"),
     "pyname": "natcap.invest.stormwater",
     "userguide": "stormwater.html",
     "aliases": (),

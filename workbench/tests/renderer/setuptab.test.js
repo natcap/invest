@@ -67,14 +67,13 @@ function renderSetupFromSpec(baseSpec, uiSpec, initValues = undefined) {
   // some MODEL_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
   const spec = { ...baseSpec };
-  if (!spec.modelName) { spec.modelName = 'Eco Model'; }
-  if (!spec.pyname) { spec.pyname = 'natcap.invest.dot'; }
+  if (!spec.model_title) { spec.model_title = 'Eco Model'; }
+  if (!spec.model_id) { spec.model_id = 'eco_model'; }
   if (!spec.userguide) { spec.userguide = 'foo.html'; }
   const { ...utils } = render(
     <SetupTab
-      pyModuleName={spec.pyname}
       userguide={spec.userguide}
-      modelId={spec.modelName}
+      modelID={spec.model_id}
       argsSpec={spec.args}
       uiSpec={uiSpec}
       argsInitValues={initValues}
@@ -546,7 +545,7 @@ describe('Misc form validation stuff', () => {
 
     renderSetupFromSpec(spec, uiSpec);
     await waitFor(() => {
-      const expectedKeys = ['model_module', 'args'];
+      const expectedKeys = ['model_id', 'args'];
       const payload = fetchValidation.mock.results[0].value;
       expectedKeys.forEach((key) => {
         expect(Object.keys(payload)).toContain(key);
@@ -610,7 +609,7 @@ describe('Misc form validation stuff', () => {
 describe('Form drag-and-drop', () => {
   test('Dragover of a datastack/logfile updates all inputs', async () => {
     const spec = {
-      pyname: `natcap.invest.${MODULE}`,
+      model_id: MODULE,
       args: {
         arg1: {
           name: 'Workspace',
@@ -629,7 +628,7 @@ describe('Form drag-and-drop', () => {
     fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
     const mockDatastack = {
-      module_name: spec.pyname,
+      model_id: spec.model_id,
       args: {
         arg1: 'circle',
         arg2: 'square',
@@ -673,7 +672,7 @@ describe('Form drag-and-drop', () => {
 
   test('Drag enter/drop of a datastack sets .dragging class', async () => {
     const spec = {
-      pyname: `natcap.invest.${MODULE}`,
+      model_id: MODULE,
       args: {
         arg1: {
           name: 'Workspace',
@@ -692,7 +691,7 @@ describe('Form drag-and-drop', () => {
     fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
     const mockDatastack = {
-      module_name: spec.pyname,
+      model_id: spec.model_id,
       args: {
         arg1: 'circle',
         arg2: 'square',

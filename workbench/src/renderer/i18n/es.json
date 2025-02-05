@@ -99,7 +99,7 @@
     "User's guide entry": "Entrada de la guía del usuario",
     "Only drop one file at a time.": "Solo se puede soltar un archivo a la vez.",
     "Choose location to extract archive": "Seleccione la ubicación donde extraer el archivo",
-    "Datastack/Logfile for {{modelName}} does not match this model.": "Datastack/Logfile para {{modelName}} no calza con este modelo.",
+    "Datastack/Logfile for {{modelTitle}} does not match this model.": "Datastack/Logfile para {{modelTitle}} no calza con este modelo.",
     "Running": "En curso",
     "Run": "Ejecutar",
     "Browse to a datastack (.json, .tgz) or InVEST logfile (.txt)": "Buscar una pila de datos (.json, .tgz) o un archivo de registro InVEST (.txt)",

@@ -67,7 +67,7 @@ export default class App extends React.Component {
       // filter out models that do not exist in current version of invest
       recentJobs: recentJobs.filter((job) => (
         Object.keys(investList)
-          .includes(job.modelRunName)
+          .includes(job.modelID)
       )),
       showDownloadModal: this.props.isFirstRun,
       // Show changelog if this is a new version,
@@ -200,9 +200,8 @@ export default class App extends React.Component {
   async updateInvestList() {
     const coreModels = {};
     const investList = await getInvestModelNames();
-    Object.keys(investList).forEach((modelName) => {
-      const modelId = investList[modelName].model_name;
-      coreModels[modelId] = { model_name: modelName, type: 'core' };
+    Object.keys(investList).forEach((modelID) => {
+      coreModels[modelID] = { modelTitle: investList[modelID].model_title, type: 'core' };
     });
     const plugins = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins') || {};
     Object.keys(plugins).forEach((plugin) => {
@@ -254,7 +253,7 @@ export default class App extends React.Component {
       }
       let badge;
       if (investList) {
-        const modelType = investList[job.modelRunName].type;
+        const modelType = investList[job.modelID].type;
         if (modelType === 'plugin') {
           badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
         }
@@ -266,7 +265,7 @@ export default class App extends React.Component {
           placement="bottom"
           overlay={(
             <Tooltip>
-              {job.modelHumanName}
+              {job.modelTitle}
             </Tooltip>
           )}
         >
@@ -287,10 +286,10 @@ export default class App extends React.Component {
             >
               {badge}
               {statusSymbol}
-              {` ${job.modelHumanName}`}
+              {` ${job.modelTitle}`}
             </Nav.Link>
             <Button
-              aria-label={`close ${job.modelHumanName} tab`}
+              aria-label={`close ${job.modelTitle} tab`}
               className="close-tab"
               variant="outline-dark"
               onClick={(event) => {
@@ -308,7 +307,7 @@ export default class App extends React.Component {
         <TabPane
           key={id}
           eventKey={id}
-          aria-label={`${job.modelHumanName} tab`}
+          aria-label={`${job.modelTitle} tab`}
         >
           <InvestTab
             job={job}

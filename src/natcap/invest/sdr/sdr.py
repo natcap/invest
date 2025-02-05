@@ -29,7 +29,7 @@ LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
     "model_id": "sdr",
-    "model_name": gettext("Sediment Delivery Ratio"),
+    "model_title": gettext("Sediment Delivery Ratio"),
     "pyname": "natcap.invest.sdr.sdr",
     "userguide": "sdr.html",
     "aliases": (),

@@ -103,7 +103,7 @@ nutrient_units = {
 
 MODEL_SPEC = {
     "model_id": "crop_production_percentile",
-    "model_name": gettext("Crop Production: Percentile"),
+    "model_title": gettext("Crop Production: Percentile"),
     "pyname": "natcap.invest.crop_production_percentile",
     "userguide": "crop_production.html",
     "aliases": ("cpp",),

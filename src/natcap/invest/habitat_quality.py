@@ -28,7 +28,7 @@ DUPLICATE_PATHS_MSG = gettext("Threat paths must be unique. Duplicates: ")
 
 MODEL_SPEC = {
     "model_id": "habitat_quality",
-    "model_name": gettext("Habitat Quality"),
+    "model_title": gettext("Habitat Quality"),
     "pyname": "natcap.invest.habitat_quality",
     "userguide": "habitat_quality.html",
     "aliases": ("hq",),

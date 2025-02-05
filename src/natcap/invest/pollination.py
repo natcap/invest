@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
     "model_id": "pollination",
-    "model_name": gettext("Crop Pollination"),
+    "model_title": gettext("Crop Pollination"),
     "pyname": "natcap.invest.pollination",
     "userguide": "croppollination.html",
     "aliases": (),
