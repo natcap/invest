@@ -356,10 +356,8 @@ codesign_mac:
 	codesign --timestamp --verbose --sign Stanford $(WORKBENCH_BIN_TO_SIGN)
 
 codesign_windows:
-	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
 	"$(SIGNTOOL)" sign -fd SHA256 -f $(BUILD_DIR)/$(CERT_FILE) -p $(CERT_PASS) $(WORKBENCH_BIN_TO_SIGN)
 	"$(SIGNTOOL)" timestamp -tr http://timestamp.sectigo.com -td SHA256 $(WORKBENCH_BIN_TO_SIGN)
-	$(RM) $(BUILD_DIR)/$(CERT_FILE)
 	@echo "Installer was signed with signtool"
 
 deploy:
