@@ -279,6 +279,7 @@ class SetupTab extends React.Component {
         );
         if (extractLocation.filePath) {
           datastack = await fetchDatastackFromFile({
+            model_id: modelID,
             filepath: filepath,
             extractPath: extractLocation.filePath,
           });
@@ -286,7 +287,9 @@ class SetupTab extends React.Component {
           return;
         }
       } else {
-        datastack = await fetchDatastackFromFile({ filepath: filepath });
+        datastack = await fetchDatastackFromFile(
+          { model_id: modelID, filepath: filepath }
+        );
       }
     } catch (error) {
       logger.error(error);
@@ -302,8 +305,8 @@ class SetupTab extends React.Component {
     } else {
       alert( // eslint-disable-line no-alert
         t(
-          'Datastack/Logfile for {{modelTitle}} does not match this model.',
-          { modelTitle: datastack.model_title }
+          'Datastack/Logfile for model {{modelID}} does not match this model.',
+          { modelID: datastack.model_id }
         )
       );
     }

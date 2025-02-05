@@ -166,7 +166,6 @@ def post_datastack_file():
         'type': stack_type,
         'args': stack_info.args,
         'model_id': stack_info.model_id,
-        'model_title': models.model_id_to_spec[stack_info.model_id]['model_title'],
         'invest_version': stack_info.invest_version
     }
     return json.dumps(result_dict)

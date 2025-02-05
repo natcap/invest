@@ -97,7 +97,7 @@ export async function getDynamicDropdowns(payload) {
  * @returns {Promise} resolves object
  */
 export async function fetchArgsEnabled(payload) {
-  const port = await getPort(payload.modelID);
+  const port = await getPort(payload.model_id);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/args_enabled`, {
       method: 'post',
@@ -125,7 +125,7 @@ export async function fetchArgsEnabled(payload) {
  * @returns {Promise} resolves array
  */
 export async function fetchValidation(payload) {
-  const port = await getPort(payload.modelID);
+  const port = await getPort(payload.model_id);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/validate?language=${LANGUAGE}`, {
       method: 'post',
@@ -172,7 +172,7 @@ export async function fetchDatastackFromFile(payload) {
  * @returns {Promise} resolves undefined
  */
 export async function saveToPython(payload) {
-  const port = await getCorePort();
+  const port = await getPort(payload.model_id);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/save_to_python`, {
       method: 'post',
@@ -199,7 +199,7 @@ export async function saveToPython(payload) {
  * @returns {Promise} resolves undefined
  */
 export async function archiveDatastack(payload) {
-  const port = await getCorePort();
+  const port = await getPort(payload.model_id);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/build_datastack_archive`, {
       method: 'post',
@@ -231,7 +231,7 @@ export async function archiveDatastack(payload) {
  * @returns {Promise} resolves undefined
  */
 export async function writeParametersToFile(payload) {
-  const port = await getCorePort();
+  const port = await getPort(payload.model_id);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/write_parameter_set_file`, {
       method: 'post',

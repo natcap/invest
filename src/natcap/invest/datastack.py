@@ -575,6 +575,7 @@ def build_parameter_set(args, model_id, paramset_path, relative=False):
         return args_param
     parameter_data = {
         'model_id': model_id,
+        'model_title': models.model_id_to_spec[model_id]['model_title'],
         'invest_version': __version__,
         'args': _recurse(args)
     }
