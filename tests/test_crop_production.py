@@ -747,7 +747,7 @@ class CropProductionTests(unittest.TestCase):
                  "vitk_modeled": 4200600, "vitk_observed": 7636800}
             ], dtype=float)
 
-        workspace = "/Users/simpson2/Desktop/output_test_cp"
+        workspace = self.workspace_dir
 
         base_aggregate_vector_path = os.path.join(workspace,
                                                   "agg_vector.shp")
