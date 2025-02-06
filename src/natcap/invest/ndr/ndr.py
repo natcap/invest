@@ -206,28 +206,28 @@ MODEL_SPEC = {
             "about": "A pixel level map showing how much phosphorus from each pixel eventually reaches the stream by surface flow.",
             "bands": {1: {
                 "type": "number",
-                "units": u.kilogram/u.pixel
+                "units": u.kilogram/u.hectare
             }}
         },
         "n_surface_export.tif": {
             "about": "A pixel level map showing how much nitrogen from each pixel eventually reaches the stream by surface flow.",
             "bands": {1: {
                 "type": "number",
-                "units": u.kilogram/u.pixel
+                "units": u.kilogram/u.hectare
             }}
         },
         "n_subsurface_export.tif": {
             "about": "A pixel level map showing how much nitrogen from each pixel eventually reaches the stream by subsurface flow.",
             "bands": {1: {
                 "type": "number",
-                "units": u.kilogram/u.pixel
+                "units": u.kilogram/u.hectare
             }}
         },
         "n_total_export.tif": {
             "about": "A pixel level map showing how much nitrogen from each pixel eventually reaches the stream by either flow.",
             "bands": {1: {
                 "type": "number",
-                "units": u.kilogram/u.pixel
+                "units": u.kilogram/u.hectare
             }}
         },
         "intermediate_outputs": {

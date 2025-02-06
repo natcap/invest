@@ -147,20 +147,20 @@ MODEL_SPEC = {
             "about": "The contribution of vegetation to keeping soil from eroding from each pixel. (Eq. (82))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "avoided_export.tif": {
             "about": "The contribution of vegetation to keeping erosion from entering a stream. This combines local/on-pixel sediment retention with trapping of erosion from upslope of the pixel. (Eq. (83))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "rkls.tif": {
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }},
             "about": "Total potential soil loss per pixel in the original land cover from the RKLS equation. Equivalent to the soil loss for bare soil. (Eq. (68), without applying the C or P factors)."
         },
@@ -168,14 +168,14 @@ MODEL_SPEC = {
             "about": "The total amount of sediment deposited on the pixel from upslope sources as a result of trapping. (Eq. (80))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "sed_export.tif": {
             "about": "The total amount of sediment exported from each pixel that reaches the stream. (Eq. (76))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "stream.tif": spec_utils.STREAM,
@@ -188,7 +188,7 @@ MODEL_SPEC = {
             "about": "Total potential soil loss per pixel in the original land cover calculated from the USLE equation. (Eq. (68))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "watershed_results_sdr.shp": {

@@ -186,13 +186,13 @@ MODEL_SPEC = {
     "outputs": {
         "carbon_map.tif": {
             "about": (
-                "A map of carbon stock per pixel, with the amount in forest derived from the regression based on "
-                "distance to forest edge, and the amount in non-forest classes according to the biophysical table. "
-                "Note that because the map displays carbon per pixel, coarser resolution maps should have higher "
-                "values for carbon, because the pixel areas are larger."),
+                "A map of carbon stock per hectare, with the amount in forest "
+                "derived from the regression based on distance to forest "
+                "edge, and the amount in non-forest classes according to the "
+                "biophysical table. "),
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "aggregated_carbon_stocks.shp": {

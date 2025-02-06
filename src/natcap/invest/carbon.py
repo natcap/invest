@@ -26,7 +26,7 @@ CARBON_OUTPUTS = {
             "scenario, mapped from the Carbon Pools table to the LULC."),
         "bands": {1: {
             "type": "number",
-            "units": u.metric_ton/u.pixel
+            "units": u.metric_ton/u.hectare
         }}
     } for pool, pool_name in [
         ('above', 'aboveground'),
@@ -200,14 +200,14 @@ MODEL_SPEC = {
             "about": "Raster showing the amount of carbon stored in each pixel for the current scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "tot_c_fut.tif": {
             "about": "Raster showing the amount of carbon stored in each pixel for the future scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }},
             "created_if": "lulc_fut_path"
         },
@@ -215,7 +215,7 @@ MODEL_SPEC = {
             "about": "Raster showing the amount of carbon stored in each pixel for the REDD scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }},
             "created_if": "lulc_redd_path"
         },
@@ -223,7 +223,7 @@ MODEL_SPEC = {
             "about": "Raster showing the difference in carbon stored between the future landscape and the current landscape. In this map some values may be negative and some positive. Positive values indicate sequestered carbon, negative values indicate carbon that was lost.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }},
             "created_if": "lulc_fut_path"
         },
@@ -231,7 +231,7 @@ MODEL_SPEC = {
             "about": "Raster showing the difference in carbon stored between the REDD landscape and the current landscape. In this map some values may be negative and some positive. Positive values indicate sequestered carbon, negative values indicate carbon that was lost.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }},
             "created_if": "lulc_redd_path"
         },
@@ -239,7 +239,7 @@ MODEL_SPEC = {
             "about": "Rasters showing the economic value of carbon sequestered between the current and the future landscape dates.",
             "bands": {1: {
                 "type": "number",
-                "units": u.currency/u.pixel
+                "units": u.currency/u.hectare
             }},
             "created_if": "lulc_fut_path"
         },
@@ -247,7 +247,7 @@ MODEL_SPEC = {
             "about": "Rasters showing the economic value of carbon sequestered between the current and the REDD landscape dates.",
             "bands": {1: {
                 "type": "number",
-                "units": u.currency/u.pixel
+                "units": u.currency/u.hectare
             }},
             "created_if": "lulc_redd_path"
         },
