@@ -80,25 +80,25 @@ def create_nutrient_df():
     """Creates a nutrient DataFrame for testing."""
     return pandas.DataFrame([
         {'crop': 'corn', 'area (ha)': 21.0, 'production_observed': 0.2,
-        'percentrefuse': 7, 'protein': 42., 'lipid': 8, 'energy': 476.,
-        'ca': 27.0, 'fe': 15.7, 'mg': 280.0, 'ph': 704.0, 'k': 1727.0,
-        'na': 2.0, 'zn': 4.9, 'cu': 1.9, 'fl': 8, 'mn': 2.9, 'se': 0.1,
-        'vita': 3.0, 'betac': 16.0, 'alphac': 2.30, 'vite': 0.8,
-        'crypto': 1.6, 'lycopene': 0.36, 'lutein': 63.0, 'betat': 0.5,
-        'gammat': 2.1, 'deltat': 1.9, 'vitc': 6.8, 'thiamin': 0.4,
-        'riboflavin': 1.8, 'niacin': 8.2, 'pantothenic': 0.9,
-        'vitb6': 1.4, 'folate': 385.0, 'vitb12': 2.0, 'vitk': 41.0},
+         'percentrefuse': 7, 'protein': 42., 'lipid': 8, 'energy': 476.,
+         'ca': 27.0, 'fe': 15.7, 'mg': 280.0, 'ph': 704.0, 'k': 1727.0,
+         'na': 2.0, 'zn': 4.9, 'cu': 1.9, 'fl': 8, 'mn': 2.9, 'se': 0.1,
+         'vita': 3.0, 'betac': 16.0, 'alphac': 2.30, 'vite': 0.8,
+         'crypto': 1.6, 'lycopene': 0.36, 'lutein': 63.0, 'betat': 0.5,
+         'gammat': 2.1, 'deltat': 1.9, 'vitc': 6.8, 'thiamin': 0.4,
+         'riboflavin': 1.8, 'niacin': 8.2, 'pantothenic': 0.9,
+         'vitb6': 1.4, 'folate': 385.0, 'vitb12': 2.0, 'vitk': 41.0},
 
         {'crop': 'soybean', 'area (ha)': 5., 'production_observed': 4.,
-        'percentrefuse': 9, 'protein': 33., 'lipid': 2., 'energy': 99.,
-        'ca': 257., 'fe': 15.7, 'mg': 280., 'ph': 704.0, 'k': 197.0,
-        'na': 2., 'zn': 4.9, 'cu': 1.6, 'fl': 3., 'mn': 5.2, 'se': 0.3,
-        'vita': 3.0, 'betac': 16.0, 'alphac': 1.0, 'vite': 0.8,
-        'crypto': 0.6, 'lycopene': 0.3, 'lutein': 61.0, 'betat': 0.5,
-        'gammat': 2.3, 'deltat': 1.2, 'vitc': 3.0, 'thiamin': 0.42,
-        'riboflavin': 0.82, 'niacin': 12.2, 'pantothenic': 0.92,
-        'vitb6': 5.4, 'folate': 305., 'vitb12': 3., 'vitk': 42.},
-    ]).set_index('crop')
+         'percentrefuse': 9, 'protein': 33., 'lipid': 2., 'energy': 99.,
+         'ca': 257., 'fe': 15.7, 'mg': 280., 'ph': 704.0, 'k': 197.0,
+         'na': 2., 'zn': 4.9, 'cu': 1.6, 'fl': 3., 'mn': 5.2, 'se': 0.3,
+         'vita': 3.0, 'betac': 16.0, 'alphac': 1.0, 'vite': 0.8,
+         'crypto': 0.6, 'lycopene': 0.3, 'lutein': 61.0, 'betat': 0.5,
+         'gammat': 2.3, 'deltat': 1.2, 'vitc': 3.0, 'thiamin': 0.42,
+         'riboflavin': 0.82, 'niacin': 12.2, 'pantothenic': 0.92,
+         'vitb6': 5.4, 'folate': 305., 'vitb12': 3., 'vitk': 42.},
+         ]).set_index('crop')
 
 
 def _create_crop_rasters(output_dir, crop_names, file_suffix):
