@@ -92,6 +92,7 @@ export default class HomeTab extends React.Component {
           <RecentInvestJobs
             openInvestModel={openInvestModel}
             recentJobs={recentJobs}
+            investList={investList}
           />
         </Col>
       </Row>
@@ -122,7 +123,7 @@ HomeTab.propTypes = {
  * Renders a button for each recent invest job.
  */
 function RecentInvestJobs(props) {
-  const { recentJobs, openInvestModel } = props;
+  const { recentJobs, openInvestModel, investList } = props;
   const { t } = useTranslation();
 
   const handleClick = (jobMetadata) => {
@@ -194,10 +195,14 @@ function RecentInvestJobs(props) {
               )}
           </Col>
           <Col className="open-button-col">
-            <OpenButton
-              className="mr-2"
-              openInvestModel={openInvestModel}
-            />
+            {investList
+              ? (
+                <OpenButton
+                  className="mr-2"
+                  openInvestModel={openInvestModel}
+                  investList={investList}
+                />
+              ) : ''}
           </Col>
         </Row>
       </Container>
