@@ -131,7 +131,7 @@ def get_args_enabled():
     """Gets the return value of an InVEST model's validate function.
 
     Body (JSON string):
-        model_id: string (e.g. natcap.invest.carbon)
+        model_id: string (e.g. carbon)
         args: JSON string of InVEST model args keys and values
 
     Accepts a `language` query parameter which should be an ISO 639-1 language
