@@ -332,8 +332,6 @@ class TestMetadataFromSpec(unittest.TestCase):
 
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
-        # this lets us delete the workspace after its done no matter the
-        # the rest result
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
@@ -341,6 +339,7 @@ class TestMetadataFromSpec(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_write_metadata(self):
+        """Test writing metadata for an invest output workspace."""
 
         # An example invest output spec
         output_spec = {
@@ -385,9 +384,8 @@ class TestMetadataFromSpec(unittest.TestCase):
             __name__='urban_nature_access',
             execute=lambda: None,
             MODEL_SPEC={'outputs': output_spec})
-        args_dict = {
-            'workspace_dir': self.workspace_dir
-        }
+
+        args_dict = {'workspace_dir': self.workspace_dir}
 
         spec_utils.generate_metadata(model_module, args_dict)
         files, messages = geometamaker.validate_dir(
