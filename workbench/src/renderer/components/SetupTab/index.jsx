@@ -269,7 +269,7 @@ class SetupTab extends React.Component {
   }
 
   async loadParametersFromFile(filepath) {
-    const { modelID, switchTabs, t } = this.props;
+    const { modelID, switchTabs, t, investList } = this.props;
     let datastack;
     try {
       if (filepath.endsWith('gz')) { // .tar.gz, .tgz
@@ -305,8 +305,8 @@ class SetupTab extends React.Component {
     } else {
       alert( // eslint-disable-line no-alert
         t(
-          'Datastack/Logfile for model {{modelID}} does not match this model.',
-          { modelID: datastack.model_id }
+          'Datastack/Logfile for model {{modelTitle}} does not match this model.',
+          { modelTitle: investList[datastack.model_id].modelTitle }
         )
       );
     }
@@ -672,4 +672,9 @@ SetupTab.propTypes = {
   sidebarFooterElementId: PropTypes.string.isRequired,
   executeClicked: PropTypes.bool.isRequired,
   switchTabs: PropTypes.func.isRequired,
+  investList: PropTypes.shape({
+    modelTitle: PropTypes.string,
+    type: PropTypes.string,
+  }).isRequired,
+  t: PropTypes.func.isRequired,
 };

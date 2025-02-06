@@ -223,7 +223,7 @@ class InvestTab extends React.Component {
       logfile,
     } = this.props.job;
 
-    const { tabID, t } = this.props;
+    const { tabID, investList, t } = this.props;
 
     if (tabStatus === 'failed') {
       return (
@@ -317,6 +317,7 @@ class InvestTab extends React.Component {
                     sidebarFooterElementId={sidebarFooterElementId}
                     executeClicked={executeClicked}
                     switchTabs={this.switchTabs}
+                    investList={investList}
                   />
                 </TabPane>
                 <TabPane

@@ -314,6 +314,7 @@ export default class App extends React.Component {
             tabID={id}
             saveJob={this.saveJob}
             updateJobProperties={this.updateJobProperties}
+            investList={investList}
           />
         </TabPane>
       );
@@ -405,8 +406,7 @@ export default class App extends React.Component {
                     recentJobs={recentJobs}
                     batchUpdateArgs={this.batchUpdateArgs}
                   />
-                )
-                : <div />}
+                ) : <div />}
             </TabPane>
             {investTabPanes}
           </TabContent>
