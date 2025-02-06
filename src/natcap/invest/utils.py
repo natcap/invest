@@ -160,17 +160,14 @@ def _format_time(seconds):
 
 @contextlib.contextmanager
 def prepare_workspace(
-        workspace, name, logging_level=logging.NOTSET, exclude_threads=None):
+        workspace, model_id, logging_level=logging.NOTSET, exclude_threads=None):
     """Prepare the workspace."""
     if not os.path.exists(workspace):
         os.makedirs(workspace)
 
-    modelname = '-'.join(name.replace(':', '').split(' '))
     logfile = os.path.join(
         workspace,
-        'InVEST-{modelname}-log-{timestamp}.txt'.format(
-            modelname=modelname,
-            timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
+        f'InVEST-{model_id}-log-{datetime.now().strftime("%Y-%m-%d--%H_%M_%S")}.txt')
 
     with capture_gdal_logging(), log_to_file(logfile,
                                              exclude_threads=exclude_threads,
@@ -185,7 +182,7 @@ def prepare_workspace(
             try:
                 yield
             except Exception:
-                LOGGER.exception(f'Exception while executing {modelname}')
+                LOGGER.exception(f'Exception while executing {model_id}')
                 raise
             finally:
                 LOGGER.info('Elapsed time: %s',
