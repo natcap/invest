@@ -129,9 +129,15 @@ describe('Unit tests for invest logger message markup', () => {
     expect(cls).toBe('invest-log-error');
   });
 
-  test('Other messages get primary class attribute', () => {
+  test('Other natcap.invest messages get primary class attribute', () => {
     const message = '2021-01-15 07:14:37,148 (natcap.invest.carbon) ... INFO';
     const cls = markupMessage(message);
     expect(cls).toBe('invest-log-primary');
+  });
+
+  test('Others get no markup', () => {
+    const message = '2021-01-15 07:14:37,148 (osgeo.gdal) ... INFO';
+    const cls = markupMessage(message);
+    expect(cls).toBe('');
   });
 });

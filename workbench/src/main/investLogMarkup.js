@@ -11,5 +11,8 @@ export default function markupMessage(message) {
   if (/WARNING/.test(message)) {
     return 'invest-log-primary-warning';
   }
-  return 'invest-log-primary';
+  if (/natcap\.invest/.test(message)) {
+    return 'invest-log-primary';
+  }
+  return '';
 }
