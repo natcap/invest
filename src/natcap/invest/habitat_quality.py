@@ -172,9 +172,9 @@ MODEL_SPEC = {
         },
         "sensitivity_table_path": {
             "type": "csv",
-            "index_col": "lulc",
+            "index_col": "lucode",
             "columns": {
-                "lulc": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "name": {
                     "type": "freestyle_string",
                     "required": False
@@ -282,9 +282,9 @@ MODEL_SPEC = {
                 "rarity_c.csv": {
                     "about": ("Table of rarity values by LULC code for the "
                               "current landscape."),
-                    "index_col": "lulc_code",
+                    "index_col": "lucode",
                     "columns": {
-                        "lulc_code": {
+                        "lucode": {
                             "type": "number",
                             "units": u.none,
                             "about": "LULC class",
@@ -314,9 +314,9 @@ MODEL_SPEC = {
                 "rarity_f.csv": {
                     "about": ("Table of rarity values by LULC code for the "
                               "future landscape."),
-                    "index_col": "lulc_code",
+                    "index_col": "lucode",
                     "columns": {
-                        "lulc_code": {
+                        "lucode": {
                             "type": "number",
                             "units": u.none,
                             "about": "LULC class",
@@ -986,7 +986,7 @@ def _generate_rarity_csv(rarity_dict, target_csv_path):
     lulc_codes = sorted(rarity_dict)
     with open(target_csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(['lulc_code', 'rarity_value'])
+        writer.writerow(['lucode', 'rarity_value'])
         for lulc_code in lulc_codes:
             writer.writerow([lulc_code, rarity_dict[lulc_code]])
 

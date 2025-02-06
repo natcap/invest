@@ -1,14 +1,13 @@
 """Module for Regression Testing the InVEST Annual Water Yield module."""
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
 
-import pandas
 import numpy
-from osgeo import gdal
+import pandas
 import pygeoprocessing
-
+from osgeo import gdal
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'annual_water_yield')
@@ -74,7 +73,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             annual_water_yield.execute(args)
         self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
-    
+
     def test_missing_lulc_value(self):
         """Hydro: catching missing LULC value in Biophysical table."""
         from natcap.invest import annual_water_yield
@@ -89,7 +88,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
         bio_df = bio_df[bio_df['lucode'] != 2]
         bio_df.to_csv(bad_biophysical_path)
         bio_df = None
-        
+
         args['biophysical_table_path'] = bad_biophysical_path
 
         with self.assertRaises(ValueError) as cm:
@@ -97,13 +96,13 @@ class AnnualWaterYieldTests(unittest.TestCase):
         self.assertTrue(
             "The missing values found in the LULC raster but not the table"
             " are: [2]" in str(cm.exception))
-    
+
     def test_missing_lulc_demand_value(self):
         """Hydro: catching missing LULC value in Demand table."""
         from natcap.invest import annual_water_yield
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
-        
+
         args['demand_table_path'] = os.path.join(
             SAMPLE_DATA, 'water_demand_table.csv')
         args['sub_watersheds_path'] = os.path.join(
@@ -117,7 +116,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
         demand_df = demand_df[demand_df['lucode'] != 2]
         demand_df.to_csv(bad_demand_path)
         demand_df = None
-        
+
         args['demand_table_path'] = bad_demand_path
 
         with self.assertRaises(ValueError) as cm:
@@ -247,7 +246,8 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
     def test_validation(self):
         """Hydro: test failure cases on the validation function."""
-        from natcap.invest import annual_water_yield, validation
+        from natcap.invest import annual_water_yield
+        from natcap.invest import validation
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
 
@@ -367,3 +367,16 @@ class AnnualWaterYieldTests(unittest.TestCase):
         self.assertTrue(
             'but are not found in the valuation table' in
             actual_message, actual_message)
+
+        # if the demand table is missing but the valuation table is present,
+        # make sure we have a validation error.
+        args_missing_demand_table = args.copy()
+        args_missing_demand_table['demand_table_path'] = ''
+        args_missing_demand_table['valuation_table_path'] = (
+            os.path.join(SAMPLE_DATA, 'hydropower_valuation_table.csv'))
+        validation_warnings = annual_water_yield.validate(
+            args_missing_demand_table)
+        self.assertEqual(len(validation_warnings), 1)
+        self.assertEqual(
+            validation_warnings[0],
+            (['demand_table_path'], 'Input is required but has no value'))

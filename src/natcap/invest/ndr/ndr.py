@@ -597,7 +597,10 @@ def execute(args):
             base_raster_list, aligned_raster_list,
             ['near']*len(base_raster_list), dem_info['pixel_size'],
             'intersection'),
-        kwargs={'base_vector_path_list': [args['watersheds_path']]},
+        kwargs={
+            'base_vector_path_list': [args['watersheds_path']],
+            'raster_align_index': 0  # align to the grid of the DEM
+        },
         target_path_list=aligned_raster_list,
         task_name='align rasters')
 

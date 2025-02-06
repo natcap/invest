@@ -34,12 +34,13 @@ jobs:
           fi
 
       - uses: actions/checkout@v4
-        if: ${{ env.RUN }}
+        if: env.RUN == 'true'
         with:
+          fetch-depth: 0  # fetch entire history, for versioning
           token: ${{ secrets.AUTORELEASE_BOT_PAT }}
 
       - name: Install dependencies
-        if: ${{ env.RUN }}
+        if: env.RUN == 'true'
         run: pip install rst2html5 setuptools_scm
 
       - name: Get current version number (scheduled runs only)
@@ -53,10 +54,10 @@ jobs:
           import os
           major, minor, bugfix, *_ = os.environ['CURRENT_VERSION'].split('.')
           with open(os.environ['GITHUB_ENV']) as env_file:
-            env_file.write(f'VERSION={major}.{minor}.{bugfix + 1}')
+            env_file.write(f'VERSION={major}.{minor}.{int(bugfix) + 1}')
 
       - name: Configure git
-        if: ${{ env.RUN }}
+        if: env.RUN == 'true'
         run: |
           git config user.name "GitHub Actions"
           git config user.email "<>"
@@ -64,7 +65,7 @@ jobs:
       # Members of the natcap software team can push to the autorelease branch on
       # natcap/invest; this branch is a special case for our release process.
       - name: Create autorelease branch
-        if: ${{ env.RUN }}
+        if: env.RUN == 'true'
         run: git checkout -b "$AUTORELEASE_BRANCH"
 
       # Replace
@@ -81,7 +82,7 @@ jobs:
       # X.X.X (XXXX-XX-XX)
       # ------------------
       - name: Update HISTORY.rst
-        if: ${{ env.RUN }}
+        if: env.RUN == 'true'
         run: |
           HEADER="$VERSION ($(date '+%Y-%m-%d'))"
           HEADER_LENGTH=${#HEADER}
@@ -91,7 +92,7 @@ jobs:
               HISTORY.rst
 
       - name: Generate changelog.html
-        if: ${{ env.RUN }}
+        if: env.RUN == 'true'
         run: rst2html5 HISTORY.rst workbench/changelog.html
 
       - name: Update package.json version
@@ -102,7 +103,7 @@ jobs:
           package-json-path: workbench/package.json
 
       - name: Commit updated HISTORY.rst, changelog.html, and package.json
-        if: ${{ env.RUN }}
+        if: env.RUN == 'true'
         run: |
           git add HISTORY.rst
           git add workbench/changelog.html
@@ -110,13 +111,13 @@ jobs:
           git commit -m "Committing the $VERSION release."
 
       - name: Tag and push
-        if: ${{ env.RUN }}
+        if: env.RUN == 'true'
         run: |
           git tag $VERSION
           git push --atomic origin $AUTORELEASE_BRANCH $VERSION
 
       - name: Find actions run for the version tag
-        if: ${{ env.RUN }}
+        if: env.RUN == 'true'
         run: |
           # wait a few seconds to make sure the actions run exists before querying it
           sleep 5
@@ -128,7 +129,7 @@ jobs:
               --jq .[].url)" >> $GITHUB_ENV
 
       - name: Create a PR from the autorelease branch into main
-        if: ${{ env.RUN }}
+        if: env.RUN == 'true'
         run: |
           gh pr create \
             --base main \
