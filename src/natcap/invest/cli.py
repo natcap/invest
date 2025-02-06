@@ -477,7 +477,7 @@ def main(user_args=None):
                     'Starting model with parameters: \n%s',
                     datastack.format_args_dict(
                         parsed_datastack.args,
-                        models.model_id_to_pyname[parsed_datastack.model_id]))
+                        parsed_datastack.model_id))
 
                 # We're deliberately not validating here because the user
                 # can just call ``invest validate <datastack>`` to validate.
