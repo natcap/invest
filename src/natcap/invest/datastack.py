@@ -55,7 +55,6 @@ ARGS_LOG_LEVEL = 100  # define high log level so it should always show in logs
 DATASTACK_EXTENSION = '.invest.tar.gz'
 PARAMETER_SET_EXTENSION = '.invest.json'
 DATASTACK_PARAMETER_FILENAME = 'parameters' + PARAMETER_SET_EXTENSION
-UNKNOWN = 'UNKNOWN'
 
 
 ParameterSet = collections.namedtuple('ParameterSet',
@@ -638,8 +637,10 @@ def extract_parameter_set(paramset_path):
         return args_param
 
     if 'model_id' in read_params:
+        # New style datastacks include the model ID
         model_id = read_params['model_id']
     else:
+        # Old style datastacks use the pyname (core models only, no plugins)
         model_id = models.pyname_to_model_id[read_params['model_name']]
     return ParameterSet(
         args=_recurse(read_params['args']),
@@ -663,10 +664,7 @@ def extract_parameters_from_logfile(logfile_path):
         logfile_path (string): The path to an InVEST logfile on disk.
 
     Returns:
-        An instance of the ParameterSet namedtuple.  If a model id and InVEST
-        version cannot be parsed from the Arguments section of the logfile,
-        ``ParameterSet.model_id`` and ``ParameterSet.invest_version`` will be
-        set to ``datastack.UNKNOWN``.
+        An instance of the ParameterSet namedtuple.
 
     Raises:
         ValueError - when no arguments could be parsed from the logfile.
@@ -679,18 +677,21 @@ def extract_parameters_from_logfile(logfile_path):
 
             if not args_started:
                 # Line would look something like this:
+                # "Arguments for InVEST carbon 3.4.1rc1:\n"
+                # (new style, using model id)
+                # or
                 # "Arguments for InVEST natcap.invest.carbon 3.4.1rc1:\n"
-                if line.startswith('Arguments'):
-                    try:
-                        name, invest_version = line.split(' ')[3:5]
-                        model_id = models.pyname_to_model_id.get(name, name)
-
-                        invest_version = invest_version.replace(':', '')
-                    except ValueError:
-                        # Old-style logfiles don't provide the model name or
-                        # version info.
-                        model_id = UNKNOWN
-                        invest_version = UNKNOWN
+                # (old style, using model pyname)
+                if line.startswith('Arguments for InVEST'):
+                    identifier, invest_version = line.split(' ')[3:5]
+                    if identifier in models.pyname_to_model_id:
+                        # Old style logfiles use the pyname
+                        # These will be for core models only, not plugins
+                        model_id = models.pyname_to_model_id[identifier]
+                    else:
+                        # New style logfiles use the model id
+                        model_id = identifier
+                    invest_version = invest_version.replace(':', '')
                     args_started = True
                     continue
             else:

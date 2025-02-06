@@ -442,6 +442,24 @@ class DatastackArchiveTests(unittest.TestCase):
                     datastack.build_datastack_archive(
                         params, 'simple_parameters',archive_path)
 
+    def test_extract_old_style_datastack(self):
+        """Datastack: extract old-style datastack that uses pyname"""
+        from natcap.invest import datastack
+        json_path = os.path.join(self.workspace, 'old_datastack.json')
+        with open(json_path, 'w') as file:
+            json.dump({
+                "args": {
+                    "factor": "",
+                    "raster_path": "",
+                    "results_suffix": "",
+                    "workspace_dir": ""
+                },
+                "invest_version": "3.14.2",
+                "model_name": "natcap.invest.carbon"
+            }, file)
+        datastack_info = datastack.extract_parameter_set(json_path)
+        self.assertEqual(datastack_info.model_id, "carbon")
+
 
 class ParameterSetTest(unittest.TestCase):
     """Test Datastack."""
@@ -733,33 +751,26 @@ class ParameterSetTest(unittest.TestCase):
         self.assertEqual(stack_info, datastack.ParameterSet(
             args, 'some_modelname', natcap.invest.__version__))
 
-    def test_get_datastack_info_logfile_iui_style(self):
-        """Datastack: test get datastack info logfile iui style."""
+    def test_get_datastack_info_logfile_old_style(self):
+        """Datastack: test get datastack info logfile old style."""
+        import natcap.invest
         from natcap.invest import datastack
+        args = {
+            'a': 1,
+            'b': 2.7,
+            'c': [1, 2, 3.55],
+            'd': 'hello, world!',
+            'e': False,
+        }
 
         logfile_path = os.path.join(self.workspace, 'logfile.txt')
         with open(logfile_path, 'w') as logfile:
-            logfile.write(textwrap.dedent("""
-                Arguments:
-                suffix                           foo
-                some_int                         1
-                some_float                       2.33
-                workspace_dir                    some_workspace_dir
-
-                some other logging here.
-            """))
-
-        expected_args = {
-            'suffix': 'foo',
-            'some_int': 1,
-            'some_float': 2.33,
-            'workspace_dir': 'some_workspace_dir',
-        }
+            logfile.write(datastack.format_args_dict(args, 'natcap.invest.carbon'))
 
         stack_type, stack_info = datastack.get_datastack_info(logfile_path)
         self.assertEqual(stack_type, 'logfile')
         self.assertEqual(stack_info, datastack.ParameterSet(
-            expected_args, datastack.UNKNOWN, datastack.UNKNOWN))
+            args, 'carbon', natcap.invest.__version__))
 
     @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
     def test_mixed_path_separators_in_paramset_windows(self):
