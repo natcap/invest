@@ -26,36 +26,24 @@ LOGGER = logging.getLogger(__name__)
 
 
 def make_raster_from_array(base_raster_path, array):
-    """Create a raster on designated path with arbitrary lulc codes.
-
+    """Create a raster on designated path with arbitrary values.
     Args:
         base_raster_path (str): the raster path for making the new raster.
-        array (array): array to save as raster
-
     Returns:
         None.
     """
-
+    # UTM Zone 10N
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG(26910)  # UTM Zone 10N
+    srs.ImportFromEPSG(26910)
     projection_wkt = srs.ExportToWkt()
-    # origin hand-picked for this epsg:
-    geotransform = [461261, 1.0, 0.0, 4923265, 0.0, -1.0]
 
-    gtiff_driver = gdal.GetDriverByName('GTiff')
-    new_raster = gtiff_driver.Create(
-        base_raster_path, array.shape[0], array.shape[1], 1,
-        gdal.GDT_Int32, options=[
-            'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
-            'BLOCKXSIZE=16', 'BLOCKYSIZE=16'])
-    new_raster.SetProjection(projection_wkt)
-    new_raster.SetGeoTransform(geotransform)
-    new_band = new_raster.GetRasterBand(1)
-    new_band.SetNoDataValue(-1)
-    new_band.WriteArray(array)
-    new_raster.FlushCache()
-    new_band = None
-    new_raster = None
+    origin = (461261, 4923265)
+    pixel_size = (1, 1)
+    no_data = -1
+
+    pygeoprocessing.numpy_array_to_raster(
+        array, no_data, pixel_size, origin, projection_wkt,
+        base_raster_path)
 
 class TestPreprocessor(unittest.TestCase):
     """Test Coastal Blue Carbon preprocessor functions."""
@@ -1098,10 +1086,7 @@ class TestCBC2(unittest.TestCase):
         """Test `_calculate_npv`"""
         from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
 
-        def make_carbon_seq_raster(out_path):
-            """make a carbon sequestration raster and save it to out_path"""
-            
-        #make fake data
+        # make fake data
         net_sequestration_rasters = {
             2010: os.path.join(self.workspace_dir, "carbon_seq_2010.tif"),
             2011: os.path.join(self.workspace_dir, "carbon_seq_2011.tif"),
@@ -1140,10 +1125,9 @@ class TestCBC2(unittest.TestCase):
         actual_2012 = band.ReadAsArray()
 
         # compare actual rasters to expected (based on running `_calculate_npv`)
-        expected_2011 = numpy.array([[100550, 50300], [200950, 5000]],
-                                    dtype=int)
-        expected_2012 = numpy.array([[370268, 185195], [740045, 18409]],
-                                    dtype=int)
+        expected_2011 = numpy.array([[100525, 50262.5], [200950, 5000]])
+        expected_2012 = numpy.array([[370206.818182, 185103.409091],
+                                     [740045.454545, 18409.090909]])
         numpy.testing.assert_allclose(actual_2011, expected_2011)
         numpy.testing.assert_allclose(actual_2012, expected_2012)
 

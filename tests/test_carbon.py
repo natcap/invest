@@ -51,38 +51,6 @@ def make_simple_raster(base_raster_path, fill_val, nodata_val):
     new_raster = None
 
 
-def make_simple_lulc_raster(base_raster_path):
-    """Create a 2x2 raster on designated path with arbitrary lulc codes.
-
-    Args:
-        base_raster_path (str): the raster path for making the new raster.
-
-    Returns:
-        None.
-    """
-    array = numpy.array([[1, 1], [2, 3]], dtype=int)
-
-    srs = osr.SpatialReference()
-    srs.ImportFromEPSG(26910)  # UTM Zone 10N
-    projection_wkt = srs.ExportToWkt()
-    # origin hand-picked for this epsg:
-    geotransform = [461261, 1.0, 0.0, 4923265, 0.0, -1.0]
-
-    n = 2
-    gtiff_driver = gdal.GetDriverByName('GTiff')
-    new_raster = gtiff_driver.Create(
-        base_raster_path, n, n, 1, gdal.GDT_Int32, options=[
-            'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
-            'BLOCKXSIZE=16', 'BLOCKYSIZE=16'])
-    new_raster.SetProjection(projection_wkt)
-    new_raster.SetGeoTransform(geotransform)
-    new_band = new_raster.GetRasterBand(1)
-    new_band.WriteArray(array)
-    new_raster.FlushCache()
-    new_band = None
-    new_raster = None
-
-
 def assert_raster_equal_value(base_raster_path, val_to_compare):
     """Assert that the entire output raster has the same value as specified.
 
@@ -304,9 +272,32 @@ class CarbonTests(unittest.TestCase):
         """Test `_generate_carbon_map`"""
         from natcap.invest.carbon import _generate_carbon_map
 
+        def _make_simple_lulc_raster(base_raster_path):
+            """Create a raster on designated path with arbitrary values.
+            Args:
+                base_raster_path (str): the raster path for making the new raster.
+            Returns:
+                None.
+            """
+
+            array = numpy.array([[1, 1], [2, 3]], dtype=numpy.int32)
+
+            # UTM Zone 10N
+            srs = osr.SpatialReference()
+            srs.ImportFromEPSG(26910)
+            projection_wkt = srs.ExportToWkt()
+
+            origin = (461251, 4923245)
+            pixel_size = (1, 1)
+            no_data = -999
+
+            pygeoprocessing.numpy_array_to_raster(
+                array, no_data, pixel_size, origin, projection_wkt,
+                base_raster_path)
+
         # generate a fake lulc raster
         lulc_path = os.path.join(self.workspace_dir, "lulc.tif")
-        make_simple_lulc_raster(lulc_path)
+        _make_simple_lulc_raster(lulc_path)
 
         # make fake carbon pool dict
         carbon_pool_by_type = {1: 5000, 2: 60, 3: 120}

@@ -60,7 +60,7 @@ def make_simple_raster(base_raster_path, array):
     Args:
         base_raster_path (str): the raster path for making the new raster.
     Returns:
-        Non
+        None.
     """
     # UTM Zone 10N
     srs = osr.SpatialReference()

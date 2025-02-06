@@ -414,7 +414,6 @@ class AnnualWaterYieldTests(unittest.TestCase):
             validation_warnings[0],
             (['demand_table_path'], 'Input is required but has no value'))
 
-
     def test_fractp_op(self):
         """Test `fractp_op`"""
         from natcap.invest.annual_water_yield import fractp_op
@@ -447,7 +446,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
         and `compute_water_yield_volume`"""
         from natcap.invest import annual_water_yield
 
-        def create_watershed_results_vector(path_to_shp):
+        def _create_watershed_results_vector(path_to_shp):
             """Generate a fake watershed results vector file."""
             shapely_geometry_list = [
                 Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)]),
@@ -468,7 +467,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
                                                        vector_format, fields,
                                                        attribute_list)
 
-        def validate_fields(vector_path, field_name, expected_values, error_msg):
+        def _validate_fields(vector_path, field_name, expected_values, error_msg):
             """
             Validate a specific field in the watershed results vector
             by comparing actual to expected values. Expected values generated
@@ -492,7 +491,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
         # generate fake watershed results vector
         watershed_results_vector_path = os.path.join(self.workspace_dir,
                                                      "watershed_results.shp")
-        create_watershed_results_vector(watershed_results_vector_path)
+        _create_watershed_results_vector(watershed_results_vector_path)
 
         # generate fake val_df
         val_df = pandas.DataFrame({'efficiency': [.7, .8], 'height': [12, 50],
@@ -503,24 +502,23 @@ class AnnualWaterYieldTests(unittest.TestCase):
         # test water yield volume
         annual_water_yield.compute_water_yield_volume(
             watershed_results_vector_path)
-        validate_fields(watershed_results_vector_path, "wyield_vol",
-                        [990.0, 800.0],
-                        "Error with water yield volume calculation.")
+        _validate_fields(watershed_results_vector_path, "wyield_vol",
+                         [990.0, 800.0],
+                         "Error with water yield volume calculation.")
 
         # test rsupply volume
         annual_water_yield.compute_rsupply_volume(
             watershed_results_vector_path)
-        validate_fields(watershed_results_vector_path, "rsupply_vl",
-                        [940.0, 730.0],
-                        "Error calculating total realized water supply volume.")
+        _validate_fields(watershed_results_vector_path, "rsupply_vl",
+                         [940.0, 730.0],
+                         "Error calculating total realized water supply volume.")
 
         # test compute watershed valuation
         annual_water_yield.compute_watershed_valuation(
             watershed_results_vector_path, val_df)
-        validate_fields(watershed_results_vector_path, "hp_energy",
-                        [19.329408, 55.5968],
-                        "Error calculating energy.")
-        validate_fields(watershed_results_vector_path, "hp_val",
-                        [501.9029748723, 4587.91946857059],
-                        "Error calculating net present value.")
-        
+        _validate_fields(watershed_results_vector_path, "hp_energy",
+                         [19.329408, 55.5968],
+                         "Error calculating energy.")
+        _validate_fields(watershed_results_vector_path, "hp_val",
+                         [501.9029748723, 4587.91946857059],
+                         "Error calculating net present value.")
