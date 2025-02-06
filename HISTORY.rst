@@ -45,6 +45,9 @@ Unreleased Changes
     * Now testing and building against Python 3.13.
       No longer testing and building with Python 3.8, which reached EOL.
       https://github.com/natcap/invest/issues/1755
+    * InVEST's windows binaries are now distributed once again with a valid
+      signature, signed by Stanford University.
+      https://github.com/natcap/invest/issues/1580
 * Workbench
     * Auto-scrolling of log output is halted on user-initiated scrolling,
       enabling easier inspection of log output while a model is running
