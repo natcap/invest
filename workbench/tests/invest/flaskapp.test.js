@@ -67,7 +67,7 @@ describe('requests to flask endpoints', () => {
 
   test('fetch invest model args spec', async () => {
     const spec = await serverRequests.getSpec('carbon');
-    const expectedKeys = ['model_name', 'pyname', 'userguide', 'args'];
+    const expectedKeys = ['model_id', 'model_title', 'pyname', 'userguide', 'args'];
     expectedKeys.forEach((key) => {
       expect(spec[key]).toBeDefined();
     });
@@ -78,8 +78,7 @@ describe('requests to flask endpoints', () => {
     // it's okay to validate even if none of the args have values yet
     const argsDict = argsDictFromObject(spec.args);
     const payload = {
-      model_module: spec.pyname,
-      modelId: 'carbon',
+      model_id: 'carbon',
       args: JSON.stringify(argsDict),
     };
 
@@ -96,7 +95,7 @@ describe('requests to flask endpoints', () => {
     const filepath = path.join(workspace, 'foo.json');
     const payload = {
       filepath: filepath,
-      moduleName: spec.pyname,
+      model_id: spec.model_id,
       args: JSON.stringify(argsDict),
       relativePaths: true,
     };
@@ -107,7 +106,7 @@ describe('requests to flask endpoints', () => {
     const expectedKeys = [
       'args',
       'invest_version',
-      'model_name',
+      'model_id',
     ];
     expectedKeys.forEach((key) => {
       expect(data[key]).toBeDefined();
@@ -120,9 +119,7 @@ describe('requests to flask endpoints', () => {
       'type',
       'args',
       'invest_version',
-      'module_name',
-      'model_run_name',
-      'model_human_name',
+      'model_id',
     ];
     expectedKeys2.forEach((key) => {
       expect(data2[key]).toBeDefined();
@@ -130,14 +127,14 @@ describe('requests to flask endpoints', () => {
   });
 
   test('write parameters to python script', async () => {
-    const modelName = 'carbon'; // as appearing in `invest list`
-    const spec = await serverRequests.getSpec(modelName);
+    const modelID = 'carbon'; // as appearing in `invest list`
+    const spec = await serverRequests.getSpec(modelID);
     const argsDict = argsDictFromObject(spec.args);
     const workspace = fs.mkdtempSync(WORKSPACE);
     const filepath = path.join(workspace, 'foo.py');
     const payload = {
       filepath: filepath,
-      modelname: modelName,
+      model_id: modelID,
       args: JSON.stringify(argsDict),
     };
     await serverRequests.saveToPython(payload);
@@ -182,7 +179,7 @@ expect.extend({
 });
 
 describe('Test building model UIs and forum links', () => {
-  const models = [
+  const modelIDs = [
     'annual_water_yield',
     'carbon',
     'coastal_blue_carbon',
@@ -210,13 +207,11 @@ describe('Test building model UIs and forum links', () => {
     'wind_energy',
   ];
 
-  test.each(models)('test building each model setup tab', async (model) => {
-    const argsSpec = await serverRequests.getSpec(model);
+  test.each(modelIDs)('test building each model setup tab', async (modelID) => {
+    const argsSpec = await serverRequests.getSpec(modelID);
     const { findByRole } = render(
       <SetupTab
-        pyModuleName={argsSpec.pyname}
-        modelName={argsSpec.model_name}
-        modelId={model}
+        modelID={modelID}
         argsSpec={argsSpec.args}
         userguide={argsSpec.userguide}
         uiSpec={argsSpec.ui_spec}
@@ -233,11 +228,11 @@ describe('Test building model UIs and forum links', () => {
       .toBeInTheDocument();
   });
 
-  test.each(models)('test each forum link', async (model) => {
-    const argsSpec = await serverRequests.getSpec(model);
+  test.each(modelIDs)('test each forum link', async (modelID) => {
+    const argsSpec = await serverRequests.getSpec(modelID);
     const { findByRole } = render(
       <ResourcesLinks
-        moduleName={model}
+        modelID={modelID}
         docs={argsSpec.userguide}
       />
     );
