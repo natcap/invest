@@ -34,7 +34,7 @@ class ValidateExceptionTests(unittest.TestCase):
             self.workspace, 'dummy.invs.json')
         with open(datastack_path, 'w') as file:
             file.write('"args": {"something": "else"},')
-            file.write('"model_name": natcap.invest.carbon')
+            file.write('"model_id": "carbon"')
         with self.assertRaises(ValueError):
             main(self.workspace)
 
@@ -44,7 +44,7 @@ class ValidateExceptionTests(unittest.TestCase):
             self.workspace, 'dummy.invs.json')
         with open(datastack_path, 'w') as file:
             file.write('"args": {"workspace_dir": "/home/foo"},')
-            file.write('"model_name": natcap.invest.carbon')
+            file.write('"model_id": "carbon"')
         with self.assertRaises(ValueError):
             main(self.workspace)
 
@@ -69,15 +69,15 @@ def main(sampledatadir):
 
     for datastack_path in datastacks:
         paramset = datastack.extract_parameter_set(datastack_path)
-        if paramset.model_name.split(".")[-1] in {
+        if paramset.model_id in {
                 'delineateit', 'ndr', 'scenic_quality', 'sdr',
                  'seasonal_water_yield', 'recreation'}:
             continue # avoid compiled modles for devoloped of plugin feature branch
         if 'workspace_dir' in paramset.args and \
                 paramset.args['workspace_dir'] != '':
             msg = (
-                '%s : workspace_dir should not be defined '
-                'for sample datastacks' % datastack_path)
+                f'{datastack_path} : workspace_dir should not be defined '
+                'for sample datastacks' )
             validation_messages += os.linesep + msg
             LOGGER.error(msg)
         else:
@@ -87,7 +87,7 @@ def main(sampledatadir):
 
         model_warnings = []  # define here in case of uncaught exception.
         try:
-            LOGGER.info('validating %s ', os.path.abspath(datastack_path))
+            LOGGER.info(f'validating {os.path.abspath(datastack_path)}')
             model_warnings = getattr(
                 model_module, 'validate')(paramset.args)
         except AttributeError as err:
