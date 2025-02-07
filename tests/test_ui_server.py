@@ -83,7 +83,7 @@ class EndpointFunctionTests(unittest.TestCase):
         response_data = json.loads(response.get_data(as_text=True))
         self.assertEqual(
             set(response_data),
-            {'type', 'args', 'model_id', 'model_title', 'invest_version'})
+            {'type', 'args', 'model_id', 'invest_version'})
 
     def test_write_parameter_set_file(self):
         """UI server: write_parameter_set_file endpoint."""

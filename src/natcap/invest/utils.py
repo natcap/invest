@@ -793,3 +793,50 @@ def matches_format_string(test_string, format_string):
     if re.fullmatch(pattern, test_string):
         return True
     return False
+
+
+def copy_spatial_files(spatial_filepath, target_dir):
+    """Copy spatial files to a new directory.
+
+    Args:
+        spatial_filepath (str): The filepath to a GDAL-supported file.
+        target_dir (str): The directory where all component files of
+            ``spatial_filepath`` should be copied.  If this directory does not
+            exist, it will be created.
+
+    Returns:
+        filepath (str): The path to a representative file copied into the
+        ``target_dir``.  If possible, this will match the basename of
+        ``spatial_filepath``, so if someone provides an ESRI Shapefile called
+        ``my_vector.shp``, the return value will be ``os.path.join(target_dir,
+        my_vector.shp)``.
+    """
+    LOGGER.info(f'Copying {spatial_filepath} --> {target_dir}')
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+
+    source_basename = os.path.basename(spatial_filepath)
+    return_filepath = None
+
+    spatial_file = gdal.OpenEx(spatial_filepath)
+    for member_file in spatial_file.GetFileList():
+        # ArcGIS Binary/Grid format includes the directory in the file listing.
+        # The parent directory isn't strictly needed, so we can just skip it.
+        if os.path.isdir(member_file):
+            continue
+
+        target_basename = os.path.basename(member_file)
+        target_filepath = os.path.join(target_dir, target_basename)
+        if source_basename == target_basename:
+            return_filepath = target_filepath
+        shutil.copyfile(member_file, target_filepath)
+    spatial_file = None
+
+    # I can't conceive of a case where the basename of the source file does not
+    # match any of the member file basenames, but just in case there's a
+    # weird GDAL driver that does this, it seems reasonable to fall back to
+    # whichever of the member files was most recent.
+    if not return_filepath:
+        return_filepath = target_filepath
+
+    return return_filepath
