@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
+import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import Spinner from 'react-bootstrap/Spinner';
@@ -15,20 +16,30 @@ export default function PluginModal(props) {
   const { updateInvestList } = props;
   const [showPluginModal, setShowPluginModal] = useState(false);
   const [url, setURL] = useState(undefined);
+  const [revision, setRevision] = useState(undefined);
+  const [path, setPath] = useState(undefined);
   const [err, setErr] = useState(undefined);
   const [pluginToRemove, setPluginToRemove] = useState(undefined);
   const [loading, setLoading] = useState(false);
   const [plugins, setPlugins] = useState({});
+  const [installFrom, setInstallFrom] = useState('url');
 
   const handleModalClose = () => {
     setURL(undefined);
+    setRevision(undefined);
     setErr(false);
     setShowPluginModal(false);
   };
   const handleModalOpen = () => setShowPluginModal(true);
+
   const addPlugin = () => {
     setLoading(true);
-    ipcRenderer.invoke(ipcMainChannels.ADD_PLUGIN, url).then((addPluginErr) => {
+    ipcRenderer.invoke(
+      ipcMainChannels.ADD_PLUGIN,
+      installFrom === 'url' ? url : undefined, // url
+      installFrom === 'url' ? revision : undefined, // revision
+      installFrom === 'path' ? path : undefined // path
+    ).then((addPluginErr) => {
       setLoading(false);
       updateInvestList();
       if (addPluginErr) {
@@ -61,33 +72,85 @@ export default function PluginModal(props) {
 
   const { t } = useTranslation();
 
-  let modalBody = (
-    <Modal.Body>
-      <Form>
-        <Form.Group className="mb-3">
-          <Form.Label htmlFor="url">{t('Add a plugin')}</Form.Label>
+  let pluginFields;
+  if (installFrom === 'url') {
+    pluginFields = (
+      <Form.Row>
+        <Form.Group as={Col} xs={7}>
+          <Form.Label htmlFor="url">{t('Git URL')}</Form.Label>
           <Form.Control
             id="url"
             type="text"
-            placeholder={t('Enter Git URL')}
+            placeholder="https://github.com/owner/repo.git"
             onChange={(event) => setURL(event.currentTarget.value)}
           />
           <Form.Text className="text-muted">
-            {t('This may take several minutes')}
+            <i>{t('Default branch used unless otherwise specified')}</i>
           </Form.Text>
+        </Form.Group>
+        <Form.Group as={Col}>
+          <Form.Label htmlFor="branch">{t('Branch, tag, or commit')}</Form.Label>
+          <Form.Control
+            id="branch"
+            type="text"
+            onChange={(event) => setRevision(event.currentTarget.value)}
+          />
+          <Form.Text className="text-muted">
+            <i>{t('Optional')}</i>
+          </Form.Text>
+        </Form.Group>
+      </Form.Row>
+    );
+  } else {
+    pluginFields = (
+      <Form.Group>
+        <Form.Label htmlFor="path">{t('Local absolute path')}</Form.Label>
+        <Form.Control
+          id="path"
+          type="text"
+          placeholder={window.Workbench.OS === 'darwin'
+            ? '/Users/username/path/to/plugin/'
+            : 'C:\\Documents\\path\\to\\plugin\\'}
+          onChange={(event) => setPath(event.currentTarget.value)}
+        />
+      </Form.Group>
+    );
+  }
+
+  let modalBody = (
+    <Modal.Body>
+      <Form>
+        <Form.Group>
+          <h5 className="mb-3">{t('Add a plugin')}</h5>
+          <Form.Group>
+            <Form.Label htmlFor="installFrom">{t('Install from')}</Form.Label>
+            <Form.Control
+              id="installFrom"
+              as="select"
+              onChange={(event) => setInstallFrom(event.target.value)}
+              className="w-auto"
+            >
+              <option value="url">{t('git URL')}</option>
+              <option value="path">{t('local path')}</option>
+            </Form.Control>
+          </Form.Group>
+          {pluginFields}
           <Button
             disabled={loading}
-            className="mt-2"
             onClick={addPlugin}
           >
             {t('Add')}
           </Button>
+          <Form.Text className="text-muted">
+            {t('This may take several minutes')}
+          </Form.Text>
         </Form.Group>
         <hr />
-        <Form.Group className="mb-3">
-          <Form.Label htmlFor="plugin-select">{t('Remove a plugin')}</Form.Label>
+        <Form.Group>
+          <h5 className="mb-3">{t('Remove a plugin')}</h5>
+          <Form.Label htmlFor="selectPluginToRemove">{t('Plugin name')}</Form.Label>
           <Form.Control
-            id="plugin-select"
+            id="selectPluginToRemove"
             as="select"
             value={pluginToRemove}
             onChange={(event) => setPluginToRemove(event.currentTarget.value)}
@@ -107,7 +170,7 @@ export default function PluginModal(props) {
           </Form.Control>
           <Button
             disabled={loading || !Object.keys(plugins).length}
-            className="mt-2"
+            className="mt-3"
             onClick={removePlugin}
           >
             {t('Remove')}
@@ -130,13 +193,15 @@ export default function PluginModal(props) {
         {t('Manage plugins')}
       </Button>
 
-      <Modal show={showPluginModal} onHide={handleModalClose}>
+      <Modal show={showPluginModal} onHide={handleModalClose} contentClassName="plugin-modal">
         <Modal.Header>
           <Modal.Title>{t('Manage plugins')}</Modal.Title>
           {loading && (
-            <Spinner animation="border" role="status" className="m-2">
-              <span className="sr-only">Loading...</span>
-            </Spinner>
+            <Form.Group>
+              <Spinner animation="border" role="status" className="m-2">
+                <span className="sr-only">{t('Loading...')}</span>
+              </Spinner>
+            </Form.Group>
           )}
         </Modal.Header>
         {modalBody}

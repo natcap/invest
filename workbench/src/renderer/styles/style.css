@@ -637,3 +637,8 @@ input[type=text]::placeholder {
     background-size: 1rem 1rem;
   }
 }
+
+/* Manage Plugins modal */
+.plugin-modal {
+  width: 34rem;
+}
