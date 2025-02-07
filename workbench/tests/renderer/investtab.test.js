@@ -40,6 +40,7 @@ function renderInvestTab(job = DEFAULT_JOB) {
       investSettings={{ nWorkers: '-1', loggingLevel: 'INFO', taskgraphLoggingLevel: 'ERROR' }}
       saveJob={() => {}}
       updateJobProperties={() => {}}
+      investList={{ foo: { modelTitle: 'Foo Model' } }}
     />
   );
   return utils;
@@ -48,7 +49,7 @@ function renderInvestTab(job = DEFAULT_JOB) {
 describe('Run status Alert renders with status from a recent run', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
-    model_name: 'Foo Model',
+    model_title: 'Foo Model',
     userguide: 'foo.html',
     ui_spec: {
       order: [['workspace']],
@@ -179,8 +180,9 @@ describe('Open Workspace button', () => {
 
 describe('Sidebar Buttons', () => {
   const spec = {
+    model_id: 'foo',
     pyname: 'natcap.invest.foo',
-    model_name: 'Foo Model',
+    model_title: 'Foo Model',
     userguide: 'foo.html',
     ui_spec: {
       order: [['workspace', 'port']],
@@ -444,7 +446,7 @@ describe('Sidebar Buttons', () => {
 
   test('Load parameters from file: loads parameters', async () => {
     const mockDatastack = {
-      module_name: spec.pyname,
+      model_id: 'foo',
       args: {
         workspace: 'myworkspace',
         port: '9999',
@@ -453,15 +455,15 @@ describe('Sidebar Buttons', () => {
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
     const mockDialogData = {
       canceled: false,
-      filePaths: ['foo.json']
+      filePaths: ['foo.json'],
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
     // Render with a completed model run so we can navigate to Log Tab
     // and assert that Loading new params toggles back to Setup Tab
     const job = new InvestJob({
-      modelID: 'carbon',
-      modelTitle: 'Carbon Model',
+      modelID: 'foo',
+      modelTitle: 'Foo Model',
       status: 'success',
       argsValues: {},
       logfile: 'foo.txt',
@@ -543,7 +545,7 @@ describe('Sidebar Buttons', () => {
 describe('InVEST Run Button', () => {
   const spec = {
     pyname: 'natcap.invest.bar',
-    model_name: 'Bar Model',
+    model_title: 'Bar Model',
     userguide: 'bar.html',
     ui_spec: {
       order: [['a', 'b', 'c']],

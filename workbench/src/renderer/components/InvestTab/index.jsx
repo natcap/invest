@@ -359,6 +359,10 @@ InvestTab.propTypes = {
   tabID: PropTypes.string.isRequired,
   saveJob: PropTypes.func.isRequired,
   updateJobProperties: PropTypes.func.isRequired,
+  investList: PropTypes.shape({
+    modelTitle: PropTypes.string,
+  }).isRequired,
+  t: PropTypes.func.isRequired,
 };
 
 export default withTranslation()(InvestTab);

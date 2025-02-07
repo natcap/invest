@@ -14,6 +14,8 @@ test('Open File: displays a tooltip on hover', async () => {
     <OpenButton
       openInvestModel={() => {}}
       batchUpdateArgs={() => {}}
+      investList={{}}
+      className=''
     />
   );
 
@@ -41,6 +43,13 @@ test('Open File: sends correct payload', async () => {
     <OpenButton
       openInvestModel={() => {}}
       batchUpdateArgs={() => {}}
+      className=''
+      investList={{
+        foo: {
+          modelTitle: 'Foo Model',
+          type: 'core',
+        },
+      }}
     />
   );
 
