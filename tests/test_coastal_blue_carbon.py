@@ -11,6 +11,7 @@ import unittest
 
 import numpy
 import pandas
+from scipy.sparse import dok_matrix
 import pygeoprocessing
 from natcap.invest import utils
 from natcap.invest import validation
@@ -23,6 +24,26 @@ REGRESSION_DATA = os.path.join(
     'coastal_blue_carbon')
 LOGGER = logging.getLogger(__name__)
 
+
+def make_raster_from_array(base_raster_path, array):
+    """Create a raster on designated path with arbitrary values.
+    Args:
+        base_raster_path (str): the raster path for making the new raster.
+    Returns:
+        None.
+    """
+    # UTM Zone 10N
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)
+    projection_wkt = srs.ExportToWkt()
+
+    origin = (461261, 4923265)
+    pixel_size = (1, 1)
+    no_data = -1
+
+    pygeoprocessing.numpy_array_to_raster(
+        array, no_data, pixel_size, origin, projection_wkt,
+        base_raster_path)
 
 class TestPreprocessor(unittest.TestCase):
     """Test Coastal Blue Carbon preprocessor functions."""
@@ -1060,3 +1081,149 @@ class TestCBC2(unittest.TestCase):
             [(['analysis_year'],
                 coastal_blue_carbon.INVALID_ANALYSIS_YEAR_MSG.format(
                     analysis_year=2000, latest_year=2000))])
+
+    def test_calculate_npv(self):
+        """Test `_calculate_npv`"""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
+
+        # make fake data
+        net_sequestration_rasters = {
+            2010: os.path.join(self.workspace_dir, "carbon_seq_2010.tif"),
+            2011: os.path.join(self.workspace_dir, "carbon_seq_2011.tif"),
+            2012: os.path.join(self.workspace_dir, "carbon_seq_2012.tif")
+        }
+
+        for year, path in net_sequestration_rasters.items():
+            array = numpy.array([[year*.5, year*.25], [year-1, 50]])  # random array
+            make_raster_from_array(path, array)
+
+        prices_by_year = {
+            2010: 50,
+            2011: 80,
+            2012: 95
+        }
+        discount_rate = 0.1
+        baseline_year = 2010
+        target_raster_years_and_paths = {
+            2010: os.path.join(self.workspace_dir, "tgt_carbon_seq_2010.tif"),
+            2011: os.path.join(self.workspace_dir, "tgt_carbon_seq_2011.tif"),
+            2012: os.path.join(self.workspace_dir, "tgt_carbon_seq_2012.tif")
+        }
+
+        coastal_blue_carbon._calculate_npv(net_sequestration_rasters,
+                                           prices_by_year, discount_rate,
+                                           baseline_year,
+                                           target_raster_years_and_paths)
+
+        # read in the created target rasters
+        actual_2011 = gdal.Open(target_raster_years_and_paths[2011])
+        band = actual_2011.GetRasterBand(1)
+        actual_2011 = band.ReadAsArray()
+
+        actual_2012 = gdal.Open(target_raster_years_and_paths[2012])
+        band = actual_2012.GetRasterBand(1)
+        actual_2012 = band.ReadAsArray()
+
+        # compare actual rasters to expected (based on running `_calculate_npv`)
+        expected_2011 = numpy.array([[100525, 50262.5], [200950, 5000]])
+        expected_2012 = numpy.array([[370206.818182, 185103.409091],
+                                     [740045.454545, 18409.090909]])
+        numpy.testing.assert_allclose(actual_2011, expected_2011)
+        numpy.testing.assert_allclose(actual_2012, expected_2012)
+
+    def test_calculate_accumulation_over_time(self):
+        """Test `_calculate_accumulation_over_time`"""
+        from natcap.invest.coastal_blue_carbon.coastal_blue_carbon import \
+            _calculate_accumulation_over_time
+
+        # generate fake data with nodata values
+        nodata = float(numpy.finfo(numpy.float32).min)
+        annual_biomass_matrix = numpy.array([[1, 2], [3, nodata]])
+        annual_soil_matrix = numpy.array([[11, 12], [13, 14]])
+        annual_litter_matrix = numpy.array([[.5, .9], [4, .9]])
+        n_years = 3
+
+        actual_accumulation = _calculate_accumulation_over_time(
+            annual_biomass_matrix, annual_soil_matrix, annual_litter_matrix,
+            n_years)
+
+        expected_accumulation = numpy.array([[37.5, 44.7], [60, nodata]])
+        numpy.testing.assert_allclose(actual_accumulation, expected_accumulation)
+
+    def test_calculate_net_sequestration(self):
+        """test `_calculate_net_sequestration`"""
+        from natcap.invest.coastal_blue_carbon.coastal_blue_carbon import \
+            _calculate_net_sequestration
+
+        # make fake rasters that contain nodata pixels (-1)
+        accumulation_raster_path = os.path.join(self.workspace_dir,
+                                                "accumulation_raster.tif")
+        accumulation_array = numpy.array([[40, -1], [70, -1]])
+        make_raster_from_array(accumulation_raster_path, accumulation_array)
+
+        emissions_raster_path = os.path.join(self.workspace_dir,
+                                             "emissions_raster.tif")
+        emissions_array = numpy.array([[-1, 8], [7, -1]])
+        make_raster_from_array(emissions_raster_path, emissions_array)
+
+        target_raster_path = os.path.join(self.workspace_dir,
+                                          "target_raster.tif")
+
+        # run `_calculate_net_sequestration`
+        _calculate_net_sequestration(accumulation_raster_path,
+                                     emissions_raster_path, target_raster_path)
+
+        # compare actual to expected output net sequestration raster
+        actual_sequestration = gdal.Open(target_raster_path)
+        band = actual_sequestration.GetRasterBand(1)
+        actual_sequestration = band.ReadAsArray()
+
+        # calculated by running `_calculate_net_sequestration`
+        nodata = float(numpy.finfo(numpy.float32).min)
+        expected_sequestration = numpy.array([[40, -8], [-7, nodata]])
+
+        numpy.testing.assert_allclose(actual_sequestration,
+                                      expected_sequestration)
+        
+    def test_reclassify_accumulation_transition(self):
+        """Test `_reclassify_accumulation_transition`"""
+        from natcap.invest.coastal_blue_carbon.coastal_blue_carbon import \
+                _reclassify_accumulation_transition, _reclassify_disturbance_magnitude
+
+        # make fake raster data
+        landuse_transition_from_raster = os.path.join(self.workspace_dir,
+                                                      "landuse_transition_from.tif")
+        landuse_transition_from_array = numpy.array([[1, 2], [3, 2]])
+        make_raster_from_array(landuse_transition_from_raster,
+                               landuse_transition_from_array)
+
+        landuse_transition_to_raster = os.path.join(self.workspace_dir,
+                                                    "landuse_transition_to.tif")
+        landuse_transition_to_array = numpy.array([[1, 1], [2, 3]])
+        make_raster_from_array(landuse_transition_to_raster,
+                               landuse_transition_to_array)
+
+        #make fake accumulation_rate_matrix
+        accumulation_rate_matrix = dok_matrix((4, 4), dtype=numpy.float32)
+        accumulation_rate_matrix[1, 2] = 0.5  # Forest -> Grassland
+        accumulation_rate_matrix[1, 3] = 0.3  # Forest -> Agriculture
+
+        accumulation_rate_matrix[2, 1] = 0.2  # Grassland -> Forest
+        accumulation_rate_matrix[2, 3] = 0.4  # Grassland -> Agriculture
+
+        accumulation_rate_matrix[3, 1] = 0.1  # Agriculture -> Forest
+        accumulation_rate_matrix[3, 2] = 0.3  # Agriculture -> Grassland
+
+        target_raster_path = os.path.join(self.workspace_dir, "output.tif")
+        _reclassify_accumulation_transition(
+            landuse_transition_from_raster, landuse_transition_to_raster,
+            accumulation_rate_matrix, target_raster_path)
+        
+        # compare actual and expected target_raster
+        actual_accumulation = gdal.Open(target_raster_path)
+        band = actual_accumulation.GetRasterBand(1)
+        actual_accumulation = band.ReadAsArray()
+
+        expected_accumulation = numpy.array([[0, .2], [.3, .4]])
+
+        numpy.testing.assert_allclose(actual_accumulation, expected_accumulation)
