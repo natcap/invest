@@ -68,7 +68,7 @@ def main(sampledatadir):
         raise ValueError(f'no json files found in {sampledatadir}')
 
     for datastack_path in datastacks:
-        if datastack_path.split('/')[2] in {'DelineateIt', 'NDR', 'ScenicQuality',
+        if datastack_path.split('/')[-2] in {'DelineateIt', 'NDR', 'ScenicQuality',
                                             'SDR', 'Seasonal_Water_Yield', 'recreation'}:
             continue # avoid compiled modles for devoloped of plugin feature branch
         paramset = datastack.extract_parameter_set(datastack_path)
