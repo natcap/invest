@@ -11,6 +11,7 @@ import tempfile
 import unittest
 
 from natcap.invest import datastack
+from natcap.invest import models
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('invest-autovalidate.py')
@@ -77,7 +78,8 @@ def main(sampledatadir):
             LOGGER.error(msg)
         else:
             paramset.args['workspace_dir'] = tempfile.mkdtemp()
-        model_module = importlib.import_module(name=paramset.model_name)
+        model_module = importlib.import_module(
+            name=models.model_id_to_pyname[paramset.model_id])
 
         model_warnings = []  # define here in case of uncaught exception.
         try:
