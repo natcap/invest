@@ -470,7 +470,7 @@ def main(user_args=None):
                         model_module.__name__, model_module)
 
             with utils.prepare_workspace(parsed_datastack.args['workspace_dir'],
-                                         name=models.model_id_to_pyname[parsed_datastack.model_id],
+                                         model_id=parsed_datastack.model_id,
                                          logging_level=log_level):
                 LOGGER.log(
                     datastack.ARGS_LOG_LEVEL,
