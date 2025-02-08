@@ -268,6 +268,69 @@ class CarbonTests(unittest.TestCase):
         assert_raster_equal_value(
             os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.4602106)
 
+    def test_generate_carbon_map(self):
+        """Test `_generate_carbon_map`"""
+        from natcap.invest.carbon import _generate_carbon_map
+
+        def _make_simple_lulc_raster(base_raster_path):
+            """Create a raster on designated path with arbitrary values.
+            Args:
+                base_raster_path (str): the raster path for making the new raster.
+            Returns:
+                None.
+            """
+
+            array = numpy.array([[1, 1], [2, 3]], dtype=numpy.int32)
+
+            # UTM Zone 10N
+            srs = osr.SpatialReference()
+            srs.ImportFromEPSG(26910)
+            projection_wkt = srs.ExportToWkt()
+
+            origin = (461251, 4923245)
+            pixel_size = (1, 1)
+            no_data = -999
+
+            pygeoprocessing.numpy_array_to_raster(
+                array, no_data, pixel_size, origin, projection_wkt,
+                base_raster_path)
+
+        # generate a fake lulc raster
+        lulc_path = os.path.join(self.workspace_dir, "lulc.tif")
+        _make_simple_lulc_raster(lulc_path)
+
+        # make fake carbon pool dict
+        carbon_pool_by_type = {1: 5000, 2: 60, 3: 120}
+
+        out_carbon_stock_path = os.path.join(self.workspace_dir,
+                                             "carbon_stock.tif")
+
+        _generate_carbon_map(lulc_path, carbon_pool_by_type,
+                             out_carbon_stock_path)
+
+        # open output carbon stock raster and check values
+        actual_carbon_stock = gdal.Open(out_carbon_stock_path)
+        band = actual_carbon_stock.GetRasterBand(1)
+        actual_carbon_stock = band.ReadAsArray()
+
+        expected_carbon_stock = numpy.array([[0.5, 0.5], [0.006, 0.012]],
+                                            dtype=numpy.float32)
+
+        numpy.testing.assert_array_equal(actual_carbon_stock,
+                                         expected_carbon_stock)
+
+    def test_calculate_valuation_constant(self):
+        """Test `_calculate_valuation_constant`"""
+        from natcap.invest.carbon import _calculate_valuation_constant
+
+        valuation_constant = _calculate_valuation_constant(lulc_cur_year=2010,
+                                                           lulc_fut_year=2012,
+                                                           discount_rate=50,
+                                                           rate_change=5,
+                                                           price_per_metric_ton_of_c=50)
+        expected_valuation = 40.87302
+        self.assertEqual(round(valuation_constant, 5), expected_valuation)
+
 
 class CarbonValidationTests(unittest.TestCase):
     """Tests for the Carbon Model MODEL_SPEC and validation."""
