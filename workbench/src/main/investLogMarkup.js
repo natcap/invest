@@ -8,7 +8,7 @@ export default function markupMessage(message) {
   if (/(ERROR|CRITICAL)/.test(message)) {
     return 'invest-log-error';
   }
-  if (/WARNING/.test(message)) {
+  if (/natcap\.invest.*WARNING/.test(message)) {
     return 'invest-log-primary-warning';
   }
   if (/natcap\.invest/.test(message)) {
