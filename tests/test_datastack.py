@@ -25,6 +25,8 @@ DATA_DIR = os.path.join(_TEST_FILE_CWD,
 SAMPLE_DATA_DIR = os.path.join(
     _TEST_FILE_CWD, '..', 'data', 'invest-sample-data')
 
+# These modules live in tests/test_datastack_modules
+# Each contains a different MODEL_SPEC for the purpose of datastack testing
 MOCK_MODEL_ID_TO_PYNAME = {
     name: f'test_datastack_modules.{name}' for name in [
         'archive_extraction',
@@ -650,11 +652,7 @@ class ParameterSetTest(unittest.TestCase):
 
                 07/20/2017 16:37:48  natcap.invest.ui.model INFO post args.
             """))
-
-        with patch('natcap.invest.datastack.models') as p:
-            p.pyname_to_model_id = {
-                val: key for key, val in MOCK_MODEL_ID_TO_PYNAME.items()}
-            params = datastack.extract_parameters_from_logfile(logfile_path)
+        params = datastack.extract_parameters_from_logfile(logfile_path)
 
         expected_params = datastack.ParameterSet(
             {'suffix': 'foo',
@@ -765,6 +763,7 @@ class ParameterSetTest(unittest.TestCase):
 
         logfile_path = os.path.join(self.workspace, 'logfile.txt')
         with open(logfile_path, 'w') as logfile:
+            # Old style of log files include the pyname instead of model ID
             logfile.write(datastack.format_args_dict(args, 'natcap.invest.carbon'))
 
         stack_type, stack_info = datastack.get_datastack_info(logfile_path)
