@@ -131,7 +131,7 @@ export function setupAddPlugin() {
         logger.info('created micromamba env for plugin');
         await spawnWithLogging(
           micromamba,
-          ['run', '--prefix', `"${pluginEnvPrefix}"`, 'python -m pip', 'install', installString]
+          ['run', '--prefix', `"${pluginEnvPrefix}"`, 'python', '-m', 'pip', 'install', installString]
         );
         logger.info('installed plugin into its env');
         // Write plugin metadata to the workbench's config.json
