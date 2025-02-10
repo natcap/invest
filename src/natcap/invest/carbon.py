@@ -541,7 +541,7 @@ def _generate_carbon_map(
     Args:
         lulc_path (string): landcover raster with integer pixels.
         out_carbon_stock_path (string): path to output raster that will have
-            pixels with carbon storage values in them with units of Mg*C
+            pixels with carbon storage values in them with units of Mg/ha.
         carbon_pool_by_type (dict): a dictionary that maps landcover values
             to carbon storage densities per area (Mg C/Ha).
 

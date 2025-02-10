@@ -185,7 +185,7 @@ MODEL_SPEC = {
             "bands": {1: {"type": "integer"}}
         },
         "usle.tif": {
-            "about": "Total potential soil loss per pixel in the original land cover calculated from the USLE equation. (Eq. (68))",
+            "about": "Total potential soil loss per hectare in the original land cover calculated from the USLE equation. (Eq. (68))",
             "bands": {1: {
                 "type": "number",
                 "units": u.metric_ton/u.hectare
