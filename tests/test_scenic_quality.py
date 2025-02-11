@@ -14,6 +14,7 @@ from shapely.geometry import LineString
 from shapely.geometry import Point
 from shapely.geometry import Polygon
 
+gdal.UseExceptions()
 _SRS = osr.SpatialReference()
 _SRS.ImportFromEPSG(32731)  # WGS84 / UTM zone 31s
 WKT = _SRS.ExportToWkt()

@@ -28,6 +28,7 @@ import warnings
 
 from natcap.invest import utils
 
+gdal.UseExceptions()
 Pyro5.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
 REGRESSION_DATA = os.path.join(

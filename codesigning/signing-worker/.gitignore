@@ -1,0 +1,5 @@
+# This key is copied from GCP.  I've added it to the .gitignore to try to
+# prevent it from getting committed and pushed to git, while still allowing it
+# to be where ansible expects the key to be so ansible can copy the file to the
+# remote server.
+natcap-servers-1732552f0202.json

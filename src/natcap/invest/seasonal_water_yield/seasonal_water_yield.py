@@ -49,7 +49,14 @@ MODEL_SPEC = {
             "contents": {
                 # monthly et0 maps, each file ending in a number 1-12
                 "[MONTH]": {
-                    **spec_utils.ET0,
+                    "name": gettext("reference evapotranspiration"),
+                    "type": "raster",
+                    "bands": {
+                        1: {
+                            "type": "number",
+                            "units": u.millimeter/u.month
+                        }
+                    },
                     "about": gettext(
                         "Twelve files, one for each month. File names must "
                         "end with the month number (1-12). For example, "
@@ -62,7 +69,8 @@ MODEL_SPEC = {
             "about": gettext(
                 "Directory containing maps of reference evapotranspiration "
                 "for each month. Only .tif files should be in this folder "
-                "(no .tfw, .xml, etc files)."),
+                "(no .tfw, .xml, etc files). Required if User-Defined Local "
+                "Recharge is not selected."),
             "name": gettext("ET0 directory")
         },
         "precip_dir": {
@@ -89,7 +97,8 @@ MODEL_SPEC = {
             "about": gettext(
                 "Directory containing maps of monthly precipitation for each "
                 "month. Only .tif files should be in this folder (no .tfw, "
-                ".xml, etc files)."),
+                ".xml, etc files). Required if User-Defined Local Recharge is "
+                "not selected."),
             "name": gettext("precipitation directory")
         },
         "dem_raster_path": {
@@ -632,6 +641,7 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
+    LOGGER.debug('n_workers: %s', n_workers)
     task_graph = taskgraph.TaskGraph(
         os.path.join(args['workspace_dir'], 'taskgraph_cache'),
         n_workers, reporting_interval=5)
@@ -642,6 +652,9 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
 
     LOGGER.info('Checking that the AOI is not the output aggregate vector')
+    LOGGER.debug("aoi_path: %s", args['aoi_path'])
+    LOGGER.debug("aggregate_vector_path: %s",
+                 os.path.normpath(file_registry['aggregate_vector_path']))
     if (os.path.normpath(args['aoi_path']) ==
             os.path.normpath(file_registry['aggregate_vector_path'])):
         raise ValueError(
@@ -655,33 +668,8 @@ def execute(args):
     output_align_list = [
         file_registry['lulc_aligned_path'], file_registry['dem_aligned_path']]
     if not args['user_defined_local_recharge']:
-        precip_path_list = []
-        et0_path_list = []
-
-        et0_dir_list = [
-            os.path.join(args['et0_dir'], f) for f in os.listdir(
-                args['et0_dir'])]
-        precip_dir_list = [
-            os.path.join(args['precip_dir'], f) for f in os.listdir(
-                args['precip_dir'])]
-
-        for month_index in range(1, N_MONTHS + 1):
-            month_file_match = re.compile(r'.*[^\d]%d\.[^.]+$' % month_index)
-
-            for data_type, dir_list, path_list in [
-                    ('et0', et0_dir_list, et0_path_list),
-                    ('Precip', precip_dir_list, precip_path_list)]:
-                file_list = [
-                    month_file_path for month_file_path in dir_list
-                    if month_file_match.match(month_file_path)]
-                if len(file_list) == 0:
-                    raise ValueError(
-                        "No %s found for month %d" % (data_type, month_index))
-                if len(file_list) > 1:
-                    raise ValueError(
-                        "Ambiguous set of files found for month %d: %s" %
-                        (month_index, file_list))
-                path_list.append(file_list[0])
+        precip_path_list = _get_monthly_file_lists(N_MONTHS, args['precip_dir'])
+        et0_path_list = _get_monthly_file_lists(N_MONTHS, args['et0_dir'])
 
         input_align_list = (
             precip_path_list + [args['soil_group_path']] + et0_path_list +
@@ -1234,7 +1222,7 @@ def _calculate_curve_number_raster(
         # if lulc_array value not in lulc_to_soil[soil_group_id]['lulc_values']
         # then numpy.digitize will not bin properly and cause an IndexError
         # during the reshaping call
-        lulc_unique = set(numpy.unique(lulc_array))
+        lulc_unique = set(i.item() for i in numpy.unique(lulc_array))
         if not lulc_unique.issubset(lucodes_set):
             # cast to list to conform with similar error messages in InVEST
             missing_lulc_values = sorted(lulc_unique.difference(lucodes_set))
@@ -1374,6 +1362,42 @@ def _aggregate_recharge(
     aggregate_layer = None
     gdal.Dataset.__swig_destroy__(aggregate_vector)
     aggregate_vector = None
+
+
+def _get_monthly_file_lists(n_months, in_dir):
+    """Create list of monthly files for data type
+
+    Parameters:
+        n_months (int): Number of months to iterate over (should be 12)
+        in_dir (string): Path to directory of monthly files (for specific
+                         data type)
+
+    Raises:
+        ValueError: If no file or multiple files are found for a month
+
+    Returns:
+        list: contains monthly file paths for data type
+    """
+    in_path_list = [os.path.join(in_dir, f) for f in os.listdir(in_dir)]
+    out_path_list = []
+
+    for month_index in range(1, n_months + 1):
+        month_file_pattern = re.compile(r'.*[^\d]0?%d\.[^.]+$' % month_index)
+        file_list = [
+            month_file_path for month_file_path in in_path_list
+            if month_file_pattern.match(month_file_path)]
+        if len(file_list) == 0:
+            raise ValueError(
+                "No files found in %s for month %d. Please ensure that \
+                    filenames end in the month number (e.g., precip_1.tif)."
+                % (in_dir, month_index))
+        if len(file_list) > 1:
+            raise ValueError(
+                "Ambiguous set of files found for month %d: %s" %
+                (month_index, file_list))
+        out_path_list.append(file_list[0])
+
+    return out_path_list
 
 
 @validation.invest_validator

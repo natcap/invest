@@ -301,7 +301,10 @@ MODEL_SPEC = {
                     "units": u.none
                 },
                 "mean_t_air": {
-                    "about": "Average temperature value in building.",
+                    "about": (
+                        "Average temperature value in building. Calculated "
+                        "from the mean T_air pixel value under this building "
+                        "geometry."),
                     "type": "number",
                     "units": u.degree_Celsius
                 }
@@ -484,7 +487,7 @@ def execute(args):
               'intersection'),
         kwargs={
             'base_vector_path_list': [args['aoi_vector_path']],
-            'raster_align_index': 1,
+            'raster_align_index': 0,
             'target_projection_wkt': lulc_raster_info['projection_wkt']},
         target_path_list=aligned_raster_path_list,
         task_name='align rasters')
@@ -963,13 +966,13 @@ def calculate_uhi_result_vector(
         if cc_stats[feature_id]['count'] > 0:
             mean_cc = (
                 cc_stats[feature_id]['sum'] / cc_stats[feature_id]['count'])
-            feature.SetField('avg_cc', mean_cc)
+            feature.SetField('avg_cc', float(mean_cc))
         mean_t_air = None
         if t_air_stats[feature_id]['count'] > 0:
             mean_t_air = (
                 t_air_stats[feature_id]['sum'] /
                 t_air_stats[feature_id]['count'])
-            feature.SetField('avg_tmp_v', mean_t_air)
+            feature.SetField('avg_tmp_v', float(mean_t_air))
 
         if mean_t_air:
             feature.SetField(
@@ -979,7 +982,7 @@ def calculate_uhi_result_vector(
             wbgt = (
                 wbgt_stats[feature_id]['sum'] /
                 wbgt_stats[feature_id]['count'])
-            feature.SetField('avg_wbgt_v', wbgt)
+            feature.SetField('avg_wbgt_v', float(wbgt))
 
         if light_loss_stats and light_loss_stats[feature_id]['count'] > 0:
             light_loss = (

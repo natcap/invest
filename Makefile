@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := ab8c74a62a93fd0019de2bca064abc0a5a07afab
+GIT_SAMPLE_DATA_REPO_REV    := dfcb820269fa50f65eed55b830314c853c2eb943
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 324abde73e1d770ad75921466ecafd1ec6297752
+GIT_TEST_DATA_REPO_REV      := 4eb5a2fac4818a37663780c4cbdff1b41e7019be
 
 GIT_UG_REPO                 := https://github.com/davemfish/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 63d16eeb50d480e216b9cdf6c56f31f83340ebd0
+GIT_UG_REPO_REV             := 4ca4962f66d10dac68948ee61c419f107d3d2fe0
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -66,6 +66,7 @@ PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2
 
 GSUTIL := gsutil
 SIGNTOOL := SignTool
+RST2HTML5 := rst2html5
 
 # local directory names
 DIST_DIR := dist
@@ -73,6 +74,8 @@ DIST_DATA_DIR := $(DIST_DIR)/data
 BUILD_DIR := build
 WORKBENCH := workbench
 WORKBENCH_DIST_DIR := $(WORKBENCH)/dist
+CHANGELOG_SRC := HISTORY.rst
+CHANGELOG_DEST := $(WORKBENCH)/changelog.html
 
 # The fork name and user here are derived from the git path on github.
 # The fork name will need to be set manually (e.g. make FORKNAME=natcap/invest)
@@ -141,6 +144,7 @@ help:
 	@echo "  binaries          to build pyinstaller binaries"
 	@echo "  apidocs           to build HTML API documentation"
 	@echo "  userguide         to build HTML version of the users guide"
+	@echo "  changelog         to build HTML version of the changelog"
 	@echo "  python_packages   to build natcap.invest wheel and source distributions"
 	@echo "  codesign_mac      to sign the mac disk image using the codesign utility"
 	@echo "  codesign_windows  to sign the windows installer using the SignTool utility"
@@ -352,10 +356,8 @@ codesign_mac:
 	codesign --timestamp --verbose --sign Stanford $(WORKBENCH_BIN_TO_SIGN)
 
 codesign_windows:
-	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
 	"$(SIGNTOOL)" sign -fd SHA256 -f $(BUILD_DIR)/$(CERT_FILE) -p $(CERT_PASS) $(WORKBENCH_BIN_TO_SIGN)
 	"$(SIGNTOOL)" timestamp -tr http://timestamp.sectigo.com -td SHA256 $(WORKBENCH_BIN_TO_SIGN)
-	$(RM) $(BUILD_DIR)/$(CERT_FILE)
 	@echo "Installer was signed with signtool"
 
 deploy:
@@ -365,6 +367,9 @@ deploy:
 	-$(GSUTIL) -m rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
 	@echo "Application binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)"
+
+changelog:
+	$(RST2HTML5) $(CHANGELOG_SRC) $(CHANGELOG_DEST)
 
 # Notes on Makefile development
 #

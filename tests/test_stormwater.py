@@ -13,7 +13,7 @@ import pygeoprocessing
 from pygeoprocessing.geoprocessing_core import (
     DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS as opts_tuple)
 
-
+gdal.UseExceptions()
 TEST_DATA = os.path.join(os.path.dirname(
     __file__), '..', 'data', 'invest-test-data', 'stormwater')
 
