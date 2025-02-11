@@ -53,7 +53,7 @@ export default function PluginModal(props) {
   const removePlugin = () => {
     setLoading(true);
     Object.keys(openJobs).forEach((tabID) => {
-      if (openJobs[tabID].modelRunName === pluginToRemove) {
+      if (openJobs[tabID].modelID === pluginToRemove) {
         closeInvestModel(tabID);
       }
     });
