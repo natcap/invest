@@ -101,7 +101,7 @@ def create_nutrient_df():
          ]).set_index('crop')
 
 
-def _create_crop_rasters(output_dir, crop_names, file_suffix):
+def _create_crop_rasters(output_dir, crop_names, file_suffix, pctls=None):
     """Creates raster files for test setup."""
     _OBSERVED_PRODUCTION_FILE_PATTERN = os.path.join(
         '.', '%s_observed_production%s.tif')
@@ -123,6 +123,32 @@ def _create_crop_rasters(output_dir, crop_names, file_suffix):
         make_simple_raster(observed_yield_path, observed_array)
         make_simple_raster(crop_production_raster_path, crop_array)
 
+
+def _create_crop_pctl_rasters(output_dir, crop_names, file_suffix, pctls):
+    """Creates crop percentile raster files for test setup."""
+    _OBSERVED_PRODUCTION_FILE_PATTERN = os.path.join(
+        '.', '%s_observed_production%s.tif')
+    _CROP_PRODUCTION_FILE_PATTERN = os.path.join(
+        '.', '%s_%s_production%s.tif')
+
+    for i, crop in enumerate(crop_names):
+        observed_yield_path = os.path.join(
+                output_dir,
+                _OBSERVED_PRODUCTION_FILE_PATTERN % (crop, file_suffix))
+        # Create arbitrary raster arrays
+        observed_array = numpy.array(
+            [[i, 1], [i*2, 3]], dtype=numpy.int16)
+        make_simple_raster(observed_yield_path, observed_array)
+
+        for pctl in pctls:
+            crop_production_raster_path = os.path.join(
+                output_dir,
+                _CROP_PRODUCTION_FILE_PATTERN % (crop, pctl, file_suffix))
+
+            crop_array = numpy.array(
+                [[i, 1], [i*3, 4]], dtype=numpy.int16) * float(pctl[-2:])/100
+
+            make_simple_raster(crop_production_raster_path, crop_array)
 
 class CropProductionTests(unittest.TestCase):
     """Tests for the Crop Production model."""
@@ -783,13 +809,248 @@ class CropProductionTests(unittest.TestCase):
 
         actual_aggregate_table = pandas.read_csv(aggregate_table_path,
                                                  dtype=float)
-        print(actual_aggregate_table)
 
         expected_aggregate_table = _create_expected_agg_table()
 
         pandas.testing.assert_frame_equal(
             actual_aggregate_table, expected_aggregate_table)
 
+    def test_aggregate_to_polygons(self):
+        """Test `aggregate_to_polygons`"""
+        from natcap.invest.crop_production_percentile import \
+            aggregate_to_polygons
+
+        def _create_expected_pctl_table():
+            """Create expected output results"""
+            # Define the new values manually
+            data = [
+                [0, 0.25, 0.5, 0.75, 1, 0.5, 1, 1.5, 2, 247800, 495600, 743400,
+                 991200, 27700, 55400, 83100, 110800, 1557150, 3114300, 4671450,
+                 6228600, 1232125, 2464250, 3696375, 4928500, 107937.5, 215875,
+                 323812.5, 431750, 1925000, 3850000, 5775000, 7700000, 4840000,
+                 9680000, 14520000, 19360000, 4911625, 9823250, 14734875,
+                 19646500, 13750, 27500, 41250, 55000, 33687.5, 67375,
+                 101062.5, 134750, 11697.5, 23395, 35092.5, 46790, 32250,
+                 64500, 96750, 129000, 30402.5, 60805, 91207.5, 121610, 1597.5,
+                 3195, 4792.5, 6390, 20625, 41250, 61875, 82500, 110000, 220000,
+                 330000, 440000, 9897.5, 19795, 29692.5, 39590, 5500, 11000,
+                 16500, 22000, 6450, 12900, 19350, 25800, 2202, 4404, 6606,
+                 8808, 424025, 848050, 1272075, 1696100, 3437.5, 6875, 10312.5,
+                 13750, 15347.5, 30695, 46042.5, 61390, 9877.5, 19755, 29632.5,
+                 39510, 29460, 58920, 88380, 117840, 2841, 5682, 8523, 11364,
+                 7916, 15832, 23748, 31664, 74575, 149150, 223725, 298300,
+                 6278.5, 12557, 18835.5, 25114, 27825, 55650, 83475, 111300,
+                 2282875, 4565750, 6848625, 9131500, 18300, 36600, 54900,
+                 73200, 286425, 572850, 859275, 1145700],
+                [1, 1.25, 2.5, 3.75, 4, 2.25, 4.5, 6.75, 7, 1163925, 2327850,
+                 3491775, 3664500, 133950, 267900, 401850, 425000, 7560525,
+                 15121050, 22681575, 24013500, 5575950, 11151900, 16727850,
+                 17375300, 503970, 1007940, 1511910, 1584130, 8988000,
+                 17976000, 26964000, 28252000, 22598400, 45196800, 67795200,
+                 71033600, 24109950, 48219900, 72329850, 76793300, 64200,
+                 128400, 192600, 201800, 157290, 314580, 471870, 494410,
+                 54847.5, 109695, 164542.5, 172600, 154425, 308850, 463275,
+                 488700, 140182.5, 280365, 420547.5, 439120, 7305, 14610,
+                 21915, 22830, 96300, 192600, 288900, 302700, 513600, 1027200,
+                 1540800, 1614400, 47212.5, 94425, 141637.5, 149260, 25680,
+                 51360, 77040, 80720, 30885, 61770, 92655, 97740, 10327.5,
+                 20655, 30982.5, 32502, 1981350, 3962700, 5944050, 6229300,
+                 16050, 32100, 48150, 50450, 71505, 143010, 214515, 224630,
+                 46657.5, 93315, 139972.5, 147120, 140475, 280950, 421425,
+                 444060, 13249.5, 26499, 39748.5, 41634, 37714.5, 75429,
+                 113143.5, 119194, 345120, 690240, 1035360, 1082180, 29299.5,
+                 58599, 87898.5, 92084, 126840, 253680, 380520, 396060,
+                 10720500, 21441000, 32161500, 33750500, 84675, 169350, 254025,
+                 265500, 1336575, 2673150, 4009725, 4200600]
+            ]
+
+            # Define column names
+            columns = [
+                "FID", "corn_25", "corn_50", "corn_75", "corn_observed",
+                "soybean_25", "soybean_50", "soybean_75", "soybean_observed",
+                "protein_25", "protein_50", "protein_75", "protein_observed",
+                "lipid_25", "lipid_50", "lipid_75", "lipid_observed",
+                "energy_25", "energy_50", "energy_75", "energy_observed",
+                "ca_25", "ca_50", "ca_75", "ca_observed", "fe_25", "fe_50",
+                "fe_75", "fe_observed", "mg_25", "mg_50", "mg_75",
+                "mg_observed", "ph_25", "ph_50", "ph_75", "ph_observed",
+                "k_25", "k_50", "k_75", "k_observed", "na_25", "na_50",
+                "na_75", "na_observed", "zn_25", "zn_50", "zn_75",
+                "zn_observed", "cu_25", "cu_50", "cu_75", "cu_observed",
+                "fl_25", "fl_50", "fl_75", "fl_observed", "mn_25", "mn_50",
+                "mn_75", "mn_observed", "se_25", "se_50", "se_75",
+                "se_observed", "vita_25", "vita_50", "vita_75",
+                "vita_observed", "betac_25", "betac_50", "betac_75",
+                "betac_observed", "alphac_25", "alphac_50", "alphac_75",
+                "alphac_observed", "vite_25", "vite_50", "vite_75",
+                "vite_observed", "crypto_25", "crypto_50", "crypto_75",
+                "crypto_observed", "lycopene_25", "lycopene_50", "lycopene_75",
+                "lycopene_observed", "lutein_25", "lutein_50", "lutein_75",
+                "lutein_observed", "betat_25", "betat_50", "betat_75",
+                "betat_observed", "gammat_25", "gammat_50", "gammat_75",
+                "gammat_observed", "deltat_25", "deltat_50", "deltat_75",
+                "deltat_observed", "vitc_25", "vitc_50", "vitc_75",
+                "vitc_observed", "thiamin_25", "thiamin_50", "thiamin_75",
+                "thiamin_observed", "riboflavin_25", "riboflavin_50",
+                "riboflavin_75", "riboflavin_observed", "niacin_25",
+                "niacin_50", "niacin_75", "niacin_observed", "pantothenic_25",
+                "pantothenic_50", "pantothenic_75", "pantothenic_observed",
+                "vitb6_25", "vitb6_50", "vitb6_75", "vitb6_observed",
+                "folate_25", "folate_50", "folate_75", "folate_observed",
+                "vitb12_25", "vitb12_50", "vitb12_75", "vitb12_observed",
+                "vitk_25", "vitk_50", "vitk_75", "vitk_observed"
+            ]
+
+            # Create the DataFrame
+            return pandas.DataFrame(data, columns=columns, dtype=float)
+
+        workspace = self.workspace_dir
+
+        base_aggregate_vector_path = os.path.join(workspace,
+                                                  "agg_vector.shp")
+        make_aggregate_vector(base_aggregate_vector_path)
+
+        target_aggregate_vector_path = os.path.join(workspace,
+                                                    "agg_vector_prj.shp")
+
+        spatial_ref = osr.SpatialReference()
+        spatial_ref.ImportFromEPSG(26910)
+        landcover_raster_projection = spatial_ref.ExportToWkt()
+
+        crop_names = ['corn', 'soybean']
+        nutrient_df = create_nutrient_df()
+        yield_percentile_headers = ['25', '50', '75']
+        output_dir = os.path.join(workspace, "OUTPUT")
+        os.makedirs(output_dir, exist_ok=True)
+        file_suffix = 'v1'
+        target_aggregate_table_path = os.path.join(output_dir,
+                                                   "results.csv")
+
+        _create_crop_pctl_rasters(output_dir, crop_names, file_suffix,
+                                  yield_percentile_headers)
+
+        aggregate_to_polygons(
+            base_aggregate_vector_path, target_aggregate_vector_path,
+            landcover_raster_projection, crop_names,
+            nutrient_df, yield_percentile_headers, output_dir, file_suffix,
+            target_aggregate_table_path)
+
+        actual_aggregate_pctl_table = pandas.read_csv(
+            target_aggregate_table_path, dtype=float)
+        expected_aggregate_pctl_table = _create_expected_pctl_table()
+
+        pandas.testing.assert_frame_equal(
+            actual_aggregate_pctl_table, expected_aggregate_pctl_table)
+
+    def test_tabulate_percentile_results(self):
+        """Test `tabulate_results"""
+        from natcap.invest.crop_production_percentile import \
+            tabulate_results
+
+        def _create_expected_result_table():
+            return pandas.DataFrame({
+                "crop": ["corn", "soybean"], "area (ha)": [20, 40],
+                "production_observed": [4, 7], "production_25": [1.25, 2.25],
+                "production_50": [2.5, 4.5], "production_75": [3.75, 6.75],
+                "protein_25": [488250, 675675], "protein_50": [976500, 1351350],
+                "protein_75": [1464750, 2027025],
+                "protein_observed": [1562400, 2102100],
+                "lipid_25": [93000, 40950], "lipid_50": [186000, 81900],
+                "lipid_75": [279000, 122850], "lipid_observed": [297600, 127400],
+                "energy_25": [5533500, 2027025], "energy_50": [11067000, 4054050],
+                "energy_75": [16600500, 6081075],
+                "energy_observed": [17707200, 6306300],
+                "ca_25": [313875, 5262075], "ca_50": [627750, 10524150],
+                "ca_75": [941625, 15786225], "ca_observed": [1004400, 16370900],
+                "fe_25": [182512.5, 321457.5], "fe_50": [365025, 642915],
+                "fe_75": [547537.5, 964372.5], "fe_observed": [584040, 1000090],
+                "mg_25": [3255000, 5733000], "mg_50": [6510000, 11466000],
+                "mg_75": [9765000, 17199000], "mg_observed": [10416000, 17836000],
+                "ph_25": [8184000, 14414400], "ph_50": [16368000, 28828800],
+                "ph_75": [24552000, 43243200], "ph_observed": [26188800, 44844800],
+                "k_25": [20076375, 4033575], "k_50": [40152750, 8067150],
+                "k_75": [60229125, 12100725], "k_observed": [64244400, 12548900],
+                "na_25": [23250, 40950], "na_50": [46500, 81900],
+                "na_75": [69750, 122850], "na_observed": [74400, 127400],
+                "zn_25": [56962.5, 100327.5], "zn_50": [113925, 200655],
+                "zn_75": [170887.5, 300982.5], "zn_observed": [182280, 312130],
+                "cu_25": [22087.5, 32760], "cu_50": [44175, 65520],
+                "cu_75": [66262.5, 98280], "cu_observed": [70680, 101920],
+                "fl_25": [93000, 61425], "fl_50": [186000, 122850],
+                "fl_75": [279000, 184275], "fl_observed": [297600, 191100],
+                "mn_25": [33712.5, 106470], "mn_50": [67425, 212940],
+                "mn_75": [101137.5, 319410], "mn_observed": [107880, 331240],
+                "se_25": [1162.5, 6142.5], "se_50": [2325, 12285],
+                "se_75": [3487.5, 18427.5], "se_observed": [3720, 19110],
+                "vita_25": [34875, 61425], "vita_50": [69750, 122850],
+                "vita_75": [104625, 184275], "vita_observed": [111600, 191100],
+                "betac_25": [186000, 327600], "betac_50": [372000, 655200],
+                "betac_75": [558000, 982800], "betac_observed": [595200, 1019200],
+                "alphac_25": [26737.5, 20475], "alphac_50": [53475, 40950],
+                "alphac_75": [80212.5, 61425], "alphac_observed": [85560, 63700],
+                "vite_25": [9300, 16380], "vite_50": [18600, 32760],
+                "vite_75": [27900, 49140], "vite_observed": [29760, 50960],
+                "crypto_25": [18600, 12285], "crypto_50": [37200, 24570],
+                "crypto_75": [55800, 36855], "crypto_observed": [59520, 38220],
+                "lycopene_25": [4185, 6142.5], "lycopene_50": [8370, 12285],
+                "lycopene_75": [12555, 18427.5], "lycopene_observed": [13392, 19110],
+                "lutein_25": [732375, 1248975], "lutein_50": [1464750, 2497950],
+                "lutein_75": [2197125, 3746925], "lutein_observed": [2343600, 3885700],
+                "betat_25": [5812.5, 10237.5], "betat_50": [11625, 20475],
+                "betat_75": [17437.5, 30712.5], "betat_observed": [18600, 31850],
+                "gammat_25": [24412.5, 47092.5], "gammat_50": [48825, 94185],
+                "gammat_75": [73237.5, 141277.5], "gammat_observed": [78120, 146510],
+                "deltat_25": [22087.5, 24570], "deltat_50": [44175, 49140],
+                "deltat_75": [66262.5, 73710], "deltat_observed": [70680, 76440],
+                "vitc_25": [79050, 61425], "vitc_50": [158100, 122850],
+                "vitc_75": [237150, 184275], "vitc_observed": [252960, 191100],
+                "thiamin_25": [4650, 8599.5], "thiamin_50": [9300, 17199],
+                "thiamin_75": [13950, 25798.5], "thiamin_observed": [14880, 26754],
+                "riboflavin_25": [20925, 16789.5], "riboflavin_50": [41850, 33579],
+                "riboflavin_75": [62775, 50368.5],
+                "riboflavin_observed": [66960, 52234], "niacin_25": [95325, 249795],
+                "niacin_50": [190650, 499590], "niacin_75": [285975, 749385],
+                "niacin_observed": [305040, 777140],
+                "pantothenic_25": [10462.5, 18837], "pantothenic_50": [20925, 37674],
+                "pantothenic_75": [31387.5, 56511],
+                "pantothenic_observed": [33480, 58604],
+                "vitb6_25": [16275, 110565], "vitb6_50": [32550, 221130],
+                "vitb6_75": [48825, 331695], "vitb6_observed": [52080, 343980],
+                "folate_25": [4475625, 6244875], "folate_50": [8951250, 12489750],
+                "folate_75": [13426875, 18734625],
+                "folate_observed": [14322000, 19428500],
+                "vitb12_25": [23250, 61425], "vitb12_50": [46500, 122850],
+                "vitb12_75": [69750, 184275], "vitb12_observed": [74400, 191100],
+                "vitk_25": [476625, 859950], "vitk_50": [953250, 1719900],
+                "vitk_75": [1429875, 2579850], "vitk_observed": [1525200, 2675400]
+            })
+
+        nutrient_df = create_nutrient_df()
+        output_dir = os.path.join(self.workspace_dir, "output")
+        os.makedirs(output_dir, exist_ok=True)
+        yield_percentile_headers = ['yield_25', 'yield_50', 'yield_75']
+        crop_names = ['corn', 'soybean']
+        pixel_area_ha = 10
+        landcover_raster_path = os.path.join(self.workspace_dir,
+                                             "landcover.tif")
+        landcover_nodata = -1
+
+        make_simple_raster(landcover_raster_path,
+                           numpy.array([[1, 4], [2, 2]], dtype=numpy.int16))
+        file_suffix = 'test'
+        target_table_path = os.path.join(output_dir, "result_table.csv")
+        _create_crop_pctl_rasters(output_dir, crop_names, file_suffix,
+                                  yield_percentile_headers)
+        tabulate_results(nutrient_df, yield_percentile_headers,
+                         crop_names, pixel_area_ha,
+                         landcover_raster_path, landcover_nodata,
+                         output_dir, file_suffix, target_table_path)
+
+        actual_table = pandas.read_csv(target_table_path, nrows=2)
+        expected_table = _create_expected_result_table()
+
+        pandas.testing.assert_frame_equal(actual_table, expected_table,
+                                          check_dtype=False)
 
 
 class CropValidationTests(unittest.TestCase):
