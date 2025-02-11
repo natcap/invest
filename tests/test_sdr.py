@@ -177,17 +177,18 @@ class SDRTests(unittest.TestCase):
         self.assertEqual(
             numpy.count_nonzero(sed_dep_array[negative_non_nodata_mask]), 0)
 
-        # Check raster outputs to make sure values are in tons/ha/yr.
-        # Pixel size in test data is 50m x 50m = 2500 m^2.
-        pixels_per_hectare = 10000 / 2500
+        # Check raster outputs to make sure values are in Mg/ha/yr.
+        raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
+        pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+        pixels_per_hectare = 10000 / pixel_area
         for (raster_name,
              attr_name) in [('usle.tif', 'usle_tot'),
                             ('sed_export.tif', 'sed_export'),
                             ('sed_deposition.tif', 'sed_dep'),
                             ('avoided_export.tif', 'avoid_exp'),
                             ('avoided_erosion.tif', 'avoid_eros')]:
-            # Since pixel values are t/(ha•yr), raster sum is (t•px)/(ha•yr),
-            # equal to the watershed total (t/yr) * (4 px/ha).
+            # Since pixel values are Mg/(ha•yr), raster sum is (Mg•px)/(ha•yr),
+            # equal to the watershed total (Mg/yr) * (pixels_per_hectare px/ha).
             expected_sum = (expected_watershed_totals[attr_name]
                             * pixels_per_hectare)
             raster_path = os.path.join(args['workspace_dir'], raster_name)

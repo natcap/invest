@@ -252,14 +252,15 @@ class NDRTests(unittest.TestCase):
                     'what_drains_to_stream.tif')))
 
         # Check raster outputs to make sure values are in kg/ha/yr.
-        # Pixel size in test data is 30m x 30m = 900 m^2.
-        pixels_per_hectare = 10000 / 900
+        raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
+        pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+        pixels_per_hectare = 10000 / pixel_area
         for attr_name in ['p_surface_export',
                           'n_surface_export',
                           'n_subsurface_export',
                           'n_total_export']:
             # Since pixel values are kg/(ha•yr), raster sum is (kg•px)/(ha•yr),
-            # equal to the watershed total (kg/yr) * (10000/900 px/ha).
+            # equal to the watershed total (kg/yr) * (pixels_per_hectare px/ha).
             expected_sum = (expected_watershed_totals[attr_name]
                             * pixels_per_hectare)
             raster_name = attr_name + '.tif'
