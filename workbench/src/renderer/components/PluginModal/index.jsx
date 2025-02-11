@@ -13,7 +13,7 @@ import { ipcMainChannels } from '../../../main/ipcMainChannels';
 const { ipcRenderer } = window.Workbench.electron;
 
 export default function PluginModal(props) {
-  const { updateInvestList } = props;
+  const { updateInvestList, closeInvestModel, openJobs } = props;
   const [showPluginModal, setShowPluginModal] = useState(false);
   const [url, setURL] = useState(undefined);
   const [revision, setRevision] = useState(undefined);
@@ -52,6 +52,11 @@ export default function PluginModal(props) {
 
   const removePlugin = () => {
     setLoading(true);
+    Object.keys(openJobs).forEach((tabID) => {
+      if (openJobs[tabID].modelRunName === pluginToRemove) {
+        closeInvestModel(tabID);
+      }
+    });
     ipcRenderer.invoke(ipcMainChannels.REMOVE_PLUGIN, pluginToRemove).then(() => {
       updateInvestList();
       setLoading(false);
@@ -212,4 +217,8 @@ export default function PluginModal(props) {
 
 PluginModal.propTypes = {
   updateInvestList: PropTypes.func.isRequired,
+  closeInvestModel: PropTypes.func.isRequired,
+  openJobs: PropTypes.shape({
+    modelRunName: PropTypes.string,
+  }).isRequired,
 };

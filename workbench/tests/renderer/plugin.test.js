@@ -141,9 +141,14 @@ describe('Add plugin modal', () => {
       return Promise.resolve();
     });
     const {
-      findByText, getByRole, findByLabelText, queryByRole,
+      findByText, findByRole, getByRole, findByLabelText, queryByRole,
     } = render(<App />);
 
+    // open the plugin first, to make sure it doesn't cause a crash when removing
+    const pluginButton = await findByRole('button', { name: /Foo/ });
+    await act(async () => {
+      userEvent.click(pluginButton);
+    });
     const managePluginsButton = await findByText('Manage plugins');
     userEvent.click(managePluginsButton);
 

@@ -379,6 +379,8 @@ export default class App extends React.Component {
                 }
                 <PluginModal
                   updateInvestList={this.updateInvestList}
+                  closeInvestModel={this.closeInvestModel}
+                  openJobs={openJobs}
                 />
                 <SettingsModal
                   className="mx-3"
