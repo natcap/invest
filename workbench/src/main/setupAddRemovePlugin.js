@@ -2,8 +2,8 @@ import upath from 'upath';
 import fs from 'fs';
 import { tmpdir } from 'os';
 import toml from 'toml';
-import { execSync, spawn } from 'child_process';
-import { ipcMain } from 'electron';
+import { spawn } from 'child_process';
+import { app, ipcMain } from 'electron';
 
 import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
@@ -57,7 +57,7 @@ export function setupAddPlugin() {
         let pyprojectTOML;
         let installString;
         const micromamba = settingsStore.get('micromamba');
-        const rootPrefix = upath.join(process.resourcesPath, 'micromamba_envs');
+        const rootPrefix = upath.join(app.getPath('userData'), 'micromamba_envs');
         if (url) { // install from git URL
           if (revision) {
             installString = `git+${url}@${revision}`;
