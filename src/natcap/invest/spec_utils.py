@@ -661,7 +661,7 @@ def generate_metadata(model_module, args_dict):
     lineage_statement = (
         f'Created by {model_module.__name__}.execute(\n{formatted_args})\n'
         f'Version {natcap.invest.__version__}')
-    keywords = [model_module.MODEL_SPEC.model_id, 'InVEST']
+    keywords = [model_module.MODEL_SPEC['model_id'], 'InVEST']
 
     def _walk_spec(output_spec, workspace):
         for filename, spec_data in output_spec.items():
