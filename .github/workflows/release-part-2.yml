@@ -72,13 +72,15 @@ jobs:
           rm -rf artifacts/Wheel*
 
           # download each artifact separately so that the command will fail if any is missing
-          for artifact in Workbench-Windows-binary \
-                          Workbench-macOS-binary \
+          for artifact in Workbench-macOS-binary \
                           InVEST-sample-data \
                           InVEST-user-guide
           do
             gh run download $RUN_ID --dir artifacts --name "$artifact"
           done
+
+          # download the signed windows workbench file from GCS
+          wget --directory-prefix=artifacts https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/${{ env.VERSION }}/workbench/invest_${{ env.VERSION }}_workbench_win32_x64.exe
 
           # We build one sdist per combination of OS and python version, so just
           # download and unzip all of them into an sdists directory so we can
