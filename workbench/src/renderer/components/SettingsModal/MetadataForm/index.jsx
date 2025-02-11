@@ -25,9 +25,9 @@ function AboutMetadataDiv() {
         in the output workspace after running a model.
       </p>
       <p>
-        Open a YAML file in a text editor to read the metadata. It includes
-        descriptions of fields in tables, of the bands in a raster, and
-        other useful information.
+        Open a YAML file in a text editor to read the metadata and even add
+        to it. Metadata includes descriptions of fields in tables,
+        the bands in a raster, and other useful information.
       </p>
       <p>
         Some properties of the metadata are configureable here. You may
