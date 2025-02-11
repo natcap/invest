@@ -383,7 +383,9 @@ class TestMetadataFromSpec(unittest.TestCase):
         model_module = types.SimpleNamespace(
             __name__='urban_nature_access',
             execute=lambda: None,
-            MODEL_SPEC={'outputs': output_spec})
+            MODEL_SPEC={
+                'model_id': 'urban_nature_access',
+                'outputs': output_spec})
 
         args_dict = {'workspace_dir': self.workspace_dir}
 

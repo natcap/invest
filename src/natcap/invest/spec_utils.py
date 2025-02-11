@@ -595,13 +595,14 @@ def describe_arg_from_name(module_name, *arg_keys):
     return f'.. _{anchor_name}:\n\n{rst_description}'
 
 
-def write_metadata_file(datasource_path, spec, lineage_statement):
+def write_metadata_file(datasource_path, spec, lineage_statement, keywords_list):
     """Write a metadata sidecar file for an invest output dataset.
 
     Args:
         datasource_path (str) - filepath to the invest output
         spec (dict) -  the invest specification for ``datasource_path``
         lineage_statement (str) - string to describe origin of the dataset.
+        keywords_list (list) - sequence of strings
 
     Returns:
         None
@@ -609,6 +610,9 @@ def write_metadata_file(datasource_path, spec, lineage_statement):
     """
     resource = geometamaker.describe(datasource_path)
     resource.set_lineage(lineage_statement)
+    # a pre-existing metadata doc could have keywords
+    words = resource.get_keywords()
+    resource.set_keywords(words + keywords_list)
 
     if 'about' in spec:
         resource.set_description(spec['about'])
@@ -657,6 +661,7 @@ def generate_metadata(model_module, args_dict):
     lineage_statement = (
         f'Created by {model_module.__name__}.execute(\n{formatted_args})\n'
         f'Version {natcap.invest.__version__}')
+    keywords = [model_module.MODEL_SPEC.model_id, 'InVEST']
 
     def _walk_spec(output_spec, workspace):
         for filename, spec_data in output_spec.items():
@@ -672,7 +677,7 @@ def generate_metadata(model_module, args_dict):
                 if os.path.exists(full_path):
                     try:
                         write_metadata_file(
-                            full_path, spec_data, lineage_statement)
+                            full_path, spec_data, lineage_statement, keywords)
                     except ValueError as error:
                         # Some unsupported file formats, e.g. html
                         LOGGER.debug(error)
