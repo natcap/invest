@@ -33,6 +33,7 @@ DISTANCE_UPPER_BOUND = 500e3
 NODATA_VALUE = -1
 
 MODEL_SPEC = {
+    "model_id": "forest_carbon_edge_effect",
     "model_name": MODEL_METADATA["forest_carbon_edge_effect"].model_title,
     "pyname": MODEL_METADATA["forest_carbon_edge_effect"].pyname,
     "userguide": MODEL_METADATA["forest_carbon_edge_effect"].userguide,

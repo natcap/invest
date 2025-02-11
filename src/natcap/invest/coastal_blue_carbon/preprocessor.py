@@ -22,6 +22,7 @@ BIOPHYSICAL_COLUMNS_SPEC = coastal_blue_carbon.MODEL_SPEC[
     'args']['biophysical_table_path']['columns']
 
 MODEL_SPEC = {
+    "model_id": "coastal_blue_carbon_preprocessor",
     "model_name": MODEL_METADATA["coastal_blue_carbon_preprocessor"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon_preprocessor"].pyname,
     "userguide": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,

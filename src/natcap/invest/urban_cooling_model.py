@@ -30,6 +30,7 @@ TARGET_NODATA = -1
 _LOGGING_PERIOD = 5
 
 MODEL_SPEC = {
+    "model_id": "urban_cooling_model",
     "model_name": MODEL_METADATA["urban_cooling_model"].model_title,
     "pyname": MODEL_METADATA["urban_cooling_model"].pyname,
     "userguide": MODEL_METADATA["urban_cooling_model"].userguide,
