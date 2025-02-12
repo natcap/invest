@@ -150,6 +150,7 @@ def _create_crop_pctl_rasters(output_dir, crop_names, file_suffix, pctls):
 
             make_simple_raster(crop_production_raster_path, crop_array)
 
+
 class CropProductionTests(unittest.TestCase):
     """Tests for the Crop Production model."""
 
