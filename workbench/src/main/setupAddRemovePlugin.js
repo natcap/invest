@@ -123,7 +123,7 @@ export function setupAddPlugin() {
         const pluginEnvPrefix = upath.join(rootPrefix, envName);
         const createCommand = [
           'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
-          '-c', 'conda-forge', 'python'];
+          '-c', 'conda-forge', 'python', 'git'];
         if (condaDeps) { // include dependencies read from pyproject.toml
           condaDeps.forEach((dep) => createCommand.push(`"${dep}"`));
         }
@@ -131,7 +131,8 @@ export function setupAddPlugin() {
         logger.info('created micromamba env for plugin');
         await spawnWithLogging(
           micromamba,
-          ['run', '--prefix', `"${pluginEnvPrefix}"`, 'pip', 'install', installString]
+          ['run', '--prefix', `"${pluginEnvPrefix}"`,
+           'python', '-m', 'pip', 'install', installString]
         );
         logger.info('installed plugin into its env');
         // Write plugin metadata to the workbench's config.json
