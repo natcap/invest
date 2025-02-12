@@ -21,7 +21,7 @@ import { removeIpcMainListeners } from '../../src/main/main';
 
 import App from '../../src/renderer/app';
 import {
-  getInvestModelNames,
+  getInvestModelIDs,
   getSpec,
   fetchValidation,
   fetchArgsEnabled
@@ -111,7 +111,7 @@ describe('InVEST subprocess testing', () => {
     fetchArgsEnabled.mockResolvedValue({
       workspace_dir: true, results_suffix: true,
     });
-    getInvestModelNames.mockResolvedValue(
+    getInvestModelIDs.mockResolvedValue(
       { carbon: { model_title: modelTitle } }
     );
     // mock the request to write the datastack file. Actually write it

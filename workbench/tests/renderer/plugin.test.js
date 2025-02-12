@@ -9,7 +9,7 @@ import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import App from '../../src/renderer/app';
 import {
   getSpec,
-  getInvestModelNames,
+  getInvestModelIDs,
   fetchArgsEnabled,
   fetchValidation
 } from '../../src/renderer/server_requests';
@@ -44,7 +44,7 @@ describe('Add plugin modal', () => {
       input_path: true,
     });
     fetchValidation.mockResolvedValue([]);
-    getInvestModelNames.mockResolvedValue({});
+    getInvestModelIDs.mockResolvedValue({});
   });
 
   test('Interface to add a plugin', async () => {

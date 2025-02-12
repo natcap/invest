@@ -219,6 +219,6 @@ PluginModal.propTypes = {
   updateInvestList: PropTypes.func.isRequired,
   closeInvestModel: PropTypes.func.isRequired,
   openJobs: PropTypes.shape({
-    modelRunName: PropTypes.string,
+    modelID: PropTypes.string,
   }).isRequired,
 };

@@ -8,7 +8,7 @@ import '@testing-library/jest-dom';
 
 import App from '../../src/renderer/app';
 import {
-  getInvestModelNames,
+  getInvestModelIDs,
   getSpec,
   fetchValidation,
   fetchDatastackFromFile,
@@ -57,7 +57,7 @@ const SAMPLE_SPEC = {
 
 describe('Various ways to open and close InVEST models', () => {
   beforeEach(async () => {
-    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
+    getInvestModelIDs.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
     fetchArgsEnabled.mockResolvedValue({
@@ -271,7 +271,7 @@ describe('Various ways to open and close InVEST models', () => {
 
 describe('Display recently executed InVEST jobs on Home tab', () => {
   beforeEach(() => {
-    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
+    getInvestModelIDs.mockResolvedValue(MOCK_INVEST_LIST);
   });
 
   afterEach(async () => {
@@ -426,7 +426,7 @@ describe('InVEST global settings: dialog interactions', () => {
   });
 
   beforeEach(async () => {
-    getInvestModelNames.mockResolvedValue({});
+    getInvestModelIDs.mockResolvedValue({});
     getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
   });
 

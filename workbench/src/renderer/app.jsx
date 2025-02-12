@@ -26,7 +26,7 @@ import PluginModal from './components/PluginModal';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 import { ipcMainChannels } from '../main/ipcMainChannels';
-import { getInvestModelNames } from './server_requests';
+import { getInvestModelIDs } from './server_requests';
 import Changelog from './components/Changelog';
 
 const { ipcRenderer } = window.Workbench.electron;
@@ -199,7 +199,7 @@ export default class App extends React.Component {
 
   async updateInvestList() {
     const coreModels = {};
-    const investList = await getInvestModelNames();
+    const investList = await getInvestModelIDs();
     Object.keys(investList).forEach((modelID) => {
       coreModels[modelID] = { modelTitle: investList[modelID].model_title, type: 'core' };
     });

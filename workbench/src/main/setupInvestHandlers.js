@@ -34,8 +34,8 @@ const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 export function setupLaunchPluginServerHandler() {
   ipcMain.handle(
     ipcMainChannels.LAUNCH_PLUGIN_SERVER,
-    async (event, pluginName) => {
-      const pid = await createPluginServerProcess(pluginName);
+    async (event, pluginID) => {
+      const pid = await createPluginServerProcess(pluginID);
       return pid;
     }
   );

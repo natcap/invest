@@ -35,7 +35,7 @@ async function getCorePort() {
 // response.json() doesn't say but is presumably also UTF-8
 // https://developer.mozilla.org/en-US/docs/Web/API/Body/json
 
-export async function getInvestModelNames() {
+export async function getInvestModelIDs() {
   const port = await getCorePort();
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/models?language=${LANGUAGE}`, {
