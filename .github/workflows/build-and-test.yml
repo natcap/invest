@@ -397,7 +397,7 @@ jobs:
         env:
           GH_TOKEN: env.GITHUB_TOKEN
           DEBUG: electron-builder
-          CSC_LINK: 2025-01-16-Expiry-AppStore-App.p12
+          CSC_LINK: 2026-02-11-expiry-mac-app-distribution.p12
           CSC_KEY_PASSWORD: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
         run: |
           gsutil cp gs://stanford_cert/$CSC_LINK $CSC_LINK
@@ -424,7 +424,7 @@ jobs:
       - name: Sign binaries (macOS)
         if: github.event_name != 'pull_request' && matrix.os == 'macos-13' # secrets not available in PR
         env:
-          CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
+          CERT_FILE: 2026-02-11-expiry-mac-app-distribution.p12
           CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
         run: |
           WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.dmg' | head -n 1)
