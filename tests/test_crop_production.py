@@ -834,24 +834,23 @@ class CropProductionTests(unittest.TestCase):
         os.makedirs(output_dir, exist_ok=True)
         file_suffix = 'test'
 
-        pixel_area_ha = 10
-
-        _create_crop_rasters(output_dir, crop_names, file_suffix)
-
-        aggregate_regression_results_to_polygons(
-            base_aggregate_vector_path, target_aggregate_vector_path,
-            landcover_raster_projection, crop_names,
-            nutrient_df, pixel_area_ha, output_dir, file_suffix)
-
         _AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
             '.', 'aggregate_results%s.csv')
 
         aggregate_table_path = os.path.join(
             output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
 
+        pixel_area_ha = 10
+
+        _create_crop_rasters(output_dir, crop_names, file_suffix)
+
+        aggregate_regression_results_to_polygons(
+            base_aggregate_vector_path, target_aggregate_vector_path,
+            aggregate_table_path, landcover_raster_projection, crop_names,
+            nutrient_df, pixel_area_ha, output_dir, file_suffix)
+
         actual_aggregate_table = pandas.read_csv(aggregate_table_path,
                                                  dtype=float)
-        print(actual_aggregate_table)
 
         expected_aggregate_table = _create_expected_agg_table()
 

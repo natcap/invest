@@ -831,6 +831,7 @@ def execute(args):
             func=aggregate_regression_results_to_polygons,
             args=(args['aggregate_polygon_path'],
                   target_aggregate_vector_path,
+                  aggregate_results_table_path,
                   landcover_raster_info['projection_wkt'],
                   crop_names, nutrient_df, pixel_area_ha,
                   output_dir, file_suffix),
@@ -1033,8 +1034,8 @@ def tabulate_regression_results(
 
 def aggregate_regression_results_to_polygons(
         base_aggregate_vector_path, target_aggregate_vector_path,
-        landcover_raster_projection, crop_names,
-        nutrient_df, pixel_area_ha, output_dir, file_suffix):
+        aggregate_results_table_path, landcover_raster_projection,
+        crop_names, nutrient_df, pixel_area_ha, output_dir, file_suffix):
     """Write table with aggregate results of yield and nutrient values.
 
     Use zonal statistics to summarize total observed and interpolated
@@ -1043,8 +1044,10 @@ def aggregate_regression_results_to_polygons(
 
     Args:
         base_aggregate_vector_path (string): path to polygon vector
-        target_aggregate_vector_path (string):
-            path to re-projected copy of polygon vector
+        target_aggregate_vector_path (string): path to re-projected copy of
+            polygon vector
+        aggregate_results_table_path (string): path to CSV file where aggregate
+            results will be reported.
         landcover_raster_projection (string): a WKT projection string
         crop_names (list): list of crop names
         nutrient_df (pandas.DataFrame): a table of nutrient values by crop
@@ -1115,9 +1118,7 @@ def aggregate_regression_results_to_polygons(
                         * nutrient_df[nutrient_id][crop_name])  # nutrient unit per 100g crop
 
     # report everything to a table
-    aggregate_table_path = os.path.join(
-        output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
-    with open(aggregate_table_path, 'w') as aggregate_table:
+    with open(aggregate_results_table_path, 'w') as aggregate_table:
         # write header
         aggregate_table.write('FID,')
         aggregate_table.write(','.join(sorted(total_yield_lookup)) + ',')
