@@ -702,14 +702,17 @@ def _generate_report(raster_file_set, model_args, file_registry):
             '<table><thead><tr><th>Description</th><th>Value</th><th>Units'
             '</th><th>Raw File</th></tr></thead><tbody>')
 
+        carbon_units = 'metric tons'
+
         # value lists are [sort priority, description, statistic, units]
         report = [
-            (file_registry['tot_c_cur'], 'Total cur', 'Mg of C'),
-            (file_registry['tot_c_fut'], 'Total fut', 'Mg of C'),
-            (file_registry['tot_c_redd'], 'Total redd', 'Mg of C'),
-            (file_registry['delta_cur_fut'], 'Change in C for fut', 'Mg of C'),
+            (file_registry['tot_c_cur'], 'Total cur', carbon_units),
+            (file_registry['tot_c_fut'], 'Total fut', carbon_units),
+            (file_registry['tot_c_redd'], 'Total redd', carbon_units),
+            (file_registry['delta_cur_fut'], 'Change in C for fut',
+             carbon_units),
             (file_registry['delta_cur_redd'],
-             'Change in C for redd', 'Mg of C'),
+             'Change in C for redd', carbon_units),
             (file_registry['npv_fut'],
              'Net present value from cur to fut', 'currency units'),
             (file_registry['npv_redd'],
