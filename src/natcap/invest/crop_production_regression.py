@@ -251,7 +251,7 @@ MODEL_SPEC = {
                         "about": f"{x} {name} production from the crop",
                         "type": "number",
                         "units": units
-                    } for nutrient, name, units in NUTRIENTS
+                    } for (nutrient, name, units) in NUTRIENTS
                     for x in ["modeled", "observed"]
                 }
             }
