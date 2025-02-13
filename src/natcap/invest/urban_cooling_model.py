@@ -516,52 +516,6 @@ def execute(args):
             task_name=f'reclassify to {prop}')
         task_path_prop_map[prop] = (prop_task, prop_raster_path)
 
-    green_area_decay_kernel_distance = int(numpy.round(
-        float(args['green_area_cooling_distance']) / cell_size))
-    cc_park_raster_path = os.path.join(
-        intermediate_dir, f'cc_park{file_suffix}.tif')
-    cc_park_task = task_graph.add_task(
-        func=convolve_2d_by_exponential,
-        args=(
-            green_area_decay_kernel_distance,
-            task_path_prop_map['green_area'][1],
-            cc_park_raster_path),
-        target_path_list=[cc_park_raster_path],
-        dependent_task_list=[
-            task_path_prop_map['green_area'][0]],
-        task_name='calculate T air')
-
-    # Calculate the area of greenspace within a search radius of each pixel.
-    area_kernel_path = os.path.join(
-        intermediate_dir, f'area_kernel{file_suffix}.tif')
-    area_kernel_task = task_graph.add_task(
-        func=pygeoprocessing.kernels.dichotomous_kernel,
-        kwargs=dict(
-            target_kernel_path=area_kernel_path,
-            max_distance=green_area_decay_kernel_distance,
-            normalize=False),
-        target_path_list=[area_kernel_path],
-        task_name='area kernel')
-
-    green_area_sum_raster_path = os.path.join(
-        intermediate_dir, f'green_area_sum{file_suffix}.tif')
-    green_area_sum_task = task_graph.add_task(
-        func=pygeoprocessing.convolve_2d,
-        args=(
-            (task_path_prop_map['green_area'][1], 1),  # green area path
-            (area_kernel_path, 1),
-            green_area_sum_raster_path),
-        kwargs={
-            'working_dir': intermediate_dir,
-            'ignore_nodata_and_edges': True},
-        target_path_list=[green_area_sum_raster_path],
-        dependent_task_list=[
-            task_path_prop_map['green_area'][0],  # reclassed green area task
-            area_kernel_task],
-        task_name='calculate green area')
-
-    align_task.join()
-
     cc_raster_path = os.path.join(intermediate_dir, f'cc{file_suffix}.tif')
     if args['cc_method'] == 'factors':
         LOGGER.info('Calculating Cooling Coefficient from factors')
@@ -621,6 +575,66 @@ def execute(args):
             dependent_task_list=[
                 task_path_prop_map['building_intensity'][0]],
             task_name='calculate cc index (intensity)')
+
+    green_area_cc_raster_path = os.path.join(
+        intermediate_dir, f'green_area_cc{file_suffix}.tif')
+
+    green_area_cc_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=(
+            [(task_path_prop_map['green_area'][1], 1),
+             (cc_raster_path, 1)],
+            lambda g, cc: numpy.where(g == 1, cc, 0),  # Apply g_j * CC_j
+            green_area_cc_raster_path, gdal.GDT_Float32, TARGET_NODATA),
+        target_path_list=[green_area_cc_raster_path],
+        dependent_task_list=[task_path_prop_map['green_area'][0], cc_task],
+        task_name='Compute green area cooling effect')
+
+    green_area_decay_kernel_distance = int(numpy.round(
+        float(args['green_area_cooling_distance']) / cell_size))
+    cc_park_raster_path = os.path.join(
+        intermediate_dir, f'cc_park{file_suffix}.tif')
+    cc_park_task = task_graph.add_task(
+        func=convolve_2d_by_exponential,
+        args=(
+            green_area_decay_kernel_distance,
+            green_area_cc_raster_path,
+            cc_park_raster_path),
+        target_path_list=[cc_park_raster_path],
+        dependent_task_list=[green_area_cc_task],
+        task_name='calculate T air')
+
+    # Calculate the area of greenspace within a search radius of each pixel.
+    area_kernel_path = os.path.join(
+        intermediate_dir, f'area_kernel{file_suffix}.tif')
+    area_kernel_task = task_graph.add_task(
+        func=pygeoprocessing.kernels.dichotomous_kernel,
+        kwargs=dict(
+            target_kernel_path=area_kernel_path,
+            max_distance=green_area_decay_kernel_distance,
+            normalize=False),
+        target_path_list=[area_kernel_path],
+        task_name='area kernel')
+
+    green_area_sum_raster_path = os.path.join(
+        intermediate_dir, f'green_area_sum{file_suffix}.tif')
+    green_area_sum_task = task_graph.add_task(
+        func=pygeoprocessing.convolve_2d,
+        args=(
+            (task_path_prop_map['green_area'][1], 1),  # green area path
+            (area_kernel_path, 1),
+            green_area_sum_raster_path),
+        kwargs={
+            'working_dir': intermediate_dir,
+            'ignore_nodata_and_edges': True},
+        target_path_list=[green_area_sum_raster_path],
+        dependent_task_list=[
+            task_path_prop_map['green_area'][0],  # reclassed green area task
+            area_kernel_task],
+        task_name='calculate green area')
+
+    align_task.join()
+
 
     # Compute Heat Mitigation (HM) index.
     #
@@ -1385,7 +1399,7 @@ def convolve_2d_by_exponential(
     Args:
         decay_kernel_distance (float): radius of 1/e cutoff of decay kernel
             raster in pixels.
-        signal_rater_path (str): path to single band signal raster.
+        signal_raster_path (str): path to single band signal raster.
         target_convolve_raster_path (str): path to convolved raster.
 
     Returns:
