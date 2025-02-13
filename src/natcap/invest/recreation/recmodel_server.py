@@ -259,7 +259,13 @@ class RecModel(object):
         shapefile_archive.extractall(workspace_path)
         shapefile_archive.close()
         shapefile_archive = None
-        aoi_path = glob.glob(os.path.join(workspace_path, '*.shp'))[0]
+        file_list = [file for file in os.listdir(workspace_path) if not file.endswith('.zip')]
+        if len(file_list) > 1:
+            # if it's a multifile AOI, assume a shapefile
+            aoi_path = glob.glob(os.path.join(workspace_path, '*.shp'))[0]
+        else:
+            aoi_path = os.path.join(workspace_path, file_list[0])
+        # aoi_path = glob.glob(os.path.join(workspace_path, '*.shp'))[0]
 
         LOGGER.info('running calc user days on %s', workspace_path)
         numpy_date_range = (
