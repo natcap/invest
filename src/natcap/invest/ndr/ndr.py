@@ -26,7 +26,7 @@ MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
 
 MODEL_SPEC = {
     "model_id": "ndr",
-    "model_name": gettext("Nutrient Delivery Ratio"),
+    "model_title": gettext("Nutrient Delivery Ratio"),
     "pyname": "natcap.invest.ndr.ndr",
     "userguide": "ndr.html",
     "aliases": (),

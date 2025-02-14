@@ -53,7 +53,7 @@ export default function PluginModal(props) {
   const removePlugin = () => {
     setLoading(true);
     Object.keys(openJobs).forEach((tabID) => {
-      if (openJobs[tabID].modelRunName === pluginToRemove) {
+      if (openJobs[tabID].modelID === pluginToRemove) {
         closeInvestModel(tabID);
       }
     });
@@ -167,7 +167,7 @@ export default function PluginModal(props) {
                     value={pluginID}
                     key={pluginID}
                   >
-                    {plugins[pluginID].model_name}
+                    {plugins[pluginID].modelTitle}
                   </option>
                 )
               )
@@ -219,6 +219,6 @@ PluginModal.propTypes = {
   updateInvestList: PropTypes.func.isRequired,
   closeInvestModel: PropTypes.func.isRequired,
   openJobs: PropTypes.shape({
-    modelRunName: PropTypes.string,
+    modelID: PropTypes.string,
   }).isRequired,
 };

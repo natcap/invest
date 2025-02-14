@@ -9,7 +9,7 @@ import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import App from '../../src/renderer/app';
 import {
   getSpec,
-  getInvestModelNames,
+  getInvestModelIDs,
   fetchArgsEnabled,
   fetchValidation
 } from '../../src/renderer/server_requests';
@@ -19,8 +19,8 @@ jest.mock('../../src/renderer/server_requests');
 describe('Add plugin modal', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue({
-      model_name: 'foo',
-      pyname: 'natcap.invest.foo',
+      model_id: 'foo',
+      model_title: 'Foo',
       userguide: '',
       args: {
         workspace_dir: {
@@ -44,7 +44,7 @@ describe('Add plugin modal', () => {
       input_path: true,
     });
     fetchValidation.mockResolvedValue([]);
-    getInvestModelNames.mockResolvedValue({});
+    getInvestModelIDs.mockResolvedValue({});
   });
 
   test('Interface to add a plugin', async () => {
@@ -53,7 +53,7 @@ describe('Add plugin modal', () => {
         if (setting === 'plugins') {
           return Promise.resolve({
             foo: {
-              model_name: 'Foo',
+              modelTitle: 'Foo',
               type: 'plugin',
             },
           });
@@ -91,7 +91,7 @@ describe('Add plugin modal', () => {
         if (setting === 'plugins') {
           return Promise.resolve({
             foo: {
-              model_name: 'Foo',
+              modelTitle: 'Foo',
               type: 'plugin',
             },
           });
@@ -117,7 +117,6 @@ describe('Add plugin modal', () => {
       expect(spy).toHaveBeenCalledWith(
         ipcMainChannels.INVEST_RUN,
         'foo',
-        'natcap.invest.foo',
         { input_path: '', workspace_dir: '' },
         expect.anything()
       );
@@ -127,7 +126,7 @@ describe('Add plugin modal', () => {
   test('Remove a plugin', async () => {
     let plugins = {
       foo: {
-        model_name: 'Foo',
+        modelTitle: 'Foo',
         type: 'plugin',
       },
     };

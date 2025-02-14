@@ -56,7 +56,7 @@ class ValidateModelSpecs(unittest.TestCase):
     def test_model_specs_are_valid(self):
         """MODEL_SPEC: test each spec meets the expected pattern."""
 
-        required_keys = {'model_id', 'model_name', 'pyname', 'userguide',
+        required_keys = {'model_id', 'model_title', 'pyname', 'userguide',
                          'aliases', 'args', 'ui_spec', 'outputs'}
         optional_spatial_key = 'args_with_spatial_overlap'
         for model_id, pyname in model_id_to_pyname.items():

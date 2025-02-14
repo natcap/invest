@@ -65,8 +65,8 @@ export default class InvestJob {
 
   /**
    * @param {object} obj - with the following properties
-   * @param {string} obj.modelRunName - name to be passed to `invest run`
-   * @param {string} obj.modelHumanName - colloquial name of the invest model
+   * @param {string} obj.modelID - name to be passed to `invest run`
+   * @param {string} obj.modelTitle - colloquial name of the invest model
    * @param {object} obj.argsValues - an invest "args dict" with initial values
    * @param {string} obj.logfile - path to an existing invest logfile
    * @param {string} obj.status - one of 'running'|'error'|'success'
@@ -74,20 +74,21 @@ export default class InvestJob {
    */
   constructor(
     {
-      modelRunName,
-      modelHumanName,
+      modelID,
+      modelTitle,
       argsValues,
       logfile,
       status,
       type,
     }
   ) {
-    if (!modelRunName || !modelHumanName) {
+    if (!modelID || !modelTitle) {
       throw new Error(
-        'Cannot create instance of InvestJob without modelRunName and modelHumanName properties')
+        'Cannot create instance of InvestJob without modelID and modelTitle properties'
+      );
     }
-    this.modelRunName = modelRunName;
-    this.modelHumanName = modelHumanName;
+    this.modelID = modelID;
+    this.modelTitle = modelTitle;
     this.argsValues = argsValues;
     this.logfile = logfile;
     this.status = status;

@@ -11,6 +11,7 @@ import tempfile
 import unittest
 
 from natcap.invest import datastack
+from natcap.invest import models
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('invest-autovalidate.py')
@@ -33,7 +34,7 @@ class ValidateExceptionTests(unittest.TestCase):
             self.workspace, 'dummy.invs.json')
         with open(datastack_path, 'w') as file:
             file.write('"args": {"something": "else"},')
-            file.write('"model_name": natcap.invest.carbon')
+            file.write('"model_id": "carbon"')
         with self.assertRaises(ValueError):
             main(self.workspace)
 
@@ -43,7 +44,7 @@ class ValidateExceptionTests(unittest.TestCase):
             self.workspace, 'dummy.invs.json')
         with open(datastack_path, 'w') as file:
             file.write('"args": {"workspace_dir": "/home/foo"},')
-            file.write('"model_name": natcap.invest.carbon')
+            file.write('"model_id": "carbon"')
         with self.assertRaises(ValueError):
             main(self.workspace)
 
@@ -67,25 +68,26 @@ def main(sampledatadir):
         raise ValueError(f'no json files found in {sampledatadir}')
 
     for datastack_path in datastacks:
+        if datastack_path.split(os.sep)[-2] in {'DelineateIt', 'NDR', 'ScenicQuality',
+                                            'SDR', 'Seasonal_Water_Yield', 'recreation'}:
+            continue # avoid compiled models for development of the plugin feature branch
+
         paramset = datastack.extract_parameter_set(datastack_path)
-        if paramset.model_name.split(".")[-1] in {
-                'delineateit', 'ndr', 'scenic_quality', 'sdr',
-                 'seasonal_water_yield', 'recreation'}:
-            continue # avoid compiled modles for devoloped of plugin feature branch
         if 'workspace_dir' in paramset.args and \
                 paramset.args['workspace_dir'] != '':
             msg = (
-                '%s : workspace_dir should not be defined '
-                'for sample datastacks' % datastack_path)
+                f'{datastack_path} : workspace_dir should not be defined '
+                'for sample datastacks' )
             validation_messages += os.linesep + msg
             LOGGER.error(msg)
         else:
             paramset.args['workspace_dir'] = tempfile.mkdtemp()
-        model_module = importlib.import_module(name=paramset.model_name)
+        model_module = importlib.import_module(
+            name=models.model_id_to_pyname[paramset.model_id])
 
         model_warnings = []  # define here in case of uncaught exception.
         try:
-            LOGGER.info('validating %s ', os.path.abspath(datastack_path))
+            LOGGER.info(f'validating {os.path.abspath(datastack_path)}')
             model_warnings = getattr(
                 model_module, 'validate')(paramset.args)
         except AttributeError as err:

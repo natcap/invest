@@ -54,7 +54,7 @@ def build_model_list_table(locale_code):
     # Adding 3 to max alias name length for the parentheses plus some padding.
     max_alias_name_length = max(len(', '.join(
         spec['aliases'])) for spec in models.model_id_to_spec.values()) + 3
-    template_string = '    {model_id} {aliases} {model_name}'
+    template_string = '    {model_id} {aliases} {model_title}'
     strings = [translation.gettext('Available models:')]
     for model_id, model_spec in models.model_id_to_spec.items():
 
@@ -65,7 +65,7 @@ def build_model_list_table(locale_code):
         strings.append(template_string.format(
             model_id=model_id.ljust(max_model_id_length),
             aliases=alias_string.ljust(max_alias_name_length),
-            model_name=translation.gettext(model_spec['model_name'])))
+            model_title=translation.gettext(model_spec['model_title'])))
     return '\n'.join(strings) + '\n'
 
 
@@ -94,8 +94,8 @@ def build_model_list_json(locale_code):
 
     json_object = {}
     for model_id, model_spec in models.model_id_to_spec.items():
-        json_object[translation.gettext(model_spec['model_name'])] = {
-            'model_name': model_id,
+        json_object[model_id] = {
+            'model_title': translation.gettext(model_spec['model_title']),
             'aliases': model_spec['aliases']
         }
 
@@ -159,7 +159,7 @@ def export_to_python(target_filepath, model_id, args_dict=None):
         py_file.write(script_template.format(
             invest_version=natcap.invest.__version__,
             today=datetime.datetime.now().strftime('%c'),
-            model_title=models.model_id_to_spec[model_id]['model_name'],
+            model_title=models.model_id_to_spec[model_id]['model_title'],
             pyname=models.model_id_to_pyname[model_id],
             model_args=args))
 
@@ -395,7 +395,7 @@ def main(user_args=None):
             # reload validation module first so it's also in the correct language
             importlib.reload(importlib.import_module('natcap.invest.validation'))
             model_module = importlib.reload(importlib.import_module(
-                name=parsed_datastack.model_name))
+                name=models.model_id_to_pyname[parsed_datastack.model_id]))
 
             try:
                 validation_result = model_module.validate(parsed_datastack.args)
@@ -470,12 +470,14 @@ def main(user_args=None):
                         model_module.__name__, model_module)
 
             with utils.prepare_workspace(parsed_datastack.args['workspace_dir'],
-                                         name=parsed_datastack.model_name,
+                                         model_id=parsed_datastack.model_id,
                                          logging_level=log_level):
-                LOGGER.log(datastack.ARGS_LOG_LEVEL,
-                           'Starting model with parameters: \n%s',
-                           datastack.format_args_dict(parsed_datastack.args,
-                                                      parsed_datastack.model_name))
+                LOGGER.log(
+                    datastack.ARGS_LOG_LEVEL,
+                    'Starting model with parameters: \n%s',
+                    datastack.format_args_dict(
+                        parsed_datastack.args,
+                        parsed_datastack.model_id))
 
                 # We're deliberately not validating here because the user
                 # can just call ``invest validate <datastack>`` to validate.

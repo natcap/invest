@@ -14,17 +14,17 @@ import fetch from 'node-fetch';
 
 import {
   setupInvestRunHandlers,
-  setupInvestLogReaderHandler,
+  setupInvestLogReaderHandler
 } from '../../src/main/setupInvestHandlers';
 import writeInvestParameters from '../../src/main/writeInvestParameters';
 import { removeIpcMainListeners } from '../../src/main/main';
 
 import App from '../../src/renderer/app';
 import {
-  getInvestModelNames,
+  getInvestModelIDs,
   getSpec,
   fetchValidation,
-  fetchArgsEnabled,
+  fetchArgsEnabled
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 
@@ -54,7 +54,7 @@ describe('InVEST subprocess testing', () => {
     pyname: 'natcap.invest.dot',
     userguide: 'foo.html',
   };
-  const modelName = 'carbon';
+  const modelTitle = 'Carbon';
   // nothing is written to the fake workspace in these tests,
   // and we mock validation, so this dir need not exist.
   const fakeWorkspace = 'foo_dir';
@@ -109,10 +109,10 @@ describe('InVEST subprocess testing', () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     fetchArgsEnabled.mockResolvedValue({
-      workspace_dir: true, results_suffix: true
+      workspace_dir: true, results_suffix: true,
     });
-    getInvestModelNames.mockResolvedValue(
-      { Carbon: { model_name: modelName } }
+    getInvestModelIDs.mockResolvedValue(
+      { carbon: { model_title: modelTitle } }
     );
     // mock the request to write the datastack file. Actually write it
     // because the app will clean it up when invest exits.
@@ -352,8 +352,8 @@ describe('InVEST subprocess testing', () => {
       workspace_dir: fakeWorkspace,
     };
     const mockJob = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Sequestration',
+      modelID: 'carbon',
+      modelTitle: 'Carbon Sequestration',
       argsValues: argsValues,
       status: 'success',
       logfile: logfilePath,

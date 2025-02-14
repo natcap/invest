@@ -189,12 +189,12 @@ class SetupTab extends React.Component {
    */
   async savePythonScript(filepath) {
     const {
-      modelId,
+      modelID,
     } = this.props;
     const args = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: filepath,
-      modelname: modelId,
+      model_id: modelID,
       args: JSON.stringify(args),
     };
     const response = await saveToPython(payload);
@@ -202,33 +202,29 @@ class SetupTab extends React.Component {
   }
 
   async saveJsonFile(datastackPath, relativePaths) {
-    const {
-      pyModuleName,
-    } = this.props;
+    const { modelID } = this.props;
     const args = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: datastackPath,
-      moduleName: pyModuleName,
+      model_id: modelID,
       relativePaths: relativePaths,
       args: JSON.stringify(args),
     };
-    const {message, error} = await writeParametersToFile(payload);
+    const { message, error } = await writeParametersToFile(payload);
     this.setSaveAlert(message, error);
   }
 
   async saveDatastack(datastackPath) {
-    const {
-      pyModuleName,
-    } = this.props;
+    const { modelID } = this.props;
     const args = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: datastackPath,
-      moduleName: pyModuleName,
+      model_id: modelID,
       args: JSON.stringify(args),
     };
     const key = window.crypto.getRandomValues(new Uint16Array(1))[0].toString();
     this.setSaveAlert('archiving...', false, key);
-    const {message, error} = await archiveDatastack(payload);
+    const { message, error } = await archiveDatastack(payload);
     this.setSaveAlert(message, error, key);
   }
 
@@ -273,23 +269,27 @@ class SetupTab extends React.Component {
   }
 
   async loadParametersFromFile(filepath) {
-    const { pyModuleName, switchTabs, t } = this.props;
+    const { modelID, switchTabs, t, investList } = this.props;
     let datastack;
     try {
-      if (filepath.endsWith('gz')) {  // .tar.gz, .tgz
+      if (filepath.endsWith('gz')) { // .tar.gz, .tgz
         const extractLocation = await ipcRenderer.invoke(
           ipcMainChannels.SHOW_SAVE_DIALOG,
           { title: t('Choose location to extract archive') }
         );
         if (extractLocation.filePath) {
           datastack = await fetchDatastackFromFile({
+            model_id: modelID,
             filepath: filepath,
-            extractPath: extractLocation.filePath});
+            extractPath: extractLocation.filePath,
+          });
         } else {
           return;
         }
       } else {
-        datastack = await fetchDatastackFromFile({ filepath: filepath });
+        datastack = await fetchDatastackFromFile(
+          { model_id: modelID, filepath: filepath }
+        );
       }
     } catch (error) {
       logger.error(error);
@@ -298,15 +298,15 @@ class SetupTab extends React.Component {
       );
       return;
     }
-    if (datastack.module_name === pyModuleName) {
+    if (datastack.model_id === modelID) {
       this.batchUpdateArgs(datastack.args);
       switchTabs('setup');
       this.triggerScrollEvent();
     } else {
       alert( // eslint-disable-line no-alert
         t(
-          'Datastack/Logfile for {{modelName}} does not match this model.',
-          { modelName: datastack.model_human_name }
+          'Datastack/Logfile for model {{modelTitle}} does not match this model.',
+          { modelTitle: investList[datastack.model_id].modelTitle }
         )
       );
     }
@@ -410,14 +410,13 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async investArgsEnabled() {
-    const { pyModuleName, modelId } = this.props;
+    const { modelID } = this.props;
     const { argsValues } = this.state;
 
     if (this._isMounted) {
       this.setState({
         argsEnabled: await fetchArgsEnabled({
-          modelId: modelId,
-          model_module: pyModuleName,
+          model_id: modelID,
           args: JSON.stringify(argsDictFromObject(argsValues)),
         }),
       });
@@ -438,10 +437,10 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async callDropdownFunctions() {
-    const { pyModuleName } = this.props;
+    const { modelID } = this.props;
     const { argsValues, argsDropdownOptions } = this.state;
     const payload = {
-      model_module: pyModuleName,
+      model_id: modelID,
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
     const results = await getDynamicDropdowns(payload);
@@ -472,12 +471,11 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async investValidate() {
-    const { argsSpec, pyModuleName, modelId } = this.props;
+    const { argsSpec, modelID } = this.props;
     const { argsValues, argsValidation, argsValid } = this.state;
     const keyset = new Set(Object.keys(argsSpec));
     const payload = {
-      modelId: modelId,
-      model_module: pyModuleName,
+      model_id: modelID,
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
     const results = await fetchValidation(payload);
@@ -547,7 +545,7 @@ class SetupTab extends React.Component {
         sidebarFooterElementId,
         executeClicked,
         uiSpec,
-        modelId,
+        modelID,
       } = this.props;
 
       const SaveAlerts = [];
@@ -626,15 +624,13 @@ class SetupTab extends React.Component {
               </Button>
             </OverlayTrigger>
             <SaveAsModal
-              modelName={modelId}
+              modelID={modelID}
               savePythonScript={this.savePythonScript}
               saveJsonFile={this.saveJsonFile}
               saveDatastack={this.saveDatastack}
               removeSaveErrors={this.removeSaveErrors}
             />
-            <React.Fragment>
-              {SaveAlerts}
-            </React.Fragment>
+            {SaveAlerts}
           </Portal>
           <Portal elId={sidebarFooterElementId}>
             <Button
@@ -658,9 +654,8 @@ class SetupTab extends React.Component {
 export default withTranslation()(SetupTab);
 
 SetupTab.propTypes = {
-  pyModuleName: PropTypes.string.isRequired,
   userguide: PropTypes.string.isRequired,
-  modelId: PropTypes.string.isRequired,
+  modelID: PropTypes.string.isRequired,
   argsSpec: PropTypes.objectOf(
     PropTypes.shape({
       name: PropTypes.string,
@@ -677,4 +672,9 @@ SetupTab.propTypes = {
   sidebarFooterElementId: PropTypes.string.isRequired,
   executeClicked: PropTypes.bool.isRequired,
   switchTabs: PropTypes.func.isRequired,
+  investList: PropTypes.shape({
+    modelTitle: PropTypes.string,
+    type: PropTypes.string,
+  }).isRequired,
+  t: PropTypes.func.isRequired,
 };

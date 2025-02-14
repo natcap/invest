@@ -111,12 +111,12 @@ export async function createCoreServerProcess(_port = undefined) {
 
 /**
  * Spawn a child process running the Python Flask app for a plugin.
- * @param {string} modelName - name of the plugin to launch
+ * @param {string} modelID - id of the plugin to launch
  * @param  {integer} _port - if provided, port to launch server on. Otherwise,
  *                         an available port is chosen.
  * @returns { integer } - PID of the process that was launched
  */
-export async function createPluginServerProcess(modelName, _port = undefined) {
+export async function createPluginServerProcess(modelID, _port = undefined) {
   let port = _port;
   if (port === undefined) {
     port = await getFreePort();
@@ -124,15 +124,15 @@ export async function createPluginServerProcess(modelName, _port = undefined) {
 
   logger.debug('creating invest plugin server process');
   const micromamba = settingsStore.get('micromamba');
-  const modelEnvPath = settingsStore.get(`plugins.${modelName}.env`);
+  const modelEnvPath = settingsStore.get(`plugins.${modelID}.env`);
   const args = [
     'run', '--prefix', `"${modelEnvPath}"`,
     'invest', '--debug', 'serve', '--port', port];
   logger.debug('spawning command:', micromamba, args);
   // shell mode is necessary in dev mode & relying on a conda env
   const pythonServerProcess = spawn(micromamba, args, { shell: true });
-  settingsStore.set(`plugins.${modelName}.port`, port);
-  settingsStore.set(`plugins.${modelName}.pid`, pythonServerProcess.pid);
+  settingsStore.set(`plugins.${modelID}.port`, port);
+  settingsStore.set(`plugins.${modelID}.pid`, pythonServerProcess.pid);
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
 

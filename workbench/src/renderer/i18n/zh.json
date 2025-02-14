@@ -99,7 +99,7 @@
     "User's guide entry": "用户指南条目",
     "Only drop one file at a time.": "一次只能丢一个文件。",
     "Choose location to extract archive": "选择提取存档的位置",
-    "Datastack/Logfile for {{modelName}} does not match this model.": "{{modelName}} 个数据堆栈/日志文件与此模型不匹配。",
+    "Datastack/Logfile for {{modelTitle}} does not match this model.": "{{modelTitle}} 个数据堆栈/日志文件与此模型不匹配。",
     "Running": "运行中",
     "Run": "运行",
     "Browse to a datastack (.json, .tgz) or InVEST logfile (.txt)": "浏览到数据包（.json, .tgz）或InVEST日志文件（.txt）。",

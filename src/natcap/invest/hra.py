@@ -16,12 +16,12 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from . import datastack
 from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
 from .unit_registry import u
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
 
 MODEL_SPEC = {
     "model_id": "habitat_risk_assessment",
-    "model_name": gettext("Habitat Risk Assessment"),
+    "model_title": gettext("Habitat Risk Assessment"),
     "pyname": "natcap.invest.hra",
     "userguide": "habitat_risk_assessment.html",
     "aliases": ("hra",),
@@ -2445,7 +2445,7 @@ def _override_datastack_archive_criteria_table_path(
                     os.path.splitext(os.path.basename(value))[0])
                 LOGGER.info(f"Copying spatial file {value} --> "
                             f"{dir_for_this_spatial_data}")
-                new_path = datastack._copy_spatial_files(
+                new_path = utils.copy_spatial_files(
                     value, dir_for_this_spatial_data)
                 criteria_table_array[row, col] = new_path
                 known_files[value] = new_path

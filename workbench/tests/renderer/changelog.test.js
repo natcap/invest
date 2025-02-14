@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 
 import App from '../../src/renderer/app';
 import pkg from '../../package.json';
-import { getInvestModelNames } from '../../src/renderer/server_requests';
+import { getInvestModelIDs } from '../../src/renderer/server_requests';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -38,7 +38,7 @@ describe('Changelog', () => {
             </html>
         `
       });
-    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
+    getInvestModelIDs.mockResolvedValue(MOCK_INVEST_LIST);
   });
 
   test('Changelog modal opens immediately on launch of a new version', async () => {

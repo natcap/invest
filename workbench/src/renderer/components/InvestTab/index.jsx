@@ -61,11 +61,11 @@ class InvestTab extends React.Component {
       // if plugin server is already running, don't re-launch
       // this will happen if we have >1 tab open with the same plugin
       let pid = await ipcRenderer.invoke(
-        ipcMainChannels.GET_SETTING, `plugins.${job.modelRunName}.pid`);
+        ipcMainChannels.GET_SETTING, `plugins.${job.modelID}.pid`);
       if (!pid) {
         pid = await ipcRenderer.invoke(
           ipcMainChannels.LAUNCH_PLUGIN_SERVER,
-          job.modelRunName
+          job.modelID
         );
         if (!pid) {
           this.setState({ tabStatus: 'failed' });
@@ -76,7 +76,7 @@ class InvestTab extends React.Component {
     try {
       const {
         args, ui_spec, ...model_spec
-      } = await getSpec(job.modelRunName);
+      } = await getSpec(job.modelID);
       this.setState({
         modelSpec: model_spec,
         argsSpec: args,
@@ -163,8 +163,7 @@ class InvestTab extends React.Component {
 
     ipcRenderer.send(
       ipcMainChannels.INVEST_RUN,
-      job.modelRunName,
-      this.state.modelSpec.pyname,
+      job.modelID,
       args,
       tabID
     );
@@ -219,12 +218,12 @@ class InvestTab extends React.Component {
     } = this.state;
     const {
       status,
-      modelRunName,
+      modelID,
       argsValues,
       logfile,
     } = this.props.job;
 
-    const { tabID, t } = this.props;
+    const { tabID, investList, t } = this.props;
 
     if (tabStatus === 'failed') {
       return (
@@ -280,7 +279,7 @@ class InvestTab extends React.Component {
               />
               <div className="sidebar-row sidebar-links">
                 <ResourcesLinks
-                  moduleName={modelRunName}
+                  modelID={modelID}
                   docs={modelSpec.userguide}
                 />
               </div>
@@ -308,9 +307,8 @@ class InvestTab extends React.Component {
                   aria-label="model setup tab"
                 >
                   <SetupTab
-                    pyModuleName={modelSpec.pyname}
                     userguide={modelSpec.userguide}
-                    modelId={modelRunName}
+                    modelID={modelID}
                     argsSpec={argsSpec}
                     uiSpec={uiSpec}
                     argsInitValues={argsValues}
@@ -319,6 +317,7 @@ class InvestTab extends React.Component {
                     sidebarFooterElementId={sidebarFooterElementId}
                     executeClicked={executeClicked}
                     switchTabs={this.switchTabs}
+                    investList={investList}
                   />
                 </TabPane>
                 <TabPane
@@ -351,8 +350,7 @@ class InvestTab extends React.Component {
 
 InvestTab.propTypes = {
   job: PropTypes.shape({
-    modelRunName: PropTypes.string.isRequired,
-    modelHumanName: PropTypes.string.isRequired,
+    modelID: PropTypes.string.isRequired,
     argsValues: PropTypes.object,
     logfile: PropTypes.string,
     status: PropTypes.string,
@@ -361,6 +359,10 @@ InvestTab.propTypes = {
   tabID: PropTypes.string.isRequired,
   saveJob: PropTypes.func.isRequired,
   updateJobProperties: PropTypes.func.isRequired,
+  investList: PropTypes.shape({
+    modelTitle: PropTypes.string,
+  }).isRequired,
+  t: PropTypes.func.isRequired,
 };
 
 export default withTranslation()(InvestTab);

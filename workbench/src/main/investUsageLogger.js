@@ -13,12 +13,12 @@ const PREFIX = 'api';
 export default function investUsageLogger() {
   const sessionId = crypto.randomUUID();
 
-  function start(modelPyName, args, port) {
+  function start(modelID, args, port) {
     logger.debug('logging model start');
     fetch(`${HOSTNAME}:${port}/${PREFIX}/log_model_start`, {
       method: 'post',
       body: JSON.stringify({
-        model_pyname: modelPyName,
+        model_id: modelID,
         model_args: JSON.stringify(args),
         invest_interface: `Workbench ${WORKBENCH_VERSION}`,
         session_id: sessionId,

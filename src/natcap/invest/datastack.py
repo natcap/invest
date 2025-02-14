@@ -36,6 +36,7 @@ from osgeo import gdal
 
 from . import utils
 from . import validation
+from . import models
 
 try:
     from . import __version__
@@ -54,10 +55,10 @@ ARGS_LOG_LEVEL = 100  # define high log level so it should always show in logs
 DATASTACK_EXTENSION = '.invest.tar.gz'
 PARAMETER_SET_EXTENSION = '.invest.json'
 DATASTACK_PARAMETER_FILENAME = 'parameters' + PARAMETER_SET_EXTENSION
-UNKNOWN = 'UNKNOWN'
+
 
 ParameterSet = collections.namedtuple('ParameterSet',
-                                      'args model_name invest_version')
+                                      'args model_id invest_version')
 
 
 def _tarfile_safe_extract(archive_path, dest_dir_path):
@@ -95,54 +96,7 @@ def _tarfile_safe_extract(archive_path, dest_dir_path):
         safe_extract(tar, dest_dir_path)
 
 
-def _copy_spatial_files(spatial_filepath, target_dir):
-    """Copy spatial files to a new directory.
-
-    Args:
-        spatial_filepath (str): The filepath to a GDAL-supported file.
-        target_dir (str): The directory where all component files of
-            ``spatial_filepath`` should be copied.  If this directory does not
-            exist, it will be created.
-
-    Returns:
-        filepath (str): The path to a representative file copied into the
-        ``target_dir``.  If possible, this will match the basename of
-        ``spatial_filepath``, so if someone provides an ESRI Shapefile called
-        ``my_vector.shp``, the return value will be ``os.path.join(target_dir,
-        my_vector.shp)``.
-    """
-    LOGGER.info(f'Copying {spatial_filepath} --> {target_dir}')
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir)
-
-    source_basename = os.path.basename(spatial_filepath)
-    return_filepath = None
-
-    spatial_file = gdal.OpenEx(spatial_filepath)
-    for member_file in spatial_file.GetFileList():
-        # ArcGIS Binary/Grid format includes the directory in the file listing.
-        # The parent directory isn't strictly needed, so we can just skip it.
-        if os.path.isdir(member_file):
-            continue
-
-        target_basename = os.path.basename(member_file)
-        target_filepath = os.path.join(target_dir, target_basename)
-        if source_basename == target_basename:
-            return_filepath = target_filepath
-        shutil.copyfile(member_file, target_filepath)
-    spatial_file = None
-
-    # I can't conceive of a case where the basename of the source file does not
-    # match any of the member file basenames, but just in case there's a
-    # weird GDAL driver that does this, it seems reasonable to fall back to
-    # whichever of the member files was most recent.
-    if not return_filepath:
-        return_filepath = target_filepath
-
-    return return_filepath
-
-
-def format_args_dict(args_dict, model_name):
+def format_args_dict(args_dict, model_id):
     """Nicely format an arguments dictionary for writing to a stream.
 
     If printed to a console, the returned string will be aligned in two columns
@@ -151,7 +105,7 @@ def format_args_dict(args_dict, model_name):
 
     Args:
         args_dict (dict): The args dictionary to format.
-        model_name (string): The model name (in python package import format)
+        model_id (string): The model ID (e.g. carbon)
 
     Returns:
         A formatted, unicode string.
@@ -162,12 +116,11 @@ def format_args_dict(args_dict, model_name):
     if len(sorted_args) > 0:
         max_key_width = max(len(x[0]) for x in sorted_args)
 
-    format_str = "%-" + str(max_key_width) + "s %s"
+    format_str = f"%-{max_key_width}s %s"
 
     args_string = '\n'.join([format_str % (arg) for arg in sorted_args])
-    args_string = "Arguments for InVEST %s %s:\n%s\n" % (model_name,
-                                                         __version__,
-                                                         args_string)
+    args_string = (
+        f"Arguments for InVEST {model_id} {__version__}:\n{args_string}\n")
     return args_string
 
 
@@ -189,7 +142,7 @@ def get_datastack_info(filepath, extract_path=None):
             * ``"logfile"`` when the file is a text logfile.
 
         The second item of the tuple is a ParameterSet namedtuple with the raw
-        parsed args, modelname and invest version that the file was built with.
+        parsed args, model id and invest version that the file was built with.
     """
     if tarfile.is_tarfile(filepath):
         if not extract_path:
@@ -214,20 +167,19 @@ def get_datastack_info(filepath, extract_path=None):
     return 'logfile', extract_parameters_from_logfile(filepath)
 
 
-def build_datastack_archive(args, model_name, datastack_path):
+def build_datastack_archive(args, model_id, datastack_path):
     """Build an InVEST datastack from an arguments dict.
 
     Args:
         args (dict): The arguments dictionary to include in the datastack.
-        model_name (string): The python-importable module string of the model
-            these args are for.
+        model_id (string): The id the model these args are for.
         datastack_path (string): The path to where the datastack archive
             should be written.
 
     Returns:
         ``None``
     """
-    module = importlib.import_module(name=model_name)
+    module = importlib.import_module(name=models.model_id_to_pyname[model_id])
 
     args = args.copy()
     temp_workspace = tempfile.mkdtemp(prefix='datastack_')
@@ -376,7 +328,7 @@ def build_datastack_archive(args, model_name, datastack_path):
                             target_dir = os.path.join(
                                 contained_files_dir,
                                 f'{row_index}_{basename}')
-                            target_filepath = _copy_spatial_files(
+                            target_filepath = utils.copy_spatial_files(
                                 source_filepath, target_dir)
                             target_filepath = os.path.relpath(
                                 target_filepath, data_dir)
@@ -428,7 +380,7 @@ def build_datastack_archive(args, model_name, datastack_path):
             # Create a directory with a readable name, something like
             # "aoi_path_vector" or "lulc_cur_path_raster".
             spatial_dir = os.path.join(data_dir, f'{key}_{input_type}')
-            target_arg_value = _copy_spatial_files(
+            target_arg_value = utils.copy_spatial_files(
                 source_path, spatial_dir)
             files_found[source_path] = target_arg_value
 
@@ -454,7 +406,7 @@ def build_datastack_archive(args, model_name, datastack_path):
     param_file_uri = os.path.join(temp_workspace,
                                   'parameters' + PARAMETER_SET_EXTENSION)
     build_parameter_set(
-        rewritten_args, model_name, param_file_uri, relative=True)
+        rewritten_args, model_id, param_file_uri, relative=True)
 
     # Remove the handler before archiving the working dir (and the logfile)
     archive_filehandler.close()
@@ -520,12 +472,12 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
     return new_args
 
 
-def build_parameter_set(args, model_name, paramset_path, relative=False):
+def build_parameter_set(args, model_id, paramset_path, relative=False):
     """Record a parameter set to a file on disk.
 
     Args:
         args (dict): The args dictionary to record to the parameter set.
-        model_name (string): An identifier string for the callable or InVEST
+        model_id (string): An identifier string for the callable or InVEST
             model that would accept the arguments given.
         paramset_path (string): The path to the file on disk where the
             parameters should be recorded.
@@ -574,7 +526,7 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
                 return linux_style_path
         return args_param
     parameter_data = {
-        'model_name': model_name,
+        'model_id': model_id,
         'invest_version': __version__,
         'args': _recurse(args)
     }
@@ -600,8 +552,7 @@ def extract_parameter_set(paramset_path):
             args (dict): The arguments dict for the callable
             invest_version (string): The version of InVEST used to record the
                 parameter set.
-            model_name (string): The name of the callable or model that these
-                arguments are intended for.
+            model_id (string): the ID of the model that these parameters are for
     """
     paramset_parent_dir = os.path.dirname(os.path.abspath(paramset_path))
     with codecs.open(paramset_path, 'r', encoding='UTF-8') as paramset_file:
@@ -638,9 +589,16 @@ def extract_parameter_set(paramset_path):
             return args_param
         return args_param
 
-    return ParameterSet(_recurse(read_params['args']),
-                        read_params['model_name'],
-                        read_params['invest_version'])
+    if 'model_id' in read_params:
+        # New style datastacks include the model ID
+        model_id = read_params['model_id']
+    else:
+        # Old style datastacks use the pyname (core models only, no plugins)
+        model_id = models.pyname_to_model_id[read_params['model_name']]
+    return ParameterSet(
+        args=_recurse(read_params['args']),
+        model_id=model_id,
+        invest_version=read_params['invest_version'])
 
 
 def extract_parameters_from_logfile(logfile_path):
@@ -659,10 +617,7 @@ def extract_parameters_from_logfile(logfile_path):
         logfile_path (string): The path to an InVEST logfile on disk.
 
     Returns:
-        An instance of the ParameterSet namedtuple.  If a model name and InVEST
-        version cannot be parsed from the Arguments section of the logfile,
-        ``ParameterSet.model_name`` and ``ParameterSet.invest_version`` will be
-        set to ``datastack.UNKNOWN``.
+        An instance of the ParameterSet namedtuple.
 
     Raises:
         ValueError - when no arguments could be parsed from the logfile.
@@ -675,16 +630,21 @@ def extract_parameters_from_logfile(logfile_path):
 
             if not args_started:
                 # Line would look something like this:
+                # "Arguments for InVEST carbon 3.4.1rc1:\n"
+                # (new style, using model id)
+                # or
                 # "Arguments for InVEST natcap.invest.carbon 3.4.1rc1:\n"
-                if line.startswith('Arguments'):
-                    try:
-                        modelname, invest_version = line.split(' ')[3:5]
-                        invest_version = invest_version.replace(':', '')
-                    except ValueError:
-                        # Old-style logfiles don't provide the modelename or
-                        # version info.
-                        modelname = UNKNOWN
-                        invest_version = UNKNOWN
+                # (old style, using model pyname)
+                if line.startswith('Arguments for InVEST'):
+                    identifier, invest_version = line.split(' ')[3:5]
+                    if identifier in models.pyname_to_model_id:
+                        # Old style logfiles use the pyname
+                        # These will be for core models only, not plugins
+                        model_id = models.pyname_to_model_id[identifier]
+                    else:
+                        # New style logfiles use the model id
+                        model_id = identifier
+                    invest_version = invest_version.replace(':', '')
                     args_started = True
                     continue
             else:
@@ -730,4 +690,4 @@ def extract_parameters_from_logfile(logfile_path):
             pass
 
         args_dict[args_key] = args_value
-    return ParameterSet(args_dict, modelname, invest_version)
+    return ParameterSet(args_dict, model_id, invest_version)

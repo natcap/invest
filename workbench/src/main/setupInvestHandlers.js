@@ -1,6 +1,5 @@
 import path from 'path';
 import fs from 'fs';
-import http from 'http';
 import os from 'os';
 import { spawn, exec } from 'child_process';
 
@@ -35,8 +34,8 @@ const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 export function setupLaunchPluginServerHandler() {
   ipcMain.handle(
     ipcMainChannels.LAUNCH_PLUGIN_SERVER,
-    async (event, pluginName) => {
-      const pid = await createPluginServerProcess(pluginName);
+    async (event, pluginID) => {
+      const pid = await createPluginServerProcess(pluginID);
       return pid;
     }
   );
@@ -58,7 +57,7 @@ export function setupInvestRunHandlers() {
   });
 
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
-    event, modelRunName, pyModuleName, args, tabID
+    event, modelID, args, tabID
   ) => {
     let investStarted = false;
     const investStdErr = '';
@@ -78,7 +77,7 @@ export function setupInvestRunHandlers() {
     const datastackPath = path.join(tempDatastackDir, 'datastack.json');
     const payload = {
       filepath: datastackPath,
-      moduleName: pyModuleName,
+      model_id: modelID,
       relativePaths: false,
       args: JSON.stringify({
         ...args,
@@ -90,20 +89,20 @@ export function setupInvestRunHandlers() {
     let cmdArgs;
     let port;
     const plugins = settingsStore.get('plugins');
-    if (plugins && Object.keys(plugins).includes(modelRunName)) {
+    if (plugins && Object.keys(plugins).includes(modelID)) {
       cmd = settingsStore.get('micromamba');
       cmdArgs = [
         'run',
-        `--prefix "${settingsStore.get(`plugins.${modelRunName}.env`)}"`,
+        `--prefix "${settingsStore.get(`plugins.${modelID}.env`)}"`,
         'invest',
         LOGLEVELMAP[loggingLevel],
         TGLOGLEVELMAP[taskgraphLoggingLevel],
         `--language "${language}"`,
         'run',
-        modelRunName,
+        modelID,
         `-d "${datastackPath}"`,
       ];
-      port = settingsStore.get(`plugins.${modelRunName}.port`);
+      port = settingsStore.get(`plugins.${modelID}.port`);
     } else {
       cmd = settingsStore.get('investExe');
       cmdArgs = [
@@ -111,7 +110,7 @@ export function setupInvestRunHandlers() {
         TGLOGLEVELMAP[taskgraphLoggingLevel],
         `--language "${language}"`,
         'run',
-        modelRunName,
+        modelID,
         `-d "${datastackPath}"`];
       port = settingsStore.get('core.port');
     }
@@ -143,7 +142,7 @@ export function setupInvestRunHandlers() {
           );
           event.reply(`invest-logging-${tabID}`, path.resolve(investLogfile));
           if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
-            usageLogger.start(pyModuleName, args, port);
+            usageLogger.start(modelID, args, port);
           }
         }
       }
@@ -151,7 +150,7 @@ export function setupInvestRunHandlers() {
       // only be one logger message at a time.
       event.reply(
         `invest-stdout-${tabID}`,
-        [strData, markupMessage(strData, pyModuleName)]
+        [strData, markupMessage(strData)]
       );
     };
     investRun.stdout.on('data', stdOutCallback);

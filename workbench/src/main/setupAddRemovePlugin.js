@@ -114,8 +114,7 @@ export function setupAddPlugin() {
 
         // Access plugin metadata from the pyproject.toml
         const pluginID = pyprojectTOML.tool.natcap.invest.model_id;
-        const pluginName = pyprojectTOML.tool.natcap.invest.model_name;
-        const pluginPyName = pyprojectTOML.tool.natcap.invest.pyname;
+        const pluginTitle = pyprojectTOML.tool.natcap.invest.model_title;
         const condaDeps = pyprojectTOML.tool.natcap.invest.conda_dependencies;
 
         // Create a conda env containing the plugin and its dependencies
@@ -140,8 +139,7 @@ export function setupAddPlugin() {
         settingsStore.set(
           `plugins.${pluginID}`,
           {
-            model_name: pluginName,
-            pyname: pluginPyName,
+            modelTitle: pluginTitle,
             type: 'plugin',
             source: installString,
             env: pluginEnvPrefix,
