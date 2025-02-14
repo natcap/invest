@@ -7,7 +7,6 @@ import logging
 import os
 import pickle
 import time
-import uuid
 
 import numpy
 import pandas
@@ -187,13 +186,13 @@ MODEL_SPEC = {
     "outputs": {
         "carbon_map.tif": {
             "about": (
-                "A map of carbon stock per pixel, with the amount in forest derived from the regression based on "
-                "distance to forest edge, and the amount in non-forest classes according to the biophysical table. "
-                "Note that because the map displays carbon per pixel, coarser resolution maps should have higher "
-                "values for carbon, because the pixel areas are larger."),
+                "A map of carbon stock per hectare, with the amount in forest "
+                "derived from the regression based on distance to forest "
+                "edge, and the amount in non-forest classes according to the "
+                "biophysical table. "),
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "aggregated_carbon_stocks.shp": {
@@ -205,7 +204,7 @@ MODEL_SPEC = {
                     "units": u.metric_ton,
                     "about": "Total carbon in the area."
                 },
-                "c_ha_mean":{
+                "c_ha_mean": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "about": "Mean carbon density in the area."
@@ -580,17 +579,24 @@ def _aggregate_carbon_map(
     target_aggregate_layer.ResetReading()
     target_aggregate_layer.StartTransaction()
 
+    # Since pixel values are Mg/ha, raster sum is (Mg•px)/ha.
+    # To convert to Mg, multiply by ha/px.
+    raster_info = pygeoprocessing.get_raster_info(carbon_map_path)
+    pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+    ha_per_px = pixel_area / 10000
+
     for poly_feat in target_aggregate_layer:
         poly_fid = poly_feat.GetFID()
         poly_feat.SetField(
-            'c_sum', float(serviceshed_stats[poly_fid]['sum']))
+            'c_sum', float(serviceshed_stats[poly_fid]['sum'] * ha_per_px))
         # calculates mean pixel value per ha in for each feature in AOI
         poly_geom = poly_feat.GetGeometryRef()
         poly_area_ha = poly_geom.GetArea() / 1e4  # converts m^2 to hectare
         poly_geom = None
         poly_feat.SetField(
             'c_ha_mean',
-            float(serviceshed_stats[poly_fid]['sum'] / poly_area_ha))
+            float(serviceshed_stats[poly_fid]['sum'] / poly_area_ha
+                  * ha_per_px))
 
         target_aggregate_layer.SetFeature(poly_feat)
     target_aggregate_layer.CommitTransaction()
@@ -629,9 +635,6 @@ def _calculate_lulc_carbon_map(
         biophysical_table_path, **MODEL_SPEC['args']['biophysical_table_path'])
 
     lucode_to_per_cell_carbon = {}
-    cell_size = pygeoprocessing.get_raster_info(
-        lulc_raster_path)['pixel_size']  # in meters
-    cell_area_ha = abs(cell_size[0]) * abs(cell_size[1]) / 10000
 
     # Build a lookup table
     for lucode, row in biophysical_df.iterrows():
@@ -648,8 +651,7 @@ def _calculate_lulc_carbon_map(
                     "Could not interpret carbon pool value as a number. "
                     f"lucode: {lucode}, pool_type: {carbon_pool_type}, "
                     f"value: {row[carbon_pool_type]}")
-            lucode_to_per_cell_carbon[lucode] = row[carbon_pool_type] * cell_area_ha
-
+            lucode_to_per_cell_carbon[lucode] = row[carbon_pool_type]
 
     # map aboveground carbon from table to lulc that is not forest
     reclass_error_details = {
@@ -873,7 +875,6 @@ def _calculate_tropical_forest_edge_carbon_map(
     cell_xsize, cell_ysize = pygeoprocessing.get_raster_info(
         edge_distance_path)['pixel_size']
     cell_size_km = (abs(cell_xsize) + abs(cell_ysize))/2 / 1000
-    cell_area_ha = (abs(cell_xsize) * abs(cell_ysize)) / 10000
 
     # Loop memory block by memory block, calculating the forest edge carbon
     # for every forest pixel.
@@ -957,19 +958,19 @@ def _calculate_tropical_forest_edge_carbon_map(
         biomass[mask_1] = (
             thetas[mask_1][:, 0] - thetas[mask_1][:, 1] * numpy.exp(
                 -thetas[mask_1][:, 2] * valid_edge_distances_km[mask_1])
-        ) * cell_area_ha
+        )
 
         # logarithmic model
         # biomass_2 = t1 + t2 * numpy.log(edge_dist_km)
         biomass[mask_2] = (
             thetas[mask_2][:, 0] + thetas[mask_2][:, 1] * numpy.log(
-                valid_edge_distances_km[mask_2])) * cell_area_ha
+                valid_edge_distances_km[mask_2]))
 
         # linear regression
         # biomass_3 = t1 + t2 * edge_dist_km
         biomass[mask_3] = (
             thetas[mask_3][:, 0] + thetas[mask_3][:, 1] *
-            valid_edge_distances_km[mask_3]) * cell_area_ha
+            valid_edge_distances_km[mask_3])
 
         # reshape the array so that each set of points is in a separate
         # dimension, here distances are distances to each valid model

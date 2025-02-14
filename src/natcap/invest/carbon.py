@@ -4,7 +4,6 @@ import codecs
 import logging
 import os
 import time
-from functools import reduce
 
 from osgeo import gdal
 import numpy
@@ -27,7 +26,7 @@ CARBON_OUTPUTS = {
             "scenario, mapped from the Carbon Pools table to the LULC."),
         "bands": {1: {
             "type": "number",
-            "units": u.metric_ton/u.pixel
+            "units": u.metric_ton/u.hectare
         }}
     } for pool, pool_name in [
         ('above', 'aboveground'),
@@ -154,7 +153,7 @@ MODEL_SPEC = {
             "about": gettext(
                 "The calendar year of the future scenario depicted in the "
                 "future LULC map. Required if Run Valuation model is selected."),
-            "name": f"future LULC year"
+            "name": gettext("future LULC year")
         },
         "do_valuation": {
             "type": "boolean",
@@ -201,14 +200,14 @@ MODEL_SPEC = {
             "about": "Raster showing the amount of carbon stored in each pixel for the current scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "tot_c_fut.tif": {
             "about": "Raster showing the amount of carbon stored in each pixel for the future scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }},
             "created_if": "lulc_fut_path"
         },
@@ -216,7 +215,7 @@ MODEL_SPEC = {
             "about": "Raster showing the amount of carbon stored in each pixel for the REDD scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }},
             "created_if": "lulc_redd_path"
         },
@@ -224,7 +223,7 @@ MODEL_SPEC = {
             "about": "Raster showing the difference in carbon stored between the future landscape and the current landscape. In this map some values may be negative and some positive. Positive values indicate sequestered carbon, negative values indicate carbon that was lost.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }},
             "created_if": "lulc_fut_path"
         },
@@ -232,7 +231,7 @@ MODEL_SPEC = {
             "about": "Raster showing the difference in carbon stored between the REDD landscape and the current landscape. In this map some values may be negative and some positive. Positive values indicate sequestered carbon, negative values indicate carbon that was lost.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }},
             "created_if": "lulc_redd_path"
         },
@@ -240,7 +239,7 @@ MODEL_SPEC = {
             "about": "Rasters showing the economic value of carbon sequestered between the current and the future landscape dates.",
             "bands": {1: {
                 "type": "number",
-                "units": u.currency/u.pixel
+                "units": u.currency/u.hectare
             }},
             "created_if": "lulc_fut_path"
         },
@@ -248,7 +247,7 @@ MODEL_SPEC = {
             "about": "Rasters showing the economic value of carbon sequestered between the current and the REDD landscape dates.",
             "bands": {1: {
                 "type": "number",
-                "units": u.currency/u.pixel
+                "units": u.currency/u.hectare
             }},
             "created_if": "lulc_redd_path"
         },
@@ -296,6 +295,7 @@ _TMP_BASE_FILES = {
 
 # -1.0 since carbon stocks are 0 or greater
 _CARBON_NODATA = -1.0
+
 
 def execute(args):
     """Carbon.
@@ -541,17 +541,15 @@ def _generate_carbon_map(
     Args:
         lulc_path (string): landcover raster with integer pixels.
         out_carbon_stock_path (string): path to output raster that will have
-            pixels with carbon storage values in them with units of Mg*C
+            pixels with carbon storage values in them with units of Mg/ha.
         carbon_pool_by_type (dict): a dictionary that maps landcover values
             to carbon storage densities per area (Mg C/Ha).
 
     Returns:
         None.
     """
-    lulc_info = pygeoprocessing.get_raster_info(lulc_path)
-    pixel_area = abs(numpy.prod(lulc_info['pixel_size']))
     carbon_stock_by_type = dict([
-        (lulcid, stock * pixel_area / 10**4)
+        (lulcid, stock)
         for lulcid, stock in carbon_pool_by_type.items()])
 
     reclass_error_details = {
@@ -704,14 +702,17 @@ def _generate_report(raster_file_set, model_args, file_registry):
             '<table><thead><tr><th>Description</th><th>Value</th><th>Units'
             '</th><th>Raw File</th></tr></thead><tbody>')
 
+        carbon_units = 'metric tons'
+
         # value lists are [sort priority, description, statistic, units]
         report = [
-            (file_registry['tot_c_cur'], 'Total cur', 'Mg of C'),
-            (file_registry['tot_c_fut'], 'Total fut', 'Mg of C'),
-            (file_registry['tot_c_redd'], 'Total redd', 'Mg of C'),
-            (file_registry['delta_cur_fut'], 'Change in C for fut', 'Mg of C'),
+            (file_registry['tot_c_cur'], 'Total cur', carbon_units),
+            (file_registry['tot_c_fut'], 'Total fut', carbon_units),
+            (file_registry['tot_c_redd'], 'Total redd', carbon_units),
+            (file_registry['delta_cur_fut'], 'Change in C for fut',
+             carbon_units),
             (file_registry['delta_cur_redd'],
-             'Change in C for redd', 'Mg of C'),
+             'Change in C for redd', carbon_units),
             (file_registry['npv_fut'],
              'Net present value from cur to fut', 'currency units'),
             (file_registry['npv_redd'],
@@ -720,11 +721,17 @@ def _generate_report(raster_file_set, model_args, file_registry):
 
         for raster_uri, description, units in report:
             if raster_uri in raster_file_set:
-                summary_stat = _accumulate_totals(raster_uri)
+                total = _accumulate_totals(raster_uri)
+                raster_info = pygeoprocessing.get_raster_info(raster_uri)
+                pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+                # Since each pixel value is in Mg/ha, ``total`` is in (Mg/ha * px) = Mg•px/ha.
+                # Adjusted sum = ([total] Mg•px/ha) * ([pixel_area] m^2 / 1 px) * (1 ha / 10000 m^2) = Mg.
+                summary_stat = total * pixel_area / 10000
                 report_doc.write(
-                    '<tr><td>%s</td><td class="number">%.2f</td><td>%s</td>'
-                    '<td>%s</td></tr>' % (
-                        description, summary_stat, units, raster_uri))
+                    '<tr><td>%s</td><td class="number" data-summary-stat="%s">'
+                    '%.2f</td><td>%s</td><td>%s</td></tr>' % (
+                        description, description, summary_stat, units,
+                        raster_uri))
         report_doc.write('</tbody></table></body></html>')
 
 

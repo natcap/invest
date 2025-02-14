@@ -1,4 +1,4 @@
-"""InVEST Crop Production Percentile Model."""
+"""InVEST Crop Production Regression Model."""
 import collections
 import logging
 import os
@@ -218,8 +218,8 @@ MODEL_SPEC = {
                         "about": f"{x} {name} production within the polygon",
                         "type": "number",
                         "units": units
-                    } for nutrient, name, units in NUTRIENTS
-                      for x in ["modeled", "observed"]
+                    } for (nutrient, name, units) in NUTRIENTS
+                    for x in ["modeled", "observed"]
                 }
             }
         },
@@ -251,8 +251,8 @@ MODEL_SPEC = {
                         "about": f"{x} {name} production from the crop",
                         "type": "number",
                         "units": units
-                    } for nutrient, name, units in NUTRIENTS
-                      for x in ["modeled", "observed"]
+                    } for (nutrient, name, units) in NUTRIENTS
+                    for x in ["modeled", "observed"]
                 }
             }
         },
@@ -660,8 +660,7 @@ def execute(args):
                    (regression_parameter_raster_path_lookup['c_n'], 1),
                    (args['landcover_raster_path'], 1),
                    (crop_to_fertilization_rate_df['nitrogen_rate'][crop_name],
-                    'raw'),
-                   (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
+                    'raw'), (crop_lucode, 'raw')],
                   _x_yield_op,
                   nitrogen_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
             target_path_list=[nitrogen_yield_raster_path],
@@ -679,8 +678,7 @@ def execute(args):
                    (regression_parameter_raster_path_lookup['c_p2o5'], 1),
                    (args['landcover_raster_path'], 1),
                    (crop_to_fertilization_rate_df['phosphorus_rate'][crop_name],
-                    'raw'),
-                   (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
+                    'raw'), (crop_lucode, 'raw')],
                   _x_yield_op,
                   phosphorus_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
             target_path_list=[phosphorus_yield_raster_path],
@@ -698,8 +696,7 @@ def execute(args):
                    (regression_parameter_raster_path_lookup['c_k2o'], 1),
                    (args['landcover_raster_path'], 1),
                    (crop_to_fertilization_rate_df['potassium_rate'][crop_name],
-                    'raw'),
-                   (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
+                    'raw'), (crop_lucode, 'raw')],
                   _x_yield_op,
                   potassium_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
             target_path_list=[potassium_yield_raster_path],
@@ -794,7 +791,7 @@ def execute(args):
             args=([(args['landcover_raster_path'], 1),
                    (interpolated_observed_yield_raster_path, 1),
                    (observed_yield_nodata, 'raw'), (landcover_nodata, 'raw'),
-                   (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
+                   (crop_lucode, 'raw')],
                   _mask_observed_yield_op, observed_production_raster_path,
                   gdal.GDT_Float32, observed_yield_nodata),
             target_path_list=[observed_production_raster_path],
@@ -834,10 +831,10 @@ def execute(args):
             func=aggregate_regression_results_to_polygons,
             args=(args['aggregate_polygon_path'],
                   target_aggregate_vector_path,
+                  aggregate_results_table_path,
                   landcover_raster_info['projection_wkt'],
-                  crop_names, nutrient_df,
-                  output_dir, file_suffix,
-                  aggregate_results_table_path),
+                  crop_names, nutrient_df, pixel_area_ha,
+                  output_dir, file_suffix),
             target_path_list=[target_aggregate_vector_path,
                               aggregate_results_table_path],
             dependent_task_list=dependent_task_list,
@@ -848,12 +845,12 @@ def execute(args):
 
 
 def _x_yield_op(
-        y_max, b_x, c_x, lulc_array, fert_rate, crop_lucode, pixel_area_ha):
+        y_max, b_x, c_x, lulc_array, fert_rate, crop_lucode):
     """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC)).
 
     The regression model has identical mathematical equations for
-    the nitrogen, phosphorus, and potassium.  The only difference is
-    the scalars in the equation (fertilization rate and pixel area).
+    the nitrogen, phosphorus, and potassium. The only difference is
+    the scalar in the equation (fertilization rate).
     """
     result = numpy.empty(b_x.shape, dtype=numpy.float32)
     result[:] = _NODATA_YIELD
@@ -862,7 +859,7 @@ def _x_yield_op(
         ~pygeoprocessing.array_equals_nodata(b_x, _NODATA_YIELD) &
         ~pygeoprocessing.array_equals_nodata(c_x, _NODATA_YIELD) &
         (lulc_array == crop_lucode))
-    result[valid_mask] = pixel_area_ha * y_max[valid_mask] * (
+    result[valid_mask] = y_max[valid_mask] * (
         1 - b_x[valid_mask] * numpy.exp(
             -c_x[valid_mask] * fert_rate))
 
@@ -897,7 +894,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
 
 def _mask_observed_yield_op(
         lulc_array, observed_yield_array, observed_yield_nodata,
-        landcover_nodata, crop_lucode, pixel_area_ha):
+        landcover_nodata, crop_lucode):
     """Mask total observed yield to crop lulc type.
 
     Args:
@@ -906,7 +903,6 @@ def _mask_observed_yield_op(
         observed_yield_nodata (float): yield raster nodata value
         landcover_nodata (float): landcover raster nodata value
         crop_lucode (int): code used to mask in the current crop
-        pixel_area_ha (float): area of lulc raster cells (hectares)
 
     Returns:
         numpy.ndarray with float values of yields masked to crop_lucode
@@ -915,13 +911,13 @@ def _mask_observed_yield_op(
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
-        valid_mask = ~pygeoprocessing.array_equals_nodata(lulc_array, landcover_nodata)
+        valid_mask = ~pygeoprocessing.array_equals_nodata(
+            lulc_array, landcover_nodata)
         result[valid_mask] = 0
     else:
         result[:] = 0
     lulc_mask = lulc_array == crop_lucode
-    result[lulc_mask] = (
-        observed_yield_array[lulc_mask] * pixel_area_ha)
+    result[lulc_mask] = observed_yield_array[lulc_mask]
     return result
 
 
@@ -952,6 +948,11 @@ def tabulate_regression_results(
         nutrient_id + '_' + mode
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
         for mode in ['modeled', 'observed']]
+
+    # Since pixel values in observed and percentile rasters are Mg/(ha•yr),
+    # raster sums are (Mg•px)/(ha•yr). Before recording sums in
+    # production_lookup dictionary, convert to Mg/yr by multiplying by ha/px.
+
     with open(target_table_path, 'w') as result_table:
         result_table.write(
             'crop,area (ha),' + 'production_observed,production_modeled,' +
@@ -982,6 +983,7 @@ def tabulate_regression_results(
                 production_pixel_count += numpy.count_nonzero(
                     valid_mask & (yield_block > 0.0))
                 yield_sum += numpy.sum(yield_block[valid_mask])
+            yield_sum *= pixel_area_ha
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
             result_table.write(',%f' % production_area)
@@ -997,6 +999,7 @@ def tabulate_regression_results(
                     # _NODATA_YIELD will always have a value (defined above)
                     yield_block[~pygeoprocessing.array_equals_nodata(
                         yield_block, _NODATA_YIELD)])
+            yield_sum *= pixel_area_ha
             production_lookup['modeled'] = yield_sum
             result_table.write(",%f" % yield_sum)
 
@@ -1031,9 +1034,8 @@ def tabulate_regression_results(
 
 def aggregate_regression_results_to_polygons(
         base_aggregate_vector_path, target_aggregate_vector_path,
-        landcover_raster_projection, crop_names,
-        nutrient_df, output_dir, file_suffix,
-        target_aggregate_table_path):
+        aggregate_results_table_path, landcover_raster_projection,
+        crop_names, nutrient_df, pixel_area_ha, output_dir, file_suffix):
     """Write table with aggregate results of yield and nutrient values.
 
     Use zonal statistics to summarize total observed and interpolated
@@ -1042,15 +1044,16 @@ def aggregate_regression_results_to_polygons(
 
     Args:
         base_aggregate_vector_path (string): path to polygon vector
-        target_aggregate_vector_path (string):
-            path to re-projected copy of polygon vector
+        target_aggregate_vector_path (string): path to re-projected copy of
+            polygon vector
+        aggregate_results_table_path (string): path to CSV file where aggregate
+            results will be reported.
         landcover_raster_projection (string): a WKT projection string
         crop_names (list): list of crop names
         nutrient_df (pandas.DataFrame): a table of nutrient values by crop
+        pixel_area_ha (float): area of lulc raster cells (hectares)
         output_dir (string): the file path to the output workspace.
         file_suffix (string): string to append to any output filenames.
-        target_aggregate_table_path (string): path to 'aggregate_results.csv'
-            in the output workspace
 
     Returns:
         None
@@ -1061,6 +1064,10 @@ def aggregate_regression_results_to_polygons(
         landcover_raster_projection,
         target_aggregate_vector_path,
         driver_name='ESRI Shapefile')
+
+    # Since pixel values are Mg/(ha•yr), zonal stats sum is (Mg•px)/(ha•yr).
+    # Before writing sum to results tables or when using sum to calculate
+    # nutrient yields, convert to Mg/yr by multiplying by ha/px.
 
     # loop over every crop and query with pgp function
     total_yield_lookup = {}
@@ -1085,10 +1092,11 @@ def aggregate_regression_results_to_polygons(
             for fid_index in total_yield_lookup['%s_modeled' % crop_name]:
                 total_nutrient_table[nutrient_id][
                     'modeled'][fid_index] += (
-                        nutrient_factor *
-                        total_yield_lookup['%s_modeled' % crop_name][
-                            fid_index]['sum'] *
-                        nutrient_df[nutrient_id][crop_name])
+                        nutrient_factor
+                        * total_yield_lookup['%s_modeled' % crop_name][
+                            fid_index]['sum']
+                        * pixel_area_ha
+                        * nutrient_df[nutrient_id][crop_name])
 
         # process observed
         observed_yield_path = os.path.join(
@@ -1103,15 +1111,14 @@ def aggregate_regression_results_to_polygons(
                     '%s_observed' % crop_name]:
                 total_nutrient_table[
                     nutrient_id]['observed'][fid_index] += (
-                        nutrient_factor * # percent crop used * 1000 [100g per Mg]
-                        total_yield_lookup[
-                            '%s_observed' % crop_name][fid_index]['sum'] *
-                        nutrient_df[nutrient_id][crop_name])  # nutrient unit per 100g crop
+                        nutrient_factor  # percent crop used * 1000 [100g per Mg]
+                        * total_yield_lookup[
+                            '%s_observed' % crop_name][fid_index]['sum']
+                        * pixel_area_ha
+                        * nutrient_df[nutrient_id][crop_name])  # nutrient unit per 100g crop
 
     # report everything to a table
-    aggregate_table_path = os.path.join(
-        output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
-    with open(aggregate_table_path, 'w') as aggregate_table:
+    with open(aggregate_results_table_path, 'w') as aggregate_table:
         # write header
         aggregate_table.write('FID,')
         aggregate_table.write(','.join(sorted(total_yield_lookup)) + ',')
@@ -1127,7 +1134,8 @@ def aggregate_regression_results_to_polygons(
         for id_index in list(total_yield_lookup.values())[0]:
             aggregate_table.write('%s,' % id_index)
             aggregate_table.write(','.join([
-                str(total_yield_lookup[yield_header][id_index]['sum'])
+                str(total_yield_lookup[yield_header][id_index]['sum']
+                    * pixel_area_ha)
                 for yield_header in sorted(total_yield_lookup)]))
 
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:

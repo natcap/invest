@@ -22,6 +22,20 @@ TEST_DATA_PATH = os.path.join(
     'crop_production_model')
 
 
+def _get_pixels_per_hectare(raster_path):
+    """Calculate number of pixels per hectare for a given raster.
+
+    Args:
+        raster_path (str): full path to the raster.
+
+    Returns:
+        A float representing the number of pixels per hectare.
+    """
+    raster_info = pygeoprocessing.get_raster_info(raster_path)
+    pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+    return 10000 / pixel_area
+
+
 def make_aggregate_vector(path_to_shp):
     """
     Generate shapefile with two overlapping polygons
@@ -176,6 +190,41 @@ class CropProductionTests(unittest.TestCase):
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
 
+        # Check raster outputs to make sure values are in Mg/ha.
+        # Raster sum is (Mg•px)/(ha•yr).
+        # Result table reports totals in Mg/yr.
+        # To convert from Mg/yr to (Mg•px)/(ha•yr), multiply by px/ha.
+        expected_raster_sums = {}
+        for (index, crop) in [(0, 'barley'), (1, 'soybean'), (2, 'wheat')]:
+            filename = crop + '_observed_production.tif'
+            pixels_per_hectare = _get_pixels_per_hectare(
+                os.path.join(args['workspace_dir'], filename))
+            expected_raster_sums[filename] = (
+                expected_result_table.loc[index]['production_observed']
+                * pixels_per_hectare)
+            for percentile in ['25', '50', '75', '95']:
+                filename = (
+                    crop + '_yield_' + percentile + 'th_production.tif')
+                col_name = 'production_' + percentile + 'th'
+                pixels_per_hectare = _get_pixels_per_hectare(
+                    os.path.join(args['workspace_dir'], filename))
+                expected_raster_sums[filename] = (
+                    expected_result_table.loc[index][col_name]
+                    * pixels_per_hectare)
+
+        for filename in expected_raster_sums:
+            raster_path = os.path.join(args['workspace_dir'], filename)
+            raster_info = pygeoprocessing.get_raster_info(raster_path)
+            nodata = raster_info['nodata'][0]
+            raster_sum = 0.0
+            for _, block in pygeoprocessing.iterblocks((raster_path, 1)):
+                raster_sum += numpy.sum(
+                    block[~pygeoprocessing.array_equals_nodata(
+                            block, nodata)], dtype=numpy.float32)
+            expected_sum = expected_raster_sums[filename]
+            numpy.testing.assert_allclose(raster_sum, expected_sum,
+                                          rtol=0, atol=0.1)
+
     def test_crop_production_percentile_no_nodata(self):
         """Crop Production: test percentile model with undefined nodata raster.
 
@@ -324,9 +373,6 @@ class CropProductionTests(unittest.TestCase):
             'model_data_path': MODEL_DATA_PATH,
             'fertilization_rate_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'crop_fertilization_rates.csv'),
-            'nitrogen_fertilization_rate': 29.6,
-            'phosphorus_fertilization_rate': 8.4,
-            'potassium_fertilization_rate': 14.2,
             'n_workers': '-1'
         }
 
@@ -355,9 +401,6 @@ class CropProductionTests(unittest.TestCase):
             'model_data_path': MODEL_DATA_PATH,
             'fertilization_rate_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'crop_fertilization_rates.csv'),
-            'nitrogen_fertilization_rate': 29.6,
-            'phosphorus_fertilization_rate': 8.4,
-            'potassium_fertilization_rate': 14.2,
             'n_workers': '-1'
         }
 
@@ -409,15 +452,13 @@ class CropProductionTests(unittest.TestCase):
             'model_data_path': MODEL_DATA_PATH,
             'fertilization_rate_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'crop_fertilization_rates.csv'),
-            'nitrogen_fertilization_rate': 29.6,
-            'phosphorus_fertilization_rate': 8.4,
-            'potassium_fertilization_rate': 14.2,
         }
 
         crop_production_regression.execute(args)
 
         expected_agg_result_table = pandas.read_csv(
-            os.path.join(TEST_DATA_PATH, 'expected_regression_aggregate_results.csv'))
+            os.path.join(TEST_DATA_PATH,
+                         'expected_regression_aggregate_results.csv'))
         agg_result_table = pandas.read_csv(
             os.path.join(args['workspace_dir'], 'aggregate_results.csv'))
         pandas.testing.assert_frame_equal(
@@ -434,6 +475,38 @@ class CropProductionTests(unittest.TestCase):
             result_table_path)
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
+
+        # Check raster outputs to make sure values are in Mg/ha.
+        # Raster sum is (Mg•px)/(ha•yr).
+        # Result table reports totals in Mg/yr.
+        # To convert from Mg/yr to (Mg•px)/(ha•yr), multiply by px/ha.
+        expected_raster_sums = {}
+        for (index, crop) in [(0, 'barley'), (1, 'soybean'), (2, 'wheat')]:
+            filename = crop + '_observed_production.tif'
+            pixels_per_hectare = _get_pixels_per_hectare(
+                os.path.join(args['workspace_dir'], filename))
+            expected_raster_sums[filename] = (
+                expected_result_table.loc[index]['production_observed']
+                * pixels_per_hectare)
+            filename = crop + '_regression_production.tif'
+            pixels_per_hectare = _get_pixels_per_hectare(
+                os.path.join(args['workspace_dir'], filename))
+            expected_raster_sums[filename] = (
+                expected_result_table.loc[index]['production_modeled']
+                * pixels_per_hectare)
+
+        for filename in expected_raster_sums:
+            raster_path = os.path.join(args['workspace_dir'], filename)
+            raster_info = pygeoprocessing.get_raster_info(raster_path)
+            nodata = raster_info['nodata'][0]
+            raster_sum = 0.0
+            for _, block in pygeoprocessing.iterblocks((raster_path, 1)):
+                raster_sum += numpy.sum(
+                    block[~pygeoprocessing.array_equals_nodata(
+                            block, nodata)], dtype=numpy.float32)
+            expected_sum = expected_raster_sums[filename]
+            numpy.testing.assert_allclose(raster_sum, expected_sum,
+                                          rtol=0, atol=0.001)
 
     def test_crop_production_regression_no_nodata(self):
         """Crop Production: test regression model with undefined nodata raster.
@@ -453,9 +526,6 @@ class CropProductionTests(unittest.TestCase):
             'model_data_path': MODEL_DATA_PATH,
             'fertilization_rate_table_path': os.path.join(
                 SAMPLE_DATA_PATH, 'crop_fertilization_rates.csv'),
-            'nitrogen_fertilization_rate': 29.6,
-            'phosphorus_fertilization_rate': 8.4,
-            'potassium_fertilization_rate': 14.2,
         }
 
         # Create a raster based on the test data geotransform, but smaller and
@@ -504,12 +574,11 @@ class CropProductionTests(unittest.TestCase):
         lulc_array = numpy.array([[3, 3, 2], [3, -1, 3]])
         fert_rate = 0.6
         crop_lucode = 3
-        pixel_area_ha = 10
 
         actual_result = _x_yield_op(y_max, b_x, c_x, lulc_array, fert_rate,
-                                    crop_lucode, pixel_area_ha)
-        expected_result = numpy.array([[-1, -19.393047, -1],
-                                       [26.776089, -1, 15.1231]])
+                                    crop_lucode)
+        expected_result = numpy.array([[-1, -1.9393047, -1],
+                                       [2.6776089, -1, 1.51231]])
 
         numpy.testing.assert_allclose(actual_result, expected_result)
 
@@ -544,13 +613,12 @@ class CropProductionTests(unittest.TestCase):
 
         landcover_nodata = -9999
         crop_lucode = 3
-        pixel_area_ha = 10
 
         actual_result = _mask_observed_yield_op(
             lulc_array, observed_yield_array, observed_yield_nodata,
-            landcover_nodata, crop_lucode, pixel_area_ha)
+            landcover_nodata, crop_lucode)
 
-        expected_result = numpy.array([[-10, 0, -1], [80, -99990, 0]])
+        expected_result = numpy.array([[-1, 0, -1], [8, -9999, 0]])
 
         numpy.testing.assert_allclose(actual_result, expected_result)
 
@@ -563,75 +631,75 @@ class CropProductionTests(unittest.TestCase):
             """Creates the expected results DataFrame."""
             return pandas.DataFrame([
                 {'crop': 'corn', 'area (ha)': 20.0,
-                'production_observed': 8.0, 'production_modeled': 4.0,
-                'protein_modeled': 1562400.0, 'protein_observed': 3124800.0,
-                'lipid_modeled': 297600.0, 'lipid_observed': 595200.0,
-                'energy_modeled': 17707200.0, 'energy_observed': 35414400.0,
-                'ca_modeled': 1004400.0, 'ca_observed': 2008800.0,
-                'fe_modeled': 584040.0, 'fe_observed': 1168080.0,
-                'mg_modeled': 10416000.0, 'mg_observed': 20832000.0,
-                'ph_modeled': 26188800.0, 'ph_observed': 52377600.0,
-                'k_modeled': 64244400.0, 'k_observed': 128488800.0,
-                'na_modeled': 74400.0, 'na_observed': 148800.0,
-                'zn_modeled': 182280.0, 'zn_observed': 364560.0,
-                'cu_modeled': 70680.0, 'cu_observed': 141360.0,
-                'fl_modeled': 297600.0, 'fl_observed': 595200.0,
-                'mn_modeled': 107880.0, 'mn_observed': 215760.0,
-                'se_modeled': 3720.0, 'se_observed': 7440.0,
-                'vita_modeled': 111600.0, 'vita_observed': 223200.0,
-                'betac_modeled': 595200.0, 'betac_observed': 1190400.0,
-                'alphac_modeled': 85560.0, 'alphac_observed': 171120.0,
-                'vite_modeled': 29760.0, 'vite_observed': 59520.0,
-                'crypto_modeled': 59520.0, 'crypto_observed': 119040.0,
-                'lycopene_modeled': 13392.0, 'lycopene_observed': 26784.0,
-                'lutein_modeled': 2343600.0, 'lutein_observed': 4687200.0,
-                'betat_modeled': 18600.0, 'betat_observed': 37200.0,
-                'gammat_modeled': 78120.0, 'gammat_observed': 156240.0,
-                'deltat_modeled': 70680.0, 'deltat_observed': 141360.0,
-                'vitc_modeled': 252960.0, 'vitc_observed': 505920.0,
-                'thiamin_modeled': 14880.0, 'thiamin_observed': 29760.0,
-                'riboflavin_modeled': 66960.0, 'riboflavin_observed': 133920.0,
-                'niacin_modeled': 305040.0, 'niacin_observed': 610080.0,
-                'pantothenic_modeled': 33480.0, 'pantothenic_observed': 66960.0,
-                'vitb6_modeled': 52080.0, 'vitb6_observed': 104160.0,
-                'folate_modeled': 14322000.0, 'folate_observed': 28644000.0,
-                'vitb12_modeled': 74400.0, 'vitb12_observed': 148800.0,
-                'vitk_modeled': 1525200.0, 'vitk_observed': 3050400.0},
+                 'production_observed': 80.0, 'production_modeled': 40.0,
+                 'protein_modeled': 15624000.0, 'protein_observed': 31248000.0,
+                 'lipid_modeled': 2976000.0, 'lipid_observed': 5952000.0,
+                 'energy_modeled': 177072000.0, 'energy_observed': 354144000.0,
+                 'ca_modeled': 10044000.0, 'ca_observed': 20088000.0,
+                 'fe_modeled': 5840400.0, 'fe_observed': 11680800.0,
+                 'mg_modeled': 104160000.0, 'mg_observed': 208320000.0,
+                 'ph_modeled': 261888000.0, 'ph_observed': 523776000.0,
+                 'k_modeled': 642444000.0, 'k_observed': 1284888000.0,
+                 'na_modeled': 744000.0, 'na_observed': 1488000.0,
+                 'zn_modeled': 1822800.0, 'zn_observed': 3645600.0,
+                 'cu_modeled': 706800.0, 'cu_observed': 1413600.0,
+                 'fl_modeled': 2976000.0, 'fl_observed': 5952000.0,
+                 'mn_modeled': 1078800.0, 'mn_observed': 2157600.0,
+                 'se_modeled': 37200.0, 'se_observed': 74400.0,
+                 'vita_modeled': 1116000.0, 'vita_observed': 2232000.0,
+                 'betac_modeled': 5952000.0, 'betac_observed': 11904000.0,
+                 'alphac_modeled': 855600.0, 'alphac_observed': 1711200.0,
+                 'vite_modeled': 297600.0, 'vite_observed': 595200.0,
+                 'crypto_modeled': 595200.0, 'crypto_observed': 1190400.0,
+                 'lycopene_modeled': 133920.0, 'lycopene_observed': 267840.0,
+                 'lutein_modeled': 23436000.0, 'lutein_observed': 46872000.0,
+                 'betat_modeled': 186000.0, 'betat_observed': 372000.0,
+                 'gammat_modeled': 781200.0, 'gammat_observed': 1562400.0,
+                 'deltat_modeled': 706800.0, 'deltat_observed': 1413600.0,
+                 'vitc_modeled': 2529600.0, 'vitc_observed': 5059200.0,
+                 'thiamin_modeled': 148800.0, 'thiamin_observed': 297600.0,
+                 'riboflavin_modeled': 669600.0, 'riboflavin_observed': 1339200.0,
+                 'niacin_modeled': 3050400.0, 'niacin_observed': 6100800.0,
+                 'pantothenic_modeled': 334800.0, 'pantothenic_observed': 669600.0,
+                 'vitb6_modeled': 520800.0, 'vitb6_observed': 1041600.0,
+                 'folate_modeled': 143220000.0, 'folate_observed': 286440000.0,
+                 'vitb12_modeled': 744000.0, 'vitb12_observed': 1488000.0,
+                 'vitk_modeled': 15252000.0, 'vitk_observed': 30504000.0},
                 {'crop': 'soybean', 'area (ha)': 40.0,
-                'production_observed': 12.0, 'production_modeled': 7.0,
-                'protein_modeled': 2102100.0, 'protein_observed': 3603600.0,
-                'lipid_modeled': 127400.0, 'lipid_observed': 218400.0,
-                'energy_modeled': 6306300.0, 'energy_observed': 10810800.0,
-                'ca_modeled': 16370900.0, 'ca_observed': 28064400.0,
-                'fe_modeled': 1000090.0, 'fe_observed': 1714440.0,
-                'mg_modeled': 17836000.0, 'mg_observed': 30576000.0,
-                'ph_modeled': 44844800.0, 'ph_observed': 76876800.0,
-                'k_modeled': 12548900.0, 'k_observed': 21512400.0,
-                'na_modeled': 127400.0, 'na_observed': 218400.0,
-                'zn_modeled': 312130.0, 'zn_observed': 535080.0,
-                'cu_modeled': 101920.0, 'cu_observed': 174720.0,
-                'fl_modeled': 191100.0, 'fl_observed': 327600.0,
-                'mn_modeled': 331240.0, 'mn_observed': 567840.0,
-                'se_modeled': 19110.0, 'se_observed': 32760.0,
-                'vita_modeled': 191100.0, 'vita_observed': 327600.0,
-                'betac_modeled': 1019200.0, 'betac_observed': 1747200.0,
-                'alphac_modeled': 63700.0, 'alphac_observed': 109200.0,
-                'vite_modeled': 50960.0, 'vite_observed': 87360.0,
-                'crypto_modeled': 38220.0, 'crypto_observed': 65520.0,
-                'lycopene_modeled': 19110.0, 'lycopene_observed': 32760.0,
-                'lutein_modeled': 3885700.0, 'lutein_observed': 6661200.0,
-                'betat_modeled': 31850.0, 'betat_observed': 54600.0,
-                'gammat_modeled': 146510.0, 'gammat_observed': 251160.0,
-                'deltat_modeled': 76440.0, 'deltat_observed': 131040.0,
-                'vitc_modeled': 191100.0, 'vitc_observed': 327600.0,
-                'thiamin_modeled': 26754.0, 'thiamin_observed': 45864.0,
-                'riboflavin_modeled': 52234.0, 'riboflavin_observed': 89544.0,
-                'niacin_modeled': 777140.0, 'niacin_observed': 1332240.0,
-                'pantothenic_modeled': 58604.0, 'pantothenic_observed': 100464.0,
-                'vitb6_modeled': 343980.0, 'vitb6_observed': 589680.0,
-                'folate_modeled': 19428500.0, 'folate_observed': 33306000.0,
-                'vitb12_modeled': 191100.0, 'vitb12_observed': 327600.0,
-                'vitk_modeled': 2675400.0, 'vitk_observed': 4586400.0}])
+                 'production_observed': 120.0, 'production_modeled': 70.0,
+                 'protein_modeled': 21021000.0, 'protein_observed': 36036000.0,
+                 'lipid_modeled': 1274000.0, 'lipid_observed': 2184000.0,
+                 'energy_modeled': 63063000.0, 'energy_observed': 108108000.0,
+                 'ca_modeled': 163709000.0, 'ca_observed': 280644000.0,
+                 'fe_modeled': 10000900.0, 'fe_observed': 17144400.0,
+                 'mg_modeled': 178360000.0, 'mg_observed': 305760000.0,
+                 'ph_modeled': 448448000.0, 'ph_observed': 768768000.0,
+                 'k_modeled': 125489000.0, 'k_observed': 215124000.0,
+                 'na_modeled': 1274000.0, 'na_observed': 2184000.0,
+                 'zn_modeled': 3121300.0, 'zn_observed': 5350800.0,
+                 'cu_modeled': 1019200.0, 'cu_observed': 1747200.0,
+                 'fl_modeled': 1911000.0, 'fl_observed': 3276000.0,
+                 'mn_modeled': 3312400.0, 'mn_observed': 5678400.0,
+                 'se_modeled': 191100.0, 'se_observed': 327600.0,
+                 'vita_modeled': 1911000.0, 'vita_observed': 3276000.0,
+                 'betac_modeled': 10192000.0, 'betac_observed': 17472000.0,
+                 'alphac_modeled': 637000.0, 'alphac_observed': 1092000.0,
+                 'vite_modeled': 509600.0, 'vite_observed': 873600.0,
+                 'crypto_modeled': 382200.0, 'crypto_observed': 655200.0,
+                 'lycopene_modeled': 191100.0, 'lycopene_observed': 327600.0,
+                 'lutein_modeled': 38857000.0, 'lutein_observed': 66612000.0,
+                 'betat_modeled': 318500.0, 'betat_observed': 546000.0,
+                 'gammat_modeled': 1465100.0, 'gammat_observed': 2511600.0,
+                 'deltat_modeled': 764400.0, 'deltat_observed': 1310400.0,
+                 'vitc_modeled': 1911000.0, 'vitc_observed': 3276000.0,
+                 'thiamin_modeled': 267540.0, 'thiamin_observed': 458640.0,
+                 'riboflavin_modeled': 522340.0, 'riboflavin_observed': 895440.0,
+                 'niacin_modeled': 7771400.0, 'niacin_observed': 13322400.0,
+                 'pantothenic_modeled': 586040.0, 'pantothenic_observed': 1004640.0,
+                 'vitb6_modeled': 3439800.0, 'vitb6_observed': 5896800.0,
+                 'folate_modeled': 194285000.0, 'folate_observed': 333060000.0,
+                 'vitb12_modeled': 1911000.0, 'vitb12_observed': 3276000.0,
+                 'vitk_modeled': 26754000.0, 'vitk_observed': 45864000.0}])
 
         nutrient_df = create_nutrient_df()
 
@@ -675,76 +743,76 @@ class CropProductionTests(unittest.TestCase):
             """Create expected output results"""
             # Define the new values manually
             return pandas.DataFrame([
-                {"FID": 0, "corn_modeled": 1, "corn_observed": 4,
-                 "soybean_modeled": 2, "soybean_observed": 5,
-                 "protein_modeled": 991200, "protein_observed": 3063900,
-                 "lipid_modeled": 110800, "lipid_observed": 388600,
-                 "energy_modeled": 6228600, "energy_observed": 22211700,
-                 "ca_modeled": 4928500, "ca_observed": 12697900,
-                 "fe_modeled": 431750, "fe_observed": 1298390,
-                 "mg_modeled": 7700000, "mg_observed": 23156000,
-                 "ph_modeled": 19360000, "ph_observed": 58220800,
-                 "k_modeled": 19646500, "k_observed": 73207900,
-                 "na_modeled": 55000, "na_observed": 165400,
-                 "zn_modeled": 134750, "zn_observed": 405230,
-                 "cu_modeled": 46790, "cu_observed": 143480,
-                 "fl_modeled": 129000, "fl_observed": 434100,
-                 "mn_modeled": 121610, "mn_observed": 344480,
-                 "se_modeled": 6390, "se_observed": 17370,
-                 "vita_modeled": 82500, "vita_observed": 248100,
-                 "betac_modeled": 440000, "betac_observed": 1323200,
-                 "alphac_modeled": 39590, "alphac_observed": 131060,
-                 "vite_modeled": 22000, "vite_observed": 66160,
-                 "crypto_modeled": 25800, "crypto_observed": 86820,
-                 "lycopene_modeled": 8808, "lycopene_observed": 27042,
-                 "lutein_modeled": 1696100, "lutein_observed": 5119100,
-                 "betat_modeled": 13750, "betat_observed": 41350,
-                 "gammat_modeled": 61390, "gammat_observed": 182770,
-                 "deltat_modeled": 39510, "deltat_observed": 125280,
-                 "vitc_modeled": 117840, "vitc_observed": 389460,
-                 "thiamin_modeled": 11364, "thiamin_observed": 33990,
-                 "riboflavin_modeled": 31664, "riboflavin_observed": 104270,
-                 "niacin_modeled": 298300, "niacin_observed": 860140,
-                 "pantothenic_modeled": 25114, "pantothenic_observed": 75340,
-                 "vitb6_modeled": 111300, "vitb6_observed": 297780,
-                 "folate_modeled": 9131500, "folate_observed": 28199500,
-                 "vitb12_modeled": 73200, "vitb12_observed": 210900,
-                 "vitk_modeled": 1145700, "vitk_observed": 3436200},
-                {"FID": 1, "corn_modeled": 4, "corn_observed": 8,
-                 "soybean_modeled": 7, "soybean_observed": 12,
-                 "protein_modeled": 3664500, "protein_observed": 6728400,
-                 "lipid_modeled": 425000, "lipid_observed": 813600,
-                 "energy_modeled": 24013500, "energy_observed": 46225200,
-                 "ca_modeled": 17375300, "ca_observed": 30073200,
-                 "fe_modeled": 1584130, "fe_observed": 2882520,
-                 "mg_modeled": 28252000, "mg_observed": 51408000,
-                 "ph_modeled": 71033600, "ph_observed": 129254400,
-                 "k_modeled": 76793300, "k_observed": 150001200,
-                 "na_modeled": 201800, "na_observed": 367200,
-                 "zn_modeled": 494410, "zn_observed": 899640,
-                 "cu_modeled": 172600, "cu_observed": 316080,
-                 "fl_modeled": 488700, "fl_observed": 922800,
-                 "mn_modeled": 439120, "mn_observed": 783600,
-                 "se_modeled": 22830, "se_observed": 40200,
-                 "vita_modeled": 302700, "vita_observed": 550800,
-                 "betac_modeled": 1614400, "betac_observed": 2937600,
-                 "alphac_modeled": 149260, "alphac_observed": 280320,
-                 "vite_modeled": 80720, "vite_observed": 146880,
-                 "crypto_modeled": 97740, "crypto_observed": 184560,
-                 "lycopene_modeled": 32502, "lycopene_observed": 59544,
-                 "lutein_modeled": 6229300, "lutein_observed": 11348400,
-                 "betat_modeled": 50450, "betat_observed": 91800,
-                 "gammat_modeled": 224630, "gammat_observed": 407400,
-                 "deltat_modeled": 147120, "deltat_observed": 272400,
-                 "vitc_modeled": 444060, "vitc_observed": 833520,
-                 "thiamin_modeled": 41634, "thiamin_observed": 75624,
-                 "riboflavin_modeled": 119194, "riboflavin_observed": 223464,
-                 "niacin_modeled": 1082180, "niacin_observed": 1942320,
-                 "pantothenic_modeled": 92084, "pantothenic_observed": 167424,
-                 "vitb6_modeled": 396060, "vitb6_observed": 693840,
-                 "folate_modeled": 33750500, "folate_observed": 61950000,
-                 "vitb12_modeled": 265500, "vitb12_observed": 476400,
-                 "vitk_modeled": 4200600, "vitk_observed": 7636800}
+                {"FID": 0, "corn_modeled": 10, "corn_observed": 40,
+                 "soybean_modeled": 20, "soybean_observed": 50,
+                 "protein_modeled": 9912000, "protein_observed": 30639000,
+                 "lipid_modeled": 1108000, "lipid_observed": 3886000,
+                 "energy_modeled": 62286000, "energy_observed": 222117000,
+                 "ca_modeled": 49285000, "ca_observed": 126979000,
+                 "fe_modeled": 4317500, "fe_observed": 12983900,
+                 "mg_modeled": 77000000, "mg_observed": 231560000,
+                 "ph_modeled": 193600000, "ph_observed": 582208000,
+                 "k_modeled": 196465000, "k_observed": 732079000,
+                 "na_modeled": 550000, "na_observed": 1654000,
+                 "zn_modeled": 1347500, "zn_observed": 4052300,
+                 "cu_modeled": 467900, "cu_observed": 1434800,
+                 "fl_modeled": 1290000, "fl_observed": 4341000,
+                 "mn_modeled": 1216100, "mn_observed": 3444800,
+                 "se_modeled": 63900, "se_observed": 173700,
+                 "vita_modeled": 825000, "vita_observed": 2481000,
+                 "betac_modeled": 4400000, "betac_observed": 13232000,
+                 "alphac_modeled": 395900, "alphac_observed": 1310600,
+                 "vite_modeled": 220000, "vite_observed": 661600,
+                 "crypto_modeled": 258000, "crypto_observed": 868200,
+                 "lycopene_modeled": 88080, "lycopene_observed": 270420,
+                 "lutein_modeled": 16961000, "lutein_observed": 51191000,
+                 "betat_modeled": 137500, "betat_observed": 413500,
+                 "gammat_modeled": 613900, "gammat_observed": 1827700,
+                 "deltat_modeled": 395100, "deltat_observed": 1252800,
+                 "vitc_modeled": 1178400, "vitc_observed": 3894600,
+                 "thiamin_modeled": 113640, "thiamin_observed": 339900,
+                 "riboflavin_modeled": 316640, "riboflavin_observed": 1042700,
+                 "niacin_modeled": 2983000, "niacin_observed": 8601400,
+                 "pantothenic_modeled": 251140, "pantothenic_observed": 753400,
+                 "vitb6_modeled": 1113000, "vitb6_observed": 2977800,
+                 "folate_modeled": 91315000, "folate_observed": 281995000,
+                 "vitb12_modeled": 732000, "vitb12_observed": 2109000,
+                 "vitk_modeled": 11457000, "vitk_observed": 34362000},
+                {"FID": 1, "corn_modeled": 40, "corn_observed": 80,
+                 "soybean_modeled": 70, "soybean_observed": 120,
+                 "protein_modeled": 36645000, "protein_observed": 67284000,
+                 "lipid_modeled": 4250000, "lipid_observed": 8136000,
+                 "energy_modeled": 240135000, "energy_observed": 462252000,
+                 "ca_modeled": 173753000, "ca_observed": 300732000,
+                 "fe_modeled": 15841300, "fe_observed": 28825200,
+                 "mg_modeled": 282520000, "mg_observed": 514080000,
+                 "ph_modeled": 710336000, "ph_observed": 1292544000,
+                 "k_modeled": 767933000, "k_observed": 1500012000,
+                 "na_modeled": 2018000, "na_observed": 3672000,
+                 "zn_modeled": 4944100, "zn_observed": 8996400,
+                 "cu_modeled": 1726000, "cu_observed": 3160800,
+                 "fl_modeled": 4887000, "fl_observed": 9228000,
+                 "mn_modeled": 4391200, "mn_observed": 7836000,
+                 "se_modeled": 228300, "se_observed": 402000,
+                 "vita_modeled": 3027000, "vita_observed": 5508000,
+                 "betac_modeled": 16144000, "betac_observed": 29376000,
+                 "alphac_modeled": 1492600, "alphac_observed": 2803200,
+                 "vite_modeled": 807200, "vite_observed": 1468800,
+                 "crypto_modeled": 977400, "crypto_observed": 1845600,
+                 "lycopene_modeled": 325020, "lycopene_observed": 595440,
+                 "lutein_modeled": 62293000, "lutein_observed": 113484000,
+                 "betat_modeled": 504500, "betat_observed": 918000,
+                 "gammat_modeled": 2246300, "gammat_observed": 4074000,
+                 "deltat_modeled": 1471200, "deltat_observed": 2724000,
+                 "vitc_modeled": 4440600, "vitc_observed": 8335200,
+                 "thiamin_modeled": 416340, "thiamin_observed": 756240,
+                 "riboflavin_modeled": 1191940, "riboflavin_observed": 2234640,
+                 "niacin_modeled": 10821800, "niacin_observed": 19423200,
+                 "pantothenic_modeled": 920840, "pantothenic_observed": 1674240,
+                 "vitb6_modeled": 3960600, "vitb6_observed": 6938400,
+                 "folate_modeled": 337505000, "folate_observed": 619500000,
+                 "vitb12_modeled": 2655000, "vitb12_observed": 4764000,
+                 "vitk_modeled": 42006000, "vitk_observed": 76368000}
             ], dtype=float)
 
         workspace = self.workspace_dir
@@ -765,31 +833,29 @@ class CropProductionTests(unittest.TestCase):
         output_dir = os.path.join(workspace, "OUTPUT")
         os.makedirs(output_dir, exist_ok=True)
         file_suffix = 'test'
-        target_aggregate_table_path = ''  # unused
+
+        _AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
+            '.', 'aggregate_results%s.csv')
+
+        aggregate_table_path = os.path.join(
+            output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
+
+        pixel_area_ha = 10
 
         _create_crop_rasters(output_dir, crop_names, file_suffix)
 
         aggregate_regression_results_to_polygons(
             base_aggregate_vector_path, target_aggregate_vector_path,
-            landcover_raster_projection, crop_names,
-            nutrient_df, output_dir, file_suffix,
-            target_aggregate_table_path)
-
-        _AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
-            '.','aggregate_results%s.csv')
-
-        aggregate_table_path = os.path.join(
-            output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
+            aggregate_table_path, landcover_raster_projection, crop_names,
+            nutrient_df, pixel_area_ha, output_dir, file_suffix)
 
         actual_aggregate_table = pandas.read_csv(aggregate_table_path,
                                                  dtype=float)
-        print(actual_aggregate_table)
 
         expected_aggregate_table = _create_expected_agg_table()
 
         pandas.testing.assert_frame_equal(
             actual_aggregate_table, expected_aggregate_table)
-
 
 
 class CropValidationTests(unittest.TestCase):

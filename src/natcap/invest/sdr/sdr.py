@@ -147,20 +147,20 @@ MODEL_SPEC = {
             "about": "The contribution of vegetation to keeping soil from eroding from each pixel. (Eq. (82))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "avoided_export.tif": {
             "about": "The contribution of vegetation to keeping erosion from entering a stream. This combines local/on-pixel sediment retention with trapping of erosion from upslope of the pixel. (Eq. (83))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "rkls.tif": {
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }},
             "about": "Total potential soil loss per pixel in the original land cover from the RKLS equation. Equivalent to the soil loss for bare soil. (Eq. (68), without applying the C or P factors)."
         },
@@ -168,14 +168,14 @@ MODEL_SPEC = {
             "about": "The total amount of sediment deposited on the pixel from upslope sources as a result of trapping. (Eq. (80))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "sed_export.tif": {
             "about": "The total amount of sediment exported from each pixel that reaches the stream. (Eq. (76))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "stream.tif": spec_utils.STREAM,
@@ -185,10 +185,10 @@ MODEL_SPEC = {
             "bands": {1: {"type": "integer"}}
         },
         "usle.tif": {
-            "about": "Total potential soil loss per pixel in the original land cover calculated from the USLE equation. (Eq. (68))",
+            "about": "Total potential soil loss per hectare in the original land cover calculated from the USLE equation. (Eq. (68))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "watershed_results_sdr.shp": {
@@ -960,6 +960,7 @@ def _avoided_export_op(avoided_erosion, sdr, sed_deposition):
     # known as a modified USLE)
     return avoided_erosion * sdr + sed_deposition
 
+
 def add_drainage_op(stream, drainage):
     """raster_map equation: add drainage mask to stream layer.
 
@@ -974,8 +975,10 @@ def add_drainage_op(stream, drainage):
     """
     return numpy.where(drainage == 1, 1, stream)
 
+
 # raster_map equation: calculate USLE
 def usle_op(rkls, cp_factor): return rkls * cp_factor
+
 
 # raster_map equation: calculate the inverse ws factor
 def inverse_ws_op(w_factor, s_factor): return 1 / (w_factor * s_factor)
@@ -1185,7 +1188,7 @@ def _calculate_ls_factor(
 def _calculate_rkls(
         ls_factor_path, erosivity_path, erodibility_path, stream_path,
         rkls_path):
-    """Calculate potential soil loss (tons / (pixel * year)) using RKLS.
+    """Calculate potential soil loss (tons / (ha * year)) using RKLS.
 
     (revised universal soil loss equation with no C or P).
 
@@ -1211,10 +1214,6 @@ def _calculate_rkls(
     stream_nodata = pygeoprocessing.get_raster_info(
         stream_path)['nodata'][0]
 
-    cell_size = abs(
-        pygeoprocessing.get_raster_info(ls_factor_path)['pixel_size'][0])
-    cell_area_ha = cell_size**2 / 10000.0  # hectares per pixel
-
     def rkls_function(ls_factor, erosivity, erodibility, stream):
         """Calculate the RKLS equation.
 
@@ -1227,7 +1226,7 @@ def _calculate_rkls(
             stream (numpy.ndarray): stream mask (1 stream, 0 no stream)
 
         Returns:
-            numpy.ndarray of RKLS values in tons / (pixel * year))
+            numpy.ndarray of RKLS values in tons / (ha * year))
         """
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
@@ -1243,11 +1242,10 @@ def _calculate_rkls(
         valid_mask = nodata_mask & (stream == 0)
         rkls[:] = _TARGET_NODATA
 
-        rkls[valid_mask] = (           # rkls units are tons / (pixel * year)
+        rkls[valid_mask] = (           # rkls units are tons / (ha * year)
             ls_factor[valid_mask] *    # unitless
             erosivity[valid_mask] *    # MJ * mm / (ha * hr * yr)
-            erodibility[valid_mask] *  # t * ha * hr / (MJ * ha * mm)
-            cell_area_ha)              # ha / pixel
+            erodibility[valid_mask])   # t * ha * hr / (MJ * ha * mm)
         return rkls
 
     # aligning with index 3 that's the stream and the most likely to be
@@ -1386,18 +1384,6 @@ def _calculate_d_up(
         target_path=out_d_up_path)
 
 
-def _calculate_d_up_bare(
-        s_bar_path, flow_accumulation_path, out_d_up_bare_path):
-    """Calculate s_bar * sqrt(flow accumulation * cell area)."""
-    cell_area = abs(
-        pygeoprocessing.get_raster_info(s_bar_path)['pixel_size'][0])**2
-    pygeoprocessing.raster_map(
-        op=lambda s_bar, flow_accum: (
-            numpy.sqrt(flow_accum * cell_area) * s_bar),
-        rasters=[s_bar_path, flow_accumulation_path],
-        target_path=out_d_up_bare_path)
-
-
 def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
     """Calculate log10(d_up/d_dn)."""
     # ic can be positive or negative, so float.min is a reasonable nodata value
@@ -1521,13 +1507,20 @@ def _generate_report(
         field_def.SetPrecision(11)
         target_layer.CreateField(field_def)
 
+    # Since pixel values are t/(ha•yr), raster sum is (t•px)/(ha•yr).
+    # To convert to t/yr, multiply by ha/px.
+    raster_info = pygeoprocessing.get_raster_info(usle_path)
+    pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+    ha_per_px = pixel_area / 10000
+
     target_layer.ResetReading()
     for feature in target_layer:
         feature_id = feature.GetFID()
         for field_name in field_summaries:
             feature.SetField(
                 field_name,
-                float(field_summaries[field_name][feature_id]['sum']))
+                float(field_summaries[field_name][feature_id]['sum']
+                      * ha_per_px))
         target_layer.SetFeature(feature)
     target_vector = None
     target_layer = None
