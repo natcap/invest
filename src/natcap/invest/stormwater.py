@@ -27,6 +27,7 @@ UINT16_NODATA = 65535
 NONINTEGER_SOILS_RASTER_MESSAGE = 'Soil group raster data type must be integer'
 
 MODEL_SPEC = {
+    "model_id": "stormwater",
     "model_name": MODEL_METADATA["stormwater"].model_title,
     "pyname": MODEL_METADATA["stormwater"].pyname,
     "userguide": MODEL_METADATA["stormwater"].userguide,

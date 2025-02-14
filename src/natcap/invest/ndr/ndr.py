@@ -25,6 +25,7 @@ LOGGER = logging.getLogger(__name__)
 MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
 
 MODEL_SPEC = {
+    "model_id": "ndr",
     "model_name": MODEL_METADATA["ndr"].model_title,
     "pyname": MODEL_METADATA["ndr"].pyname,
     "userguide": MODEL_METADATA["ndr"].userguide,

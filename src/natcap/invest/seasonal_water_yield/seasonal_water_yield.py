@@ -30,6 +30,7 @@ MONTH_ID_TO_LABEL = [
     'nov', 'dec']
 
 MODEL_SPEC = {
+    "model_id": "seasonal_water_yield",
     "model_name": MODEL_METADATA["seasonal_water_yield"].model_title,
     "pyname": MODEL_METADATA["seasonal_water_yield"].pyname,
     "userguide": MODEL_METADATA["seasonal_water_yield"].userguide,

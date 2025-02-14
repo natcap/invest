@@ -48,6 +48,7 @@ _INTERMEDIATE_BASE_FILES = {
 }
 
 MODEL_SPEC = {
+    "model_id": "scenic_quality",
     "model_name": MODEL_METADATA["scenic_quality"].model_title,
     "pyname": MODEL_METADATA["scenic_quality"].pyname,
     "userguide": MODEL_METADATA["scenic_quality"].userguide,
