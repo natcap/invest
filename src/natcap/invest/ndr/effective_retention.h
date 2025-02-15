@@ -94,8 +94,11 @@ void run_effective_retention(
 
             if (time(NULL) - last_log_time > 5) {
                 last_log_time = time(NULL);
-                log_msg(LogLevel::info, std::format("Effective retention {:.1f} complete",
-                    100 * n_pixels_processed / total_n_pixels)
+                log_msg(
+                    LogLevel::info,
+                    "Effective retention " + std::to_string(
+                        100 * n_pixels_processed / total_n_pixels
+                    ) + " complete"
                 );
             }
 

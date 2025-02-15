@@ -140,8 +140,11 @@ void run_calculate_local_recharge(
 
             if (time(NULL) - last_log_time > 5) {
                 last_log_time = time(NULL);
-                log_msg(LogLevel::info, std::format("Local recharge {:.1f} complete",
-                    100 * n_pixels_processed / total_n_pixels)
+                log_msg(
+                    LogLevel::info,
+                    "Local recharge " + std::to_string(
+                        100 * n_pixels_processed / total_n_pixels
+                    ) + " complete"
                 );
             }
 
@@ -380,8 +383,11 @@ void run_route_baseflow_sum(
 
                         if (time(NULL) - last_log_time > 5) {
                             last_log_time = time(NULL);
-                            log_msg(LogLevel::info, std::format("Baseflow {:.1f} complete",
-                                100 * current_pixel / total_n_pixels)
+                            log_msg(
+                                LogLevel::info,
+                                "Baseflow " + std::to_string(
+                                    100 * current_pixel / total_n_pixels
+                                ) + " complete"
                             );
                         }
 

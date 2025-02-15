@@ -106,8 +106,11 @@ void run_sediment_deposition(
 
             if (time(NULL) - last_log_time > 5) {
                 last_log_time = time(NULL);
-                log_msg(LogLevel::info, std::format("Sediment deposition {:.1f} complete",
-                    100 * n_pixels_processed / total_n_pixels)
+                log_msg(
+                    LogLevel::info,
+                    "Sediment deposition "  + std::to_string(
+                        100 * n_pixels_processed / total_n_pixels
+                    ) + " complete"
                 );
             }
 
