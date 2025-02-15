@@ -5,4 +5,4 @@ cdef extern from "effective_retention.h":
         char*,
         char*,
         char*,
-        char*)
+        char*) except +

@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <stack>
 #include <queue>
+#include <ctime>
 
 #include "ManagedRaster.h"
 
@@ -63,13 +64,13 @@ void run_calculate_local_recharge(
     UpslopeNeighborsNoDivide<T> up_neighbors;
     DownslopeNeighbors<T> dn_neighbors;
 
-    // # used for time-delayed logging
-    // cdef time_t last_log_time
-    // last_log_time = ctime(NULL)
-
     ManagedFlowDirRaster<T> flow_dir_raster = ManagedFlowDirRaster<T>(
         flow_dir_path, 1, 0);
     NeighborTuple neighbor;
+
+    time_t last_log_time = time(NULL);
+    unsigned long n_pixels_processed = 0;
+    float total_n_pixels = flow_dir_raster.raster_x_size * flow_dir_raster.raster_y_size;
 
     // make sure that user input nodata values are defined
     // set to -1 if not defined
@@ -137,10 +138,12 @@ void run_calculate_local_recharge(
                 win_xsize = flow_dir_raster.block_xsize;
             }
 
-            // if ctime(NULL) - last_log_time > 5.0:
-            //     last_log_time = ctime(NULL)
-            //     LOGGER.info('Sediment deposition %.2f%% complete', 100 * (
-            //         n_pixels_processed / float(flow_dir_raster.raster_x_size * flow_dir_raster.raster_y_size)))
+            if (time(NULL) - last_log_time > 5) {
+                last_log_time = time(NULL);
+                log_msg(LogLevel::info, std::format("Local recharge {:.1f} complete",
+                    100 * n_pixels_processed / total_n_pixels)
+                );
+            }
 
             for (int row_index = 0; row_index < win_ysize; row_index++) {
                 ys_root = yoff + row_index;
@@ -253,9 +256,9 @@ void run_calculate_local_recharge(
                     }
                 }
             }
+            n_pixels_processed += win_xsize * win_ysize;
         }
     }
-
     flow_dir_raster.close();
     target_li_raster.close();
     target_li_avail_raster.close();
@@ -268,6 +271,7 @@ void run_calculate_local_recharge(
         qf_m_rasters[i].close();
         kc_m_rasters[i].close();
     }
+    log_msg(LogLevel::info, "Local recharge 100% complete");
 }
 
 // Route Baseflow as described in Equation 11.
@@ -292,10 +296,6 @@ void run_route_baseflow_sum(
         char* target_b_path,
         char* target_b_sum_path) {
 
-    // used for time-delayed logging
-    // cdef time_t last_log_time
-    // last_log_time = ctime(NULL)
-
     float target_nodata = static_cast<float>(-1e32);
     double b_i, b_sum_i, b_sum_j, l_j, l_avail_j, l_sum_j;
     double l_i, l_sum_i;
@@ -318,7 +318,9 @@ void run_route_baseflow_sum(
     DownslopeNeighborsNoSkip<T> dn_neighbors_no_skip;
     NeighborTuple neighbor;
 
-    // int current_pixel = 0;
+    time_t last_log_time = time(NULL);
+    unsigned long current_pixel = 0;
+    float total_n_pixels = flow_dir_raster.raster_x_size * flow_dir_raster.raster_y_size;
 
     // efficient way to calculate ceiling division:
     // a divided by b rounded up = (a + (b - 1)) / b
@@ -340,11 +342,6 @@ void run_route_baseflow_sum(
                 win_xsize = flow_dir_raster.block_xsize;
             }
 
-            // if ctime(NULL) - last_log_time > 5.0:
-            //     last_log_time = ctime(NULL)
-            //     LOGGER.info('Sediment deposition %.2f%% complete', 100 * (
-            //         n_pixels_processed / float(flow_dir_raster.raster_x_size * flow_dir_raster.raster_y_size)))
-
             for (int row_index = 0; row_index < win_ysize; row_index++) {
                 ys_root = yoff + row_index;
                 for (int col_index = 0; col_index < win_xsize; col_index++) {
@@ -352,7 +349,7 @@ void run_route_baseflow_sum(
 
                     if (static_cast<int>(flow_dir_raster.get(xs_root, ys_root)) ==
                             static_cast<int>(flow_dir_raster.nodata)) {
-                        // current_pixel += 1;
+                        current_pixel += 1;
                         continue;
                     }
 
@@ -381,12 +378,12 @@ void run_route_baseflow_sum(
                             continue;
                         }
 
-                        // if ctime(NULL) - last_log_time > 5.0:
-                        //     last_log_time = ctime(NULL)
-                        //     LOGGER.info(
-                        //         'route base flow %.2f%% complete',
-                        //         100.0 * current_pixel / <float>(
-                        //             flow_dir_raster.raster_x_size * flow_dir_raster.raster_y_size))
+                        if (time(NULL) - last_log_time > 5) {
+                            last_log_time = time(NULL);
+                            log_msg(LogLevel::info, std::format("Baseflow {:.1f} complete",
+                                100 * current_pixel / total_n_pixels)
+                            );
+                        }
 
                         b_sum_i = 0;
                         downslope_defined = true;
@@ -442,7 +439,7 @@ void run_route_baseflow_sum(
                         target_b_raster.set(xi, yi, b_i);
                         target_b_sum_raster.set(xi, yi, b_sum_i);
 
-                        // current_pixel += 1;
+                        current_pixel += 1;
                         up_neighbors = UpslopeNeighbors<T>(Pixel<T>(flow_dir_raster, xi, yi));
                         for (auto neighbor: up_neighbors) {
                             work_stack.push(pair<long, long>(neighbor.x, neighbor.y));
@@ -452,7 +449,6 @@ void run_route_baseflow_sum(
             }
         }
     }
-
     target_b_sum_raster.close();
     target_b_raster.close();
     l_raster.close();
@@ -460,4 +456,5 @@ void run_route_baseflow_sum(
     l_sum_raster.close();
     flow_dir_raster.close();
     stream_raster.close();
+    log_msg(LogLevel::info, "Baseflow 100% complete");
 }

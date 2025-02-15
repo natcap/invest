@@ -79,15 +79,19 @@ def ndr_eff_calculation(
         [(flow_direction_path, 1)], flow_dir_op,
         to_process_flow_directions_path, gdal.GDT_Byte, None)
 
-    args = [
-        flow_direction_path.encode('utf-8'),
-        stream_path.encode('utf-8'),
-        retention_eff_lulc_path.encode('utf-8'),
-        crit_len_path.encode('utf-8'),
-        to_process_flow_directions_path.encode('utf-8'),
-        effective_retention_path.encode('utf-8')]
-
     if algorithm == 'MFD':
-        run_effective_retention[MFD](*args)
+        run_effective_retention[MFD](
+            flow_direction_path.encode('utf-8'),
+            stream_path.encode('utf-8'),
+            retention_eff_lulc_path.encode('utf-8'),
+            crit_len_path.encode('utf-8'),
+            to_process_flow_directions_path.encode('utf-8'),
+            effective_retention_path.encode('utf-8'))
     else: # D8
-        run_effective_retention[D8](*args)
+        run_effective_retention[D8](
+            flow_direction_path.encode('utf-8'),
+            stream_path.encode('utf-8'),
+            retention_eff_lulc_path.encode('utf-8'),
+            crit_len_path.encode('utf-8'),
+            to_process_flow_directions_path.encode('utf-8'),
+            effective_retention_path.encode('utf-8'))

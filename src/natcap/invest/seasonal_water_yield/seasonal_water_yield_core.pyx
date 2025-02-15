@@ -146,16 +146,22 @@ def route_baseflow_sum(
     pygeoprocessing.new_raster_from_base(
         flow_dir_path, target_b_path, gdal.GDT_Float32,
         [target_nodata], fill_value_list=[target_nodata])
-    args = [
-        flow_dir_path.encode('utf-8'),
-        l_path.encode('utf-8'),
-        l_avail_path.encode('utf-8'),
-        l_sum_path.encode('utf-8'),
-        stream_path.encode('utf-8'),
-        target_b_path.encode('utf-8'),
-        target_b_sum_path.encode('utf-8')]
 
     if algorithm == 'MFD':
-        run_route_baseflow_sum[MFD](*args)
+        run_route_baseflow_sum[MFD](
+            flow_dir_path.encode('utf-8'),
+            l_path.encode('utf-8'),
+            l_avail_path.encode('utf-8'),
+            l_sum_path.encode('utf-8'),
+            stream_path.encode('utf-8'),
+            target_b_path.encode('utf-8'),
+            target_b_sum_path.encode('utf-8'))
     else:  # D8
-        run_route_baseflow_sum[D8](*args)
+        run_route_baseflow_sum[D8](
+            flow_dir_path.encode('utf-8'),
+            l_path.encode('utf-8'),
+            l_avail_path.encode('utf-8'),
+            l_sum_path.encode('utf-8'),
+            stream_path.encode('utf-8'),
+            target_b_path.encode('utf-8'),
+            target_b_sum_path.encode('utf-8'))
