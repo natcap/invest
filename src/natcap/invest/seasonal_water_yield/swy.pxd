@@ -16,7 +16,7 @@ cdef extern from "swy.h":
         char*, # target_l_sum_avail_path
         char*, # target_aet_path
         char* # target_pi_path
-    )
+    ) except +
 
     void run_route_baseflow_sum[T](
         char*,
@@ -25,4 +25,4 @@ cdef extern from "swy.h":
         char*,
         char*,
         char*,
-        char*)
+        char*) except +

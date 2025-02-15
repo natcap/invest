@@ -3,8 +3,10 @@
 
 #include "gdal.h"
 #include "gdal_priv.h"
+#include <Python.h>
 
 #include <iostream>
+#include <string>
 
 #include "LRUCache.h"
 
@@ -27,6 +29,49 @@ typedef std::pair<int, double*> BlockBufferPair;
 
 class D8 {};
 class MFD {};
+
+enum class LogLevel {debug, info, warning, error};
+
+// Largely copied from:
+// https://gist.github.com/hensing/0db3f8e3a99590006368
+static void log_msg(LogLevel level, string msg)
+{
+    static PyObject *logging = NULL;
+    static PyObject *pyString = NULL;
+
+    // import logging module on demand
+    if (logging == NULL) {
+        logging = PyImport_ImportModuleNoBlock("logging");
+        if (logging == NULL) {
+            PyErr_SetString(PyExc_ImportError,
+                "Could not import module 'logging'");
+        }
+    }
+
+    // build msg-string
+    pyString = Py_BuildValue("s", msg.c_str());
+
+    // call function depending on log level
+    switch (level)
+    {
+        case LogLevel::debug:
+            PyObject_CallMethod(logging, "debug", "O", pyString);
+            break;
+
+        case LogLevel::info:
+            PyObject_CallMethod(logging, "info", "O", pyString);
+            break;
+
+        case LogLevel::warning:
+            PyObject_CallMethod(logging, "warn", "O", pyString);
+            break;
+
+        case LogLevel::error:
+            PyObject_CallMethod(logging, "error", "O", pyString);
+            break;
+    }
+    Py_DECREF(pyString);
+}
 
 class NeighborTuple {
 public:

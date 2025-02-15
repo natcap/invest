@@ -4,4 +4,4 @@ cdef extern from "sediment_deposition.h":
         char*,
         char*,
         char*,
-        char*)
+        char*) except +

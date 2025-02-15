@@ -1,5 +1,5 @@
 #include "ManagedRaster.h"
-
+#include <ctime>
 
 // Calculate sediment deposition layer.
 //
@@ -73,17 +73,16 @@ void run_sediment_deposition(
     double downslope_sdr_weighted_sum;
     double sdr_i, e_prime_i, sdr_j, f_j;
     long flow_dir_sum;
-
-    // unsigned long n_pixels_processed = 0;
+    time_t last_log_time = time(NULL);
+    unsigned long n_pixels_processed = 0;
     bool upslope_neighbors_processed;
-    // time_t last_log_time = ctime(NULL)
     double f_j_weighted_sum;
     NeighborTuple neighbor;
     NeighborTuple neighbor_of_neighbor;
     double dr_i, t_i, f_i;
-
     UpslopeNeighbors<T> up_neighbors;
     DownslopeNeighbors<T> dn_neighbors;
+    float total_n_pixels = flow_dir_raster.raster_x_size * flow_dir_raster.raster_y_size;
 
     // efficient way to calculate ceiling division:
     // a divided by b rounded up = (a + (b - 1)) / b
@@ -105,10 +104,15 @@ void run_sediment_deposition(
                 win_xsize = flow_dir_raster.block_xsize;
             }
 
-            // if ctime(NULL) - last_log_time > 5.0:
-            //     last_log_time = ctime(NULL)
-            //     LOGGER.info('Sediment deposition %.2f%% complete', 100 * (
-            //         n_pixels_processed / float(flow_dir_raster.raster_x_size * flow_dir_raster.raster_y_size)))
+            if (time(NULL) - last_log_time > 5) {
+                last_log_time = time(NULL);
+                log_msg(
+                    LogLevel::info,
+                    "Sediment deposition "  + std::to_string(
+                        100 * n_pixels_processed / total_n_pixels
+                    ) + " complete"
+                );
+            }
 
             for (int row_index = 0; row_index < win_ysize; row_index++) {
                 ys = yoff + row_index;
@@ -258,7 +262,7 @@ void run_sediment_deposition(
                     }
                 }
             }
-            // n_pixels_processed += win_xsize * win_ysize;
+            n_pixels_processed += win_xsize * win_ysize;
         }
     }
     sediment_deposition_raster.close();
@@ -266,5 +270,5 @@ void run_sediment_deposition(
     e_prime_raster.close();
     sdr_raster.close();
     f_raster.close();
-//     // LOGGER.info('Sediment deposition 100% complete')
+    log_msg(LogLevel::info, "Sediment deposition 100% complete");
 }
