@@ -30,8 +30,12 @@ function spawnWithLogging(cmd, args, options) {
   logger.info(cmd, args);
   const cmdProcess = spawn(
     cmd, args, { ...options, shell: true, windowsHide: true });
+  let errMessage;
   if (cmdProcess.stdout) {
-    cmdProcess.stderr.on('data', (data) => logger.info(data.toString()));
+    cmdProcess.stderr.on('data', (data) => {
+      errMessage = data.toString();
+      logger.info(errMessage);
+    });
     cmdProcess.stdout.on('data', (data) => logger.info(data.toString()));
   }
   return new Promise((resolve, reject) => {
@@ -43,13 +47,13 @@ function spawnWithLogging(cmd, args, options) {
       if (code === 0) {
         resolve(code);
       } else {
-        reject(code);
+        reject(errMessage);
       }
     });
   });
 }
 
-export function setupAddPlugin() {
+export function setupAddPlugin(mainWindow, i18n) {
   ipcMain.handle(
     ipcMainChannels.ADD_PLUGIN,
     async (e, url, revision, path) => {
@@ -71,6 +75,7 @@ export function setupAddPlugin() {
           // Create invest_base environment, if it doesn't already exist
           // The purpose of this environment is just to ensure that git is available
           if (!fs.existsSync(baseEnvPrefix)) {
+            mainWindow.webContents.send('pluginInstallStatus', i18n.t('Creating base environment...'));
             await spawnWithLogging(
               micromamba,
               ['create', '--yes', '--prefix', `"${baseEnvPrefix}"`, '-c', 'conda-forge', 'git']
@@ -79,6 +84,7 @@ export function setupAddPlugin() {
 
           // Create a temporary directory and check out the plugin's pyproject.toml,
           // without downloading any extra files or git history
+          mainWindow.webContents.send('pluginInstallStatus', i18n.t('Downloading plugin source code...'));
           const tmpPluginDir = fs.mkdtempSync(upath.join(tmpdir(), 'natcap-invest-'));
           await spawnWithLogging(
             micromamba,
@@ -126,8 +132,10 @@ export function setupAddPlugin() {
         if (condaDeps) { // include dependencies read from pyproject.toml
           condaDeps.forEach((dep) => createCommand.push(`"${dep}"`));
         }
+        mainWindow.webContents.send('pluginInstallStatus', i18n.t('Creating plugin environment...'));
         await spawnWithLogging(micromamba, createCommand);
         logger.info('created micromamba env for plugin');
+        mainWindow.webContents.send('pluginInstallStatus', i18n.t('Installing plugin into environment...'));
         await spawnWithLogging(
           micromamba,
           ['run', '--prefix', `"${pluginEnvPrefix}"`,
@@ -147,6 +155,7 @@ export function setupAddPlugin() {
         );
         logger.info('successfully added plugin');
       } catch (error) {
+        console.log(error);
         return error;
       }
     }
