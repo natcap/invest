@@ -79,3 +79,51 @@ test('Metadata form interact and submit', async () => {
     expect(alert).not.toBeInTheDocument();
   });
 });
+
+test('Metadata form error on submit', async () => {
+  getGeoMetaMakerProfile.mockResolvedValue({
+    contact: {
+      individual_name: '',
+      email: '',
+      organization: '',
+      position_name: '',
+    },
+    license: {
+      title: '',
+      path: '',
+    },
+  });
+  const alertMessage = 'Something went wrong';
+  setGeoMetaMakerProfile.mockResolvedValue({
+    message: alertMessage,
+    error: true,
+  });
+
+  const user = userEvent.setup();
+  const {
+    findByRole,
+    getByLabelText,
+    getByRole,
+  } = render(<MetadataForm />);
+
+  const submit = getByRole('button', { name: /save metadata/i });
+  await user.click(submit);
+
+  const alert = await findByRole('alert');
+  expect(alert).toHaveTextContent(alertMessage);
+
+  // The alert should persist until the form is re-submit
+  const licenseInput = getByLabelText('Title');
+  await user.type(licenseInput, 'foo');
+  expect(alert).toHaveTextContent(alertMessage);
+
+  const successMessage = 'success';
+  setGeoMetaMakerProfile.mockResolvedValue({
+    message: successMessage,
+    error: false,
+  });
+  await user.click(submit);
+  await waitFor(() => {
+    expect(alert).toHaveTextContent(successMessage);
+  });
+});

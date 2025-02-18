@@ -117,13 +117,22 @@ export default function MetadataForm() {
     setAlertError(error);
   };
 
+  /**
+   * A change handler for the form, not for individual fields
+   */
+  const handleChange = async () => {
+    // Clear the alert message only if it's not an error message
+    if (alertError) { return; }
+    setAlertMsg('');
+  };
+
   return (
     <div id="metadata-form">
       {
         (showInfo)
           ? <AboutMetadataDiv />
           : (
-            <Form onSubmit={handleSubmit} onChange={() => setAlertMsg('')}>
+            <Form onSubmit={handleSubmit} onChange={handleChange}>
               <fieldset>
                 <legend>{t('Contact Information')}</legend>
                 <Form.Group controlId="name">
