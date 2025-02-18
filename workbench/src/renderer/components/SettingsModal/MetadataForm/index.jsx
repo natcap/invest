@@ -7,7 +7,6 @@ import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 
-import Expire from '../../Expire';
 import {
   getGeoMetaMakerProfile,
   setGeoMetaMakerProfile,
@@ -81,7 +80,6 @@ export default function MetadataForm() {
   const [licenseURL, setLicenseURL] = useState('');
   const [alertMsg, setAlertMsg] = useState('');
   const [alertError, setAlertError] = useState(false);
-  const [alertKey, setAlertKey] = useState(0);
   const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
@@ -117,8 +115,6 @@ export default function MetadataForm() {
     });
     setAlertMsg(message);
     setAlertError(error);
-    const key = window.crypto.getRandomValues(new Uint16Array(1))[0].toString();
-    setAlertKey(key);
   };
 
   return (
@@ -127,7 +123,7 @@ export default function MetadataForm() {
         (showInfo)
           ? <AboutMetadataDiv />
           : (
-            <Form onSubmit={handleSubmit}>
+            <Form onSubmit={handleSubmit} onChange={() => setAlertMsg('')}>
               <fieldset>
                 <legend>{t('Contact Information')}</legend>
                 <Form.Group controlId="name">
@@ -162,17 +158,12 @@ export default function MetadataForm() {
                 </Button>
                 {
                   (alertMsg) && (
-                  <Expire
-                    key={alertKey}
-                    delay={4000}
-                  >
                     <Alert
                       className="my-1 py-2"
                       variant={alertError ? 'danger' : 'success'}
                     >
                       {alertMsg}
                     </Alert>
-                  </Expire>
                   )
                 }
               </Form.Row>
@@ -181,7 +172,7 @@ export default function MetadataForm() {
       }
       <Button
         variant="outline-secondary"
-        className="my-1 py2 mx-2"
+        className="my-1 py2 mx-2 info-toggle"
         onClick={() => setShowInfo((prevState) => !prevState)}
       >
         {showInfo ? t('Hide Info') : t('More Info')}

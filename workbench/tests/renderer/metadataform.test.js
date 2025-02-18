@@ -32,15 +32,19 @@ test('Metadata form interact and submit', async () => {
   });
 
   const user = userEvent.setup();
-  const { findByRole, getByLabelText, getByRole, getByText } = render(
-    <MetadataForm />
-  );
+  const {
+    findByRole,
+    getByLabelText,
+    getByRole,
+    getByText,
+  } = render(<MetadataForm />);
+
   // The form should render with content from an existing profile
   const nameInput = getByLabelText('Full name');
   await waitFor(() => {
     expect(nameInput).toHaveValue(startingName);
   });
-  const licenseInput = getByLabelText('Title');
+  let licenseInput = getByLabelText('Title');
   await waitFor(() => {
     expect(licenseInput).toHaveValue(startingLicense);
   });
@@ -60,10 +64,18 @@ test('Metadata form interact and submit', async () => {
   const submit = getByRole('button', { name: /save metadata/i });
   await user.click(submit);
 
-  expect(await findByRole('alert'))
-    .toHaveTextContent('Metadata profile saved');
+  const alert = await findByRole('alert');
+  expect(alert).toHaveTextContent('Metadata profile saved');
+
   const payload = setGeoMetaMakerProfile.mock.calls[0][0];
   expect(Object.keys(payload)).toEqual(['contact', 'license']);
   expect(payload['contact']['individual_name']).toEqual(name);
   expect(payload['license']['title']).toEqual(license);
+
+  // The alert should go away if the form data changes
+  licenseInput = getByLabelText('Title');
+  await user.clear(licenseInput);
+  await waitFor(() => {
+    expect(alert).not.toBeInTheDocument();
+  });
 });
