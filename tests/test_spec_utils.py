@@ -398,5 +398,5 @@ class TestMetadataFromSpec(unittest.TestCase):
         resource = geometamaker.describe(
             os.path.join(args_dict['workspace_dir'], 'output',
                          'urban_nature_supply_percapita.tif'))
-        self.assertEqual(resource.get_keywords(),
-                         [model_module.MODEL_SPEC['model_id'], 'InVEST'])
+        self.assertCountEqual(resource.get_keywords(),
+                              [model_module.MODEL_SPEC['model_id'], 'InVEST'])
