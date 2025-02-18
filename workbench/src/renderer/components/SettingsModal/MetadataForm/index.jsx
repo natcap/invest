@@ -87,13 +87,13 @@ export default function MetadataForm() {
   useEffect(() => {
     async function loadProfile() {
       const profile = await getGeoMetaMakerProfile();
-      if (profile.contact) {
+      if (profile && profile.contact) {
         setContactName(profile.contact.individual_name);
         setContactEmail(profile.contact.email);
         setContactOrg(profile.contact.organization);
         setContactPosition(profile.contact.position_name);
       }
-      if (profile.license) {
+      if (profile && profile.license) {
         setLicenseTitle(profile.license.title);
         setLicenseURL(profile.license.path);
       }

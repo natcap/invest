@@ -37,7 +37,7 @@ class SpecUtilsUnitTests(unittest.TestCase):
             spec_utils.format_unit({})
 
 
-class TestDescribeArgFomSpec(unittest.TestCase):
+class TestDescribeArgFromSpec(unittest.TestCase):
     """Test building RST for various invest args specifications."""
 
     def test_number_spec(self):
