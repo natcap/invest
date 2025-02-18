@@ -596,6 +596,16 @@ input[type=text]::placeholder {
   max-width: 600px;
 }
 
+.settings-modal .accordion:has(.show) button svg {
+  transform: rotate(180deg);
+}
+
+.settings-modal .accordion button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 /* Save As modal */
 .save-as-modal svg {
   margin-bottom: 0.2rem;

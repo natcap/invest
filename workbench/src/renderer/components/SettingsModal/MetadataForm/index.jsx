@@ -39,7 +39,7 @@ function AboutMetadataDiv() {
         and you may modify it here anytime.`)}
       </p>
       <p>
-        {t('InVEST uses GeoMetaMaker to generate metadata. Learn more about')}
+        {t('InVEST uses GeoMetaMaker to generate metadata. Learn more about ')}
         <a
           href="https://github.com/natcap/geometamaker"
           onClick={openLinkInBrowser}

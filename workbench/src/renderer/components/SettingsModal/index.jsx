@@ -11,9 +11,8 @@ import {
   MdSettings,
   MdClose,
   MdTranslate,
-  MdWarningAmber,
 } from 'react-icons/md';
-import { BsChevronExpand } from 'react-icons/bs';
+import { BsChevronExpand, BsChevronDown, } from 'react-icons/bs';
 import { withTranslation } from 'react-i18next';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
@@ -277,7 +276,7 @@ class SettingsModal extends React.Component {
             <Button
               variant="primary"
               onClick={this.switchToDownloadModal}
-              className="w-50"
+              className="w-100"
             >
               {t('Download Sample Data')}
             </Button>
@@ -285,7 +284,7 @@ class SettingsModal extends React.Component {
             <Button
               variant="secondary"
               onClick={clearJobsStorage}
-              className="mr-2 w-50"
+              className="mr-2 w-100"
             >
               {t('Clear Recent Jobs')}
             </Button>
@@ -294,12 +293,12 @@ class SettingsModal extends React.Component {
             <Accordion>
               <Accordion.Toggle
                 as={Button}
-                variant="secondary"
+                variant="outline-secondary"
                 eventKey="0"
-                className="mr-2 w-50"
+                className="mr-2 w-100"
               >
-                <span><u>{t('Configure Metadata')}</u></span>
-                <BsChevronExpand className="mx-1" />
+                {t('Configure Metadata')}
+                <BsChevronDown className="mx-1" />
               </Accordion.Toggle>
               <Accordion.Collapse eventKey="0" className="pr-1">
                 <MetadataForm />
