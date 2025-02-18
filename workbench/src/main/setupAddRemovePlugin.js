@@ -155,7 +155,6 @@ export function setupAddPlugin(mainWindow, i18n) {
         );
         logger.info('successfully added plugin');
       } catch (error) {
-        console.log(error);
         return error;
       }
     }

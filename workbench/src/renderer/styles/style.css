@@ -643,11 +643,6 @@ input[type=text]::placeholder {
   width: 34rem;
 }
 
-.adding-button {
-  display: "flex";
-  align-items: "center";
-}
-
 .plugin-spinner {
   margin-right: 0.5rem;
   margin-bottom: 0.1rem;
