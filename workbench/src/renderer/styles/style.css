@@ -634,18 +634,26 @@ input[type=text]::placeholder {
 }
 
 #metadata-form {
+  /*This div toggles between a form and some help text.
+  position and static height ensure no resizing to content.*/
+  position: 'relative';
+  height: '460px';
   background-color: ghostwhite;
   border: dotted;
   border-width: thin;
   padding: 0.5rem;
 }
 
+/* This button should also not move as content is toggled*/
+#metadata-form button {
+  position: 'absolute',
+  bottom: '10px',
+  right: '10px'
+}
+
 #metadata-form legend {
   font-size: 1.1rem;
   text-decoration-line: underline;
-}
-
-#metadata-form fieldset {
 }
 
 #metadata-form .form-group {

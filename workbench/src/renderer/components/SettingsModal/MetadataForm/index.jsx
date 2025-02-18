@@ -122,13 +122,7 @@ export default function MetadataForm() {
   };
 
   return (
-    <div
-      id="metadata-form"
-      style={{
-        position: 'relative',
-        height: '460px'
-      }}
-    >
+    <div id="metadata-form">
       {
         (showInfo)
           ? <AboutMetadataDiv />
@@ -186,11 +180,6 @@ export default function MetadataForm() {
           )
       }
       <Button
-        style={{
-          position: 'absolute',
-          bottom: '10px',
-          right: '10px'
-        }}
         variant="outline-secondary"
         className="my-1 py2 mx-2"
         onClick={() => setShowInfo((prevState) => !prevState)}
