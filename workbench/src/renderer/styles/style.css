@@ -646,9 +646,9 @@ input[type=text]::placeholder {
 
 /* This button should also not move as content is toggled*/
 #metadata-form button {
-  position: 'absolute',
-  bottom: '10px',
-  right: '10px'
+  position: 'absolute';
+  bottom: '10px';
+  right: '10px';
 }
 
 #metadata-form legend {
