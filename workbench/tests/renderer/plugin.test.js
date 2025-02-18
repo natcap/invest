@@ -73,13 +73,14 @@ describe('Add plugin modal', () => {
     const submitButton = await findByText('Add');
     userEvent.click(submitButton);
 
-    await findByText('Loading...');
-    const calledChannels = spy.mock.calls.map((call) => call[0]);
+    await findByText('Adding...');
     await waitFor(() => {
+      const calledChannels = spy.mock.calls.map((call) => call[0]);
       expect(calledChannels).toContain(ipcMainChannels.ADD_PLUGIN);
     });
-    // expect the plugin dialog to have disappeared
-    await waitFor(() => expect(queryByRole('dialog')).toBeNull());
+    // close the modal
+    const overlay = await findByRole('dialog');
+    await act(async () => { await userEvent.click(overlay); });
     const pluginButton = await findByRole('button', { name: /Foo/ });
     // assert that the 'plugin' badge is displayed
     await waitFor(() => expect(within(pluginButton).getByText('Plugin')).toBeInTheDocument());
