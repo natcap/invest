@@ -612,7 +612,7 @@ def write_metadata_file(datasource_path, spec, lineage_statement, keywords_list)
     resource.set_lineage(lineage_statement)
     # a pre-existing metadata doc could have keywords
     words = resource.get_keywords()
-    resource.set_keywords(words + keywords_list)
+    resource.set_keywords(set(words + keywords_list))
 
     if 'about' in spec:
         resource.set_description(spec['about'])

@@ -394,3 +394,9 @@ class TestMetadataFromSpec(unittest.TestCase):
             self.workspace_dir, recursive=True)
         self.assertEqual(len(files), 2)
         self.assertFalse(any(messages))
+
+        resource = geometamaker.describe(
+            os.path.join(args_dict['workspace_dir'], 'output',
+                         'urban_nature_supply_percapita.tif'))
+        self.assertEqual(resource.get_keywords(),
+                         [model_module.MODEL_SPEC['model_id'], 'InVEST'])
