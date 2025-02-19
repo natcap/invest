@@ -1,4 +1,5 @@
 import path from 'path';
+import { spawn } from 'child_process';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {
   app,
