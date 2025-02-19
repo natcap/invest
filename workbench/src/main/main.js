@@ -103,8 +103,6 @@ export const createWindow = async () => {
   setupInvestLogReaderHandler();
   setupOpenExternalUrl();
   setupRendererLogger();
-  setupAddPlugin();
-  setupRemovePlugin();
   setupBaseUrl();
 
   const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';
@@ -160,6 +158,8 @@ export const createWindow = async () => {
   setupDownloadHandlers(mainWindow);
   setupInvestRunHandlers();
   setupLaunchPluginServerHandler();
+  setupAddPlugin(mainWindow, i18n);
+  setupRemovePlugin(mainWindow);
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
   if (ELECTRON_DEV_MODE) {
     // The timing of this is fussy due a chromium bug. It seems to only
