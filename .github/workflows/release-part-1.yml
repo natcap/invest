@@ -22,6 +22,7 @@ env:
 
 jobs:
   start-release:
+    if: github.repository_owner == 'natcap'
     runs-on: ubuntu-latest
     steps:
       # skip scheduled runs that aren't the first tuesday of the month
@@ -44,11 +45,11 @@ jobs:
         run: pip install rst2html5 setuptools_scm
 
       - name: Get current version number (scheduled runs only)
-        if: github.event_name == 'schedule'
+        if: env.RUN == 'true' && github.event_name == 'schedule'
         run: echo "CURRENT_VERSION=$(python -m setuptools_scm)" > $GITHUB_ENV
 
       - name: Get next bugfix version number (scheduled runs only)
-        if: github.event_name == 'schedule'
+        if: env.RUN == 'true' && github.event_name == 'schedule'
         shell: python
         run: |
           import os
