@@ -6,6 +6,7 @@ import unittest
 import pytest
 
 import numpy
+import pandas
 import pygeoprocessing
 from osgeo import gdal
 from osgeo import ogr
@@ -865,7 +866,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         when a climate zone raster value is not present in the climate
         zone table.
         """
-        import pandas
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # use predefined directory so test can clean up files during teardown
@@ -1218,23 +1218,23 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # set up tiny raster arrays to test
         precip_array = numpy.array([
-            [10, 10],
-            [10, 10]], dtype=numpy.float32)
+            [10, 1, 5],
+            [100, 15, 70]], dtype=numpy.float32)
         et0_array = numpy.array([
-            [100, 100],
-            [200, 200]], dtype=numpy.float32)
+            [5, 100, 1],
+            [200, 20, 100]], dtype=numpy.float32)
         quickflow_array = numpy.array([
-            [0, 0],
-            [0.61, 0.61]], dtype=numpy.float32)
+            [0, 1, 0],
+            [0.61, 0.61, 1]], dtype=numpy.float32)
         flow_dir_array = numpy.array([
-            [15, 25],
-            [50, 50]], dtype=numpy.float32)
+            [15, 25, 25],
+            [50, 50, 10]], dtype=numpy.float32)
         kc_array = numpy.array([
-            [1, 1],
-            [1, 1]], dtype=numpy.float32)
+            [1, .75, 1],
+            [1, .4, 0]], dtype=numpy.float32)
         stream_mask = numpy.array([
-            [0, 0],
-            [0, 0]], dtype=numpy.float32)
+            [0, 0, 0],
+            [0, 0, 0]], dtype=numpy.float32)
 
         precip_path = os.path.join(self.workspace_dir, 'precip.tif')
         et0_path = os.path.join(self.workspace_dir, 'et0.tif')
@@ -1246,7 +1246,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(26910)  # UTM Zone 10N
         project_wkt = srs.ExportToWkt()
-        output_path = os.path.join(self.workspace_dir, 'quickflow.tif')
 
         # write all the test arrays to raster files
         for array, path in [(precip_array, precip_path),
@@ -1258,22 +1257,160 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                             (flow_dir_array, flow_dir_path),
                             (kc_array, kc_path),
                             (stream_mask, stream_path)]:
-            # define a nodata value for intermediate outputs
             pygeoprocessing.numpy_array_to_raster(
-                array, -1, (1, -1), (1180000, 690000), project_wkt, path)
+                array, -999, (1, -1), (1180000, 690000), project_wkt, path)
 
-        # arbitrary values for alpha, beta, gamma, etc.
-        # not verifying the output, just making sure there are no errors
+        # arbitrary values for alpha, beta, gamma
+        alpha = .6
+        beta = .4
+        gamma = .5
+        alpha_month_map = {i: alpha for i in range(1, 13)}
+
+        target_li_path = os.path.join(self.workspace_dir, 'target_li_path.tif')
+        target_li_avail_path = os.path.join(self.workspace_dir,
+                                            'target_li_avail_path.tif')
+        target_l_sum_avail_path = os.path.join(self.workspace_dir,
+                                               'target_l_sum_avail_path.tif')
+        target_aet_path = os.path.join(self.workspace_dir,
+                                       'target_aet_path.tif')
+
         seasonal_water_yield_core.calculate_local_recharge(
             [precip_path for i in range(12)], [et0_path for i in range(12)],
             [quickflow_path for i in range(12)], flow_dir_path,
-            [kc_path for i in range(12)], {i: 0.5 for i in range(12)}, 0.5,
-            0.5, stream_path,
-            os.path.join(self.workspace_dir, 'target_li_path.tif'),
-            os.path.join(self.workspace_dir, 'target_li_avail_path.tif'),
-            os.path.join(self.workspace_dir, 'target_l_sum_avail_path.tif'),
-            os.path.join(self.workspace_dir, 'target_aet_path.tif'),
+            [kc_path for i in range(12)], alpha_month_map, beta,
+            gamma, stream_path, target_li_path, target_li_avail_path,
+            target_l_sum_avail_path, target_aet_path,
             os.path.join(self.workspace_dir, 'target_precip_path.tif'))
+
+        actual_li = pygeoprocessing.raster_to_numpy_array(target_li_path)
+        actual_li_avail = pygeoprocessing.raster_to_numpy_array(target_li_avail_path)
+        actual_l_sum_avail = pygeoprocessing.raster_to_numpy_array(target_l_sum_avail_path)
+        actual_aet = pygeoprocessing.raster_to_numpy_array(target_aet_path)
+
+        # note: obtained these arrays by running `calculate_local_recharge`
+        expected_li = numpy.array([[60., -72., 73.915215],
+                                   [0, 76.68, 828.]])
+        expected_li_avail = numpy.array([[30., -72., 36.957607],
+                                         [0, 38.34, 414.]])
+        expected_l_sum_avail = numpy.array([[0, 25., -25.665003],
+                                            [0, 0, 38.34]])
+        expected_aet = numpy.array([[60., 72., -13.915211],
+                                    [1192.68, 96., 0.]])
+
+        # assert li is same as expected li from function
+        numpy.testing.assert_allclose(actual_li, expected_li, equal_nan=True,
+                                      err_msg="li raster values do not match.")
+        numpy.testing.assert_allclose(actual_li_avail, expected_li_avail,
+                                      equal_nan=True,
+                                      err_msg="li_avail raster values do not match.")
+        numpy.testing.assert_allclose(actual_l_sum_avail, expected_l_sum_avail,
+                                      equal_nan=True,
+                                      err_msg="l_sum_avail raster values do not match.")
+        numpy.testing.assert_allclose(actual_aet, expected_aet, equal_nan=True,
+                                      err_msg="aet raster values do not match.")
+
+    def test_route_baseflow_sum(self):
+        """Test `route_baseflow_sum`"""
+        from natcap.invest.seasonal_water_yield import \
+            seasonal_water_yield_core
+
+        # set up tiny raster arrays to test
+        flow_dir_mfd = numpy.array([
+            [1409286196, 1409286196, 1677721604],
+            [1678770180, 838861365, 1677721604]], dtype=numpy.int32)
+        l = numpy.array([
+            [18, 15, 12.5],
+            [2, 17, 8]], dtype=numpy.float32)
+        l_avail = numpy.array([
+            [15.6, 12, 11],
+            [1, 15, 6]], dtype=numpy.float32)
+        l_sum = numpy.array([
+            [29, 28, 19],
+            [2, 19, 99]], dtype=numpy.float32)
+        stream_mask = numpy.array([
+            [0, 1, 0],
+            [0, 0, 0]], dtype=numpy.int8)
+
+        flow_dir_mfd_path = os.path.join(self.workspace_dir, 'flow_dir_mfd.tif')
+        l_path = os.path.join(self.workspace_dir, 'l.tif')
+        l_avail_path = os.path.join(self.workspace_dir, 'l_avail.tif')
+        l_sum_path = os.path.join(self.workspace_dir, 'l_sum.tif')
+        stream_path = os.path.join(self.workspace_dir, 'stream.tif')
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        project_wkt = srs.ExportToWkt()
+
+        # write all the test arrays to raster files
+        for array, path in [(flow_dir_mfd, flow_dir_mfd_path),
+                            (l, l_path),
+                            (l_avail, l_avail_path),
+                            (l_sum, l_sum_path),
+                            (stream_mask, stream_path)]:
+            pygeoprocessing.numpy_array_to_raster(
+                array, 0, (1, -1), (1180000, 690000), project_wkt, path)
+
+        target_b_path = os.path.join(self.workspace_dir, 'b.tif')
+        target_b_sum_path = os.path.join(self.workspace_dir, 'b_sum.tif')
+
+        seasonal_water_yield_core.route_baseflow_sum(flow_dir_mfd_path, l_path,
+                                                     l_avail_path, l_sum_path,
+                                                     stream_path, target_b_path,
+                                                     target_b_sum_path)
+
+        actual_b = pygeoprocessing.raster_to_numpy_array(target_b_path)
+        actual_b_sum = pygeoprocessing.raster_to_numpy_array(target_b_sum_path)
+
+        # note: obtained these arrays by running `route_baseflow_sum`
+        expected_b = numpy.array([[10.5, 0.9999998, 0],
+                                  [0.1422222, 2.2666667, 0]])
+        expected_b_sum = numpy.array([[16.916666, 1.8666663, 0],
+                                      [0.1422222, 2.5333333, 0]])
+
+        numpy.testing.assert_allclose(actual_b, expected_b, equal_nan=True,
+                                      err_msg="Baseflow raster values do not match.")
+        numpy.testing.assert_allclose(actual_b_sum, expected_b_sum, equal_nan=True,
+                                      err_msg="b_sum raster values do not match.")
+
+    def test_calculate_curve_number_raster(self):
+        """test `_calculate_curve_number_raster`"""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # make small lulc raster
+        lulc_raster_path = os.path.join(self.workspace_dir, 'lulc.tif')
+        lulc_array = numpy.zeros((3, 3), dtype=numpy.int16)
+        lulc_array[1:, :] = 1
+        lulc_array[0, 0] = 2
+        make_raster_from_array(lulc_array, lulc_raster_path)
+
+        # make small soil raster
+        soil_group_path = os.path.join(self.workspace_dir, "soil_group.tif")
+        soil_groups = 4
+        soil_array = numpy.zeros((3, 3), dtype=numpy.int32)
+        for i, row in enumerate(soil_array):
+            row[:] = i % soil_groups + 1
+        make_raster_from_array(soil_array, soil_group_path)
+
+        # make biophysical table
+        biophysical_df = pandas.DataFrame([
+            {"lucode": 0, "Description": "lulc 1", "cn_a": 50,
+             "cn_b": 60, "cn_c": 0, "cn_d": 0},
+            {"lucode": 1, "Description": "lulc 2", "cn_a": 72,
+             "cn_b": 82, "cn_c": 0, "cn_d": 0},
+            {"lucode": 2, "Description": "lulc 3", "cn_a": 65,
+             "cn_b": 22, "cn_c": 1, "cn_d": 0}])
+
+        cn_path = os.path.join(self.workspace_dir, "cn.tif")
+
+        seasonal_water_yield._calculate_curve_number_raster(
+            lulc_raster_path, soil_group_path, biophysical_df, cn_path)
+
+        actual_cn = pygeoprocessing.raster_to_numpy_array(cn_path)
+        expected_cn = [[65, 50, 50], [82, 82, 82], [0,  0,  0]]
+        # obtained expected array by running _calculate_curve_number_raster
+
+        numpy.testing.assert_allclose(actual_cn, expected_cn, equal_nan=True,
+                                      err_msg="Curve Number raster values do not match.")
 
 
 class SWYValidationTests(unittest.TestCase):

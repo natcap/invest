@@ -21,7 +21,7 @@ env:
   # nomkl: make sure numpy w/out mkl
   # setuptools_scm: needed for versioning to work
   CONDA_DEFAULT_DEPENDENCIES: python-build nomkl setuptools_scm
-  LATEST_SUPPORTED_PYTHON_VERSION: "3.12"
+  LATEST_SUPPORTED_PYTHON_VERSION: "3.13"
 
 jobs:
   check-syntax-errors:
@@ -72,7 +72,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
+        python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
         os: [windows-latest, macos-13]
     steps:
       - uses: actions/checkout@v4
@@ -159,7 +159,7 @@ jobs:
     needs: check-syntax-errors
     strategy:
       matrix:
-        python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
+        python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
         os: [windows-latest, macos-13]
     steps:
       - uses: actions/checkout@v4
@@ -198,6 +198,9 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          # NOTE: if you change this name, make sure the source distribution
+          # pattern defined in .github/workflows/release-part-2.yml will still
+          # grab it!
           name: Source distribution ${{ matrix.os }} ${{ matrix.python-version }}
           path: dist
 
@@ -444,20 +447,19 @@ jobs:
           WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.dmg' | head -n 1)
           make WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
 
-      #- name: Sign binaries (Windows)
-      #  if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
-      #  env:
-      #    CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-      #    CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
-      #  run: |
-      #    # figure out the path to signtool.exe (it keeps changing with SDK updates)
-      #    SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
-      #    WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.exe' | head -n 1)
-      #    make WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
-
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
         run: make deploy
+
+      # This relies on the file existing on GCP, so it must be run after `make
+      # deploy` is called.
+      - name: Queue windows binaries for signing
+        if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
+        env:
+          ACCESS_TOKEN: ${{ secrets.CODESIGN_QUEUE_ACCESS_TOKEN }}
+        run: |
+          cd codesigning
+          bash enqueue-current-windows-installer.sh
 
       - name: Upload workbench binary artifact
         if: always()

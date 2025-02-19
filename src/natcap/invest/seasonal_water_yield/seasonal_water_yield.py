@@ -62,7 +62,14 @@ MODEL_SPEC = {
             "contents": {
                 # monthly et0 maps, each file ending in a number 1-12
                 "[MONTH]": {
-                    **spec_utils.ET0,
+                    "name": gettext("reference evapotranspiration"),
+                    "type": "raster",
+                    "bands": {
+                        1: {
+                            "type": "number",
+                            "units": u.millimeter/u.month
+                        }
+                    },
                     "about": gettext(
                         "Twelve files, one for each month. File names must "
                         "end with the month number (1-12). For example, "
@@ -76,7 +83,8 @@ MODEL_SPEC = {
             "about": gettext(
                 "Directory containing maps of reference evapotranspiration "
                 "for each month. Only .tif files should be in this folder "
-                "(no .tfw, .xml, etc files)."),
+                "(no .tfw, .xml, etc files). Required if User-Defined Local "
+                "Recharge is not selected."),
             "name": gettext("ET0 directory")
         },
         "precip_dir": {
@@ -104,7 +112,8 @@ MODEL_SPEC = {
             "about": gettext(
                 "Directory containing maps of monthly precipitation for each "
                 "month. Only .tif files should be in this folder (no .tfw, "
-                ".xml, etc files)."),
+                ".xml, etc files). Required if User-Defined Local Recharge is "
+                "not selected."),
             "name": gettext("precipitation directory")
         },
         "dem_raster_path": {

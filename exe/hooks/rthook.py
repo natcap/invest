@@ -3,6 +3,7 @@ import platform
 import sys
 
 os.environ['PROJ_LIB'] = os.path.join(sys._MEIPASS, 'proj')
+os.environ['PROJ_DATA'] = os.path.join(sys._MEIPASS, 'proj')
 
 if platform.system() == 'Darwin':
     # Rtree will look in this directory first for libspatialindex_c.dylib.
