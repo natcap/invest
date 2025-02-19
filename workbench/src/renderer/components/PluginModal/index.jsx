@@ -36,9 +36,7 @@ export default function PluginModal(props) {
 
   const addPlugin = () => {
     setInstallLoading(true);
-    window.electronAPI.onPluginInstallStatus((msg) => {
-      setStatusMessage(msg);
-    });
+    ipcRenderer.on(`plugin-install-status`, (msg) => { setStatusMessage(msg); });
     ipcRenderer.invoke(
       ipcMainChannels.ADD_PLUGIN,
       installFrom === 'url' ? url : undefined, // url

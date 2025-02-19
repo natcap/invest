@@ -75,7 +75,7 @@ export function setupAddPlugin(mainWindow, i18n) {
           // Create invest_base environment, if it doesn't already exist
           // The purpose of this environment is just to ensure that git is available
           if (!fs.existsSync(baseEnvPrefix)) {
-            mainWindow.webContents.send('pluginInstallStatus', i18n.t('Creating base environment...'));
+            mainWindow.webContents.send('plugin-install-status', i18n.t('Creating base environment...'));
             await spawnWithLogging(
               micromamba,
               ['create', '--yes', '--prefix', `"${baseEnvPrefix}"`, '-c', 'conda-forge', 'git']
@@ -84,7 +84,7 @@ export function setupAddPlugin(mainWindow, i18n) {
 
           // Create a temporary directory and check out the plugin's pyproject.toml,
           // without downloading any extra files or git history
-          mainWindow.webContents.send('pluginInstallStatus', i18n.t('Downloading plugin source code...'));
+          mainWindow.webContents.send('plugin-install-status', i18n.t('Downloading plugin source code...'));
           const tmpPluginDir = fs.mkdtempSync(upath.join(tmpdir(), 'natcap-invest-'));
           await spawnWithLogging(
             micromamba,
@@ -132,10 +132,10 @@ export function setupAddPlugin(mainWindow, i18n) {
         if (condaDeps) { // include dependencies read from pyproject.toml
           condaDeps.forEach((dep) => createCommand.push(`"${dep}"`));
         }
-        mainWindow.webContents.send('pluginInstallStatus', i18n.t('Creating plugin environment...'));
+        mainWindow.webContents.send('plugin-install-status', i18n.t('Creating plugin environment...'));
         await spawnWithLogging(micromamba, createCommand);
         logger.info('created micromamba env for plugin');
-        mainWindow.webContents.send('pluginInstallStatus', i18n.t('Installing plugin into environment...'));
+        mainWindow.webContents.send('plugin-install-status', i18n.t('Installing plugin into environment...'));
         await spawnWithLogging(
           micromamba,
           ['run', '--prefix', `"${pluginEnvPrefix}"`,
