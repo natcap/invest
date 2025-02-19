@@ -300,7 +300,7 @@ class SettingsModal extends React.Component {
                 {t('Configure Metadata')}
                 <BsChevronDown className="mx-1" />
               </Accordion.Toggle>
-              <Accordion.Collapse eventKey="0" className="pr-1">
+              <Accordion.Collapse eventKey="0">
                 <MetadataForm />
               </Accordion.Collapse>
             </Accordion>

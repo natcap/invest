@@ -19,7 +19,7 @@ function AboutMetadataDiv() {
 
   return (
     <div>
-      <h4>{t('Metadata for InVEST results')}</h4>
+      <h5>{t('Metadata for InVEST results')}</h5>
       <p>
         {t(`InVEST models create metadata files that describe each dataset
         created by the model. These are the "*.yml", or YAML, files
@@ -181,7 +181,7 @@ export default function MetadataForm() {
       }
       <Button
         variant="outline-secondary"
-        className="my-1 py2 mx-2 info-toggle"
+        className="my-1 py-2 mx-2 info-toggle"
         onClick={() => setShowInfo((prevState) => !prevState)}
       >
         {showInfo ? t('Hide Info') : t('More Info')}
