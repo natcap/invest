@@ -602,7 +602,7 @@ def execute(args):
             cc_park_raster_path),
         target_path_list=[cc_park_raster_path],
         dependent_task_list=[green_area_cc_task],
-        task_name='calculate T air')
+        task_name='calculate CC park')
 
     # Calculate the area of greenspace within a search radius of each pixel.
     area_kernel_path = os.path.join(
@@ -634,7 +634,6 @@ def execute(args):
         task_name='calculate green area')
 
     align_task.join()
-
 
     # Compute Heat Mitigation (HM) index.
     #

@@ -140,7 +140,7 @@ class UCMTests(unittest.TestCase):
 
         # Assert that the decimal value of the energy savings value is what we
         # expect.
-        expected_energy_sav = 3587013.960782#3564038.678764
+        expected_energy_sav = 3587013.960782
 
         energy_sav = 0.0
         n_nonetype = 0
@@ -681,7 +681,7 @@ class UCMTests(unittest.TestCase):
              [0.12958309, 0.13732901, 0.15681312, 0.19008783, 0.20202886, 0.19012527],
              [0.14077205, 0.14386285, 0.15591808, 0.1798869, 0.17768322, 0.16847441],
              [0.16178172, 0.15551754, 0.1504447, 0.15288675, 0.15125562, 0.14787331],
-             [0.18740276, 0.16416582, 0.14733819, 0.14024282, 0.13631615, 0.13484109]]
-            , dtype=float)
+             [0.18740276, 0.16416582, 0.14733819, 0.14024282, 0.13631615, 0.13484109]],
+            dtype=float)
 
         numpy.testing.assert_allclose(actual_cc_park, expected_cc_park)
