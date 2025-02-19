@@ -12,7 +12,7 @@ import {
   MdClose,
   MdTranslate,
 } from 'react-icons/md';
-import { BsChevronExpand, BsChevronDown, } from 'react-icons/bs';
+import { BsChevronDown } from 'react-icons/bs';
 import { withTranslation } from 'react-i18next';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
@@ -251,7 +251,7 @@ class SettingsModal extends React.Component {
                         eventKey="0"
                         className="pt-0"
                       >
-                        <BsChevronExpand className="mx-1" />
+                        <BsChevronDown className="mx-1" />
                         <span className="small"><u>{t('more info')}</u></span>
                       </Accordion.Toggle>
                       <Accordion.Collapse eventKey="0" className="pr-1">
@@ -288,7 +288,7 @@ class SettingsModal extends React.Component {
             >
               {t('Clear Recent Jobs')}
             </Button>
-            <span>{t('no invest workspaces will be deleted')}</span>
+            <span><em>{t('*no invest workspaces will be deleted')}</em></span>
             <hr />
             <Accordion>
               <Accordion.Toggle
