@@ -11,6 +11,7 @@
 # on pip.
 
 GDAL>=3.4.2
+geotiff<1.7.4
 Pyro4==4.77  # pip-only
 pandas>=1.2.1
 numpy>=1.11.0,!=1.16.0
