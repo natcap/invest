@@ -65,7 +65,6 @@ Unreleased Changes
     * Fixed bug in the calculation of Cooling Capacity (CC) provided by parks,
       where the CC Index was not being properly incorporated.
       https://github.com/natcap/invest/issues/1726
-  
 * Wind Energy
     * Fixed a bug that could cause the Workbench to crash when running the Wind
       Energy model with ``Taskgraph`` logging set to ``DEBUG`` (`InVEST #1497
