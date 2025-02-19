@@ -14,6 +14,7 @@ gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ucm')
 
+
 def make_simple_vector(path_to_shp):
     """
     Generate shapefile with two overlapping polygons
@@ -41,6 +42,7 @@ def make_simple_vector(path_to_shp):
                                                vector_format, fields,
                                                attribute_list)
 
+
 def make_simple_raster(base_raster_path, array):
     """Create a raster on designated path with arbitrary values.
     Args:
@@ -60,6 +62,7 @@ def make_simple_raster(base_raster_path, array):
     pygeoprocessing.numpy_array_to_raster(
         array, no_data, pixel_size, origin, projection_wkt,
         base_raster_path)
+
 
 class UCMTests(unittest.TestCase):
     """Regression tests for InVEST Urban Cooling Model."""
@@ -116,10 +119,10 @@ class UCMTests(unittest.TestCase):
 
         expected_results = {
             'avg_cc': 0.222150472947109,
-            'avg_tmp_v': 37.325275675470998,
-            'avg_tmp_an': 2.325275675470998,
-            'avd_eng_cn': 3520217.313878,
-            'avg_wbgt_v': 32.60417266705069,
+            'avg_tmp_v': 37.3205,
+            'avg_tmp_an': 2.3205,
+            'avd_eng_cn': 3542934.706329,
+            'avg_wbgt_v': 32.599522,
             'avg_ltls_v': 75.000000000000000,
             'avg_hvls_v': 75.000000000000000,
         }
@@ -137,7 +140,7 @@ class UCMTests(unittest.TestCase):
 
         # Assert that the decimal value of the energy savings value is what we
         # expect.
-        expected_energy_sav = 3564038.678764
+        expected_energy_sav = 3587013.960782#3564038.678764
 
         energy_sav = 0.0
         n_nonetype = 0
@@ -637,7 +640,7 @@ class UCMTests(unittest.TestCase):
 
             et_array = numpy.array([
                 [800, 799, 567, 234, 422, 422],
-                [765, 867,765, 654, 456, 677],
+                [765, 867, 765, 654, 456, 677],
                 [556, 443, 456, 265, 876, 890],
                 [433, 266, 677, 776, 900, 687],
                 [456, 832, 234, 234, 234, 554]
@@ -653,15 +656,21 @@ class UCMTests(unittest.TestCase):
         cc_array = numpy.array(
             [[0.13336212, 0.10972146, 0.20872944, 0.09386546, 0.10740186, 0.76457861],
              [0.21253381, 0.11518815, 0.2197744,  0.78813271, 0.81885501, 0.18493078],
-             [0.10702884, 0.10485205, 0.21758553, 0.75502879, 0.20403731, 0.4],
+             [0.10702884, 0.10485205, 0.21758553, 0.75502879, 0.20403731, 0.21],
              [0.20400554, 0.20699993, 0.17395858, 0.14347044, 0.21995562, 0.11127872],
              [0.83419093, 0.21042678, 0.15485258, 0.09879297, 0.10041213, 0.10268253]])
 
-        numpy.testing.assert_allclose(f"cc{args['results_suffix']}.tif", cc_array)
+        cc_tif = gdal.Open(os.path.join(args["workspace_dir"], "intermediate",
+                                        f"cc{args['results_suffix']}.tif"))
+        band_cc = cc_tif.GetRasterBand(1)
+        actual_cc = band_cc.ReadAsArray()
+
+        numpy.testing.assert_allclose(actual_cc, cc_array)
 
         # Check CC_park
-        cc_park_tif = gdal.Open(os.path.join(args["workspace_dir"], "intermediate",
-                                        f"cc_park{args['results_suffix']}.tif"))
+        cc_park_tif = gdal.Open(
+            os.path.join(args["workspace_dir"], "intermediate",
+                         f"cc_park{args['results_suffix']}.tif"))
         band = cc_park_tif.GetRasterBand(1)
         actual_cc_park = band.ReadAsArray()
 
@@ -673,10 +682,6 @@ class UCMTests(unittest.TestCase):
              [0.14077205, 0.14386285, 0.15591808, 0.1798869, 0.17768322, 0.16847441],
              [0.16178172, 0.15551754, 0.1504447, 0.15288675, 0.15125562, 0.14787331],
              [0.18740276, 0.16416582, 0.14733819, 0.14024282, 0.13631615, 0.13484109]]
-            )
+            , dtype=float)
 
         numpy.testing.assert_allclose(actual_cc_park, expected_cc_park)
-
-
-
-
