@@ -19,7 +19,7 @@ import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
 import setupCheckFilePermissions from './setupCheckFilePermissions';
-import { setupCheckFirstRun } from './setupCheckFirstRun';
+import { checkFirstRun, setupCheckFirstRun } from './setupCheckFirstRun';
 import { setupCheckStorageToken } from './setupCheckStorageToken';
 import {
   setupInvestRunHandlers,
@@ -81,6 +81,10 @@ export const createWindow = async () => {
 
   settingsStore.set('investExe', findInvestBinaries(ELECTRON_DEV_MODE));
   settingsStore.set('micromamba', findMicromambaExecutable(ELECTRON_DEV_MODE));
+  // install visual C++ dependencies for micromamba
+  if (!ELECTRON_DEV_MODE && process.platform === 'win32' && checkFirstRun()) {
+    spawn('powershell.exe', ['install_vc_redist.ps1'])
+  }
   // No plugin server processes should persist between workbench sessions
   // In case any were left behind, remove them
   const plugins = settingsStore.get('plugins');
