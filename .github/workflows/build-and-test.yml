@@ -94,7 +94,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} geotiff<1.7.4 libpng==1.6.46
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} geotiff<1.7.4 libpng==1.6.46 sqlite==3.48.0
 
       - name: Download previous conda environment.yml
         continue-on-error: true
