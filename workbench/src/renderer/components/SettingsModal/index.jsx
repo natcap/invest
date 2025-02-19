@@ -11,13 +11,13 @@ import {
   MdSettings,
   MdClose,
   MdTranslate,
-  MdWarningAmber,
 } from 'react-icons/md';
-import { BsChevronExpand } from 'react-icons/bs';
+import { BsChevronDown } from 'react-icons/bs';
 import { withTranslation } from 'react-i18next';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import { getSupportedLanguages } from '../../server_requests';
+import MetadataForm from './MetadataForm';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -184,6 +184,7 @@ class SettingsModal extends React.Component {
                 </Form.Group>
               ) : <React.Fragment />
             }
+            <hr />
             <Form.Group as={Row}>
               <Form.Label column sm="6" htmlFor="logging-select">
                 {t('Logging threshold')}
@@ -250,7 +251,7 @@ class SettingsModal extends React.Component {
                         eventKey="0"
                         className="pt-0"
                       >
-                        <BsChevronExpand className="mx-1" />
+                        <BsChevronDown className="mx-1" />
                         <span className="small"><u>{t('more info')}</u></span>
                       </Accordion.Toggle>
                       <Accordion.Collapse eventKey="0" className="pr-1">
@@ -275,7 +276,7 @@ class SettingsModal extends React.Component {
             <Button
               variant="primary"
               onClick={this.switchToDownloadModal}
-              className="w-50"
+              className="w-100"
             >
               {t('Download Sample Data')}
             </Button>
@@ -283,11 +284,26 @@ class SettingsModal extends React.Component {
             <Button
               variant="secondary"
               onClick={clearJobsStorage}
-              className="mr-2 w-50"
+              className="mr-2 w-100"
             >
               {t('Clear Recent Jobs')}
             </Button>
-            <span>{t('no invest workspaces will be deleted')}</span>
+            <span><em>{t('*no invest workspaces will be deleted')}</em></span>
+            <hr />
+            <Accordion>
+              <Accordion.Toggle
+                as={Button}
+                variant="outline-secondary"
+                eventKey="0"
+                className="mr-2 w-100"
+              >
+                {t('Configure Metadata')}
+                <BsChevronDown className="mx-1" />
+              </Accordion.Toggle>
+              <Accordion.Collapse eventKey="0">
+                <MetadataForm />
+              </Accordion.Collapse>
+            </Accordion>
           </Modal.Body>
         </Modal>
         {

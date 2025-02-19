@@ -13,9 +13,16 @@ exename = 'invest'
 conda_env = os.environ['CONDA_PREFIX']
 
 if is_win:
-    proj_datas = ((os.path.join(conda_env, 'Library/share/proj'), 'proj'))
+    proj_datas = (os.path.join(conda_env, 'Library/share/proj'), 'proj')
+    frictionless_datas = (
+        os.path.join(conda_env, 'Lib/site-packages/frictionless/assets'),
+        'frictionless/assets')
 else:
-    proj_datas = ((os.path.join(conda_env, 'share/proj'), 'proj'))
+    proj_datas = (os.path.join(conda_env, 'share/proj'), 'proj')
+    frictionless_datas = (
+        glob.glob(os.path.join(
+            conda_env, 'lib/python3*/site-packages/frictionless/assets'))[0],
+        'frictionless/assets')
 
 kwargs = {
     'hookspath': [os.path.join(current_dir, 'exe', 'hooks')],
@@ -34,7 +41,7 @@ kwargs = {
         'scipy.special._special_ufuncs',
         'scipy._lib.array_api_compat.numpy.fft',
     ],
-    'datas': [proj_datas],
+    'datas': [proj_datas, frictionless_datas],
     'cipher': block_cipher,
 }
 

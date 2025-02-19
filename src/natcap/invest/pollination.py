@@ -24,6 +24,7 @@ from .unit_registry import u
 LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
+    "model_id": "pollination",
     "model_name": MODEL_METADATA["pollination"].model_title,
     "pyname": MODEL_METADATA["pollination"].pyname,
     "userguide": MODEL_METADATA["pollination"].userguide,

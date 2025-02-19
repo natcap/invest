@@ -68,6 +68,7 @@ NUTRIENTS = [
 ]
 
 MODEL_SPEC = {
+    "model_id": "crop_production_regression",
     "model_name": MODEL_METADATA["crop_production_regression"].model_title,
     "pyname": MODEL_METADATA["crop_production_regression"].pyname,
     "userguide": MODEL_METADATA["crop_production_regression"].userguide,

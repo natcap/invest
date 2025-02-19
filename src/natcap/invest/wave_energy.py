@@ -132,6 +132,7 @@ CAPTURED_WEM_FIELDS = {
 }
 
 MODEL_SPEC = {
+    "model_id": "wave_energy",
     "model_name": MODEL_METADATA["wave_energy"].model_title,
     "pyname": MODEL_METADATA["wave_energy"].pyname,
     "userguide": MODEL_METADATA["wave_energy"].userguide,

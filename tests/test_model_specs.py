@@ -50,7 +50,8 @@ class ValidateModelSpecs(unittest.TestCase):
     def test_model_specs_are_valid(self):
         """MODEL_SPEC: test each spec meets the expected pattern."""
 
-        required_keys = {'model_name', 'pyname', 'userguide', 'args', 'outputs'}
+        required_keys = {
+            'model_id', 'model_name', 'pyname', 'userguide', 'args', 'outputs'}
         optional_spatial_key = 'args_with_spatial_overlap'
         for model_name, metadata in MODEL_METADATA.items():
             # metadata is a collections.namedtuple, fields accessible by name
@@ -228,7 +229,6 @@ class ValidateModelSpecs(unittest.TestCase):
             if attrs:
                 raise AssertionError(f'{key} has key(s) {attrs} that are not '
                                      'expected for its type')
-
 
     def validate_args(self, arg, name, parent_type=None):
         """
@@ -503,30 +503,6 @@ class ValidateModelSpecs(unittest.TestCase):
                     f'Failed to avoid TypeError when serializing '
                     f'{metadata.pyname}.MODEL_SPEC: \n'
                     f'{error}')
-
-
-class SpecUtilsTests(unittest.TestCase):
-    """Tests for natcap.invest.spec_utils."""
-
-    def test_format_unit(self):
-        """spec_utils: test converting units to strings with format_unit."""
-        from natcap.invest import spec_utils
-        for unit_name, expected in [
-                ('meter', 'm'),
-                ('meter / second', 'm/s'),
-                ('foot * mm', 'ft · mm'),
-                ('t * hr * ha / ha / MJ / mm', 't · h · ha / (ha · MJ · mm)'),
-                ('mm^3 / year', 'mm³/year')
-        ]:
-            unit = spec_utils.u.Unit(unit_name)
-            actual = spec_utils.format_unit(unit)
-            self.assertEqual(expected, actual)
-
-    def test_format_unit_raises_error(self):
-        """spec_utils: format_unit raises TypeError if not a pint.Unit."""
-        from natcap.invest import spec_utils
-        with self.assertRaises(TypeError):
-            spec_utils.format_unit({})
 
 
 if __name__ == '__main__':

@@ -106,6 +106,7 @@ WATERSHED_OUTPUT_FIELDS = {
 }
 
 MODEL_SPEC = {
+    "model_id": "annual_water_yield",
     "model_name": MODEL_METADATA["annual_water_yield"].model_title,
     "pyname": MODEL_METADATA["annual_water_yield"].pyname,
     "userguide": MODEL_METADATA["annual_water_yield"].userguide,

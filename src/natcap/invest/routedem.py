@@ -18,6 +18,7 @@ LOGGER = logging.getLogger(__name__)
 INVALID_BAND_INDEX_MSG = gettext('Must be between 1 and {maximum}')
 
 MODEL_SPEC = {
+    "model_id": "routedem",
     "model_name": MODEL_METADATA["routedem"].model_title,
     "pyname": MODEL_METADATA["routedem"].pyname,
     "userguide": MODEL_METADATA["routedem"].userguide,

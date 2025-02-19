@@ -29,6 +29,7 @@ from . import sdr_core
 LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
+    "model_id": "sdr",
     "model_name": MODEL_METADATA["sdr"].model_title,
     "pyname": MODEL_METADATA["sdr"].pyname,
     "userguide": MODEL_METADATA["sdr"].userguide,

@@ -25,6 +25,7 @@ from . import delineateit_core
 LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
+    "model_id": "delineateit",
     "model_name": MODEL_METADATA["delineateit"].model_title,
     "pyname": MODEL_METADATA["delineateit"].pyname,
     "userguide": MODEL_METADATA["delineateit"].userguide,
