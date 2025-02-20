@@ -70,12 +70,11 @@ export function setupAddPlugin(i18n) {
             installString = `git+${url}`;
             logger.info(`adding plugin from ${installString} at default branch`);
           }
-
           const baseEnvPrefix = upath.join(rootPrefix, 'invest_base');
           // Create invest_base environment, if it doesn't already exist
           // The purpose of this environment is just to ensure that git is available
           if (!fs.existsSync(baseEnvPrefix)) {
-            event.reply('plugin-install-status', i18n.t('Creating base environment...'));
+            event.sender.send('plugin-install-status', i18n.t('Creating base environment...'));
             await spawnWithLogging(
               micromamba,
               ['create', '--yes', '--prefix', `"${baseEnvPrefix}"`, '-c', 'conda-forge', 'git']
@@ -84,7 +83,7 @@ export function setupAddPlugin(i18n) {
 
           // Create a temporary directory and check out the plugin's pyproject.toml,
           // without downloading any extra files or git history
-          event.reply('plugin-install-status', i18n.t('Downloading plugin source code...'));
+          event.sender.send('plugin-install-status', i18n.t('Downloading plugin source code...'));
           const tmpPluginDir = fs.mkdtempSync(upath.join(tmpdir(), 'natcap-invest-'));
           await spawnWithLogging(
             micromamba,
@@ -132,10 +131,10 @@ export function setupAddPlugin(i18n) {
         if (condaDeps) { // include dependencies read from pyproject.toml
           condaDeps.forEach((dep) => createCommand.push(`"${dep}"`));
         }
-        event.reply('plugin-install-status', i18n.t('Creating plugin environment...'));
+        event.sender.send('plugin-install-status', i18n.t('Creating plugin environment...'));
         await spawnWithLogging(micromamba, createCommand);
         logger.info('created micromamba env for plugin');
-        event.reply('plugin-install-status', i18n.t('Installing plugin into environment...'));
+        event.sender.send('plugin-install-status', i18n.t('Installing plugin into environment...'));
         await spawnWithLogging(
           micromamba,
           ['run', '--prefix', `"${pluginEnvPrefix}"`,
