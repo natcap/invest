@@ -642,3 +642,16 @@ input[type=text]::placeholder {
 .plugin-modal {
   width: 34rem;
 }
+
+.plugin-spinner {
+  margin-right: 0.5rem;
+  margin-bottom: 0.1rem;
+}
+
+.plugin-error {
+  font-family: monospace;
+  margin: 1rem;
+  overflow-wrap: break-word;
+  color: #f13232;
+  font-weight: bold;
+}
