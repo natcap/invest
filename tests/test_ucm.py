@@ -457,7 +457,7 @@ class UCMTests(unittest.TestCase):
                 header='column', header_name='green_area'))]
         self.assertEqual(result, expected)
 
-    def test_do_energy_valuation_option(self):
+    def test_do_energy_valuation_option(self): 
         """UCM: test separate valuation options."""
         import natcap.invest.urban_cooling_model
         args = {
@@ -592,21 +592,26 @@ class UCMTests(unittest.TestCase):
         from natcap.invest import urban_cooling_model
 
         args = {}
-        args['workspace_dir'] = os.path.join(self.workspace_dir, "ucm")
+        args['workspace_dir'] = self.workspace_dir
         args['results_suffix'] = "_01"
         args['t_ref'] = 23.5
-        args['lulc_raster_path'] = "lulc.tif"
-        args['ref_eto_raster_path'] = "evapotranspiration.tif"
-        args['aoi_vector_path'] = "aoi.shp"
-        args['biophysical_table_path'] = "biophysical_table.csv"
+        args['lulc_raster_path'] = os.path.join(self.workspace_dir,
+                                                "lulc.tif")
+        args['ref_eto_raster_path'] = os.path.join(self.workspace_dir,
+                                                   "evapotranspiration.tif")
+        args['aoi_vector_path'] = os.path.join(self.workspace_dir, "aoi.shp")
+        args['biophysical_table_path'] = os.path.join(self.workspace_dir,
+                                                      "biophysical_table.csv")
         args['green_area_cooling_distance'] = 90
         args['t_air_average_radius'] = 300
         args['uhi_max'] = 2.05
         args['do_energy_valuation'] = False
         args['do_productivity_valuation'] = False
         args['avg_rel_humidity'] = ''
-        args['building_vector_path'] = "buildings.shp"
-        args['energy_consumption_table_path'] = "ucm_energy.csv"
+        args['building_vector_path'] = os.path.join(self.workspace_dir,
+                                                    "buildings.shp")
+        args['energy_consumption_table_path'] = os.path.join(self.workspace_dir,
+                                                             "ucm_energy.csv")
         args['cc_method'] = "factors"
         args['cc_weight_shade'] = ''  # 0.6
         args['cc_weight_albedo'] = ''  # 0.2
