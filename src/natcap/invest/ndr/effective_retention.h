@@ -1,16 +1,7 @@
 #include "ManagedRaster.h"
 #include <cmath>
 #include <stack>
-#include <iomanip>   // std::setprecision, std::setw
-#include <iostream>
-#include <cfenv>
-
-// cdef extern from "time.h" nogil:
-//     ctypedef int time_t
-//     time_t time(time_t*)
-
-// LOGGER = logging.getLogger(__name__)
-
+#include <ctime>
 
 // Calculate flow downhill effective_retention to the channel.
 // Args:
@@ -77,6 +68,9 @@ void run_effective_retention(
     double intermediate_retention;
     string s;
     long flow_dir_sum;
+    time_t last_log_time = time(NULL);
+    unsigned long n_pixels_processed = 0;
+    float total_n_pixels = flow_dir_raster.raster_x_size * flow_dir_raster.raster_y_size;
 
     // efficient way to calculate ceiling division:
     // a divided by b rounded up = (a + (b - 1)) / b
@@ -98,10 +92,15 @@ void run_effective_retention(
                 win_xsize = flow_dir_raster.block_xsize;
             }
 
-            // if ctime(NULL) - last_log_time > 5.0:
-            //     last_log_time = ctime(NULL)
-            //     LOGGER.info('Sediment deposition %.2f%% complete', 100 * (
-            //         n_pixels_processed / float(flow_dir_raster.raster_x_size * flow_dir_raster.raster_y_size)))
+            if (time(NULL) - last_log_time > 5) {
+                last_log_time = time(NULL);
+                log_msg(
+                    LogLevel::info,
+                    "Effective retention " + std::to_string(
+                        100 * n_pixels_processed / total_n_pixels
+                    ) + " complete"
+                );
+            }
 
             for (int row_index = 0; row_index < win_ysize; row_index++) {
                 global_row = yoff + row_index;
@@ -251,6 +250,7 @@ void run_effective_retention(
                     }
                 }
             }
+            n_pixels_processed += win_xsize * win_ysize;
         }
     }
     stream_raster.close();
@@ -259,4 +259,5 @@ void run_effective_retention(
     effective_retention_raster.close();
     flow_dir_raster.close();
     to_process_flow_directions_raster.close();
+    log_msg(LogLevel::info, "Effective retention 100% complete");
 }
