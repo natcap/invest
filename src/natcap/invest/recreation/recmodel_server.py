@@ -525,7 +525,7 @@ class RecModel(object):
 
 
 def _parse_big_input_csv(
-        block_offset_size_queue, numpy_array_queue, csv_filepath, dataset_name='flickr'):
+        block_offset_size_queue, numpy_array_queue, csv_filepath, dataset_name):
     """Parse CSV file lines to (datetime64[d], userhash, lat, lng) tuples.
 
     Args:
@@ -548,12 +548,14 @@ def _parse_big_input_csv(
         chunk_string = csv_file.read(chunk_size)
         csv_file.close()
 
-        # sample line:
+        # sample line from flickr:
         # 8568090486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
+        # sample line from twitter:
+        # 1117195232,2023-01-01,-22.908,-43.1975
         # this pattern matches the above style of line and only parses valid
         # dates to handle some cases where there are weird dates in the input
         flickr_pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"  # pylint: disable=line-too-long
-        twittr_pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])),([^,]+),([^,]+)\n"  # pylint: disable=line-too-long
+        twittr_pattern = r"([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])),([^,]+),([^,]+)\n"  # pylint: disable=line-too-long
         patterns = {
             'flickr': flickr_pattern,
             'twitter': twittr_pattern
@@ -584,7 +586,7 @@ def _parse_big_input_csv(
 
 
 def _parse_small_input_csv_list(
-        csv_file_list, numpy_array_queue, dataset_name='twitter'):
+        csv_file_list, numpy_array_queue, dataset_name):
     """Parse CSV file lines to (datetime64[d], userhash, lat, lng) tuples.
 
     Args:
@@ -609,7 +611,7 @@ def _parse_small_input_csv_list(
         # 8568090486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
         # sample line from twitter:
         # 1117195232,2023-01-01,-22.908,-43.1975
-        # patterns matche the above styles of lines and only parses valid
+        # patterns match the above styles of lines and only parse valid
         # dates to handle some cases where there are weird dates in the input
         flickr_pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"  # pylint: disable=line-too-long
         twittr_pattern = r"([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])),([^,]+),([^,]+)\n"  # pylint: disable=line-too-long
@@ -726,7 +728,7 @@ def construct_userday_quadtree(
             csv_file_list = raw_csv_file_list[i::n_parse_processes]
             parse_input_csv_process = multiprocessing.Process(
                 target=_parse_small_input_csv_list,
-                args=(csv_file_list, numpy_array_queue))
+                args=(csv_file_list, numpy_array_queue, dataset_name))
             parse_input_csv_process.deamon = True
             parse_input_csv_process.start()
             parse_process_list.append(parse_input_csv_process)
@@ -739,7 +741,7 @@ def construct_userday_quadtree(
             parse_input_csv_process = multiprocessing.Process(
                 target=_parse_big_input_csv, args=(
                     block_offset_size_queue, numpy_array_queue,
-                    raw_photo_csv_table))
+                    raw_photo_csv_table, dataset_name))
             parse_input_csv_process.deamon = True
             parse_input_csv_process.start()
             parse_process_list.append(parse_input_csv_process)

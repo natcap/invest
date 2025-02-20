@@ -11,8 +11,11 @@ import os
 import functools
 import logging
 import json
-import queue
+import math
 import multiprocessing
+import queue
+import random
+import string
 import time
 
 import numpy
@@ -430,7 +433,7 @@ class UnitTestRecServer(unittest.TestCase):
         numpy_array_queue = queue.Queue()
         recmodel_server._parse_big_input_csv(
             block_offset_size_queue, numpy_array_queue,
-            self.resampled_data_path)
+            self.resampled_data_path, 'flickr')
         val = recmodel_server._numpy_loads(numpy_array_queue.get())
         # we know what the first date is
         self.assertEqual(val[0][0], datetime.date(2013, 3, 16))
@@ -461,8 +464,6 @@ class UnitTestRecServer(unittest.TestCase):
     def test_construct_query_twitter_qt(self):
         """Recreation test constructing and querying twitter quadtree."""
         from natcap.invest.recreation import recmodel_server
-        import string
-        import random
 
         # user,date,lat,lon
         # 1117195232,2023-01-01,-22.908,-43.1975
@@ -485,7 +486,7 @@ class UnitTestRecServer(unittest.TestCase):
             }, index=None).to_csv(target_filename, index=False)
 
         raw_csv_file_list = [
-            os.path.join(self.workspace_dir, 'a.csv'),
+            # os.path.join(self.workspace_dir, 'a.csv'),
             os.path.join(self.workspace_dir, 'b.csv'),
         ]
         for filename in raw_csv_file_list:
@@ -544,6 +545,53 @@ class UnitTestRecServer(unittest.TestCase):
             expected_result_table, result_table, check_dtype=False)
 
 
+def _synthesize_points_in_aoi(aoi_path, target_flickr_path, target_twitter_path, n_points):
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(4326)  # WGS84
+    target_wkt = srs.ExportToWkt()
+
+    aoi_info = pygeoprocessing.get_vector_info(aoi_path)
+    lonlat_bbox = pygeoprocessing.transform_bounding_box(
+        aoi_info['bounding_box'], aoi_info['projection_wkt'], target_wkt)
+    origin_x, origin_y = lonlat_bbox[:2]
+
+    x_size = int(math.sqrt(n_points))
+    lon = numpy.linspace(lonlat_bbox[0], lonlat_bbox[2], num=x_size)
+    lat = numpy.linspace(lonlat_bbox[1], lonlat_bbox[3], num=x_size)
+    offsets = numpy.geomspace(0.01, 1, num=x_size)
+    lon = lon + offsets
+    lat = lat + offsets
+
+    flickr_dates = pandas.date_range(
+        numpy.datetime64('2017-01-01 12:12:12'),
+        numpy.datetime64('2017-12-31 12:12:12'), freq='D')
+    twitter_dates = pandas.date_range(
+        numpy.datetime64('2017-01-01'),
+        numpy.datetime64('2017-12-31'), freq='D')
+
+    users = numpy.array([
+        ''.join(random.choices(string.digits, k=n))
+        for n in random.choices(range(7, 18), k=50)  # 50 unique people
+    ])
+
+    x, y = numpy.meshgrid(lon, lat)
+    user_array = users[numpy.arange(n_points) % len(users)]
+
+    flickr_df = pandas.DataFrame({
+        'id': range(n_points),
+        'user': user_array,
+        'date': flickr_dates[numpy.arange(n_points) % len(flickr_dates)],
+        'lat': y.flatten(),
+        'lon': x.flatten(),
+        'accuracy': [16] * n_points
+    }, index=None)
+    flickr_df.to_csv(target_flickr_path, index=False)
+
+    twitter_df = flickr_df.drop(columns=['id', 'accuracy'])
+    twitter_df['date'] = twitter_dates[numpy.arange(n_points) % len(twitter_dates)]
+    twitter_df.to_csv(target_twitter_path, index=False)
+
+
 class TestRecClientServer(unittest.TestCase):
     """Client regression tests using a server executing in a local process."""
 
@@ -553,14 +601,23 @@ class TestRecClientServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
 
         cls.server_workspace_dir = tempfile.mkdtemp()
-        cls.resampled_data_path = os.path.join(
-            cls.server_workspace_dir, 'resampled_data.csv')
-        _resample_csv(
-            os.path.join(SAMPLE_DATA, 'sample_data.csv'),
-            cls.resampled_data_path, resample_factor=10)
-        with open(cls.resampled_data_path, 'rb') as f:
-            n_points = sum(1 for _ in f)
+        # cls.resampled_data_path = os.path.join(
+        #     cls.server_workspace_dir, 'resampled_data.csv')
+        # _resample_csv(
+        #     os.path.join(SAMPLE_DATA, 'sample_data.csv'),
+        #     cls.resampled_data_path, resample_factor=10)
+        # with open(cls.resampled_data_path, 'rb') as f:
+        #     n_points = sum(1 for _ in f)
 
+        flickr_csv_path = os.path.join(
+            cls.server_workspace_dir, 'flickr_sample_data.csv')
+        twitter_csv_path = os.path.join(
+            cls.server_workspace_dir, 'twitter_sample_data.csv')
+        n_points = 100**2  # a perfect square for convenience
+        _synthesize_points_in_aoi(
+            os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            flickr_csv_path, twitter_csv_path,
+            n_points=n_points)
         # attempt to get an open port; could result in race condition but
         # will be okay for a test. if this test ever fails because of port
         # in use, that's probably why
@@ -576,15 +633,15 @@ class TestRecClientServer(unittest.TestCase):
             'port': cls.port,
             'cache_workspace': cls.server_workspace_dir,
             'max_points_per_node': 200,
-            'max_allowable_query': n_points - 1000,
+            'max_allowable_query': n_points + 1000,
             'datasets': {
                 'flickr': {
-                    'raw_csv_point_data_path': cls.resampled_data_path,
+                    'raw_csv_point_data_path': flickr_csv_path,
                     'min_year': 2005,
                     'max_year': 2017
                 },
                 'twitter': {
-                    'raw_csv_point_data_path': cls.resampled_data_path,
+                    'raw_csv_point_data_path': twitter_csv_path,
                     'min_year': 2012,
                     'max_year': 2022
                 }
@@ -636,18 +693,22 @@ class TestRecClientServer(unittest.TestCase):
         """
         from natcap.invest.recreation import recmodel_client
         args = {
+            # 'aoi_path': os.path.join(
+            #     SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
             'aoi_path': os.path.join(
-                SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
+                SAMPLE_DATA, 'andros_aoi.shp'),
             'compute_regression': True,
             'start_year': MIN_YEAR,
             'end_year': MAX_YEAR,
-            'grid_aoi': False,
+            'grid_aoi': True,
+            'cell_size': 20000,
+            'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
             'results_suffix': 'foo',
-            'workspace_dir': 'scratch/rec_test',
+            'workspace_dir': self.workspace_dir,
             'hostname': self.hostname,
             'port': self.port,
         }
@@ -758,6 +819,7 @@ class TestRecClientServer(unittest.TestCase):
 
     def test_results_suffix_on_serverside_files(self):
         """Recreation test suffix gets added to files created on server."""
+        # TODO: move this to main regression test
         from natcap.invest.recreation import recmodel_client
 
         args = {
