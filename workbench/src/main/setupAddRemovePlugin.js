@@ -176,6 +176,7 @@ export function setupRemovePlugin() {
       } catch (error) {
         logger.info('Error removing plugin:');
         logger.info(error);
+        return error;
       }
     }
   );

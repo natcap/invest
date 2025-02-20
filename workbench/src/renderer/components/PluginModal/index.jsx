@@ -18,7 +18,8 @@ export default function PluginModal(props) {
   const [url, setURL] = useState('');
   const [revision, setRevision] = useState('');
   const [path, setPath] = useState('');
-  const [err, setErr] = useState('');
+  const [installErr, setInstallErr] = useState('');
+  const [uninstallErr, setUninstallErr] = useState('');
   const [pluginToRemove, setPluginToRemove] = useState(undefined);
   const [installLoading, setInstallLoading] = useState(false);
   const [uninstallLoading, setUninstallLoading] = useState(false);
@@ -29,7 +30,8 @@ export default function PluginModal(props) {
   const handleModalClose = () => {
     setURL(undefined);
     setRevision(undefined);
-    setErr('');
+    setInstallErr('');
+    setUninstallErr('');
     setShowPluginModal(false);
   };
   const handleModalOpen = () => setShowPluginModal(true);
@@ -46,7 +48,7 @@ export default function PluginModal(props) {
       setInstallLoading(false);
       updateInvestList();
       if (addPluginErr) {
-        setErr(addPluginErr);
+        setInstallErr(addPluginErr);
       } else {
         // clear the input fields
         setURL('');
@@ -63,9 +65,13 @@ export default function PluginModal(props) {
         closeInvestModel(tabID);
       }
     });
-    ipcRenderer.invoke(ipcMainChannels.REMOVE_PLUGIN, pluginToRemove).then(() => {
-      updateInvestList();
-      setUninstallLoading(false);
+    ipcRenderer.invoke(ipcMainChannels.REMOVE_PLUGIN, pluginToRemove).then((err) => {
+      if (err) {
+        setUninstallErr(err)
+      } else {
+        updateInvestList();
+        setUninstallLoading(false);
+      }
     });
   };
 
@@ -210,11 +216,26 @@ export default function PluginModal(props) {
       </Form>
     </Modal.Body>
   );
-  if (err) {
+  if (installErr) {
     modalBody = (
       <Modal.Body>
         <h5>{t('Error installing plugin:')}</h5>
-        <div className="plugin-error">{err}</div>
+        <div className="plugin-error">{installErr}</div>
+        <Button
+          onClick={() => ipcRenderer.send(
+            ipcMainChannels.SHOW_ITEM_IN_FOLDER,
+            window.Workbench.ELECTRON_LOG_PATH,
+          )}
+        >
+          {t('Find workbench logs')}
+        </Button>
+      </Modal.Body>
+    );
+  } else if (uninstallErr) {
+    modalBody = (
+      <Modal.Body>
+        <h5>{t('Error removing plugin:')}</h5>
+        <div className="plugin-error">{uninstallErr}</div>
         <Button
           onClick={() => ipcRenderer.send(
             ipcMainChannels.SHOW_ITEM_IN_FOLDER,
