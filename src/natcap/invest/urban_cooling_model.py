@@ -560,6 +560,8 @@ def execute(args):
             task_name=f'reclassify to {prop}')
         task_path_prop_map[prop] = (prop_task, prop_raster_path)
 
+    align_task.join()
+
     cc_raster_path = os.path.join(intermediate_dir, f'cc{file_suffix}.tif')
     if args['cc_method'] == 'factors':
         LOGGER.info('Calculating Cooling Coefficient from factors')
@@ -676,8 +678,6 @@ def execute(args):
             task_path_prop_map['green_area'][0],  # reclassed green area task
             area_kernel_task],
         task_name='calculate green area')
-
-    align_task.join()
 
     # Compute Heat Mitigation (HM) index.
     #
