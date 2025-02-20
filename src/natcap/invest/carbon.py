@@ -41,6 +41,7 @@ CARBON_OUTPUTS = {
 }
 
 MODEL_SPEC = {
+    "model_id": "carbon",
     "model_name": MODEL_METADATA["carbon"].model_title,
     "pyname": MODEL_METADATA["carbon"].pyname,
     "userguide": MODEL_METADATA["carbon"].userguide,

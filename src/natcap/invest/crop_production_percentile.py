@@ -242,6 +242,7 @@ nutrient_units = {
 }
 
 MODEL_SPEC = {
+    "model_id": "crop_production_percentile",
     "model_name": MODEL_METADATA["crop_production_percentile"].model_title,
     "pyname": MODEL_METADATA["crop_production_percentile"].pyname,
     "userguide": MODEL_METADATA["crop_production_percentile"].userguide,

@@ -50,6 +50,7 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
 
 MODEL_SPEC = {
+    "model_id": "habitat_risk_assessment",
     "model_name": MODEL_METADATA["habitat_risk_assessment"].model_title,
     "pyname": MODEL_METADATA["habitat_risk_assessment"].pyname,
     "userguide": MODEL_METADATA["habitat_risk_assessment"].userguide,

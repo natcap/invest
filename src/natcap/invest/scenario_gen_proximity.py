@@ -30,6 +30,7 @@ MISSING_CONVERT_OPTION_MSG = gettext(
     'must be selected')
 
 MODEL_SPEC = {
+    "model_id": "scenario_generator_proximity",
     "model_name": MODEL_METADATA["scenario_generator_proximity"].model_title,
     "pyname": MODEL_METADATA["scenario_generator_proximity"].pyname,
     "userguide": MODEL_METADATA["scenario_generator_proximity"].userguide,
