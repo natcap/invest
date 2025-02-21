@@ -7,7 +7,22 @@
 
 version=$(python -m setuptools_scm)
 url_base=$(make -C .. --no-print-directory print-DIST_URL_BASE | awk ' { print $3 } ')
-url="${url_base}/workbench/invest_${version}_workbench_win32_x64.exe"
+platform=$(python -c "import platform;p=platform.system().lower();print(p if p != 'windows' else 'win32')")
+
+if [ "$platform" = "windows" ]; then
+    url="${url_base}/workbench/invest_${version}_workbench_${platform}_x64.exe"
+elif [ "$platform" = "darwin" ]; then
+    architecture=$(python -c "import platform;print(platform.machine())")
+    if [ "$architecture" = "arm64" ]; then
+        url="${url_base}/workbench/invest_${version}_workbench_${platform}_arm64.dmg"
+    else
+        url="${url_base}/workbench/invest_${version}_workbench_${platform}_x64.dmg"
+    fi
+else
+    echo "Unsupported platform: ${platform}"
+    exit 1
+fi
+
 
 echo "Enqueuing URL ${url}"
 python enqueue-binary.py "${url}"
