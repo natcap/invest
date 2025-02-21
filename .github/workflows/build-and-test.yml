@@ -380,7 +380,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Build Workbench (PRs)
+      - name: Build Workbench
         if: github.event_name == 'pull_request'
         working-directory: workbench
         env:
@@ -391,44 +391,9 @@ jobs:
           yarn run build
           yarn run dist
 
-      - name: Build Workbench (macOS)
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-13' # secrets not available in PR
-        working-directory: workbench
-        env:
-          GH_TOKEN: env.GITHUB_TOKEN
-          DEBUG: electron-builder
-          CSC_LINK: 2026-02-11-expiry-mac-app-distribution.p12
-          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
-        run: |
-          gsutil cp gs://stanford_cert/$CSC_LINK $CSC_LINK
-          yarn run build
-          yarn run dist
-
-      - name: Build Workbench (Windows)
-        if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
-        working-directory: workbench
-        env:
-          GH_TOKEN: env.GITHUB_TOKEN
-          DEBUG: electron-builder
-          #CSC_LINK: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-          #CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
-        run: |
-          #gsutil cp gs://stanford_cert/$CSC_LINK $CSC_LINK
-          yarn run build
-          yarn run dist
-
       - name: Test electron app with puppeteer
         working-directory: workbench
         run: npx cross-env CI=true yarn run test-electron-app
-
-      - name: Sign binaries (macOS)
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-13' # secrets not available in PR
-        env:
-          CERT_FILE: 2026-02-11-expiry-mac-app-distribution.p12
-          CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
-        run: |
-          WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.dmg' | head -n 1)
-          make WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
@@ -436,13 +401,13 @@ jobs:
 
       # This relies on the file existing on GCP, so it must be run after `make
       # deploy` is called.
-      - name: Queue windows binaries for signing
-        if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
+      - name: Queue binaries for signing
+        if: github.event_name != 'pull_request'
         env:
           ACCESS_TOKEN: ${{ secrets.CODESIGN_QUEUE_ACCESS_TOKEN }}
         run: |
           cd codesigning
-          bash enqueue-current-windows-installer.sh
+          bash enqueue-current-installer.sh
 
       - name: Upload workbench binary artifact
         if: always()
