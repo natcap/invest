@@ -361,14 +361,14 @@ MODEL_SPEC = {
                 },
                 "green_area_sum.tif": {
                     "about": (
-                        "Map of area of green spaces within a search distance "
+                        "Map of green area pixels within a search distance "
                         "around each pixel."
                     ),
-                    "bands": {1: {"type": "number"}}
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "kc.tif": {
                     "about": "Map of crop coefficient.",
-                    "bands": {1: {"type": "number"}}
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "lulc.tif": {
                     "about": "Map of land use/land cover.",
@@ -379,7 +379,7 @@ MODEL_SPEC = {
                         "Map of reference evapotranspiration reprojected and "
                         "aligned to the intersection of the AOI, ET0, and LULC."
                         ),
-                    "bands": {1: {"type": "number"}}
+                    "bands": {1: {"type": "number", "units": u.millimeter}}
                 },
                 "shade.tif": {
                     "about": "Map of shade.",
