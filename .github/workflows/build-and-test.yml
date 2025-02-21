@@ -101,7 +101,7 @@ jobs:
       - name: Set up python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ inputs.python-version }}
+          python-version: ${{ matrix.python-version }}
 
       # save week number to use in next step
       # save CONDA_PREFIX to GITHUB_ENV so it's accessible outside of shell commands
@@ -113,16 +113,20 @@ jobs:
 
       - name: Copy requirements into file
         shell: bash
+        env:
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} sqlite<3.49.1
         run: |
           # make sure each package is separated by a newline
-          echo "python=${{ inputs.python-version }}" > extra_requirements.txt
-          echo "${{ inputs.requirements }}" | xargs | tr " " "\n" >> extra_requirements.txt
+          echo "python=${{ matrix.python-version }}" > extra_requirements.txt
+          echo "${{ env.requirements }}" | xargs | tr " " "\n" >> extra_requirements.txt
 
       - name: Combine all requirements into environment YML
         shell: bash
+        env:
+          requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
         run: |
           # make sure each file is separated by a space
-          REQUIREMENTS_FILES=$(echo "${{ inputs.requirements-files }}" | xargs | tr "\n" " ")
+          REQUIREMENTS_FILES=$(echo "${{ env.requirements-files }}" | xargs | tr "\n" " ")
           python ./scripts/convert-requirements-to-conda-yml.py \
             extra_requirements.txt $REQUIREMENTS_FILES \
           > environment.yml
