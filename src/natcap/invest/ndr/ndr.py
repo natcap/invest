@@ -143,6 +143,19 @@ MODEL_SPEC = {
                 "actually reaches the stream)."),
             "name": gettext("Borselli k parameter"),
         },
+        "runoff_proxy_av": {
+            "type": "number",
+            "units": u.none,
+            "required": False,
+            "name": gettext("average runoff proxy"),
+            "about": gettext(
+                "The average runoff proxy. The runoff proxy index (RPI) is "
+                "calculated by dividing the runoff proxy by the average runoff proxy "
+                "within the watersheds. If an average runoff proxy is not explicitly "
+                "specified, it will be automatically calculated. The units will be "
+                "the same as those in the Runoff Proxy raster."
+                ),
+        },
         "subsurface_critical_length_n": {
             "type": "number",
             "units": u.meter,
@@ -525,6 +538,9 @@ def execute(args):
         args['k_param'] (number): The Borselli k parameter. This is a
             calibration parameter that determines the shape of the
             relationship between hydrologic connectivity.
+        args['runoff_proxy_av'] (number): (optional) The average runoff proxy. 
+            Used to calculate the runoff proxy index. If not specified,
+            it will be automatically calculated.
         args['subsurface_critical_length_n'] (number): The distance (traveled
             subsurface and downslope) after which it is assumed that soil
             retains nutrient at its maximum capacity, given in meters. If
@@ -578,6 +594,8 @@ def execute(args):
     biophysical_df = validation.get_validated_dataframe(
         args['biophysical_table_path'],
         **MODEL_SPEC['args']['biophysical_table_path'])
+
+    runoff_proxy_av = args.get('runoff_proxy_av', None)
 
     # these are used for aggregation in the last step
     field_pickle_map = {}
@@ -718,6 +736,7 @@ def execute(args):
         func=_normalize_raster,
         args=((f_reg['masked_runoff_proxy_path'], 1),
               f_reg['runoff_proxy_index_path']),
+        kwargs={'user_provided_mean': runoff_proxy_av},
         target_path_list=[f_reg['runoff_proxy_index_path']],
         dependent_task_list=[align_raster_task, mask_runoff_proxy_task],
         task_name='runoff proxy mean')
@@ -1190,7 +1209,8 @@ def validate(args, limit_to=None):
     return validation_warnings
 
 
-def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
+def _normalize_raster(base_raster_path_band, target_normalized_raster_path,
+                      user_provided_mean=None):
     """Calculate normalize raster by dividing by the mean value.
 
     Args:
@@ -1198,20 +1218,26 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
             mean.
         target_normalized_raster_path (string): path to target normalized
             raster from base_raster_path_band.
+        user_provided_mean (float, optional): user-provided runoff proxy
+            average. If provided, this value will be used instead of
+            computing the mean from the raster.
 
     Returns:
         None.
 
     """
-    value_sum, value_count = pygeoprocessing.raster_reduce(
-        function=lambda sum_count, block:  # calculate both in one pass
-            (sum_count[0] + numpy.sum(block), sum_count[1] + block.size),
-        raster_path_band=base_raster_path_band,
-        initializer=(0, 0))
+    if user_provided_mean is None:
+        value_sum, value_count = pygeoprocessing.raster_reduce(
+            function=lambda sum_count, block:  # calculate both in one pass
+                (sum_count[0] + numpy.sum(block), sum_count[1] + block.size),
+            raster_path_band=base_raster_path_band,
+            initializer=(0, 0))
 
-    value_mean = value_sum
-    if value_count > 0:
-        value_mean /= value_count
+        value_mean = value_sum
+        if value_count > 0:
+            value_mean /= value_count
+    else:
+        value_mean = user_provided_mean
 
     pygeoprocessing.raster_map(
         op=lambda array: array if value_mean == 0 else array / value_mean,
