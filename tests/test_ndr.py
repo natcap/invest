@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 import numpy
+import pandas
 import pygeoprocessing
 import shapely.geometry
 from osgeo import gdal
@@ -16,6 +17,56 @@ gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ndr')
 
+
+def make_simple_raster(base_raster_path, array):
+    """Create a raster on designated path with arbitrary values.
+    Args:
+        base_raster_path (str): the raster path for making the new raster.
+    Returns:
+        None.
+    """
+    # UTM Zone 10N
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)
+    projection_wkt = srs.ExportToWkt()
+
+    origin = (461251, 4923445)
+    pixel_size = (30, -30)
+    no_data = -1
+
+    pygeoprocessing.numpy_array_to_raster(
+        array, no_data, pixel_size, origin, projection_wkt,
+        base_raster_path)
+
+
+def make_simple_vector(path_to_shp):
+    """
+    Generate shapefile with two overlapping polygons
+    Args:
+        path_to_shp (str): path to store watershed results vector
+    Outputs:
+        None
+    """
+    # (xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax)
+    shapely_geometry_list = [
+        shapely.geometry.Polygon(
+            [(461251, 4923195), (461501, 4923195),
+             (461501, 4923445), (461251, 4923445),
+             (461251, 4923195)])
+    ]
+
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)
+    projection_wkt = srs.ExportToWkt()
+
+    vector_format = "ESRI Shapefile"
+    fields = {"id": ogr.OFTReal}
+    attribute_list = [{"id": 0}]
+
+    pygeoprocessing.shapely_geometry_to_vector(shapely_geometry_list,
+                                               path_to_shp, projection_wkt,
+                                               vector_format, fields,
+                                               attribute_list)
 
 class NDRTests(unittest.TestCase):
     """Regression tests for InVEST SDR model."""
@@ -409,3 +460,109 @@ class NDRTests(unittest.TestCase):
         numpy.testing.assert_array_equal(
             expected_array,
             pygeoprocessing.raster_to_numpy_array(target_raster_path))
+
+    def test_synthetic_runoff_proxy_av(self):
+        """
+        Test that runoff proxy average is calculated correctly if
+        (1) the user specified a runoff proxy average value,
+        (2) the user does not specify a value so the runoff proxy average
+            is auto-calculated
+        """
+        from natcap.invest.ndr.ndr import execute
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'runoff_proxy_av': 2,
+            'biophysical_table_path': os.path.join(
+                self.workspace_dir, "biophysical_table_gura.csv"),
+            'calc_n': False,
+            'calc_p': False,
+            'dem_path': os.path.join(
+                self.workspace_dir, "DEM_gura.tif"),
+            'k_param': "2",
+            'lulc_path': os.path.join(
+                self.workspace_dir, "land_use_gura.tif"),
+            'results_suffix': "_v1",
+            'runoff_proxy_path': os.path.join(
+                self.workspace_dir, "precipitation_gura.tif"),
+            'threshold_flow_accumulation': "1000",
+            'watersheds_path': os.path.join(
+                self.workspace_dir, "watershed_gura.shp")
+            }
+
+        biophysical_table = pandas.DataFrame({
+            "lucode": [1, 2, 3, 4],
+            "description": ["water", "forest", "grass", "urban"],
+            "load_p": [0, 1, 1, 0],
+            "eff_p": [1, 1.1, .9, .3],
+            "crit_len_p": [.05, .1, .2, .3],
+            "load_n": [0, 1, 0, 0.2],
+            'proportion_subsurface_n': [0, 0, 0, 0]
+        })
+
+        biophysical_csv_path = args['biophysical_table_path']
+        biophysical_table.to_csv(biophysical_csv_path, index=False)
+
+        runoff_proxy_ar = numpy.array([
+            [800, 799, 567, 234, 422, 422, 555],
+            [765, 867, 765, 654, 456, 677, 444],
+            [556, 443, 456, 265, 876, 890, 333],
+            [433, 266, 677, 776, 900, 687, 222],
+            [456, 832, 234, 234, 234, 554, 345]
+        ], dtype=numpy.float32)
+        make_simple_raster(args['runoff_proxy_path'], runoff_proxy_ar)
+
+        lulc_array = numpy.array([
+            [2, 3, 1, 5, 5, 5, 5],
+            [3, 3, 1, 1, 4, 5, 5],
+            [5, 5, 4, 2, 3, 1, 5],
+            [4, 1, 4, 2, 2, 1, 5],
+            [1, 5, 4, 1, 1, 2, 5]
+        ], dtype=numpy.float32)
+        make_simple_raster(args['lulc_path'], lulc_array)
+
+        dem = numpy.array([
+            [800, 799, 567, 234, 422, 422, 555],
+            [765, 867, 765, 654, 456, 677, 444],
+            [556, 443, 456, 265, 876, 890, 333],
+            [433, 266, 677, 776, 900, 687, 222],
+            [456, 832, 234, 234, 234, 222, 300]
+        ], dtype=numpy.float32)
+        make_simple_raster(args['dem_path'], dem)
+
+        make_simple_vector(args['watersheds_path'])
+
+        execute(args)
+
+        actual_output_path = os.path.join(
+            args['workspace_dir'], "intermediate_outputs",
+            f"runoff_proxy_index{args['results_suffix']}.tif")
+        actual_output = gdal.Open(actual_output_path)
+        band = actual_output.GetRasterBand(1)
+        actual_rpi = band.ReadAsArray()
+
+        expected_output = gdal.Open(args['runoff_proxy_path'])
+        expected_band = expected_output.GetRasterBand(1)
+        expected_rpi = expected_band.ReadAsArray()/args['runoff_proxy_av']
+
+        numpy.testing.assert_allclose(actual_rpi, expected_rpi)
+
+        # now run this without the a user average specified
+        del args['runoff_proxy_av']
+
+        execute(args)
+
+        actual_output_path = os.path.join(
+            args['workspace_dir'], "intermediate_outputs",
+            f"runoff_proxy_index{args['results_suffix']}.tif")
+        actual_output = gdal.Open(actual_output_path)
+        band = actual_output.GetRasterBand(1)
+        actual_rpi = band.ReadAsArray()
+
+        # compare to rpi with automatically calculated mean
+        expected_output = gdal.Open(args['runoff_proxy_path'])
+        expected_band = expected_output.GetRasterBand(1)
+        expected_rpi = expected_band.ReadAsArray()
+        expected_rpi /= numpy.mean(expected_rpi)
+
+        numpy.testing.assert_allclose(actual_rpi, expected_rpi)
