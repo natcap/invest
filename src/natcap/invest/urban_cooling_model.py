@@ -357,29 +357,29 @@ MODEL_SPEC = {
                 },
                 "area_kernel.tif": {
                     "about": "Area kernel for green area convolution.",
-                    "bands": {1: {"type": "boolean"}}
+                    "bands": {1: {"type": "integer"}}
                 },
                 "green_area_sum.tif": {
                     "about": (
                         "Map of area of green spaces within a search distance "
                         "around each pixel."
                     ),
-                    "bands": {1: {"type": ""}}
+                    "bands": {1: {"type": "number"}}
                 },
                 "kc.tif": {
                     "about": "Map of crop coefficient.",
-                    "bands": {1: {"type": ""}}
+                    "bands": {1: {"type": "number"}}
                 },
                 "lulc.tif": {
                     "about": "Map of land use/land cover.",
-                    "bands": {1: {"type": ""}}
+                    "bands": {1: {"type": "integer"}}
                 },
                 "ref_eto.tif": {
                     "about": (
                         "Map of reference evapotranspiration reprojected and "
                         "aligned to the intersection of the AOI, ET0, and LULC."
                         ),
-                    "bands": {1: {"type": ""}}
+                    "bands": {1: {"type": "number"}}
                 },
                 "shade.tif": {
                     "about": "Map of shade.",
