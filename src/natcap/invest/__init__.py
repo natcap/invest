@@ -30,13 +30,13 @@ LOCALE_NAME_MAP = {
     locale: babel.Locale(locale).display_name for locale in LOCALES
 }
 
-if not gdal.GetUseExceptions():
-    warnings.warn(('''
-        natcap.invest requires GDAL exceptions to be enabled. You must
-        call gdal.UseExceptions() to avoid unexpected behavior from
-        natcap.invest. A future version will enable exceptions on import.
-        gdal.UseExceptions() affects global state, so this may affect the
-        behavior of other packages.'''), FutureWarning)
+# if not gdal.GetUseExceptions():
+#     warnings.warn(('''
+#         natcap.invest requires GDAL exceptions to be enabled. You must
+#         call gdal.UseExceptions() to avoid unexpected behavior from
+#         natcap.invest. A future version will enable exceptions on import.
+#         gdal.UseExceptions() affects global state, so this may affect the
+#         behavior of other packages.'''), FutureWarning)
 
 
 def set_locale(locale_code):

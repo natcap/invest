@@ -318,7 +318,7 @@ MODEL_SPEC = {
                 }
             }
         },
-        "regression_coefficients.txt": {
+        "regression_summary.txt": {
             "created_if": "compute_regression",
             "about": gettext(
                 "This is a text file output of the regression analysis. It "
@@ -415,7 +415,8 @@ _OUTPUT_BASE_FILES = {
     'tud_monthly_table_path': 'TUD_monthly_table.csv',
     'regression_vector_path': 'regression_data.shp',
     'scenario_results_path': 'scenario_results.shp',
-    'regression_coefficients': 'regression_coefficients.txt',
+    'regression_summary': 'regression_summary.txt',
+    'regression_coefficients': 'regression_coefficients.csv',
 }
 
 _INTERMEDIATE_BASE_FILES = {
@@ -554,7 +555,7 @@ def execute(args):
         func=_retrieve_user_days,
         args=(file_registry['local_aoi_path'],
               file_registry['compressed_aoi_path'],
-              args['start_year'], args['end_year'],file_suffix,
+              args['start_year'], args['end_year'], file_suffix,
               output_dir, server_url, file_registry['server_version']),
         target_path_list=[file_registry['compressed_aoi_path'],
                           file_registry['pud_results_path'],
@@ -595,15 +596,21 @@ def execute(args):
         # Compute the regression
         coefficient_json_path = os.path.join(
             intermediate_dir, 'predictor_estimates.json')
+        predictor_df = validation.get_validated_dataframe(
+            args['predictor_table_path'],
+            **MODEL_SPEC['args']['predictor_table_path'])
+        predictor_id_list = predictor_df.index
         compute_regression_task = task_graph.add_task(
             func=_compute_and_summarize_regression,
             args=(file_registry['regression_vector_path'],
                   RESPONSE_VARIABLE_ID,
-                  args['predictor_table_path'],
+                  predictor_id_list,
                   file_registry['server_version'],
                   coefficient_json_path,
-                  file_registry['regression_coefficients']),
+                  file_registry['regression_coefficients'],
+                  file_registry['regression_summary']),
             target_path_list=[file_registry['regression_coefficients'],
+                              file_registry['regression_summary'],
                               coefficient_json_path],
             dependent_task_list=[assemble_regression_data_task],
             task_name='compute regression')
@@ -1425,21 +1432,25 @@ def _assemble_regression_data(
 
 
 def _compute_and_summarize_regression(
-        data_vector_path, response_id, predictor_table_path, server_version_path,
-        target_coefficient_json_path, target_regression_summary_path):
+        data_vector_path, response_id, predictor_list, server_version_path,
+        target_coefficient_json_path, target_coefficient_csv_path,
+        target_regression_summary_path):
     """Compute a regression and summary statistics and generate a report.
 
     Args:
         data_vector_path (string): path to polygon vector containing the
-            RESPONSE_ID field and predictor data
-        predictor_vector_path (string): path to polygon vector containing
-            fields for each predictor variable. Geometry is identical to that
-            of 'response_vector_path'.
+            ``response_id`` field and predictor data
+        response_id (string): column name from ``data_vector_path`` table
+            that contains the response variable.
+        predictor_list (list): list of strings with names of predictor
+            variables. These must be columns contained in ``data_vector_path``.
         server_version_path (string): path to pickle file containing the
             rec server id hash.
-        target_coefficient_json_path (string): path to json file to store a dictionary
-            that maps a predictor id its coefficient estimate.
+        target_coefficient_json_path (string): path to json file to store a
+            dictionary that maps a predictor id its coefficient estimate.
             This file is created by this function.
+        target_coefficient_csv_path (string): path to csv file with predictor
+            estimates and errors. Created by this function.
         target_regression_summary_path (string): path to txt file for the report.
             This file is created by this function.
 
@@ -1447,26 +1458,24 @@ def _compute_and_summarize_regression(
         None
 
     """
-    predictor_df = validation.get_validated_dataframe(
-        predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
-    predictor_list = predictor_df.index
     predictor_id_list, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est, eps = (
         _build_regression(
             data_vector_path, predictor_list, response_id))
 
+    t_values = [coef / se for coef, se in zip(coefficients, se_est)]
     # Generate a nice looking regression result and write to log and file
     coefficients_string = '               estimate     stderr    t value\n'
     # The last coefficient is the y-intercept,
     # but we want it at the top of the report, thus [-1] on lists
     coefficients_string += (
         f'{predictor_id_list[-1]:12} {coefficients[-1]:+.3e} '
-        f'{se_est[-1]:+.3e} {coefficients[-1] / se_est[-1]:+.3e}\n')
+        f'{se_est[-1]:+.3e} {t_values[-1]:+.3e}\n')
     # Since the intercept has already been reported, [:-1] on all the lists
     coefficients_string += '\n'.join(
         f'{p_id:12} {coefficient:+.3e} {se_est_factor:+.3e} '
-        f'{coefficient / se_est_factor:+.3e}'
-        for p_id, coefficient, se_est_factor in zip(
-            predictor_id_list[:-1], coefficients[:-1], se_est[:-1]))
+        f'{t:+.3e}'
+        for p_id, coefficient, se_est_factor, t in zip(
+            predictor_id_list[:-1], coefficients[:-1], se_est[:-1], t_values[:-1]))
 
     # Include the server version and hash in the report:
     with open(server_version_path, 'rb') as f:
@@ -1491,6 +1500,11 @@ def _compute_and_summarize_regression(
     predictor_estimates['epsilon'] = eps
     with open(target_coefficient_json_path, 'w') as json_file:
         json.dump(predictor_estimates, json_file)
+    # It's also convenient for end-users to have coefficients in a table.
+    with open(target_coefficient_csv_path, 'w') as csvfile:
+        csvfile.write('predictor,estimate,stderr,t-value\n')
+        for p_id, coef, se, t in zip(predictor_id_list, coefficients, se_est, t_values):
+            csvfile.write(','.join([p_id, str(coef), str(se), str(t)])+'\n')
 
 
 def _build_regression(

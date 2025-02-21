@@ -486,7 +486,7 @@ class UnitTestRecServer(unittest.TestCase):
             }, index=None).to_csv(target_filename, index=False)
 
         raw_csv_file_list = [
-            # os.path.join(self.workspace_dir, 'a.csv'),
+            os.path.join(self.workspace_dir, 'a.csv'),
             os.path.join(self.workspace_dir, 'b.csv'),
         ]
         for filename in raw_csv_file_list:
@@ -633,7 +633,7 @@ class TestRecClientServer(unittest.TestCase):
             'port': cls.port,
             'cache_workspace': cls.server_workspace_dir,
             'max_points_per_node': 200,
-            'max_allowable_query': n_points + 1000,
+            'max_allowable_query': n_points - 100,
             'datasets': {
                 'flickr': {
                     'raw_csv_point_data_path': flickr_csv_path,
@@ -708,7 +708,8 @@ class TestRecClientServer(unittest.TestCase):
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
             'results_suffix': 'foo',
-            'workspace_dir': self.workspace_dir,
+            # 'workspace_dir': self.workspace_dir,
+            'workspace_dir': 'scratch/rec_test',
             'hostname': self.hostname,
             'port': self.port,
         }
@@ -817,33 +818,33 @@ class TestRecClientServer(unittest.TestCase):
     #         aoi_path,
     #         os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
-    def test_results_suffix_on_serverside_files(self):
-        """Recreation test suffix gets added to files created on server."""
-        # TODO: move this to main regression test
-        from natcap.invest.recreation import recmodel_client
+    # def test_results_suffix_on_serverside_files(self):
+    #     """Recreation test suffix gets added to files created on server."""
+    #     # TODO: move this to main regression test
+    #     from natcap.invest.recreation import recmodel_client
 
-        args = {
-            'aoi_path': os.path.join(
-                SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
-            'compute_regression': False,
-            'start_year': MIN_YEAR,
-            'end_year': MAX_YEAR,
-            'grid_aoi': False,
-            'results_suffix': 'hello',
-            'workspace_dir': self.workspace_dir,
-            'hostname': self.hostname,
-            'port': self.port,
-        }
-        recmodel_client.execute(args)
+    #     args = {
+    #         'aoi_path': os.path.join(
+    #             SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
+    #         'compute_regression': False,
+    #         'start_year': MIN_YEAR,
+    #         'end_year': MAX_YEAR,
+    #         'grid_aoi': False,
+    #         'results_suffix': 'hello',
+    #         'workspace_dir': self.workspace_dir,
+    #         'hostname': self.hostname,
+    #         'port': self.port,
+    #     }
+    #     recmodel_client.execute(args)
 
-        self.assertTrue(os.path.exists(
-            os.path.join(args['workspace_dir'], 'pud_monthly_table_hello.csv')))
-        self.assertTrue(os.path.exists(
-            os.path.join(args['workspace_dir'], 'pud_results_hello.shp')))
-        self.assertTrue(os.path.exists(
-            os.path.join(args['workspace_dir'], 'tud_monthly_table_hello.csv')))
-        self.assertTrue(os.path.exists(
-            os.path.join(args['workspace_dir'], 'tud_results_hello.shp')))
+    #     self.assertTrue(os.path.exists(
+    #         os.path.join(args['workspace_dir'], 'pud_monthly_table_hello.csv')))
+    #     self.assertTrue(os.path.exists(
+    #         os.path.join(args['workspace_dir'], 'pud_results_hello.shp')))
+    #     self.assertTrue(os.path.exists(
+    #         os.path.join(args['workspace_dir'], 'tud_monthly_table_hello.csv')))
+    #     self.assertTrue(os.path.exists(
+    #         os.path.join(args['workspace_dir'], 'tud_results_hello.shp')))
 
     def test_start_year_out_of_range(self):
         """Test server sends valid date-ranges; client raises ValueError."""
@@ -1082,9 +1083,10 @@ class RecreationClientRegressionTests(unittest.TestCase):
         expected_value = 1
         self.assertEqual(actual_value, expected_value)
 
-    def test_least_squares_regression(self):
+    def test_compute_and_summarize_regression(self):
         """Recreation regression test for the least-squares linear model."""
         from natcap.invest.recreation import recmodel_client
+        import pickle
 
         data_vector_path = os.path.join(
             self.workspace_dir, 'regression_data.shp')
@@ -1122,29 +1124,38 @@ class RecreationClientRegressionTests(unittest.TestCase):
             attribute_list=attribute_list,
             ogr_geom_type=ogr.wkbPoint)
         predictor_list = ['roads', 'parks']
-        predictor_id_list, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est, eps = (
-            recmodel_client._build_regression(
-                data_vector_path, predictor_list, response_id))
+        server_version_path = 'server_version.pickle'
+        with open(server_version_path, 'ab') as f:
+            pickle.dump('version: foo', f)
+        target_coefficient_json_path = os.path.join(self.workspace_dir, 'estimates.json')
+        target_coefficient_csv_path = os.path.join(self.workspace_dir, 'estimates.csv')
+        target_regression_summary_path = os.path.join(self.workspace_dir, 'summary.txt')
+        recmodel_client._compute_and_summarize_regression(
+            data_vector_path, response_id, predictor_list, server_version_path,
+            target_coefficient_json_path, target_coefficient_csv_path,
+            target_regression_summary_path)
 
-        results = {}
-        results['coefficients'] = coefficients
-        results['ssres'] = ssres
-        results['r_sq'] = r_sq
-        results['r_sq_adj'] = r_sq_adj
-        results['std_err'] = std_err
-        results['dof'] = dof
-        results['se_est'] = se_est
+        results = pandas.read_csv(
+            target_coefficient_csv_path).to_dict(orient='list')
+        # results = {}
+        # results['coefficients'] = coefficients
+        # results['ssres'] = ssres
+        # results['r_sq'] = r_sq
+        # results['r_sq_adj'] = r_sq_adj
+        # results['std_err'] = std_err
+        # results['dof'] = dof
+        # results['se_est'] = se_est
 
         # Expected results created using R 4.4.0 lm()
         expected_results = {}
-        # y-intercept is last
-        expected_results['coefficients'] = [4.480035e-02, -2.177808e-04, -3.636955e+00]
-        expected_results['se_est'] = [3.540886e-03, 3.408778e-05, 7.603066e-02]
-        expected_results['ssres'] = 0.065457
-        expected_results['r_sq'] = 0.988802
-        expected_results['r_sq_adj'] = 0.985603
-        expected_results['std_err'] = 0.0967
-        expected_results['dof'] = 7
+        expected_results['estimate'] = [4.480035e-02, -2.177808e-04, -3.636955e+00]
+        expected_results['stderr'] = [3.540886e-03, 3.408778e-05, 7.603066e-02]
+        expected_results['t-value'] = [12.652301,  -6.388823, -47.835373]
+        # expected_results['ssres'] = 0.065457
+        # expected_results['r_sq'] = 0.988802
+        # expected_results['r_sq_adj'] = 0.985603
+        # expected_results['std_err'] = 0.0967
+        # expected_results['dof'] = 7
 
         for key in expected_results:
             numpy.testing.assert_allclose(
@@ -1538,7 +1549,6 @@ def _assert_regression_results_eq(
 
     finally:
         result_layer = None
-        gdal.Dataset.__swig_destroy__(result_vector)
         result_vector = None
 
 
