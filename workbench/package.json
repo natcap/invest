@@ -18,7 +18,7 @@
     "build-license": "cat ../NOTICE.txt ../LICENSE.txt > build/license_en.txt",
     "build-main": "babel --delete-dir-on-start src/main -d build/main --verbose --config-file ./babel.config.js --ignore **/__mocks__/* -s both --copy-files --no-copy-ignored",
     "build:preload": "cd src/preload && vite build",
-    "build-renderer": "vite --config vite.config.js build",
+    "build-renderer": "vite --config vite.config.mjs build",
     "build": "yarn build-renderer && yarn build-main && yarn build:preload && yarn build-license",
     "token": "cd .. && make jprint-DATA_BASE_URL > workbench/resources/storage_token.txt",
     "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
@@ -64,6 +64,7 @@
   },
   "devDependencies": {
     "@babel/cli": "^7.22.5",
+    "@babel/core": "^7.0.0",
     "@babel/eslint-parser": "^7.22.5",
     "@babel/plugin-transform-runtime": "^7.22.5",
     "@babel/preset-env": "^7.22.5",
@@ -79,7 +80,7 @@
     "concurrently": "^8.2.0",
     "cross-env": "^7.0.3",
     "electron": "^25.1.0",
-    "electron-builder": "^23.0.3",
+    "electron-builder": "^24.13.3",
     "eslint": "^8.57.0",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-plugin-import": "^2.29.1",
@@ -89,8 +90,8 @@
     "eslint-plugin-react": "^7.34.0",
     "eslint-plugin-react-hooks": "^4.2.0",
     "fs-extra": "^9.1.0",
-    "i18next-conv": "^13.1.0",
-    "i18next-parser": "^7.6.0",
+    "i18next-conv": "^15.1.1",
+    "i18next-parser": "^9.0.1",
     "jest": "^29.5.0",
     "jest-environment-jsdom": "^29.5.0",
     "puppeteer-core": "^20.6.0",
@@ -99,7 +100,7 @@
     "react-dom": "^18.2.0",
     "react-icons": "^4.9.0",
     "rimraf": "^3.0.2",
-    "vite": "^4.3.9",
+    "vite": "^5.4.14",
     "yazl": "^2.5.1"
   }
 }
