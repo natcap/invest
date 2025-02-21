@@ -98,12 +98,59 @@ jobs:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-      - name: Set up python environment
-        uses: ./.github/actions/setup_env
+      - name: Set up python
+        uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
-          requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} sqlite<3.49.1  # https://github.com/natcap/invest/issues/1797
+          python-version: ${{ inputs.python-version }}
+
+      # save week number to use in next step
+      # save CONDA_PREFIX to GITHUB_ENV so it's accessible outside of shell commands
+      - name: Set environment variables
+        shell: bash -l {0} # need login shell so that CONDA_PREFIX is set
+        run: |
+          echo "WEEK=$(date +%U)" >> $GITHUB_ENV
+          echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+
+      - name: Copy requirements into file
+        shell: bash
+        run: |
+          # make sure each package is separated by a newline
+          echo "python=${{ inputs.python-version }}" > extra_requirements.txt
+          echo "${{ inputs.requirements }}" | xargs | tr " " "\n" >> extra_requirements.txt
+
+      - name: Combine all requirements into environment YML
+        shell: bash
+        run: |
+          # make sure each file is separated by a space
+          REQUIREMENTS_FILES=$(echo "${{ inputs.requirements-files }}" | xargs | tr "\n" " ")
+          python ./scripts/convert-requirements-to-conda-yml.py \
+            extra_requirements.txt $REQUIREMENTS_FILES \
+          > environment.yml
+          echo "Will update environment using this environment.yml:"
+          cat environment.yml
+
+      - name: Setup conda environment
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: environment.yml
+          environment-name: env
+          condarc: |
+                channels:
+                  - conda-forge
+          init-shell: bash
+          cache-environment: true
+          cache-environment-key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
+
+      - name: List conda environment
+        shell: bash -l {0}
+        run: micromamba list
+
+      # - name: Set up python environment
+      #   uses: ./.github/actions/setup_env
+      #   with:
+      #     python-version: ${{ matrix.python-version }}
+      #     requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
+      #     requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} sqlite<3.49.1  # https://github.com/natcap/invest/issues/1797
 
       - name: Download previous conda environment.yml
         continue-on-error: true
