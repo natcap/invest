@@ -38,6 +38,7 @@
           - libengine-pkcs11-openssl
           - ykcs11
           - libssl-dev
+          - rust-all
           - google-cloud-sdk
           - google-cloud-cli
           - yubikey-manager
@@ -59,6 +60,10 @@
           # bookworm-backports is 2.9.  The issue (and solution) was similar to
           # https://stackoverflow.com/a/78308879
           - osslsigncode
+
+    - name: Install rcodesign from cargo
+      ansible.builtin.shell:
+        cmd: cargo install apple-codesign
 
     - name: Create the codesign directory
       ansible.builtin.file:
