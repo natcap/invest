@@ -51,6 +51,10 @@ workspace, which is located at `/opt/natcap-codesign':
 * `/opt/natcap-codesign/natcap-servers-1732552f0202.json` is a GCP service
   account key used to authenticate to google cloud storage.  This file must be
   available in the `gcp-cloudfunc/` directory at the time of deployment.
+* `/opt/natcap-codesign/mac-certificate.p12` is a p12 certificate for mac
+  codesigning.  This is a Developer ID Application certificate.
+* `/opt/natcap-codesign/mac-certificate-pass.txt` is a text file containing the
+  password for the mac certificate.
 
 
 ## Future Work
