@@ -189,7 +189,7 @@ def sign_dmg_file(file_to_sign):
     p12_pass_file = os.path.join(FILE_DIR, 'mac-certificate-pass.txt')
 
     subprocess.run(
-        ['rcodesign', 'sign', '--p12-file', p12_file, '--p12-password-file',
+        ['/opt/cargo/bin/rcodesign', 'sign', '--p12-file', p12_file, '--p12-password-file',
          p12_pass_file, file_to_sign], check=True, capture_output=False)
 
 
@@ -264,7 +264,7 @@ def dmg_has_signature(filename):
         ``True`` if the file is signed, ``False`` otherwise.
     """
     process = subprocess.run(
-        ['rcodesign', 'print-signature-info', filename], capture_output=True,
+        ['/opt/cargo/bin/rcodesign', 'print-signature-info', filename], capture_output=True,
         check=True)
     info = yaml.load(process.stdout.decode('utf-8'), Loader=Loader)
     if not info[0]['entity']['dmg']['signature']:

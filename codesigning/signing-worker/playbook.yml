@@ -38,7 +38,7 @@
           - libengine-pkcs11-openssl
           - ykcs11
           - libssl-dev
-          - rust-all
+          - g++
           - google-cloud-sdk
           - google-cloud-cli
           - yubikey-manager
@@ -61,9 +61,25 @@
           # https://stackoverflow.com/a/78308879
           - osslsigncode
 
-    - name: Install rcodesign from cargo
+    - name: Install rust
       ansible.builtin.shell:
-        cmd: cargo install apple-codesign
+        # From https://github.com/rust-lang/rustup/issues/1085
+        cmd: |
+            RUSTUP_HOME=/opt/rust
+            export RUSTUP_HOME
+            CARGO_HOME=/opt/rust
+            export CARGO_HOME
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        creates: /opt/rust/bin/cargo
+
+    - name: Install rcodesign from cargo
+      community.general.cargo:
+        executable: /opt/rust/bin/cargo
+        name: apple-codesign
+
+    #- name: Install rcodesign from cargo
+    #  ansible.builtin.shell:
+    #    cmd: cargo install --git https://github.com/indygreg/apple-platform-rs --branch main --bin rcodesign apple-codesign
 
     - name: Create the codesign directory
       ansible.builtin.file:
