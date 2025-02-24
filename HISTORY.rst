@@ -48,6 +48,9 @@ Unreleased Changes
     * InVEST's windows binaries are now distributed once again with a valid
       signature, signed by Stanford University.
       https://github.com/natcap/invest/issues/1580
+    * InVEST's mac disk image is now distributed once again with a valid
+      signature, signed by Stanford University.
+      https://github.com/natcap/invest/issues/1784
 * Annual Water Yield
     * Fixed an issue where the model would crash if the valuation table was
       provided, but the demand table was not.  Validation will now warn about

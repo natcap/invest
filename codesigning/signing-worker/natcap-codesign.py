@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Service script to sign InVEST windows binaries."""
+"""Service script to sign InVEST exe and dmg installers."""
 
 import logging
 import os
@@ -12,10 +12,22 @@ import traceback
 
 import pexpect  # apt install python3-pexpect
 import requests  # apt install python3-requests
+import yaml
+
+try:
+    from yaml import CLoader as Loader
+except ImportError:
+    from yaml import Loader
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 CERTIFICATE = sys.argv[1]
+
+# I had to install rust to a custom location in order to get the latest
+# version, so it's easier to just refer to the specific rcodesign binary we
+# want instead of trying to assume that whatever is on the PATH is the correct
+# version.
+RCODESIGN = '/opt/rust/bin/rcodesign'
 
 FILE_DIR = os.path.dirname(__file__)
 QUEUE_TOKEN_FILE = os.path.join(FILE_DIR, "access_token.txt")
@@ -29,14 +41,12 @@ with open(SLACK_TOKEN_FILE) as token_file:
 
 SLACK_NOTIFICATION_SUCCESS = textwrap.dedent(
     """\
-    :lower_left_fountain_pen: Successfully signed and uploaded `{filename}` to
-     <{url}|google cloud>
+    :lower_left_fountain_pen: Successfully signed and uploaded `{filename}` to <{url}|google cloud>
     """)
 
 SLACK_NOTIFICATION_ALREADY_SIGNED = textwrap.dedent(
     """\
-    :lower_left_fountain_pen: `{filename}` is already signed!
-     <{url}|google cloud>
+    :lower_left_fountain_pen: `{filename}` is already signed! <{url}|google cloud>
     """)
 
 
@@ -49,6 +59,11 @@ SLACK_NOTIFICATION_FAILURE = textwrap.dedent(
     Please investigate on ncp-inkwell using:
     ```
     sudo journalctl -u natcap-codesign.service
+    ```
+
+    When ready to try re-signing, requeue the file on a workstation with:
+    ```
+    python codesigning/enqueue-binary.py {filename}
     ```
     """)
 
@@ -129,7 +144,7 @@ def upload_to_bucket(filename, path_on_bucket):
     subprocess.run(['gsutil', 'cp', filename, path_on_bucket], check=True)
 
 
-def sign_file(file_to_sign):
+def sign_exe_file(file_to_sign):
     """Sign a local .exe file.
 
     Uses ``osslsigncode`` to sign the file using the private key stored on a
@@ -169,17 +184,42 @@ def sign_file(file_to_sign):
     shutil.move(signed_file, file_to_sign)
 
 
+def sign_dmg_file(file_to_sign):
+    """Sign a local .dmg file.
+
+    Args:
+        file_to_sign (str): The local filepath to the DMG to sign.
+
+    Returns:
+        ``None``
+    """
+
+    p12_file = os.path.join(FILE_DIR, 'mac-certificate.p12')
+    p12_pass_file = os.path.join(FILE_DIR, 'mac-certificate-pass.txt')
+
+    subprocess.run(
+        [RCODESIGN, 'sign', '--p12-file', p12_file, '--p12-password-file',
+         p12_pass_file, file_to_sign], check=True, capture_output=False)
+
+
 def note_signature_complete(local_filepath, target_gs_uri):
     """Create a small file next to the signed file to indicate signature.
 
     Args:
         gs_uri (str): The GCS URI of the signed file.
     """
-    # Using osslsigncode to verify the output always fails for me, even though
-    # the signature is clearly valid when checked on Windows.
-    process = subprocess.run(
-        ['osslsigncode', 'verify', '-in', local_filepath], check=False,
-        capture_output=True)
+    if local_filepath.endswith('.exe'):
+        # Using osslsigncode to verify the output always fails for me, even though
+        # the signature is clearly valid when checked on Windows.
+        process = subprocess.run(
+            ['osslsigncode', 'verify', '-in', local_filepath], check=False,
+            capture_output=True)
+    elif local_filepath.endswith('.dmg'):
+        process = subprocess.run(
+            [RCODESIGN, 'print-signature-info',
+             local_filepath], check=True, capture_output=True)
+    else:
+        raise ValueError(f'Unknown filetype for {local_filepath}')
 
     temp_filepath = f'/tmp/{os.path.basename(local_filepath)}.signed'
     with open(temp_filepath, 'w') as signature_file:
@@ -195,6 +235,28 @@ def note_signature_complete(local_filepath, target_gs_uri):
 
 
 def has_signature(filename):
+    """Check to see if the file has already been signed.
+
+    Any signature found, if any, is not verified as a part of this function, we
+    are only checking for the presence of a signature.
+
+    Args:
+        filename (str): The path to a local exe or dmg file.
+
+    Returns:
+        ``True`` if the file has a signature, ``False`` otherwise.
+    """
+    if filename.endswith('.exe'):
+        return exe_has_signature(filename)
+    elif filename.endswith('.dmg'):
+        return dmg_has_signature(filename)
+    else:
+        raise ValueError(
+            'Cannot verify signature; Unknown file extension '
+            f'{os.path.splitext(filename)[1]}')
+
+
+def exe_has_signature(filename):
     """Check if a file is already signed.
 
     Args:
@@ -219,6 +281,24 @@ def has_signature(filename):
     return True
 
 
+def dmg_has_signature(filename):
+    """Check if a DMG is already signed.
+
+    Args:
+        filename (str): The local filepath to the file to check.
+
+    Returns:
+        ``True`` if the file is signed, ``False`` otherwise.
+    """
+    process = subprocess.run(
+        [RCODESIGN, 'print-signature-info', filename], capture_output=True,
+        check=True)
+    info = yaml.load(process.stdout.decode('utf-8'), Loader=Loader)
+    if not info[0]['entity']['dmg']['signature']:
+        return False
+    return True
+
+
 def main():
     while True:
         try:
@@ -238,8 +318,12 @@ def main():
                             url=file_to_sign['https-url']))
                     note_signature_complete(filename, file_to_sign['gs-uri'])
                 else:
-                    LOGGER.info(f"Signing {filename}")
-                    sign_file(filename)
+                    if filename.endswith('.exe'):
+                        LOGGER.info(f"Signing {filename} with osslsigncode")
+                        sign_exe_file(filename)
+                    elif filename.endswith('.dmg'):
+                        LOGGER.info(f'Signing {filename} with rcodesign')
+                        sign_dmg_file(filename)
                     LOGGER.info(f"Uploading signed file to {file_to_sign['gs-uri']}")
                     upload_to_bucket(filename, file_to_sign['gs-uri'])
                     LOGGER.info(
