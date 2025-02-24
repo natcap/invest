@@ -1370,8 +1370,19 @@ def hm_op(cc_array, green_area_sum, cc_park_array, green_area_threshold):
 
 
 def mask_cc_green_areas_op(green_area_array, cc_array):
-    """Mask out non-green areas from the CC raster.
+    """
+    Mask out non-green areas from the cooling capacity (CC) raster.
 
+    Both `green_area_array` and `cc_array` originate from the LULC raster:
+        - `green_area_array` is a reclassification of LULC.
+        - `cc_array` is derived from raster calculations using reclassified
+           LULC arrays and ETI.
+    This function sets `cc_array` to:
+        - Its original cc value in green areas.
+        - 0 in non-green areas.
+        - Nodata if either `cc_array` or `green_area_array` are nodata
+
+    Args:
         cc_array (numpy.ndarray): this is the raw cooling index mapped from
             landcover values.
         green_area_array (numpy.ndarray): this is the boolean array of green
@@ -1379,12 +1390,13 @@ def mask_cc_green_areas_op(green_area_array, cc_array):
             and 0 represent areas that are not green.
 
     Returns:
-        masked cc array
+        A modified `cc_array` where only green areas retain their original values, 
+        non-green areas are set to 0, and nodata values are preserved.
 
     """
     result = numpy.empty(cc_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
-    valid_mask = ~(pygeoprocessing.array_equals_nodata(cc_array, TARGET_NODATA) &
+    valid_mask = ~(pygeoprocessing.array_equals_nodata(cc_array, TARGET_NODATA) |
                    pygeoprocessing.array_equals_nodata(green_area_array, TARGET_NODATA))
     green_area_mask = green_area_array.astype(bool)
     result[green_area_mask & valid_mask] = cc_array[green_area_mask & valid_mask]

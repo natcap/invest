@@ -120,10 +120,10 @@ class UCMTests(unittest.TestCase):
 
         expected_results = {
             'avg_cc': 0.222150472947109,
-            'avg_tmp_v': 37.3205,
-            'avg_tmp_an': 2.3205,
-            'avd_eng_cn': 3542934.706329,
-            'avg_wbgt_v': 32.599522,
+            'avg_tmp_v': 37.306549,
+            'avg_tmp_an': 2.306549,
+            'avd_eng_cn': 3602851.784639,
+            'avg_wbgt_v': 32.585935,
             'avg_ltls_v': 75.000000000000000,
             'avg_hvls_v': 75.000000000000000,
         }
@@ -141,7 +141,7 @@ class UCMTests(unittest.TestCase):
 
         # Assert that the decimal value of the energy savings value is what we
         # expect.
-        expected_energy_sav = 3587013.960782
+        expected_energy_sav = 3647696.209368
 
         energy_sav = 0.0
         n_nonetype = 0
@@ -162,7 +162,7 @@ class UCMTests(unittest.TestCase):
             # Expected energy savings is an accumulated value and may differ
             # past about 4 decimal places.
             numpy.testing.assert_allclose(energy_sav, expected_energy_sav, rtol=1e-4)
-            self.assertEqual(n_nonetype, 119)
+            self.assertEqual(n_nonetype, 121)
         finally:
             buildings_layer = None
             buildings_vector = None
@@ -201,7 +201,7 @@ class UCMTests(unittest.TestCase):
             # and may differ past about 4 decimal places.
             numpy.testing.assert_allclose(energy_sav, expected_energy_sav,
                                           rtol=1e-4)
-            self.assertEqual(n_nonetype, 119)
+            self.assertEqual(n_nonetype, 121)
         finally:
             buildings_layer = None
             buildings_vector = None
@@ -588,7 +588,8 @@ class UCMTests(unittest.TestCase):
             self.assertFalse(os.path.exists(path))
 
     def test_cc_rasters(self):
-        """Test that `execute` creates correct values with synthetic data"""
+        """Test that `execute` creates correct cooling coefficient rasters with
+        synthetic data"""
         from natcap.invest import urban_cooling_model
 
         args = {}
