@@ -35,8 +35,8 @@ with open(SLACK_TOKEN_FILE) as token_file:
 
 SLACK_NOTIFICATION_SUCCESS = textwrap.dedent(
     """\
-    :lower_left_fountain_pen: Successfully signed and uploaded `{filename}` to
-     <{url}|google cloud>
+    :lower_left_fountain_pen: Successfully signed and uploaded `{filename}` \
+    to <{url}|google cloud>
     """)
 
 SLACK_NOTIFICATION_ALREADY_SIGNED = textwrap.dedent(
@@ -55,6 +55,11 @@ SLACK_NOTIFICATION_FAILURE = textwrap.dedent(
     Please investigate on ncp-inkwell using:
     ```
     sudo journalctl -u natcap-codesign.service
+    ```
+
+    When ready to try re-signing, requeue the file on a workstation with:
+    ```
+    python codesigning/enqueue-binary.py {filename}
     ```
     """)
 
