@@ -229,6 +229,17 @@ def note_signature_complete(local_filepath, target_gs_uri):
 
 
 def has_signature(filename):
+    """Check to see if the file has already been signed.
+
+    Any signature found, if any, is not verified as a part of this function, we
+    are only checking for the presence of a signature.
+
+    Args:
+        filename (str): The path to a local exe or dmg file.
+
+    Returns:
+        ``True`` if the file has a signature, ``False`` otherwise.
+    """
     if filename.endswith('.exe'):
         return exe_has_signature(filename)
     elif filename.endswith('.dmg'):
