@@ -20,7 +20,7 @@
 # See https://wiki.debian.org/systemd/Services for background info about systemd services.
 
 [Unit]
-Description=NatCap Code Signing for Windows EXE Binaries
+Description=NatCap Code Signing for EXE and DMG Binaries
 User=natcap-codesign
 Group=natcap-codesign
 WorkingDirectory=/tmp
