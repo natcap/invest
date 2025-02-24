@@ -9,7 +9,7 @@ version=$(python -m setuptools_scm)
 url_base=$(make -C .. --no-print-directory print-DIST_URL_BASE | awk ' { print $3 } ')
 platform=$(python -c "import platform;p=platform.system().lower();print(p if p != 'windows' else 'win32')")
 
-if [ "$platform" = "windows" ]; then
+if [ "$platform" = "win32" ]; then
     url="${url_base}/workbench/invest_${version}_workbench_${platform}_x64.exe"
 elif [ "$platform" = "darwin" ]; then
     architecture=$(python -c "import platform;print(platform.machine())")
