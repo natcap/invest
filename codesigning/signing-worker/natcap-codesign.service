@@ -21,9 +21,6 @@
 
 [Unit]
 Description=NatCap Code Signing for EXE and DMG Binaries
-User=natcap-codesign
-Group=natcap-codesign
-WorkingDirectory=/tmp
 
 
 [Service]
@@ -31,3 +28,6 @@ WorkingDirectory=/tmp
 Type=simple
 Restart=always
 ExecStart=python3 /opt/natcap-codesign/natcap-codesign.py /opt/natcap-codesign/codesign-cert-chain.pem
+User=natcap-codesign
+Group=natcap-codesign
+WorkingDirectory=/opt/natcap-codesign
