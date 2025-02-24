@@ -35,14 +35,12 @@ with open(SLACK_TOKEN_FILE) as token_file:
 
 SLACK_NOTIFICATION_SUCCESS = textwrap.dedent(
     """\
-    :lower_left_fountain_pen: Successfully signed and uploaded `{filename}` \
-    to <{url}|google cloud>
+    :lower_left_fountain_pen: Successfully signed and uploaded `{filename}` to <{url}|google cloud>
     """)
 
 SLACK_NOTIFICATION_ALREADY_SIGNED = textwrap.dedent(
     """\
-    :lower_left_fountain_pen: `{filename}` is already signed!
-     <{url}|google cloud>
+    :lower_left_fountain_pen: `{filename}` is already signed! <{url}|google cloud>
     """)
 
 
