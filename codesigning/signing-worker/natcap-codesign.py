@@ -202,11 +202,18 @@ def note_signature_complete(local_filepath, target_gs_uri):
     Args:
         gs_uri (str): The GCS URI of the signed file.
     """
-    # Using osslsigncode to verify the output always fails for me, even though
-    # the signature is clearly valid when checked on Windows.
-    process = subprocess.run(
-        ['osslsigncode', 'verify', '-in', local_filepath], check=False,
-        capture_output=True)
+    if local_filepath.endswith('.exe'):
+        # Using osslsigncode to verify the output always fails for me, even though
+        # the signature is clearly valid when checked on Windows.
+        process = subprocess.run(
+            ['osslsigncode', 'verify', '-in', local_filepath], check=False,
+            capture_output=True)
+    elif local_filepath.endswith('.dmg'):
+        process = subprocess.run(
+            ['/opt/rust/bin/rcodesign', 'print-signature-info',
+             local_filepath], check=True, capture_output=True)
+    else:
+        raise ValueError(f'Unknown filetype for {local_filepath}')
 
     temp_filepath = f'/tmp/{os.path.basename(local_filepath)}.signed'
     with open(temp_filepath, 'w') as signature_file:
