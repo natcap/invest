@@ -381,7 +381,6 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Build Workbench
-        if: github.event_name == 'pull_request'
         working-directory: workbench
         env:
           GH_TOKEN: env.GITHUB_TOKEN
