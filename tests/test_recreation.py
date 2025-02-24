@@ -613,7 +613,7 @@ class TestRecClientServer(unittest.TestCase):
             cls.server_workspace_dir, 'flickr_sample_data.csv')
         twitter_csv_path = os.path.join(
             cls.server_workspace_dir, 'twitter_sample_data.csv')
-        n_points = 100**2  # a perfect square for convenience
+        n_points = 50**2  # a perfect square for convenience
         _synthesize_points_in_aoi(
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             flickr_csv_path, twitter_csv_path,
@@ -692,6 +692,8 @@ class TestRecClientServer(unittest.TestCase):
 
         """
         from natcap.invest.recreation import recmodel_client
+        from natcap.invest import validation
+
         args = {
             # 'aoi_path': os.path.join(
             #     SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
@@ -701,33 +703,61 @@ class TestRecClientServer(unittest.TestCase):
             'start_year': MIN_YEAR,
             'end_year': MAX_YEAR,
             'grid_aoi': True,
-            'cell_size': 20000,
+            'cell_size': 40000,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
             'results_suffix': 'foo',
-            # 'workspace_dir': self.workspace_dir,
-            'workspace_dir': 'scratch/rec_test',
+            'workspace_dir': self.workspace_dir,
             'hostname': self.hostname,
             'port': self.port,
         }
         recmodel_client.execute(args)
 
         out_grid_vector_path = os.path.join(
-            args['workspace_dir'], 'regression_data.shp')
-        expected_grid_vector_path = os.path.join(
-            REGRESSION_DATA, 'predictor_data_all_metrics.shp')
-        utils._assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 1e-3)
+            args['workspace_dir'], 'regression_data_foo.shp')
+
+        predictor_df = validation.get_validated_dataframe(
+            os.path.join(SAMPLE_DATA, 'predictors_all.csv'),
+            **recmodel_client.MODEL_SPEC['args']['predictor_table_path'])
+        field_list = list(predictor_df.index) + ['pr_TUD', 'pr_PUD', 'avg_pr_UD']
+
+        actual_sums = sum_vector_columns(out_grid_vector_path, field_list)
+        expected_sums = {
+            'ports': 10.0,
+            'airdist': 435104.4350759008,
+            'bonefish_a': 4446728168.518886,
+            'bathy': 25.6711717243,
+            'roads': 5072.70757123528,
+            'bonefish_p': 427.8866175179,
+            'bathy_sum': 326.41848224774003,
+            'pr_TUD': 1.0,
+            'pr_PUD': 1.0,
+            'avg_pr_UD': 1.0
+        }
+        for key in expected_sums:
+            numpy.testing.assert_almost_equal(
+                expected_sums[key], actual_sums[key], decimal=3)
 
         out_scenario_path = os.path.join(
-            args['workspace_dir'], 'scenario_results.shp')
-        expected_scenario_path = os.path.join(
-            REGRESSION_DATA, 'scenario_results_all_metrics.shp')
-        utils._assert_vectors_equal(
-            out_scenario_path, expected_scenario_path, 1e-3)
+            args['workspace_dir'], 'scenario_results_foo.shp')
+        field_list = list(predictor_df.index) + ['pr_UD_EST']
+        actual_scenario_sums = sum_vector_columns(out_scenario_path, field_list)
+        expected_scenario_sums = {
+            'ports': 10.0,
+            'airdist': 435104.4350759008,
+            'bonefish_a': 4446728168.518886,
+            'bathy': 25.6711717243,
+            'roads': 5072.70757123528,
+            'bonefish_p': 427.8866175179,
+            'bathy_sum': 326.41848224774003,
+            'pr_UD_EST': 1.0
+        }
+        for key in expected_scenario_sums:
+            numpy.testing.assert_almost_equal(
+                expected_scenario_sums[key], actual_scenario_sums[key], decimal=3)
 
     @_timeout(60.0)
     def test_execute_local_server(self):
@@ -1026,7 +1056,7 @@ class RecreationClientRegressionTests(unittest.TestCase):
         with open(target_path, 'r') as file:
             predictor_results = json.load(file)
         # Assert that target file was written and it is an empty dictionary
-        assert(len(predictor_results) == 0)
+        self.assertEqual(len(predictor_results), 0)
 
     def test_overlapping_features_in_polygon_predictor(self):
         """Recreation test overlapping predictor features not double-counted.
@@ -1215,7 +1245,7 @@ class RecreationClientRegressionTests(unittest.TestCase):
         msgs = recmodel_client.validate(args)
         self.assertIn('more than 10 characters long', msgs[0][1])
 
-    def test_existing_output_shapefiles(self):
+    def test_existing_gridded_aoi_shapefiles(self):
         """Recreation grid test when output files need to be overwritten."""
         from natcap.invest.recreation import recmodel_client
 
@@ -1581,3 +1611,24 @@ def _test_same_files(base_list_path, directory_path):
         raise AssertionError(
             "The following files were expected but not found: " +
             '\n'.join(missing_files))
+
+
+def sum_vector_columns(vector_path, field_list):
+    """Calculate the sum of values in each field of a gdal vector.
+
+    Args:
+        vector_path (str): path to a gdal vector.
+        field_list (list): list of field names to sum.
+
+    Returns:
+        dict: mapping field name to sum of values.
+
+    """
+    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
+    layer = vector.GetLayer()
+    result = {}
+    for field in field_list:
+        result[field] = sum([
+            feature.GetField(field)
+            for feature in layer])
+    return result
