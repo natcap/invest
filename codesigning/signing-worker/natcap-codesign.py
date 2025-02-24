@@ -23,6 +23,12 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 CERTIFICATE = sys.argv[1]
 
+# I had to install rust to a custom location in order to get the latest
+# version, so it's easier to just refer to the specific rcodesign binary we
+# want instead of trying to assume that whatever is on the PATH is the correct
+# version.
+RCODESIGN = '/opt/rust/bin/rcodesign'
+
 FILE_DIR = os.path.dirname(__file__)
 QUEUE_TOKEN_FILE = os.path.join(FILE_DIR, "access_token.txt")
 with open(QUEUE_TOKEN_FILE) as token_file:
@@ -192,7 +198,7 @@ def sign_dmg_file(file_to_sign):
     p12_pass_file = os.path.join(FILE_DIR, 'mac-certificate-pass.txt')
 
     subprocess.run(
-        ['/opt/rust/bin/rcodesign', 'sign', '--p12-file', p12_file, '--p12-password-file',
+        [RCODESIGN, 'sign', '--p12-file', p12_file, '--p12-password-file',
          p12_pass_file, file_to_sign], check=True, capture_output=False)
 
 
@@ -210,7 +216,7 @@ def note_signature_complete(local_filepath, target_gs_uri):
             capture_output=True)
     elif local_filepath.endswith('.dmg'):
         process = subprocess.run(
-            ['/opt/rust/bin/rcodesign', 'print-signature-info',
+            [RCODESIGN, 'print-signature-info',
              local_filepath], check=True, capture_output=True)
     else:
         raise ValueError(f'Unknown filetype for {local_filepath}')
@@ -285,7 +291,7 @@ def dmg_has_signature(filename):
         ``True`` if the file is signed, ``False`` otherwise.
     """
     process = subprocess.run(
-        ['/opt/rust/bin/rcodesign', 'print-signature-info', filename], capture_output=True,
+        [RCODESIGN, 'print-signature-info', filename], capture_output=True,
         check=True)
     info = yaml.load(process.stdout.decode('utf-8'), Loader=Loader)
     if not info[0]['entity']['dmg']['signature']:
