@@ -225,9 +225,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -333,9 +333,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_reprojected_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_reprojected_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -394,9 +394,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -456,9 +456,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -516,9 +516,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -570,9 +570,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,%s,linear,,1111_c.tif,1111_f.tif\n' % threatnames[0])
+                '40,0.7,%s,linear,,1111_c.tif,1111_f.tif\n' % threatnames[0])
             open_table.write(
-                '0.07,1.0,%s,exponential,,2222_c.tif,2222_f.tif\n'
+                '70,1.0,%s,exponential,,2222_c.tif,2222_f.tif\n'
                 % threatnames[1])
 
         args = {
@@ -654,9 +654,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(KeyError):
@@ -698,7 +698,7 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.07,0.8,missing_threat,linear,,missing_threat_c.tif,'
+                '70,0.8,missing_threat,linear,,missing_threat_c.tif,'
                 'missing_threat_f.tif\n')
 
         with self.assertRaises(ValueError):
@@ -744,9 +744,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError):
@@ -792,7 +792,7 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 '0.0,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -837,7 +837,7 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,invalid,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,invalid,,threat_1_c.tif,threat_1_f.tif\n')
 
         with self.assertRaises(ValueError):
             habitat_quality.execute(args)
@@ -881,9 +881,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         try:
@@ -932,9 +932,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif\n')
+                '70,1.0,threat_2,exponential,,threat_2_c.tif\n')
 
         try:
             habitat_quality.execute(args)
@@ -976,9 +976,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1020,9 +1020,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -1068,9 +1068,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'Max_Dist,Weight,threat,Decay,BASE_PATH,cur_PATH,fut_path\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -1113,9 +1113,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -1179,9 +1179,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1251,9 +1251,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1301,9 +1301,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         args['lulc_cur_path'], args['access_vector_path'] = (
@@ -1359,9 +1359,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_3,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_3,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         # At least one threat header is expected, so there should be a message
@@ -1410,9 +1410,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1460,9 +1460,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1513,9 +1513,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1566,9 +1566,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1616,9 +1616,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1669,9 +1669,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1735,9 +1735,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_c.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1800,9 +1800,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_c.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1890,9 +1890,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args)
@@ -1969,9 +1969,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args)
@@ -2018,9 +2018,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,threat_1_cur.tif,threat_1_c.tif\n')
+                '40,0.7,threat_1,threat_1_cur.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,threat_2_c.tif,threat_2_f.tif\n')
+                '70,1.0,threat_2,threat_2_c.tif,threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
@@ -2069,9 +2069,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -2122,9 +2122,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif')
+                '70,1.0,threat_2,exponential,,threat_2_c.tif')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
@@ -2171,9 +2171,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(TypeError):

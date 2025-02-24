@@ -83,7 +83,7 @@ MODEL_SPEC = {
                         "corresponding column in the Sensitivity table.")},
                 "max_dist": {
                     "type": "number",
-                    "units": u.kilometer,
+                    "units": u.meter,
                     "about": gettext(
                         "The maximum distance over which each threat affects "
                         "habitat quality. The impact of each degradation "
@@ -1055,7 +1055,7 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
         dist_raster_path (string): a filepath for the raster to decay.
             The raster is expected to be a euclidean distance transform with
             values measuring distance in pixels.
-        max_dist (float): max distance of threat in KM.
+        max_dist (float): max distance of threat in meters.
         decay_type (string): a string defining which decay method to use.
             Options include: 'linear' | 'exponential'.
         target_path (string): a filepath for a float output raster.
@@ -1067,12 +1067,9 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
     threat_pixel_size = pygeoprocessing.get_raster_info(
         dist_raster_path)['pixel_size']
 
-    # convert max distance (given in KM) to meters
-    max_dist_m = max_dist * 1000
-
     # convert max distance from meters to the number of pixels that
     # represents on the raster
-    max_dist_pixel = max_dist_m / abs(threat_pixel_size[0])
+    max_dist_pixel = max_dist / abs(threat_pixel_size[0])
     LOGGER.debug(f'Max distance in pixels: {max_dist_pixel}')
 
     def linear_op(dist):
