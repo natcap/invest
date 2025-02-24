@@ -73,9 +73,10 @@
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
         creates: /opt/rust/bin/cargo
 
-    - name: Install rcodesign from cargo
+    - name: Compile/install rcodesign from cargo (this can take a while)
       community.general.cargo:
         executable: /opt/rust/bin/cargo
+        path: /opt/rust
         name: apple-codesign
 
     #- name: Install rcodesign from cargo
