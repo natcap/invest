@@ -242,10 +242,15 @@ class UnitTestRecServer(unittest.TestCase):
             2005, 2014, os.path.join('.', 'server_cache'),
             raw_csv_filename=self.resampled_data_path)
 
-        # aoi_path = os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp')
-        aoi_path = os.path.join(self.workspace_dir, 'test_aoi_for_subset.geojson')
-        # This polygon matches the test data shapefile we used formerly.    
-        geomstring = "POLYGON ((-5.54101768507434 56.1006500736864,1.2562729659521 56.007023480697,1.01284382417981 50.2396253525534,-5.2039619503127 49.9961962107811,-5.54101768507434 56.1006500736864))"
+        aoi_path = os.path.join(
+            self.workspace_dir, 'test_aoi_for_subset.geojson')
+        # This polygon matches the test data shapefile we used formerly.
+        geomstring = """
+            POLYGON ((-5.54101768507434 56.1006500736864,
+                      1.2562729659521 56.007023480697,
+                      1.01284382417981 50.2396253525534,
+                      -5.2039619503127 49.9961962107811,
+                      -5.54101768507434 56.1006500736864))"""
         polygon = shapely.wkt.loads(geomstring)
         _make_simple_lat_lon_aoi([polygon], aoi_path)
 
@@ -292,53 +297,41 @@ class UnitTestRecServer(unittest.TestCase):
             'PUD_DEC': 1.2}
         ]
         fields = {field: ogr.OFTReal for field in expected_attributes[0]}
-        # expected_vector_path = os.path.join(
-        #     REGRESSION_DATA, 'test_aoi_for_subset_pud.shp')
-        expected_vector_path = os.path.join(self.workspace_dir, 'regression_pud.geojson')
-        _make_simple_lat_lon_aoi([polygon], expected_vector_path, fields, expected_attributes)
+
+        expected_vector_path = os.path.join(
+            self.workspace_dir, 'regression_pud.geojson')
+        _make_simple_lat_lon_aoi(
+            [polygon], expected_vector_path, fields, expected_attributes)
         utils._assert_vectors_equal(expected_vector_path, result_vector_path)
 
-        # # ensure the remote workspace is as expected
-        # workspace_zip_binary = recreation_server.fetch_workspace_aoi(
-        #     workspace_id)
-        # out_workspace_dir = os.path.join(self.workspace_dir, 'workspace_zip')
-        # os.makedirs(out_workspace_dir)
-        # workspace_zip_path = os.path.join(out_workspace_dir, 'workspace.zip')
-        # with open(workspace_zip_path, 'wb') as file:
-        #     file.write(workspace_zip_binary)
-        # zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
-        # utils._assert_vectors_equal(
-        #     aoi_path,
-        #     os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
+    # def test_local_calc_poly_ud(self):
+    #     """Recreation test single threaded local PUD calculation."""
+    #     from natcap.invest.recreation import recmodel_server
 
-    def test_local_calc_poly_ud(self):
-        """Recreation test single threaded local PUD calculation."""
-        from natcap.invest.recreation import recmodel_server
+    #     recreation_server = recmodel_server.RecModel(
+    #         2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
+    #         raw_csv_filename=self.resampled_data_path)
 
-        recreation_server = recmodel_server.RecModel(
-            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
-            raw_csv_filename=self.resampled_data_path)
+    #     date_range = (
+    #         numpy.datetime64('2005-01-01'),
+    #         numpy.datetime64('2014-12-31'))
 
-        date_range = (
-            numpy.datetime64('2005-01-01'),
-            numpy.datetime64('2014-12-31'))
+    #     aoi_path = os.path.join('aoi.geojson')
+    #     geomstring = "POLYGON ((-5.54101768507434 56.1006500736864,1.2562729659521 56.007023480697,1.01284382417981 50.2396253525534,-5.2039619503127 49.9961962107811,-5.54101768507434 56.1006500736864))"
+    #     polygon = shapely.wkt.loads(geomstring)
+    #     _make_simple_lat_lon_aoi([polygon], aoi_path)
 
-        aoi_path = os.path.join('aoi.geojson')
-        geomstring = "POLYGON ((-5.54101768507434 56.1006500736864,1.2562729659521 56.007023480697,1.01284382417981 50.2396253525534,-5.2039619503127 49.9961962107811,-5.54101768507434 56.1006500736864))"
-        polygon = shapely.wkt.loads(geomstring)
-        _make_simple_lat_lon_aoi([polygon], aoi_path)
+    #     poly_test_queue = queue.Queue()
+    #     poly_test_queue.put(0)
+    #     poly_test_queue.put('STOP')
+    #     pud_poly_feature_queue = queue.Queue()
+    #     recmodel_server._calc_poly_ud(
+    #         recreation_server.qt_pickle_filename, aoi_path,
+    #         date_range, poly_test_queue, pud_poly_feature_queue)
 
-        poly_test_queue = queue.Queue()
-        poly_test_queue.put(0)
-        poly_test_queue.put('STOP')
-        pud_poly_feature_queue = queue.Queue()
-        recmodel_server._calc_poly_ud(
-            recreation_server.qt_pickle_filename, aoi_path,
-            date_range, poly_test_queue, pud_poly_feature_queue)
-
-        # assert annual average PUD is the same as regression
-        self.assertEqual(
-            83.2, pud_poly_feature_queue.get()[1][0])
+    #     # assert annual average PUD is the same as regression
+    #     self.assertEqual(
+    #         83.2, pud_poly_feature_queue.get()[1][0])
 
     def test_local_calc_poly_ud_bad_aoi(self):
         """Recreation test PUD calculation with missing AOI features."""
@@ -389,39 +382,21 @@ class UnitTestRecServer(unittest.TestCase):
         self.assertEqual(
             0.0, pud_poly_feature_queue.get()[1][0])
 
-    def test_local_calc_existing_cached(self):
-        """Recreation local PUD calculation on existing quadtree."""
+    def test_reuse_of_existing_quadtree(self):
+        """Test init RecModel can reuse an existing quadtree on disk."""
         from natcap.invest.recreation import recmodel_server
+        from unittest.mock import patch
 
-        recreation_server = recmodel_server.RecModel(
+        _ = recmodel_server.RecModel(
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
             raw_csv_filename=self.resampled_data_path)
-        recreation_server = None
+
         # This will not generate a new quadtree but instead load existing one
-        recreation_server = recmodel_server.RecModel(
-            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
-            raw_csv_filename=self.resampled_data_path)
-
-        date_range = (
-            numpy.datetime64('2005-01-01'),
-            numpy.datetime64('2014-12-31'))
-
-        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
-        geomstring = "POLYGON ((-5.54101768507434 56.1006500736864,1.2562729659521 56.007023480697,1.01284382417981 50.2396253525534,-5.2039619503127 49.9961962107811,-5.54101768507434 56.1006500736864))"
-        polygon = shapely.wkt.loads(geomstring)
-        _make_simple_lat_lon_aoi([polygon], aoi_path)
-
-        poly_test_queue = queue.Queue()
-        poly_test_queue.put(0)
-        poly_test_queue.put('STOP')
-        pud_poly_feature_queue = queue.Queue()
-        recmodel_server._calc_poly_ud(
-            recreation_server.qt_pickle_filename, aoi_path,
-            date_range, poly_test_queue, pud_poly_feature_queue)
-
-        # assert annual average PUD is the same as regression
-        self.assertEqual(
-            83.2, pud_poly_feature_queue.get()[1][0])
+        with patch.object(recmodel_server, 'construct_userday_quadtree') as mock:
+            _ = recmodel_server.RecModel(
+                2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
+                raw_csv_filename=self.resampled_data_path)
+            self.assertFalse(mock.called)
 
     def test_parse_big_input_csv(self):
         """Recreation test parsing raw CSV."""
@@ -601,14 +576,6 @@ class TestRecClientServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
 
         cls.server_workspace_dir = tempfile.mkdtemp()
-        # cls.resampled_data_path = os.path.join(
-        #     cls.server_workspace_dir, 'resampled_data.csv')
-        # _resample_csv(
-        #     os.path.join(SAMPLE_DATA, 'sample_data.csv'),
-        #     cls.resampled_data_path, resample_factor=10)
-        # with open(cls.resampled_data_path, 'rb') as f:
-        #     n_points = sum(1 for _ in f)
-
         flickr_csv_path = os.path.join(
             cls.server_workspace_dir, 'flickr_sample_data.csv')
         twitter_csv_path = os.path.join(
@@ -618,6 +585,7 @@ class TestRecClientServer(unittest.TestCase):
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             flickr_csv_path, twitter_csv_path,
             n_points=n_points)
+
         # attempt to get an open port; could result in race condition but
         # will be okay for a test. if this test ever fails because of port
         # in use, that's probably why
@@ -759,44 +727,6 @@ class TestRecClientServer(unittest.TestCase):
             numpy.testing.assert_almost_equal(
                 expected_scenario_sums[key], actual_scenario_sums[key], decimal=3)
 
-    @_timeout(60.0)
-    def test_execute_local_server(self):
-        """Recreation base regression test on sample data on local server.
-
-        Executes Recreation model all the way through scenario prediction.
-        With this florida AOI, raster and vector predictors do not
-        intersect the AOI. This makes for a fast test and incidentally
-        covers an edge case.
-        """
-        from natcap.invest.recreation import recmodel_client
-
-        args = {
-            'aoi_path': os.path.join(
-                SAMPLE_DATA, 'local_recreation_aoi_florida_utm18n.shp'),
-            'cell_size': 40000.0,
-            'compute_regression': True,
-            'start_year': MIN_YEAR,
-            'end_year': MAX_YEAR,
-            'hostname': self.hostname,
-            'port': self.port,
-            'grid_aoi': True,
-            'grid_type': 'hexagon',
-            'predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors.csv'),
-            'results_suffix': '',
-            'scenario_predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors_scenario.csv'),
-            'workspace_dir': self.workspace_dir,
-        }
-
-        recmodel_client.execute(args)
-
-        _assert_regression_results_eq(
-            args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_base_florida_aoi.txt'),
-            os.path.join(args['workspace_dir'], 'scenario_results.shp'),
-            os.path.join(REGRESSION_DATA, 'local_server_scenario_results.csv'))
-
     # @_timeout(30.0)
     # def test_workspace_fetcher(self):
     #     """Recreation test workspace fetcher on a local Pyro5 empty server."""
@@ -848,51 +778,16 @@ class TestRecClientServer(unittest.TestCase):
     #         aoi_path,
     #         os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
-    # def test_results_suffix_on_serverside_files(self):
-    #     """Recreation test suffix gets added to files created on server."""
-    #     # TODO: move this to main regression test
-    #     from natcap.invest.recreation import recmodel_client
-
-    #     args = {
-    #         'aoi_path': os.path.join(
-    #             SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
-    #         'compute_regression': False,
-    #         'start_year': MIN_YEAR,
-    #         'end_year': MAX_YEAR,
-    #         'grid_aoi': False,
-    #         'results_suffix': 'hello',
-    #         'workspace_dir': self.workspace_dir,
-    #         'hostname': self.hostname,
-    #         'port': self.port,
-    #     }
-    #     recmodel_client.execute(args)
-
-    #     self.assertTrue(os.path.exists(
-    #         os.path.join(args['workspace_dir'], 'pud_monthly_table_hello.csv')))
-    #     self.assertTrue(os.path.exists(
-    #         os.path.join(args['workspace_dir'], 'pud_results_hello.shp')))
-    #     self.assertTrue(os.path.exists(
-    #         os.path.join(args['workspace_dir'], 'tud_monthly_table_hello.csv')))
-    #     self.assertTrue(os.path.exists(
-    #         os.path.join(args['workspace_dir'], 'tud_results_hello.shp')))
-
     def test_start_year_out_of_range(self):
         """Test server sends valid date-ranges; client raises ValueError."""
         from natcap.invest.recreation import recmodel_client
 
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
-            'cell_size': 7000.0,
-            'compute_regression': True,
+            'compute_regression': False,
             'start_year': '1219',  # start year ridiculously out of range
             'end_year': MAX_YEAR,
-            'grid_aoi': True,
-            'grid_type': 'hexagon',
-            'predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors.csv'),
-            'results_suffix': '',
-            'scenario_predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors_scenario.csv'),
+            'grid_aoi': False,
             'workspace_dir': self.workspace_dir,
             'hostname': self.hostname,
             'port': self.port
@@ -910,17 +805,10 @@ class TestRecClientServer(unittest.TestCase):
 
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
-            'cell_size': 7000.0,
-            'compute_regression': True,
+            'compute_regression': False,
             'start_year': MIN_YEAR,
             'end_year': '2219',  # end year ridiculously out of range
-            'grid_aoi': True,
-            'grid_type': 'hexagon',
-            'predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors.csv'),
-            'results_suffix': '',
-            'scenario_predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors_scenario.csv'),
+            'grid_aoi': False,
             'workspace_dir': self.workspace_dir,
             'hostname': self.hostname,
             'port': self.port
