@@ -317,6 +317,10 @@ MODEL_SPEC = {
                     "about": "Map of cooling capacity",
                     "bands": {1: {"type": "ratio"}}
                 },
+                "cc_masked_green_areas.tif": {
+                    "about": "Cooling capacity map masked by non-green areas",
+                    "bands": {1: {"type": "ratio"}}
+                },
                 "T_air.tif": {
                     "about": "Map of air temperature with air mixing.",
                     "bands": {1: {"type": "number", "units": u.degree_Celsius}}
@@ -346,7 +350,47 @@ MODEL_SPEC = {
                         "reference of the LULC."),
                     "geometries": spec_utils.POLYGONS,
                     "fields": {}
-                }
+                },
+                "albedo.tif": {
+                    "about": "Map of albedo.",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "area_kernel.tif": {
+                    "about": "Area kernel for green area convolution.",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "green_area_sum.tif": {
+                    "about": (
+                        "Map of green area pixels within a search distance "
+                        "around each pixel."
+                    ),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "kc.tif": {
+                    "about": "Map of crop coefficient.",
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "lulc.tif": {
+                    "about": "Map of land use/land cover.",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "ref_eto.tif": {
+                    "about": (
+                        "Map of reference evapotranspiration reprojected and "
+                        "aligned to the intersection of the AOI, ET0, and LULC."
+                        ),
+                    "bands": {1: {"type": "number", "units": u.millimeter}}
+                },
+                "shade.tif": {
+                    "about": "Map of shade.",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "cc_ref_aoi_stats.pickle": {
+                    "about": "Cooling capacity zonal statistics for aoi.",
+                },
+                "t_air_aoi_stats.pickle": {
+                    "about": "Air temperature zonal statistics for aoi.",
+                },
             }
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
@@ -516,50 +560,6 @@ def execute(args):
             task_name=f'reclassify to {prop}')
         task_path_prop_map[prop] = (prop_task, prop_raster_path)
 
-    green_area_decay_kernel_distance = int(numpy.round(
-        float(args['green_area_cooling_distance']) / cell_size))
-    cc_park_raster_path = os.path.join(
-        intermediate_dir, f'cc_park{file_suffix}.tif')
-    cc_park_task = task_graph.add_task(
-        func=convolve_2d_by_exponential,
-        args=(
-            green_area_decay_kernel_distance,
-            task_path_prop_map['green_area'][1],
-            cc_park_raster_path),
-        target_path_list=[cc_park_raster_path],
-        dependent_task_list=[
-            task_path_prop_map['green_area'][0]],
-        task_name='calculate T air')
-
-    # Calculate the area of greenspace within a search radius of each pixel.
-    area_kernel_path = os.path.join(
-        intermediate_dir, f'area_kernel{file_suffix}.tif')
-    area_kernel_task = task_graph.add_task(
-        func=pygeoprocessing.kernels.dichotomous_kernel,
-        kwargs=dict(
-            target_kernel_path=area_kernel_path,
-            max_distance=green_area_decay_kernel_distance,
-            normalize=False),
-        target_path_list=[area_kernel_path],
-        task_name='area kernel')
-
-    green_area_sum_raster_path = os.path.join(
-        intermediate_dir, f'green_area_sum{file_suffix}.tif')
-    green_area_sum_task = task_graph.add_task(
-        func=pygeoprocessing.convolve_2d,
-        args=(
-            (task_path_prop_map['green_area'][1], 1),  # green area path
-            (area_kernel_path, 1),
-            green_area_sum_raster_path),
-        kwargs={
-            'working_dir': intermediate_dir,
-            'ignore_nodata_and_edges': True},
-        target_path_list=[green_area_sum_raster_path],
-        dependent_task_list=[
-            task_path_prop_map['green_area'][0],  # reclassed green area task
-            area_kernel_task],
-        task_name='calculate green area')
-
     align_task.join()
 
     cc_raster_path = os.path.join(intermediate_dir, f'cc{file_suffix}.tif')
@@ -621,6 +621,63 @@ def execute(args):
             dependent_task_list=[
                 task_path_prop_map['building_intensity'][0]],
             task_name='calculate cc index (intensity)')
+
+    cc_masked_green_area_raster_path = os.path.join(
+        intermediate_dir, f'cc_masked_green_areas{file_suffix}.tif')
+
+    green_area_cc_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=(
+            [(task_path_prop_map['green_area'][1], 1),
+             (cc_raster_path, 1)],
+            mask_cc_green_areas_op,
+            cc_masked_green_area_raster_path, gdal.GDT_Float32, TARGET_NODATA),
+        target_path_list=[cc_masked_green_area_raster_path],
+        dependent_task_list=[task_path_prop_map['green_area'][0], cc_task],
+        task_name='Compute green area cooling effect')
+
+    green_area_decay_kernel_distance = int(numpy.round(
+        float(args['green_area_cooling_distance']) / cell_size))
+    cc_park_raster_path = os.path.join(
+        intermediate_dir, f'cc_park{file_suffix}.tif')
+    cc_park_task = task_graph.add_task(
+        func=convolve_2d_by_exponential,
+        args=(
+            green_area_decay_kernel_distance,
+            cc_masked_green_area_raster_path,
+            cc_park_raster_path),
+        target_path_list=[cc_park_raster_path],
+        dependent_task_list=[green_area_cc_task],
+        task_name='calculate CC park')
+
+    # Calculate the area of greenspace within a search radius of each pixel.
+    area_kernel_path = os.path.join(
+        intermediate_dir, f'area_kernel{file_suffix}.tif')
+    area_kernel_task = task_graph.add_task(
+        func=pygeoprocessing.kernels.dichotomous_kernel,
+        kwargs=dict(
+            target_kernel_path=area_kernel_path,
+            max_distance=green_area_decay_kernel_distance,
+            normalize=False),
+        target_path_list=[area_kernel_path],
+        task_name='area kernel')
+
+    green_area_sum_raster_path = os.path.join(
+        intermediate_dir, f'green_area_sum{file_suffix}.tif')
+    green_area_sum_task = task_graph.add_task(
+        func=pygeoprocessing.convolve_2d,
+        args=(
+            (task_path_prop_map['green_area'][1], 1),  # green area path
+            (area_kernel_path, 1),
+            green_area_sum_raster_path),
+        kwargs={
+            'working_dir': intermediate_dir,
+            'ignore_nodata_and_edges': True},
+        target_path_list=[green_area_sum_raster_path],
+        dependent_task_list=[
+            task_path_prop_map['green_area'][0],  # reclassed green area task
+            area_kernel_task],
+        task_name='calculate green area')
 
     # Compute Heat Mitigation (HM) index.
     #
@@ -1312,6 +1369,42 @@ def hm_op(cc_array, green_area_sum, cc_park_array, green_area_threshold):
     return result
 
 
+def mask_cc_green_areas_op(green_area_array, cc_array):
+    """
+    Mask out non-green areas from the cooling capacity (CC) raster.
+
+    Both `green_area_array` and `cc_array` originate from the LULC raster:
+        - `green_area_array` is a reclassification of LULC.
+        - `cc_array` is derived from raster calculations using reclassified
+           LULC arrays and ETI.
+    This function sets `cc_array` to:
+        - Its original cc value in green areas.
+        - 0 in non-green areas.
+        - Nodata if either `cc_array` or `green_area_array` are nodata
+
+    Args:
+        cc_array (numpy.ndarray): this is the raw cooling index mapped from
+            landcover values.
+        green_area_array (numpy.ndarray): this is the boolean array of green
+            areas where 1 corresponds with lulc classes that are green areas
+            and 0 represent areas that are not green.
+
+    Returns:
+        A modified `cc_array` where only green areas retain their original values, 
+        non-green areas are set to 0, and nodata values are preserved.
+
+    """
+    result = numpy.empty(cc_array.shape, dtype=numpy.float32)
+    result[:] = TARGET_NODATA
+    valid_mask = ~(pygeoprocessing.array_equals_nodata(cc_array, TARGET_NODATA) |
+                   pygeoprocessing.array_equals_nodata(green_area_array, TARGET_NODATA))
+    green_area_mask = green_area_array.astype(bool)
+    result[green_area_mask & valid_mask] = cc_array[green_area_mask & valid_mask]
+    result[~green_area_mask & valid_mask] = 0
+
+    return result
+
+
 def map_work_loss(
         work_temp_threshold_array, temperature_raster_path,
         work_loss_raster_path):
@@ -1385,7 +1478,7 @@ def convolve_2d_by_exponential(
     Args:
         decay_kernel_distance (float): radius of 1/e cutoff of decay kernel
             raster in pixels.
-        signal_rater_path (str): path to single band signal raster.
+        signal_raster_path (str): path to single band signal raster.
         target_convolve_raster_path (str): path to convolved raster.
 
     Returns:
