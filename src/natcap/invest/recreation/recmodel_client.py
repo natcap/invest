@@ -396,12 +396,6 @@ MODEL_SPEC = {
 }
 
 
-# # These are the expected extensions associated with an ESRI Shapefile
-# # as part of the ESRI Shapefile driver standard, but some extensions
-# # like .prj, .sbn, and .sbx, are optional depending on versions of the
-# # format: http://www.gdal.org/drv_shapefile.html
-_ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
-
 # Have 5 seconds between timed progress outputs
 LOGGER_TIME_DELAY = 5
 
@@ -409,12 +403,12 @@ RESPONSE_VARIABLE_ID = 'avg_pr_UD'
 SCENARIO_RESPONSE_ID = 'pr_UD_EST'
 
 _OUTPUT_BASE_FILES = {
-    'pud_results_path': 'PUD_results.gpkg',
+    'pud_results_path': 'PUD_results.shp',
     'pud_monthly_table_path': 'PUD_monthly_table.csv',
-    'tud_results_path': 'TUD_results.gpkg',
+    'tud_results_path': 'TUD_results.shp',
     'tud_monthly_table_path': 'TUD_monthly_table.csv',
-    'regression_vector_path': 'regression_data.gpkg',
-    'scenario_results_path': 'scenario_results.gpkg',
+    'regression_vector_path': 'regression_data.shp',
+    'scenario_results_path': 'scenario_results.shp',
     'regression_summary': 'regression_summary.txt',
     'regression_coefficients': 'regression_coefficients.csv',
 }
@@ -715,15 +709,14 @@ def _retrieve_user_days(
         LOGGER.info(f'AOI accepted. Fewer than {n_points} {dataset} points '
                     f'found within AOI extent: {aoi_bounding_box}')
 
-    basename = os.path.splitext(local_aoi_path)[0]
+    aoi_vector = gdal.OpenEx(local_aoi_path, gdal.OF_VECTOR)
     with zipfile.ZipFile(compressed_aoi_path, 'w') as aoizip:
-        for suffix in _ESRI_SHAPEFILE_EXTENSIONS:
-            filename = basename + suffix
-            if os.path.exists(filename):
-                LOGGER.info(f'archiving {filename}')
-                aoizip.write(filename, os.path.basename(filename))
+        for filename in aoi_vector.GetFileList():
+            LOGGER.info(f'archiving {filename}')
+            aoizip.write(filename, os.path.basename(filename))
+    aoi_vector = None
 
-    # convert shapefile to binary string for serialization
+    # convert compressed AOI to binary string for serialization
     with open(compressed_aoi_path, 'rb') as aoifile:
         zip_file_binary = aoifile.read()
 

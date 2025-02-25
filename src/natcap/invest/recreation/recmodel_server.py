@@ -228,8 +228,8 @@ class RecModel(object):
         """Calculate annual average and per monthly average user days.
 
         Args:
-            zip_file_binary (string): a bytestring that is a zip file of an
-                ESRI shapefile.
+            zip_file_binary (string): a bytestring that is a zip file of a
+                GDAL vector.
             date_range (string 2-tuple): a tuple that contains the inclusive
                 start and end date formatted as 'YYYY-MM-DD'
             out_vector_filename (string): base filename of output vector
@@ -255,17 +255,17 @@ class RecModel(object):
         LOGGER.info('decompress zip file AOI')
         with open(out_zip_file_filename, 'wb') as zip_file_disk:
             zip_file_disk.write(zip_file_binary)
-        shapefile_archive = zipfile.ZipFile(out_zip_file_filename, 'r')
-        shapefile_archive.extractall(workspace_path)
-        shapefile_archive.close()
-        shapefile_archive = None
-        file_list = [file for file in os.listdir(workspace_path) if not file.endswith('.zip')]
+        aoi_archive = zipfile.ZipFile(out_zip_file_filename, 'r')
+        aoi_archive.extractall(workspace_path)
+        aoi_archive.close()
+        aoi_archive = None
+        file_list = [file for file in os.listdir(workspace_path)
+                     if not file.endswith('.zip')]
         if len(file_list) > 1:
             # if it's a multifile AOI, assume a shapefile
             aoi_path = glob.glob(os.path.join(workspace_path, '*.shp'))[0]
         else:
             aoi_path = os.path.join(workspace_path, file_list[0])
-        # aoi_path = glob.glob(os.path.join(workspace_path, '*.shp'))[0]
 
         LOGGER.info('running calc user days on %s', workspace_path)
         numpy_date_range = (
