@@ -20,16 +20,16 @@ export default function PluginModal(props) {
   const [path, setPath] = useState('');
   const [installErr, setInstallErr] = useState('');
   const [uninstallErr, setUninstallErr] = useState('');
-  const [pluginToRemove, setPluginToRemove] = useState(undefined);
+  const [pluginToRemove, setPluginToRemove] = useState('');
   const [installLoading, setInstallLoading] = useState(false);
   const [uninstallLoading, setUninstallLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState(undefined);
+  const [statusMessage, setStatusMessage] = useState('');
   const [plugins, setPlugins] = useState({});
   const [installFrom, setInstallFrom] = useState('url');
 
   const handleModalClose = () => {
-    setURL(undefined);
-    setRevision(undefined);
+    setURL('');
+    setRevision('');
     setInstallErr('');
     setUninstallErr('');
     setShowPluginModal(false);
