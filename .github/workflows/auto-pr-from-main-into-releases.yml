@@ -76,7 +76,7 @@ jobs:
                   --reviewer "$PR_USERNAME" \
                   --assignee "$PR_USERNAME" \
                   --label "auto" \
-                  --title "auto merge main into release/*" \
+                  --title "[Auto-generated] Merge main into release/$BRANCH" \
                   --body-file $PR_BODY_FILE || ERRORSPRESENT=$(($ERRORSPRESENT | $?))
           done
 
