@@ -304,34 +304,41 @@ class UnitTestRecServer(unittest.TestCase):
             [polygon], expected_vector_path, fields, expected_attributes)
         utils._assert_vectors_equal(expected_vector_path, result_vector_path)
 
-    # def test_local_calc_poly_ud(self):
-    #     """Recreation test single threaded local PUD calculation."""
-    #     from natcap.invest.recreation import recmodel_server
+    def test_local_calc_poly_ud(self):
+        """Recreation test single threaded local PUD calculation."""
+        from natcap.invest.recreation import recmodel_server
 
-    #     recreation_server = recmodel_server.RecModel(
-    #         2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
-    #         raw_csv_filename=self.resampled_data_path)
+        recreation_server = recmodel_server.RecModel(
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
+            raw_csv_filename=self.resampled_data_path)
 
-    #     date_range = (
-    #         numpy.datetime64('2005-01-01'),
-    #         numpy.datetime64('2014-12-31'))
+        date_range = (
+            numpy.datetime64('2005-01-01'),
+            numpy.datetime64('2014-12-31'))
 
-    #     aoi_path = os.path.join('aoi.geojson')
-    #     geomstring = "POLYGON ((-5.54101768507434 56.1006500736864,1.2562729659521 56.007023480697,1.01284382417981 50.2396253525534,-5.2039619503127 49.9961962107811,-5.54101768507434 56.1006500736864))"
-    #     polygon = shapely.wkt.loads(geomstring)
-    #     _make_simple_lat_lon_aoi([polygon], aoi_path)
+        aoi_path = os.path.join('aoi.geojson')
+        # This polygon matches the test data shapefile we used formerly.
+        geomstring = """
+            POLYGON ((-5.54101768507434 56.1006500736864,
+                      1.2562729659521 56.007023480697,
+                      1.01284382417981 50.2396253525534,
+                      -5.2039619503127 49.9961962107811,
+                      -5.54101768507434 56.1006500736864))"""
 
-    #     poly_test_queue = queue.Queue()
-    #     poly_test_queue.put(0)
-    #     poly_test_queue.put('STOP')
-    #     pud_poly_feature_queue = queue.Queue()
-    #     recmodel_server._calc_poly_ud(
-    #         recreation_server.qt_pickle_filename, aoi_path,
-    #         date_range, poly_test_queue, pud_poly_feature_queue)
+        polygon = shapely.wkt.loads(geomstring)
+        _make_simple_lat_lon_aoi([polygon], aoi_path)
 
-    #     # assert annual average PUD is the same as regression
-    #     self.assertEqual(
-    #         83.2, pud_poly_feature_queue.get()[1][0])
+        poly_test_queue = queue.Queue()
+        poly_test_queue.put(0)
+        poly_test_queue.put('STOP')
+        pud_poly_feature_queue = queue.Queue()
+        recmodel_server._calc_poly_ud(
+            recreation_server.qt_pickle_filename, aoi_path,
+            date_range, poly_test_queue, pud_poly_feature_queue)
+
+        # assert annual average PUD is the same as regression
+        self.assertEqual(
+            83.2, pud_poly_feature_queue.get()[1][0])
 
     def test_local_calc_poly_ud_bad_aoi(self):
         """Recreation test PUD calculation with missing AOI features."""
@@ -1258,17 +1265,10 @@ class RecreationClientRegressionTests(unittest.TestCase):
 
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
-            'cell_size': 7000.0,
-            'compute_regression': True,
+            'compute_regression': False,
             'start_year': MAX_YEAR,  # note start_year > end_year
             'end_year': MIN_YEAR,
-            'grid_aoi': True,
-            'grid_type': 'hexagon',
-            'predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors.csv'),
-            'results_suffix': '',
-            'scenario_predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors_scenario.csv'),
+            'grid_aoi': False,
             'workspace_dir': self.workspace_dir,
         }
         msgs = recmodel_client.validate(args)
@@ -1289,7 +1289,6 @@ class RecreationClientRegressionTests(unittest.TestCase):
             'end_year': MAX_YEAR,
             'grid_aoi': True,
             'grid_type': 'circle',  # intentionally bad gridtype
-            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
         }
 
@@ -1403,7 +1402,6 @@ class RecreationValidationTests(unittest.TestCase):
 
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
-            'cell_size': 40000.0,
             'compute_regression': True,
             'start_year': MIN_YEAR,
             'end_year': MAX_YEAR,
