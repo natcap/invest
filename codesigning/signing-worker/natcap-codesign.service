@@ -30,4 +30,4 @@ Restart=always
 ExecStart=python3 /opt/natcap-codesign/natcap-codesign.py /opt/natcap-codesign/codesign-cert-chain.pem
 User=natcap-codesign
 Group=natcap-codesign
-WorkingDirectory=/opt/natcap-codesign
+WorkingDirectory=/tmp

@@ -107,15 +107,23 @@
         dest: /opt/natcap-codesign/natcap-servers-1732552f0202.json
         mode: 0600
 
-    - name: Set up application credentials
-      ansible.builtin.shell:
-        cmd: gcloud auth activate-service-account --key-file=/opt/natcap-codesign/natcap-servers-1732552f0202.json
-
     - name: Install codesigning python script
       ansible.builtin.copy:
         src: natcap-codesign.py
         dest: /opt/natcap-codesign/natcap-codesign.py
         mode: 0755
+
+    - name: Update permissions on the natcap-codesign directory
+      ansible.builtin.file:
+        path: /opt/natcap-codesign
+        state: directory
+        recurse: true
+        owner: natcap-codesign
+        group: natcap-codesign
+
+    - name: Set up application credentials
+      ansible.builtin.shell:
+        cmd: su -c "gcloud auth activate-service-account --key-file=/opt/natcap-codesign/natcap-servers-1732552f0202.json" - natcap-codesign
 
     - name: Install the codesign service
       ansible.builtin.copy:
