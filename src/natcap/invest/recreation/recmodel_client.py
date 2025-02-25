@@ -803,7 +803,8 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     out_grid_vector = driver.Create(
         out_grid_vector_path, 0, 0, 0, gdal.GDT_Unknown)
     grid_layer = out_grid_vector.CreateLayer(
-        'grid', spat_ref, ogr.wkbPolygon)
+        os.path.splitext(os.path.basename(vector_path))[0],
+        spat_ref, ogr.wkbPolygon)
     grid_layer_defn = grid_layer.GetLayerDefn()
 
     extent = vector_layer.GetExtent()  # minx maxx miny maxy
