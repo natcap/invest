@@ -211,7 +211,7 @@ MODEL_SPEC = {
         }
     },
     "outputs": {
-        "PUD_results.shp": {
+        "PUD_results.gpkg": {
             "about": gettext(
                 "Results of photo-user-days aggregations in the AOI."),
             "geometries": spec_utils.POLYGONS,
@@ -230,7 +230,7 @@ MODEL_SPEC = {
                 }
             }
         },
-        "TUD_results.shp": {
+        "TUD_results.gpkg": {
             "about": gettext(
                 "Results of twitter-user-days aggregations in the AOI."),
             "geometries": spec_utils.POLYGONS,
@@ -283,7 +283,7 @@ MODEL_SPEC = {
                 }
             }
         },
-        "regression_data.shp": {
+        "regression_data.gpkg": {
             "created_if": "compute_regression",
             "about": gettext(
                 "AOI polygons with all the variables needed to compute a regression, "
@@ -328,7 +328,7 @@ MODEL_SPEC = {
                 "server. If these results are used in publication this hash "
                 "should be included with the results for reproducibility.")
         },
-        "scenario_results.shp": {
+        "scenario_results.gpkg": {
             "created_if": "scenario_predictor_table_path",
             "about": gettext(
                 "Results of scenario, including the predictor data used in the "
@@ -354,7 +354,7 @@ MODEL_SPEC = {
         "intermediate": {
             "type": "directory",
             "contents": {
-                "aoi.shp": {
+                "aoi.gpkg": {
                     "about": gettext(
                         "Copy of the input AOI, gridded if applicable."),
                     "fields": {},
@@ -396,11 +396,11 @@ MODEL_SPEC = {
 }
 
 
-# These are the expected extensions associated with an ESRI Shapefile
-# as part of the ESRI Shapefile driver standard, but some extensions
-# like .prj, .sbn, and .sbx, are optional depending on versions of the
-# format: http://www.gdal.org/drv_shapefile.html
-_ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
+# # These are the expected extensions associated with an ESRI Shapefile
+# # as part of the ESRI Shapefile driver standard, but some extensions
+# # like .prj, .sbn, and .sbx, are optional depending on versions of the
+# # format: http://www.gdal.org/drv_shapefile.html
+# _ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
 
 # Have 5 seconds between timed progress outputs
 LOGGER_TIME_DELAY = 5
@@ -409,18 +409,18 @@ RESPONSE_VARIABLE_ID = 'avg_pr_UD'
 SCENARIO_RESPONSE_ID = 'pr_UD_EST'
 
 _OUTPUT_BASE_FILES = {
-    'pud_results_path': 'PUD_results.shp',
+    'pud_results_path': 'PUD_results.gpkg',
     'pud_monthly_table_path': 'PUD_monthly_table.csv',
-    'tud_results_path': 'TUD_results.shp',
+    'tud_results_path': 'TUD_results.gpkg',
     'tud_monthly_table_path': 'TUD_monthly_table.csv',
-    'regression_vector_path': 'regression_data.shp',
-    'scenario_results_path': 'scenario_results.shp',
+    'regression_vector_path': 'regression_data.gpkg',
+    'scenario_results_path': 'scenario_results.gpkg',
     'regression_summary': 'regression_summary.txt',
     'regression_coefficients': 'regression_coefficients.csv',
 }
 
 _INTERMEDIATE_BASE_FILES = {
-    'local_aoi_path': 'aoi.shp',
+    'local_aoi_path': 'aoi.gpkg',
     'compressed_aoi_path': 'aoi.zip',
     'pud_compressed_userdays_path': 'pud_userdays.zip',
     'tud_compressed_userdays_path': 'tud_userdays.zip',
@@ -642,12 +642,10 @@ def execute(args):
 def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
     """Copy a shapefile from source to destination"""
     aoi_vector = gdal.OpenEx(source_aoi_path, gdal.OF_VECTOR)
-    driver = gdal.GetDriverByName('ESRI Shapefile')
+    driver = gdal.GetDriverByName('GPKG')
     local_aoi_vector = driver.CreateCopy(
         dest_aoi_path, aoi_vector)
-    gdal.Dataset.__swig_destroy__(local_aoi_vector)
     local_aoi_vector = None
-    gdal.Dataset.__swig_destroy__(aoi_vector)
     aoi_vector = None
 
 
@@ -778,16 +776,15 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
         cell_size (float): dimensions of the grid cell in the projected units
             of ``vector_path``; if "square" then this indicates the side length,
             if "hexagon" indicates the width of the horizontal axis.
-        out_grid_vector_path (string): path to the output ESRI shapefile
-            vector that contains a gridded version of ``vector_path``, this file
-            should not exist before this call
+        out_grid_vector_path (string): path to the output Geopackage
+            vector that contains a gridded version of ``vector_path``.
 
     Returns:
         None
 
     """
     LOGGER.info("gridding aoi")
-    driver = gdal.GetDriverByName('ESRI Shapefile')
+    driver = gdal.GetDriverByName('GPKG')
     if os.path.exists(out_grid_vector_path):
         driver.Delete(out_grid_vector_path)
 

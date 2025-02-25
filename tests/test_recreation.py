@@ -1093,7 +1093,7 @@ class RecreationClientRegressionTests(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
 
         out_grid_vector_path = os.path.join(
-            self.workspace_dir, 'square_grid_vector_path.shp')
+            self.workspace_dir, 'square_grid_vector_path.gpkg')
 
         recmodel_client._grid_vector(
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'square', 20000.0,
@@ -1110,7 +1110,7 @@ class RecreationClientRegressionTests(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
 
         out_grid_vector_path = os.path.join(
-            self.workspace_dir, 'hex_grid_vector_path.shp')
+            self.workspace_dir, 'hex_grid_vector_path.gpkg')
 
         recmodel_client._grid_vector(
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
@@ -1147,7 +1147,7 @@ class RecreationClientRegressionTests(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
 
         out_grid_vector_path = os.path.join(
-            self.workspace_dir, 'hex_grid_vector_path.shp')
+            self.workspace_dir, 'hex_grid_vector_path.gpkg')
 
         recmodel_client._grid_vector(
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
