@@ -42,13 +42,6 @@ jobs:
           PR_USERNAME=$(gh pr view --json author $PR_NUM | jq -j '.author.login')
           echo "Latest PR on main ($PR_NUM) was authored by $PR_USERNAME."
 
-          if [ "$PR_USERNAME" = "github-actions" ]
-          then
-              # Set the PR reviewer/assignee to the release manager.
-              source ./ci/release/RELEASE_MANAGER.env
-              PR_USERNAME=$RELEASE_MANAGER
-          fi
-
           # Using grep with pattern ^release filters out any autorelease branches.
           # If no release branches are found, exit github actions.
           BRANCHES=$(git ls-remote --heads origin | cut -d '/' -f 3- | grep ^release || echo '')
