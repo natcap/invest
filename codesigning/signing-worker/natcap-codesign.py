@@ -38,17 +38,20 @@ SLACK_TOKEN_FILE = os.path.join(FILE_DIR, "slack_token.txt")
 with open(SLACK_TOKEN_FILE) as token_file:
     SLACK_ACCESS_TOKEN = token_file.read().strip()
 
+OS_EMOJI = {
+    '.dmg': ':mac:',
+    '.exe': ':windowsxp:',
+}
 
-SLACK_NOTIFICATION_SUCCESS = textwrap.dedent(
-    """\
-    :lower_left_fountain_pen: Successfully signed and uploaded `{filename}` to <{url}|google cloud>
-    """)
+SLACK_NOTIFICATION_SUCCESS = (
+    ":lower_left_fountain_pen: {os_emoji} Successfully signed and uploaded "
+    "{username}'s build `{filename}` to <{url}|google cloud>"
+)
 
 SLACK_NOTIFICATION_ALREADY_SIGNED = textwrap.dedent(
     """\
     :lower_left_fountain_pen: `{filename}` is already signed! <{url}|google cloud>
     """)
-
 
 SLACK_NOTIFICATION_FAILURE = textwrap.dedent(
     """\
@@ -332,6 +335,8 @@ def main():
                     LOGGER.info(f"Removing {filename}")
                     post_to_slack(
                         SLACK_NOTIFICATION_SUCCESS.format(
+                            os_emoji=OS_EMOJI[os.path.splitext(filename)[1]],
+                            username=file_to_sign['https-url'].split('/')[5],
                             filename=filename,
                             url=file_to_sign['https-url']))
                     LOGGER.info("Signing complete.")
