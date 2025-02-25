@@ -734,6 +734,8 @@ class TestRecClientServer(unittest.TestCase):
             numpy.testing.assert_almost_equal(
                 expected_scenario_sums[key], actual_scenario_sums[key], decimal=3)
 
+        # TODO: assert that all tabular outputs are indexed by the same poly_id
+
     # @_timeout(30.0)
     # def test_workspace_fetcher(self):
     #     """Recreation test workspace fetcher on a local Pyro5 empty server."""
@@ -954,11 +956,11 @@ class RecreationClientRegressionTests(unittest.TestCase):
         self.assertEqual(len(predictor_results), 0)
 
     def test_overlapping_features_in_polygon_predictor(self):
-        """Recreation test overlapping predictor features not double-counted.
+        """Test overlapping predictor features are not double-counted.
 
         If a polygon predictor contains features that overlap, the overlapping
-        area should only be counted once when calculating `polygon_area_coverage`
-        or `polygon_percent_coverage`.
+        area should only be counted once when calculating
+        `polygon_area_coverage` or `polygon_percent_coverage`.
         """
         from natcap.invest.recreation import recmodel_client
 

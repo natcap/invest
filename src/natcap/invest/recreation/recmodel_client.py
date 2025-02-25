@@ -654,17 +654,17 @@ def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
 def _retrieve_user_days(
         local_aoi_path, compressed_aoi_path, start_year, end_year,
         file_suffix, output_dir, server_url, server_version_pickle):
-    """Calculate photo-user-days (PUD) on the server and send back results.
+    """Calculate user-days (PUD & TUD) on the server and send back results.
 
     All of the client-server communication happens in this scope. The local AOI
-    is sent to the server for PUD calculations. PUD results are sent back when
+    is sent to the server for aggregations. Results are sent back when
     complete.
 
     Args:
-        local_aoi_path (string): path to polygon vector for PUD aggregation
+        local_aoi_path (string): path to polygon vector for UD aggregation
         compressed_aoi_path (string): path to zip file storing compressed AOI
-        start_year (int/string): lower limit of date-range for PUD queries
-        end_year (int/string): upper limit of date-range for PUD queries
+        start_year (int/string): lower limit of date-range for UD queries
+        end_year (int/string): upper limit of date-range for UD queries
         file_suffix (string): to append to filenames of files created by server
         output_dir (string): path to output workspace where results are
             unpacked.
@@ -676,15 +676,10 @@ def _retrieve_user_days(
         None
 
     """
-
     LOGGER.info('Contacting server, please wait.')
     recmodel_manager = Pyro5.api.Proxy(server_url)
 
-    # TODO: allow datasets to be specified in args to
-    # allow API users access to a single dataset and a wider
-    # range of years
-    dataset_list = ['flickr', 'twitter']
-    acronym_lookup = {
+    datasets = {
         'flickr': 'PUD',
         'twitter': 'TUD'
     }
@@ -696,7 +691,7 @@ def _retrieve_user_days(
     aoi_bounding_box = pygeoprocessing.transform_bounding_box(
         aoi_info['bounding_box'], aoi_info['projection_wkt'], target_proj)
 
-    for dataset in dataset_list:
+    for dataset in datasets:
         # validate available year range
         min_year, max_year = recmodel_manager.get_valid_year_range(dataset)
         LOGGER.info(
@@ -737,10 +732,10 @@ def _retrieve_user_days(
     start_time = time.time()
     LOGGER.info('Please wait for server to calculate PUD and TUD...')
     results = recmodel_manager.calculate_userdays(
-        zip_file_binary, start_year, end_year, dataset_list)
-    for dataset in dataset_list:
+        zip_file_binary, start_year, end_year, list(datasets))
+    for acronym in datasets.values():
         result_zip_file_binary, workspace_id, server_version = (
-            results[acronym_lookup[dataset]])
+            results[acronym])
 
         LOGGER.info(f'Server version: {server_version}')
         # store server version info in a file so we can list it in results summary.
