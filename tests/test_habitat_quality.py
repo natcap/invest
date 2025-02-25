@@ -14,6 +14,7 @@ from shapely.geometry import Polygon
 
 gdal.UseExceptions()
 
+
 def make_raster_from_array(
         base_array, base_raster_path, nodata_val=-1, gdal_type=gdal.GDT_Int32):
     """Make a raster from an array on a designated path.
@@ -133,14 +134,14 @@ def make_sensitivity_samp_csv(
     """
     if include_threat:
         with open(csv_path, 'w') as open_table:
-            open_table.write('LULC,NAME,HABITAT,threat_1,threat_2\n')
+            open_table.write('lucode,name,habitat,threat_1,threat_2\n')
             open_table.write('1,"lulc 1",1,1,1\n')
             if not missing_lines:
                 open_table.write('2,"lulc 2",0.5,0.5,1\n')
                 open_table.write('3,"lulc 3",0,0.3,1\n')
     else:
         with open(csv_path, 'w') as open_table:
-            open_table.write('LULC,NAME,HABITAT\n')
+            open_table.write('lucode,name,habitat\n')
             open_table.write('1,"lulc 1",1\n')
             if not missing_lines:
                 open_table.write('2,"lulc 2",0.5\n')
@@ -266,11 +267,11 @@ class HabitatQualityTests(unittest.TestCase):
             with open(csv_path, newline='') as csvfile:
                 reader = csv.DictReader(csvfile, delimiter=',')
                 self.assertEqual(reader.fieldnames,
-                                 ['lulc_code', 'rarity_value'])
+                                 ['lucode', 'rarity_value'])
                 for (exp_lulc, exp_rarity,
                      places_to_round) in expected_csv_values[csv_filename]:
                     row = next(reader)
-                    self.assertEqual(int(row['lulc_code']), exp_lulc)
+                    self.assertEqual(int(row['lucode']), exp_lulc)
                     self.assertAlmostEqual(float(row['rarity_value']),
                                            exp_rarity, places_to_round)
 
@@ -599,7 +600,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         with open(args['sensitivity_table_path'], 'w') as open_table:
             open_table.write(
-                'LULC,NAME,HABITAT,%s,%s\n' % tuple(threatnames))
+                'lucode,name,habitat,%s,%s\n' % tuple(threatnames))
             open_table.write('1,"lulc 1",1,1,1\n')
             open_table.write('2,"lulc 2",0.5,0.5,1\n')
             open_table.write('3,"lulc 3",0,0.3,1\n')
@@ -1046,7 +1047,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['workspace_dir'], 'sensitivity_samp.csv')
 
         with open(args['sensitivity_table_path'], 'w') as open_table:
-            open_table.write('Lulc,Name,habitat,Threat_1,THREAT_2\n')
+            open_table.write('LuCode,Name,habitat,Threat_1,THREAT_2\n')
             open_table.write('1,"lulc 1",1,1,1\n')
             open_table.write('2,"lulc 2",0.5,0.5,1\n')
             open_table.write('3,"lulc 3",0,0.3,1\n')
@@ -2135,7 +2136,7 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_missing_lulc_val_in_sens_table(self):
-        """Habitat Quality: test for empty value in LULC column of
+        """Habitat Quality: test for empty value in lucode column of
         sensitivity table. Expects TypeError"""
         from natcap.invest import habitat_quality
 
@@ -2154,9 +2155,9 @@ class HabitatQualityTests(unittest.TestCase):
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
         with open(args['sensitivity_table_path'], 'w') as open_table:
-            open_table.write('LULC,NAME,HABITAT,threat_1,threat_2\n')
+            open_table.write('lucode,name,habitat,threat_1,threat_2\n')
             open_table.write('1,"lulc 1",1,1,1\n')
-            open_table.write(',"lulc 2",0.5,0.5,1\n')  # missing LULC value
+            open_table.write(',"lulc 2",0.5,0.5,1\n')  # missing lucode value
             open_table.write('3,"lulc 3",0,0.3,1\n')
 
         make_threats_raster(

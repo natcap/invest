@@ -98,6 +98,7 @@ predictor_table_columns = {
 
 
 MODEL_SPEC = {
+    "model_id": "recreation",
     "model_name": MODEL_METADATA["recreation"].model_title,
     "pyname": MODEL_METADATA["recreation"].pyname,
     "userguide": MODEL_METADATA["recreation"].userguide,
