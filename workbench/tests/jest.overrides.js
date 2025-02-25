@@ -23,9 +23,6 @@ if (global.window) {
   global.window._ = (x) => x;
 
   global.window.fetch = fetch;
-
-  global.window.electronAPI = {};
-  global.window.electronAPI.onPluginInstallStatus = () => {};
 }
 
 // Cause tests to fail on console.error messages
