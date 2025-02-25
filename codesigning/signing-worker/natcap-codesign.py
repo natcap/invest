@@ -19,6 +19,7 @@ try:
 except ImportError:
     from yaml import Loader
 
+RELEASES_BUCKET = 'releases.naturalcapitalproject.org'
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 CERTIFICATE = sys.argv[1]
@@ -332,14 +333,21 @@ def main():
                     LOGGER.info(
                         f"Adding {file_to_sign['https-url']} to signed files list")
                     note_signature_complete(filename, file_to_sign['gs-uri'])
-                    LOGGER.info(f"Removing {filename}")
+
+                    LOGGER.info('Posting alert to slack')
+                    if RELEASES_BUCKET in file_to_sign['https-url']:
+                        username = 'natcap'
+                    else:
+                        username = file_to_sign['https-url'].split('/')[5]
                     post_to_slack(
                         SLACK_NOTIFICATION_SUCCESS.format(
                             os_emoji=OS_EMOJI[os.path.splitext(filename)[1]],
-                            username=file_to_sign['https-url'].split('/')[5],
+                            username=username,
                             filename=filename,
                             url=file_to_sign['https-url']))
                     LOGGER.info("Signing complete.")
+
+                LOGGER.info(f"Removing {filename}")
                 os.remove(filename)
         except Exception as e:
             LOGGER.exception(f"Unexpected error signing file: {e}")
