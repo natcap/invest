@@ -80,7 +80,7 @@ describe('Add plugin modal', () => {
     });
     // close the modal
     const overlay = await findByRole('dialog');
-    await act(async () => { await userEvent.click(overlay); });
+    await userEvent.click(overlay);
     const pluginButton = await findByRole('button', { name: /Foo/ });
     // assert that the 'plugin' badge is displayed
     await waitFor(() => expect(within(pluginButton).getByText('Plugin')).toBeInTheDocument());
@@ -147,17 +147,16 @@ describe('Add plugin modal', () => {
 
     // open the plugin first, to make sure it doesn't cause a crash when removing
     const pluginButton = await findByRole('button', { name: /Foo/ });
-    await act(async () => {
-      userEvent.click(pluginButton);
-    });
+    await userEvent.click(pluginButton);
+
     const managePluginsButton = await findByText('Manage plugins');
-    userEvent.click(managePluginsButton);
+    await userEvent.click(managePluginsButton);
 
     const pluginDropdown = await findByLabelText('Plugin name');
     await userEvent.selectOptions(pluginDropdown, [getByRole('option', { name: 'Foo' })]);
 
     const submitButton = await findByText('Remove');
-    userEvent.click(submitButton);
+    await userEvent.click(submitButton);
     await waitFor(() => {
       expect(spy.mock.calls.map((call) => call[0])).toContain(ipcMainChannels.REMOVE_PLUGIN);
     });
