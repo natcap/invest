@@ -400,7 +400,7 @@ MODEL_SPEC = {
 # # as part of the ESRI Shapefile driver standard, but some extensions
 # # like .prj, .sbn, and .sbx, are optional depending on versions of the
 # # format: http://www.gdal.org/drv_shapefile.html
-# _ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
+_ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
 
 # Have 5 seconds between timed progress outputs
 LOGGER_TIME_DELAY = 5
@@ -859,14 +859,9 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     for row_index in range(n_rows):
         for col_index in range(n_cols):
             polygon_points = _generate_polygon(col_index, row_index)
-            ring = ogr.Geometry(ogr.wkbLinearRing)
-            for xoff, yoff in polygon_points:
-                ring.AddPoint(xoff, yoff)
-            poly = ogr.Geometry(ogr.wkbPolygon)
-            poly.AddGeometry(ring)
-
-            if original_polygon.contains(
-                    shapely.wkt.loads(poly.ExportToWkt())):
+            shapely_feature = shapely.geometry.Polygon(polygon_points)
+            if original_polygon.contains(shapely_feature):
+                poly = ogr.CreateGeometryFromWkb(shapely_feature.wkb)
                 poly_feature = ogr.Feature(grid_layer_defn)
                 poly_feature.SetGeometry(poly)
                 grid_layer.CreateFeature(poly_feature)

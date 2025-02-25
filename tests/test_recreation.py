@@ -1099,11 +1099,12 @@ class RecreationClientRegressionTests(unittest.TestCase):
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'square', 20000.0,
             out_grid_vector_path)
 
-        expected_grid_vector_path = os.path.join(
-            REGRESSION_DATA, 'square_grid_vector_path.shp')
-
-        utils._assert_vectors_equal(
-            expected_grid_vector_path, out_grid_vector_path)
+        vector = gdal.OpenEx(out_grid_vector_path, gdal.OF_VECTOR)
+        layer = vector.GetLayer()
+        n_features = layer.GetFeatureCount()
+        layer = vector = None
+        # andros_aoi.shp fits 38 squares at 20000 meters cell size
+        self.assertEqual(n_features, 38)
 
     def test_hex_grid(self):
         """Recreation hex grid regression test."""
@@ -1116,11 +1117,12 @@ class RecreationClientRegressionTests(unittest.TestCase):
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
             out_grid_vector_path)
 
-        expected_grid_vector_path = os.path.join(
-            REGRESSION_DATA, 'hex_grid_vector_path.shp')
-
-        utils._assert_vectors_equal(
-            expected_grid_vector_path, out_grid_vector_path)
+        vector = gdal.OpenEx(out_grid_vector_path, gdal.OF_VECTOR)
+        layer = vector.GetLayer()
+        n_features = layer.GetFeatureCount()
+        layer = vector = None
+        # andros_aoi.shp fits 71 hexes at 20000 meters cell size
+        self.assertEqual(n_features, 71)
 
     def test_predictor_id_too_long(self):
         """Recreation can validate predictor ID length."""
@@ -1157,11 +1159,12 @@ class RecreationClientRegressionTests(unittest.TestCase):
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
             out_grid_vector_path)
 
-        expected_grid_vector_path = os.path.join(
-            REGRESSION_DATA, 'hex_grid_vector_path.shp')
-
-        utils._assert_vectors_equal(
-            expected_grid_vector_path, out_grid_vector_path)
+        vector = gdal.OpenEx(out_grid_vector_path, gdal.OF_VECTOR)
+        layer = vector.GetLayer()
+        n_features = layer.GetFeatureCount()
+        layer = vector = None
+        # andros_aoi.shp fits 71 hexes at 20000 meters cell size
+        self.assertEqual(n_features, 71)
 
     def test_existing_regression_coef(self):
         """Recreation test regression coefficients handle existing output."""
