@@ -595,7 +595,11 @@ def execute(args):
         args['biophysical_table_path'],
         **MODEL_SPEC['args']['biophysical_table_path'])
 
-    runoff_proxy_av = args.get('runoff_proxy_av', None)
+    runoff_proxy_av = args.get("runoff_proxy_av")
+    try:
+        runoff_proxy_av = float(runoff_proxy_av) if runoff_proxy_av not in [None, ""] else None
+    except ValueError:
+        raise ValueError(f"Invalid value for runoff_proxy_av: {runoff_proxy_av}. Expected a number.")
 
     # these are used for aggregation in the last step
     field_pickle_map = {}
