@@ -16,8 +16,12 @@ __all__ = ['local_dir', ]
 try:
     __version__ = importlib.metadata.version('natcap.invest')
 except importlib.metadata.PackageNotFoundError:
-    # package is not installed.  Log the exception for debugging.
-    LOGGER.exception('Could not load natcap.invest version information')
+    try:
+        __version__ = importlib.metadata.version('natcap_invest')
+    except importlib.metadata.PackageNotFoundError:
+        # package is not installed.  Log the exception for debugging.
+        LOGGER.exception(
+            'Could not load natcap.invest (or natcap_invest) version information')
 
 # location of our translation message catalog directory
 LOCALE_DIR = os.path.join(

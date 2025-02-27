@@ -121,7 +121,7 @@ jobs:
           python -m pip uninstall -y natcap.invest
           python -m build --wheel
           ls -la dist
-          pip install $(find dist -name "natcap.invest*.whl")
+          pip install $(find dist -name "natcap[._-]invest*.whl")
 
       - name: Run model tests
         run: make test
