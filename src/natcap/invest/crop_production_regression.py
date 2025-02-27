@@ -18,15 +18,16 @@ from .unit_registry import u
 LOGGER = logging.getLogger(__name__)
 
 CROPS = {
-    "barley": {"description": gettext("barley")},
-    "maize": {"description": gettext("maize")},
-    "oilpalm": {"description": gettext("oil palm")},
-    "potato": {"description": gettext("potato")},
-    "rice": {"description": gettext("rice")},
-    "soybean": {"description": gettext("soybean")},
-    "sugarbeet": {"description": gettext("sugar beet")},
-    "sugarcane": {"description": gettext("sugarcane")},
-    "wheat": {"description": gettext("wheat")}
+    "barley": {"description": gettext("Barley")},
+    "maize": {"description": gettext("Maize")},
+    "oilpalm": {"description": gettext("Oil palm fruit")},
+    "potato": {"description": gettext("Potatoes")},
+    "rice": {"description": gettext("Rice")},
+    "soybean": {"description": gettext("Soybeans")},
+    "sugarbeet": {"description": gettext("Sugar beets")},
+    "sugarcane": {"description": gettext("Sugar cane")},
+    "sunflower": {"description": gettext("Sunflower seed")},
+    "wheat": {"description": gettext("Wheat")}
 }
 
 NUTRIENTS = [

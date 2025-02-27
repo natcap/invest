@@ -261,11 +261,11 @@ MODEL_SPEC = {
                 }
             },
             "index_col": "lucode",
-            "required": False,
+            "required": "valuation_table_path",
             "about": gettext(
                 "A table of water demand for each LULC class. Each LULC code "
                 "in the LULC raster must have a corresponding row in this "
-                "table."),
+                "table.  Required if 'valuation_table_path' is provided."),
             "name": gettext("water demand table")
         },
         "valuation_table_path": {
@@ -512,14 +512,13 @@ def execute(args):
             a path to an input CSV
             table of LULC classes, showing consumptive water use for each
             landuse / land-cover type (cubic meters per year) to calculate
-            water scarcity.
+            water scarcity.  Required if ``valuation_table_path`` is provided.
 
         args['valuation_table_path'] (string): (optional) if a non-empty
             string, a path to an input CSV table of
             hydropower stations with the following fields to calculate
             valuation: 'ws_id', 'time_span', 'discount', 'efficiency',
             'fraction', 'cost', 'height', 'kw_price'
-            Required if ``calculate_valuation`` is True.
 
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
