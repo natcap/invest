@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import { MdOpenInNew } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 
+import { openLinkInBrowser } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
@@ -39,15 +40,6 @@ const FORUM_TAGS = {
   wind_energy: 'wind-energy',
 };
 
-/**
- * Open the target href in the default web browser.
- */
-function handleForumClick(event) {
-  event.preventDefault();
-  ipcRenderer.send(
-    ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
-  );
-}
 
 /**
  * Open the target href in an electron window.
@@ -92,7 +84,7 @@ export default function ResourcesTab(props) {
         href={forumURL}
         title={forumURL}
         aria-label="go to frequently asked questions in web browser"
-        onClick={handleForumClick}
+        onClick={openLinkInBrowser}
       >
         <MdOpenInNew className="mr-1" />
         {t("Frequently Asked Questions")}

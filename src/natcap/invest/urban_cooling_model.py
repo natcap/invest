@@ -30,6 +30,7 @@ TARGET_NODATA = -1
 _LOGGING_PERIOD = 5
 
 MODEL_SPEC = {
+    "model_id": "urban_cooling_model",
     "model_name": MODEL_METADATA["urban_cooling_model"].model_title,
     "pyname": MODEL_METADATA["urban_cooling_model"].pyname,
     "userguide": MODEL_METADATA["urban_cooling_model"].userguide,
@@ -531,7 +532,7 @@ def execute(args):
               'intersection'),
         kwargs={
             'base_vector_path_list': [args['aoi_vector_path']],
-            'raster_align_index': 1,
+            'raster_align_index': 0,
             'target_projection_wkt': lulc_raster_info['projection_wkt']},
         target_path_list=aligned_raster_path_list,
         task_name='align rasters')

@@ -119,11 +119,19 @@ class UCMTests(unittest.TestCase):
         results_feature = results_layer.GetFeature(1)
 
         expected_results = {
+<<<<<<< HEAD
             'avg_cc': 0.222150472947109,
             'avg_tmp_v': 37.306549,
             'avg_tmp_an': 2.306549,
             'avd_eng_cn': 3602851.784639,
             'avg_wbgt_v': 32.585935,
+=======
+            'avg_cc': 0.221991,
+            'avg_tmp_v': 37.321395,
+            'avg_tmp_an': 2.321395,
+            'avd_eng_cn': 3525589.694141,
+            'avg_wbgt_v': 32.600393,
+>>>>>>> release/3.15.0
             'avg_ltls_v': 75.000000000000000,
             'avg_hvls_v': 75.000000000000000,
         }
@@ -141,7 +149,11 @@ class UCMTests(unittest.TestCase):
 
         # Assert that the decimal value of the energy savings value is what we
         # expect.
+<<<<<<< HEAD
         expected_energy_sav = 3647696.209368
+=======
+        expected_energy_sav = 3562738.321307
+>>>>>>> release/3.15.0
 
         energy_sav = 0.0
         n_nonetype = 0
@@ -162,7 +174,11 @@ class UCMTests(unittest.TestCase):
             # Expected energy savings is an accumulated value and may differ
             # past about 4 decimal places.
             numpy.testing.assert_allclose(energy_sav, expected_energy_sav, rtol=1e-4)
+<<<<<<< HEAD
             self.assertEqual(n_nonetype, 121)
+=======
+            self.assertEqual(n_nonetype, 134)
+>>>>>>> release/3.15.0
         finally:
             buildings_layer = None
             buildings_vector = None
@@ -201,7 +217,11 @@ class UCMTests(unittest.TestCase):
             # and may differ past about 4 decimal places.
             numpy.testing.assert_allclose(energy_sav, expected_energy_sav,
                                           rtol=1e-4)
+<<<<<<< HEAD
             self.assertEqual(n_nonetype, 121)
+=======
+            self.assertEqual(n_nonetype, 134)
+>>>>>>> release/3.15.0
         finally:
             buildings_layer = None
             buildings_vector = None
@@ -249,12 +269,12 @@ class UCMTests(unittest.TestCase):
         results_feature = results_layer.GetFeature(1)
 
         expected_results = {
-            'avg_cc': 0.428302583240327,
-            'avg_tmp_v': 36.60869797039769,
-            'avg_tmp_an': 1.608697970397692,
-            'avd_eng_cn': 7239992.744486,
-            'avg_wbgt_v': 31.91108630952381,
-            'avg_ltls_v': 28.73463901689708,
+            'avg_cc': 0.422250,
+            'avg_tmp_v': 36.621779,
+            'avg_tmp_an': 1.621779,
+            'avd_eng_cn': 7148968.928616,
+            'avg_wbgt_v': 31.92365,
+            'avg_ltls_v': 29.380548,
             'avg_hvls_v': 75.000000000000000,
         }
         try:
