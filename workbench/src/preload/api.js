@@ -11,6 +11,7 @@ const ipcRendererChannels = [
   /invest-stdout-*/,
   /invest-exit-*/,
   /download-status/,
+  /plugin-install-status/,
 ];
 
 // args sent via `additionalArguments` to `webPreferences` for `BroswerWindow`
