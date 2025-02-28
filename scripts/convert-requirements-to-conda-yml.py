@@ -13,6 +13,10 @@ dependencies:
 {pip_dependencies}
 """
 
+# For restricting conda-forge only packages
+# https://github.com/conda-forge/sqlite-feedstock/issues/130 
+CONDA_DEPS = ['sqlite<3.49']
+
 
 def build_environment_from_requirements(cli_args):
     """Build a conda environment.yml from requirements.txt files.
@@ -47,7 +51,7 @@ def build_environment_from_requirements(cli_args):
     requirements_files = args.req
 
     pip_requirements = set()
-    conda_requirements = set()
+    conda_requirements = set(CONDA_DEPS)
     for requirement_file in requirements_files:
         with open(requirement_file) as file:
             for line in file:
