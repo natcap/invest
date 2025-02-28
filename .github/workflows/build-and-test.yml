@@ -328,7 +328,7 @@ jobs:
             requirements-dev.txt
             requirements-docs.txt
             constraints_tests.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pandoc 
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pandoc
 
       - name: Make install
         run: make install
