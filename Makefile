@@ -337,9 +337,9 @@ build/vcredist_x86.exe: | build
 KEYCHAIN_NAME := codesign_keychain
 # only need password to be able to create the keychain, not for security
 KEYCHAIN_PASS := password
+# NOTE: the certificate p12 file must be in the BUILD_DIR
+# NOTE: the certificate p12 file name must be defined with the env var CERT_FILE
 codesign_mac:
-	# download the p12 certificate file from google cloud
-	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
 	# create a new keychain (so that we can know what the password is)
 	security create-keychain -p $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
 	# add the keychain to the search list so it can be found
