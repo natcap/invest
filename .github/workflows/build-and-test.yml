@@ -405,8 +405,7 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ secrets.CODESIGN_QUEUE_ACCESS_TOKEN }}
         run: |
-          cd codesigning
-          bash enqueue-current-installer.sh
+          make codesign
 
       - name: Upload workbench binary artifact
         if: always()
