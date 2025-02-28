@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 #
-# Run this script to enqueue the windows binary for this current version of the
-# InVEST windows workbench installer for code signing.
+# This script determines the filename of the binary that is built on the
+# current operating system and enqueues it for code signing.
 #
 # NOTE: this script must be run from the directory containing this script.
 
