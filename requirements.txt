@@ -26,4 +26,4 @@ Babel
 Flask
 flask_cors
 requests
-sqlite<=3.48.0 # https://github.com/conda-forge/sqlite-feedstock/issues/130
+sqlite!=3.49.* # https://github.com/conda-forge/sqlite-feedstock/issues/130
