@@ -685,7 +685,7 @@ class TestRecClientServer(unittest.TestCase):
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
             'results_suffix': 'foo',
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': 'scratch/rec_test',
             'hostname': self.hostname,
             'port': self.port,
         }
@@ -1016,8 +1016,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
         import pickle
 
         data_vector_path = os.path.join(
-            self.workspace_dir, 'regression_data.shp')
-        driver = 'ESRI Shapefile'
+            self.workspace_dir, 'regression_data.gpkg')
+        driver = 'GPKG'
         n_features = 10
         userdays = numpy.linspace(0, 1, n_features)
         avg_pr_UD = userdays / userdays.sum()

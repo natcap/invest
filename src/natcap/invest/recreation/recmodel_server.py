@@ -308,7 +308,6 @@ class RecModel(object):
 
         """
         aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
-        # append a _ud to the aoi filename
         out_aoi_ud_path = os.path.join(workspace_path, out_vector_filename)
 
         # start the workers now, because they have to load a quadtree and
@@ -437,8 +436,8 @@ class RecModel(object):
             polytest_process_list.append(polytest_process)
 
         # Copy the input shapefile into the designated output folder
-        LOGGER.info('Creating a copy of the input shapefile')
-        driver = gdal.GetDriverByName('ESRI Shapefile')
+        LOGGER.info('Creating a copy of the input AOI')
+        driver = gdal.GetDriverByName('GPKG')
         ud_aoi_vector = driver.CreateCopy(out_aoi_ud_path, aoi_vector)
         ud_aoi_layer = ud_aoi_vector.GetLayer()
 
@@ -456,8 +455,8 @@ class RecModel(object):
             if field_index >= 0:
                 ud_aoi_layer.DeleteField(field_index)
             field_defn = ogr.FieldDefn(field_id, ogr.OFTReal)
-            field_defn.SetWidth(24)
-            field_defn.SetPrecision(11)
+            # field_defn.SetWidth(24)
+            # field_defn.SetPrecision(11)
             ud_aoi_layer.CreateField(field_defn)
 
         last_time = time.time()
@@ -520,7 +519,6 @@ class RecModel(object):
         for polytest_process in polytest_process_list:
             polytest_process.join()
 
-        LOGGER.info('returning out shapefile path')
         return out_aoi_ud_path, monthly_table_path, len(local_points)
 
 
@@ -1058,7 +1056,7 @@ class RecManager(object):
                 date_range = (str(start_year)+'-01-01',
                               str(end_year)+'-12-31')
 
-                results_filename = f'{server.acronym}_results.shp'
+                results_filename = f'{server.acronym}_results.gpkg'
                 fut = executor.submit(
                     server.calc_user_days_in_aoi,
                     zip_file_binary, date_range, results_filename)

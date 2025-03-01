@@ -403,12 +403,12 @@ RESPONSE_VARIABLE_ID = 'avg_pr_UD'
 SCENARIO_RESPONSE_ID = 'pr_UD_EST'
 
 _OUTPUT_BASE_FILES = {
-    'pud_results_path': 'PUD_results.shp',
+    'pud_results_path': 'PUD_results.gpkg',
     'pud_monthly_table_path': 'PUD_monthly_table.csv',
-    'tud_results_path': 'TUD_results.shp',
+    'tud_results_path': 'TUD_results.gpkg',
     'tud_monthly_table_path': 'TUD_monthly_table.csv',
-    'regression_vector_path': 'regression_data.shp',
-    'scenario_results_path': 'scenario_results.shp',
+    'regression_vector_path': 'regression_data.gpkg',
+    'scenario_results_path': 'scenario_results.gpkg',
     'regression_summary': 'regression_summary.txt',
     'regression_coefficients': 'regression_coefficients.csv',
 }
@@ -966,7 +966,7 @@ def _schedule_predictor_data_processing(
 
     # return predictor_task_list, predictor_json_list
     assemble_predictor_data_task = task_graph.add_task(
-        func=_json_to_shp_table,
+        func=_json_to_gpkg_table,
         args=(response_vector_path, target_predictor_vector_path,
               predictor_json_list),
         target_path_list=[target_predictor_vector_path],
@@ -992,11 +992,11 @@ def _prepare_response_polygons_lookup(
         pickle.dump(response_polygons_lookup, pickle_file)
 
 
-def _json_to_shp_table(
+def _json_to_gpkg_table(
         response_vector_path, predictor_vector_path,
         predictor_json_list):
-    """Create a shapefile and a field with data from each json file."""
-    driver = gdal.GetDriverByName('ESRI Shapefile')
+    """Create a GeoPackage and a field with data from each json file."""
+    driver = gdal.GetDriverByName('GPKG')
     if os.path.exists(predictor_vector_path):
         driver.Delete(predictor_vector_path)
     response_vector = gdal.OpenEx(
@@ -1019,8 +1019,8 @@ def _json_to_shp_table(
         if field_index >= 0:
             layer.DeleteField(field_index)
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
-        predictor_field.SetWidth(24)
-        predictor_field.SetPrecision(11)
+        # predictor_field.SetWidth(24)
+        # predictor_field.SetPrecision(11)
         layer.CreateField(predictor_field)
         # _create_field(predictor_id)
 
