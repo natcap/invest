@@ -161,7 +161,7 @@ jobs:
           requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
           requirements: |  # https://github.com/natcap/invest/issues/1797
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
-            python===${{ matrix.python-version }}
+            python==${{ matrix.python-version }}
             sqlite<3.49.1
 
       - name: shell init (Ubuntu)
