@@ -102,19 +102,20 @@ jobs:
           USERNAME=runner
           USER_UID=1000
           USER_GID=$USER_UID
-
-          ls /home
           groupadd --gid $USER_GID $USERNAME
           useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
           yum install -y sudo jq
           echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME
           chmod 0440 /etc/sudoers.d/$USERNAME
-          ls /home
-          mkdir -p /home/runner/invest
 
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
+
+      - name: test
+        run: |
+          which python
+          which python3
 
       # NOTE: It takes twice as long to save the sample data cache
       # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
