@@ -163,6 +163,7 @@ jobs:
           requirements: |  # https://github.com/natcap/invest/issues/1797
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             libxcrypt
+            gdal>3.5
             python==${{ matrix.python-version }}
             sqlite<3.49.1
 
