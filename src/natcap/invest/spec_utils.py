@@ -93,7 +93,7 @@ PRECIP = {
     "name": gettext("precipitation")
 }
 ET0 = {
-    "name": gettext("evapotranspiration"),
+    "name": gettext("reference evapotranspiration"),
     "type": "raster",
     "bands": {
         1: {
@@ -101,7 +101,7 @@ ET0 = {
             "units": u.millimeter
         }
     },
-    "about": gettext("Map of evapotranspiration values.")
+    "about": gettext("Map of reference evapotranspiration values.")
 }
 SOIL_GROUP = {
     "type": "raster",
