@@ -7,7 +7,7 @@ a formality.  However, there are a few cases where we may need to do some
 extra work to make sure `$RELEASE_BRANCH` contains what it should after the
 merge:
 
-## There is a merge conflict in this PR
+## If there is a merge conflict in this PR
 
 1. Leave a comment on this PR about the merge conflict and close the PR.
 2. In your fork, `git pull` the upstream `$SOURCE_BRANCH` and `$RELEASE_BRANCH`.
@@ -27,7 +27,7 @@ merge:
 7. When the PR is complete, delete the `pr-resolution` branch.  That will
    help us avoid confusion and extra work down the road when we do this again.
 
-## This PR contains content that should not be in `$RELEASE_BRANCH`
+## If this PR contains content that should not be in `$RELEASE_BRANCH`
 
 1. Leave a comment on this PR about the content that should not be included
    and close the PR.
