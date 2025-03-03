@@ -149,7 +149,7 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }}
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python==${{ matrix.python-version }}
 
       - name: Set up python environment (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
@@ -159,10 +159,10 @@ jobs:
         with:
           python: /opt/python/cp39-cp39/bin/python
           requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
-          requirements: |
+          requirements: |  # https://github.com/natcap/invest/issues/1797
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
-            python=${{ matrix.python-version }}
-            sqlite<3.49.1  # https://github.com/natcap/invest/issues/1797
+            python===${{ matrix.python-version }}
+            sqlite<3.49.1
 
       - name: shell init (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
@@ -258,7 +258,7 @@ jobs:
       - uses: ./.github/actions/setup_env
         with:
           requirements-files: requirements.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} twine
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python==${{ matrix.python-version }} twine
 
       - name: Build source distribution
         run: |
@@ -324,7 +324,7 @@ jobs:
           requirements-files: requirements.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
-            python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+            python==${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
             pytest
 
       - name: Make install
@@ -358,7 +358,7 @@ jobs:
           requirements-files: requirements.txt requirements-dev.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
-            python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+            python==${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
       - name: Make install
         run: make install
@@ -420,7 +420,7 @@ jobs:
             constraints_tests.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
-            python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+            python==${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
             pandoc
 
       - name: Make install
