@@ -7,6 +7,14 @@ description:
   requirements, and the number of the week in the year, so that the cache
   refreshes weekly."
 inputs:
+  setup-python:
+    description: "Whether to run the setup-python action"
+    required: false
+    default: 'true'
+  python:
+    description: "Path to python executable to use"
+    required: false
+    default: 'python'
   python-version:
     description: "Python version to install"
     required: true
@@ -30,6 +38,7 @@ runs:
     # conda-managed python and this python won't be used again
     - name: Set up python
       uses: actions/setup-python@v4
+      if: ${{ inputs.setup-python == 'true' }}
       with:
         python-version: ${{ inputs.python-version }}
 
@@ -53,7 +62,7 @@ runs:
       run: |
         # make sure each file is separated by a space
         REQUIREMENTS_FILES=$(echo "${{ inputs.requirements-files }}" | xargs | tr "\n" " ")
-        python ./scripts/convert-requirements-to-conda-yml.py \
+        ${{ inputs.python }} ./scripts/convert-requirements-to-conda-yml.py \
           extra_requirements.txt $REQUIREMENTS_FILES \
         > environment.yml
         echo "Will update environment using this environment.yml:"
