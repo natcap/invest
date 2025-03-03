@@ -146,12 +146,13 @@ MODEL_SPEC = {
             "required": False,
             "name": gettext("average runoff proxy"),
             "about": gettext(
-                "The average runoff proxy. The runoff proxy index (RPI) is "
-                "calculated by dividing the runoff proxy by the average runoff proxy "
-                "within the watersheds. If an average runoff proxy is not explicitly "
-                "specified, it will be automatically calculated. The units will be "
-                "the same as those in the Runoff Proxy raster."
-                ),
+                "This parameter allows the user to specify a predefined "
+                "average value for the runoff proxy. This value is used "
+                "to normalize the Runoff Proxy raster when calculating "
+                "the Runoff Proxy Index (RPI). If a user does not specify "
+                "the runoff proxy average, this value will be automatically "
+                "calculated from the Runoff Proxy raster. The units will "
+                "be the same as those in the Runoff Proxy raster."),
         },
         "subsurface_critical_length_n": {
             "type": "number",
