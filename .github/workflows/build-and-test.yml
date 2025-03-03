@@ -86,6 +86,9 @@ jobs:
           - os: macos-13
             shell: bash -l {0}
             setup-conda-home: $HOME
+        exclude:
+          - os: ubuntu-latest
+            python-version: 3.9
     defaults:
       run:
         shell: ${{ matrix.shell }}
@@ -163,7 +166,7 @@ jobs:
           requirements: |  # https://github.com/natcap/invest/issues/1797
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             libxcrypt
-            gdal>=3.6.0
+            gdal==3.6.0
             python==${{ matrix.python-version }}
             sqlite<3.49.1
 
