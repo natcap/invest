@@ -73,13 +73,14 @@ describe('Add plugin modal', () => {
     const submitButton = await findByText('Add');
     userEvent.click(submitButton);
 
-    await findByText('Loading...');
-    const calledChannels = spy.mock.calls.map((call) => call[0]);
+    await findByText('Adding...');
     await waitFor(() => {
+      const calledChannels = spy.mock.calls.map((call) => call[0]);
       expect(calledChannels).toContain(ipcMainChannels.ADD_PLUGIN);
     });
-    // expect the plugin dialog to have disappeared
-    await waitFor(() => expect(queryByRole('dialog')).toBeNull());
+    // close the modal
+    const overlay = await findByRole('dialog');
+    await userEvent.click(overlay);
     const pluginButton = await findByRole('button', { name: /Foo/ });
     // assert that the 'plugin' badge is displayed
     await waitFor(() => expect(within(pluginButton).getByText('Plugin')).toBeInTheDocument());
@@ -146,17 +147,16 @@ describe('Add plugin modal', () => {
 
     // open the plugin first, to make sure it doesn't cause a crash when removing
     const pluginButton = await findByRole('button', { name: /Foo/ });
-    await act(async () => {
-      userEvent.click(pluginButton);
-    });
+    await userEvent.click(pluginButton);
+
     const managePluginsButton = await findByText('Manage plugins');
-    userEvent.click(managePluginsButton);
+    await userEvent.click(managePluginsButton);
 
     const pluginDropdown = await findByLabelText('Plugin name');
     await userEvent.selectOptions(pluginDropdown, [getByRole('option', { name: 'Foo' })]);
 
     const submitButton = await findByText('Remove');
-    userEvent.click(submitButton);
+    await userEvent.click(submitButton);
     await waitFor(() => {
       expect(spy.mock.calls.map((call) => call[0])).toContain(ipcMainChannels.REMOVE_PLUGIN);
     });
