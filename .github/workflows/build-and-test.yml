@@ -20,7 +20,9 @@ env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
   # setuptools_scm: needed for versioning to work
-  CONDA_DEFAULT_DEPENDENCIES: python-build nomkl setuptools_scm sqlite<3.49.1 # https://github.com/natcap/invest/issues/1797
+  # libxcrypt: needed on linux with python<=3.9
+  # sqlite pin: https://github.com/natcap/invest/issues/1797
+  CONDA_DEFAULT_DEPENDENCIES: python-build nomkl setuptools_scm sqlite<3.49.1 libxcrypt
   LATEST_SUPPORTED_PYTHON_VERSION: "3.13"
 
 jobs:
@@ -156,7 +158,6 @@ jobs:
           requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
           requirements: |  # https://github.com/natcap/invest/issues/1797
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
-            libxcrypt
             python==${{ matrix.python-version }}
             sqlite<3.49.1
 
@@ -254,7 +255,10 @@ jobs:
       - uses: ./.github/actions/setup_env
         with:
           requirements-files: requirements.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python==${{ matrix.python-version }} twine
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python==${{ matrix.python-version }}
+            twine
 
       - name: Build source distribution
         run: |
