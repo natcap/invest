@@ -1341,7 +1341,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         actual_aet = pygeoprocessing.raster_to_numpy_array(target_aet_path)
 
         # note: obtained these arrays by running `calculate_local_recharge`
-        expected_li = numpy.array([[60., -72., 73.915215],
+        expected_li = numpy.array([[60., -72., 73.91521],
                                    [0, 76.68, 828.]])
         expected_li_avail = numpy.array([[30., -72., 36.957607],
                                          [0, 38.34, 414.]])
@@ -1351,7 +1351,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                                     [1192.68, 96., 0.]])
 
         # assert li is same as expected li from function
-        numpy.testing.assert_allclose(actual_li, expected_li, equal_nan=True, rtol=2e-7,
+        numpy.testing.assert_allclose(actual_li, expected_li, equal_nan=True,
                                       err_msg="li raster values do not match.")
         numpy.testing.assert_allclose(actual_li_avail, expected_li_avail,
                                       equal_nan=True,
@@ -1415,10 +1415,10 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         actual_b_sum = pygeoprocessing.raster_to_numpy_array(target_b_sum_path)
 
         # note: obtained these arrays by running `route_baseflow_sum`
-        expected_b = numpy.array([[10.5, 0.9999998, 0],
-                                  [0.1422222, 2.2666667, 0]])
-        expected_b_sum = numpy.array([[16.916666, 1.8666663, 0],
-                                      [0.1422222, 2.5333333, 0]])
+        expected_b = numpy.array([[10.5, 1, 0],
+                                  [0.14222223, 2.2666667, 0]])
+        expected_b_sum = numpy.array([[16.916666, 1.8666667, 0],
+                                      [0.14222223, 2.5333333, 0]])
 
         numpy.testing.assert_allclose(actual_b, expected_b, equal_nan=True,
                                       err_msg="Baseflow raster values do not match.")
