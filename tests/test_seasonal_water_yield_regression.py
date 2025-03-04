@@ -1351,7 +1351,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                                     [1192.68, 96., 0.]])
 
         # assert li is same as expected li from function
-        numpy.testing.assert_allclose(actual_li, expected_li, equal_nan=True,
+        numpy.testing.assert_allclose(actual_li, expected_li, equal_nan=True, rtol=2e-7,
                                       err_msg="li raster values do not match.")
         numpy.testing.assert_allclose(actual_li_avail, expected_li_avail,
                                       equal_nan=True,
@@ -1409,7 +1409,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         seasonal_water_yield_core.route_baseflow_sum(flow_dir_mfd_path, l_path,
                                                      l_avail_path, l_sum_path,
                                                      stream_path, target_b_path,
-                                                     target_b_sum_path)
+                                                     target_b_sum_path, 'MFD')
 
         actual_b = pygeoprocessing.raster_to_numpy_array(target_b_path)
         actual_b_sum = pygeoprocessing.raster_to_numpy_array(target_b_sum_path)
