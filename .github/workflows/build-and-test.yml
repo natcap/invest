@@ -249,6 +249,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: check-syntax-errors
     strategy:
+      fail-fast: false
       matrix:
         python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
         os: [windows-latest, macos-13, ubuntu-latest]
