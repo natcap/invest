@@ -86,9 +86,6 @@ jobs:
           - os: macos-13
             shell: bash -l {0}
             setup-conda-home: $HOME
-        exclude:
-          - os: ubuntu-latest
-            python-version: 3.9
     defaults:
       run:
         shell: ${{ matrix.shell }}
@@ -115,11 +112,6 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - name: test
-        run: |
-          which python
-          which python3
-
       # NOTE: It takes twice as long to save the sample data cache
       # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
       # Test data is way, way faster by contrast (on the order of a few
@@ -135,7 +127,6 @@ jobs:
         run: |
           # actions/checkout won't check out to a directory outside of /__w/invest,
           # so we have to copy it afterwards
-          sudo chown -R $(whoami) /home/runner
           chmod +rwx /home/runner
           cp -r /__w/invest/invest /home/runner
 
