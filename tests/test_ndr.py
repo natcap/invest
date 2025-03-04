@@ -573,6 +573,10 @@ class NDRTests(unittest.TestCase):
 
         numpy.testing.assert_allclose(actual_rpi, expected_rpi)
 
+        expected_output = None
+        expected_band = None
+        expected_rpi = None
+
         # now run this without the a user average specified
         del args['runoff_proxy_av']
 
@@ -592,3 +596,7 @@ class NDRTests(unittest.TestCase):
         expected_rpi /= numpy.mean(expected_rpi)
 
         numpy.testing.assert_allclose(actual_rpi, expected_rpi)
+
+        expected_output = None
+        expected_band = None
+        expected_rpi = None
