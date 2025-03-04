@@ -20,9 +20,7 @@ env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
   # setuptools_scm: needed for versioning to work
-  # libxcrypt: needed on linux with python<=3.9
-  # sqlite pin: https://github.com/natcap/invest/issues/1797
-  CONDA_DEFAULT_DEPENDENCIES: python-build nomkl setuptools_scm sqlite<3.49.1 libxcrypt
+  CONDA_DEFAULT_DEPENDENCIES: python-build nomkl setuptools_scm sqlite<3.49.1 # https://github.com/natcap/invest/issues/1797
   LATEST_SUPPORTED_PYTHON_VERSION: "3.13"
 
 jobs:
@@ -82,6 +80,9 @@ jobs:
             container: quay.io/pypa/manylinux_2_34_x86_64
             shell: su - runner {0}
             setup-conda-home: /home/runner
+          - os: ubuntu-latest
+            python-version: 3.9
+            platform-specific-dependencies: libxcrypt
           - os: windows-latest
             shell: bash -l {0}
             setup-conda-home: $HOME
@@ -158,6 +159,7 @@ jobs:
           requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
           requirements: |  # https://github.com/natcap/invest/issues/1797
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            ${{ matrix.platform-specific-dependencies }}
             python==${{ matrix.python-version }}
             sqlite<3.49.1
 
@@ -247,6 +249,10 @@ jobs:
       matrix:
         python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
         os: [windows-latest, macos-13, ubuntu-latest]
+        include:
+          - os: ubuntu-latest
+            python-version: 3.9
+            platform-specific-dependencies: libxcrypt
     steps:
       - uses: actions/checkout@v4
         with:
@@ -258,7 +264,7 @@ jobs:
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python==${{ matrix.python-version }}
-            twine
+            twine ${{ matrix.platform-specific-dependencies }}
 
       - name: Build source distribution
         run: |
