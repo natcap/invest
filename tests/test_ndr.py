@@ -490,11 +490,11 @@ class NDRTests(unittest.TestCase):
     def test_synthetic_runoff_proxy_av(self):
         """
         Test that runoff proxy average is calculated correctly if
-        (1) the user specified a runoff proxy average value,
+        (1) the user specifies a runoff proxy average value,
         (2) the user does not specify a value so the runoff proxy average
             is auto-calculated
         """
-        from natcap.invest.ndr.ndr import execute
+        from natcap.invest.ndr import ndr
 
         args = {
             'workspace_dir': self.workspace_dir,
@@ -558,45 +558,30 @@ class NDRTests(unittest.TestCase):
 
         make_simple_vector(args['watersheds_path'])
 
-        execute(args)
+        ndr.execute(args)
 
         actual_output_path = os.path.join(
             args['workspace_dir'], "intermediate_outputs",
             f"runoff_proxy_index{args['results_suffix']}.tif")
-        actual_output = gdal.Open(actual_output_path)
-        band = actual_output.GetRasterBand(1)
-        actual_rpi = band.ReadAsArray()
-
-        expected_output = gdal.Open(args['runoff_proxy_path'])
-        expected_band = expected_output.GetRasterBand(1)
-        expected_rpi = expected_band.ReadAsArray()/args['runoff_proxy_av']
+        actual_rpi = pygeoprocessing.raster_to_numpy_array(actual_output_path)
+        expected_rpi = pygeoprocessing.raster_to_numpy_array(
+            args['runoff_proxy_path'])/args['runoff_proxy_av']
 
         numpy.testing.assert_allclose(actual_rpi, expected_rpi)
-
-        expected_output = None
-        expected_band = None
-        expected_rpi = None
 
         # now run this without the a user average specified
         del args['runoff_proxy_av']
 
-        execute(args)
+        ndr.execute(args)
 
         actual_output_path = os.path.join(
             args['workspace_dir'], "intermediate_outputs",
             f"runoff_proxy_index{args['results_suffix']}.tif")
-        actual_output = gdal.Open(actual_output_path)
-        band = actual_output.GetRasterBand(1)
-        actual_rpi = band.ReadAsArray()
+        actual_rpi = pygeoprocessing.raster_to_numpy_array(actual_output_path)
 
         # compare to rpi with automatically calculated mean
-        expected_output = gdal.Open(args['runoff_proxy_path'])
-        expected_band = expected_output.GetRasterBand(1)
-        expected_rpi = expected_band.ReadAsArray()
+        expected_rpi = pygeoprocessing.raster_to_numpy_array(
+            args['runoff_proxy_path'])
         expected_rpi /= numpy.mean(expected_rpi)
 
         numpy.testing.assert_allclose(actual_rpi, expected_rpi)
-
-        expected_output = None
-        expected_band = None
-        expected_rpi = None
