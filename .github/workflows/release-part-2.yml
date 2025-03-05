@@ -22,7 +22,7 @@ jobs:
     if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged != true
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Extract version from autorelease branch name
         run: echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
@@ -39,7 +39,7 @@ jobs:
     if: ${{ ! github.head_ref || (startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged == true) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install dependencies
         run: pip install twine
@@ -72,14 +72,22 @@ jobs:
           rm -rf artifacts/Wheel*
 
           # download each artifact separately so that the command will fail if any is missing
-          for artifact in Workbench-Windows-binary \
-                          Workbench-macOS-binary \
+          for artifact in Workbench-macOS-binary \
                           InVEST-sample-data \
-                          InVEST-user-guide \
-                          "Source distribution"
+                          InVEST-user-guide
           do
             gh run download $RUN_ID --dir artifacts --name "$artifact"
           done
+
+          # download the signed windows workbench file from GCS
+          wget --directory-prefix=artifacts https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/${{ env.VERSION }}/workbench/invest_${{ env.VERSION }}_workbench_win32_x64.exe
+
+          # We build one sdist per combination of OS and python version, so just
+          # download and unzip all of them into an sdists directory so we can
+          # just grab the first one.  This approach is more flexible to changes
+          # in OS and python versions than just statically defining the artifact name.
+          gh run download $RUN_ID --dir sdists --pattern "Source*"
+          cp "$(find sdists -name '*.tar.gz' -print -quit)" artifacts/
 
       - name: Create Github release
         run: |
