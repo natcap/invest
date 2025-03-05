@@ -155,10 +155,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         uses: ./.github/actions/setup_env
         env:
-          HOME: ${{ matrix.setup-conda-home }}
+          # HOME: ${{ matrix.setup-conda-home }}
           PIP_ROOT_USER_ACTION: ignore
         with:
-          python: /opt/python/cp39-cp39/bin/python
+          python: /opt/python/cp313-cp313/bin/python
           requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
           requirements: |  # https://github.com/natcap/invest/issues/1797
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
