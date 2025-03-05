@@ -48,6 +48,9 @@ Unreleased Changes
     * InVEST's windows binaries are now distributed once again with a valid
       signature, signed by Stanford University.
       https://github.com/natcap/invest/issues/1580
+    * The natcap.invest python package now officially supports linux.
+      manylinux wheels will be available on PyPI.
+      (`#1730 <https://github.com/natcap/invest/issues/1730>`_).
 * Annual Water Yield
     * Fixed an issue where the model would crash if the valuation table was
       provided, but the demand table was not.  Validation will now warn about
