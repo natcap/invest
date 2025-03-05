@@ -166,10 +166,6 @@ jobs:
             python=${{ matrix.python-version }}
             sqlite<3.49.1
 
-      - name: shell init (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
-        run: micromamba shell init bash
-
       - name: Download previous conda environment.yml
         continue-on-error: true
         # Using 'dawidd6' since 'download-artifact' GH action doesn't
