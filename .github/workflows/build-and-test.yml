@@ -188,8 +188,6 @@ jobs:
       # the working-directory key doesn't work as expected in the docker container,
       # so we need to cd into the invest directory in the following steps
       - name: Build wheel
-        env:
-          PIP_ROOT_USER_ACTION: ignore  # for the linux docker container
         run: |
           # uninstall InVEST if it was already in the restored cache
           cd ~/invest
