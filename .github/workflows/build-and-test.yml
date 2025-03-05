@@ -155,7 +155,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         uses: ./.github/actions/setup_env
         env:
-          # HOME: ${{ matrix.setup-conda-home }}
+          HOME: ${{ matrix.setup-conda-home }}
           PIP_ROOT_USER_ACTION: ignore
         with:
           python: /opt/python/cp313-cp313/bin/python
