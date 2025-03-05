@@ -57,7 +57,7 @@ else
 	.DEFAULT_GOAL := binaries
 endif
 
-REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs conda yarn bash
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs conda yarn
 
 ZIP := zip
 PIP = $(PYTHON) -m pip
@@ -334,7 +334,7 @@ build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
 codesign:
-	cd codesigning && bash enqueue-current-installer.sh
+	python codesigning/enqueue-current-installer.py
 
 deploy:
 	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
