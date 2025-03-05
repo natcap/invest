@@ -62,19 +62,58 @@ jobs:
 
       - name: Lint with doc8
         run: |
-            # Skip line-too-long errors (D001)
-            python -m doc8 --ignore D001 HISTORY.rst README_PYTHON.rst
+          # Skip line-too-long errors (D001)
+          python -m doc8 --ignore D001 HISTORY.rst README_PYTHON.rst
 
   run-model-tests:
     name: Run model tests
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
     needs: check-syntax-errors
     strategy:
       fail-fast: false
       matrix:
         python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
-        os: [windows-latest, macos-13]
+        os: [windows-latest, macos-13, ubuntu-latest]
+        include:
+          - os: ubuntu-latest
+            container: quay.io/pypa/manylinux_2_34_x86_64
+            shell: su - runner {0}
+            setup-conda-home: /home/runner
+          - os: ubuntu-latest
+            python-version: 3.9
+            platform-specific-dependencies: libxcrypt
+          - os: ubuntu-latest
+            python-version: "3.10"
+            platform-specific-dependencies: libxcrypt
+          - os: windows-latest
+            shell: bash -l {0}
+            setup-conda-home: $HOME
+          - os: macos-13
+            shell: bash -l {0}
+            setup-conda-home: $HOME
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
     steps:
+      # The manylinux docker container doesn't create any users,
+      # and running everything as root caused some weird problems
+      # (including the permissions-related validation tests failing).
+      # Running as a non-root user seems to be the better practice and
+      # avoids these issues.
+      - name: create user
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash -l {0}
+        run: |
+          USERNAME=runner
+          USER_UID=1000
+          USER_GID=$USER_UID
+          groupadd --gid $USER_GID $USERNAME
+          useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
+          yum install -y sudo jq
+          echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME
+          chmod 0440 /etc/sudoers.d/$USERNAME
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
@@ -89,12 +128,43 @@ jobs:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-      - name: Set up python environment
+      - name: Setup in manylinux docker container
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          # actions/checkout won't check out to a directory outside of /__w/invest,
+          # so we have to copy it afterwards
+          chmod +rwx /home/runner
+          cp -r /__w/invest/invest /home/runner
+
+          # Install the latest release of git lfs
+          VERSION=$(curl -s https://api.github.com/repos/git-lfs/git-lfs/releases/latest | jq -r '.name')
+          curl -LO https://github.com/git-lfs/git-lfs/releases/latest/download/git-lfs-linux-amd64-$VERSION.tar.gz
+          tar -xvzf git-lfs-linux-amd64-$VERSION.tar.gz
+          rm git-lfs-linux-amd64-$VERSION.tar.gz
+          cd git-lfs-*
+          sudo ./install.sh
+
+      - name: Set up python environment (Mac, Windows)
+        if: matrix.os != 'ubuntu-latest'
         uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }}
+
+      - name: Set up python environment (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        uses: ./.github/actions/setup_env
+        env:
+          HOME: ${{ matrix.setup-conda-home }}
+          PIP_ROOT_USER_ACTION: ignore
+        with:
+          python: /opt/python/cp313-cp313/bin/python
+          requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
+          requirements: |  # https://github.com/natcap/invest/issues/1797
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            ${{ matrix.platform-specific-dependencies }}
+            python=${{ matrix.python-version }}
+            sqlite<3.49.1
 
       - name: Download previous conda environment.yml
         continue-on-error: true
@@ -115,29 +185,43 @@ jobs:
           # otherwise, an error appears in the action annotations
           diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
-      - name: Build and install wheel
+      # the working-directory key doesn't work as expected in the docker container,
+      # so we need to cd into the invest directory in the following steps
+      - name: Build wheel
         run: |
           # uninstall InVEST if it was already in the restored cache
+          cd ~/invest
           python -m pip uninstall -y natcap.invest
           python -m build --wheel
           ls -la dist
-          pip install $(find dist -name "natcap[._-]invest*.whl")
 
-      - name: Run model tests
-        run: make test
+      - name: Audit and repair wheel (manylinux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cd ~/invest
+          WHEEL=$(find dist -name "natcap[._-]invest*.whl")
+          auditwheel show $WHEEL
+          auditwheel repair $WHEEL --plat manylinux_2_34_x86_64 -w dist
+          rm $WHEEL  # remove the original wheel
+
+      - name: Install and run model tests
+        run: |
+          cd ~/invest
+          pip install $(find dist -name "natcap[._-]invest*.whl")
+          make test
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
         with:
           name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
-          path: dist
+          path: ~/invest/dist
 
       - name: Upload conda env artifact
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
           name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
-          path: conda-env.txt
+          path: ~/invest/conda-env.txt
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
@@ -151,16 +235,26 @@ jobs:
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
-        run: make deploy
+        run: |
+          cd ~/invest
+          make deploy
 
   test-source-distribution:
     name: Check sdist
     runs-on: ${{ matrix.os }}
     needs: check-syntax-errors
     strategy:
+      fail-fast: false
       matrix:
         python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
-        os: [windows-latest, macos-13]
+        os: [windows-latest, macos-13, ubuntu-latest]
+        include:
+          - os: ubuntu-latest
+            python-version: 3.9
+            platform-specific-dependencies: libxcrypt
+          - os: ubuntu-latest
+            python-version: "3.10"
+            platform-specific-dependencies: libxcrypt
     steps:
       - uses: actions/checkout@v4
         with:
@@ -168,9 +262,11 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} twine
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ matrix.python-version }}
+            twine ${{ matrix.platform-specific-dependencies }}
 
       - name: Build source distribution
         run: |
@@ -233,9 +329,11 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
           requirements-files: requirements.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pytest
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+            pytest
 
       - name: Make install
         run: make install
@@ -265,9 +363,10 @@ jobs:
       - name: Set up python environment
         uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
           requirements-files: requirements.txt requirements-dev.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
       - name: Make install
         run: make install
@@ -322,13 +421,15 @@ jobs:
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
           requirements-files: |
             requirements.txt
             requirements-dev.txt
             requirements-docs.txt
             constraints_tests.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pandoc
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+            pandoc
 
       - name: Make install
         run: make install
