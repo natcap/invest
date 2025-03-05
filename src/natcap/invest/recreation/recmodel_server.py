@@ -442,7 +442,7 @@ class RecModel(object):
         ud_aoi_layer = ud_aoi_vector.GetLayer()
 
         aoi_layer = None
-        gdal.Dataset.__swig_destroy__(aoi_vector)
+        # gdal.Dataset.__swig_destroy__(aoi_vector)
         aoi_vector = None
 
         ud_id_suffix_list = [
@@ -513,7 +513,7 @@ class RecModel(object):
         LOGGER.info('done with polygon test, syncing to disk')
         ud_aoi_layer = None
         ud_aoi_vector.FlushCache()
-        gdal.Dataset.__swig_destroy__(ud_aoi_vector)
+        # gdal.Dataset.__swig_destroy__(ud_aoi_vector)
         ud_aoi_vector = None
 
         for polytest_process in polytest_process_list:
@@ -922,7 +922,7 @@ def _calc_poly_ud(
             ud_poly_feature_queue.put((poly_id, ud_averages, ud_monthly_set))
     ud_poly_feature_queue.put('STOP')
     aoi_layer = None
-    gdal.Dataset.__swig_destroy__(aoi_vector)
+    # gdal.Dataset.__swig_destroy__(aoi_vector)
     aoi_vector = None
 
 

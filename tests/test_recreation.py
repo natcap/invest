@@ -658,81 +658,74 @@ class TestRecClientServer(unittest.TestCase):
         shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
     def test_all_metrics_local_server(self):
-        """Recreation test with all but trivial predictor metrics.
-
-        Executes Recreation model all the way through scenario prediction.
-        With this 'extra_fields_features' AOI, we also cover two edge cases:
-        1) the AOI has a pre-existing field that the model wishes to create.
-        2) the AOI has features only covering nodata raster predictor values.
-
-        """
+        """Recreation test with all but trivial predictor metrics."""
         from natcap.invest.recreation import recmodel_client
         from natcap.invest import validation
 
         args = {
-            # 'aoi_path': os.path.join(
-            #     SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
             'aoi_path': os.path.join(
                 SAMPLE_DATA, 'andros_aoi.shp'),
             'compute_regression': True,
             'start_year': MIN_YEAR,
             'end_year': MAX_YEAR,
             'grid_aoi': True,
-            'cell_size': 40000,
+            'cell_size': 30000,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
             'results_suffix': 'foo',
-            'workspace_dir': 'scratch/rec_test',
+            'workspace_dir': self.workspace_dir,
             'hostname': self.hostname,
             'port': self.port,
         }
         recmodel_client.execute(args)
 
         out_grid_vector_path = os.path.join(
-            args['workspace_dir'], 'regression_data_foo.shp')
+            args['workspace_dir'], 'regression_data_foo.gpkg')
 
         predictor_df = validation.get_validated_dataframe(
             os.path.join(SAMPLE_DATA, 'predictors_all.csv'),
             **recmodel_client.MODEL_SPEC['args']['predictor_table_path'])
         field_list = list(predictor_df.index) + ['pr_TUD', 'pr_PUD', 'avg_pr_UD']
 
+        # For convenience, assert the sums of the columns instead of all
+        # the individual values.
         actual_sums = sum_vector_columns(out_grid_vector_path, field_list)
         expected_sums = {
-            'ports': 10.0,
-            'airdist': 435104.4350759008,
-            'bonefish_a': 4446728168.518886,
-            'bathy': 25.6711717243,
-            'roads': 5072.70757123528,
-            'bonefish_p': 427.8866175179,
-            'bathy_sum': 326.41848224774003,
+            'ports': 11.0,
+            'airdist': 875291.8190812231,
+            'bonefish_a': 4630187907.293639,
+            'bathy': 47.16540460441528,
+            'roads': 5072.707571235277,
+            'bonefish_p': 792.0711806443292,
+            'bathy_sum': 348.04177433624864,
             'pr_TUD': 1.0,
             'pr_PUD': 1.0,
             'avg_pr_UD': 1.0
         }
         for key in expected_sums:
             numpy.testing.assert_almost_equal(
-                expected_sums[key], actual_sums[key], decimal=3)
+                actual_sums[key], expected_sums[key], decimal=3)
 
         out_scenario_path = os.path.join(
-            args['workspace_dir'], 'scenario_results_foo.shp')
+            args['workspace_dir'], 'scenario_results_foo.gpkg')
         field_list = list(predictor_df.index) + ['pr_UD_EST']
         actual_scenario_sums = sum_vector_columns(out_scenario_path, field_list)
         expected_scenario_sums = {
-            'ports': 10.0,
-            'airdist': 435104.4350759008,
-            'bonefish_a': 4446728168.518886,
-            'bathy': 25.6711717243,
-            'roads': 5072.70757123528,
-            'bonefish_p': 427.8866175179,
-            'bathy_sum': 326.41848224774003,
-            'pr_UD_EST': 1.0
+            'ports': 11.0,
+            'airdist': 875291.8190812231,
+            'bonefish_a': 4630187907.293639,
+            'bathy': 47.16540460441528,
+            'roads': 5072.707571235277,
+            'bonefish_p': 792.0711806443292,
+            'bathy_sum': 348.04177433624864,
+            'pr_UD_EST': 0.9980054302281078
         }
         for key in expected_scenario_sums:
             numpy.testing.assert_almost_equal(
-                expected_scenario_sums[key], actual_scenario_sums[key], decimal=3)
+                actual_scenario_sums[key], expected_scenario_sums[key], decimal=3)
 
         # TODO: assert that all tabular outputs are indexed by the same poly_id
 
@@ -1522,4 +1515,5 @@ def sum_vector_columns(vector_path, field_list):
         result[field] = sum([
             feature.GetField(field)
             for feature in layer])
+    layer = vector = None
     return result

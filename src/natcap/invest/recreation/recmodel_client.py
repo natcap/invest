@@ -634,7 +634,7 @@ def execute(args):
 
 
 def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
-    """Copy a shapefile from source to destination"""
+    """Copy a shapefile from source to destination."""
     aoi_vector = gdal.OpenEx(source_aoi_path, gdal.OF_VECTOR)
     driver = gdal.GetDriverByName('GPKG')
     local_aoi_vector = driver.CreateCopy(
@@ -922,7 +922,7 @@ def _schedule_predictor_data_processing(
     predictor_df = validation.get_validated_dataframe(
         predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
     predictor_task_list = []
-    predictor_json_list = []  # tracks predictor files to add to shp
+    predictor_json_list = []  # tracks predictor files to add to gpkg
 
     for predictor_id, row in predictor_df.iterrows():
         LOGGER.info(f"Building predictor {predictor_id}")
@@ -988,6 +988,7 @@ def _prepare_response_polygons_lookup(
         feature_geometry = None
         response_polygons_lookup[response_feature.GetFID()] = feature_polygon
     response_layer = None
+    response_vector = None
     with open(target_pickle_path, 'wb') as pickle_file:
         pickle.dump(response_polygons_lookup, pickle_file)
 
@@ -1371,6 +1372,7 @@ def _assemble_regression_data(
         if field_index >= 0:
             target_layer.DeleteField(field_index)
         field = ogr.FieldDefn(str(fieldname), ogr.OFTReal)
+        # TODO: no width & precision for gpkg, still OFTReal?
         field.SetWidth(24)
         field.SetPrecision(11)
         target_layer.CreateField(field)
@@ -1385,12 +1387,11 @@ def _assemble_regression_data(
     # the proportion of PUD_YR_AVG for each feature
     # the proportion of TUD_YR_AVG for each feature
     sql = f'SELECT SUM(PUD_YR_AVG) sum_PUD FROM {pud_layer.GetName()}'
-    pud_sum_layer = pud_vector.ExecuteSQL(sql)
-    pud_sum = pud_sum_layer.GetNextFeature().GetField('sum_PUD')
+    with pud_vector.ExecuteSQL(sql) as pud_sum_layer:
+        pud_sum = pud_sum_layer.GetNextFeature().GetField('sum_PUD')
     sql = f'SELECT SUM(TUD_YR_AVG) sum_TUD FROM {tud_layer.GetName()}'
-    tud_sum_layer = tud_vector.ExecuteSQL(sql)
-    tud_sum = tud_sum_layer.GetNextFeature().GetField('sum_TUD')
-    pud_sum_layer = tud_sum_layer = None
+    with tud_vector.ExecuteSQL(sql) as tud_sum_layer:
+        tud_sum = tud_sum_layer.GetNextFeature().GetField('sum_TUD')
 
     if pud_sum == 0 or tud_sum == 0:
         raise RuntimeError(
@@ -1408,6 +1409,9 @@ def _assemble_regression_data(
             RESPONSE_VARIABLE_ID, (pr_pud + pr_tud) / 2)
         target_layer.SetFeature(feature)
 
+    pud_feature = tud_feature = None
+    pud_layer = pud_vector = None
+    tud_layer = tud_vector = None
     target_layer = None
     target_vector = None
 
@@ -1574,11 +1578,12 @@ def _build_regression(
         LOGGER.warning(
             f'{n_missing} features are missing data for at least one '
             'predictor and will be ommitted from the regression model. '
-            'See regression_data.shp to see the missing values.')
+            'See regression_data.gpkg to see the missing values.')
     y_factors = data_matrix[:, 0]  # useful to have this as a 1-D array
     coefficients, _, _, _ = numpy.linalg.lstsq(
         data_matrix[:, 1:], y_factors, rcond=-1)
 
+    # numpy lstsq will not always return residuals, but they can be calculated.
     ssres = numpy.sum((
         y_factors -
         numpy.sum(data_matrix[:, 1:] * coefficients, axis=1)) ** 2)
@@ -1602,6 +1607,7 @@ def _build_regression(
             numpy.dot(
                 data_matrix[:, 1:].T, data_matrix[:, 1:])))
         se_est = numpy.sqrt(var_est)
+
     else:
         LOGGER.warning(f"Linear model is under constrained with DOF={dof}")
         std_err = sigma2 = numpy.nan
