@@ -208,8 +208,7 @@ jobs:
         run: |
           cd ~/invest
           pip install $(find dist -name "natcap[._-]invest*.whl")
-          make TESTRUNNER="python -m pytest -vs --import-mode=importlib \
-            --durations=0 -k '${{ matrix.pytest-pattern }}'" test
+          make test
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
