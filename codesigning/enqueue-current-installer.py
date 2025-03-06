@@ -40,7 +40,7 @@ def main():
         f"invest_{version}_workbench_{os_alias}_{arch}.{ext}"
     )
     subprocess.run(
-        ['python', os.path.join(this_dir, 'enqueue-binary.py')], url)
+        ['python', os.path.join(this_dir, 'enqueue-binary.py'), url])
 
 
 if __name__ == '__main__':
