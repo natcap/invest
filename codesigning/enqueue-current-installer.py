@@ -13,10 +13,11 @@ def main():
 
     this_dir = os.path.dirname(__file__)
     repo_root = os.path.dirname(this_dir)
-    dist_url = subprocess.run(
+    dist_url_proc = subprocess.run(
         ['make', '-C', repo_root, '--no-print-directory',
          'print-DIST_URL_BASE'],
-        capture_output=True, check=True).stdout.split(' ')[2]
+        capture_output=True, check=True)
+    dist_url = dist_url_proc.stdout.decode('utf-8').strip().split(' ')[2]
 
     os_alias = platform.system().lower()
     if os_alias == 'windows':
@@ -36,7 +37,7 @@ def main():
 
     url = (
         f"{dist_url}/workbench/"
-        f"invest_{version}_workbench_{platform}_{arch}.{ext}"
+        f"invest_{version}_workbench_{os_alias}_{arch}.{ext}"
     )
     subprocess.run(
         ['python', os.path.join(this_dir, 'enqueue-binary.py')], url)
