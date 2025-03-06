@@ -41,7 +41,8 @@ def main():
     )
     print(f"Enqueueing URL for signing: {url}")
     subprocess.run(
-        ['python', os.path.join(this_dir, 'enqueue-binary.py'), url])
+        ['python', os.path.join(this_dir, 'enqueue-binary.py'), url],
+        check=True)
 
 
 if __name__ == '__main__':
