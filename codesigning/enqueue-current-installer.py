@@ -4,12 +4,18 @@
 import os
 import platform
 import subprocess
+import sys
 
-import setuptools_scm
+# setuptools_scm is required, but not directly imported here
 
 
 def main():
-    version = setuptools_scm.get_version()
+    # Calling this from the CLI makes sure that our pyproject.toml config is
+    # parsed, which isn't the case by default when setuptools_scm.version() is
+    # called.
+    version = subprocess.run(
+        [sys.executable, '-m', 'setuptools_scm'],
+        capture_output=True, check=True).stdout.decode('utf-8').strip()
 
     this_dir = os.path.dirname(__file__)
     repo_root = os.path.dirname(this_dir)
