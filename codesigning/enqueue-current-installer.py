@@ -39,6 +39,7 @@ def main():
         f"{dist_url}/workbench/"
         f"invest_{version}_workbench_{os_alias}_{arch}.{ext}"
     )
+    print(f"Enqueueing URL for signing: {url}")
     subprocess.run(
         ['python', os.path.join(this_dir, 'enqueue-binary.py'), url])
 
