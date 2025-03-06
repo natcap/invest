@@ -8,24 +8,24 @@ sudo apt-get install gcsfuse git gcc g++
 cd ~
 curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
 bash Miniforge3-$(uname)-$(uname -m).sh
-source .bashrc
+mamba init && source .bashrc
 
+cd /usr/local/recreation-server
+mkdir invest_3_15_0
+cd  invest_3_15_0
 git clone https://github.com/davemfish/invest.git
 cd invest
-git checkout exp/REC-twitter
-mamba create -p ./env python=3.11
+git checkout feature/REC-twitter-client
+mamba create -p ./env python=3.12
 mamba activate ./env
 mamba install gdal pygeoprocessing numpy
 pip install .
 
 # Mount GCS Fuse
-cd ~ && mkdir server
-mkdir server/volume
-cd server
-
-gcsfuse --implicit-dirs -o ro natcap-recreation volume
+cd /usr/local/recreation-server/invest_3_15_0 && mkdir server && mkdir server/volume
+gcsfuse --implicit-dirs -o ro natcap-recreation server/volume
 # Listing all contents should build some indices and improve performance later
-cd volume && ls -R
+ls -R server/volume
 
-cd ~/invest/scripts/recreation_server
-
+# Refer to invest/scripts/recreation_server/readme.txt for instructions on
+# starting the python processes.
