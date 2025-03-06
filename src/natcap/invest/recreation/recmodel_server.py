@@ -82,10 +82,87 @@ def _try_except_wrapper(mesg):
     return try_except_decorator
 
 
-class RecModel(object):
-    """Class that manages RPCs for calculating photo user days."""
+@Pyro5.api.expose
+class RecManager(object):
 
-    # @_try_except_wrapper("RecModel construction exited while multiprocessing.")
+    def __init__(self, servers_dict, max_allowable_query):
+        self.servers = servers_dict
+        self.max_allowable_query = max_allowable_query
+
+    def get_valid_year_range(self, dataset):
+        server = self.servers[dataset]
+        return server.get_valid_year_range()
+
+    def estimate_aoi_query_size(self, bounding_box, dataset):
+        """Count points in quadtree nodes that intersect a bounding box.
+
+        This allows for a quick upper-limit estimate of the number
+        of points found within an AOI extent.
+
+        Args:
+            bounding_box (list): of the form [xmin, ymin, xmax, ymax]
+                where coordinates are WGS84 decimal degrees.
+            dataset (str): one of 'flickr' or 'twitter'
+
+        Returns:
+            (int, int): (n points, max number of points allowed by this server)
+
+        """
+        LOGGER.info(f'Validating AOI extent: {bounding_box} against {dataset}')
+        server = self.servers[dataset]
+        n_points = server.n_points_in_intersecting_nodes(bounding_box)
+        LOGGER.info(
+            f'{n_points} found; max allowed: {self.max_allowable_query}')
+        return (n_points, self.max_allowable_query)
+
+    @_try_except_wrapper("calculate_userdays exited while multiprocessing.")
+    def calculate_userdays(self, zip_file_binary, start_year, end_year, dataset_list):
+        results = {}
+        with concurrent.futures.ProcessPoolExecutor(max_workers=2) as executor:
+            future_to_label = {}
+            for dataset in dataset_list:
+                server = self.servers[dataset]
+                # append jan 1 to start and dec 31 to end
+                date_range = (str(start_year)+'-01-01',
+                              str(end_year)+'-12-31')
+
+                results_filename = f'{server.acronym}_results.gpkg'
+                fut = executor.submit(
+                    server.calc_user_days_in_aoi,
+                    zip_file_binary, date_range, results_filename)
+                future_to_label[fut] = server.acronym
+
+            for future in concurrent.futures.as_completed(future_to_label):
+                label = future_to_label[future]
+                results[label] = future.result()
+                LOGGER.info(f'calc user-days complete for {label}')
+        LOGGER.info('all user-day calculations complete; sending binary back')
+        return results
+
+    @_try_except_wrapper("fetch workspaces exited.")
+    def fetch_aoi_workspaces(self, workspace_id, server_id):
+        """Download the AOI in the workspace specified by workspace_id.
+
+        Cosntructs the path using the server's self.local_cache_workspace.
+
+        Args:
+            workspace_id (string): identifier of the workspace
+            server_id (string): one of ('flickr', 'twitter')
+
+        Returns:
+            binary string of a zipfile containing the AOI.
+
+        """
+        server = self.servers[server_id]
+        zipfile_path = server.find_workspace(workspace_id)
+        with open(zipfile_path, 'rb') as out_zipfile:
+            zip_binary = out_zipfile.read()
+        return zip_binary
+
+
+class RecModel(object):
+    """Class that manages quadtree construction and queries."""
+
     def __init__(
             self, min_year, max_year, cache_workspace,
             raw_csv_filename=None,
@@ -918,170 +995,6 @@ def _calc_poly_ud(
     aoi_vector = None
 
 
-def execute(args):
-    """Launch recreation server and parse/generate quadtree if necessary.
-
-    A call to this function registers a Pyro RPC RecModel entry point given
-    the configuration input parameters described below.
-
-    There are many methods to launch a server, including at a Linux command
-    line as shown:
-
-    nohup python -u -c "import natcap.invest.recreation.recmodel_server;
-    args={
-
-        'hostname':'$LOCALIP',
-        'port':$REC_SERVER_PORT,
-        'datasets': {
-            'flickr': {
-                'raw_csv_point_data_path': $POINT_DATA_PATH,
-                'quadtree_pickle_filepath': $QT_PICKLE_PATH,
-                'min_year': $MIN_YEAR,
-                'max_year': $MAX_YEAR
-            },
-            'twitter': {
-                'raw_csv_point_data_path': $POINT_DATA_PATH,
-                'quadtree_pickle_filepath': $QT_PICKLE_PATH,
-                'min_year': $MIN_YEAR,
-                'max_year': $MAX_YEAR
-            }
-        },
-        'cache_workspace': $CACHE_WORKSPACE_PATH'};
-
-    natcap.invest.recreation.recmodel_server.execute(args)"
-
-    Args:
-        args['raw_csv_point_data_path'] (string): path to a csv file of the
-            format
-        args['quadtree_pickle_filepath'] (string): path to existing quadtree index
-        args['hostname'] (string): hostname to host Pyro server.
-        args['port'] (int/or string representation of int): port number to host
-            Pyro entry point.
-        args['max_year'] (int): maximum year allowed to be queries by user
-        args['min_year'] (int): minimum valid year allowed to be queried by
-            user
-        args['dataset_name'] (string): 'flickr' or 'twitter' to indicate the
-            dataset exposed by this server and used to count either
-            photo-userdays (PUD) or twitter-userdays (TUD)
-
-    Returns:
-        Never returns
-    """
-    max_points_per_node = GLOBAL_MAX_POINTS_PER_NODE
-    if 'max_points_per_node' in args:
-        max_points_per_node = args['max_points_per_node']
-
-    max_allowable_query = MAX_ALLOWABLE_QUERY
-    if 'max_allowable_query' in args:
-        max_allowable_query = args['max_allowable_query']
-
-    servers = {}
-    for dataset, ds_args in args['datasets'].items():
-        cache_workspace = os.path.join(args['cache_workspace'], dataset)
-        if 'raw_csv_point_data_path' in ds_args and ds_args['raw_csv_point_data_path']:
-            servers[dataset] = RecModel(
-                ds_args['min_year'], ds_args['max_year'], cache_workspace,
-                raw_csv_filename=ds_args['raw_csv_point_data_path'],
-                max_points_per_node=max_points_per_node,
-                dataset_name=dataset)
-        elif 'quadtree_pickle_filename' in ds_args and ds_args['quadtree_pickle_filename']:
-            servers[dataset] = RecModel(
-                ds_args['min_year'], ds_args['max_year'], cache_workspace,
-                quadtree_pickle_filename=ds_args['quadtree_pickle_filename'],
-                dataset_name=dataset)
-        else:
-            raise ValueError(
-                f'Either `raw_csv_point_data_path` or `quadtree_pickle_filename`'
-                f'must be present in `args[datasets][{dataset}]`')
-    if len(servers) == 0:
-        raise ValueError('No valid RecModel servers configured in `args`')
-
-    daemon = Pyro5.api.Daemon(args['hostname'], int(args['port']))
-    manager = RecManager(servers, max_allowable_query)
-    uri = daemon.register(manager, 'natcap.invest.recreation')
-    LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
-    LOGGER.info(f'accepting queries up to {max_allowable_query} points')
-    daemon.requestLoop()
-
-
-@Pyro5.api.expose
-class RecManager(object):
-
-    def __init__(self, servers_dict, max_allowable_query):
-        self.servers = servers_dict
-        self.max_allowable_query = max_allowable_query
-
-    def get_valid_year_range(self, dataset):
-        server = self.servers[dataset]
-        return server.get_valid_year_range()
-
-    def estimate_aoi_query_size(self, bounding_box, dataset):
-        """Count points in quadtree nodes that intersect a bounding box.
-
-        This allows for a quick upper-limit estimate of the number
-        of points found within an AOI extent.
-
-        Args:
-            bounding_box (list): of the form [xmin, ymin, xmax, ymax]
-                where coordinates are WGS84 decimal degrees.
-            dataset (str): one of 'flickr' or 'twitter'
-
-        Returns:
-            (int, int): (n points, max number of points allowed by this server)
-
-        """
-        LOGGER.info(f'Validating AOI extent: {bounding_box} against {dataset}')
-        server = self.servers[dataset]
-        n_points = server.n_points_in_intersecting_nodes(bounding_box)
-        LOGGER.info(
-            f'{n_points} found; max allowed: {self.max_allowable_query}')
-        return (n_points, self.max_allowable_query)
-
-    @_try_except_wrapper("calculate_userdays exited while multiprocessing.")
-    def calculate_userdays(self, zip_file_binary, start_year, end_year, dataset_list):
-        results = {}
-        with concurrent.futures.ProcessPoolExecutor(max_workers=2) as executor:
-            future_to_label = {}
-            for dataset in dataset_list:
-                server = self.servers[dataset]
-                # append jan 1 to start and dec 31 to end
-                date_range = (str(start_year)+'-01-01',
-                              str(end_year)+'-12-31')
-
-                results_filename = f'{server.acronym}_results.gpkg'
-                fut = executor.submit(
-                    server.calc_user_days_in_aoi,
-                    zip_file_binary, date_range, results_filename)
-                future_to_label[fut] = server.acronym
-
-            for future in concurrent.futures.as_completed(future_to_label):
-                label = future_to_label[future]
-                results[label] = future.result()
-                LOGGER.info(f'calc user-days complete for {label}')
-        LOGGER.info('all user-day calculations complete; sending binary back')
-        return results
-
-    @_try_except_wrapper("fetch workspaces exited.")
-    def fetch_aoi_workspaces(self, workspace_id, server_id):
-        """Download the AOI in the workspace specified by workspace_id.
-
-        Cosntructs the path using the server's self.local_cache_workspace.
-
-        Args:
-            workspace_id (string): identifier of the workspace
-            server_id (string): one of ('flickr', 'twitter')
-
-        Returns:
-            binary string of a zipfile containing the AOI.
-
-        """
-        server = self.servers[server_id]
-        zipfile_path = server.find_workspace(workspace_id)
-        with open(zipfile_path, 'rb') as out_zipfile:
-            zip_binary = out_zipfile.read()
-        return zip_binary
-
-
 def _hashfile(file_path, blocksize=2**20, fast_hash=False):
     """Hash file with memory efficiency as a priority.
 
@@ -1190,3 +1103,89 @@ def transplant_quadtree(qt_pickle_filepath, workspace):
         with open(pickle_filepath, 'wb') as qt_pickle:
             pickle.dump(new_qt, qt_pickle)
     return pickle_filepath
+
+
+def execute(args):
+    """Launch recreation server and parse/generate quadtree if necessary.
+
+    A call to this function registers a Pyro RPC RecModel entry point given
+    the configuration input parameters described below.
+
+    There are many methods to launch a server, including at a Linux command
+    line as shown:
+
+    nohup python -u -c "import natcap.invest.recreation.recmodel_server;
+    args={
+
+        'hostname':'$LOCALIP',
+        'port':$REC_SERVER_PORT,
+        'datasets': {
+            'flickr': {
+                'raw_csv_point_data_path': $POINT_DATA_PATH,
+                'quadtree_pickle_filepath': $QT_PICKLE_PATH,
+                'min_year': $MIN_YEAR,
+                'max_year': $MAX_YEAR
+            },
+            'twitter': {
+                'raw_csv_point_data_path': $POINT_DATA_PATH,
+                'quadtree_pickle_filepath': $QT_PICKLE_PATH,
+                'min_year': $MIN_YEAR,
+                'max_year': $MAX_YEAR
+            }
+        },
+        'cache_workspace': $CACHE_WORKSPACE_PATH'};
+
+    natcap.invest.recreation.recmodel_server.execute(args)"
+
+    Args:
+        args['raw_csv_point_data_path'] (string): path to a csv file of the
+            format
+        args['quadtree_pickle_filepath'] (string): path to existing quadtree index
+        args['hostname'] (string): hostname to host Pyro server.
+        args['port'] (int/or string representation of int): port number to host
+            Pyro entry point.
+        args['max_year'] (int): maximum year allowed to be queries by user
+        args['min_year'] (int): minimum valid year allowed to be queried by
+            user
+        args['dataset_name'] (string): 'flickr' or 'twitter' to indicate the
+            dataset exposed by this server and used to count either
+            photo-userdays (PUD) or twitter-userdays (TUD)
+
+    Returns:
+        Never returns
+    """
+    max_points_per_node = GLOBAL_MAX_POINTS_PER_NODE
+    if 'max_points_per_node' in args:
+        max_points_per_node = args['max_points_per_node']
+
+    max_allowable_query = MAX_ALLOWABLE_QUERY
+    if 'max_allowable_query' in args:
+        max_allowable_query = args['max_allowable_query']
+
+    servers = {}
+    for dataset, ds_args in args['datasets'].items():
+        cache_workspace = os.path.join(args['cache_workspace'], dataset)
+        if 'raw_csv_point_data_path' in ds_args and ds_args['raw_csv_point_data_path']:
+            servers[dataset] = RecModel(
+                ds_args['min_year'], ds_args['max_year'], cache_workspace,
+                raw_csv_filename=ds_args['raw_csv_point_data_path'],
+                max_points_per_node=max_points_per_node,
+                dataset_name=dataset)
+        elif 'quadtree_pickle_filename' in ds_args and ds_args['quadtree_pickle_filename']:
+            servers[dataset] = RecModel(
+                ds_args['min_year'], ds_args['max_year'], cache_workspace,
+                quadtree_pickle_filename=ds_args['quadtree_pickle_filename'],
+                dataset_name=dataset)
+        else:
+            raise ValueError(
+                f'Either `raw_csv_point_data_path` or `quadtree_pickle_filename`'
+                f'must be present in `args[datasets][{dataset}]`')
+    if len(servers) == 0:
+        raise ValueError('No valid RecModel servers configured in `args`')
+
+    daemon = Pyro5.api.Daemon(args['hostname'], int(args['port']))
+    manager = RecManager(servers, max_allowable_query)
+    uri = daemon.register(manager, 'natcap.invest.recreation')
+    LOGGER.info("natcap.invest.recreation ready. Object uri = %s", uri)
+    LOGGER.info(f'accepting queries up to {max_allowable_query} points')
+    daemon.requestLoop()

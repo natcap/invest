@@ -1408,6 +1408,25 @@ class RecreationValidationTests(unittest.TestCase):
         self.assertIn('The table contains invalid type value(s)', msgs[0][1])
 
 
+class RecreationProductionServerHealth(unittest.TestCase):
+    """Health check for the production server."""
+
+    def test_production_server(self):
+        from natcap.invest.recreation import recmodel_client
+        import requests
+
+        server_url = requests.get(recmodel_client.SERVER_URL).text.rstrip()
+        proxy = Pyro5.api.Proxy(server_url)
+        try:
+            # _pyroBind() forces the client-server handshake and
+            # seems like a good way to check if the remote object is ready
+            proxy._pyroBind()
+        except Exception as exc:
+            self.fail(exc)
+        finally:
+            proxy._pyroRelease()
+
+
 def _assert_regression_results_eq(
         workspace_dir, file_list_path, result_vector_path,
         expected_results_path):
