@@ -138,14 +138,14 @@ class CarbonTests(unittest.TestCase):
             'do_valuation': True,
             'price_per_metric_ton_of_c': 43.0,
             'rate_change': 2.8,
-            'lulc_cur_year': 2016,
-            'lulc_fut_year': 2030,
+            'lulc_bas_year': 2016,
+            'lulc_alt_year': 2030,
             'discount_rate': -7.1,
             'n_workers': -1,
         }
 
         # Create LULC rasters and pools csv in workspace and add them to args.
-        lulc_names = ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path']
+        lulc_names = ['lulc_bas_path', 'lulc_alt_path']
         for fill_val, lulc_name in enumerate(lulc_names, 1):
             args[lulc_name] = os.path.join(args['workspace_dir'],
                                            lulc_name + '.tif')
@@ -158,43 +158,32 @@ class CarbonTests(unittest.TestCase):
         carbon.execute(args)
 
         # Ensure every pixel has the correct total C value.
-        # Current: 15 + 10 + 60 + 1 = 86 Mg/ha
+        # Baseline: 15 + 10 + 60 + 1 = 86 Mg/ha
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'tot_c_cur.tif'), 86)
-        # Future: 5 + 3 + 20 + 0 = 28 Mg/ha
+            os.path.join(args['workspace_dir'], 'tot_c_bas.tif'), 86)
+        # Alternate: 5 + 3 + 20 + 0 = 28 Mg/ha
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'tot_c_fut.tif'), 28)
-        # REDD: 2 + 1 + 5 + 0 = 8 Mg/ha
-        assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'tot_c_redd.tif'), 8)
+            os.path.join(args['workspace_dir'], 'tot_c_alt.tif'), 28)
 
         # Ensure deltas are correct.
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'delta_cur_fut.tif'), -58)
-        assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'delta_cur_redd.tif'), -78)
+            os.path.join(args['workspace_dir'], 'delta_bas_alt.tif'), -58)
 
         # Ensure NPV calculations are correct.
         # Valuation constant based on provided args is 59.00136.
-        # Future: 59.00136 * -58 Mg/ha = -3422.079 Mg/ha
+        # Alternate: 59.00136 * -58 Mg/ha = -3422.079 Mg/ha
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -3422.079)
-        # REDD: 59.00136 * -78 Mg/ha = -4602.106 Mg/ha
-        assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -4602.106)
+            os.path.join(args['workspace_dir'], 'npv_alt.tif'), -3422.079)
 
         # Ensure aggregate results are correct.
         report_path = os.path.join(args['workspace_dir'], 'report.html')
         # Raster size is 100 m^2; therefore, raster total is as follows:
         # (x Mg / 1 ha) * (1 ha / 10000 m^2) * (100 m^2) = (x / 100) Mg
         for (stat, expected_value) in [
-                ('Total cur', 0.86),
-                ('Total fut', 0.28),
-                ('Total redd', 0.08),
-                ('Change in C for fut', -0.58),
-                ('Change in C for redd', -0.78),
-                ('Net present value from cur to fut', -34.22),
-                ('Net present value from cur to redd', -46.02),
+                ('Total bas', 0.86),
+                ('Total alt', 0.28),
+                ('Change in C for alt', -0.58),
+                ('Net present value from bas to alt', -34.22),
                 ]:
             assert_aggregate_result_equal(report_path, stat, expected_value)
 
@@ -207,14 +196,14 @@ class CarbonTests(unittest.TestCase):
             'do_valuation': True,
             'price_per_metric_ton_of_c': 43.0,
             'rate_change': 0.0,
-            'lulc_cur_year': 2016,
-            'lulc_fut_year': 2030,
+            'lulc_bas_year': 2016,
+            'lulc_alt_year': 2030,
             'discount_rate': 0.0,
             'n_workers': -1,
         }
 
         # Create LULC rasters and pools csv in workspace and add them to args.
-        lulc_names = ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path']
+        lulc_names = ['lulc_bas_path', 'lulc_alt_path']
         for fill_val, lulc_name in enumerate(lulc_names, 1):
             args[lulc_name] = os.path.join(args['workspace_dir'],
                                            lulc_name + '.tif')
@@ -226,31 +215,27 @@ class CarbonTests(unittest.TestCase):
 
         carbon.execute(args)
 
-        # Add assertions for npv for future and REDD scenarios.
-        # carbon change from cur to fut:
+        # Add assertions for npv for alternate scenario.
+        # carbon change from bas to alt:
         # -58 Mg/ha * 43 $/Mg = -2494 $/ha
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -2494)
-        # carbon change from cur to redd:
-        # -78 Mg/ha * 43 $/Mg = -3354 $/ha
-        assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -3354)
+            os.path.join(args['workspace_dir'], 'npv_alt.tif'), -2494)
 
-    def test_carbon_without_redd(self):
-        """Carbon: regression testing for future scenario only (no REDD)."""
+    def test_carbon_alternate_scenario(self):
+        """Carbon: regression testing for alternate scenario"""
         from natcap.invest import carbon
         args = {
             'workspace_dir': self.workspace_dir,
             'do_valuation': True,
             'price_per_metric_ton_of_c': 43.0,
             'rate_change': 2.8,
-            'lulc_cur_year': 2016,
-            'lulc_fut_year': 2030,
+            'lulc_bas_year': 2016,
+            'lulc_alt_year': 2030,
             'discount_rate': -7.1,
             'n_workers': -1,
         }
 
-        lulc_names = ['lulc_cur_path', 'lulc_fut_path']
+        lulc_names = ['lulc_bas_path', 'lulc_alt_path']
         for fill_val, lulc_name in enumerate(lulc_names, 1):
             args[lulc_name] = os.path.join(args['workspace_dir'],
                                            lulc_name + '.tif')
@@ -264,9 +249,9 @@ class CarbonTests(unittest.TestCase):
 
         # Ensure NPV calculations are correct.
         # Valuation constant based on provided args is 59.00136.
-        # Future: 59.00136 * -58 Mg/ha = -3422.079 Mg/ha
+        # Alternate: 59.00136 * -58 Mg/ha = -3422.079 Mg/ha
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -3422.079)
+            os.path.join(args['workspace_dir'], 'npv_alt.tif'), -3422.079)
 
     def test_carbon_missing_landcover_values(self):
         """Carbon: testing expected exception on missing LULC codes."""
@@ -277,7 +262,7 @@ class CarbonTests(unittest.TestCase):
             'n_workers': -1,
         }
 
-        lulc_names = ['lulc_cur_path', 'lulc_fut_path']
+        lulc_names = ['lulc_bas_path', 'lulc_alt_path']
         for fill_val, lulc_name in enumerate(lulc_names, 200):
             args[lulc_name] = os.path.join(args['workspace_dir'],
                                            lulc_name + '.tif')
@@ -304,14 +289,14 @@ class CarbonTests(unittest.TestCase):
             'do_valuation': True,
             'price_per_metric_ton_of_c': 43.0,
             'rate_change': 2.8,
-            'lulc_cur_year': 2016,
-            'lulc_fut_year': 2030,
+            'lulc_bas_year': 2016,
+            'lulc_alt_year': 2030,
             'discount_rate': -7.1,
             'n_workers': -1,
         }
 
         # Create LULC rasters and pools csv in workspace and add them to args.
-        lulc_names = ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path']
+        lulc_names = ['lulc_bas_path', 'lulc_alt_path']
         for fill_val, lulc_name in enumerate(lulc_names, 1):
             args[lulc_name] = os.path.join(args['workspace_dir'],
                                            lulc_name + '.tif')
@@ -325,12 +310,9 @@ class CarbonTests(unittest.TestCase):
 
         # Ensure NPV calculations are correct.
         # Valuation constant based on provided args is 59.00136.
-        # Future: 59.00136 * -58 Mg/ha = -3422.079 Mg/ha
+        # Alternate: 59.00136 * -58 Mg/ha = -3422.079 Mg/ha
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -3422.079)
-        # REDD: 59.00136 * -78 Mg/ha = -4602.106 Mg/ha
-        assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -4602.106)
+            os.path.join(args['workspace_dir'], 'npv_alt.tif'), -3422.079)
 
     def test_generate_carbon_map(self):
         """Test `_generate_carbon_map`"""
@@ -373,9 +355,8 @@ class CarbonTests(unittest.TestCase):
                              out_carbon_stock_path)
 
         # open output carbon stock raster and check values
-        actual_carbon_stock = gdal.Open(out_carbon_stock_path)
-        band = actual_carbon_stock.GetRasterBand(1)
-        actual_carbon_stock = band.ReadAsArray()
+        actual_carbon_stock = pygeoprocessing.raster_to_numpy_array(
+            out_carbon_stock_path)
 
         expected_carbon_stock = numpy.array([[5000, 5000], [60, 120]],
                                             dtype=numpy.float32)
@@ -387,8 +368,8 @@ class CarbonTests(unittest.TestCase):
         """Test `_calculate_valuation_constant`"""
         from natcap.invest.carbon import _calculate_valuation_constant
 
-        valuation_constant = _calculate_valuation_constant(lulc_cur_year=2010,
-                                                           lulc_fut_year=2012,
+        valuation_constant = _calculate_valuation_constant(lulc_bas_year=2010,
+                                                           lulc_alt_year=2012,
                                                            discount_rate=50,
                                                            rate_change=5,
                                                            price_per_metric_ton_of_c=50)
@@ -404,7 +385,7 @@ class CarbonValidationTests(unittest.TestCase):
         self.workspace_dir = tempfile.mkdtemp()
         self.base_required_keys = [
             'workspace_dir',
-            'lulc_cur_path',
+            'lulc_bas_path',
             'carbon_pools_path',
         ]
 
@@ -432,21 +413,7 @@ class CarbonValidationTests(unittest.TestCase):
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(
             self.base_required_keys +
-            ['lulc_fut_path'])
-        self.assertEqual(invalid_keys, expected_missing_keys)
-
-    def test_missing_keys_redd(self):
-        """Carbon Validate: assert missing do_redd keys."""
-        from natcap.invest import carbon
-        from natcap.invest import validation
-
-        args = {'do_redd': True}
-        validation_errors = carbon.validate(args)
-        invalid_keys = validation.get_invalid_keys(validation_errors)
-        expected_missing_keys = set(
-            self.base_required_keys +
-            ['calc_sequestration',
-             'lulc_redd_path'])
+            ['lulc_alt_path'])
         self.assertEqual(invalid_keys, expected_missing_keys)
 
     def test_missing_keys_valuation(self):
@@ -463,6 +430,6 @@ class CarbonValidationTests(unittest.TestCase):
              'price_per_metric_ton_of_c',
              'discount_rate',
              'rate_change',
-             'lulc_cur_year',
-             'lulc_fut_year'])
+             'lulc_bas_year',
+             'lulc_alt_year'])
         self.assertEqual(invalid_keys, expected_missing_keys)
