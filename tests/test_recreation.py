@@ -13,6 +13,7 @@ import logging
 import json
 import math
 import multiprocessing
+import pickle
 import queue
 import random
 import string
@@ -729,56 +730,53 @@ class TestRecClientServer(unittest.TestCase):
 
         # TODO: assert that all tabular outputs are indexed by the same poly_id
 
-    # @_timeout(30.0)
-    # def test_workspace_fetcher(self):
-    #     """Recreation test workspace fetcher on a local Pyro5 empty server."""
-    #     from natcap.invest.recreation import recmodel_workspace_fetcher
+    def test_workspace_fetcher(self):
+        """Recreation test workspace fetcher on a local Pyro5 server."""
+        from natcap.invest.recreation import recmodel_workspace_fetcher
+        from natcap.invest.recreation import recmodel_client
 
-    #     path = "PYRO:natcap.invest.recreation@localhost:%s" % self.port
-    #     LOGGER.info("Local server path %s", path)
-    #     recreation_server = Pyro5.api.Proxy(path)
-    #     aoi_path = os.path.join(
-    #         SAMPLE_DATA, 'test_aoi_for_subset.shp')
-    #     basename = os.path.splitext(aoi_path)[0]
-    #     aoi_archive_path = os.path.join(
-    #         self.workspace_dir, 'aoi_zipped.zip')
-    #     with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
-    #         for filename in glob.glob(basename + '.*'):
-    #             myzip.write(filename, os.path.basename(filename))
+        args = {
+            'aoi_path': os.path.join(
+                SAMPLE_DATA, 'andros_aoi.shp'),
+            'compute_regression': False,
+            'start_year': MIN_YEAR,
+            'end_year': MAX_YEAR,
+            'grid_aoi': False,
+            'workspace_dir': self.workspace_dir,
+            'hostname': self.hostname,
+            'port': self.port,
+        }
+        recmodel_client.execute(args)
 
-    #     # convert shapefile to binary string for serialization
-    #     with open(aoi_archive_path, 'rb') as file:
-    #         zip_file_binary = file.read()
-    #     date_range = (('2005-01-01'), ('2014-12-31'))
-    #     out_vector_filename = 'test_aoi_for_subset_pud.shp'
+        # workspace IDs are stored in this file
+        server_version_path = os.path.join(
+            args['workspace_dir'], 'intermediate', 'server_version.pickle')
+        with open(server_version_path, 'rb') as f:
+            server_data = pickle.load(f)
 
-    #     _, workspace_id = (
-    #         recreation_server.calc_user_days_in_aoi(
-    #             zip_file_binary, date_range, out_vector_filename))
-    #     fetcher_args = {
-    #         'workspace_dir': self.workspace_dir,
-    #         'hostname': 'localhost',
-    #         'port': self.port,
-    #         'workspace_id': workspace_id,
-    #     }
-    #     try:
-    #         recmodel_workspace_fetcher.execute(fetcher_args)
-    #     except:
-    #         LOGGER.error(
-    #             "Server process failed (%s) is_alive=%s",
-    #             str(server_thread), server_thread.is_alive())
-    #         raise
+        server = 'flickr'
+        workspace_id = server_data[server]['workspace_id']
+        fetcher_args = {
+            'workspace_dir': os.path.join(self.workspace_dir, server),
+            'hostname': 'localhost',
+            'port': self.port,
+            'workspace_id': workspace_id,
+            'server_id': server,
+        }
 
-    #     out_workspace_dir = os.path.join(
-    #         self.workspace_dir, 'workspace_zip')
-    #     os.makedirs(out_workspace_dir)
-    #     workspace_zip_path = os.path.join(
-    #         self.workspace_dir, workspace_id + '.zip')
-    #     zipfile.ZipFile(workspace_zip_path, 'r').extractall(
-    #         out_workspace_dir)
-    #     utils._assert_vectors_equal(
-    #         aoi_path,
-    #         os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
+        recmodel_workspace_fetcher.execute(fetcher_args)
+        zip_path = os.path.join(
+            fetcher_args['workspace_dir'], f'{server}_{workspace_id}.zip')
+        zipfile.ZipFile(zip_path, 'r').extractall(
+            fetcher_args['workspace_dir'])
+
+        utils._assert_vectors_equal(
+            os.path.join(
+                fetcher_args['workspace_dir'],
+                'aoi.gpkg'),
+            os.path.join(
+                args['workspace_dir'], 'intermediate',
+                'aoi.gpkg'))
 
     def test_start_year_out_of_range(self):
         """Test server sends valid date-ranges; client raises ValueError."""
@@ -1006,7 +1004,6 @@ class RecreationClientRegressionTests(unittest.TestCase):
     def test_compute_and_summarize_regression(self):
         """Recreation regression test for the least-squares linear model."""
         from natcap.invest.recreation import recmodel_client
-        import pickle
 
         data_vector_path = os.path.join(
             self.workspace_dir, 'regression_data.gpkg')

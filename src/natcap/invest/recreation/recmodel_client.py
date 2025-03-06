@@ -724,16 +724,19 @@ def _retrieve_user_days(
     LOGGER.info('Please wait for server to calculate PUD and TUD...')
     results = recmodel_manager.calculate_userdays(
         zip_file_binary, start_year, end_year, list(datasets))
-    for acronym in datasets.values():
+    for dataset in datasets:
         result_zip_file_binary, workspace_id, server_version = (
-            results[acronym])
+            results[datasets[dataset]])
 
-        LOGGER.info(f'Server version: {server_version}')
+        LOGGER.info(f'Server version {dataset}: {server_version}')
+        LOGGER.info(f'workspace_id: {workspace_id}')
+        LOGGER.info(f'received result, took {time.time() - start_time} seconds')
         # store server version info in a file so we can list it in results summary.
         with open(server_version_pickle, 'ab') as f:
-            pickle.dump(server_version, f)
-        LOGGER.info(f'received result, took {time.time() - start_time} seconds, '
-                    f'workspace_id: {workspace_id}')
+            pickle.dump({
+                dataset: {
+                    'server_version': server_version,
+                    'workspace_id': workspace_id}}, f)
 
         # unpack result
         compressed_userdays_path = os.path.join(
@@ -1020,8 +1023,6 @@ def _json_to_gpkg_table(
         if field_index >= 0:
             layer.DeleteField(field_index)
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
-        # predictor_field.SetWidth(24)
-        # predictor_field.SetPrecision(11)
         layer.CreateField(predictor_field)
         # _create_field(predictor_id)
 
@@ -1372,9 +1373,6 @@ def _assemble_regression_data(
         if field_index >= 0:
             target_layer.DeleteField(field_index)
         field = ogr.FieldDefn(str(fieldname), ogr.OFTReal)
-        # TODO: no width & precision for gpkg, still OFTReal?
-        field.SetWidth(24)
-        field.SetPrecision(11)
         target_layer.CreateField(field)
 
     tud_variable_id = 'pr_TUD'

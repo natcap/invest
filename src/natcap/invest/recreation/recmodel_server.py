@@ -173,8 +173,7 @@ class RecModel(object):
         """
         return (self.min_year, self.max_year)
 
-    # not static so it can register in Pyro object
-    def get_version(self):  # pylint: disable=no-self-use
+    def get_version(self):
         """Return the rec model server version.
 
         This string can be used to uniquely identify the userday database and
@@ -182,27 +181,20 @@ class RecModel(object):
         """
         return '%s:%s' % (invest.__version__, self.qt_pickle_filename)
 
-    # not static so it can register in Pyro object
-    # @_try_except_wrapper("exception in fetch_workspace_aoi")
-    def fetch_workspace_aoi(self, workspace_id):  # pylint: disable=no-self-use
-        """Download the AOI of the workspace specified by workspace_id.
-
-        Searches self.local_cache_workspace for the workspace specified, zips the
-        contents, then returns the result as a binary string.
+    def find_workspace(self, workspace_id):
+        """Find the AOI of the workspace specified by workspace_id.
 
         Args:
             workspace_id (string): unique workspace ID on server to query.
 
         Returns:
-            zip file as a binary string of workspace.
+            string: path to a zip file
 
         """
-        # make a random workspace name so we can work in parallel
         workspace_path = os.path.join(self.local_cache_workspace, workspace_id)
         out_zip_file_path = os.path.join(
-            workspace_path, str('server_in')+'.zip')
-        with open(out_zip_file_path, 'rb') as out_zipfile:
-            return out_zipfile.read()
+            workspace_path, 'server_in.zip')
+        return out_zip_file_path
 
     def n_points_in_intersecting_nodes(self, bounding_box):
         """Count points in quadtree nodes that intersect a bounding box.
@@ -1068,6 +1060,26 @@ class RecManager(object):
                 LOGGER.info(f'calc user-days complete for {label}')
         LOGGER.info('all user-day calculations complete; sending binary back')
         return results
+
+    @_try_except_wrapper("fetch workspaces exited.")
+    def fetch_aoi_workspaces(self, workspace_id, server_id):
+        """Download the AOI in the workspace specified by workspace_id.
+
+        Cosntructs the path using the server's self.local_cache_workspace.
+
+        Args:
+            workspace_id (string): identifier of the workspace
+            server_id (string): one of ('flickr', 'twitter')
+
+        Returns:
+            binary string of a zipfile containing the AOI.
+
+        """
+        server = self.servers[server_id]
+        zipfile_path = server.find_workspace(workspace_id)
+        with open(zipfile_path, 'rb') as out_zipfile:
+            zip_binary = out_zipfile.read()
+        return zip_binary
 
 
 def _hashfile(file_path, blocksize=2**20, fast_hash=False):
