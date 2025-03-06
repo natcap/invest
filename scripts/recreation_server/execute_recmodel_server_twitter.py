@@ -9,18 +9,25 @@ logging.basicConfig(
     format='%(asctime)s %(name)-20s %(levelname)-8s %(message)s',
     level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+# We're setting up on a VM that already has a flickr quadtree built,
+# So we can reference that 'quadtree_pickle_filename' instead of
+# referencing the the 'raw_csv_point_data_path'.
+# For twitter, we always reference a pre-existing quadtree because
+# we built it up-front on an HPC.
+
 args_dict = {
     'hostname': '',
-    'port': 54322,
+    'port': 54322,  # http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_twitter/
     'max_allowable_query': 40_000_000,
     'datasets': {
         'flickr': {
-            'raw_csv_point_data_path': '/home/davemfish/server/volume/flickr/photos_2005-2017_odlla.csv',
+            # 'raw_csv_point_data_path': '/usr/local/recreation-server/invest_3_15_0/server/volume/flickr/photos_2005-2017_odlla.csv',
+            'quadtree_pickle_filename': '/usr/local/recreation-server/recserver_cache_py36/76e890d2cf86640e_fast_hash.pickle',
             'min_year': 2005,
             'max_year': 2017
         },
         'twitter': {
-            'quadtree_pickle_filename': '/home/davemfish/server/volume/twitter_quadtree/global_twitter_qt.pickle',
+            'quadtree_pickle_filename': '/usr/local/recreation-server/invest_3_15_0/server/volume/twitter_quadtree/global_twitter_qt.pickle',
             'min_year': 2012,
             'max_year': 2022
         }
@@ -42,6 +49,4 @@ if __name__ == '__main__':
     multiprocessing.set_start_method('spawn')
     args_dict['cache_workspace'] = args.cache_workspace
     mounted_volume = os.path.join(args.cache_workspace, 'cache')
-    args_dict['quadtree_pickle_filename'] = os.path.join(
-        mounted_volume, 'global_twitter_qt.pickle')
     natcap.invest.recreation.recmodel_server.execute(args_dict)
