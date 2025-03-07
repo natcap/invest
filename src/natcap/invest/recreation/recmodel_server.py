@@ -88,6 +88,7 @@ class RecManager(object):
     def __init__(self, servers_dict, max_allowable_query):
         self.servers = servers_dict
         self.max_allowable_query = max_allowable_query
+        self.client_log_queues = {}
 
     def get_valid_year_range(self, dataset):
         server = self.servers[dataset]
@@ -116,12 +117,17 @@ class RecManager(object):
         return (n_points, self.max_allowable_query)
 
     @_try_except_wrapper("calculate_userdays exited while multiprocessing.")
-    def calculate_userdays(self, zip_file_binary, start_year, end_year, dataset_list):
+    def calculate_userdays(self, zip_file_binary, start_year, end_year,
+                           dataset_list, client_id):
+        log_queue = multiprocessing.Manager().Queue()
+        self.client_log_queues[client_id] = log_queue
         results = {}
+
         with concurrent.futures.ProcessPoolExecutor(max_workers=2) as executor:
             future_to_label = {}
             for dataset in dataset_list:
                 server = self.servers[dataset]
+                server.log_queue_map[client_id] = log_queue
                 # append jan 1 to start and dec 31 to end
                 date_range = (str(start_year)+'-01-01',
                               str(end_year)+'-12-31')
@@ -129,7 +135,7 @@ class RecManager(object):
                 results_filename = f'{server.acronym}_results.gpkg'
                 fut = executor.submit(
                     server.calc_user_days_in_aoi,
-                    zip_file_binary, date_range, results_filename)
+                    zip_file_binary, date_range, results_filename, client_id)
                 future_to_label[fut] = server.acronym
 
             for future in concurrent.futures.as_completed(future_to_label):
@@ -137,7 +143,16 @@ class RecManager(object):
                 results[label] = future.result()
                 LOGGER.info(f'calc user-days complete for {label}')
         LOGGER.info('all user-day calculations complete; sending binary back')
+        self.client_log_queues[client_id].put('STOP')
         return results
+
+    def log_to_client(self, client_id):
+        if client_id in self.client_log_queues:
+            record = self.client_log_queues[client_id].get()
+            if record == 'STOP':
+                del self.client_log_queues[client_id]
+                return None
+            return record.__dict__
 
     @_try_except_wrapper("fetch workspaces exited.")
     def fetch_aoi_workspaces(self, workspace_id, server_id):
@@ -240,6 +255,7 @@ class RecModel(object):
         self.min_year = min_year
         self.max_year = max_year
         self.acronym = 'PUD' if dataset_name == 'flickr' else 'TUD'
+        self.log_queue_map = {}
 
     def get_valid_year_range(self):
         """Return the min and max year queriable.
@@ -293,7 +309,7 @@ class RecModel(object):
 
     # @_try_except_wrapper("exception in calc_user_days_in_aoi")
     def calc_user_days_in_aoi(
-            self, zip_file_binary, date_range, out_vector_filename):
+            self, zip_file_binary, date_range, out_vector_filename, client_id):
         """Calculate annual average and per monthly average user days.
 
         Args:
@@ -321,7 +337,13 @@ class RecModel(object):
         out_zip_file_filename = os.path.join(
             workspace_path, str('server_in')+'.zip')
 
-        LOGGER.info('decompress zip file AOI')
+        log_queue = self.log_queue_map[client_id]
+        handler = logging.handlers.QueueHandler(log_queue)
+        logger = logging.getLogger(workspace_id)
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.info('decompress zip file AOI')
         with open(out_zip_file_filename, 'wb') as zip_file_disk:
             zip_file_disk.write(zip_file_binary)
         aoi_archive = zipfile.ZipFile(out_zip_file_filename, 'r')
@@ -336,17 +358,17 @@ class RecModel(object):
         else:
             aoi_path = os.path.join(workspace_path, file_list[0])
 
-        LOGGER.info('running calc user days on %s', workspace_path)
+        logger.info('running calc user days on %s', workspace_path)
         numpy_date_range = (
             numpy.datetime64(date_range[0]),
             numpy.datetime64(date_range[1]))
         base_ud_aoi_path, monthly_table_path, _ = (
             self._calc_aggregated_points_in_aoi(
                 aoi_path, workspace_path, numpy_date_range,
-                out_vector_filename))
+                out_vector_filename, logger))
 
         # ZIP and stream the result back
-        LOGGER.info('zipping result')
+        logger.info('zipping result')
         aoi_ud_archive_path = os.path.join(
             workspace_path, 'aoi_ud_result.zip')
         with zipfile.ZipFile(aoi_ud_archive_path, 'w') as myzip:
@@ -355,12 +377,14 @@ class RecModel(object):
                 myzip.write(filename, os.path.basename(filename))
             myzip.write(
                 monthly_table_path, os.path.basename(monthly_table_path))
+        
+        del self.log_queue_map[client_id]
         # return the binary stream
         with open(aoi_ud_archive_path, 'rb') as aoi_ud_archive:
             return aoi_ud_archive.read(), workspace_id, self.get_version()
 
     def _calc_aggregated_points_in_aoi(
-            self, aoi_path, workspace_path, date_range, out_vector_filename):
+            self, aoi_path, workspace_path, date_range, out_vector_filename, logger):
         """Aggregate the userdays in the AOI.
 
         Args:
@@ -385,7 +409,7 @@ class RecModel(object):
         ud_poly_feature_queue = multiprocessing.Queue(4)
         n_processes = multiprocessing.cpu_count()
 
-        LOGGER.info(f'OPENING {self.qt_pickle_filename}')
+        logger.info(f'OPENING {self.qt_pickle_filename}')
         with open(self.qt_pickle_filename, 'rb') as qt_pickle:
             global_qt = pickle.load(qt_pickle)
 
@@ -438,24 +462,24 @@ class RecModel(object):
         local_b_box = [
             aoi_extent[0], aoi_extent[2], aoi_extent[1], aoi_extent[3]]
 
-        LOGGER.info(
+        logger.info(
             'querying global quadtree against %s', str(global_b_box))
         local_points = global_qt.get_intersecting_points_in_bounding_box(
             global_b_box)
-        LOGGER.info('found %d points', len(local_points))
+        logger.info('found %d points', len(local_points))
 
         local_qt_cache_dir = os.path.join(workspace_path, 'local_qt')
         local_qt_pickle_filename = os.path.join(
             local_qt_cache_dir, 'local_qt.pickle')
         os.mkdir(local_qt_cache_dir)
 
-        LOGGER.info('building local quadtree in bounds %s', str(local_b_box))
+        logger.info('building local quadtree in bounds %s', str(local_b_box))
         local_qt = out_of_core_quadtree.OutOfCoreQuadTree(
             local_b_box, LOCAL_MAX_POINTS_PER_NODE, LOCAL_DEPTH,
             local_qt_cache_dir, pickle_filename=local_qt_pickle_filename,
             n_workers=n_processes)
 
-        LOGGER.info(
+        logger.info(
             'building local quadtree with %d points', len(local_points))
         last_time = time.time()
         time_elapsed = None
@@ -484,7 +508,7 @@ class RecModel(object):
 
             local_qt.add_points(
                 projected_point_list, 0, len(projected_point_list))
-        LOGGER.info('saving local qt to %s', local_qt_pickle_filename)
+        logger.info('saving local qt to %s', local_qt_pickle_filename)
         local_qt.flush()
 
         local_quad_tree_shapefile_name = os.path.join(
@@ -505,7 +529,7 @@ class RecModel(object):
             polytest_process_list.append(polytest_process)
 
         # Copy the input shapefile into the designated output folder
-        LOGGER.info('Creating a copy of the input AOI')
+        logger.info('Creating a copy of the input AOI')
         driver = gdal.GetDriverByName('GPKG')
         ud_aoi_vector = driver.CreateCopy(out_aoi_ud_path, aoi_vector)
         ud_aoi_layer = ud_aoi_vector.GetLayer()
@@ -529,7 +553,7 @@ class RecModel(object):
             ud_aoi_layer.CreateField(field_defn)
 
         last_time = time.time()
-        LOGGER.info('testing polygons against quadtree')
+        logger.info('testing polygons against quadtree')
 
         # Load up the test queue with polygons
         for poly_feat in ud_aoi_layer:
@@ -563,7 +587,7 @@ class RecModel(object):
                         break
                     continue
                 last_time = recmodel_client.delay_op(
-                    last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
+                    last_time, LOGGER_TIME_DELAY, lambda: logger.info(
                         '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
                         ud_aoi_layer.GetFeatureCount()))
                 poly_id, ud_list, ud_monthly_set = result_tuple
@@ -579,7 +603,7 @@ class RecModel(object):
                 line += '\n'  # final newline
                 monthly_table.write(line)
 
-        LOGGER.info('done with polygon test, syncing to disk')
+        logger.info('done with polygon test, syncing to disk')
         ud_aoi_layer = None
         ud_aoi_vector.FlushCache()
         # gdal.Dataset.__swig_destroy__(ud_aoi_vector)

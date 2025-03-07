@@ -1,4 +1,5 @@
 """InVEST Recreation Client."""
+import concurrent.futures
 import json
 import logging
 import math
@@ -8,6 +9,7 @@ import requests
 import shutil
 import tempfile
 import time
+import uuid
 import zipfile
 
 import numpy
@@ -722,8 +724,26 @@ def _retrieve_user_days(
 
     start_time = time.time()
     LOGGER.info('Please wait for server to calculate PUD and TUD...')
-    results = recmodel_manager.calculate_userdays(
-        zip_file_binary, start_year, end_year, list(datasets))
+    client_id = uuid.uuid4()
+
+    def wrap_calculate_userdays():
+        proxy = Pyro5.api.Proxy(server_url)
+        result = proxy.calculate_userdays(
+            zip_file_binary, start_year, end_year, list(datasets), client_id)
+        proxy._pyroRelease()
+        return result
+
+    # Use a separate thread for the long-running remote function call so
+    # that we can make concurrent requests for the logging messages
+    # queued on the server during that call.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(wrap_calculate_userdays)
+        while not future.done():
+            record_dict = recmodel_manager.log_to_client(client_id)
+            if record_dict:
+                LOGGER.handle(logging.makeLogRecord(record_dict))
+        results = future.result()
+
     for dataset in datasets:
         result_zip_file_binary, workspace_id, server_version = (
             results[datasets[dataset]])
