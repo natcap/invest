@@ -68,6 +68,10 @@ Unreleased Changes
     * Raster outputs that previously contained per-pixel values (e.g., t/pixel)
       now contain per-hectare values (e.g., t/ha). (`InVEST #1270
       <https://github.com/natcap/invest/issues/1270>`_).
+    * Removed the REDD scenario and updated the naming of the Current and
+      Future scenarios to Baseline and Alternate, respectively, to better
+      indicate that users are not limited to comparing present and future.
+      (`InVEST #1758 <https://github.com/natcap/invest/issues/1758>`_).
 * Coastal Blue Carbon
     * The ``code`` column in the model's biophysical table input, as well as
       the ``code`` column in the preprocessor's LULC lookup table input and
