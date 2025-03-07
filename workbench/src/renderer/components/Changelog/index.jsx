@@ -30,8 +30,10 @@ export default function Changelog(props) {
         // Find the section whose heading explicitly matches the current version.
         const versionStr = pkg.version;
         const escapedVersionStr = versionStr.split('.').join('\\.');
+        // Find section with h1 matching current version,
+        // and get everything up to (but not including) the next h1.
         const sectionRegex = new RegExp(
-          `<section.*?>[\\s]*?<h1>${escapedVersionStr}\\b[\\s\\S]*?</h1>[\\s\\S]*?</section>`
+          `<section.*?>[\\s]*?<h1>${escapedVersionStr}\\b[\\s\\S]*?</h1>[\\s\\S]*?<h1`
         );
         const sectionMatches = htmlString.match(sectionRegex);
         if (sectionMatches && sectionMatches.length) {
