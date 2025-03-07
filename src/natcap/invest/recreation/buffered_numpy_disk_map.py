@@ -17,6 +17,7 @@ from .. import utils
 LOGGER = logging.getLogger(
     'natcap.invest.recmodel_server.buffered_numpy_disk_map')
 
+
 def _npy_append(filepath, array):
     with open(filepath, 'rb+') as file:
         version = numpy.lib.format.read_magic(file)
@@ -32,6 +33,7 @@ def _npy_append(filepath, array):
         file.write(array)
         file.seek(0, 0)  # go to start to re-write header
         numpy.lib.format._write_array_header(file, d, version)
+
 
 class BufferedNumpyDiskMap(object):
     """Persistent object to append and read numpy arrays to unique keys.

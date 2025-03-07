@@ -9,20 +9,13 @@ logging.basicConfig(
     format='%(asctime)s %(name)-20s %(levelname)-8s %(message)s',
     level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-# We're setting up on a VM that already has a flickr quadtree built,
-# So we can reference that 'quadtree_pickle_filename' instead of
-# referencing the the 'raw_csv_point_data_path'.
-# For twitter, we always reference a pre-existing quadtree because
-# we built it up-front on an HPC.
-
 args_dict = {
     'hostname': '',
     'port': 54322,  # http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_twitter/
     'max_allowable_query': 40_000_000,
     'datasets': {
         'flickr': {
-            # 'raw_csv_point_data_path': '/usr/local/recreation-server/invest_3_15_0/server/volume/flickr/photos_2005-2017_odlla.csv',
-            'quadtree_pickle_filename': '/usr/local/recreation-server/recserver_cache_py36/76e890d2cf86640e_fast_hash.pickle',
+            'raw_csv_point_data_path': '/usr/local/recreation-server/invest_3_15_0/server/volume/flickr/photos_2005-2017_odlla.csv',
             'min_year': 2005,
             'max_year': 2017
         },

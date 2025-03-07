@@ -1,10 +1,10 @@
-Starting the rec server:
-************************
+Starting (or restarting) the rec server:
+****************************************
 
 The backend of the recreation model typically runs on a GCE VM.
 See invest/scripts/recreation_server/setup_vm.sh to see how the VM is setup.
 
-sudo env "PATH=$PATH" invest/scripts/recreation_server/launch_recserver_twitter.sh
+./invest/scripts/recreation_server/launch_recserver_twitter.sh
 
 
 *****************************************************

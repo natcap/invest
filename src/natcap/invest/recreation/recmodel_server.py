@@ -1081,9 +1081,10 @@ def transplant_quadtree(qt_pickle_filepath, workspace):
 
     def rename_managers(qt):
         if qt.is_leaf:
+            # re-writing from relative to absolute paths
             qt.node_data_manager.manager_filename = f'{qt_pickle_filepath}.db'
             qt.node_data_manager.manager_directory = os.path.dirname(qt_pickle_filepath)
-            qt.quad_tree_storage_dir = storage_dir
+            qt.quad_tree_storage_dir = storage_dir  # this one still relative
         else:
             [rename_managers(qt.nodes[index]) for index in range(4)]
         return qt
