@@ -56,9 +56,9 @@ MODEL_SPEC = {
             "projected": True,
             "projection_units": u.meter,
             "about": gettext(
-                "A map of LULC for the baseline scenario. "
-                "All values in this raster must have corresponding "
-                "entries in the Carbon Pools table."),
+                "A map of LULC for the baseline scenario, which must occur "
+                "prior to the alternate scenario. All values in this raster "
+                "must have corresponding entries in the Carbon Pools table."),
             "name": gettext("baseline LULC")
         },
         "calc_sequestration": {
@@ -76,10 +76,10 @@ MODEL_SPEC = {
             "projection_units": u.meter,
             "required": "calc_sequestration",
             "about": gettext(
-                "A map of LULC for the alternate scenario. "
-                "All values in this raster must have corresponding entries in "
-                "the Carbon Pools table. Required if Calculate Sequestration "
-                "is selected."),
+                "A map of LULC for the alternate scenario, which must occur "
+                "after the baseline scenario. All values in this raster must "
+                "have corresponding entries in the Carbon Pools table. "
+                "Required if Calculate Sequestration is selected."),
             "name": gettext("alternate LULC")
         },
         "carbon_pools_path": {
@@ -116,17 +116,19 @@ MODEL_SPEC = {
             "required": "do_valuation",
             "about": gettext(
                 "The calendar year of the baseline scenario depicted in the "
-                "baseline LULC map. Required if Run Valuation model is selected."),
+                "baseline LULC map. Must be < alternate LULC year. Required "
+                "if Run Valuation model is selected."),
             "name": gettext("baseline LULC year")
         },
         "lulc_alt_year": {
-            "expression": "float(value).is_integer() and value > MODEL_SPEC['lulc_bas_year']",
+            "expression": "float(value).is_integer()",
             "type": "number",
             "units": u.year_AD,
             "required": "do_valuation",
             "about": gettext(
                 "The calendar year of the alternate scenario depicted in the "
-                "alternate LULC map. Required if Run Valuation model is selected."),
+                "alternate LULC map. Must be > baseline LULC year. Required "
+                "if Run Valuation model is selected."),
             "name": gettext("alternate LULC year")
         },
         "do_valuation": {
