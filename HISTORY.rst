@@ -55,6 +55,9 @@ Unreleased Changes
     * Auto-scrolling of log output is halted on user-initiated scrolling,
       enabling easier inspection of log output while a model is running
       (`InVEST #1533 <https://github.com/natcap/invest/issues/1533>`_).
+    * InVEST's mac disk image is now distributed once again with a valid
+      signature, signed by Stanford University.
+      https://github.com/natcap/invest/issues/1784
 * Annual Water Yield
     * Fixed an issue where the model would crash if the valuation table was
       provided, but the demand table was not.  Validation will now warn about
