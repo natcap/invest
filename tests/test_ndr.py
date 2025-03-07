@@ -19,6 +19,7 @@ REGRESSION_DATA = os.path.join(
 
 def make_simple_raster(base_raster_path, array):
     """Create a raster on designated path with arbitrary values.
+
     Args:
         base_raster_path (str): the raster path for making the new raster.
     Returns:
@@ -40,10 +41,11 @@ def make_simple_raster(base_raster_path, array):
 
 def make_simple_vector(path_to_shp):
     """
-    Generate shapefile with two overlapping polygons
+    Generate shapefile with a polygon.
+
     Args:
         path_to_shp (str): path to store watershed results vector
-    Outputs:
+    Returns:
         None
     """
     # (xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax)
@@ -489,99 +491,39 @@ class NDRTests(unittest.TestCase):
 
     def test_synthetic_runoff_proxy_av(self):
         """
-        Test that runoff proxy average is calculated correctly if
+        Test RPI given user-entered or auto-calculated runoff proxy average.
+
+        Test that the runoff proxy index (RPI) is calculated correctly if
         (1) the user specifies a runoff proxy average value,
         (2) the user does not specify a value so the runoff proxy average
-            is auto-calculated
+            is auto-calculated.
         """
         from natcap.invest.ndr import ndr
 
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'runoff_proxy_av': 2,
-            'biophysical_table_path': os.path.join(
-                self.workspace_dir, "biophysical_table_gura.csv"),
-            'calc_n': False,
-            'calc_p': False,
-            'dem_path': os.path.join(
-                self.workspace_dir, "DEM_gura.tif"),
-            'k_param': "2",
-            'lulc_path': os.path.join(
-                self.workspace_dir, "land_use_gura.tif"),
-            'results_suffix': "_v1",
-            'runoff_proxy_path': os.path.join(
-                self.workspace_dir, "precipitation_gura.tif"),
-            'threshold_flow_accumulation': "1000",
-            'watersheds_path': os.path.join(
-                self.workspace_dir, "watershed_gura.shp")
-            }
+        runoff_proxy_path = os.path.join(self.workspace_dir, "ppt.tif")
+        runoff_proxy_array = numpy.array(
+            [[800, 799, 567, 234], [765, 867, 765, 654]], dtype=numpy.float32)
+        make_simple_raster(runoff_proxy_path, runoff_proxy_array)
+        target_rpi_path = os.path.join(self.workspace_dir, "out_raster.tif")
 
-        biophysical_table = pandas.DataFrame({
-            "lucode": [1, 2, 3, 4],
-            "description": ["water", "forest", "grass", "urban"],
-            "load_p": [0, 1, 1, 0],
-            "eff_p": [1, 1.1, .9, .3],
-            "crit_len_p": [.05, .1, .2, .3],
-            "load_n": [0, 1, 0, 0.2],
-            'proportion_subsurface_n': [0, 0, 0, 0]
-        })
+        # Calculate RPI with user-specified runoff proxy average
+        runoff_proxy_av = 2
+        ndr._normalize_raster((runoff_proxy_path, 1), target_rpi_path,
+                              user_provided_mean=runoff_proxy_av)
 
-        biophysical_csv_path = args['biophysical_table_path']
-        biophysical_table.to_csv(biophysical_csv_path, index=False)
-
-        runoff_proxy_ar = numpy.array([
-            [800, 799, 567, 234, 422, 422, 555],
-            [765, 867, 765, 654, 456, 677, 444],
-            [556, 443, 456, 265, 876, 890, 333],
-            [433, 266, 677, 776, 900, 687, 222],
-            [456, 832, 234, 234, 234, 554, 345]
-        ], dtype=numpy.float32)
-        make_simple_raster(args['runoff_proxy_path'], runoff_proxy_ar)
-
-        lulc_array = numpy.array([
-            [2, 3, 1, 5, 5, 5, 5],
-            [3, 3, 1, 1, 4, 5, 5],
-            [5, 5, 4, 2, 3, 1, 5],
-            [4, 1, 4, 2, 2, 1, 5],
-            [1, 5, 4, 1, 1, 2, 5]
-        ], dtype=numpy.float32)
-        make_simple_raster(args['lulc_path'], lulc_array)
-
-        dem = numpy.array([
-            [800, 799, 567, 234, 422, 422, 555],
-            [765, 867, 765, 654, 456, 677, 444],
-            [556, 443, 456, 265, 876, 890, 333],
-            [433, 266, 677, 776, 900, 687, 222],
-            [456, 832, 234, 234, 234, 222, 300]
-        ], dtype=numpy.float32)
-        make_simple_raster(args['dem_path'], dem)
-
-        make_simple_vector(args['watersheds_path'])
-
-        ndr.execute(args)
-
-        actual_output_path = os.path.join(
-            args['workspace_dir'], "intermediate_outputs",
-            f"runoff_proxy_index{args['results_suffix']}.tif")
-        actual_rpi = pygeoprocessing.raster_to_numpy_array(actual_output_path)
+        actual_rpi = pygeoprocessing.raster_to_numpy_array(target_rpi_path)
         expected_rpi = pygeoprocessing.raster_to_numpy_array(
-            args['runoff_proxy_path'])/args['runoff_proxy_av']
+            runoff_proxy_path)/runoff_proxy_av
 
         numpy.testing.assert_allclose(actual_rpi, expected_rpi)
 
-        # now run this without the a user average specified
-        del args['runoff_proxy_av']
+        # Now calculate RPI with auto-calculated RP average
+        ndr._normalize_raster((runoff_proxy_path, 1), target_rpi_path,
+                              user_provided_mean=None)
 
-        ndr.execute(args)
+        actual_rpi = pygeoprocessing.raster_to_numpy_array(target_rpi_path)
 
-        actual_output_path = os.path.join(
-            args['workspace_dir'], "intermediate_outputs",
-            f"runoff_proxy_index{args['results_suffix']}.tif")
-        actual_rpi = pygeoprocessing.raster_to_numpy_array(actual_output_path)
-
-        # compare to rpi with automatically calculated mean
-        expected_rpi = pygeoprocessing.raster_to_numpy_array(
-            args['runoff_proxy_path'])
+        expected_rpi = pygeoprocessing.raster_to_numpy_array(runoff_proxy_path)
         expected_rpi /= numpy.mean(expected_rpi)
 
         numpy.testing.assert_allclose(actual_rpi, expected_rpi)

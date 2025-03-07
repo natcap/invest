@@ -536,7 +536,7 @@ def execute(args):
         args['k_param'] (number): The Borselli k parameter. This is a
             calibration parameter that determines the shape of the
             relationship between hydrologic connectivity.
-        args['runoff_proxy_av'] (number): (optional) The average runoff proxy. 
+        args['runoff_proxy_av'] (number): (optional) The average runoff proxy.
             Used to calculate the runoff proxy index. If not specified,
             it will be automatically calculated.
         args['subsurface_critical_length_n'] (number): The distance (traveled
@@ -593,11 +593,9 @@ def execute(args):
         args['biophysical_table_path'],
         **MODEL_SPEC['args']['biophysical_table_path'])
 
+    # Ensure that if user doesn't explicitly assing a value, runoff_proxy_av = None
     runoff_proxy_av = args.get("runoff_proxy_av")
-    try:
-        runoff_proxy_av = float(runoff_proxy_av) if runoff_proxy_av not in [None, ""] else None
-    except ValueError:
-        raise ValueError(f"Invalid value for runoff_proxy_av: {runoff_proxy_av}. Expected a number.")
+    runoff_proxy_av = float(runoff_proxy_av) if runoff_proxy_av not in [None, ""] else None
 
     # these are used for aggregation in the last step
     field_pickle_map = {}
@@ -1231,9 +1229,9 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path,
             mean.
         target_normalized_raster_path (string): path to target normalized
             raster from base_raster_path_band.
-        user_provided_mean (float, optional): user-provided runoff proxy
-            average. If provided, this value will be used instead of
-            computing the mean from the raster.
+        user_provided_mean (float, optional): user-provided average.
+            If provided, this value will be used instead of computing
+            the mean from the raster.
 
     Returns:
         None.
