@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 import numpy
+import pandas
 import pygeoprocessing
 import shapely.geometry
 from osgeo import gdal
@@ -15,6 +16,58 @@ gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ndr')
 
+
+def make_simple_raster(base_raster_path, array):
+    """Create a raster on designated path with arbitrary values.
+
+    Args:
+        base_raster_path (str): the raster path for making the new raster.
+    Returns:
+        None.
+    """
+    # UTM Zone 10N
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)
+    projection_wkt = srs.ExportToWkt()
+
+    origin = (461251, 4923445)
+    pixel_size = (30, -30)
+    no_data = -1
+
+    pygeoprocessing.numpy_array_to_raster(
+        array, no_data, pixel_size, origin, projection_wkt,
+        base_raster_path)
+
+
+def make_simple_vector(path_to_shp):
+    """
+    Generate shapefile with a polygon.
+
+    Args:
+        path_to_shp (str): path to store watershed results vector
+    Returns:
+        None
+    """
+    # (xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax)
+    shapely_geometry_list = [
+        shapely.geometry.Polygon(
+            [(461251, 4923195), (461501, 4923195),
+             (461501, 4923445), (461251, 4923445),
+             (461251, 4923195)])
+    ]
+
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)
+    projection_wkt = srs.ExportToWkt()
+
+    vector_format = "ESRI Shapefile"
+    fields = {"id": ogr.OFTReal}
+    attribute_list = [{"id": 0}]
+
+    pygeoprocessing.shapely_geometry_to_vector(shapely_geometry_list,
+                                               path_to_shp, projection_wkt,
+                                               vector_format, fields,
+                                               attribute_list)
 
 class NDRTests(unittest.TestCase):
     """Regression tests for InVEST SDR model."""
@@ -435,3 +488,42 @@ class NDRTests(unittest.TestCase):
         numpy.testing.assert_array_equal(
             expected_array,
             pygeoprocessing.raster_to_numpy_array(target_raster_path))
+
+    def test_synthetic_runoff_proxy_av(self):
+        """
+        Test RPI given user-entered or auto-calculated runoff proxy average.
+
+        Test that the runoff proxy index (RPI) is calculated correctly if
+        (1) the user specifies a runoff proxy average value,
+        (2) the user does not specify a value so the runoff proxy average
+            is auto-calculated.
+        """
+        from natcap.invest.ndr import ndr
+
+        runoff_proxy_path = os.path.join(self.workspace_dir, "ppt.tif")
+        runoff_proxy_array = numpy.array(
+            [[800, 799, 567, 234], [765, 867, 765, 654]], dtype=numpy.float32)
+        make_simple_raster(runoff_proxy_path, runoff_proxy_array)
+        target_rpi_path = os.path.join(self.workspace_dir, "out_raster.tif")
+
+        # Calculate RPI with user-specified runoff proxy average
+        runoff_proxy_av = 2
+        ndr._normalize_raster((runoff_proxy_path, 1), target_rpi_path,
+                              user_provided_mean=runoff_proxy_av)
+
+        actual_rpi = pygeoprocessing.raster_to_numpy_array(target_rpi_path)
+        expected_rpi = pygeoprocessing.raster_to_numpy_array(
+            runoff_proxy_path)/runoff_proxy_av
+
+        numpy.testing.assert_allclose(actual_rpi, expected_rpi)
+
+        # Now calculate RPI with auto-calculated RP average
+        ndr._normalize_raster((runoff_proxy_path, 1), target_rpi_path,
+                              user_provided_mean=None)
+
+        actual_rpi = pygeoprocessing.raster_to_numpy_array(target_rpi_path)
+
+        expected_rpi = pygeoprocessing.raster_to_numpy_array(runoff_proxy_path)
+        expected_rpi /= numpy.mean(expected_rpi)
+
+        numpy.testing.assert_allclose(actual_rpi, expected_rpi)
