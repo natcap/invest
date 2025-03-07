@@ -593,7 +593,7 @@ def execute(args):
         args['biophysical_table_path'],
         **MODEL_SPEC['args']['biophysical_table_path'])
 
-    # Ensure that if user doesn't explicitly assing a value, runoff_proxy_av = None
+    # Ensure that if user doesn't explicitly assign a value, runoff_proxy_av = None
     runoff_proxy_av = args.get("runoff_proxy_av")
     runoff_proxy_av = float(runoff_proxy_av) if runoff_proxy_av not in [None, ""] else None
 
