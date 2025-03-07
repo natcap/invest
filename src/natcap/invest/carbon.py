@@ -120,7 +120,7 @@ MODEL_SPEC = {
             "name": gettext("baseline LULC year")
         },
         "lulc_alt_year": {
-            "expression": "float(value).is_integer()",
+            "expression": "float(value).is_integer() and value > MODEL_SPEC['lulc_bas_year']",
             "type": "number",
             "units": u.year_AD,
             "required": "do_valuation",
@@ -299,6 +299,13 @@ def execute(args):
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
+
+    if args['do_valuation'] and args['lulc_bas_year'] >= args['lulc_alt_year']:
+        raise ValueError(
+            f"Invalid input: The Alternate LULC Year ({args['lulc_alt_year']}) "
+            "must be greater than the Baseline LULC Year ({args['lulc_bas_year']}). "
+            "Ensure that the Baseline LULC Year is earlier than the Alternate LULC Year."
+        )
 
     carbon_pool_df = validation.get_validated_dataframe(
         args['carbon_pools_path'], **MODEL_SPEC['args']['carbon_pools_path'])

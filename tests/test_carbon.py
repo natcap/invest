@@ -433,3 +433,18 @@ class CarbonValidationTests(unittest.TestCase):
              'lulc_bas_year',
              'lulc_alt_year'])
         self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_invalid_lulc_years(self):
+        """Test that providing an Alternate LULC year < Baseline LULC error
+        raises a ValueError"""
+        from natcap.invest import carbon
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'do_valuation': True,
+            'lulc_bas_year': 2025,
+            'lulc_alt_year': 2023,
+        }
+
+        with self.assertRaises(ValueError):
+            carbon.execute(args)
