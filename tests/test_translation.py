@@ -134,7 +134,7 @@ class TranslationTests(unittest.TestCase):
             'api/getspec', json='carbon', query_string={'language': TEST_LANG})
         spec = json.loads(response.get_data(as_text=True))
         self.assertEqual(
-            spec['args']['lulc_cur_path']['name'],
+            spec['args']['lulc_bas_path']['name'],
             TEST_MESSAGES['current LULC'])
 
     def test_server_get_invest_validate(self):
