@@ -1416,8 +1416,8 @@ class RecreationProductionServerHealth(unittest.TestCase):
         import requests
 
         server_url = requests.get(recmodel_client.SERVER_URL).text.rstrip()
-        proxy = Pyro5.api.Proxy(server_url)
         try:
+            proxy = Pyro5.api.Proxy(server_url)
             # _pyroBind() forces the client-server handshake and
             # seems like a good way to check if the remote object is ready
             proxy._pyroBind()

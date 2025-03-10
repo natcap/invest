@@ -741,6 +741,11 @@ def _retrieve_user_days(
         while not future.done():
             record_dict = recmodel_manager.log_to_client(client_id)
             if record_dict:
+                try:
+                    # Strip workspace_id from the name for readability
+                    record_dict['name'] = record_dict['name'].split('_')[0]
+                except (KeyError, AttributeError, IndexError):
+                    pass
                 LOGGER.handle(logging.makeLogRecord(record_dict))
         results = future.result()
 

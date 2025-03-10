@@ -311,7 +311,8 @@ class RecModel(object):
         return global_qt.estimate_points_in_bounding_box(bounding_box)
 
     def calc_user_days_in_aoi(
-            self, zip_file_binary, date_range, out_vector_filename, client_id=None):
+            self, zip_file_binary, date_range, out_vector_filename,
+            client_id=None):
         """Calculate annual average and per monthly average user days.
 
         Args:
@@ -320,6 +321,7 @@ class RecModel(object):
             date_range (string 2-tuple): a tuple that contains the inclusive
                 start and end date formatted as 'YYYY-MM-DD'
             out_vector_filename (string): base filename of output vector
+            client_id (string): a unique id sent by the Pyro client.
 
         Returns:
             zip_result: a bytestring of a zipped copy of `zip_file_binary`
@@ -336,16 +338,18 @@ class RecModel(object):
         os.makedirs(workspace_path)
 
         if client_id:
-            # Setup a logger that queues messages for retrieval by the client
+            # If a Pyro client is calling this function, setup a logger that
+            # queues messages for retrieval by the client.
             # Client-relevant logging should use this logger. Other messages
             # can use this module's global LOGGER.
-            handler = logging.handlers.QueueHandler(self.log_queue_map[client_id])
-            log_format = utils.LOG_FMT.replace("%(name)s", self.acronym)
-            formatter = logging.Formatter(log_format)
-            handler.setFormatter(formatter)
-            logger = logging.getLogger(workspace_id)
+            handler = logging.handlers.QueueHandler(
+                self.log_queue_map[client_id])
+            logger = logging.getLogger(f'{self.acronym}_{workspace_id}')
             logger.addHandler(handler)
             logger.setLevel(logging.DEBUG)
+            # Formatting is handled by the client-side logger because
+            # log records are passed over the network as dicts rather
+            # than LogRecords.
         else:
             logger = LOGGER
 
@@ -392,8 +396,12 @@ class RecModel(object):
 
     def _calc_aggregated_points_in_aoi(
             self, aoi_path, workspace_path, date_range,
-            out_vector_filename, logger):
+            out_vector_filename, logger=None):
         """Aggregate the userdays in the AOI.
+
+        If a user wishes to query a RecModel quadtree locally, rather than
+        through a Pyro-connected client, this function would be the right
+        one to use.
 
         Args:
             aoi_path (string): a path to an OGR compatible vector.
@@ -403,13 +411,17 @@ class RecModel(object):
                 start and end date
             out_vector_filename (string): base filename of output vector
             logger (logging.Logger): a logger with a QueueHandler for messages
-                that are relevant to the client.
+                that are relevant to the client. Only use this if queries
+                are being made from a Pyro-connected client.
 
         Returns:
             a path to an ESRI shapefile copy of `aoi_path` updated with a
             "PUD" or "TUD" fields which contains the metric per polygon.
 
         """
+        if logger is None:
+            logger = LOGGER
+
         aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
         out_aoi_ud_path = os.path.join(workspace_path, out_vector_filename)
 
@@ -1021,7 +1033,6 @@ def _calc_poly_ud(
             ud_poly_feature_queue.put((poly_id, ud_averages, ud_monthly_set))
     ud_poly_feature_queue.put('STOP')
     aoi_layer = None
-    # gdal.Dataset.__swig_destroy__(aoi_vector)
     aoi_vector = None
 
 
