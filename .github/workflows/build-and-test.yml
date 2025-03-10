@@ -125,7 +125,7 @@ jobs:
             source ~/.bashrc
             micromamba --version
 
-            echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs | tr " " "\n" > extra_requirements.txt
+            echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs | tr ";" "\n" > extra_requirements.txt
 
             cat extra_requirements.txt
 
