@@ -7,6 +7,7 @@ WORKDIR /home/runner/invest
 
 COPY ../../../.. .
 RUN echo $(ls)
+RUN chmod +rwx .
 
 # RUN USERNAME=runner
 # RUN USER_UID=1000
@@ -18,7 +19,7 @@ RUN echo $(ls)
 
 # actions/checkout won't check out to a directory outside of /__w/invest,
 # so we have to copy it afterwards
-# RUN chmod +rwx /home/runner
+
 
 # Install the latest release of git lfs
 ARG GIT_LFS_VERSION=v3.6.1
