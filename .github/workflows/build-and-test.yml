@@ -140,6 +140,11 @@ jobs:
             # otherwise, an error appears in the action annotations
             diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
+            ls -ld .
+            ls -ld /home/runner
+            ls -ld /home/runner/invest
+            ls -ld /home/runner/invest/src/natcap/invest/delineateit
+
             # uninstall InVEST if it was already in the restored cache
             python -m build --wheel
             ls -la dist
