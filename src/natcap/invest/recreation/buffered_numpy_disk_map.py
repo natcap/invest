@@ -44,7 +44,7 @@ class BufferedNumpyDiskMap(object):
     files on disk to manage memory and persist between instantiations.
     """
 
-    _ARRAY_TUPLE_TYPE = numpy.dtype('datetime64[D],a4,f4,f4')
+    _ARRAY_TUPLE_TYPE = numpy.dtype('datetime64[D],S4,f4,f4')
 
     def __init__(self, manager_filename, max_bytes_to_buffer, n_workers=1):
         """Create file manager object.

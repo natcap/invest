@@ -682,7 +682,7 @@ def _parse_big_input_csv(
         hashes = md5hash_v(result['user'])
 
         user_day_lng_lat = numpy.empty(
-            hashes.size, dtype='datetime64[D],a4,f4,f4')
+            hashes.size, dtype='datetime64[D],S4,f4,f4')
         user_day_lng_lat['f0'] = result['date']
         user_day_lng_lat['f1'] = hashes
         user_day_lng_lat['f2'] = result['lng']
