@@ -161,6 +161,7 @@ INTERMEDIATE_DIR_NAME = 'intermediate'
 OUTPUT_DIR_NAME = 'output'
 
 MODEL_SPEC = {
+    "model_id": "coastal_blue_carbon",
     "model_name": MODEL_METADATA["coastal_blue_carbon"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon"].pyname,
     "userguide": MODEL_METADATA["coastal_blue_carbon"].userguide,
@@ -207,9 +208,9 @@ MODEL_SPEC = {
         "biophysical_table_path": {
             "name": gettext("biophysical table"),
             "type": "csv",
-            "index_col": "code",
+            "index_col": "lucode",
             "columns": {
-                "code": {
+                "lucode": {
                     "type": "integer",
                     "about": gettext(
                         "The LULC code that represents this LULC "
@@ -1679,7 +1680,7 @@ def _track_disturbance(
         disturbed_carbon_volume[:] = NODATA_FLOAT32_MIN
         disturbed_carbon_volume[
             ~pygeoprocessing.array_equals_nodata(disturbance_magnitude_matrix,
-                           NODATA_FLOAT32_MIN)] = 0.0
+                                                 NODATA_FLOAT32_MIN)] = 0.0
 
         if year_of_disturbance_band:
             known_transition_years_matrix = (

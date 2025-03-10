@@ -92,6 +92,7 @@ OUTPUT_WIND_DATA_FIELDS = {
 }
 
 MODEL_SPEC = {
+    "model_id": "wind_energy",
     "model_name": MODEL_METADATA["wind_energy"].model_title,
     "pyname": MODEL_METADATA["wind_energy"].pyname,
     "userguide": MODEL_METADATA["wind_energy"].userguide,
