@@ -94,7 +94,7 @@ class TranslationTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 cli.main(['--language', TEST_LANG, 'getspec', 'carbon'])
         result = out.getvalue()
-        self.assertIn(TEST_MESSAGES['current LULC'], result)
+        self.assertIn(TEST_MESSAGES['baseline LULC'], result)
 
     def test_invest_validate(self):
         """Translation: test that CLI validate output is translated."""
