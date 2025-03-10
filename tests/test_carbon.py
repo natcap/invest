@@ -180,9 +180,9 @@ class CarbonTests(unittest.TestCase):
         # Raster size is 100 m^2; therefore, raster total is as follows:
         # (x Mg / 1 ha) * (1 ha / 10000 m^2) * (100 m^2) = (x / 100) Mg
         for (stat, expected_value) in [
-                ('Total bas', 0.86),
-                ('Total alt', 0.28),
-                ('Change in C for alt', -0.58),
+                ('Baseline Carbon Storage', 0.86),
+                ('Alternate Carbon Storage', 0.28),
+                ('Change in C for Alternate', -0.58),
                 ('Net present value from bas to alt', -34.22),
                 ]:
             assert_aggregate_result_equal(report_path, stat, expected_value)
