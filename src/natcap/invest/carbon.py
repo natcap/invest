@@ -79,6 +79,7 @@ MODEL_SPEC = {
                 "A map of LULC for the alternate scenario, which must occur "
                 "after the baseline scenario. All values in this raster must "
                 "have corresponding entries in the Carbon Pools table. "
+                "This raster must align with the Baseline LULC raster. "
                 "Required if Calculate Sequestration is selected."),
             "name": gettext("alternate LULC")
         },
