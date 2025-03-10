@@ -240,7 +240,7 @@ class UnitTestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
 
         recreation_server = recmodel_server.RecModel(
-            2005, 2014, os.path.join('.', 'server_cache'),
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
             raw_csv_filename=self.resampled_data_path)
 
         aoi_path = os.path.join(
