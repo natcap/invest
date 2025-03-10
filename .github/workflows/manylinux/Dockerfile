@@ -4,9 +4,10 @@ RUN useradd runner
 RUN usermod -aG wheel runner
 RUN yum install -y sudo jq
 WORKDIR /home/runner/invest
-RUN chown -R runner /home/runner
 
 COPY ../../../.. .
+RUN chown -R runner /home/runner
+
 RUN echo $(ls)
 
 # RUN USERNAME=runner
