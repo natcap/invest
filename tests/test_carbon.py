@@ -160,14 +160,14 @@ class CarbonTests(unittest.TestCase):
         # Ensure every pixel has the correct total C value.
         # Baseline: 15 + 10 + 60 + 1 = 86 Mg/ha
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'tot_c_bas.tif'), 86)
+            os.path.join(args['workspace_dir'], 'c_storage_bas.tif'), 86)
         # Alternate: 5 + 3 + 20 + 0 = 28 Mg/ha
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'tot_c_alt.tif'), 28)
+            os.path.join(args['workspace_dir'], 'c_storage_alt.tif'), 28)
 
-        # Ensure deltas are correct.
+        # Ensure c_changes are correct.
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'delta_bas_alt.tif'), -58)
+            os.path.join(args['workspace_dir'], 'c_change_bas_alt.tif'), -58)
 
         # Ensure NPV calculations are correct.
         # Valuation constant based on provided args is 59.00136.

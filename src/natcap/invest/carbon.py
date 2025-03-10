@@ -172,14 +172,14 @@ MODEL_SPEC = {
         "report.html": {
             "about": "This file presents a summary of all data computed by the model. It also includes descriptions of all other output files produced by the model, so it is a good place to begin exploring and understanding model results. Because this is an HTML file, it can be opened with any web browser."
         },
-        "tot_c_bas.tif": {
+        "c_storage_bas.tif": {
             "about": "Raster showing the amount of carbon stored in each pixel for the baseline scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
             "bands": {1: {
                 "type": "number",
                 "units": u.metric_ton/u.hectare
             }}
         },
-        "tot_c_alt.tif": {
+        "c_storage_alt.tif": {
             "about": "Raster showing the amount of carbon stored in each pixel for the alternate scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
             "bands": {1: {
                 "type": "number",
@@ -187,7 +187,7 @@ MODEL_SPEC = {
             }},
             "created_if": "lulc_alt_path"
         },
-        "delta_bas_alt.tif": {
+        "c_change_bas_alt.tif": {
             "about": "Raster showing the difference in carbon stored between the alternate landscape and the baseline landscape. In this map some values may be negative and some positive. Positive values indicate sequestered carbon, negative values indicate carbon that was lost.",
             "bands": {1: {
                 "type": "number",
@@ -214,9 +214,9 @@ MODEL_SPEC = {
 }
 
 _OUTPUT_BASE_FILES = {
-    'tot_c_bas': 'tot_c_bas.tif',
-    'tot_c_alt': 'tot_c_alt.tif',
-    'delta_bas_alt': 'delta_bas_alt.tif',
+    'c_storage_bas': 'c_storage_bas.tif',
+    'c_storage_alt': 'c_storage_alt.tif',
+    'c_change_bas_alt': 'c_change_bas_alt.tif',
     'npv_alt': 'npv_alt.tif',
     'html_report': 'report.html',
 }
@@ -372,7 +372,7 @@ def execute(args):
             storage_path_list.append(file_registry[storage_key])
             carbon_map_task_lookup[scenario_type].append(carbon_map_task)
 
-        output_key = 'tot_c_' + scenario_type
+        output_key = 'c_storage_' + scenario_type
         LOGGER.info(
             "Calculate carbon storage for '%s'", output_key)
 
@@ -392,15 +392,15 @@ def execute(args):
     # calculate sequestration
     diff_rasters_task_lookup = {}
     if 'alt' in valid_scenarios:
-        output_key = 'delta_bas_alt'
+        output_key = 'c_change_bas_alt'
         LOGGER.info("Calculate sequestration scenario '%s'", output_key)
 
         diff_rasters_task = graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
-                op=numpy.subtract,  # delta = scenario C - baseline C
-                rasters=[file_registry['tot_c_alt'],
-                         file_registry['tot_c_bas']],
+                op=numpy.subtract,  # c_change = scenario C - baseline C
+                rasters=[file_registry['c_storage_alt'],
+                         file_registry['c_storage_bas']],
                 target_path=file_registry[output_key],
                 target_nodata=_CARBON_NODATA),
             target_path_list=[file_registry[output_key]],
@@ -426,7 +426,7 @@ def execute(args):
 
             calculate_npv_task = graph.add_task(
                 _calculate_npv,
-                args=(file_registry['delta_bas_alt'],
+                args=(file_registry['c_change_bas_alt'],
                       valuation_constant, file_registry[output_key]),
                 target_path_list=[file_registry[output_key]],
                 dependent_task_list=[diff_rasters_task_lookup['alt']],
@@ -514,8 +514,8 @@ def _calculate_valuation_constant(
         price_per_metric_ton_of_c (float): currency amount of Mg of carbon
 
     Returns:
-        a floating point number that can be used to multiply a delta carbon
-        storage value by to calculate NPV.
+        a floating point number that can be used to multiply a carbon
+        storage change value by to calculate NPV.
     """
     n_years = lulc_alt_year - lulc_bas_year
     ratio = (
@@ -535,11 +535,11 @@ def _calculate_valuation_constant(
     return valuation_constant
 
 
-def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
+def _calculate_npv(c_change_carbon_path, valuation_constant, npv_out_path):
     """Calculate net present value.
 
     Args:
-        delta_carbon_path (string): path to change in carbon storage over
+        c_change_carbon_path (string): path to change in carbon storage over
             time.
         valuation_constant (float): value to multiply each carbon storage
             value by to calculate NPV.
@@ -550,7 +550,7 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
     """
     pygeoprocessing.raster_map(
         op=lambda carbon: carbon * valuation_constant,
-        rasters=[delta_carbon_path],
+        rasters=[c_change_carbon_path],
         target_path=npv_out_path)
 
 
@@ -647,9 +647,11 @@ def _generate_report(raster_file_set, model_args, file_registry):
 
         # value lists are [sort priority, description, statistic, units]
         report = [
-            (file_registry['tot_c_bas'], 'Total bas', carbon_units),
-            (file_registry['tot_c_alt'], 'Total alt', carbon_units),
-            (file_registry['delta_bas_alt'], 'Change in C for alt',
+            (file_registry['c_storage_bas'], 'Baseline Carbon Storage',
+             carbon_units),
+            (file_registry['c_storage_alt'], 'Alternate Carbon Storage',
+             carbon_units),
+            (file_registry['c_change_bas_alt'], 'Change in C for Alternate',
              carbon_units),
             (file_registry['npv_alt'],
              'Net present value from bas to alt', 'currency units'),
