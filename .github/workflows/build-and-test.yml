@@ -127,9 +127,13 @@ jobs:
 
             echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs | tr " " "\n" > extra_requirements.txt
 
+            cat extra_requirements.txt
+
             /opt/python/cp313-cp313/bin/python ./scripts/convert-requirements-to-conda-yml.py \
               extra_requirements.txt requirements.txt requirements-dev.txt constraints_tests.txt \
             > environment.yml
+
+            cat environment.yml
 
             micromamba env create -y -n env -f environment.yml
             micromamba activate env
