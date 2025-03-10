@@ -20,7 +20,7 @@ env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
   # setuptools_scm: needed for versioning to work
-  CONDA_DEFAULT_DEPENDENCIES: python-build nomkl setuptools_scm libsqlite<3.49.1 sqlite<3.49.1 # https://github.com/natcap/invest/issues/1797
+  CONDA_DEFAULT_DEPENDENCIES: python-build nomkl setuptools_scm "libsqlite<3.49.1" "sqlite<3.49.1" # https://github.com/natcap/invest/issues/1797
   LATEST_SUPPORTED_PYTHON_VERSION: "3.13"
 
 jobs:
@@ -125,13 +125,13 @@ jobs:
             source ~/.bashrc
             micromamba --version
 
-            echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} > extra_requirements.txt
+            echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs | tr " " "\n" > extra_requirements.txt
 
             /opt/python/cp313-cp313/bin/python ./scripts/convert-requirements-to-conda-yml.py \
               extra_requirements.txt requirements.txt requirements-dev.txt constraints_tests.txt \
             > environment.yml
 
-            micromamba env create -n env -f environment.yml
+            micromamba env create -y -n env -f environment.yml
             micromamba activate env
 
             # Compare conda environments
@@ -141,7 +141,6 @@ jobs:
             diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
             # uninstall InVEST if it was already in the restored cache
-            cd ~/invest
             python -m build --wheel
             ls -la dist
 
