@@ -304,9 +304,10 @@ def execute(args):
 
     if args['do_valuation'] and args['lulc_bas_year'] >= args['lulc_alt_year']:
         raise ValueError(
-            f"Invalid input: The Alternate LULC Year ({args['lulc_alt_year']}) "
-            "must be greater than the Baseline LULC Year ({args['lulc_bas_year']}). "
-            "Ensure that the Baseline LULC Year is earlier than the Alternate LULC Year."
+            "Invalid input for lulc_bas_year or lulc_alt_year. The Alternate "
+            f"LULC Year ({args['lulc_alt_year']}) must be greater than the "
+            f"Baseline LULC Year ({args['lulc_bas_year']}). Ensure that the "
+            "Baseline LULC Year is earlier than the Alternate LULC Year."
         )
 
     carbon_pool_df = validation.get_validated_dataframe(
