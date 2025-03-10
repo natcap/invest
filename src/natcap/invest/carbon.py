@@ -149,7 +149,7 @@ MODEL_SPEC = {
             "name": gettext("price of carbon")
         },
         "discount_rate": {
-            "type": "ratio",
+            "type": "percent",
             "required": "do_valuation",
             "about": gettext(
                 "The annual market discount rate in the price of carbon, "
@@ -160,7 +160,7 @@ MODEL_SPEC = {
             "name": gettext("annual market discount rate")
         },
         "rate_change": {
-            "type": "ratio",
+            "type": "percent",
             "required": "do_valuation",
             "about": gettext(
                 "The relative annual change of the price of carbon. "
