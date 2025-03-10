@@ -268,7 +268,7 @@ class UnitTestRecServer(unittest.TestCase):
 
         # transfer zipped file to server
         date_range = (('2005-01-01'), ('2014-12-31'))
-        out_vector_filename = 'test_aoi_for_subset_pud.shp'
+        out_vector_filename = 'results_pud.gpkg'
 
         zip_result, workspace_id, version_str = (
             recreation_server.calc_user_days_in_aoi(
