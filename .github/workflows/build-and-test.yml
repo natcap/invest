@@ -65,6 +65,122 @@ jobs:
           # Skip line-too-long errors (D001)
           python -m doc8 --ignore D001 HISTORY.rst README_PYTHON.rst
 
+  run-tests-manylinux:
+    name: Run model tests (manylinux)
+    runs-on: ubuntu-latest
+    needs: check-syntax-errors
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch complete history for accurate versioning
+
+      # NOTE: It takes twice as long to save the sample data cache
+      # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
+      # Test data is way, way faster by contrast (on the order of a few
+      # seconds to archive).
+      - name: Restore git-LFS test data cache
+        uses: actions/cache@v3
+        with:
+          path: data/invest-test-data
+          key: git-lfs-testdata-${{ hashfiles('Makefile') }}
+
+      - name: Set up python environment (Ubuntu)
+        uses: ./.github/actions/setup_env
+        env:
+          HOME: ${{ matrix.setup-conda-home }}
+        with:
+          requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
+          requirements: |  # https://github.com/natcap/invest/issues/1797
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            libxcrypt
+            python=${{ matrix.python-version }}
+            sqlite<3.49.1
+
+      - name: Download previous conda environment.yml
+        continue-on-error: true
+        # Using 'dawidd6' since 'download-artifact' GH action doesn't
+        # support downloading artifacts from prior workflow runs
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build-and-test.yml
+          # Get frozen conda env artifact from last successful workflow
+          workflow_conclusion: success
+          name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
+          path: ./conda-env-artifact
+
+      - name: Build docker image
+        run: docker build --progress plain -t manylinux -f .github/workflows/Dockerfile .
+
+      - uses: addnab/docker-run-action@v3
+        with:
+          image: manylinux
+          run: |
+            echo "hello world"
+
+            # install micromamba
+            "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
+            micromamba --version
+
+            # Compare conda environments
+            micromamba list > conda-env.txt
+            # make sure that the exit code is always 0
+            # otherwise, an error appears in the action annotations
+            diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
+
+            # uninstall InVEST if it was already in the restored cache
+            cd ~/invest
+            python -m pip uninstall -y natcap.invest
+            python -m build --wheel
+            ls -la dist
+
+            # Audit and repair wheel
+            cd ~/invest
+            WHEEL=$(find dist -name "natcap[._-]invest*.whl")
+            auditwheel show $WHEEL
+            auditwheel repair $WHEEL --plat manylinux_2_34_x86_64 -w dist
+            rm $WHEEL  # remove the original wheel
+
+      - name: Copy out file
+        run: docker cp manylinux:/invest/ invest
+
+      - name: Install and run model tests
+        run: |
+          pip install $(find dist -name "natcap[._-]invest*.whl")
+          make test
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
+          path: ~/invest/dist
+
+      - name: Upload conda env artifact
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
+          path: ~/invest/conda-env.txt
+
+      - name: Authenticate GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+      - name: Set up GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy artifacts to GCS
+        if: github.event_name != 'pull_request'
+        run: |
+          cd ~/invest
+          make deploy
+
   run-model-tests:
     name: Run model tests
     runs-on: ${{ matrix.os }}
@@ -96,24 +212,6 @@ jobs:
       run:
         shell: ${{ matrix.shell }}
     steps:
-      # The manylinux docker container doesn't create any users,
-      # and running everything as root caused some weird problems
-      # (including the permissions-related validation tests failing).
-      # Running as a non-root user seems to be the better practice and
-      # avoids these issues.
-      - name: create user
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash -l {0}
-        run: |
-          USERNAME=runner
-          USER_UID=1000
-          USER_GID=$USER_UID
-          groupadd --gid $USER_GID $USERNAME
-          useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
-          yum install -y sudo jq
-          echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME
-          chmod 0440 /etc/sudoers.d/$USERNAME
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
@@ -127,22 +225,6 @@ jobs:
         with:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
-
-      - name: Setup in manylinux docker container
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          # actions/checkout won't check out to a directory outside of /__w/invest,
-          # so we have to copy it afterwards
-          chmod +rwx /home/runner
-          cp -r /__w/invest/invest /home/runner
-
-          # Install the latest release of git lfs
-          VERSION=$(curl -s https://api.github.com/repos/git-lfs/git-lfs/releases/latest | jq -r '.name')
-          curl -LO https://github.com/git-lfs/git-lfs/releases/latest/download/git-lfs-linux-amd64-$VERSION.tar.gz
-          tar -xvzf git-lfs-linux-amd64-$VERSION.tar.gz
-          rm git-lfs-linux-amd64-$VERSION.tar.gz
-          cd git-lfs-*
-          sudo ./install.sh
 
       - name: Set up python environment (Mac, Windows)
         if: matrix.os != 'ubuntu-latest'
