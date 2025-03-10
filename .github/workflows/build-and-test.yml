@@ -118,9 +118,11 @@ jobs:
           image: manylinux
           run: |
             echo "hello world"
+            ls
 
             # install micromamba
             "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
+            source ~/.bashrc
             micromamba --version
 
             # Compare conda environments
