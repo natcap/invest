@@ -141,9 +141,12 @@ class RecManager(object):
             for future in concurrent.futures.as_completed(future_to_label):
                 label = future_to_label[future]
                 results[label] = future.result()
-                LOGGER.info(f'calc user-days complete for {label}')
+
         LOGGER.info('all user-day calculations complete; sending binary back')
         self.client_log_queues[client_id].put('STOP')
+        for dataset in dataset_list:
+            server = self.servers[dataset]
+            del server.log_queue_map[client_id]
         return results
 
     def log_to_client(self, client_id):
@@ -307,9 +310,8 @@ class RecModel(object):
             global_qt = pickle.load(qt_pickle)
         return global_qt.estimate_points_in_bounding_box(bounding_box)
 
-    # @_try_except_wrapper("exception in calc_user_days_in_aoi")
     def calc_user_days_in_aoi(
-            self, zip_file_binary, date_range, out_vector_filename, client_id):
+            self, zip_file_binary, date_range, out_vector_filename, client_id=None):
         """Calculate annual average and per monthly average user days.
 
         Args:
@@ -333,17 +335,23 @@ class RecModel(object):
         workspace_path = os.path.join(self.local_cache_workspace, workspace_id)
         os.makedirs(workspace_path)
 
-        # decompress zip
-        out_zip_file_filename = os.path.join(
-            workspace_path, str('server_in')+'.zip')
-
-        log_queue = self.log_queue_map[client_id]
-        handler = logging.handlers.QueueHandler(log_queue)
-        logger = logging.getLogger(workspace_id)
-        logger.addHandler(handler)
-        logger.setLevel(logging.DEBUG)
+        if client_id:
+            # Setup a logger that queues messages for retrieval by the client
+            # Client-relevant logging should use this logger. Other messages
+            # can use this module's global LOGGER.
+            handler = logging.handlers.QueueHandler(self.log_queue_map[client_id])
+            log_format = utils.LOG_FMT.replace("%(name)s", self.acronym)
+            formatter = logging.Formatter(log_format)
+            handler.setFormatter(formatter)
+            logger = logging.getLogger(workspace_id)
+            logger.addHandler(handler)
+            logger.setLevel(logging.DEBUG)
+        else:
+            logger = LOGGER
 
         logger.info('decompress zip file AOI')
+        out_zip_file_filename = os.path.join(
+            workspace_path, str('server_in')+'.zip')
         with open(out_zip_file_filename, 'wb') as zip_file_disk:
             zip_file_disk.write(zip_file_binary)
         aoi_archive = zipfile.ZipFile(out_zip_file_filename, 'r')
@@ -368,7 +376,7 @@ class RecModel(object):
                 out_vector_filename, logger))
 
         # ZIP and stream the result back
-        logger.info('zipping result')
+        logger.info(f'finished {self.acronym}; zipping result')
         aoi_ud_archive_path = os.path.join(
             workspace_path, 'aoi_ud_result.zip')
         with zipfile.ZipFile(aoi_ud_archive_path, 'w') as myzip:
@@ -377,14 +385,14 @@ class RecModel(object):
                 myzip.write(filename, os.path.basename(filename))
             myzip.write(
                 monthly_table_path, os.path.basename(monthly_table_path))
-        
-        del self.log_queue_map[client_id]
+
         # return the binary stream
         with open(aoi_ud_archive_path, 'rb') as aoi_ud_archive:
             return aoi_ud_archive.read(), workspace_id, self.get_version()
 
     def _calc_aggregated_points_in_aoi(
-            self, aoi_path, workspace_path, date_range, out_vector_filename, logger):
+            self, aoi_path, workspace_path, date_range,
+            out_vector_filename, logger):
         """Aggregate the userdays in the AOI.
 
         Args:
@@ -394,6 +402,8 @@ class RecModel(object):
             date_range (datetime 2-tuple): a tuple that contains the inclusive
                 start and end date
             out_vector_filename (string): base filename of output vector
+            logger (logging.Logger): a logger with a QueueHandler for messages
+                that are relevant to the client.
 
         Returns:
             a path to an ESRI shapefile copy of `aoi_path` updated with a
@@ -409,7 +419,7 @@ class RecModel(object):
         ud_poly_feature_queue = multiprocessing.Queue(4)
         n_processes = multiprocessing.cpu_count()
 
-        logger.info(f'OPENING {self.qt_pickle_filename}')
+        LOGGER.info(f'OPENING {self.qt_pickle_filename}')
         with open(self.qt_pickle_filename, 'rb') as qt_pickle:
             global_qt = pickle.load(qt_pickle)
 
@@ -487,7 +497,7 @@ class RecModel(object):
                 0, len(local_points), POINTS_TO_ADD_PER_STEP):
             time_elapsed = time.time() - last_time
             last_time = recmodel_client.delay_op(
-                last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
+                last_time, LOGGER_TIME_DELAY, lambda: logger.info(
                     '%d out of %d points added to local_qt so far, and '
                     ' n_nodes in qt %d in %.2fs', local_qt.n_points(),
                     len(local_points), local_qt.n_nodes(), time_elapsed))
@@ -508,7 +518,7 @@ class RecModel(object):
 
             local_qt.add_points(
                 projected_point_list, 0, len(projected_point_list))
-        logger.info('saving local qt to %s', local_qt_pickle_filename)
+        LOGGER.info('saving local qt to %s', local_qt_pickle_filename)
         local_qt.flush()
 
         local_quad_tree_shapefile_name = os.path.join(
@@ -529,13 +539,12 @@ class RecModel(object):
             polytest_process_list.append(polytest_process)
 
         # Copy the input shapefile into the designated output folder
-        logger.info('Creating a copy of the input AOI')
+        LOGGER.info('Creating a copy of the input AOI')
         driver = gdal.GetDriverByName('GPKG')
         ud_aoi_vector = driver.CreateCopy(out_aoi_ud_path, aoi_vector)
         ud_aoi_layer = ud_aoi_vector.GetLayer()
 
         aoi_layer = None
-        # gdal.Dataset.__swig_destroy__(aoi_vector)
         aoi_vector = None
 
         ud_id_suffix_list = [
@@ -548,8 +557,6 @@ class RecModel(object):
             if field_index >= 0:
                 ud_aoi_layer.DeleteField(field_index)
             field_defn = ogr.FieldDefn(field_id, ogr.OFTReal)
-            # field_defn.SetWidth(24)
-            # field_defn.SetPrecision(11)
             ud_aoi_layer.CreateField(field_defn)
 
         last_time = time.time()
@@ -603,10 +610,9 @@ class RecModel(object):
                 line += '\n'  # final newline
                 monthly_table.write(line)
 
-        logger.info('done with polygon test, syncing to disk')
+        logger.info('done with polygon tests')
         ud_aoi_layer = None
         ud_aoi_vector.FlushCache()
-        # gdal.Dataset.__swig_destroy__(ud_aoi_vector)
         ud_aoi_vector = None
 
         for polytest_process in polytest_process_list:
