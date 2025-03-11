@@ -1,21 +1,20 @@
 """InVEST Recreation Server."""
 
+import collections
 import concurrent.futures
-import subprocess
-import os
-import multiprocessing
-import uuid
-import zipfile
 import glob
 import hashlib
-import pickle
-import time
-import threading
-import collections
 import logging
-import psutil
+import multiprocessing
+import os
+import pickle
 import queue
 import random
+import subprocess
+import threading
+import time
+import uuid
+import zipfile
 from io import StringIO
 
 import numpy
@@ -84,13 +83,38 @@ def _try_except_wrapper(mesg):
 
 @Pyro5.api.expose
 class RecManager(object):
+    """A class to manage incoming Pyro requests.
+
+    This class's methods will typically be called by a remote client.
+
+    """
 
     def __init__(self, servers_dict, max_allowable_query):
+        """Initialize the manager with references to servers.
+
+        In this context, a "server" is a ``RecModel`` instance.
+
+        Args:
+            servers_dict (dict): mapping names to ``RecModel`` instances.
+                e.g. {'flickr': flickr_model, 'twitter': twitter_model }
+            max_allowable_query (int): the maximum number of points allowed
+                within the bounding box of a query.
+
+        """
         self.servers = servers_dict
         self.max_allowable_query = max_allowable_query
         self.client_log_queues = {}
 
     def get_valid_year_range(self, dataset):
+        """Return the min and max year supported for dataset queries.
+
+        Args:
+            dataset (str): one of 'flickr' or 'twitter'.
+
+        Returns:
+            (min_year, max_year)
+
+        """
         server = self.servers[dataset]
         return server.get_valid_year_range()
 
@@ -106,7 +130,7 @@ class RecManager(object):
             dataset (str): one of 'flickr' or 'twitter'
 
         Returns:
-            (int, int): (n points, max number of points allowed by this server)
+            (int, int): (n points, max number of points allowed by this manager)
 
         """
         LOGGER.info(f'Validating AOI extent: {bounding_box} against {dataset}')
@@ -119,6 +143,25 @@ class RecManager(object):
     @_try_except_wrapper("calculate_userdays exited while multiprocessing.")
     def calculate_userdays(self, zip_file_binary, start_year, end_year,
                            dataset_list, client_id):
+        """Calculate userdays as requested by a client.
+
+        Submit concurrent.futures jobs to ``RecModel`` servers and wait for
+        them to complete. Also manage a logging Queue that is shared by the
+        servers.
+
+        Args:
+            zip_file_binary (string): a bytestring that is a zip file of a
+                GDAL vector.
+            start_year (int or string): formatted as 'YYYY'
+            end_year (int or string): formatted as 'YYYY'
+            dataset_list (list): listing the names of RecModel servers to query
+            client_id (string): a unique id sent by the Pyro client.
+
+        Returns:
+            (dict): an tuple item for each in ``dataset_list``
+                (result_zip_file_binary, workspace_id, server_version)
+
+        """
         log_queue = multiprocessing.Manager().Queue()
         self.client_log_queues[client_id] = log_queue
         results = {}
@@ -143,13 +186,27 @@ class RecManager(object):
                 results[label] = future.result()
 
         LOGGER.info('all user-day calculations complete; sending binary back')
+
+        # With the futures complete, we know that no more messages will be sent
+        # to the logging queue. A STOP sentinel conveys that.
         self.client_log_queues[client_id].put('STOP')
+        # Also clean up the references held by each server.
         for dataset in dataset_list:
             server = self.servers[dataset]
             del server.log_queue_map[client_id]
         return results
 
     def log_to_client(self, client_id):
+        """Get queued log messages and return them to client.
+
+        Args:
+            client_id (string): a unique id sent by the Pyro client.
+
+        Returns:
+            (dict): LogRecords cannot be returned with the Pyro5 serializer,
+                so they are returned as dicts to be reconstructed.
+
+        """
         if client_id in self.client_log_queues:
             record = self.client_log_queues[client_id].get()
             if record == 'STOP':
@@ -194,20 +251,26 @@ class RecModel(object):
         or with a path to an existing quadtree in the cache_workspace.
 
         Args:
-            raw_csv_filename (string): path to csv file that contains lines
-                with the following pattern:
-
-                id,userid,date/time,lat,lng,err
-
-                example:
-
-                0486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
+            raw_csv_filename (string): path to csv file that contains points
+                for indexing into a quadtree.
+                Must be given if ``quadtree_pickle_filename`` is None.
+            quadtree_pickle_filename (string): path to pickle file containing
+                a pre-existing quadtree index.
+                Must be given if ``raw_csv_filename`` is None.
             min_year (int): minimum year allowed to be queried by user
             max_year (int): maximum year allowed to be queried by user
             cache_workspace (string): path to a writable directory where the
-                object can write quadtree data to disk and search for
+                object can write quadtree data to disk or search for
                 pre-computed quadtrees based on the hash of the file at
-                `raw_csv_filename`
+                `raw_csv_filename`.
+            max_points_per_node(int): maximum number of points to allow per
+                node of the quadtree. Exceeding this will cause the node to
+                subdivide.
+            max_depth (int): maximum depth of nodes in the quadtree.
+                Once reached, the leaf nodes will not subdivide,
+                even if max_points_per_node is exceeded.
+            dataset_name (string): one of 'flickr', 'twitter', indicating
+                the expected structure of data in the raw csv.
 
         Returns:
             None
@@ -218,19 +281,14 @@ class RecModel(object):
                 "max_year is less than min_year, must be greater or "
                 "equal to")
 
-        # local_cache = os.path.join(cache_workspace, 'local')
         if raw_csv_filename:
-            # global_cache = os.path.join(cache_workspace, 'global')
             LOGGER.info('hashing input file')
             LOGGER.info(raw_csv_filename)
             csv_hash = _hashfile(raw_csv_filename, fast_hash=True)
             ooc_qt_picklefilename = os.path.join(
                 cache_workspace, csv_hash + '.pickle')
         elif quadtree_pickle_filename:
-            # ooc_qt_picklefilename = os.path.join(
-            #     global_cache, quadtree_pickle_filename)
             ooc_qt_picklefilename = quadtree_pickle_filename
-            # global_cache = os.path.dirname(ooc_qt_picklefilename)
         else:
             raise ValueError(
                 'Both raw_csv_filename and quadtree_pickle_filename'
@@ -254,7 +312,6 @@ class RecModel(object):
                 max_points_per_node, max_depth)
         self.qt_pickle_filename = ooc_qt_picklefilename
         self.local_cache_workspace = os.path.join(cache_workspace, 'local')
-        # self.global_cache_dir = global_cache
         self.min_year = min_year
         self.max_year = max_year
         self.acronym = 'PUD' if dataset_name == 'flickr' else 'TUD'
@@ -647,6 +704,8 @@ def _parse_big_input_csv(
             structured arrays of (datetime, userid, lat, lng) parsed from the
             raw CSV file
         csv_filepath (string): path to csv file to parse from
+        dataset_name (string): one of 'flickr', 'twitter', to indicate the
+            expected structure of lines in the csv.
 
     Returns:
         None
@@ -700,11 +759,13 @@ def _parse_small_input_csv_list(
 
     Args:
 
-        csv_file_list (string): path to csv file to parse from
+        csv_file_list (string): list of csv file paths to parse from
         numpy_array_queue (multiprocessing.Queue): output queue will have
             paths to files that can be opened with numpy.load and contain
             structured arrays of (datetime, userid, lat, lng) parsed from the
             raw CSV file
+        dataset_name (string): one of 'flickr', 'twitter', to indicate the
+            expected structure of lines in the csv.
 
     Returns:
         None
@@ -732,7 +793,7 @@ def _parse_small_input_csv_list(
         def md5hash(user_string):
             """md5hash userid."""
             return hashlib.md5(user_string).digest()[-4:]
-        
+
         if chunk_string:
             result = numpy.fromregex(
                 StringIO(chunk_string), patterns[dataset_name],
@@ -789,11 +850,24 @@ def construct_userday_quadtree(
     Args:
         initial_bounding_box (list of int):
         raw_csv_file_list (list): list of filepaths of point CSVs
+        dataset_name (string): one of 'flickr', 'twitter', indicating the
+            expected structure of the csv.
         cache_dir (string): path to a directory that can be used to cache
             the quadtree files on disk
+        ooc_qt_picklefilename (string): name for the pickle file quadtree index
+            created in the cache_dir.
         max_points_per_node(int): maximum number of points to allow per node
             of the quadtree.  A larger amount will cause the quadtree to
             subdivide.
+        max_depth (int): maximum depth of nodes in the quadtree.
+            Once reached, the leaf nodes will not subdivide,
+            even if max_points_per_node is exceeded.
+        n_workers (int): number of cores for multiprocessing.
+        build_shapefile (boolean): whether or not to create vector geometries
+            representing nodes of the quadtree.
+        fast_point_count (boolean): If False, count the number of lines in all
+            the csv files. If True, estimate total number of points by counting
+            a random sample of files.
 
     Returns:
         None
@@ -927,7 +1001,6 @@ def construct_userday_quadtree(
         proc.join()
 
     LOGGER.info('took %f seconds', (time.time() - start_time))
-    # return ooc_qt_picklefilename
 
 
 def build_quadtree_shape(
@@ -1104,7 +1177,7 @@ def _hashfile(file_path, blocksize=2**20, fast_hash=False):
 def transplant_quadtree(qt_pickle_filepath, workspace):
     """Move quadtree filepath references to a local filesystem.
 
-    The quadtree index contains absolute paths that are remnants of the
+    The quadtree index contains paths that are remnants of the
     filesystem where it was created. Since we're serving it from a
     different filesystem, we overwrite those paths and write a new
     quadtree index file.
@@ -1148,50 +1221,41 @@ def transplant_quadtree(qt_pickle_filepath, workspace):
 
 
 def execute(args):
-    """Launch recreation server and parse/generate quadtree if necessary.
+    """Launch recreation manager, initializing RecModel servers.
 
-    A call to this function registers a Pyro RPC RecModel entry point given
+    A call to this function registers a Pyro RPC RecManager entry point given
     the configuration input parameters described below.
 
-    There are many methods to launch a server, including at a Linux command
-    line as shown:
+    The RecManager instatiates RecModel servers, which parse input data
+    and construct quadtrees if necessary.
 
-    nohup python -u -c "import natcap.invest.recreation.recmodel_server;
-    args={
-
-        'hostname':'$LOCALIP',
-        'port':$REC_SERVER_PORT,
-        'datasets': {
-            'flickr': {
-                'raw_csv_point_data_path': $POINT_DATA_PATH,
-                'quadtree_pickle_filepath': $QT_PICKLE_PATH,
-                'min_year': $MIN_YEAR,
-                'max_year': $MAX_YEAR
-            },
-            'twitter': {
-                'raw_csv_point_data_path': $POINT_DATA_PATH,
-                'quadtree_pickle_filepath': $QT_PICKLE_PATH,
-                'min_year': $MIN_YEAR,
-                'max_year': $MAX_YEAR
-            }
-        },
-        'cache_workspace': $CACHE_WORKSPACE_PATH'};
-
-    natcap.invest.recreation.recmodel_server.execute(args)"
+    For a usage example,
+    see invest/scripts/recreation_server/launch_recserver.sh
+    and invest/scripts/recreation_server/execute_recmodel_server.py
 
     Args:
-        args['raw_csv_point_data_path'] (string): path to a csv file of the
-            format
-        args['quadtree_pickle_filepath'] (string): path to existing quadtree index
         args['hostname'] (string): hostname to host Pyro server.
         args['port'] (int/or string representation of int): port number to host
             Pyro entry point.
-        args['max_year'] (int): maximum year allowed to be queries by user
-        args['min_year'] (int): minimum valid year allowed to be queried by
-            user
-        args['dataset_name'] (string): 'flickr' or 'twitter' to indicate the
-            dataset exposed by this server and used to count either
-            photo-userdays (PUD) or twitter-userdays (TUD)
+        args['cache_workspace'] (string): Path to a local, writeable, directory.
+            Avoid mounted volumes.
+        args['max_allowable_query'] (int): the maximum number of points allowed
+            within the bounding box of a query.
+        args['datasets'] (dict): args for instantiating each RecModel server.
+            For example,
+
+                {
+                    'flickr': {
+                        'raw_csv_point_data_path': 'photos_2005-2017_odlla.csv',
+                        'min_year': 2005,
+                        'max_year': 2017
+                    },
+                    'twitter': {
+                        'quadtree_pickle_filename': '/global_twitter_qt.pickle',
+                        'min_year': 2012,
+                        'max_year': 2022
+                    }
+                }
 
     Returns:
         Never returns
