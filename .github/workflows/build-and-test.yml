@@ -118,7 +118,7 @@ jobs:
       - uses: addnab/docker-run-action@v3
         with:
           image: manylinux
-          options: -v ${{ github.workspace }}/dist:/home/runner/invest/dist:rw
+          options: -v ${{ github.workspace }}/dist:/home/runner/invest/dist:z
           run: |
             echo "hello world"
             ls
