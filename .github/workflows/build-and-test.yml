@@ -201,7 +201,6 @@ jobs:
   run-model-tests:
     name: Run model tests
     runs-on: ${{ matrix.os }}
-    container: ${{ matrix.container }}
     needs: check-syntax-errors
     strategy:
       fail-fast: false
@@ -210,8 +209,6 @@ jobs:
         os: [windows-latest, macos-13, ubuntu-latest]
         include:
           - os: ubuntu-latest
-            container: quay.io/pypa/manylinux_2_34_x86_64
-            shell: su - runner {0}
             setup-conda-home: /home/runner
           - os: ubuntu-latest
             python-version: 3.9
@@ -225,9 +222,6 @@ jobs:
           - os: macos-13
             shell: bash -l {0}
             setup-conda-home: $HOME
-    defaults:
-      run:
-        shell: ${{ matrix.shell }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -243,23 +237,11 @@ jobs:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-      - name: Set up python environment (Mac, Windows)
-        if: matrix.os != 'ubuntu-latest'
+      - name: Set up python environment
         uses: ./.github/actions/setup_env
         with:
           requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }}
-
-      - name: Set up python environment (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
-        uses: ./.github/actions/setup_env
-        env:
-          HOME: ${{ matrix.setup-conda-home }}
-          PIP_ROOT_USER_ACTION: ignore
-        with:
-          python: /opt/python/cp313-cp313/bin/python
-          requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
-          requirements: |  # https://github.com/natcap/invest/issues/1797
+          requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             ${{ matrix.platform-specific-dependencies }}
             python=${{ matrix.python-version }}
@@ -328,6 +310,7 @@ jobs:
             rm $WHEEL  # remove the original wheel
 
       - name: Compare conda environments
+        if: matrix.os != 'ubuntu-latest'
         run: |
           micromamba list > conda-env.txt
           # make sure that the exit code is always 0
