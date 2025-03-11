@@ -114,7 +114,8 @@ jobs:
         run: |
           echo ${{ github.workspace }}
           docker build --progress plain -t manylinux -f .github/workflows/manylinux/Dockerfile .
-          chmod +777 dist
+          mkdir ${{ github.workspace }}/dist
+          chmod +777 ${{ github.workspace }}/dist
 
       - uses: addnab/docker-run-action@v3
         with:
