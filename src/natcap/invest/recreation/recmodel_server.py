@@ -1215,7 +1215,7 @@ def execute(args):
     A call to this function registers a Pyro RPC RecManager entry point given
     the configuration input parameters described below.
 
-    The RecManager instatiates RecModel servers, which parse input data
+    The RecManager instantiates RecModel servers, which parse input data
     and construct quadtrees if necessary.
 
     For a usage example,
@@ -1231,19 +1231,15 @@ def execute(args):
         args['max_allowable_query'] (int): the maximum number of points allowed
             within the bounding box of a query.
         args['datasets'] (dict): args for instantiating each RecModel server.
-            For example,
-                {
-                    'flickr': {
+            For example:
+                {'flickr': {
                         'raw_csv_point_data_path': 'photos_2005-2017_odlla.csv',
                         'min_year': 2005,
-                        'max_year': 2017
-                    },
-                    'twitter': {
-                        'quadtree_pickle_filename': '/global_twitter_qt.pickle',
-                        'min_year': 2012,
-                        'max_year': 2022
-                    }
-                }
+                        'max_year': 2017},
+                'twitter': {
+                    'quadtree_pickle_filename': 'global_twitter_qt.pickle',
+                    'min_year': 2012,
+                    'max_year': 2022}}
 
     Returns:
         Never returns
