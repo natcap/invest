@@ -54,6 +54,19 @@ Pyro5.config.SERIALIZER = 'marshal'  # lets us pass null bytes in strings
 
 LOGGER = logging.getLogger('natcap.invest.recreation.recmodel_server')
 
+# sample line from flickr:
+# 8568090486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
+# sample line from twitter:
+# 1117195232,2023-01-01,-22.908,-43.1975
+# this pattern matches the above style of line and only parses valid
+# dates to handle some cases where there are weird dates in the input
+flickr_pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"  # pylint: disable=line-too-long
+twittr_pattern = r"([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])),([^,]+),([^,]+)\n"  # pylint: disable=line-too-long
+CSV_PATTERNS = {
+    'flickr': flickr_pattern,
+    'twitter': twittr_pattern
+}
+
 
 def _try_except_wrapper(mesg):
     """Wrap the function in a try/except to log exception before failing.
@@ -716,20 +729,8 @@ def _parse_big_input_csv(
         chunk_string = csv_file.read(chunk_size)
         csv_file.close()
 
-        # sample line from flickr:
-        # 8568090486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
-        # sample line from twitter:
-        # 1117195232,2023-01-01,-22.908,-43.1975
-        # this pattern matches the above style of line and only parses valid
-        # dates to handle some cases where there are weird dates in the input
-        flickr_pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"  # pylint: disable=line-too-long
-        twittr_pattern = r"([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])),([^,]+),([^,]+)\n"  # pylint: disable=line-too-long
-        patterns = {
-            'flickr': flickr_pattern,
-            'twitter': twittr_pattern
-        }
         result = numpy.fromregex(
-            StringIO(chunk_string), patterns[dataset_name],
+            StringIO(chunk_string), CSV_PATTERNS[dataset_name],
             [('user', 'S40'), ('date', 'datetime64[D]'), ('lat', 'f4'),
              ('lng', 'f4')])
 
@@ -777,26 +778,13 @@ def _parse_small_input_csv_list(
         chunk_string = csv_file.read()
         csv_file.close()
 
-        # sample line from flickr:
-        # 8568090486,48344648@N00,2013-03-17 16:27:27,42.383841,-71.138378,16
-        # sample line from twitter:
-        # 1117195232,2023-01-01,-22.908,-43.1975
-        # patterns match the above styles of lines and only parse valid
-        # dates to handle some cases where there are weird dates in the input
-        flickr_pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"  # pylint: disable=line-too-long
-        twittr_pattern = r"([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])),([^,]+),([^,]+)\n"  # pylint: disable=line-too-long
-        patterns = {
-            'flickr': flickr_pattern,
-            'twitter': twittr_pattern
-        }
-
         def md5hash(user_string):
             """md5hash userid."""
             return hashlib.md5(user_string).digest()[-4:]
 
         if chunk_string:
             result = numpy.fromregex(
-                StringIO(chunk_string), patterns[dataset_name],
+                StringIO(chunk_string), CSV_PATTERNS[dataset_name],
                 [('user', 'S40'), ('date', 'datetime64[D]'), ('lat', 'f4'),
                  ('lng', 'f4')])
 
