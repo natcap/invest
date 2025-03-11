@@ -65,138 +65,138 @@ jobs:
           # Skip line-too-long errors (D001)
           python -m doc8 --ignore D001 HISTORY.rst README_PYTHON.rst
 
-  run-tests-manylinux:
-    name: Run model tests (manylinux)
-    runs-on: ubuntu-latest
-    needs: check-syntax-errors
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Fetch complete history for accurate versioning
+  # run-tests-manylinux:
+  #   name: Run model tests (manylinux)
+  #   runs-on: ubuntu-latest
+  #   needs: check-syntax-errors
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      # NOTE: It takes twice as long to save the sample data cache
-      # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
-      # Test data is way, way faster by contrast (on the order of a few
-      # seconds to archive).
-      - name: Restore git-LFS test data cache
-        uses: actions/cache@v3
-        with:
-          path: data/invest-test-data
-          key: git-lfs-testdata-${{ hashfiles('Makefile') }}
+  #     # NOTE: It takes twice as long to save the sample data cache
+  #     # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
+  #     # Test data is way, way faster by contrast (on the order of a few
+  #     # seconds to archive).
+  #     - name: Restore git-LFS test data cache
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: data/invest-test-data
+  #         key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-      - name: Set up python environment (Ubuntu)
-        uses: ./.github/actions/setup_env
-        with:
-          requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
-          requirements: |  # https://github.com/natcap/invest/issues/1797
-            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
-            libxcrypt
-            python=${{ matrix.python-version }}
-            sqlite<3.49.1
+  #     - name: Set up python environment (Ubuntu)
+  #       uses: ./.github/actions/setup_env
+  #       with:
+  #         requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
+  #         requirements: |  # https://github.com/natcap/invest/issues/1797
+  #           ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+  #           libxcrypt
+  #           python=${{ matrix.python-version }}
+  #           sqlite<3.49.1
 
-      - name: Download previous conda environment.yml
-        continue-on-error: true
-        # Using 'dawidd6' since 'download-artifact' GH action doesn't
-        # support downloading artifacts from prior workflow runs
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          workflow: build-and-test.yml
-          # Get frozen conda env artifact from last successful workflow
-          workflow_conclusion: success
-          name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
-          path: ./conda-env-artifact
+  #     - name: Download previous conda environment.yml
+  #       continue-on-error: true
+  #       # Using 'dawidd6' since 'download-artifact' GH action doesn't
+  #       # support downloading artifacts from prior workflow runs
+  #       uses: dawidd6/action-download-artifact@v6
+  #       with:
+  #         workflow: build-and-test.yml
+  #         # Get frozen conda env artifact from last successful workflow
+  #         workflow_conclusion: success
+  #         name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
+  #         path: ./conda-env-artifact
 
-      - name: Build docker image
-        run: |
-          echo ${{ github.workspace }}
-          docker build --progress plain -t manylinux -f .github/workflows/manylinux/Dockerfile .
-          mkdir ${{ github.workspace }}/dist
-          chmod +777 ${{ github.workspace }}/dist
+  #     - name: Build docker image
+  #       run: |
+  #         echo ${{ github.workspace }}
+  #         docker build --progress plain -t manylinux -f .github/workflows/manylinux/Dockerfile .
+  #         mkdir ${{ github.workspace }}/dist
+  #         chmod +777 ${{ github.workspace }}/dist
 
-      - uses: addnab/docker-run-action@v3
-        with:
-          image: manylinux
-          options: -v ${{ github.workspace }}/dist:/home/runner/invest/dist:Z
-          run: |
-            echo "hello world"
-            ls
+  #     - uses: addnab/docker-run-action@v3
+  #       with:
+  #         image: manylinux
+  #         options: -v ${{ github.workspace }}/dist:/home/runner/invest/dist:Z
+  #         run: |
+  #           echo "hello world"
+  #           ls
 
-            ls -ld dist
+  #           ls -ld dist
 
-            # install micromamba
-            "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
-            source ~/.bashrc
-            micromamba --version
+  #           # install micromamba
+  #           "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
+  #           source ~/.bashrc
+  #           micromamba --version
 
-            echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs -n 1 > extra_requirements.txt
+  #           echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs -n 1 > extra_requirements.txt
 
-            /opt/python/cp313-cp313/bin/python ./scripts/convert-requirements-to-conda-yml.py \
-              extra_requirements.txt requirements.txt requirements-dev.txt constraints_tests.txt \
-            > environment.yml
-            cat environment.yml
+  #           /opt/python/cp313-cp313/bin/python ./scripts/convert-requirements-to-conda-yml.py \
+  #             extra_requirements.txt requirements.txt requirements-dev.txt constraints_tests.txt \
+  #           > environment.yml
+  #           cat environment.yml
 
-            micromamba env create -y -n env -f environment.yml
-            micromamba activate env
+  #           micromamba env create -y -n env -f environment.yml
+  #           micromamba activate env
 
-            # Compare conda environments
-            micromamba list > conda-env.txt
-            # make sure that the exit code is always 0
-            # otherwise, an error appears in the action annotations
-            diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
+  #           # Compare conda environments
+  #           micromamba list > conda-env.txt
+  #           # make sure that the exit code is always 0
+  #           # otherwise, an error appears in the action annotations
+  #           diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
-            ls -ld .
-            ls -ld /home/runner
-            ls -ld /home/runner/invest
-            ls -ld /home/runner/invest/src/natcap/invest/delineateit
+  #           ls -ld .
+  #           ls -ld /home/runner
+  #           ls -ld /home/runner/invest
+  #           ls -ld /home/runner/invest/src/natcap/invest/delineateit
 
-            # uninstall InVEST if it was already in the restored cache
-            python -m build --wheel
-            ls -la dist
+  #           # uninstall InVEST if it was already in the restored cache
+  #           python -m build --wheel
+  #           ls -la dist
 
-            # Audit and repair wheel
-            cd ~/invest
-            WHEEL=$(find dist -name "natcap[._-]invest*.whl")
-            auditwheel show $WHEEL
-            auditwheel repair $WHEEL --plat manylinux_2_34_x86_64 -w dist
-            rm $WHEEL  # remove the original wheel
+  #           # Audit and repair wheel
+  #           cd ~/invest
+  #           WHEEL=$(find dist -name "natcap[._-]invest*.whl")
+  #           auditwheel show $WHEEL
+  #           auditwheel repair $WHEEL --plat manylinux_2_34_x86_64 -w dist
+  #           rm $WHEEL  # remove the original wheel
 
-      - name: Install and run model tests
-        run: |
-          pip install $(find dist -name "natcap[._-]invest*.whl")
-          make test
+  #     - name: Install and run model tests
+  #       run: |
+  #         pip install $(find dist -name "natcap[._-]invest*.whl")
+  #         make test
 
-      - name: Upload wheel artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
-          path: ~/invest/dist
+  #     - name: Upload wheel artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
+  #         path: ~/invest/dist
 
-      - name: Upload conda env artifact
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
-        with:
-          name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
-          path: ~/invest/conda-env.txt
+  #     - name: Upload conda env artifact
+  #       uses: actions/upload-artifact@v4
+  #       continue-on-error: true
+  #       with:
+  #         name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
+  #         path: ~/invest/conda-env.txt
 
-      - name: Authenticate GCP
-        if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+  #     - name: Authenticate GCP
+  #       if: github.event_name != 'pull_request'
+  #       uses: google-github-actions/auth@v2
+  #       with:
+  #         credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-      - name: Set up GCP
-        if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v2
+  #     - name: Set up GCP
+  #       if: github.event_name != 'pull_request'
+  #       uses: google-github-actions/setup-gcloud@v2
 
-      - name: Deploy artifacts to GCS
-        if: github.event_name != 'pull_request'
-        run: |
-          cd ~/invest
-          make deploy
+  #     - name: Deploy artifacts to GCS
+  #       if: github.event_name != 'pull_request'
+  #       run: |
+  #         cd ~/invest
+  #         make deploy
 
   run-model-tests:
     name: Run model tests
@@ -276,6 +276,57 @@ jobs:
           name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
           path: ./conda-env-artifact
 
+      - name: Build docker image
+        run: |
+          echo ${{ github.workspace }}
+          docker build --progress plain -t manylinux -f .github/workflows/manylinux/Dockerfile .
+          mkdir ${{ github.workspace }}/dist
+          chmod +777 ${{ github.workspace }}/dist
+
+      - name: Build manylinux wheel
+        if: matrix.os == 'ubuntu-latest'
+        uses: addnab/docker-run-action@v3
+        with:
+          image: manylinux
+          options: -v ${{ github.workspace }}/dist:/home/runner/invest/dist:Z
+          run: |
+            echo "hello world"
+            ls
+
+            ls -ld dist
+
+            # install micromamba
+            "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
+            source ~/.bashrc
+            micromamba --version
+
+            echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs -n 1 > extra_requirements.txt
+
+            /opt/python/cp313-cp313/bin/python ./scripts/convert-requirements-to-conda-yml.py \
+              extra_requirements.txt requirements.txt requirements-dev.txt constraints_tests.txt \
+            > environment.yml
+            cat environment.yml
+
+            micromamba env create -y -n env -f environment.yml
+            micromamba activate env
+
+            # Compare conda environments
+            micromamba list > conda-env.txt
+            # make sure that the exit code is always 0
+            # otherwise, an error appears in the action annotations
+            diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
+
+            # uninstall InVEST if it was already in the restored cache
+            python -m build --wheel
+            ls -la dist
+
+            # Audit and repair wheel
+            cd ~/invest
+            WHEEL=$(find dist -name "natcap[._-]invest*.whl")
+            auditwheel show $WHEEL
+            auditwheel repair $WHEEL --plat manylinux_2_34_x86_64 -w dist
+            rm $WHEEL  # remove the original wheel
+
       - name: Compare conda environments
         run: |
           micromamba list > conda-env.txt
@@ -286,6 +337,7 @@ jobs:
       # the working-directory key doesn't work as expected in the docker container,
       # so we need to cd into the invest directory in the following steps
       - name: Build wheel
+        if: matrix.os != 'ubuntu-latest'
         run: |
           # uninstall InVEST if it was already in the restored cache
           cd ~/invest
@@ -293,18 +345,8 @@ jobs:
           python -m build --wheel
           ls -la dist
 
-      - name: Audit and repair wheel (manylinux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          cd ~/invest
-          WHEEL=$(find dist -name "natcap[._-]invest*.whl")
-          auditwheel show $WHEEL
-          auditwheel repair $WHEEL --plat manylinux_2_34_x86_64 -w dist
-          rm $WHEEL  # remove the original wheel
-
       - name: Install and run model tests
         run: |
-          cd ~/invest
           pip install $(find dist -name "natcap[._-]invest*.whl")
           make test
 
@@ -312,14 +354,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
-          path: ~/invest/dist
+          path: dist
 
       - name: Upload conda env artifact
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
           name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
-          path: ~/invest/conda-env.txt
+          path: conda-env.txt
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
@@ -333,9 +375,7 @@ jobs:
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
-        run: |
-          cd ~/invest
-          make deploy
+        run: make deploy
 
   test-source-distribution:
     name: Check sdist
