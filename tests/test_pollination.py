@@ -60,7 +60,7 @@ def make_simple_raster(base_raster_path, array):
     projection_wkt = srs.ExportToWkt()
 
     origin = (461251, 4923245)
-    pixel_size = (30, 30)
+    pixel_size = (30, -30)
     no_data = -1
 
     pygeoprocessing.numpy_array_to_raster(
