@@ -182,8 +182,8 @@ class CarbonTests(unittest.TestCase):
         for (stat, expected_value) in [
                 ('Baseline Carbon Storage', 0.86),
                 ('Alternate Carbon Storage', 0.28),
-                ('Change in C for Alternate', -0.58),
-                ('Net present value from bas to alt', -34.22),
+                ('Change in Carbon Storage', -0.58),
+                ('Net Present Value of Carbon Change', -34.22),
                 ]:
             assert_aggregate_result_equal(report_path, stat, expected_value)
 
