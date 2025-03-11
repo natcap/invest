@@ -363,6 +363,10 @@ MODEL_SPEC = {
                 "filtered_[THREAT]_aligned.tif": {
                     "about": "Filtered threat raster",
                     "bands": {1: {"type": "ratio"}},
+                },
+                "degradation_[THREAT].tif": {
+                    "about": "Degradation raster for each threat",
+                    "bands": {1: {"type": "ratio"}},
                 }
             }
         },
@@ -640,6 +644,7 @@ def execute(args):
 
         threat_decay_task_list = []
         sensitivity_task_list = []
+        individual_degradation_task_list = []
 
         # Create raster of habitat based on habitat field
         habitat_raster_path = os.path.join(
@@ -657,12 +662,9 @@ def execute(args):
             dependent_task_list=[align_task],
             task_name=f'habitat_raster{lulc_key}')
 
-        # initialize a list that will store all the threat/threat rasters
+        # initialize a list that will store all the degradation rasters for each threat
         # after they have been adjusted for distance, weight, and access
-        deg_raster_list = []
-
-        # a list to keep track of the normalized weight for each threat
-        weight_list = numpy.array([])
+        indiv_deg_raster_list = []
 
         # variable to indicate whether we should break out of calculations
         # for a land cover because a threat raster was not found
@@ -736,28 +738,31 @@ def execute(args):
                 task_name=f'sens_raster_{row["decay"]}{lulc_key}_{threat}')
             sensitivity_task_list.append(sens_threat_task)
 
-            # get the normalized weight for each threat
+            # get the normalized weight for the threat
+            # which is used to calculate threat degradation
             weight_avg = row['weight'] / weight_sum
 
-            # add the threat raster adjusted by distance and the raster
-            # representing sensitivity to the list to be past to
-            # vectorized_rasters below
-            deg_raster_list.append(filtered_threat_raster_path)
-            deg_raster_list.append(sens_raster_path)
+            # Calculate degradation for each threat
+            indiv_threat_raster_path = os.path.join(
+                intermediate_output_dir, f'degradation_{threat}{lulc_key}{file_suffix}.tif')
 
-            # store the normalized weight for each threat in a list that
-            # will be used below in total_degradation
-            weight_list = numpy.append(weight_list, weight_avg)
+            individual_threat_task = task_graph.add_task(
+                func=_calculate_individual_degradation,
+                args=(filtered_threat_raster_path, sens_raster_path, weight_avg,
+                      access_raster_path, indiv_threat_raster_path),
+                target_path_list=[indiv_threat_raster_path],
+                dependent_task_list=[
+                    sens_threat_task, dist_decay_task,
+                    *access_task_list],
+                task_name=f'deg raster {lulc_key} {threat}')
+            individual_degradation_task_list.append(individual_threat_task)
+
+            indiv_deg_raster_list.append(indiv_threat_raster_path)
 
         # check to see if we got here because a threat raster was missing
         # for baseline lulc, if so then we want to skip to the next landcover
         if exit_landcover:
             continue
-
-        # add the access_raster onto the end of the collected raster list. The
-        # access_raster will be values from the shapefile if provided or a
-        # raster filled with all 1's if not
-        deg_raster_list.append(access_raster_path)
 
         deg_sum_raster_path = os.path.join(
             output_dir, f'deg_sum{lulc_key}{file_suffix}.tif')
@@ -766,11 +771,9 @@ def execute(args):
 
         total_degradation_task = task_graph.add_task(
             func=_calculate_total_degradation,
-            args=(deg_raster_list, deg_sum_raster_path, weight_list),
+            args=(indiv_deg_raster_list, deg_sum_raster_path),
             target_path_list=[deg_sum_raster_path],
-            dependent_task_list=[
-                *threat_decay_task_list, *sensitivity_task_list,
-                *access_task_list],
+            dependent_task_list=individual_degradation_task_list,
             task_name=f'tot_degradation_{row["decay"]}{lulc_key}_{threat}')
 
         # Compute habitat quality
@@ -846,17 +849,49 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
         target_path=quality_out_path)
 
 
-def _calculate_total_degradation(
-        deg_raster_list, deg_sum_raster_path, weight_list):
-    """Calculate habitat degradation.
+def _calculate_individual_degradation(
+        filtered_threat_raster_path, sens_raster_path, weight_avg, access_raster_path,
+        indiv_threat_raster_path):
+    """Calculate habitat degradation for a given threat.
+    Args:
+        filtered_threat_raster_path (string): path for the filtered threat raster
+        sens_raster_path (string): path for the sensitivity raster
+        weight_avg (float): normalized weight for the threat
+        access_raster_path (string): path for the access raster
+        indiv_threat_raster_path (string): path to output the habitat quality
+            degradation raster for the individual threat.
+
+    Returns:
+        None
+    """
+    def degradation(filtered_threat_array, sens_array, access_array):
+        """Computes the degradation value for a given threat.
+
+        Args:
+            filtered_threat_array (numpy.ndarray): filtered threat raster values
+            sens_array (numpy.ndarray): sensitivity raster values
+            access_array (numpy.ndarray): access raster based on values from the
+                shapefile if provided or a raster filled with all 1s if not
+
+        Returns:
+            The degradation score for the pixel for the individual threat.
+        """
+        return filtered_threat_array * sens_array * weight_avg * access_array
+
+    pygeoprocessing.raster_map(
+        op=degradation,
+        rasters=[filtered_threat_raster_path, sens_raster_path, access_raster_path],
+        target_path=indiv_threat_raster_path)
+
+
+def _calculate_total_degradation(indiv_deg_raster_list, deg_sum_raster_path):
+    """Calculate total habitat degradation.
 
     Args:
-        deg_raster_list (list): list of string paths for the degraded
-            threat rasters.
+        indiv_deg_raster_list (list): list of string paths for the degraded
+            threat rasters for each threat.
         deg_sum_raster_path (string): path to output the habitat quality
             degradation raster.
-        weight_list (list): normalized weight for each threat corresponding
-            to threats in ``deg_raster_list``.
 
     Returns:
         None
@@ -867,32 +902,20 @@ def _calculate_total_degradation(
         Args:
             *raster (list): a list of numpy arrays of float type depicting
                 the adjusted threat value per pixel based on distance and
-                sensitivity. The values are in pairs so that the values for
-                each threat can be tracked:
-                [filtered_val_threat1, sens_val_threat1,
-                 filtered_val_threat2, sens_val_threat2, ...]
-                There is an optional last value in the list which is the
-                access_raster value, but it is only present if
-                access_raster is not None.
+                sensitivity.
 
         Returns:
             The total degradation score for the pixel.
         """
-        # we can not be certain how many threats the user will enter,
-        # so we handle each filtered threat and sensitivity raster
-        # in pairs
         sum_degradation = numpy.zeros(arrays[0].shape)
-        for index in range(len(arrays) // 2):
-            step = index * 2
-            sum_degradation += (
-                arrays[step] * arrays[step + 1] * weight_list[index])
+        for arr in arrays:
+            sum_degradation += arr
 
-        # the last element in arrays is access
-        return sum_degradation * arrays[-1]
+        return sum_degradation
 
     pygeoprocessing.raster_map(
         op=total_degradation,
-        rasters=deg_raster_list,
+        rasters=indiv_deg_raster_list,
         target_path=deg_sum_raster_path)
 
 
