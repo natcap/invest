@@ -51,6 +51,9 @@ Unreleased Changes
     * InVEST's windows binaries are now distributed once again with a valid
       signature, signed by Stanford University.
       https://github.com/natcap/invest/issues/1580
+    * The natcap.invest python package now officially supports linux.
+      manylinux wheels will be available on PyPI.
+      (`#1730 <https://github.com/natcap/invest/issues/1730>`_).
 * Workbench
     * Auto-scrolling of log output is halted on user-initiated scrolling,
       enabling easier inspection of log output while a model is running
