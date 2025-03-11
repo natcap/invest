@@ -114,6 +114,7 @@ jobs:
         run: |
           echo ${{ github.workspace }}
           docker build --progress plain -t manylinux -f .github/workflows/manylinux/Dockerfile .
+          chmod +777 dist
 
       - uses: addnab/docker-run-action@v3
         with:
@@ -130,17 +131,11 @@ jobs:
             source ~/.bashrc
             micromamba --version
 
-            echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }}
-            echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs
-            echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs -n 1
             echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs -n 1 > extra_requirements.txt
-
-            cat extra_requirements.txt
 
             /opt/python/cp313-cp313/bin/python ./scripts/convert-requirements-to-conda-yml.py \
               extra_requirements.txt requirements.txt requirements-dev.txt constraints_tests.txt \
             > environment.yml
-
             cat environment.yml
 
             micromamba env create -y -n env -f environment.yml
