@@ -394,12 +394,13 @@ class RecModel(object):
             client_id (string): a unique id sent by the Pyro client.
 
         Returns:
-            zip_result: a bytestring of a zipped copy of `zip_file_binary`
-                with a "PUD_YR_AVG", and a "PUD_{MON}_AVG" for {MON} in the
-                calendar months.
-            workspace_id: a string that can be used to uniquely identify this
-                run on the server
-            server version string
+            (tuple):
+                - bytestring of a zipped copy of `zip_file_binary`
+                    with a "PUD_YR_AVG", and a "PUD_{MON}_AVG" for {MON} in the
+                    calendar months.
+                - string that can be used to uniquely identify this workspace
+                    on the server
+                - string representing the server version
 
         """
         # make a random workspace name so we can work in parallel
@@ -1231,7 +1232,6 @@ def execute(args):
             within the bounding box of a query.
         args['datasets'] (dict): args for instantiating each RecModel server.
             For example,
-
                 {
                     'flickr': {
                         'raw_csv_point_data_path': 'photos_2005-2017_odlla.csv',
@@ -1247,6 +1247,7 @@ def execute(args):
 
     Returns:
         Never returns
+
     """
     max_points_per_node = GLOBAL_MAX_POINTS_PER_NODE
     if 'max_points_per_node' in args:
