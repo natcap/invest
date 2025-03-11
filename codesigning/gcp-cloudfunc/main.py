@@ -63,7 +63,7 @@ def main(request):
     The 'url' attribute, when provided, must be a URL to a file that meets
     these requirements:
         * The URL must be a publicly accessible URL
-        * The URL must be a file that ends in '.exe'
+        * The URL must be a file that ends in '.exe' or '.dmg'
         * The URL must be located in either the releases bucket, or else
             in the dev builds bucket.  It doesn't necessarily have to be an
             InVEST binary.
@@ -112,8 +112,8 @@ def main(request):
         url = data['url']
         logging.info(f'Attempting to enqueue url {url}')
 
-        if not url.endswith('.exe'):
-            logging.info("Rejecting URL because it doesn't end in .exe")
+        if not url.endswith(('.exe', '.dmg')):
+            logging.info("Rejecting URL because it doesn't end in .exe or .dmg")
             return jsonify('Invalid URL to sign'), 400
 
         if not url.startswith(GOOGLE_PREFIX):
