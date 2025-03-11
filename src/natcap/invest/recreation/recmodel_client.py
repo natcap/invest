@@ -47,8 +47,7 @@ Pyro5.config.SERIALIZER = 'marshal'
 predictor_table_columns = {
     "id": {
         "type": "freestyle_string",
-        "about": gettext("A unique identifier for the predictor (10 "
-                   "characters or less).")
+        "about": gettext("A unique identifier for the predictor.")
     },
     "path": {
         "type": {"raster", "vector"},
@@ -583,7 +582,6 @@ def execute(args):
             func=_assemble_regression_data,
             args=(file_registry['pud_results_path'],
                   file_registry['tud_results_path'],
-                  # file_registry['predictor_vector_path'],
                   file_registry['regression_vector_path']),
             target_path_list=[file_registry['regression_vector_path']],
             dependent_task_list=[assemble_predictor_data_task, user_days_task],
@@ -1356,19 +1354,15 @@ def _ogr_to_geometry_list(vector_path):
 
 
 def _assemble_regression_data(
-        pud_vector_path, tud_vector_path, target_vector_path):
-    """Create a vector with data for each predictor and response variables.
+        pud_vector_path, tud_vector_path, regression_vector_path):
+    """Update the vector with the predctor data, adding response variables.
 
     Args:
         pud_vector_path (string): Path to the vector polygon
             layer with PUD_YR_AVG.
         tud_vector_path (string): Path to the vector polygon
             layer with TUD_YR_AVG.
-        predictor_json_list (list): list of json filenames, one for each
-            predictor dataset. A json file will look like this,
-            {0: 0.0, 1: 0.0}
-            Keys match FIDs of ``response_vector_path``.
-        target_vector_path (string): The response polygons with predictor data.
+        regression_vector_path (string): The response polygons with predictor data.
             Fields will be added in order to compute the linear regression:
                 * pr_PUD
                 * pr_TUD
@@ -1378,7 +1372,6 @@ def _assemble_regression_data(
         None
 
     """
-    # driver = gdal.GetDriverByName('ESRI Shapefile')
     pud_vector = gdal.OpenEx(
         pud_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
     pud_layer = pud_vector.GetLayer()
@@ -1386,7 +1379,7 @@ def _assemble_regression_data(
         tud_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
     tud_layer = tud_vector.GetLayer()
     target_vector = gdal.OpenEx(
-        target_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+        regression_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
 
     target_layer = target_vector.GetLayer()
 
