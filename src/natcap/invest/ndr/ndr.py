@@ -143,6 +143,7 @@ MODEL_SPEC = {
         "runoff_proxy_av": {
             "type": "number",
             "units": u.none,
+            'expression': 'value > 0',
             "required": False,
             "name": gettext("average runoff proxy"),
             "about": gettext(
