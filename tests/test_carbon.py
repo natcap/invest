@@ -24,7 +24,7 @@ def make_simple_raster(base_raster_path, fill_val, nodata_val):
         nodata_val (int or None): for defining a band's nodata value.
 
     Returns:
-        lulc_path (str): the path of the raster file.
+        None.
 
     """
 
