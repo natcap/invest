@@ -122,7 +122,7 @@ USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 INVEST_AUTOTESTER := $(PYTHON) scripts/invest-autotest.py --cwd $(GIT_SAMPLE_DATA_REPO_PATH) --binary $(INVEST_BINARIES_DIR)/invest
 
 
-.PHONY: fetch install binaries apidocs userguide sampledata sampledata_single test clean help check python_packages jenkins purge mac_zipfile deploy codesign_mac codesign_windows $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
+.PHONY: fetch install binaries apidocs userguide sampledata sampledata_single test clean help check python_packages jenkins purge mac_zipfile deploy codesign $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -146,8 +146,7 @@ help:
 	@echo "  userguide         to build HTML version of the users guide"
 	@echo "  changelog         to build HTML version of the changelog"
 	@echo "  python_packages   to build natcap.invest wheel and source distributions"
-	@echo "  codesign_mac      to sign the mac disk image using the codesign utility"
-	@echo "  codesign_windows  to sign the windows installer using the SignTool utility"
+	@echo "  codesign          to enqueue a built binary for signing using our codesigning service"
 	@echo "  sampledata        to build sample data zipfiles"
 	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for advanced NSIS install."
 	@echo "  test              to run pytest on the tests directory"
@@ -334,31 +333,8 @@ $(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
-KEYCHAIN_NAME := codesign_keychain
-# only need password to be able to create the keychain, not for security
-KEYCHAIN_PASS := password
-codesign_mac:
-	# download the p12 certificate file from google cloud
-	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
-	# create a new keychain (so that we can know what the password is)
-	security create-keychain -p $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
-	# add the keychain to the search list so it can be found
-	security list-keychains -s $(KEYCHAIN_NAME)
-	# unlock the keychain so we can import to it (stays unlocked 5 minutes by default)
-	security unlock-keychain -p $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
-	# add the certificate to the keychain
-	# -T option says that the codesign executable can access the keychain
-	# for some reason this alone is not enough, also need the following step
-	security import $(BUILD_DIR)/$(CERT_FILE) -k $(KEYCHAIN_NAME) -P "$(CERT_PASS)" -T /usr/bin/codesign
-	# this is essential to avoid the UI password prompt
-	security set-key-partition-list -S apple-tool:,apple: -s -k $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
-	# sign the dmg using certificate that's looked up by unique identifier 'Stanford'
-	codesign --timestamp --verbose --sign Stanford $(WORKBENCH_BIN_TO_SIGN)
-
-codesign_windows:
-	"$(SIGNTOOL)" sign -fd SHA256 -f $(BUILD_DIR)/$(CERT_FILE) -p $(CERT_PASS) $(WORKBENCH_BIN_TO_SIGN)
-	"$(SIGNTOOL)" timestamp -tr http://timestamp.sectigo.com -td SHA256 $(WORKBENCH_BIN_TO_SIGN)
-	@echo "Installer was signed with signtool"
+codesign:
+	python codesigning/enqueue-current-installer.py
 
 deploy:
 	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)

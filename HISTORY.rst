@@ -48,6 +48,9 @@ Unreleased Changes
     * InVEST's windows binaries are now distributed once again with a valid
       signature, signed by Stanford University.
       https://github.com/natcap/invest/issues/1580
+    * InVEST's mac disk image is now distributed once again with a valid
+      signature, signed by Stanford University.
+      https://github.com/natcap/invest/issues/1784
 * Annual Water Yield
     * Fixed an issue where the model would crash if the valuation table was
       provided, but the demand table was not.  Validation will now warn about
@@ -62,6 +65,9 @@ Unreleased Changes
     * Updated the documentation for the ``mean_t_air`` attribute of the
       ``buildings_with_stats.shp`` output to clarify how the value is
       calculated.  https://github.com/natcap/invest/issues/1746
+    * Fixed bug in the calculation of Cooling Capacity (CC) provided by parks,
+      where the CC Index was not being properly incorporated.
+      https://github.com/natcap/invest/issues/1726
 * Wind Energy
     * Fixed a bug that could cause the Workbench to crash when running the Wind
       Energy model with ``Taskgraph`` logging set to ``DEBUG`` (`InVEST #1497
