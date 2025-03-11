@@ -259,11 +259,11 @@ jobs:
           path: ./conda-env-artifact
 
       - name: Build docker image
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          echo ${{ github.workspace }}
-          docker build --progress plain -t manylinux -f .github/workflows/manylinux/Dockerfile .
           mkdir ${{ github.workspace }}/dist
           chmod +777 ${{ github.workspace }}/dist
+          docker build --progress plain -t manylinux -f .github/workflows/manylinux/Dockerfile .
 
       - name: Build manylinux wheel
         if: matrix.os == 'ubuntu-latest'
