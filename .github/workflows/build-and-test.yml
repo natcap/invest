@@ -111,12 +111,14 @@ jobs:
           path: ./conda-env-artifact
 
       - name: Build docker image
-        run: docker build --progress plain -t manylinux -f .github/workflows/manylinux/Dockerfile .
+        run: |
+          echo ${{ github.workspace }}
+          docker build --progress plain -t manylinux -f .github/workflows/manylinux/Dockerfile .
 
       - uses: addnab/docker-run-action@v3
         with:
           image: manylinux
-          options: -v dist:dist
+          options: -v ${{ github.workspace }}/dist:/home/runner/invest/dist
           run: |
             echo "hello world"
             ls
