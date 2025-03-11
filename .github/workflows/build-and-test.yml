@@ -116,9 +116,12 @@ jobs:
       - uses: addnab/docker-run-action@v3
         with:
           image: manylinux
+          options: -v dist:dist
           run: |
             echo "hello world"
             ls
+
+            ls dist
 
             # install micromamba
             "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
@@ -162,9 +165,6 @@ jobs:
             auditwheel show $WHEEL
             auditwheel repair $WHEEL --plat manylinux_2_34_x86_64 -w dist
             rm $WHEEL  # remove the original wheel
-
-      - name: Copy out file
-        run: docker cp manylinux:/invest/ invest
 
       - name: Install and run model tests
         run: |
