@@ -6,6 +6,7 @@ RUN yum install -y sudo jq
 WORKDIR /home/runner/invest
 
 COPY ../../../.. .
+RUN mkdir /home/runner/invest/dist
 RUN chown -R runner /home/runner
 
 RUN echo $(ls)
