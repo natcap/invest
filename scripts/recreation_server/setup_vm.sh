@@ -29,3 +29,7 @@ ls -R server/volume
 
 # Refer to invest/scripts/recreation_server/readme.txt for instructions on
 # starting the python processes.
+
+# After setting up a new VM or new server cache, initialize the cron
+# job that periodically clears out the cache:
+# invest/scripts/recreation_server/cron_find_rm_cached_workspaces.sh
