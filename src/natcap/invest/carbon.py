@@ -653,10 +653,10 @@ def _generate_report(raster_file_set, model_args, file_registry):
              carbon_units),
             (file_registry['c_storage_alt'], 'Alternate Carbon Storage',
              carbon_units),
-            (file_registry['c_change_bas_alt'], 'Change in C for Alternate',
+            (file_registry['c_change_bas_alt'], 'Change in Carbon Storage',
              carbon_units),
             (file_registry['npv_alt'],
-             'Net present value from bas to alt', 'currency units'),
+             'Net Present Value of Carbon Change', 'currency units'),
         ]
 
         for raster_uri, description, units in report:
