@@ -141,6 +141,10 @@ jobs:
           image: manylinux
           options: -v ${{ github.workspace }}/dist:/home/runner/invest/dist
           run: |
+            # install micromamba
+            RUN "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
+            RUN source ~/.bashrc
+
             # set up conda environment for build
             echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs -n 1 > extra_requirements.txt
             /opt/python/cp313-cp313/bin/python ./scripts/convert-requirements-to-conda-yml.py \

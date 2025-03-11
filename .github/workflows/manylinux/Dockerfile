@@ -16,7 +16,3 @@ RUN rm git-lfs-linux-amd64-$GIT_LFS_VERSION.tar.gz
 RUN cd git-lfs-* && ./install.sh
 
 USER runner
-
-# install micromamba
-RUN "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
-RUN source ~/.bashrc
