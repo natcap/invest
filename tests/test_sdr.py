@@ -120,20 +120,21 @@ class SDRTests(unittest.TestCase):
             'expected a validation error but didn\'t get one')
 
     def test_base_regression(self):
-        """SDR base regression test on sample data.
+        """SDR base regression test on test data.
 
-        Execute SDR with sample data and checks that the output files are
-        generated and that the aggregate shapefile fields are the same as the
-        regression case.
+        Executes SDR with test data. Checks for accuracy of aggregate
+        values in summary vector, presence of drainage raster in
+        intermediate outputs, absence of negative (non-nodata) values
+        in sed_deposition raster, and accuracy of raster outputs (as
+        measured by the sum of their non-nodata pixel values).
         """
         from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
-        # make args explicit that this is a base run of SWY
 
         sdr.execute(args)
-        expected_results = {
+        expected_watershed_totals = {
             'usle_tot': 2.62457418442,
             'sed_export': 0.09748090804,
             'sed_dep': 1.71672844887,
@@ -143,7 +144,8 @@ class SDRTests(unittest.TestCase):
 
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
-        assert_expected_results_in_vector(expected_results, vector_path)
+        assert_expected_results_in_vector(expected_watershed_totals,
+                                          vector_path)
 
         # We only need to test that the drainage mask exists.  Functionality
         # for that raster is tested elsewhere
@@ -166,6 +168,29 @@ class SDRTests(unittest.TestCase):
             (sed_dep_array < 0))
         self.assertEqual(
             numpy.count_nonzero(sed_dep_array[negative_non_nodata_mask]), 0)
+        
+        # Check raster outputs to make sure values are in Mg/ha/yr.
+        raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
+        pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+        pixels_per_hectare = 10000 / pixel_area
+        for (raster_name,
+             attr_name) in [('usle.tif', 'usle_tot'),
+                            ('sed_export.tif', 'sed_export'),
+                            ('sed_deposition.tif', 'sed_dep'),
+                            ('avoided_export.tif', 'avoid_exp'),
+                            ('avoided_erosion.tif', 'avoid_eros')]:
+            # Since pixel values are Mg/(ha•yr), raster sum is (Mg•px)/(ha•yr),
+            # equal to the watershed total (Mg/yr) * (pixels_per_hectare px/ha).
+            expected_sum = (expected_watershed_totals[attr_name]
+                            * pixels_per_hectare)
+            raster_path = os.path.join(args['workspace_dir'], raster_name)
+            nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
+            raster_sum = 0.0
+            for _, block in pygeoprocessing.iterblocks((raster_path, 1)):
+                raster_sum += numpy.sum(
+                    block[~pygeoprocessing.array_equals_nodata(
+                            block, nodata)], dtype=numpy.float64)
+            numpy.testing.assert_allclose(raster_sum, expected_sum)
 
     def test_base_regression_d8(self):
         """SDR base regression test on sample data in D8 mode.
@@ -216,7 +241,6 @@ class SDRTests(unittest.TestCase):
             (sed_dep_array < 0))
         self.assertEqual(
             numpy.count_nonzero(sed_dep_array[negative_non_nodata_mask]), 0)
-
 
     def test_regression_with_undefined_nodata(self):
         """SDR base regression test with undefined nodata values.
@@ -331,8 +355,8 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            f'A value in the biophysical table is not a number '
-            f'within range 0..1.', str(context.exception))
+            'A value in the biophysical table is not a number '
+            'within range 0..1.', str(context.exception))
 
     def test_base_usle_p_nan(self):
         """SDR test expected exception for USLE_P not a number."""
@@ -347,7 +371,7 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            f'could not be interpreted as ratios', str(context.exception))
+            'could not be interpreted as ratios', str(context.exception))
 
     def test_lucode_not_a_number(self):
         """SDR test expected exception for invalid data in lucode column."""

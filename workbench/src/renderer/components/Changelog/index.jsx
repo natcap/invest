@@ -5,6 +5,7 @@ import Modal from 'react-bootstrap/Modal';
 import { MdClose } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 
+import { openLinkInBrowser } from '../../utils';
 import pkg from '../../../../package.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
@@ -55,12 +56,6 @@ export default function Changelog(props) {
   // Once HTML content has loaded, set up links to open in browser
   // (instead of in an Electron window).
   useEffect(() => {
-    const openLinkInBrowser = (event) => {
-      event.preventDefault();
-      ipcRenderer.send(
-        ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
-      );
-    };
     document.querySelectorAll('.link-external').forEach(link => {
       link.addEventListener('click', openLinkInBrowser);
     });

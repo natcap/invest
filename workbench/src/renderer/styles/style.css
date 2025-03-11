@@ -596,6 +596,44 @@ input[type=text]::placeholder {
   max-width: 600px;
 }
 
+.settings-modal .accordion:has(.show) button svg {
+  transform: rotate(180deg);
+}
+
+.settings-modal .accordion button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#metadata-form {
+  /*This div toggles between a form and some help text.
+  position and static height ensure no resizing to content.*/
+  position: relative;
+  height: 460px;
+  background-color: ghostwhite;
+  border: dotted;
+  border-width: thin;
+  padding: 0.5rem;
+}
+
+/* This button should also not move as content is toggled*/
+#metadata-form .info-toggle {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+}
+
+#metadata-form legend {
+  font-size: 1.1rem;
+  text-decoration-line: underline;
+}
+
+#metadata-form .form-group {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
 /* Save As modal */
 .save-as-modal svg {
   margin-bottom: 0.2rem;
