@@ -24,7 +24,7 @@ TEST_MESSAGES = {
     "InVEST Carbon Model": "ιиνєѕт ςαявσи мσ∂єℓ",
     "Available models:": "αναιℓαвℓє мσ∂єℓѕ:",
     "Carbon Storage and Sequestration": "ςαявσи ѕтσяαgє αи∂ ѕєףυєѕтяαтισи",
-    "baseline LULC": "ςυяяєит ℓυℓς",
+    "baseline LULC": "вαѕєℓιиє ℓυℓς",
     missing_key_msg: "кєу ιѕ мιѕѕιиg fяσм тнє αяgѕ ∂ιςт",
     not_a_number_msg: 'ναℓυє "{value}" ςσυℓ∂ иσт вє ιитєяρяєтє∂ αѕ α иυмвєя'
 }
