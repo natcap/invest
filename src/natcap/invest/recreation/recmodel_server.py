@@ -1233,9 +1233,9 @@ def execute(args):
         args['datasets'] (dict): args for instantiating each RecModel server.
             For example:
                 {'flickr': {
-                        'raw_csv_point_data_path': 'photos_2005-2017_odlla.csv',
-                        'min_year': 2005,
-                        'max_year': 2017},
+                    'raw_csv_point_data_path': 'photos_2005-2017_odlla.csv',
+                    'min_year': 2005,
+                    'max_year': 2017},
                 'twitter': {
                     'quadtree_pickle_filename': 'global_twitter_qt.pickle',
                     'min_year': 2012,
