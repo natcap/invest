@@ -20,7 +20,7 @@ env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
   # setuptools_scm: needed for versioning to work
-  CONDA_DEFAULT_DEPENDENCIES: python-build nomkl setuptools_scm libsqlite<3.49.1 sqlite<3.49.1 # https://github.com/natcap/invest/issues/1797
+  CONDA_DEFAULT_DEPENDENCIES: python-build nomkl setuptools_scm 'libsqlite<3.49.1' 'sqlite<3.49.1' # https://github.com/natcap/invest/issues/1797
   LATEST_SUPPORTED_PYTHON_VERSION: "3.13"
 
 jobs:
@@ -62,8 +62,8 @@ jobs:
 
       - name: Lint with doc8
         run: |
-            # Skip line-too-long errors (D001)
-            python -m doc8 --ignore D001 HISTORY.rst README_PYTHON.rst
+          # Skip line-too-long errors (D001)
+          python -m doc8 --ignore D001 HISTORY.rst README_PYTHON.rst
 
   run-model-tests:
     name: Run model tests
@@ -73,7 +73,22 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
-        os: [windows-latest, macos-13]
+        os: [windows-latest, macos-13, ubuntu-latest]
+        include:
+          - os: ubuntu-latest
+            setup-conda-home: /home/runner
+          - os: ubuntu-latest
+            python-version: 3.9
+            platform-specific-dependencies: libxcrypt
+          - os: ubuntu-latest
+            python-version: "3.10"
+            platform-specific-dependencies: libxcrypt
+          - os: windows-latest
+            shell: bash -l {0}
+            setup-conda-home: $HOME
+          - os: macos-13
+            shell: bash -l {0}
+            setup-conda-home: $HOME
     steps:
       - uses: actions/checkout@v4
         with:
@@ -92,9 +107,11 @@ jobs:
       - name: Set up python environment
         uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            ${{ matrix.platform-specific-dependencies }}
+            python=${{ matrix.python-version }}
 
       - name: Download previous conda environment.yml
         continue-on-error: true
@@ -108,23 +125,69 @@ jobs:
           name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
           path: ./conda-env-artifact
 
+      - name: Build docker image
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          # set up the directory to mount
+          # this will be used to access the wheel outside of the container
+          mkdir ${{ github.workspace }}/dist
+          chmod +777 ${{ github.workspace }}/dist
+          docker build --progress plain -t manylinux -f .github/workflows/manylinux/Dockerfile .
+
+      - name: Build manylinux wheel
+        if: matrix.os == 'ubuntu-latest'
+        uses: addnab/docker-run-action@v3
+        with:
+          image: manylinux
+          options: -v ${{ github.workspace }}/dist:/home/runner/invest/dist
+          run: |
+            # install micromamba
+            "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
+            source ~/.bashrc
+
+            # set up conda environment for build
+            echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs -n 1 > extra_requirements.txt
+            /opt/python/cp313-cp313/bin/python ./scripts/convert-requirements-to-conda-yml.py \
+              extra_requirements.txt requirements.txt requirements-dev.txt constraints_tests.txt \
+            > environment.yml
+            cat environment.yml
+
+            micromamba env create -y -n env -f environment.yml
+            micromamba activate env
+
+            # Compare conda environments
+            micromamba list > conda-env.txt
+            # make sure that the exit code is always 0
+            # otherwise, an error appears in the action annotations
+            diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
+
+            # Build, audit and repair wheel
+            python -m build --wheel
+            WHEEL=$(find dist -name "natcap[._-]invest*.whl")
+            auditwheel show $WHEEL
+            auditwheel repair $WHEEL --plat manylinux_2_34_x86_64 -w dist
+            rm $WHEEL  # remove the original wheel
+
       - name: Compare conda environments
+        if: matrix.os != 'ubuntu-latest'
         run: |
           micromamba list > conda-env.txt
           # make sure that the exit code is always 0
           # otherwise, an error appears in the action annotations
           diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
-      - name: Build and install wheel
+      - name: Build wheel
+        if: matrix.os != 'ubuntu-latest'
         run: |
           # uninstall InVEST if it was already in the restored cache
           python -m pip uninstall -y natcap.invest
           NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --wheel
           ls -la dist
-          pip install $(find dist -name "natcap[._-]invest*.whl")
 
-      - name: Run model tests
-        run: make test
+      - name: Install wheel and run model tests
+        run: |
+          pip install $(find dist -name "natcap[._-]invest*.whl")
+          make test
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
@@ -158,9 +221,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: check-syntax-errors
     strategy:
+      fail-fast: false
       matrix:
         python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
-        os: [windows-latest, macos-13]
+        os: [windows-latest, macos-13, ubuntu-latest]
+        include:
+          - os: ubuntu-latest
+            python-version: 3.9
+            platform-specific-dependencies: libxcrypt
+          - os: ubuntu-latest
+            python-version: "3.10"
+            platform-specific-dependencies: libxcrypt
     steps:
       - uses: actions/checkout@v4
         with:
@@ -168,9 +239,11 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} twine
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ matrix.python-version }}
+            twine ${{ matrix.platform-specific-dependencies }}
 
       - name: Build source distribution
         run: |
@@ -233,9 +306,11 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
           requirements-files: requirements.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pytest
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+            pytest
 
       - name: Make install
         run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
@@ -265,9 +340,10 @@ jobs:
       - name: Set up python environment
         uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
           requirements-files: requirements.txt requirements-dev.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
       - name: Make install
         run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
@@ -322,13 +398,15 @@ jobs:
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
           requirements-files: |
             requirements.txt
             requirements-dev.txt
             requirements-docs.txt
             constraints_tests.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pandoc
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+            pandoc
 
       - name: Make install
         run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
