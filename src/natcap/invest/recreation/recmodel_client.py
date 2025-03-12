@@ -654,7 +654,8 @@ def _retrieve_user_days(
 
     Args:
         local_aoi_path (string): path to polygon vector for UD aggregation
-        compressed_aoi_path (string): path to zip file storing compressed AOI
+        compressed_aoi_path (string): path to zip file where AOI will be
+            compressed
         start_year (int/string): lower limit of date-range for UD queries
         end_year (int/string): upper limit of date-range for UD queries
         file_suffix (string): to append to filenames of files created by server
@@ -773,9 +774,17 @@ def _retrieve_user_days(
         for filename in os.listdir(temporary_output_dir):
             # Results are returned from the server without a results_suffix.
             pre, post = os.path.splitext(filename)
+            target_filepath = os.path.join(
+                output_dir, f'{pre}{file_suffix}{post}')
             shutil.copy(
                 os.path.join(temporary_output_dir, filename),
-                os.path.join(output_dir, f'{pre}{file_suffix}{post}'))
+                target_filepath)
+            # Get the suffix attached to the layername too
+            if target_filepath.endswith('gpkg'):
+                vector = gdal.OpenEx(target_filepath, gdal.OF_UPDATE)
+                layer = vector.GetLayer()
+                _rename_layer_from_parent(layer)
+                layer = vector = None
         shutil.rmtree(temporary_output_dir)
 
     LOGGER.info('connection release')
@@ -822,7 +831,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     out_grid_vector = driver.Create(
         out_grid_vector_path, 0, 0, 0, gdal.GDT_Unknown)
     grid_layer = out_grid_vector.CreateLayer(
-        os.path.splitext(os.path.basename(vector_path))[0],
+        os.path.splitext(os.path.basename(out_grid_vector_path))[0],
         spat_ref, ogr.wkbPolygon)
     grid_layer_defn = grid_layer.GetLayerDefn()
 
@@ -1033,6 +1042,7 @@ def _json_to_gpkg_table(
     response_vector = None
 
     layer = predictor_vector.GetLayer()
+    _rename_layer_from_parent(layer)
     layer_defn = layer.GetLayerDefn()
 
     predictor_id_list = []
@@ -1857,6 +1867,13 @@ def delay_op(last_time, time_delay, func):
     return last_time
 
 
+def _rename_layer_from_parent(layer):
+    """Rename a GDAL vector layer to match the dataset filename."""
+    lyrname = os.path.splitext(
+        os.path.basename(layer._parent_ds().GetName()))[0]
+    layer.Rename(lyrname)
+
+
 @validation.invest_validator
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to ``execute``'s contract.
@@ -1898,7 +1915,6 @@ def validate(args, limit_to=None):
         if 'aoi_path' in sufficient_valid_keys:
             validation_tuples.append((_validate_same_projection,
                 ['aoi_path', 'scenario_predictor_table_path']))
-
 
     for validate_func, key_list in validation_tuples:
         msg = validate_func(*[args[key] for key in key_list])
