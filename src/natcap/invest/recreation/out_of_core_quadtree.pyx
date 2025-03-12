@@ -51,6 +51,8 @@ class OutOfCoreQuadTree(object):
                 to store the node data across the entire quadtree
             pickle_filename (string): name of file on disk which to pickle the
                 tree to during a flush
+            n_workers (int): if great than 1, number of child processes to
+                use during flushes to disk
 
         Returns:
             None
@@ -66,7 +68,8 @@ class OutOfCoreQuadTree(object):
         if node_data_manager is None:
             self.node_data_manager = (
                 buffered_numpy_disk_map.BufferedNumpyDiskMap(
-                    pickle_filename+'.db', MAX_BYTES_TO_BUFFER, n_workers=n_workers))
+                    pickle_filename+'.db', MAX_BYTES_TO_BUFFER,
+                    n_workers=n_workers))
         else:
             self.node_data_manager = node_data_manager
 

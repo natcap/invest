@@ -2,8 +2,10 @@ from io import BytesIO
 
 import numpy
 
+
 def _numpy_dumps(numpy_array):
     """Safely pickle numpy array to string.
+
     Args:
         numpy_array (numpy.ndarray): arbitrary numpy array.
     Returns:
@@ -17,7 +19,7 @@ def _numpy_dumps(numpy_array):
 
 def _numpy_loads(queue_string):
     """Safely unpickle string to numpy array.
-    
+
     Args:
         queue_string (str): binary string representing a pickled
             numpy array.

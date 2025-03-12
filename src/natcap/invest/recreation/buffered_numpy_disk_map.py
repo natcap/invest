@@ -19,6 +19,7 @@ LOGGER = logging.getLogger(
 
 
 def _npy_append(filepath, array):
+    """Append to a numpy array on disk without reading the entire array."""
     with open(filepath, 'rb+') as file:
         version = numpy.lib.format.read_magic(file)
         header = numpy.lib.format._read_array_header(file, version)
@@ -88,7 +89,6 @@ class BufferedNumpyDiskMap(object):
         Returns:
             None
         """
-        # self.array_cache[array_id].append(array_data.copy())
         self.array_cache[array_id].append(_numpy_dumps(array_data))
         self.current_bytes_in_system += (
             array_data.size * BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE.itemsize)
@@ -103,23 +103,18 @@ class BufferedNumpyDiskMap(object):
         if not isinstance(array_id_list, list):
             array_id_list = [array_id_list]
         for array_id in array_id_list:
-            array_deque = collections.deque(_numpy_loads(x) for x in self.array_cache[array_id])
+            array_deque = collections.deque(
+                _numpy_loads(x) for x in self.array_cache[array_id])
             # try to get data if it's there
             db_cursor.execute(
                 """SELECT (array_path) FROM array_table
                     where array_id=? LIMIT 1""", [array_id])
             array_path = db_cursor.fetchone()
             if array_path is not None:
-                _npy_append(os.path.join(
-                    self.manager_directory, array_path[0]), numpy.concatenate(array_deque))
+                _npy_append(os.path.join(self.manager_directory, array_path[0]),
+                            numpy.concatenate(array_deque))
                 array_deque = None
-                # cache gets wiped at end so okay to use same deque
-                # array_deque.append(numpy.load(array_path[0]))
-                # array_data = numpy.concatenate(array_deque)
-                # array_deque = None
-                # numpy.save(array_path[0], array_data)
             else:
-                # otherwise directly write
                 # make a random filename and put it one directory deep named
                 # off the last two characters in the filename
                 array_filename = uuid.uuid4().hex + '.npy'
@@ -134,8 +129,9 @@ class BufferedNumpyDiskMap(object):
                 array_data = numpy.concatenate(array_deque)
                 array_deque = None
                 numpy.save(array_path, array_data)
-                # insert_list.append((array_id, array_path))
-                insert_list.append((array_id, os.path.join(array_subdirectory, array_filename)))
+                insert_list.append(
+                    (array_id,
+                     os.path.join(array_subdirectory, array_filename)))
         db_connection.close()
         return insert_list
 
@@ -148,7 +144,8 @@ class BufferedNumpyDiskMap(object):
 
         array_id_list = list(self.array_cache)
 
-        n_workers = self.n_workers if self.n_workers <= len(array_id_list) else len(array_id_list)
+        n_workers = self.n_workers \
+            if self.n_workers <= len(array_id_list) else len(array_id_list)
         LOGGER.debug(f'N_WORKERS for flush: {n_workers}')
         if n_workers > 1:
             with multiprocessing.Pool(processes=self.n_workers) as pool:
@@ -197,13 +194,15 @@ class BufferedNumpyDiskMap(object):
         db_connection.close()
 
         if array_path is not None:
-            array_data = numpy.load(os.path.join(self.manager_directory, array_path[0]))
+            array_data = numpy.load(
+                os.path.join(self.manager_directory, array_path[0]))
         else:
             array_data = numpy.empty(
                 0, dtype=BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE)
 
         if len(self.array_cache[array_id]) > 0:
-            local_deque = collections.deque(_numpy_loads(x) for x in self.array_cache[array_id])
+            local_deque = collections.deque(
+                _numpy_loads(x) for x in self.array_cache[array_id])
             local_deque.append(array_data)
             array_data = numpy.concatenate(local_deque)
 
