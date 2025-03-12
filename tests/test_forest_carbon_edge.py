@@ -4,13 +4,70 @@ import tempfile
 import shutil
 import os
 
-from osgeo import gdal
+from osgeo import gdal, osr, ogr
 import numpy
+import pygeoprocessing
+from shapely.geometry import Polygon
 
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'forest_carbon_edge_effect')
+
+
+def make_simple_vector(path_to_shp):
+    """
+    Generate shapefile with one rectangular polygon
+    Args:
+        path_to_shp (str): path to target shapefile
+    Returns:
+        None
+    """
+    # (xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax), (xmin, ymin)
+    shapely_geometry_list = [
+        Polygon([(461251, 4923195), (461501, 4923195),
+                 (461501, 4923445), (461251, 4923445),
+                 (461251, 4923195)])
+    ]
+
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)
+    projection_wkt = srs.ExportToWkt()
+
+    vector_format = "ESRI Shapefile"
+    fields = {"id": ogr.OFTReal}
+    attribute_list = [{"id": 0}]
+
+    pygeoprocessing.shapely_geometry_to_vector(shapely_geometry_list,
+                                               path_to_shp, projection_wkt,
+                                               vector_format, fields,
+                                               attribute_list)
+
+
+def make_simple_raster(base_raster_path, array, nodata_val=-1):
+    """Create a raster on designated path.
+
+    Args:
+        base_raster_path (str): the raster path for the new raster.
+        array (array): numpy array to convert to tif.
+        nodata_val (int or None): for defining a raster's nodata value.
+
+    Returns:
+        None.
+
+    """
+
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)  # UTM Zone 10N
+    projection_wkt = srs.ExportToWkt()
+    # origin hand-picked for this epsg:
+    origin = (461261, 4923265)
+
+    pixel_size = (1, -1)
+
+    pygeoprocessing.numpy_array_to_raster(
+        array, nodata_val, pixel_size, origin, projection_wkt,
+        base_raster_path)
 
 
 class ForestCarbonEdgeTests(unittest.TestCase):
@@ -67,7 +124,6 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         actual_carbon_array = actual_carbon_band.ReadAsArray()
         self.assertTrue(numpy.allclose(expected_carbon_array, 
                                        actual_carbon_array))
-
 
     def test_carbon_dup_output(self):
         """Forest Carbon Edge: test for existing output overlap."""
@@ -229,6 +285,62 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         expected_message = 'The landcover raster '
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
+
+    def test_combine_carbon_maps(self):
+        """Test `combine_carbon_maps`"""
+        from natcap.invest.forest_carbon_edge_effect import combine_carbon_maps
+
+        # note that NODATA_VALUE = -1
+        carbon_arr1 = numpy.array([[7, 2, -1], [0, -2, -1]])
+        carbon_arr2 = numpy.array([[-1, 900, -1], [1, 20, 0]])
+
+        expected_output = numpy.array([[7, 902, -1], [1, 18, 0]])
+
+        actual_output = combine_carbon_maps(carbon_arr1, carbon_arr2)
+
+        numpy.testing.assert_allclose(actual_output, expected_output)
+
+    def test_aggregate_carbon_map(self):
+        """Test `_aggregate_carbon_map`"""
+        from natcap.invest.forest_carbon_edge_effect import \
+            _aggregate_carbon_map
+
+        aoi_vector_path = os.path.join(self.workspace_dir, "aoi.shp")
+        carbon_map_path = os.path.join(self.workspace_dir, "carbon.tif")
+        target_aggregate_vector_path = os.path.join(self.workspace_dir,
+                                                    "agg_carbon.shp")
+
+        # make data
+        make_simple_vector(aoi_vector_path)
+        carbon_array = numpy.array(([1, 2, 3], [4, 5, 6]))
+        make_simple_raster(carbon_map_path, carbon_array)
+
+        _aggregate_carbon_map(aoi_vector_path, carbon_map_path,
+                              target_aggregate_vector_path)
+
+        def _validate_fields(vector_path, field_name, expected_values):
+            """
+            Validate a field in the agg carbon results vector
+
+            Args:
+                vector path (str): path to shapefile
+                field_name (str): attribute field to check
+                expected values (list): list of expected values for field
+                error_msg (str): what to print if assertion fails
+
+            Returns:
+                None
+            """
+            with gdal.OpenEx(vector_path, gdal.OF_VECTOR | gdal.GA_Update) as ws_ds:
+                ws_layer = ws_ds.GetLayer()
+                actual_values = [ws_feat.GetField(field_name)
+                                 for ws_feat in ws_layer]
+                error_msg = f"Error with {field_name} in {vector_path}"
+                self.assertEqual(actual_values, expected_values, msg=error_msg)
+
+        _validate_fields(target_aggregate_vector_path, 'c_sum', [21])
+        _validate_fields(target_aggregate_vector_path, 'c_ha_mean', [3.36])
+
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
