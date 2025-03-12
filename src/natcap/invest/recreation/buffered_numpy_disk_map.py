@@ -122,8 +122,12 @@ class BufferedNumpyDiskMap(object):
                 array_subdirectory = array_filename[-6:-4]
                 array_directory = os.path.join(
                     self.manager_directory, array_subdirectory)
-                if not os.path.isdir(array_directory):
+                try:
+                    # multiple processes could be trying to make this dir
+                    # so use a try/except instead of checking for existence
                     os.mkdir(array_directory)
+                except FileExistsError:
+                    pass
                 array_path = os.path.join(array_directory, array_filename)
                 # save the file
                 array_data = numpy.concatenate(array_deque)
