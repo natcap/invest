@@ -1222,26 +1222,36 @@ def execute(args):
     see invest/scripts/recreation_server/launch_recserver.sh
     and invest/scripts/recreation_server/execute_recmodel_server.py
 
+    Example::
+
+        args = {
+            'hostname': '',
+            'port': 54322,
+            'max_allowable_query': 40_000_000,
+            'datasets': {
+                'flickr': {
+                    'raw_csv_point_data_path': 'photos_2005-2017_odlla.csv',
+                    'min_year': 2005,
+                    'max_year': 2017
+                },
+                'twitter': {
+                    'quadtree_pickle_filename': 'global_twitter_qt.pickle',
+                    'min_year': 2012,
+                    'max_year': 2022
+                }
+            }
+        }
+
     Args:
         args['hostname'] (string): hostname to host Pyro server.
         args['port'] (int/or string representation of int): port number to host
             Pyro entry point.
         args['cache_workspace'] (string): Path to a local, writeable, directory.
-            Avoid mounted volumes.
+            Avoid network-mounted volumes.
         args['max_allowable_query'] (int): the maximum number of points allowed
             within the bounding box of a query.
         args['datasets'] (dict): args for instantiating each RecModel server.
-            For example:
-            {
-                'flickr': {
-                    'raw_csv_point_data_path': 'photos_2005-2017_odlla.csv',
-                    'min_year': 2005,
-                    'max_year': 2017},
-                'twitter': {
-                'quadtree_pickle_filename': 'global_twitter_qt.pickle',
-                'min_year': 2012,
-                'max_year': 2022}
-            }
+            Keys should include 'flickr', 'twitter', or both.
 
     Returns:
         Never returns
