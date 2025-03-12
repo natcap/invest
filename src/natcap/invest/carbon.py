@@ -233,11 +233,6 @@ _INTERMEDIATE_BASE_FILES = {
     'c_dead_alt': 'c_dead_alt.tif',
 }
 
-_TMP_BASE_FILES = {
-    'aligned_lulc_bas_path': 'aligned_lulc_bas.tif',
-    'aligned_lulc_alt_path': 'aligned_lulc_alt.tif',
-}
-
 # -1.0 since carbon stocks are 0 or greater
 _CARBON_NODATA = -1.0
 
@@ -300,8 +295,7 @@ def execute(args):
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_TMP_BASE_FILES, output_dir)], file_suffix)
+         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),], file_suffix)
 
     if args['do_valuation'] and args['lulc_bas_year'] >= args['lulc_alt_year']:
         raise ValueError(
@@ -447,16 +441,6 @@ def execute(args):
         dependent_task_list=tasks_to_report,
         task_name='generate_report')
     graph.join()
-
-    for tmp_filename_key in _TMP_BASE_FILES:
-        try:
-            tmp_filename = file_registry[tmp_filename_key]
-            if os.path.exists(tmp_filename):
-                os.remove(tmp_filename)
-        except OSError as os_error:
-            LOGGER.warning(
-                "Can't remove temporary file: %s\nOriginal Exception:\n%s",
-                file_registry[tmp_filename_key], os_error)
 
 
 # element-wise sum function to pass to raster_map
