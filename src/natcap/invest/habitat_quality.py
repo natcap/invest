@@ -26,6 +26,9 @@ MISSING_THREAT_RASTER_MSG = gettext(
     "A threat raster for threats: {threat_list} was not found or it "
     "could not be opened by GDAL.")
 DUPLICATE_PATHS_MSG = gettext("Threat paths must be unique. Duplicates: ")
+MISSING_MAX_DIST_MSG = gettext(
+    "Maximum distance value is missing for threats: {threat_list}. "
+    "MAX_DIST must be a positive value.")
 
 MODEL_SPEC = {
     "model_id": "habitat_quality",
@@ -685,11 +688,12 @@ def execute(args):
                     ' calculation for this land cover.')
                 exit_landcover = True
                 break
-            # Check to make sure max_dist is greater than 0
-            if row['max_dist'] <= 0:
+            # Check to make sure max_dist exists and is greater than 0
+            if not row['max_dist'] or row['max_dist'] <= 0:
                 raise ValueError(
                     f"The max distance for threat: '{threat}' is less than"
-                    " or equal to 0. MAX_DIST should be a positive value.")
+                    " or equal to 0, or is missing."
+                    " MAX_DIST should be a positive value.")
 
             distance_raster_path = os.path.join(
                 intermediate_output_dir,
@@ -1189,6 +1193,7 @@ def validate(args, limit_to=None):
         bad_threat_paths = []
         duplicate_paths = []
         threat_path_list = []
+        missing_max_dist = []
         for lulc_key, lulc_arg in (('_c', 'lulc_cur_path'),
                                    ('_f', 'lulc_fut_path'),
                                    ('_b', 'lulc_bas_path')):
@@ -1220,6 +1225,11 @@ def validate(args, limit_to=None):
                             duplicate_paths.append(
                                 os.path.basename(threat_path))
 
+                    # check that `max_dist` value exists
+                    if not row['max_dist']:
+                        missing_max_dist.append(threat)
+
+
         if bad_threat_paths:
             validation_warnings.append((
                 ['threats_table_path'],
@@ -1231,6 +1241,15 @@ def validate(args, limit_to=None):
             validation_warnings.append((
                 ['threats_table_path'],
                 DUPLICATE_PATHS_MSG + str(duplicate_paths)))
+
+            if 'threats_table_path' not in invalid_keys:
+                invalid_keys.add('threats_table_path')
+
+        if missing_max_dist:
+            validation_warnings.append((
+                ['threats_table_path'],
+                MISSING_MAX_DIST_MSG.format(threat_list=set(missing_max_dist))
+            ))
 
             if 'threats_table_path' not in invalid_keys:
                 invalid_keys.add('threats_table_path')
