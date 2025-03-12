@@ -1,4 +1,4 @@
-FROM quay.io/pypa/manylinux_2_39_x86_64
+FROM quay.io/pypa/manylinux_2_34_x86_64
 
 RUN useradd runner
 RUN usermod -aG wheel runner
