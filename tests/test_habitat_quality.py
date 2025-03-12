@@ -802,6 +802,55 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertIn("max distance for threat: 'threat_1' is less",
                       str(cm.exception))
 
+    def test_habitat_quality_missing_max_dist(self):
+        """Habitat Quality: expected ValueError on missing max_dist."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'])
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        # create the threat CSV table
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                ',0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                'threat_2_f.tif\n')
+
+        with self.assertRaises(ValueError) as cm:
+            habitat_quality.execute(args)
+
+        self.assertIn("max distance for threat: 'threat_1' is less",
+                      str(cm.exception))
+
     def test_habitat_quality_invalid_decay_type(self):
         """Habitat Quality: expected ValueError on invalid decay type."""
         from natcap.invest import habitat_quality
