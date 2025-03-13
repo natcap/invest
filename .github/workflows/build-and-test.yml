@@ -65,103 +65,6 @@ jobs:
           # Skip line-too-long errors (D001)
           python -m doc8 --ignore D001 HISTORY.rst README_PYTHON.rst
 
-  build_wheels_linux:
-    name: Build ${{ matrix.baseimage }} wheels
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            baseimage: manylinux2014_x86_64
-            cibw_build: "*manylinux_x86_64"
-            arch: x86_64
-          - os: ubuntu-latest
-            baseimage: musllinux_1_2_x86_64
-            cibw_build: "*musllinux_x86_64"
-            arch: x86_64
-          - os: ubuntu-24.04-arm
-            baseimage: manylinux2014_aarch64
-            cibw_build: "*manylinux_aarch64"
-            arch: aarch64
-          - os: ubuntu-24.04-arm
-            baseimage: musllinux_1_2_aarch64
-            cibw_build: "*musllinux_aarch64"
-            arch: aarch64
-    env:
-      basetag: 2024.08.12-1
-      GEOS_VERSION: "3.13.1"
-
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          install: true
-          buildkitd-flags: --debug
-
-      - name: Build Docker image with GEOS
-        # using build-push-action (without push) to make use of cache arguments
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: .github/workflows/Dockerfile
-          platforms: linux/${{ matrix.arch }}
-          tags: ${{ matrix.baseimage }}_geos:${{ env.GEOS_VERSION }}
-          build-args: |
-            BASEIMAGE=quay.io/pypa/${{ matrix.baseimage }}:${{ env.basetag }}
-            GEOS_VERSION=${{ env.GEOS_VERSION }}
-          push: false
-          load: true
-          cache-from: type=gha,scope=${{ matrix.baseimage }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.baseimage }}
-        env:
-          BUILDKIT_PROGRESS: plain
-
-      # - name: Add GEOS LICENSE
-      #   run: cp ci/wheelbuilder/LICENSE_GEOS .
-      #   shell: bash
-
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.0
-        env:
-          CIBW_ARCHS: ${{ matrix.arch }}
-          # TEMP don't use automated/isolated build environment, but manually
-          # install build dependencies so we can build with cython 3.1.0a0
-          # once Cython has an official release that supports free threading we can remove this
-          CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
-          CIBW_BEFORE_BUILD: |
-            yum search *gdal*
-            yum install -y gdal gdal-devel
-            rpm -ql gdal
-            echo $PATH
-            which gdalinfo
-            which gdal-config
-
-            # For free threading support in Cython install a pre-release version of Cython
-            python -c "import sysconfig, subprocess; subprocess.check_call(['pip', 'install', '--pre', 'cython'] if sysconfig.get_config_var('Py_GIL_DISABLED') else ['pip', 'install', 'cython'])" &&
-            pip install numpy setuptools wheel gdal
-
-          CIBW_BUILD: ${{ matrix.cibw_build }}
-          CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.baseimage }}_geos:${{ env.GEOS_VERSION }}
-          CIBW_MUSLLINUX_X86_64_IMAGE: ${{ matrix.baseimage }}_geos:${{ env.GEOS_VERSION }}
-          CIBW_MANYLINUX_AARCH64_IMAGE: ${{ matrix.baseimage }}_geos:${{ env.GEOS_VERSION }}
-          CIBW_MUSLLINUX_AARCH64_IMAGE: ${{ matrix.baseimage }}_geos:${{ env.GEOS_VERSION }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-linux-${{ matrix.baseimage }}
-          path: ./wheelhouse/*.whl
-          retention-days: 30
-          compression-level: 0
-
-
   run-model-tests:
     name: Run model tests
     runs-on: ${{ matrix.os }}
@@ -225,48 +128,48 @@ jobs:
           name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
           path: ./conda-env-artifact
 
-      - name: Build docker image
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          # set up the directory to mount
-          # this will be used to access the wheel outside of the container
-          mkdir ${{ github.workspace }}/dist
-          chmod +777 ${{ github.workspace }}/dist
-          docker build --progress plain -t manylinux -f .github/workflows/manylinux/Dockerfile .
+      # - name: Build docker image
+      #   if: matrix.os == 'ubuntu-latest'
+      #   run: |
+      #     # set up the directory to mount
+      #     # this will be used to access the wheel outside of the container
+      #     mkdir ${{ github.workspace }}/dist
+      #     chmod +777 ${{ github.workspace }}/dist
+      #     docker build --progress plain -t manylinux -f .github/workflows/manylinux/Dockerfile .
 
-      - name: Build manylinux wheel
-        if: matrix.os == 'ubuntu-latest'
-        uses: addnab/docker-run-action@v3
-        with:
-          image: manylinux
-          options: -v ${{ github.workspace }}/dist:/home/runner/invest/dist
-          run: |
-            # install micromamba
-            "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
-            source ~/.bashrc
+      # - name: Build manylinux wheel
+      #   if: matrix.os == 'ubuntu-latest'
+      #   uses: addnab/docker-run-action@v3
+      #   with:
+      #     image: manylinux
+      #     options: -v ${{ github.workspace }}/dist:/home/runner/invest/dist
+      #     run: |
+      #       # install micromamba
+      #       "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
+      #       source ~/.bashrc
 
-            # set up conda environment for build
-            echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs -n 1 > extra_requirements.txt
-            /opt/python/${{ matrix.python-tag }}/bin/python ./scripts/convert-requirements-to-conda-yml.py \
-              extra_requirements.txt requirements.txt requirements-dev.txt constraints_tests.txt \
-            > environment.yml
-            cat environment.yml
+      #       # set up conda environment for build
+      #       echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs -n 1 > extra_requirements.txt
+      #       /opt/python/${{ matrix.python-tag }}/bin/python ./scripts/convert-requirements-to-conda-yml.py \
+      #         extra_requirements.txt requirements.txt requirements-dev.txt constraints_tests.txt \
+      #       > environment.yml
+      #       cat environment.yml
 
-            micromamba env create -y -n env -f environment.yml
-            micromamba activate env
+      #       micromamba env create -y -n env -f environment.yml
+      #       micromamba activate env
 
-            # Compare conda environments
-            micromamba list > conda-env.txt
-            # make sure that the exit code is always 0
-            # otherwise, an error appears in the action annotations
-            diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
+      #       # Compare conda environments
+      #       micromamba list > conda-env.txt
+      #       # make sure that the exit code is always 0
+      #       # otherwise, an error appears in the action annotations
+      #       diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
-            # Build, audit and repair wheel
-            /opt/python/${{ matrix.python-tag }}/bin/python -m build --wheel
-            WHEEL=$(find dist -name "natcap[._-]invest*.whl")
-            auditwheel show $WHEEL
-            auditwheel repair $WHEEL --plat manylinux_2_39_x86_64 -w dist
-            rm $WHEEL  # remove the original wheel
+      #       # Build, audit and repair wheel
+      #       /opt/python/${{ matrix.python-tag }}/bin/python -m build --wheel
+      #       WHEEL=$(find dist -name "natcap[._-]invest*.whl")
+      #       auditwheel show $WHEEL
+      #       auditwheel repair $WHEEL --plat manylinux_2_39_x86_64 -w dist
+      #       rm $WHEEL  # remove the original wheel
 
       - name: Compare conda environments
         if: matrix.os != 'ubuntu-latest'
@@ -277,12 +180,19 @@ jobs:
           diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
       - name: Build wheel
-        if: matrix.os != 'ubuntu-latest'
         run: |
           # uninstall InVEST if it was already in the restored cache
           python -m pip uninstall -y natcap.invest
           NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --wheel
           ls -la dist
+
+      - name: Audit and repair wheel for manylinux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          WHEEL=$(find dist -name "natcap[._-]invest*.whl")
+          auditwheel show $WHEEL
+          auditwheel repair $WHEEL --plat manylinux_2_39_x86_64 -w dist
+          rm $WHEEL  # remove the original wheel
 
       - name: Install wheel and run model tests
         run: |
