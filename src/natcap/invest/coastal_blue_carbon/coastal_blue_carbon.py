@@ -161,6 +161,7 @@ INTERMEDIATE_DIR_NAME = 'intermediate'
 OUTPUT_DIR_NAME = 'output'
 
 MODEL_SPEC = {
+    "model_id": "coastal_blue_carbon",
     "model_name": MODEL_METADATA["coastal_blue_carbon"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon"].pyname,
     "userguide": MODEL_METADATA["coastal_blue_carbon"].userguide,

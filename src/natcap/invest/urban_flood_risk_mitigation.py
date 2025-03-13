@@ -23,6 +23,7 @@ from .unit_registry import u
 LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
+    "model_id": "urban_flood_risk_mitigation",
     "model_name": MODEL_METADATA["urban_flood_risk_mitigation"].model_title,
     "pyname": MODEL_METADATA["urban_flood_risk_mitigation"].pyname,
     "userguide": MODEL_METADATA["urban_flood_risk_mitigation"].userguide,
