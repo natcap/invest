@@ -189,6 +189,7 @@ jobs:
       - name: Audit and repair wheel for manylinux
         if: matrix.os == 'ubuntu-latest'
         run: |
+          pip install auditwheel
           WHEEL=$(find dist -name "natcap[._-]invest*.whl")
           auditwheel show $WHEEL
           auditwheel repair $WHEEL --plat manylinux_2_39_x86_64 -w dist
