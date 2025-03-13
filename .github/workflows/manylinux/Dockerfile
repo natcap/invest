@@ -15,14 +15,14 @@ RUN tar -xvzf git-lfs-linux-amd64-$GIT_LFS_VERSION.tar.gz
 RUN rm git-lfs-linux-amd64-$GIT_LFS_VERSION.tar.gz
 RUN cd git-lfs-* && ./install.sh
 
-# ARG GDAL_VERSION=3.10.2
-# RUN curl -LO https://github.com/OSGeo/gdal/releases/download/v$GDAL_VERSION/gdal-$GDAL_VERSION.tar.gz
-# RUN tar -xvzf gdal-$GDAL_VERSION.tar.gz
-# RUN rm gdal-$GDAL_VERSION.tar.gz
-# RUN cd gdal-$GDAL_VERSION && \
-#     mkdir build && cd build && \
-#     cmake .. && \
-#     cmake --build . && \
-#     cmake --build . --target install
+ARG GDAL_VERSION=3.10.2
+RUN curl -LO https://github.com/OSGeo/gdal/releases/download/v$GDAL_VERSION/gdal-$GDAL_VERSION.tar.gz
+RUN tar -xvzf gdal-$GDAL_VERSION.tar.gz
+RUN rm gdal-$GDAL_VERSION.tar.gz
+RUN cd gdal-$GDAL_VERSION && \
+    mkdir build && cd build && \
+    cmake .. && \
+    cmake --build . && \
+    cmake --build . --target install
 
 USER runner

@@ -139,6 +139,7 @@ jobs:
             # For free threading support in Cython install a pre-release version of Cython
             python -c "import sysconfig, subprocess; subprocess.check_call(['pip', 'install', '--pre', 'cython'] if sysconfig.get_config_var('Py_GIL_DISABLED') else ['pip', 'install', 'cython'])" &&
             pip install numpy setuptools wheel
+            yum install -y gdal
           CIBW_BUILD: ${{ matrix.cibw_build }}
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.baseimage }}_geos:${{ env.GEOS_VERSION }}
           CIBW_MUSLLINUX_X86_64_IMAGE: ${{ matrix.baseimage }}_geos:${{ env.GEOS_VERSION }}
