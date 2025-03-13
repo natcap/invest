@@ -68,27 +68,22 @@ const UI_SPEC = {
   carbon: {
     order: [
       ['workspace_dir', 'results_suffix'],
-      ['lulc_cur_path', 'carbon_pools_path'],
-      ['calc_sequestration', 'lulc_fut_path'],
-      ['do_redd', 'lulc_redd_path'],
+      ['lulc_bas_path', 'carbon_pools_path'],
+      ['calc_sequestration', 'lulc_alt_path'],
       [
         'do_valuation',
-        'lulc_cur_year',
-        'lulc_fut_year',
+        'lulc_bas_year',
+        'lulc_alt_year',
         'price_per_metric_ton_of_c',
         'discount_rate',
         'rate_change',
       ],
     ],
     enabledFunctions: {
-      lulc_fut_path: isSufficient.bind(null, 'calc_sequestration'),
-
-      do_redd: isSufficient.bind(null, 'calc_sequestration'),
-      lulc_redd_path: isSufficient.bind(null, 'do_redd'),
-
+      lulc_alt_path: isSufficient.bind(null, 'calc_sequestration'),
       do_valuation: isSufficient.bind(null, 'calc_sequestration'),
-      lulc_cur_year: isSufficient.bind(null, 'do_valuation'),
-      lulc_fut_year: isSufficient.bind(null, 'do_valuation'),
+      lulc_bas_year: isSufficient.bind(null, 'do_valuation'),
+      lulc_alt_year: isSufficient.bind(null, 'do_valuation'),
       price_per_metric_ton_of_c: isSufficient.bind(null, 'do_valuation'),
       discount_rate: isSufficient.bind(null, 'do_valuation'),
       rate_change: isSufficient.bind(null, 'do_valuation'),
