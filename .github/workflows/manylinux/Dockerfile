@@ -5,7 +5,7 @@ RUN usermod -aG wheel runner
 RUN yum install -y sudo jq proj
 WORKDIR /home/runner/invest
 
-# COPY ../../../.. .
+COPY ../../../.. .
 RUN chown -R runner /home/runner
 
 # Install the latest release of git lfs
