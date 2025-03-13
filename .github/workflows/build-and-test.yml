@@ -137,6 +137,11 @@ jobs:
           CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
           CIBW_BEFORE_BUILD: |
             yum install -y gdal
+            rpm -ql gdal
+            echo $PATH
+            which gdalinfo
+            which gdal-config
+
             # For free threading support in Cython install a pre-release version of Cython
             python -c "import sysconfig, subprocess; subprocess.check_call(['pip', 'install', '--pre', 'cython'] if sysconfig.get_config_var('Py_GIL_DISABLED') else ['pip', 'install', 'cython'])" &&
             pip install numpy setuptools wheel gdal
