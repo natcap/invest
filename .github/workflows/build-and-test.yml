@@ -265,7 +265,7 @@ jobs:
             /opt/python/${{ matrix.python-tag }}/bin/python -m build --wheel
             WHEEL=$(find dist -name "natcap[._-]invest*.whl")
             auditwheel show $WHEEL
-            auditwheel repair $WHEEL --plat manylinux_2_34_x86_64 -w dist
+            auditwheel repair $WHEEL --plat manylinux_2_39_x86_64 -w dist
             rm $WHEEL  # remove the original wheel
 
       - name: Compare conda environments
