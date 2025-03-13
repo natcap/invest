@@ -90,6 +90,7 @@ jobs:
             arch: aarch64
     env:
       basetag: 2024.08.12-1
+      GEOS_VERSION: "3.13.1"
 
     steps:
       - name: Checkout source
