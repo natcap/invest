@@ -1248,8 +1248,8 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path,
         value_mean = value_sum
         if value_count > 0:
             value_mean /= value_count
-        LOGGER.info("Normalizing runoff proxy using auto-calculated mean: "
-                    f"{value_mean}")
+        LOGGER.info(f"Normalizing raster ({base_raster_path_band[0]}) using "
+                    f"auto-calculated mean: {value_mean}")
     else:
         value_mean = user_provided_mean
 
