@@ -103,6 +103,10 @@ Unreleased Changes
     * Raster outputs that previously contained per-pixel values (e.g., kg/pixel)
       now contain per-hectare values (e.g., kg/ha). (`InVEST #1270
       <https://github.com/natcap/invest/issues/1270>`_).
+    * Made the runoff proxy index calculation more robust by allowing users to
+      specify the average runoff proxy, preventing normalization issues across
+      different climate scenarios and watershed selections.
+      https://github.com/natcap/invest/issues/1741
 * SDR
     * Raster outputs that previously contained per-pixel values (e.g., t/pixel)
       now contain per-hectare values (e.g., t/ha). (`InVEST #1270
