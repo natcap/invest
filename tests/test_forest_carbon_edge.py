@@ -6,6 +6,7 @@ import os
 
 from osgeo import gdal, osr, ogr
 import numpy
+import pandas
 import pygeoprocessing
 from shapely.geometry import Polygon
 
@@ -307,8 +308,8 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
         aoi_vector_path = os.path.join(self.workspace_dir, "aoi.shp")
         carbon_map_path = os.path.join(self.workspace_dir, "carbon.tif")
-        target_aggregate_vector_path = os.path.join(self.workspace_dir,
-                                                    "agg_carbon.shp")
+        target_vector_path = os.path.join(self.workspace_dir,
+                                          "agg_carbon.shp")
 
         # make data
         make_simple_vector(aoi_vector_path)
@@ -316,30 +317,124 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         make_simple_raster(carbon_map_path, carbon_array)
 
         _aggregate_carbon_map(aoi_vector_path, carbon_map_path,
-                              target_aggregate_vector_path)
+                              target_vector_path)
 
-        def _validate_fields(vector_path, field_name, expected_values):
-            """
-            Validate a field in the agg carbon results vector
-
-            Args:
-                vector path (str): path to shapefile
-                field_name (str): attribute field to check
-                expected values (list): list of expected values for field
-                error_msg (str): what to print if assertion fails
-
-            Returns:
-                None
-            """
-            with gdal.OpenEx(vector_path, gdal.OF_VECTOR | gdal.GA_Update) as ws_ds:
-                ws_layer = ws_ds.GetLayer()
+        # Validate fields in the agg carbon results vector
+        with gdal.OpenEx(target_vector_path,
+                         gdal.OF_VECTOR | gdal.GA_Update) as ws_ds:
+            ws_layer = ws_ds.GetLayer()
+            for field_name, expected_value in zip(['c_sum', 'c_ha_mean'],
+                                                  [21., 3.36]):
                 actual_values = [ws_feat.GetField(field_name)
-                                 for ws_feat in ws_layer]
-                error_msg = f"Error with {field_name} in {vector_path}"
-                self.assertEqual(actual_values, expected_values, msg=error_msg)
+                                 for ws_feat in ws_layer][0]
+                error_msg = f"Error with {field_name} in agg_carbon.shp"
+                self.assertEqual(actual_values, expected_value, msg=error_msg)
 
-        _validate_fields(target_aggregate_vector_path, 'c_sum', [21])
-        _validate_fields(target_aggregate_vector_path, 'c_ha_mean', [3.36])
+    def test_calculate_lulc_carbon_map(self):
+        """Test `_calculate_lulc_carbon_map`"""
+        from natcap.invest.forest_carbon_edge_effect import \
+            _calculate_lulc_carbon_map
+
+        # Make synthetic data
+        lulc_raster_path = os.path.join(self.workspace_dir, "lulc.tif")
+        lulc_array = numpy.array([[1, 2, 3], [3, 2, 1]], dtype=numpy.int16)
+        make_simple_raster(lulc_raster_path, lulc_array)
+
+        biophysical_table_path = os.path.join(self.workspace_dir,
+                                              "biophysical_table.csv")
+
+        data = {"lucode": [1, 2, 3]}
+        df = pandas.DataFrame(data).set_index("lucode")
+        df["is_tropical_forest"] = [0, 1, 0]
+        df["c_above"] = [100, 500, 200]
+        df.to_csv(biophysical_table_path)
+
+        carbon_pool_type = 'c_above'
+        ignore_tropical_type = False
+        compute_forest_edge_effects = True
+        carbon_map_path = os.path.join(self.workspace_dir, "output_carbon.tif")
+
+        _calculate_lulc_carbon_map(
+            lulc_raster_path, biophysical_table_path, carbon_pool_type,
+            ignore_tropical_type, compute_forest_edge_effects,
+            carbon_map_path)
+
+        actual_output = pygeoprocessing.raster_to_numpy_array(carbon_map_path)
+        expected_output = numpy.array([[0.01, 0.05, 0.02], [0.02, 0.05, 0.01]])
+        numpy.testing.assert_allclose(actual_output, expected_output)
+
+    def test_map_distance_from_tropical_forest_edge(self):
+        """Test `_map_distance_from_tropical_forest_edge`"""
+        from natcap.invest.forest_carbon_edge_effect import \
+            _map_distance_from_tropical_forest_edge
+
+        # Make synthetic data
+        base_lulc_raster_path = os.path.join(self.workspace_dir, "lulc.tif")
+        lulc_array = numpy.array([
+            [2, 2, 3, 3, 3, 2, 2],
+            [2, 1, 1, 1, 1, 1, 2],
+            [3, 1, 1, 1, 1, 1, 3],
+            [2, 1, 1, 1, 1, 1, 2],
+            [2, 2, 3, 3, 3, 2, 2]
+        ], dtype=numpy.int16)
+        make_simple_raster(base_lulc_raster_path, lulc_array)
+
+        biophysical_table_path = os.path.join(self.workspace_dir,
+                                              "biophysical_table.csv")
+
+        data = {"lucode": [1, 2, 3]}
+        df = pandas.DataFrame(data).set_index("lucode")
+        df["is_tropical_forest"] = [1, 0, 0]
+        df["c_above"] = [100, 500, 200]
+        df.to_csv(biophysical_table_path)
+
+        target_edge_distance_path = os.path.join(self.workspace_dir,
+                                                 "edge_distance.tif")
+        target_mask_path = os.path.join(self.workspace_dir,
+                                        "non_forest_mask.tif")
+
+        _map_distance_from_tropical_forest_edge(
+            base_lulc_raster_path, biophysical_table_path,
+            target_edge_distance_path, target_mask_path)
+
+        # check forest mask
+        actual_output = pygeoprocessing.raster_to_numpy_array(target_mask_path)
+        expected_output = numpy.array([
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1]
+        ], dtype=numpy.int16)
+        numpy.testing.assert_allclose(actual_output, expected_output)
+
+        # check edge distance map
+        actual_output = pygeoprocessing.raster_to_numpy_array(
+            target_edge_distance_path)
+        expected_output = numpy.array([
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 1, 1, 0],
+            [0, 1, 2, 2, 2, 1, 0],
+            [0, 1, 1, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0]
+        ], dtype=numpy.int16)
+        numpy.testing.assert_allclose(actual_output, expected_output)
+
+    def test_build_spatial_index(self):
+        """Test `build_spatial_index`"""
+        from natcap.invest.forest_carbon_edge_effect import _build_spatial_index
+
+        base_raster_path = os.path.join(self.workspace_dir, "base.tif")
+        local_model_dir = os.path.join(self.workspace_dir, "model")
+        tropical_forest_edge_carbon_model_vector_path = os.path.join(
+            self.workspace_dir, "params.shp")
+        target_spatial_index_pickle_path = os.path.join(
+            self.workspace_dir, "index.pkl")
+
+        _build_spatial_index(
+            base_raster_path, local_model_dir,
+            tropical_forest_edge_carbon_model_vector_path,
+            target_spatial_index_pickle_path)
 
 
     @staticmethod
