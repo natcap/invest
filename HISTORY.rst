@@ -116,6 +116,16 @@ Unreleased Changes
     * Fixed bug in the calculation of Cooling Capacity (CC) provided by parks,
       where the CC Index was not being properly incorporated.
       https://github.com/natcap/invest/issues/1726
+* Visitation: Recreation and Tourism
+    * Added a database of geotagged tweets to support calculating
+      twitter-user-days (TUD) as proxy for vistation rates. The model now calculates
+      photo-user-days (PUD) and TUD and uses their average as the response
+      variable in the regression model. Please refer to the User's Guide for
+      more details on the regression model.
+    * Output data were updated to support the new TUD results, and vector outputs
+      are now in GeoPackage format instead of ESRI Shapefile.
+    * Regression coefficients are still listed in a summary text file, and are now
+      also included in a tabular output: "regression_coefficients.csv".
 * Wind Energy
     * Fixed a bug that could cause the Workbench to crash when running the Wind
       Energy model with ``Taskgraph`` logging set to ``DEBUG`` (`InVEST #1497
