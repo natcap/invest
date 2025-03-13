@@ -69,14 +69,11 @@ Highlights
   to this update, these rasters reported **per-pixel** values. This change
   affects the following models:
 
-  * Carbon Storage and Sequestration
-  * Crop Production (both Percentile and Regression)
+  * Carbon
+  * Crop Production
   * Forest Carbon Edge Effect
   * NDR
   * SDR
-* Metadata (details forthcoming)
-* Routing (details forthcoming)
-* Rec model (details forthcoming)
 
 General
 =======
@@ -89,9 +86,15 @@ General
 * All InVEST model output data now include metadata sidecar files.
   These are '.yml' files with the same basename as the dataset they
   describe. https://github.com/natcap/invest/issues/1662
-* InVEST's windows binaries are now distributed once again with a valid
+* InVEST's Windows binaries are now distributed once again with a valid
   signature, signed by Stanford University.
   https://github.com/natcap/invest/issues/1580
+* InVEST's macOS disk image is now distributed once again with a valid
+  signature, signed by Stanford University.
+  https://github.com/natcap/invest/issues/1784
+* The natcap.invest python package now officially supports linux.
+  manylinux wheels will be available on PyPI.
+  (`#1730 <https://github.com/natcap/invest/issues/1730>`_)
 
 Workbench
 =========
@@ -154,6 +157,10 @@ NDR
 * Raster outputs that previously contained per-pixel values (e.g., kg/pixel)
   now contain per-hectare values (e.g., kg/ha). (`InVEST #1270
   <https://github.com/natcap/invest/issues/1270>`_).
+* Made the runoff proxy index calculation more robust by allowing users to
+  specify the average runoff proxy, preventing normalization issues across
+  different climate scenarios and watershed selections.
+  https://github.com/natcap/invest/issues/1741
 
 SDR
 ===
