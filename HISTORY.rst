@@ -103,10 +103,17 @@ Unreleased Changes
     * Raster outputs that previously contained per-pixel values (e.g., kg/pixel)
       now contain per-hectare values (e.g., kg/ha). (`InVEST #1270
       <https://github.com/natcap/invest/issues/1270>`_).
+    * D8 routing is now supported in addition to MFD
+      (`#1440 <https://github.com/natcap/invest/issues/1440>`_).
 * SDR
     * Raster outputs that previously contained per-pixel values (e.g., t/pixel)
       now contain per-hectare values (e.g., t/ha). (`InVEST #1270
       <https://github.com/natcap/invest/issues/1270>`_).
+    * D8 routing is now supported in addition to MFD
+      (`#1440 <https://github.com/natcap/invest/issues/1440>`_).
+* Seasonal Water Yield
+    * D8 routing is now supported in addition to MFD
+      (`#1440 <https://github.com/natcap/invest/issues/1440>`_).
 * Urban Cooling
     * Align rasters to the grid of the LULC raster, rather than the ET0 raster
       (`#1488 <https://github.com/natcap/invest/issues/1488>`_).
