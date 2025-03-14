@@ -77,21 +77,10 @@ jobs:
         include:
           - os: ubuntu-latest
             python-version: 3.9
-            python-tag: cp39-cp39
             platform-specific-dependencies: libxcrypt
           - os: ubuntu-latest
             python-version: "3.10"
-            python-tag: cp310-cp310
             platform-specific-dependencies: libxcrypt
-          - os: ubuntu-latest
-            python-version: "3.11"
-            python-tag: cp311-cp311
-          - os: ubuntu-latest
-            python-version: "3.12"
-            python-tag: cp312-cp312
-          - os: ubuntu-latest
-            python-version: "3.13"
-            python-tag: cp313-cp313
     steps:
       - uses: actions/checkout@v4
         with:
