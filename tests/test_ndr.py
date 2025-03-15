@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 import numpy
+import pandas
 import pygeoprocessing
 import shapely.geometry
 from osgeo import gdal
@@ -491,3 +492,48 @@ class NDRTests(unittest.TestCase):
         numpy.testing.assert_array_equal(
             expected_array,
             pygeoprocessing.raster_to_numpy_array(target_raster_path))
+
+    def test_synthetic_runoff_proxy_av(self):
+        """
+        Test RPI given user-entered or auto-calculated runoff proxy average.
+
+        Test that the runoff proxy index (RPI) is calculated correctly if
+        (1) the user specifies a runoff proxy average value,
+        (2) the user does not specify a value so the runoff proxy average
+            is auto-calculated.
+        """
+        from natcap.invest.ndr import ndr
+
+        # make simple raster
+        runoff_proxy_path = os.path.join(self.workspace_dir, "ppt.tif")
+        runoff_proxy_array = numpy.array(
+            [[800, 799, 567, 234], [765, 867, 765, 654]], dtype=numpy.float32)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        projection_wkt = srs.ExportToWkt()
+        origin = (461251, 4923445)
+        pixel_size = (30, -30)
+        no_data = -1
+        pygeoprocessing.numpy_array_to_raster(
+            runoff_proxy_array, no_data, pixel_size, origin, projection_wkt,
+            runoff_proxy_path)
+        target_rpi_path = os.path.join(self.workspace_dir, "out_raster.tif")
+
+        # Calculate RPI with user-specified runoff proxy average
+        runoff_proxy_av = 2
+        ndr._normalize_raster((runoff_proxy_path, 1), target_rpi_path,
+                              user_provided_mean=runoff_proxy_av)
+
+        actual_rpi = pygeoprocessing.raster_to_numpy_array(target_rpi_path)
+        expected_rpi = runoff_proxy_array/runoff_proxy_av
+
+        numpy.testing.assert_allclose(actual_rpi, expected_rpi)
+
+        # Now calculate RPI with auto-calculated RP average
+        ndr._normalize_raster((runoff_proxy_path, 1), target_rpi_path,
+                              user_provided_mean=None)
+
+        actual_rpi = pygeoprocessing.raster_to_numpy_array(target_rpi_path)
+        expected_rpi = runoff_proxy_array/numpy.mean(runoff_proxy_array)
+
+        numpy.testing.assert_allclose(actual_rpi, expected_rpi)
