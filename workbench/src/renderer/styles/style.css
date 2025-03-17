@@ -670,3 +670,7 @@ input[type=text]::placeholder {
     background-size: 1rem 1rem;
   }
 }
+
+code {
+  color: inherit;
+}
