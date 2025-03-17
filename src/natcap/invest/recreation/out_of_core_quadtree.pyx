@@ -36,7 +36,7 @@ class OutOfCoreQuadTree(object):
     def __init__(
             self, bounding_box, max_points_per_node, max_node_depth,
             quad_tree_storage_dir, node_depth=0, node_data_manager=None,
-            pickle_filename=None):
+            pickle_filename=None, n_workers=1):
         """Make a new quadtree node with a given initial_bounding_box range.
 
         Args:
@@ -51,6 +51,8 @@ class OutOfCoreQuadTree(object):
                 to store the node data across the entire quadtree
             pickle_filename (string): name of file on disk which to pickle the
                 tree to during a flush
+            n_workers (int): if great than 1, number of child processes to
+                use during flushes to disk
 
         Returns:
             None
@@ -66,7 +68,8 @@ class OutOfCoreQuadTree(object):
         if node_data_manager is None:
             self.node_data_manager = (
                 buffered_numpy_disk_map.BufferedNumpyDiskMap(
-                    pickle_filename+'.db', MAX_BYTES_TO_BUFFER))
+                    pickle_filename+'.db', MAX_BYTES_TO_BUFFER,
+                    n_workers=n_workers))
         else:
             self.node_data_manager = node_data_manager
 
@@ -263,7 +266,7 @@ class OutOfCoreQuadTree(object):
         return sum([self.nodes[index].n_nodes() for index in xrange(4)]) + 1
 
     def n_points(self):
-        """Return the number of nodes in the quadtree"""
+        """Return the number of points in the quadtree"""
         if self.is_leaf:
             return self.n_points_in_node
         return sum([self.nodes[index].n_points() for index in xrange(4)])
@@ -344,6 +347,25 @@ class OutOfCoreQuadTree(object):
                     self.nodes[node_index].get_intersecting_points_in_bounding_box(
                         bounding_box), point_list))
             return point_list
+
+    def estimate_points_in_bounding_box(self, bounding_box):
+        """Count points in nodes intersecting a bounding_box.
+
+        Args:
+            bounding_box (list): of the form [xmin, ymin, xmax, ymax]
+
+        Returns:
+            int
+
+        """
+        if not self._bounding_box_intersect(bounding_box):
+            return 0
+        if self.is_leaf:
+            return self.n_points_in_node
+        else:
+            return sum([
+                self.nodes[index].estimate_points_in_bounding_box(bounding_box)
+                for index in xrange(4)])
 
 
 cdef _sort_list_to_quads(
