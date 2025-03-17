@@ -28,6 +28,7 @@ MISSING_THREAT_RASTER_MSG = gettext(
 DUPLICATE_PATHS_MSG = gettext("Threat paths must be unique. Duplicates: ")
 
 MODEL_SPEC = {
+    "model_id": "habitat_quality",
     "model_name": MODEL_METADATA["habitat_quality"].model_title,
     "pyname": MODEL_METADATA["habitat_quality"].pyname,
     "userguide": MODEL_METADATA["habitat_quality"].userguide,
@@ -83,7 +84,7 @@ MODEL_SPEC = {
                         "corresponding column in the Sensitivity table.")},
                 "max_dist": {
                     "type": "number",
-                    "units": u.kilometer,
+                    "units": u.meter,
                     "about": gettext(
                         "The maximum distance over which each threat affects "
                         "habitat quality. The impact of each degradation "
@@ -172,9 +173,9 @@ MODEL_SPEC = {
         },
         "sensitivity_table_path": {
             "type": "csv",
-            "index_col": "lulc",
+            "index_col": "lucode",
             "columns": {
-                "lulc": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "name": {
                     "type": "freestyle_string",
                     "required": False
@@ -282,9 +283,9 @@ MODEL_SPEC = {
                 "rarity_c.csv": {
                     "about": ("Table of rarity values by LULC code for the "
                               "current landscape."),
-                    "index_col": "lulc_code",
+                    "index_col": "lucode",
                     "columns": {
-                        "lulc_code": {
+                        "lucode": {
                             "type": "number",
                             "units": u.none,
                             "about": "LULC class",
@@ -314,9 +315,9 @@ MODEL_SPEC = {
                 "rarity_f.csv": {
                     "about": ("Table of rarity values by LULC code for the "
                               "future landscape."),
-                    "index_col": "lulc_code",
+                    "index_col": "lucode",
                     "columns": {
-                        "lulc_code": {
+                        "lucode": {
                             "type": "number",
                             "units": u.none,
                             "about": "LULC class",
@@ -1009,7 +1010,7 @@ def _generate_rarity_csv(rarity_dict, target_csv_path):
     lulc_codes = sorted(rarity_dict)
     with open(target_csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(['lulc_code', 'rarity_value'])
+        writer.writerow(['lucode', 'rarity_value'])
         for lulc_code in lulc_codes:
             writer.writerow([lulc_code, rarity_dict[lulc_code]])
 
@@ -1078,7 +1079,7 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
         dist_raster_path (string): a filepath for the raster to decay.
             The raster is expected to be a euclidean distance transform with
             values measuring distance in pixels.
-        max_dist (float): max distance of threat in KM.
+        max_dist (float): max distance of threat in meters.
         decay_type (string): a string defining which decay method to use.
             Options include: 'linear' | 'exponential'.
         target_path (string): a filepath for a float output raster.
@@ -1090,12 +1091,9 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
     threat_pixel_size = pygeoprocessing.get_raster_info(
         dist_raster_path)['pixel_size']
 
-    # convert max distance (given in KM) to meters
-    max_dist_m = max_dist * 1000
-
     # convert max distance from meters to the number of pixels that
     # represents on the raster
-    max_dist_pixel = max_dist_m / abs(threat_pixel_size[0])
+    max_dist_pixel = max_dist / abs(threat_pixel_size[0])
     LOGGER.debug(f'Max distance in pixels: {max_dist_pixel}')
 
     def linear_op(dist):
