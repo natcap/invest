@@ -149,6 +149,11 @@ Habitat Quality
 * The model now expects the maximum threat distance (``max_dist`` in the
   threats table) to be specified in ``m`` instead of ``km`` (`InVEST #1252
   <https://github.com/natcap/invest/issues/1252>`_).
+* Adjusted total habitat degradation calculation to calculate degradation
+  for each threat and create intermediate degradation rasters. Total
+  degradation is now calculated using these individual threat degradation
+  rasters.
+  https://github.com/natcap/invest/issues/1100
 
 NDR
 ===
