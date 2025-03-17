@@ -897,25 +897,8 @@ def _calculate_total_degradation(indiv_deg_raster_list, deg_sum_raster_path):
     Returns:
         None
     """
-    def total_degradation(*arrays):
-        """Computes the total degradation value.
-
-        Args:
-            *raster (list): a list of numpy arrays of float type depicting
-                the adjusted threat value per pixel based on distance and
-                sensitivity.
-
-        Returns:
-            The total degradation score for the pixel.
-        """
-        sum_degradation = numpy.zeros(arrays[0].shape)
-        for arr in arrays:
-            sum_degradation += arr
-
-        return sum_degradation
-
     pygeoprocessing.raster_map(
-        op=total_degradation,
+        op=lambda *indiv_arrays: numpy.sum(indiv_arrays, axis=0),
         rasters=indiv_deg_raster_list,
         target_path=deg_sum_raster_path)
 
