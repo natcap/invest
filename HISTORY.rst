@@ -118,6 +118,16 @@ Carbon
 * Raster outputs that previously contained per-pixel values (e.g., t/pixel)
   now contain per-hectare values (e.g., t/ha). (`InVEST #1270
   <https://github.com/natcap/invest/issues/1270>`_).
+* Removed the REDD scenario and updated the naming of the Current and
+  Future scenarios to Baseline and Alternate, respectively, to better
+  indicate that users are not limited to comparing present and future.
+  (`InVEST #1758 <https://github.com/natcap/invest/issues/1758>`_).
+* Changed output filename prefixes from ``tot_c`` to ``c_storage`` and
+  ``delta`` to ``c_change``. (`InVEST #1825
+  <https://github.com/natcap/invest/issues/1825>`_).
+* Fixed bug where discount rate and annual price change were incorrectly
+  treated as ratios instead of percentages. (`InVEST #1827
+  <https://github.com/natcap/invest/issues/1827>`_).
 
 Coastal Blue Carbon
 ===================

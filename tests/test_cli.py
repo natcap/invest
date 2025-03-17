@@ -221,7 +221,7 @@ class CLIHeadlessTests(unittest.TestCase):
         validation_output = stdout_stream.getvalue()
         # it's expected that these keys are missing because the only
         # key we included was the workspace_dir
-        expected_warning = [(['carbon_pools_path', 'lulc_cur_path'],
+        expected_warning = [(['carbon_pools_path', 'lulc_bas_path'],
                             validation.MESSAGES['MISSING_KEY'])]
         self.assertEqual(validation_output, str(expected_warning))
         self.assertEqual(exit_cm.exception.code, 0)
