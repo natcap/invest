@@ -97,7 +97,7 @@ jobs:
         run: rst2html5 HISTORY.rst workbench/changelog.html
 
       - name: Update package.json version
-        if: ${{ env.RUN }}
+        if: env.RUN == 'true'
         uses: BellCubeDev/update-package-version-by-release-tag@v2
         with:
           version: ${{ inputs.version }}
