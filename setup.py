@@ -28,6 +28,7 @@ if platform.system() == 'Windows':
     library_dirs = [f'{os.environ["NATCAP_INVEST_GDAL_LIB_PATH"]}/lib']
     include_dirs.append(f'{os.environ["NATCAP_INVEST_GDAL_LIB_PATH"]}/include')
 else:
+    compiler_args = []
     include_dirs.append(subprocess.run(
         ['gdal-config', '--cflags'], capture_output=True, text=True
     ).stdout[2:])
