@@ -28,16 +28,18 @@ if platform.system() == 'Windows':
     library_dirs = [f'{os.environ["NATCAP_INVEST_GDAL_LIB_PATH"]}/lib']
     include_dirs.append(f'{os.environ["NATCAP_INVEST_GDAL_LIB_PATH"]}/include')
 else:
-    compiler_args = []
+    compiler_args = [subprocess.run(
+        ['gdal-config', '--cflags'], capture_output=True, text=True
+    ).stdout]
     compiler_and_linker_args = ['-std=c++20']
     library_dirs = [subprocess.run(
         ['gdal-config', '--libs'], capture_output=True, text=True
     ).stdout]
-    if platform.system() == 'Darwin':
+    # if platform.system() == 'Darwin':
         # get the first argument which is the library path
-        library_dirs = [library_dirs[0].split()[0][2:]]
+    library_dirs = [library_dirs[0].split()[0][2:]]
 
-print(library_dirs)
+print('library dirs:', library_dirs)
 
 class build_py(_build_py):
     """Command to compile translation message catalogs before building."""
