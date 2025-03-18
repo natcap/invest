@@ -15,10 +15,10 @@ _REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
                  if (not req.startswith(('#', 'hg+', 'git+'))
                      and len(req.strip()) > 0)]
 
-compiler_and_linker_args = []
 include_dirs = [numpy.get_include(), 'src/natcap/invest/managed_raster']
 if platform.system() == 'Windows':
     compiler_args = ['/std:c++20']
+    compiler_and_linker_args = []
     if 'NATCAP_INVEST_GDAL_LIB_PATH' not in os.environ:
         raise RuntimeError(
             'env variable NATCAP_INVEST_GDAL_LIB_PATH is not defined. '
@@ -34,12 +34,8 @@ else:
     compiler_and_linker_args = ['-std=c++20']
     library_dirs = [subprocess.run(
         ['gdal-config', '--libs'], capture_output=True, text=True
-    ).stdout]
-    # if platform.system() == 'Darwin':
-        # get the first argument which is the library path
-    library_dirs = [library_dirs[0].split()[0][2:]]
+    ).stdout.split()[0][2:]] # get the first argument which is the library path
 
-print('library dirs:', library_dirs)
 
 class build_py(_build_py):
     """Command to compile translation message catalogs before building."""
