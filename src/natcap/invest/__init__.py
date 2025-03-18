@@ -4,10 +4,8 @@ import logging
 import os
 import sys
 from gettext import translation
-import warnings
 
 import babel
-from osgeo import gdal
 
 LOGGER = logging.getLogger('natcap.invest')
 LOGGER.addHandler(logging.NullHandler())

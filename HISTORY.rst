@@ -95,6 +95,10 @@ General
 * The natcap.invest python package now officially supports linux.
   manylinux wheels will be available on PyPI.
   (`#1730 <https://github.com/natcap/invest/issues/1730>`_)
+* Removed the warning about ``gdal.UseExceptions()``.
+  Python API users should still call ``gdal.UseExceptions()``, but no
+  longer need to do so before importing ``natcap.invest``.
+  https://github.com/natcap/invest/issues/1702
 
 Workbench
 =========
