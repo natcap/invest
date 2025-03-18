@@ -76,19 +76,11 @@ jobs:
         os: [windows-latest, macos-13, ubuntu-latest]
         include:
           - os: ubuntu-latest
-            setup-conda-home: /home/runner
-          - os: ubuntu-latest
             python-version: 3.9
             platform-specific-dependencies: libxcrypt
           - os: ubuntu-latest
             python-version: "3.10"
             platform-specific-dependencies: libxcrypt
-          - os: windows-latest
-            shell: bash -l {0}
-            setup-conda-home: $HOME
-          - os: macos-13
-            shell: bash -l {0}
-            setup-conda-home: $HOME
     steps:
       - uses: actions/checkout@v4
         with:
@@ -125,49 +117,6 @@ jobs:
           name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
           path: ./conda-env-artifact
 
-      - name: Build docker image
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          # set up the directory to mount
-          # this will be used to access the wheel outside of the container
-          mkdir ${{ github.workspace }}/dist
-          chmod +777 ${{ github.workspace }}/dist
-          docker build --progress plain -t manylinux -f .github/workflows/manylinux/Dockerfile .
-
-      - name: Build manylinux wheel
-        if: matrix.os == 'ubuntu-latest'
-        uses: addnab/docker-run-action@v3
-        with:
-          image: manylinux
-          options: -v ${{ github.workspace }}/dist:/home/runner/invest/dist
-          run: |
-            # install micromamba
-            "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
-            source ~/.bashrc
-
-            # set up conda environment for build
-            echo ${{ env.CONDA_DEFAULT_DEPENDENCIES }} python=${{ matrix.python-version }} | xargs -n 1 > extra_requirements.txt
-            /opt/python/cp313-cp313/bin/python ./scripts/convert-requirements-to-conda-yml.py \
-              extra_requirements.txt requirements.txt requirements-dev.txt constraints_tests.txt \
-            > environment.yml
-            cat environment.yml
-
-            micromamba env create -y -n env -f environment.yml
-            micromamba activate env
-
-            # Compare conda environments
-            micromamba list > conda-env.txt
-            # make sure that the exit code is always 0
-            # otherwise, an error appears in the action annotations
-            diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
-
-            # Build, audit and repair wheel
-            python -m build --wheel
-            WHEEL=$(find dist -name "natcap[._-]invest*.whl")
-            auditwheel show $WHEEL
-            auditwheel repair $WHEEL --plat manylinux_2_34_x86_64 -w dist
-            rm $WHEEL  # remove the original wheel
-
       - name: Compare conda environments
         if: matrix.os != 'ubuntu-latest'
         run: |
@@ -177,12 +126,27 @@ jobs:
           diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
       - name: Build wheel
-        if: matrix.os != 'ubuntu-latest'
         run: |
           # uninstall InVEST if it was already in the restored cache
           python -m pip uninstall -y natcap.invest
-          python -m build --wheel
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --wheel
           ls -la dist
+
+      # This produces a wheel that should work on any distro with glibc>=2.39.
+      # This is a very recent version. If we want to support older versions, I
+      # suspect we would need to build GDAL from source on an appropriate
+      # system (such as a manylinux docker container) to ensure compatibility.
+      # Symbols used in libgdal are the cause of the high minimum version,
+      # possibly because of installing with conda.
+      - name: Audit and repair wheel for manylinux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          ldd --version
+          pip install auditwheel
+          WHEEL=$(find dist -name "natcap[._-]invest*.whl")
+          auditwheel show $WHEEL
+          auditwheel repair $WHEEL --plat manylinux_2_39_x86_64 -w dist
+          rm $WHEEL  # remove the original wheel
 
       - name: Install wheel and run model tests
         run: |
@@ -253,12 +217,12 @@ jobs:
           # .cpp files in addition to the .pyx files.
           #
           # Elevating any python warnings to errors to catch build issues ASAP.
-          python -W error -m build --sdist
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -W error -m build --sdist
 
       - name: Install from source distribution
         run : |
           # Install natcap.invest from the sdist in dist/
-          pip install $(find dist -name "natcap[._-]invest*")
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" pip install $(find dist -name "natcap[._-]invest*")
 
           # Model tests should cover model functionality, we just want
           # to be sure that we can import `natcap.invest` here.
@@ -313,7 +277,7 @@ jobs:
             pytest
 
       - name: Make install
-        run: make install
+        run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
 
       - name: Validate sample data
         run: make validate_sampledata
@@ -346,7 +310,7 @@ jobs:
             python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
       - name: Make install
-        run: make install
+        run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
 
       - name: Set up node
         uses: actions/setup-node@v3
@@ -409,7 +373,7 @@ jobs:
             pandoc
 
       - name: Make install
-        run: make install
+        run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
 
         # Not caching chocolatey packages because the cache may not be reliable
         # https://github.com/chocolatey/choco/issues/2134
