@@ -25,15 +25,10 @@ if platform.system() == 'Windows':
             'This env variable is required when building on Windows. If '
             'using conda to manage your gdal installation, you may set '
             'NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library".')
-    library_dirs = [f'{os.environ["NATCAP_INVEST_GDAL_LIB_PATH"]}/lib']
     include_dirs.append(f'{os.environ["NATCAP_INVEST_GDAL_LIB_PATH"]}/include')
 else:
-    library_dirs = []
     compiler_args = []
     compiler_and_linker_args = ['-std=c++20']
-    library_dirs = [subprocess.run(
-        ['gdal-config', '--libs'], capture_output=True, text=True
-    ).stdout.split()[0][2:]]  # get the first argument which is the library path
 
 class build_py(_build_py):
     """Command to compile translation message catalogs before building."""
@@ -66,7 +61,12 @@ setup(
             extra_link_args=compiler_and_linker_args,
             language='c++',
             libraries=['gdal'],
-            library_dirs=library_dirs,
+            library_dirs=(
+                [f'{os.environ["NATCAP_INVEST_GDAL_LIB_PATH"]}/lib']
+                if platform.system() == 'Windows' else
+                [subprocess.run(
+                    ['gdal-config', '--libs'], capture_output=True, text=True
+                ).stdout.split()[0][2:]]),  # get the first argument which is the library path
             define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]
         ) for package, module, package_compiler_args in [
             ('delineateit', 'delineateit_core', []),
