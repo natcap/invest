@@ -56,6 +56,7 @@ jobs:
                   # Replace / (invalid tag character) with .
                   SANITIZED_REF="$(echo ${{github.ref_name}} | sed 's|/|.|g')"
                   cd docker && docker build \
+                        --progress=plain \
                         --build-arg="INVEST_REPO=${{ github.repository }}" \
                         --build-arg="INVEST_VERSION=${{ github.sha }}" \
                         -t ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:latest \
