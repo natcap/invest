@@ -31,7 +31,7 @@ else:
     compiler_args = []
     include_dirs.append(subprocess.run(
         ['gdal-config', '--cflags'], capture_output=True, text=True
-    ).stdout[2:])
+    ).stdout.strip()[2:])
     compiler_and_linker_args = ['-std=c++20']
     library_dirs = [subprocess.run(
         ['gdal-config', '--libs'], capture_output=True, text=True
