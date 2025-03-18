@@ -75,6 +75,8 @@ Highlights
   * NDR
   * SDR
 
+* Visitation: Recreation and Tourism model now includes twitter data.
+
 General
 =======
 * Fixed an issue where a user's PROJ_DATA environment variable could
