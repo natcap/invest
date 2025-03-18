@@ -49,6 +49,9 @@ class build_py(_build_py):
         # then execute the original run method
         _build_py.run(self)
 
+print([subprocess.run(
+    ['gdal-config', '--libs'], capture_output=True, text=True
+).stdout.split()[0][2:]])  # get the first argument which is the library path
 
 setup(
     install_requires=_REQUIREMENTS,
