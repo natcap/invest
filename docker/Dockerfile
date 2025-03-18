@@ -4,7 +4,7 @@
 FROM debian:12.2 as build
 ARG INVEST_VERSION="main"
 ARG INVEST_REPO="natcap/invest"
-RUN apt update && apt install -y python3 python3-dev python3-pip python3-build build-essential git python3.11-venv libgdal-dev
+RUN apt update && apt install -y python3 python3-dev python3-pip python3-build build-essential git python3.11-venv gdal-bin libgdal-dev
 RUN cd / && \
         git clone https://github.com/${INVEST_REPO}.git && \
         cd $(basename ${INVEST_REPO}) && \
