@@ -10,7 +10,7 @@ def _numpy_dumps(numpy_array):
         numpy_array (numpy.ndarray): arbitrary numpy array.
     Returns:
         A string representation of the array that can be loaded using
-        `numpy_loads.
+        `numpy_loads`.
     """
     with BytesIO() as file_stream:
         numpy.save(file_stream, numpy_array, allow_pickle=False)

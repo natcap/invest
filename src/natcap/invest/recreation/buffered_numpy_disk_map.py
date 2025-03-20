@@ -22,18 +22,19 @@ def _npy_append(filepath, array):
     """Append to a numpy array on disk without reading the entire array."""
     with open(filepath, 'rb+') as file:
         version = numpy.lib.format.read_magic(file)
-        header = numpy.lib.format._read_array_header(file, version)
-        d = {
-            'shape': header[0],
-            'fortran_order': header[1],
-            'descr': numpy.lib.format.dtype_to_descr(header[2])
+        header_tuple = numpy.lib.format._read_array_header(file, version)
+        header_dict = {
+            'shape': header_tuple[0],
+            'fortran_order': header_tuple[1],
+            'descr': numpy.lib.format.dtype_to_descr(header_tuple[2])
         }
-        n = d['shape'][0] + array.size
-        d['shape'] = (n, )
+        # update the shape because we intend to append array
+        n = header_dict['shape'][0] + array.size
+        header_dict['shape'] = (n, )
         file.seek(0, 2)  # go to end to append data
         file.write(array)
         file.seek(0, 0)  # go to start to re-write header
-        numpy.lib.format._write_array_header(file, d, version)
+        numpy.lib.format._write_array_header(file, header_dict, version)
 
 
 class BufferedNumpyDiskMap(object):
