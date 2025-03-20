@@ -8,7 +8,7 @@
 # Define how long the job will run d-hh:mm:ss
 #SBATCH --time=48:00:00
 # Get email notification when job finishes or fails
-#SBATCH --mail-user=dfisher5@stanford.edu
+#SBATCH --mail-user=
 #SBATCH --mail-type=END,FAIL,BEGIN
 #SBATCH -J build_quadtree
 #SBATCH -o build_quadtree
@@ -26,7 +26,6 @@ cd ~/invest
 git checkout exp/REC-twitter
 
 set -x  # Be eXplicit about what's happening.
-FAILED=0
 singularity run \
     docker://$CONTAINER python scripts/recreation_server/build_twitter_quadtree.py \
     --csv_file_list=$TWEETS_LIST \

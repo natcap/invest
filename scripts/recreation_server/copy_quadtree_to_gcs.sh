@@ -5,9 +5,9 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=4000M
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=davefisher@stanford.edu
+#SBATCH --mail-user=
 #SBATCH --partition=hns,normal
-#SBATCH --output=/scratch/users/dfisher5/slurm-logfiles/slurm-%j.%x.out
+#SBATCH --output=slurm-%j.%x.out
 
 ml load system rclone
 rclone copy --progress \
