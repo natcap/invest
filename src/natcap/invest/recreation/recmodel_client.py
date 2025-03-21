@@ -731,12 +731,10 @@ def _retrieve_user_days(
     client_id = uuid.uuid4()
 
     def wrap_calculate_userdays():
-        proxy = Pyro5.api.Proxy(server_url)
-        result = proxy.calculate_userdays(
-            zip_file_binary, os.path.basename(local_aoi_path),
-            start_year, end_year, list(datasets), client_id)
-        proxy._pyroRelease()
-        return result
+        with Pyro5.api.Proxy(server_url) as proxy:
+            return proxy.calculate_userdays(
+                zip_file_binary, os.path.basename(local_aoi_path),
+                start_year, end_year, list(datasets), client_id)
 
     # Use a separate thread for the long-running remote function call so
     # that we can make concurrent requests for the logging messages
