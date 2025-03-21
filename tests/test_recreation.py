@@ -42,10 +42,6 @@ SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
 
 LOGGER = logging.getLogger('test_recreation')
 
-# These are defined in the model spec for validating start and end year
-MIN_YEAR = 2012
-MAX_YEAR = 2017
-
 
 def _timeout(max_timeout):
     """Timeout decorator, parameter in seconds."""
@@ -667,8 +663,8 @@ class TestRecClientServer(unittest.TestCase):
             'aoi_path': os.path.join(
                 SAMPLE_DATA, 'andros_aoi.shp'),
             'compute_regression': True,
-            'start_year': MIN_YEAR,
-            'end_year': MAX_YEAR,
+            'start_year': recmodel_client.MIN_YEAR,
+            'end_year': recmodel_client.MAX_YEAR,
             'grid_aoi': True,
             'cell_size': 30000,
             'grid_type': 'hexagon',
@@ -739,8 +735,8 @@ class TestRecClientServer(unittest.TestCase):
             'aoi_path': os.path.join(
                 SAMPLE_DATA, 'andros_aoi.shp'),
             'compute_regression': False,
-            'start_year': MIN_YEAR,
-            'end_year': MAX_YEAR,
+            'start_year': recmodel_client.MIN_YEAR,
+            'end_year': recmodel_client.MAX_YEAR,
             'grid_aoi': False,
             'workspace_dir': self.workspace_dir,
             'hostname': self.hostname,
@@ -786,7 +782,7 @@ class TestRecClientServer(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'compute_regression': False,
             'start_year': '1219',  # start year ridiculously out of range
-            'end_year': MAX_YEAR,
+            'end_year': recmodel_client.MAX_YEAR,
             'grid_aoi': False,
             'workspace_dir': self.workspace_dir,
             'hostname': self.hostname,
@@ -806,7 +802,7 @@ class TestRecClientServer(unittest.TestCase):
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'compute_regression': False,
-            'start_year': MIN_YEAR,
+            'start_year': recmodel_client.MIN_YEAR,
             'end_year': '2219',  # end year ridiculously out of range
             'grid_aoi': False,
             'workspace_dir': self.workspace_dir,
@@ -839,8 +835,8 @@ class TestRecClientServer(unittest.TestCase):
         args = {
             'aoi_path': aoi_path,
             'compute_regression': False,
-            'start_year': MIN_YEAR,
-            'end_year': MAX_YEAR,
+            'start_year': recmodel_client.MIN_YEAR,
+            'end_year': recmodel_client.MAX_YEAR,
             'grid_aoi': False,
             'workspace_dir': self.workspace_dir,
             'hostname': self.hostname,
@@ -1121,8 +1117,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'compute_regression': True,
-            'start_year': MIN_YEAR,
-            'end_year': MAX_YEAR,
+            'start_year': recmodel_client.MIN_YEAR,
+            'end_year': recmodel_client.MAX_YEAR,
             'grid_aoi': True,
             'grid_type': 'square',
             'cell_size': 20000,
@@ -1261,8 +1257,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'compute_regression': False,
-            'start_year': MAX_YEAR,  # note start_year > end_year
-            'end_year': MIN_YEAR,
+            'start_year': recmodel_client.MAX_YEAR,  # note start_year > end_year
+            'end_year': recmodel_client.MIN_YEAR,
             'grid_aoi': False,
             'workspace_dir': self.workspace_dir,
         }
@@ -1280,8 +1276,8 @@ class RecreationClientRegressionTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'cell_size': 7000.0,
             'compute_regression': False,
-            'start_year': MIN_YEAR,
-            'end_year': MAX_YEAR,
+            'start_year': recmodel_client.MIN_YEAR,
+            'end_year': recmodel_client.MAX_YEAR,
             'grid_aoi': True,
             'grid_type': 'circle',  # intentionally bad gridtype
             'workspace_dir': self.workspace_dir,
@@ -1357,8 +1353,8 @@ class RecreationValidationTests(unittest.TestCase):
         validation_warnings = recreation.recmodel_client.validate({
             'compute_regression': True,
             'predictor_table_path': table_path,
-            'start_year': MIN_YEAR,
-            'end_year': MAX_YEAR,
+            'start_year': recmodel_client.MIN_YEAR,
+            'end_year': recmodel_client.MAX_YEAR,
             'workspace_dir': self.workspace_dir,
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
 
@@ -1368,8 +1364,8 @@ class RecreationValidationTests(unittest.TestCase):
             'compute_regression': True,
             'predictor_table_path': table_path,
             'scenario_predictor_table_path': table_path,
-            'start_year': MIN_YEAR,
-            'end_year': MAX_YEAR,
+            'start_year': recmodel_client.MIN_YEAR,
+            'end_year': recmodel_client.MAX_YEAR,
             'workspace_dir': self.workspace_dir,
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
         expected_messages = [
@@ -1398,8 +1394,8 @@ class RecreationValidationTests(unittest.TestCase):
         args = {
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'compute_regression': True,
-            'start_year': MIN_YEAR,
-            'end_year': MAX_YEAR,
+            'start_year': recmodel_client.MIN_YEAR,
+            'end_year': recmodel_client.MAX_YEAR,
             'grid_aoi': False,
             'predictor_table_path': bad_table_path,
             'workspace_dir': self.workspace_dir,

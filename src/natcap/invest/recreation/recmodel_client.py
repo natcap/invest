@@ -44,6 +44,10 @@ SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recre
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro5.config.SERIALIZER = 'marshal'
 
+# year range supported by both the flickr and twitter databases
+MIN_YEAR = 2012
+MAX_YEAR = 2017
+
 predictor_table_columns = {
     "id": {
         "type": "freestyle_string",
@@ -128,24 +132,24 @@ MODEL_SPEC = {
         },
         "start_year": {
             "type": "number",
-            "expression": "2012 <= value <= 2017",
+            "expression": f"{MIN_YEAR} <= value <= {MAX_YEAR}",
             "units": u.year_AD,
             "about": gettext(
                 "Year at which to start user-day calculations. "
                 "Calculations start on the first day of the year. Year "
-                "must be in the range 2012 - 2017, and must be less than "
-                "or equal to the End Year."),
+                f"must be in the range {MIN_YEAR} - {MAX_YEAR}, and must be "
+                "less than or equal to the End Year."),
             "name": gettext("start year")
         },
         "end_year": {
             "type": "number",
-            "expression": "2012 <= value <= 2017",
+            "expression": f"{MIN_YEAR} <= value <= {MAX_YEAR}",
             "units": u.year_AD,
             "about": gettext(
                 "Year at which to end user-day calculations. "
                 "Calculations continue through the last day of the year. "
-                "Year must be in the range 2012 - 2017, and must be "
-                "greater than or equal to the Start Year."),
+                f"Year must be in the range {MIN_YEAR} - {MAX_YEAR}, and must "
+                "be greater than or equal to the Start Year."),
             "name": gettext("end year")
         },
         "grid_aoi": {
@@ -1058,7 +1062,6 @@ def _json_to_gpkg_table(
             layer.DeleteField(field_index)
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
         layer.CreateField(predictor_field)
-        # _create_field(predictor_id)
 
         with open(json_filename, 'r') as file:
             predictor_results = json.load(file)
@@ -1068,9 +1071,7 @@ def _json_to_gpkg_table(
             layer.SetFeature(feature)
 
     # Get all the fieldnames. If they are not in the predictor_id_list,
-    # or the userday variables, find and delete them.
-    # field_list = predictor_id_list + [
-    #     RESPONSE_VARIABLE_ID, tud_variable_id, pud_variable_id]
+    # find and delete those fields.
     n_fields = layer_defn.GetFieldCount()
     fieldnames = []
     for idx in range(n_fields):
@@ -1366,7 +1367,7 @@ def _ogr_to_geometry_list(vector_path):
 
 def _assemble_regression_data(
         pud_vector_path, tud_vector_path, regression_vector_path):
-    """Update the vector with the predctor data, adding response variables.
+    """Update the vector with the predictor data, adding response variables.
 
     Args:
         pud_vector_path (string): Path to the vector polygon
