@@ -733,7 +733,8 @@ def _retrieve_user_days(
     def wrap_calculate_userdays():
         proxy = Pyro5.api.Proxy(server_url)
         result = proxy.calculate_userdays(
-            zip_file_binary, start_year, end_year, list(datasets), client_id)
+            zip_file_binary, os.path.basename(local_aoi_path),
+            start_year, end_year, list(datasets), client_id)
         proxy._pyroRelease()
         return result
 

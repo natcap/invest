@@ -239,8 +239,9 @@ class UnitTestRecServer(unittest.TestCase):
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
             raw_csv_filename=self.resampled_data_path)
 
+        aoi_filename = 'test_aoi.geojson'
         aoi_path = os.path.join(
-            self.workspace_dir, 'test_aoi_for_subset.geojson')
+            self.workspace_dir, aoi_filename)
         # This polygon matches the test data shapefile we used formerly.
         geomstring = """
             POLYGON ((-5.54101768507434 56.1006500736864,
@@ -250,12 +251,12 @@ class UnitTestRecServer(unittest.TestCase):
                       -5.54101768507434 56.1006500736864))"""
         polygon = shapely.wkt.loads(geomstring)
         _make_simple_lat_lon_aoi([polygon], aoi_path)
+        aoi_vector = gdal.OpenEx(aoi_path)
 
-        basename = os.path.splitext(aoi_path)[0]
         aoi_archive_path = os.path.join(
             self.workspace_dir, 'aoi_zipped.zip')
         with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
-            for filename in glob.glob(basename + '.*'):
+            for filename in aoi_vector.GetFileList():
                 myzip.write(filename, os.path.basename(filename))
 
         # convert shapefile to binary string for serialization
@@ -268,7 +269,7 @@ class UnitTestRecServer(unittest.TestCase):
 
         zip_result, workspace_id, version_str = (
             recreation_server.calc_user_days_in_aoi(
-                zip_file_binary, date_range, out_vector_filename))
+                zip_file_binary, aoi_filename, date_range, out_vector_filename))
 
         # unpack result
         result_zip_path = os.path.join(self.workspace_dir, 'pud_result.zip')
@@ -1339,7 +1340,8 @@ class RecreationValidationTests(unittest.TestCase):
 
     def test_bad_predictor_table_header(self):
         """Recreation Validate: assert messages for bad table headers."""
-        from natcap.invest import recreation, validation
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest import validation
 
         table_path = os.path.join(self.workspace_dir, 'table.csv')
         with open(table_path, 'w') as file:
@@ -1350,7 +1352,7 @@ class RecreationValidationTests(unittest.TestCase):
             ['predictor_table_path'],
             validation.MESSAGES['MATCHED_NO_HEADERS'].format(
                 header='column', header_name='id'))]
-        validation_warnings = recreation.recmodel_client.validate({
+        validation_warnings = recmodel_client.validate({
             'compute_regression': True,
             'predictor_table_path': table_path,
             'start_year': recmodel_client.MIN_YEAR,
@@ -1360,7 +1362,7 @@ class RecreationValidationTests(unittest.TestCase):
 
         self.assertEqual(validation_warnings, expected_message)
 
-        validation_warnings = recreation.recmodel_client.validate({
+        validation_warnings = recmodel_client.validate({
             'compute_regression': True,
             'predictor_table_path': table_path,
             'scenario_predictor_table_path': table_path,

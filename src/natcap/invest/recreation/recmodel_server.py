@@ -154,8 +154,8 @@ class RecManager(object):
         return (n_points, self.max_allowable_query)
 
     @_try_except_wrapper("calculate_userdays exited while multiprocessing.")
-    def calculate_userdays(self, zip_file_binary, start_year, end_year,
-                           dataset_list, client_id):
+    def calculate_userdays(self, zip_file_binary, aoi_filename, start_year,
+                           end_year, dataset_list, client_id):
         """Calculate userdays as requested by a client.
 
         Submit concurrent.futures jobs to ``RecModel`` servers and wait for
@@ -165,6 +165,8 @@ class RecManager(object):
         Args:
             zip_file_binary (string): a bytestring that is a zip file of a
                 GDAL vector.
+            aoi_filename (string): the name of the AOI file extracted from
+                ``zip_file_binary``
             start_year (int or string): formatted as 'YYYY'
             end_year (int or string): formatted as 'YYYY'
             dataset_list (list): listing the names of RecModel servers to query
@@ -191,7 +193,8 @@ class RecManager(object):
                 results_filename = f'{server.acronym}_results.gpkg'
                 fut = executor.submit(
                     server.calc_user_days_in_aoi,
-                    zip_file_binary, date_range, results_filename, client_id)
+                    zip_file_binary, aoi_filename,
+                    date_range, results_filename, client_id)
                 future_to_label[fut] = server.acronym
 
             for future in concurrent.futures.as_completed(future_to_label):
@@ -381,13 +384,15 @@ class RecModel(object):
         return global_qt.estimate_points_in_bounding_box(bounding_box)
 
     def calc_user_days_in_aoi(
-            self, zip_file_binary, date_range, out_vector_filename,
+            self, zip_file_binary, aoi_filename, date_range, out_vector_filename,
             client_id=None):
         """Calculate annual average and per monthly average user days.
 
         Args:
             zip_file_binary (string): a bytestring that is a zip file of a
                 GDAL vector.
+            aoi_filename (string): the filename for the AOI expected to be
+                extracted from ``zip_file_binary``.
             date_range (string 2-tuple): a tuple that contains the inclusive
                 start and end date formatted as 'YYYY-MM-DD'
             out_vector_filename (string): base filename of output vector
@@ -433,13 +438,7 @@ class RecModel(object):
         aoi_archive.extractall(workspace_path)
         aoi_archive.close()
         aoi_archive = None
-        file_list = [file for file in os.listdir(workspace_path)
-                     if not file.endswith('.zip')]
-        if len(file_list) > 1:
-            # if it's a multifile AOI, assume a shapefile
-            aoi_path = glob.glob(os.path.join(workspace_path, '*.shp'))[0]
-        else:
-            aoi_path = os.path.join(workspace_path, file_list[0])
+        aoi_path = os.path.join(workspace_path, aoi_filename)
 
         logger.info('running calc user days on %s', workspace_path)
         numpy_date_range = (
