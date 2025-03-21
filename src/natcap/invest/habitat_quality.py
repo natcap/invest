@@ -1266,16 +1266,12 @@ def validate(args, limit_to=None):
                 ['threats_table_path'],
                 MISSING_THREAT_RASTER_MSG.format(threat_list=bad_threat_paths)
             ))
-
-            if 'threats_table_path' not in invalid_keys:
-                invalid_keys.add('threats_table_path')
+            invalid_keys.add('threats_table_path')
 
         if duplicate_paths:
             validation_warnings.append((
                 ['threats_table_path'],
                 DUPLICATE_PATHS_MSG + str(duplicate_paths)))
-
-            if 'threats_table_path' not in invalid_keys:
-                invalid_keys.add('threats_table_path')
+            invalid_keys.add('threats_table_path')
 
     return validation_warnings
