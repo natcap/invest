@@ -111,7 +111,7 @@ class OutOfCoreQuadTree(object):
             feature.SetField('bb_box', str(self.bounding_box))
             ogr_polygon_layer.CreateFeature(feature)
         else:
-            for node_index in xrange(4):
+            for node_index in range(4):
                 self.nodes[node_index].build_node_shapes(ogr_polygon_layer)
 
     def _get_points_from_node(self):
@@ -263,13 +263,13 @@ class OutOfCoreQuadTree(object):
         """Return the number of nodes in the quadtree"""
         if self.is_leaf:
             return 1
-        return sum([self.nodes[index].n_nodes() for index in xrange(4)]) + 1
+        return sum([self.nodes[index].n_nodes() for index in range(4)]) + 1
 
     def n_points(self):
         """Return the number of points in the quadtree"""
         if self.is_leaf:
             return self.n_points_in_node
-        return sum([self.nodes[index].n_points() for index in xrange(4)])
+        return sum([self.nodes[index].n_points() for index in range(4)])
 
     def get_intersecting_points_in_polygon(self, shapely_polygon):
         """Return the points contained in `shapely_prepared_polygon`.
@@ -308,7 +308,7 @@ class OutOfCoreQuadTree(object):
         elif shapely_polygon.intersects(bounding_polygon):
             # combine results of children
             result_deque = collections.deque()
-            for node_index in xrange(4):
+            for node_index in range(4):
                 result_deque.extend(
                     self.nodes[node_index].get_intersecting_points_in_polygon(
                         shapely_polygon))
@@ -342,7 +342,7 @@ class OutOfCoreQuadTree(object):
             return point_list
         else:
             point_list = numpy.empty(0, dtype=_ARRAY_TUPLE_TYPE)
-            for node_index in xrange(4):
+            for node_index in range(4):
                 point_list = numpy.concatenate((
                     self.nodes[node_index].get_intersecting_points_in_bounding_box(
                         bounding_box), point_list))
@@ -365,7 +365,7 @@ class OutOfCoreQuadTree(object):
         else:
             return sum([
                 self.nodes[index].estimate_points_in_bounding_box(bounding_box)
-                for index in xrange(4)])
+                for index in range(4)])
 
 
 cdef _sort_list_to_quads(
