@@ -26,9 +26,11 @@ MISSING_THREAT_RASTER_MSG = gettext(
     "A threat raster for threats: {threat_list} was not found or it "
     "could not be opened by GDAL.")
 DUPLICATE_PATHS_MSG = gettext("Threat paths must be unique. Duplicates: ")
+INVALID_MAX_DIST_MSG = gettext(
+    "The maximum distance value for threats: {threat_list} is less than "
+    "or equal to 0. MAX_DIST must be a positive value.")
 MISSING_MAX_DIST_MSG = gettext(
-    "Maximum distance value is missing for threats: {threat_list}. "
-    "MAX_DIST must be a positive value.")
+    "Maximum distance value is missing for threats: {threat_list}.")
 MISSING_WEIGHT_MSG = gettext("Weight value is missing for threats: {threat_list}.")
 
 MODEL_SPEC = {
@@ -480,18 +482,6 @@ def execute(args):
             # for each threat given in the CSV file try opening the associated
             # raster which should be found relative to the Threat CSV
             for threat, row in threat_df.iterrows():
-
-                # Check that weight has been provided
-                if not row['weight']:
-                    raise ValueError(
-                        f"Missing weight ratio for threat: '{threat}'.")
-                # Check that max_dist exists and is greater than 0
-                if not row['max_dist'] or row['max_dist'] <= 0:
-                    raise ValueError(
-                        f"The max distance for threat: '{threat}' is less than"
-                        " or equal to 0, or is missing."
-                        " MAX_DIST should be a positive value.")
-
                 LOGGER.debug(f"Validating path for threat: {threat}")
                 threat_table_path_col = _THREAT_SCENARIO_MAP[lulc_key]
 
@@ -701,6 +691,11 @@ def execute(args):
                     ' calculation for this land cover.')
                 exit_landcover = True
                 break
+            # Check to make sure max_dist is greater than 0
+            if row['max_dist'] <= 0:
+                raise ValueError(
+                    f"The max distance for threat: '{threat}' is less than"
+                    " or equal to 0. MAX_DIST should be a positive value.")
 
             distance_raster_path = os.path.join(
                 intermediate_output_dir,
@@ -1196,12 +1191,45 @@ def validate(args, limit_to=None):
 
             invalid_keys.add('sensitivity_table_path')
 
+        # check that max_dist and weight values are included in the
+        # threats table and that max_dist >= 0
+        invalid_max_dist = []
+        missing_max_dist = []
+        missing_weight = []
+        for threat, row in threat_df.iterrows():
+            if row['max_dist'] == '':
+                missing_max_dist.append(threat)
+            elif row['max_dist'] <= 0:
+                invalid_max_dist.append(threat)
+
+            if row['weight'] == '':
+                missing_weight.append(threat)
+
+        if invalid_max_dist:
+            validation_warnings.append((
+                ['threats_table_path'],
+                INVALID_MAX_DIST_MSG.format(threat_list=invalid_max_dist)
+            ))
+
+        if missing_max_dist:
+            validation_warnings.append((
+                ['threats_table_path'],
+                MISSING_MAX_DIST_MSG.format(threat_list=missing_max_dist)
+            ))
+
+        if missing_weight:
+            validation_warnings.append((
+                ['threats_table_path'],
+                MISSING_WEIGHT_MSG.format(threat_list=missing_weight)
+            ))
+
+        if invalid_max_dist or missing_max_dist or missing_weight:
+            invalid_keys.add('threats_table_path')
+
         # Validate threat raster paths and their nodata values
         bad_threat_paths = []
         duplicate_paths = []
         threat_path_list = []
-        missing_max_dist = []
-        missing_weight = []
         for lulc_key, lulc_arg in (('_c', 'lulc_cur_path'),
                                    ('_f', 'lulc_fut_path'),
                                    ('_b', 'lulc_bas_path')):
@@ -1233,43 +1261,19 @@ def validate(args, limit_to=None):
                             duplicate_paths.append(
                                 os.path.basename(threat_path))
 
-                    # check that `max_dist` value exists
-                    if not row['max_dist']:
-                        missing_max_dist.append(threat)
-
-                    if not row['weight']:
-                        missing_weight.append(threat)
-
-
         if bad_threat_paths:
             validation_warnings.append((
                 ['threats_table_path'],
                 MISSING_THREAT_RASTER_MSG.format(threat_list=bad_threat_paths)
             ))
-            invalid_keys.add('threats_table_path')
+
+            if 'threats_table_path' not in invalid_keys:
+                invalid_keys.add('threats_table_path')
 
         if duplicate_paths:
             validation_warnings.append((
                 ['threats_table_path'],
                 DUPLICATE_PATHS_MSG + str(duplicate_paths)))
-
-            if 'threats_table_path' not in invalid_keys:
-                invalid_keys.add('threats_table_path')
-
-        if missing_max_dist:
-            validation_warnings.append((
-                ['threats_table_path'],
-                MISSING_MAX_DIST_MSG.format(threat_list=set(missing_max_dist))
-            ))
-
-            if 'threats_table_path' not in invalid_keys:
-                invalid_keys.add('threats_table_path')
-
-        if missing_weight:
-            validation_warnings.append((
-                ['threats_table_path'],
-                MISSING_WEIGHT_MSG.format(threat_list=set(missing_weight))
-            ))
 
             if 'threats_table_path' not in invalid_keys:
                 invalid_keys.add('threats_table_path')
