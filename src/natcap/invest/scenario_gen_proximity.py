@@ -70,7 +70,7 @@ MODEL_SPEC = {
             "regexp": "[0-9 ]+",
             "about": gettext(
                 "A space-separated list of LULC codes that can be "
-                "converted to be converted to agriculture."),
+                "converted to agriculture."),
             "name": gettext("convertible landcover codes")
         },
         "n_fragmentation_steps": {
