@@ -184,7 +184,7 @@ Urban Cooling
 Visitation: Recreation and Tourism
 ==================================
   * Added a database of geotagged tweets to support calculating
-    twitter-user-days (TUD) as proxy for vistation rates. The model now calculates
+    twitter-user-days (TUD) as proxy for visitation rates. The model now calculates
     photo-user-days (PUD) and TUD and uses their average as the response
     variable in the regression model. Please refer to the User's Guide for
     more details on the regression model.
