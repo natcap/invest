@@ -181,6 +181,14 @@ NDR
   different climate scenarios and watershed selections.
   https://github.com/natcap/invest/issues/1741
 
+Scenario Generator
+==================
+* Updated the output CSV columns: Renamed `lucode` column `original lucode`
+  to clarify that it contains the original, to-be-converted, value(s). Added
+  `replacement lucode` column, containing the LULC code to which habitat was
+  converted during the model run.
+  https://github.com/natcap/invest/issues/1295
+
 SDR
 ===
 * Raster outputs that previously contained per-pixel values (e.g., t/pixel)

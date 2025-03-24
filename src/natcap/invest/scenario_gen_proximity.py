@@ -146,7 +146,7 @@ MODEL_SPEC = {
         },
         "farthest_from_edge.csv": {
             "about": gettext(
-                "Table of land cover classes and the amount of each that was converted for the nearest-to-edge conversion scenario."),
+                "Table of land cover classes and the amount of each that was converted for the farthest-from-edge conversion scenario."),
             "index_col": "original lucode",
             "columns": {
                 "original lucode": {
