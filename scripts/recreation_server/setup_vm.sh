@@ -44,7 +44,7 @@ tail -f server/log.txt
 
 # After setting up a new VM or new server cache,
 # initialize a cron job that periodically clears out the cache.
-# Copy the script so that updates to the inveset repo don't clobber it
+# Copy the script so that updates to the invest repo don't clobber it
 # Edit the paths to workspaces referenced in the script if needed.
 cp invest/scripts/recreation_server/cron_find_rm_cached_workspaces.sh server/cron_find_rm_cached_workspaces.sh
 chmod 755 server/cron_find_rm_cached_workspaces.sh
