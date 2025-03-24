@@ -57,8 +57,8 @@ class BufferedNumpyDiskMap(object):
                 binary data as needed.
             max_bytes_to_buffer (int): number of bytes to hold in memory at
                 one time.
-            n_workers (int): if great than 1, number of child processes to
-                use during flushes to disk
+            n_workers (int): if greater than 1, number of child processes to
+                use during flushes to disk.
 
         Returns:
             None

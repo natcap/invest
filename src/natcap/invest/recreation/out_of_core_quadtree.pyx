@@ -51,8 +51,8 @@ class OutOfCoreQuadTree(object):
                 to store the node data across the entire quadtree
             pickle_filename (string): name of file on disk which to pickle the
                 tree to during a flush
-            n_workers (int): if great than 1, number of child processes to
-                use during flushes to disk
+            n_workers (int): if greater than 1, number of child processes to
+                use during flushes to disk.
 
         Returns:
             None

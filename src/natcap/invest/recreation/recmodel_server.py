@@ -234,7 +234,7 @@ class RecManager(object):
     def fetch_aoi_workspaces(self, workspace_id, server_id):
         """Download the AOI in the workspace specified by workspace_id.
 
-        Cosntructs the path using the server's self.local_cache_workspace.
+        Constructs the path using the server's self.local_cache_workspace.
 
         Args:
             workspace_id (string): identifier of the workspace
@@ -376,7 +376,7 @@ class RecModel(object):
                 where coordinates are WGS84 decimal degrees.
 
         Returns:
-            int
+            int: the number of points in the intersecting nodes.
 
         """
         with open(self.qt_pickle_filename, 'rb') as qt_pickle:
