@@ -47,6 +47,7 @@ Pyro5.config.SERIALIZER = 'marshal'
 # year range supported by both the flickr and twitter databases
 MIN_YEAR = 2012
 MAX_YEAR = 2017
+POLYGON_ID_FIELD = 'poly_id'
 
 predictor_table_columns = {
     "id": {
@@ -644,6 +645,18 @@ def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
     driver = gdal.GetDriverByName('GPKG')
     local_aoi_vector = driver.CreateCopy(
         dest_aoi_path, aoi_vector)
+    layer = local_aoi_vector.GetLayer()
+    idx = layer.FindFieldIndex(POLYGON_ID_FIELD, 1)
+    if idx > -1:  # -1 is index if it does not exist
+        layer.DeleteField(idx)
+    layer.CreateField(
+        ogr.FieldDefn(POLYGON_ID_FIELD, ogr.OFTInteger64))
+    layer.StartTransaction()
+    for i, feature in enumerate(layer):
+        feature.SetField(POLYGON_ID_FIELD, i)
+        layer.SetFeature(feature)
+    layer.CommitTransaction()
+    layer = None
     local_aoi_vector = None
     aoi_vector = None
 
@@ -837,6 +850,8 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     grid_layer = out_grid_vector.CreateLayer(
         os.path.splitext(os.path.basename(out_grid_vector_path))[0],
         spat_ref, ogr.wkbPolygon)
+    grid_layer.CreateField(
+        ogr.FieldDefn(POLYGON_ID_FIELD, ogr.OFTInteger64))
     grid_layer_defn = grid_layer.GetLayerDefn()
 
     extent = vector_layer.GetExtent()  # minx maxx miny maxy
@@ -889,6 +904,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     else:
         raise ValueError(f'Unknown polygon type: {grid_type}')
 
+    poly_id = 0
     for row_index in range(n_rows):
         for col_index in range(n_cols):
             polygon_points = _generate_polygon(col_index, row_index)
@@ -897,7 +913,9 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
                 poly = ogr.CreateGeometryFromWkb(shapely_feature.wkb)
                 poly_feature = ogr.Feature(grid_layer_defn)
                 poly_feature.SetGeometry(poly)
+                poly_feature.SetField(POLYGON_ID_FIELD, poly_id)
                 grid_layer.CreateFeature(poly_feature)
+                poly_id += 1
 
 
 def _schedule_predictor_data_processing(
@@ -1047,7 +1065,6 @@ def _json_to_gpkg_table(
 
     layer = predictor_vector.GetLayer()
     _rename_layer_from_parent(layer)
-    layer_defn = layer.GetLayerDefn()
 
     predictor_id_list = []
     for json_filename in predictor_json_list:
@@ -1069,18 +1086,6 @@ def _json_to_gpkg_table(
             feature.SetField(str(predictor_id), value)
             layer.SetFeature(feature)
 
-    # Get all the fieldnames. If they are not in the predictor_id_list,
-    # find and delete those fields.
-    n_fields = layer_defn.GetFieldCount()
-    fieldnames = []
-    for idx in range(n_fields):
-        field_defn = layer_defn.GetFieldDefn(idx)
-        fieldnames.append(field_defn.GetName())
-    for field_name in fieldnames:
-        if field_name not in predictor_id_list:
-            idx = layer.FindFieldIndex(field_name, 1)
-            layer.DeleteField(idx)
-    layer_defn = None
     layer = None
     predictor_vector.FlushCache()
     predictor_vector = None

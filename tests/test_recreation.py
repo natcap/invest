@@ -250,7 +250,9 @@ class UnitTestRecServer(unittest.TestCase):
                       -5.2039619503127 49.9961962107811,
                       -5.54101768507434 56.1006500736864))"""
         polygon = shapely.wkt.loads(geomstring)
-        _make_simple_lat_lon_aoi([polygon], aoi_path)
+        fields = {'poly_id': ogr.OFTInteger}
+        attribute_list = [{'poly_id': 0}]
+        _make_simple_lat_lon_aoi([polygon], aoi_path, fields, attribute_list)
         aoi_vector = gdal.OpenEx(aoi_path)
 
         aoi_archive_path = os.path.join(
@@ -280,7 +282,8 @@ class UnitTestRecServer(unittest.TestCase):
             self.workspace_dir, out_vector_filename)
 
         expected_attributes = [
-           {'PUD_YR_AVG': 83.2,
+           {'poly_id': 0,
+            'PUD_YR_AVG': 83.2,
             'PUD_JAN': 2.5,
             'PUD_FEB': 2.4,
             'PUD_MAR': 33.3,
@@ -495,17 +498,20 @@ class UnitTestRecServer(unittest.TestCase):
         srs.ImportFromEPSG(4326)  # WGS84
         wkt = srs.ExportToWkt()
         polygon = shapely.geometry.box(-120, -60, 120, 60)
+        poly_id = 999
         pygeoprocessing.shapely_geometry_to_vector(
-            [polygon], aoi_path, wkt, 'GeoJSON')
+            [polygon], aoi_path, wkt, 'GeoJSON',
+            fields={'poly_id': ogr.OFTInteger},
+            attribute_list=[{'poly_id': poly_id}])
 
         numpy_date_range = (
             numpy.datetime64('2017-01-01'),
             numpy.datetime64('2017-12-31'))
-        server._calc_aggregated_points_in_aoi(
+        _, monthly_table_path = server._calc_aggregated_points_in_aoi(
             aoi_path, self.workspace_dir, numpy_date_range, target_filename)
 
         expected_result_table = pandas.DataFrame({
-           'poly_id': [0],
+           'poly_id': [999],
            '2017-1': [0],
            '2017-2': [0],
            '2017-3': [58],
@@ -520,7 +526,7 @@ class UnitTestRecServer(unittest.TestCase):
            '2017-12': [0]
         }, index=None)
         result_table = pandas.read_csv(
-            os.path.join(self.workspace_dir, 'TUD_monthly_table.csv'))
+            monthly_table_path)
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
 
@@ -660,6 +666,7 @@ class TestRecClientServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
         from natcap.invest import validation
 
+        suffix = 'foo'
         args = {
             'aoi_path': os.path.join(
                 SAMPLE_DATA, 'andros_aoi.shp'),
@@ -673,15 +680,15 @@ class TestRecClientServer(unittest.TestCase):
                 SAMPLE_DATA, 'predictors_all.csv'),
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
-            'results_suffix': 'foo',
+            'results_suffix': suffix,
             'workspace_dir': self.workspace_dir,
             'hostname': self.hostname,
             'port': self.port,
         }
         recmodel_client.execute(args)
 
-        out_grid_vector_path = os.path.join(
-            args['workspace_dir'], 'regression_data_foo.gpkg')
+        out_regression_vector_path = os.path.join(
+            args['workspace_dir'], f'regression_data_{suffix}.gpkg')
 
         predictor_df = validation.get_validated_dataframe(
             os.path.join(SAMPLE_DATA, 'predictors_all.csv'),
@@ -690,7 +697,7 @@ class TestRecClientServer(unittest.TestCase):
 
         # For convenience, assert the sums of the columns instead of all
         # the individual values.
-        actual_sums = sum_vector_columns(out_grid_vector_path, field_list)
+        actual_sums = sum_vector_columns(out_regression_vector_path, field_list)
         expected_sums = {
             'ports': 11.0,
             'airdist': 875291.8190812231,
@@ -708,7 +715,7 @@ class TestRecClientServer(unittest.TestCase):
                 actual_sums[key], expected_sums[key], decimal=3)
 
         out_scenario_path = os.path.join(
-            args['workspace_dir'], 'scenario_results_foo.gpkg')
+            args['workspace_dir'], f'scenario_results_{suffix}.gpkg')
         field_list = list(predictor_df.index) + ['pr_UD_EST']
         actual_scenario_sums = sum_vector_columns(out_scenario_path, field_list)
         expected_scenario_sums = {
@@ -725,7 +732,27 @@ class TestRecClientServer(unittest.TestCase):
             numpy.testing.assert_almost_equal(
                 actual_scenario_sums[key], expected_scenario_sums[key], decimal=3)
 
-        # TODO: assert that all tabular outputs are indexed by the same poly_id
+        # assert that all tabular outputs are indexed by the same poly_id
+        output_aoi_path = os.path.join(
+            args['workspace_dir'], 'intermediate', f'aoi_{suffix}.gpkg')
+        aoi_vector = gdal.OpenEx(output_aoi_path, gdal.OF_VECTOR)
+        aoi_layer = aoi_vector.GetLayer()
+        aoi_poly_id_list = [feature.GetField(
+            recmodel_client.POLYGON_ID_FIELD) for feature in aoi_layer]
+        aoi_layer = aoi_vector = None
+
+        output_vector_list = [
+            out_scenario_path,
+            out_regression_vector_path,
+            os.path.join(args['workspace_dir'], f'PUD_results_{suffix}.gpkg'),
+            os.path.join(args['workspace_dir'], f'TUD_results_{suffix}.gpkg')]
+        for vector_filepath in output_vector_list:
+            vector = gdal.OpenEx(vector_filepath, gdal.OF_VECTOR)
+            layer = vector.GetLayer()
+            id_list = [feature.GetField(
+                recmodel_client.POLYGON_ID_FIELD) for feature in layer]
+            self.assertEqual(id_list, aoi_poly_id_list)
+            vector = layer = None
 
     def test_workspace_fetcher(self):
         """Recreation test workspace fetcher on a local Pyro5 server."""
@@ -1075,6 +1102,25 @@ class RecreationClientRegressionTests(unittest.TestCase):
             numpy.testing.assert_allclose(
                 results[key], expected_results[key], rtol=1e-05)
 
+    def test_copy_aoi_no_grid(self):
+        """Recreation test AOI copy adds poly_id field."""
+        from natcap.invest.recreation import recmodel_client
+
+        out_grid_vector_path = os.path.join(
+            self.workspace_dir, 'aoi.gpkg')
+
+        recmodel_client._copy_aoi_no_grid(
+            os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            out_grid_vector_path)
+
+        vector = gdal.OpenEx(out_grid_vector_path, gdal.OF_VECTOR)
+        layer = vector.GetLayer()
+        n_features = layer.GetFeatureCount()
+        poly_id_list = [feature.GetField(
+            recmodel_client.POLYGON_ID_FIELD) for feature in layer]
+        self.assertEqual(poly_id_list, list(range(n_features)))
+        layer = vector = None
+
     def test_square_grid(self):
         """Recreation square grid regression test."""
         from natcap.invest.recreation import recmodel_client
@@ -1089,6 +1135,9 @@ class RecreationClientRegressionTests(unittest.TestCase):
         vector = gdal.OpenEx(out_grid_vector_path, gdal.OF_VECTOR)
         layer = vector.GetLayer()
         n_features = layer.GetFeatureCount()
+        poly_id_list = [feature.GetField(
+            recmodel_client.POLYGON_ID_FIELD) for feature in layer]
+        self.assertEqual(poly_id_list, list(range(n_features)))
         layer = vector = None
         # andros_aoi.shp fits 38 squares at 20000 meters cell size
         self.assertEqual(n_features, 38)
@@ -1165,7 +1214,7 @@ class RecreationClientRegressionTests(unittest.TestCase):
         task_graph = taskgraph.TaskGraph(taskgraph_db_dir, n_workers)
 
         response_vector_path = os.path.join(
-            self.workspace_dir, 'no_grid_vector_path.shp')
+            self.workspace_dir, 'no_grid_vector_path.gpkg')
         response_polygons_lookup_path = os.path.join(
             self.workspace_dir, 'response_polygons_lookup.pickle')
         recmodel_client._copy_aoi_no_grid(
@@ -1199,11 +1248,18 @@ class RecreationClientRegressionTests(unittest.TestCase):
             prepare_response_polygons_task, predictor_table_path,
             out_coefficient_vector_path, tmp_working_dir, task_graph)
 
-        expected_coeff_vector_path = os.path.join(
-            REGRESSION_DATA, 'test_regression_coefficients.shp')
-
-        utils._assert_vectors_equal(
-            expected_coeff_vector_path, out_coefficient_vector_path, 1e-6)
+        # Copied over from a shapefile formerly in our test-data repo:
+        expected_values = {
+            'bonefish': 19.96503546104,
+            'airdist': 40977.89565353348,
+            'ports': 14.0,
+            'bathy': 1.17308099107
+        }
+        vector = gdal.OpenEx(out_coefficient_vector_path)
+        layer = vector.GetLayer()
+        for feature in layer:
+            for k, v in expected_values.items():
+                numpy.testing.assert_almost_equal(feature.GetField(k), v)
 
     def test_predictor_table_absolute_paths(self):
         """Recreation test validation from full path."""

@@ -444,7 +444,7 @@ class RecModel(object):
         numpy_date_range = (
             numpy.datetime64(date_range[0]),
             numpy.datetime64(date_range[1]))
-        base_ud_aoi_path, monthly_table_path, _ = (
+        base_ud_aoi_path, monthly_table_path = (
             self._calc_aggregated_points_in_aoi(
                 aoi_path, workspace_path, numpy_date_range,
                 out_vector_filename, logger))
@@ -475,6 +475,7 @@ class RecModel(object):
 
         Args:
             aoi_path (string): a path to an OGR compatible vector.
+                It must have a unique ID integer field named 'poly_id'.
             workspace_path(string): path to a directory where working files
                 can be created
             date_range (datetime 2-tuple): a tuple that contains the inclusive
@@ -485,10 +486,14 @@ class RecModel(object):
                 are being made from a Pyro-connected client.
 
         Returns:
-            a path to an ESRI shapefile copy of `aoi_path` updated with a
-            "PUD" or "TUD" fields which contains the metric per polygon.
+            - a path to a GDAL vector copy of `aoi_path` updated with annual
+              userday counts per polygon, indexed by 'poly_id'
+            - a path to a CSV table containing monthly counts of userdays
+              per polygon, indexed by 'poly_id'
 
         """
+        # A field expected to be in the AOI vector sent by a client
+        poly_id_field = 'poly_id'
         if logger is None:
             logger = LOGGER
 
@@ -679,13 +684,13 @@ class RecModel(object):
                     last_time, LOGGER_TIME_DELAY, lambda: logger.info(
                         '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
                         ud_aoi_layer.GetFeatureCount()))
-                poly_id, ud_list, ud_monthly_set = result_tuple
-                poly_feat = ud_aoi_layer.GetFeature(poly_id)
+                fid, ud_list, ud_monthly_set = result_tuple
+                poly_feat = ud_aoi_layer.GetFeature(fid)
                 for ud_index, ud_id in enumerate(ud_id_suffix_list):
                     poly_feat.SetField(f'{self.acronym}_{ud_id}', ud_list[ud_index])
                 ud_aoi_layer.SetFeature(poly_feat)
 
-                line = '%s,' % poly_id
+                line = '%s,' % poly_feat.GetField(poly_id_field)
                 line += (
                     ",".join(['%s' % len(ud_monthly_set[header])
                               for header in table_headers]))
@@ -700,7 +705,7 @@ class RecModel(object):
         for polytest_process in polytest_process_list:
             polytest_process.join()
 
-        return out_aoi_ud_path, monthly_table_path, len(local_points)
+        return out_aoi_ud_path, monthly_table_path
 
 
 def _parse_big_input_csv(
