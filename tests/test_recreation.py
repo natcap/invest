@@ -1076,31 +1076,29 @@ class RecreationClientRegressionTests(unittest.TestCase):
             target_coefficient_json_path, target_coefficient_csv_path,
             target_regression_summary_path)
 
+        # Expected results created using R 4.4.0 lm()
+        coefficient_results = {}
+        coefficient_results['estimate'] = [4.480035e-02, -2.177808e-04, -3.636955e+00]
+        coefficient_results['stderr'] = [3.540886e-03, 3.408778e-05, 7.603066e-02]
+        coefficient_results['t-value'] = [12.652301,  -6.388823, -47.835373]
+        summary_results = {
+            'SSres': '0.0655',
+            'Multiple R-squared': '0.9888',
+            'Adjusted R-squared': '0.9856',
+            'Residual standard error': '0.0967 on 7 degrees of freedom'
+        }
+
         results = pandas.read_csv(
             target_coefficient_csv_path).to_dict(orient='list')
-        # results = {}
-        # results['coefficients'] = coefficients
-        # results['ssres'] = ssres
-        # results['r_sq'] = r_sq
-        # results['r_sq_adj'] = r_sq_adj
-        # results['std_err'] = std_err
-        # results['dof'] = dof
-        # results['se_est'] = se_est
-
-        # Expected results created using R 4.4.0 lm()
-        expected_results = {}
-        expected_results['estimate'] = [4.480035e-02, -2.177808e-04, -3.636955e+00]
-        expected_results['stderr'] = [3.540886e-03, 3.408778e-05, 7.603066e-02]
-        expected_results['t-value'] = [12.652301,  -6.388823, -47.835373]
-        # expected_results['ssres'] = 0.065457
-        # expected_results['r_sq'] = 0.988802
-        # expected_results['r_sq_adj'] = 0.985603
-        # expected_results['std_err'] = 0.0967
-        # expected_results['dof'] = 7
-
-        for key in expected_results:
+        for key in coefficient_results:
             numpy.testing.assert_allclose(
-                results[key], expected_results[key], rtol=1e-05)
+                results[key], coefficient_results[key], rtol=1e-05)
+
+        with open(target_regression_summary_path, 'r') as file:
+            for line in file.readlines():
+                for k, v in summary_results.items():
+                    if line.startswith(k):
+                        self.assertEqual(line.split(': ')[1].rstrip(), v)
 
     def test_copy_aoi_no_grid(self):
         """Recreation test AOI copy adds poly_id field."""
