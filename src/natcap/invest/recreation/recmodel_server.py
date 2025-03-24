@@ -21,6 +21,7 @@ import numpy
 from osgeo import ogr
 from osgeo import osr
 from osgeo import gdal
+import pygeoprocessing
 import Pyro5.api
 import shapely.ops
 import shapely.wkt
@@ -511,53 +512,18 @@ class RecModel(object):
             global_qt = pickle.load(qt_pickle)
 
         aoi_layer = aoi_vector.GetLayer()
-        aoi_extent = aoi_layer.GetExtent()
+        # aoi_extent = aoi_layer.GetExtent()
         aoi_ref = aoi_layer.GetSpatialRef()
 
-        # TODO: replace all this with pygeoprocessing.transform_bounding_box
         # coordinate transformation to convert AOI points to and from lat/lng
         lat_lng_ref = osr.SpatialReference()
         lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
+        aoi_info = pygeoprocessing.get_vector_info(aoi_path)
+        local_b_box = aoi_info['bounding_box']
+        global_b_box = pygeoprocessing.transform_bounding_box(
+            local_b_box, aoi_info['projection_wkt'], lat_lng_ref.ExportToWkt())
 
-        to_lat_trans = utils.create_coordinate_transformer(aoi_ref, lat_lng_ref)
         from_lat_trans = utils.create_coordinate_transformer(lat_lng_ref, aoi_ref)
-
-        # calculate x_min transformed by comparing the x coordinate at both
-        # the top and bottom of the aoi extent and taking the minimum
-        x_min_y_min, _, _ = to_lat_trans.TransformPoint(
-            aoi_extent[0], aoi_extent[2])
-        x_min_y_max, _, _ = to_lat_trans.TransformPoint(
-            aoi_extent[0], aoi_extent[3])
-        x_min = min(x_min_y_min, x_min_y_max)
-
-        # calculate x_max transformed by comparing the x coordinate at both
-        # the top and bottom of the aoi extent and taking the maximum
-        x_max_y_min, _, _ = to_lat_trans.TransformPoint(
-            aoi_extent[1], aoi_extent[2])
-        x_max_y_max, _, _ = to_lat_trans.TransformPoint(
-            aoi_extent[1], aoi_extent[3])
-        x_max = max(x_max_y_min, x_max_y_max)
-
-        # calculate y_min transformed by comparing the y coordinate at both
-        # the top and bottom of the aoi extent and taking the minimum
-        _, y_min_x_min, _ = to_lat_trans.TransformPoint(
-            aoi_extent[0], aoi_extent[2])
-        _, y_min_x_max, _ = to_lat_trans.TransformPoint(
-            aoi_extent[1], aoi_extent[2])
-        y_min = min(y_min_x_min, y_min_x_max)
-
-        # calculate y_max transformed by comparing the y coordinate at both
-        # the top and bottom of the aoi extent and taking the maximum
-        _, y_max_x_min, _ = to_lat_trans.TransformPoint(
-            aoi_extent[0], aoi_extent[3])
-        _, y_max_x_max, _ = to_lat_trans.TransformPoint(
-            aoi_extent[1], aoi_extent[3])
-        y_max = max(y_max_x_min, y_max_x_max)
-
-        global_b_box = [x_min, y_min, x_max, y_max]
-
-        local_b_box = [
-            aoi_extent[0], aoi_extent[2], aoi_extent[1], aoi_extent[3]]
 
         logger.info(
             'querying global quadtree against %s', str(global_b_box))
