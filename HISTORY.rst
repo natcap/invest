@@ -97,6 +97,10 @@ General
 * The natcap.invest python package now officially supports linux.
   manylinux wheels will be available on PyPI.
   (`#1730 <https://github.com/natcap/invest/issues/1730>`_)
+* Removed the warning about ``gdal.UseExceptions()``.
+  Python API users should still call ``gdal.UseExceptions()``, but no
+  longer need to do so before importing ``natcap.invest``.
+  https://github.com/natcap/invest/issues/1702
 
 Workbench
 =========
@@ -120,6 +124,16 @@ Carbon
 * Raster outputs that previously contained per-pixel values (e.g., t/pixel)
   now contain per-hectare values (e.g., t/ha). (`InVEST #1270
   <https://github.com/natcap/invest/issues/1270>`_).
+* Removed the REDD scenario and updated the naming of the Current and
+  Future scenarios to Baseline and Alternate, respectively, to better
+  indicate that users are not limited to comparing present and future.
+  (`InVEST #1758 <https://github.com/natcap/invest/issues/1758>`_).
+* Changed output filename prefixes from ``tot_c`` to ``c_storage`` and
+  ``delta`` to ``c_change``. (`InVEST #1825
+  <https://github.com/natcap/invest/issues/1825>`_).
+* Fixed bug where discount rate and annual price change were incorrectly
+  treated as ratios instead of percentages. (`InVEST #1827
+  <https://github.com/natcap/invest/issues/1827>`_).
 
 Coastal Blue Carbon
 ===================
@@ -151,6 +165,11 @@ Habitat Quality
 * The model now expects the maximum threat distance (``max_dist`` in the
   threats table) to be specified in ``m`` instead of ``km`` (`InVEST #1252
   <https://github.com/natcap/invest/issues/1252>`_).
+* Adjusted total habitat degradation calculation to calculate degradation
+  for each threat and create intermediate degradation rasters. Total
+  degradation is now calculated using these individual threat degradation
+  rasters.
+  https://github.com/natcap/invest/issues/1100
 
 NDR
 ===
