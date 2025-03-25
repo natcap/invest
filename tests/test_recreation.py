@@ -1100,6 +1100,50 @@ class RecreationClientRegressionTests(unittest.TestCase):
                     if line.startswith(k):
                         self.assertEqual(line.split(': ')[1].rstrip(), v)
 
+    def test_regression_edge_case(self):
+        """Recreation unit test only one non-zero userday observation."""
+        from natcap.invest.recreation import recmodel_client
+
+        data_vector_path = os.path.join(
+            self.workspace_dir, 'regression_data.gpkg')
+        driver = 'GPKG'
+        n_features = 10
+        userdays = numpy.array([0] * n_features)
+        userdays[0] = 1  # one non-zero value
+        avg_pr_UD = userdays / userdays.sum()
+        roads = numpy.linspace(0, 100, n_features)
+        response_id = 'avg_pr_UD'
+
+        attribute_list = []
+        for i in range(n_features):
+            attribute_list.append({
+                response_id: avg_pr_UD[i],
+                'roads': roads[i],
+            })
+        field_map = {
+            response_id: ogr.OFTReal,
+            'roads': ogr.OFTReal,
+        }
+
+        # The geometries don't matter.
+        geom_list = [shapely.geometry.Point(1, -1)] * n_features
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        pygeoprocessing.shapely_geometry_to_vector(
+            geom_list,
+            data_vector_path,
+            srs.ExportToWkt(),
+            driver,
+            fields=field_map,
+            attribute_list=attribute_list,
+            ogr_geom_type=ogr.wkbPoint)
+        predictor_list = ['roads']
+
+        with self.assertRaises(ValueError):
+            recmodel_client._build_regression(
+                data_vector_path, predictor_list,
+                response_id)
+
     def test_copy_aoi_no_grid(self):
         """Recreation test AOI copy adds poly_id field."""
         from natcap.invest.recreation import recmodel_client

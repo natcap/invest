@@ -1572,15 +1572,20 @@ def _build_regression(
     for row_index, feature in enumerate(data_layer):
         response_array[row_index, :] = feature.GetField(str(response_id))
 
+    if (response_array == 1).any():
+        raise ValueError('Cannot compute a regression because there is only '
+                         f'one non-zero observation in {response_id}')
     # Logit transformation.
-    # The smallest non-zero value is added to the array because
-    # the array is likely to include zeros.
-    epsilon = response_array[response_array > 0].min()
-    array_adj = response_array + epsilon
-    response_array = numpy.log(array_adj / (1 - array_adj))
+    # Zeros are replaced with half the smallest non-zero value
+    # because zero cannot be log-transformed.
+    epsilon = 0
+    if (response_array == 0).any():
+        epsilon = response_array[response_array > 0].min() / 2
+        response_array[response_array == 0] = epsilon
+    transformed_array = numpy.log(response_array / (1 - response_array))
 
     # Y-Intercept data matrix
-    intercept_array = numpy.ones_like(response_array)
+    intercept_array = numpy.ones_like(transformed_array)
 
     # Predictor data matrix
     predictor_matrix = numpy.empty((n_features, len(predictor_id_list)))
@@ -1598,7 +1603,7 @@ def _build_regression(
 
     # add columns for response variable and y-intercept
     data_matrix = numpy.concatenate(
-        (response_array, predictor_matrix, intercept_array), axis=1)
+        (transformed_array, predictor_matrix, intercept_array), axis=1)
     predictor_names.append('(Intercept)')
 
     # if any variable is missing data for some feature, drop that feature:
