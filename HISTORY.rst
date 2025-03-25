@@ -105,6 +105,9 @@ Workbench
 * Auto-scrolling of log output is halted on user-initiated scrolling,
   enabling easier inspection of log output while a model is running
   (`InVEST #1533 <https://github.com/natcap/invest/issues/1533>`_).
+* Fixed a bug where toggle inputs would fail to respond if multiple tabs
+  of the same model were open.
+  https://github.com/natcap/invest/issues/1842
 
 Annual Water Yield
 ==================
