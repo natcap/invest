@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -41,7 +41,7 @@ function filterSpatialOverlapFeedback(message, filepath) {
 
 function FormLabel(props) {
   const {
-    argkey, argname, argtype, required, units,
+    inputId, argkey, argname, argtype, required, units,
   } = props;
 
   const userFriendlyArgType = parseArgType(argtype);
@@ -49,7 +49,7 @@ function FormLabel(props) {
   const includeComma = userFriendlyArgType && optional;
 
   return (
-    <Form.Label column sm="3" htmlFor={argkey}>
+    <Form.Label column sm="3" htmlFor={`${argkey}-${inputId}`}>
       <span className="argname">{argname} </span>
       {
        (userFriendlyArgType || optional) &&
@@ -157,6 +157,7 @@ function parseArgType(argtype) {
 }
 
 export default function ArgInput(props) {
+  const inputId = useId();
   const inputRef = useRef();
 
   const {
@@ -221,7 +222,7 @@ export default function ArgInput(props) {
       <Button
         aria-label={`browse for ${argSpec.name}`}
         className="ml-2"
-        id={argkey}
+        id={`${argkey}-${inputId}`}
         variant="outline-dark"
         value={argSpec.type} // dialog will limit options accordingly
         name={argkey}
@@ -242,7 +243,7 @@ export default function ArgInput(props) {
       <Form.Check
         inline
         type="switch"
-        id={argkey}
+        id={`${argkey}-${inputId}`}
         name={argkey}
         checked={value}
         onChange={() => updateArgValues(argkey, !value)}
@@ -253,7 +254,7 @@ export default function ArgInput(props) {
   } else if (argSpec.type === 'option_string') {
     form = (
       <Form.Control
-        id={argkey}
+        id={`${argkey}-${inputId}`}
         as="select"
         name={argkey}
         value={value}
@@ -279,7 +280,7 @@ export default function ArgInput(props) {
       <React.Fragment>
         <Form.Control
           ref={inputRef}
-          id={argkey}
+          id={`${argkey}-${inputId}`}
           name={argkey}
           type="text"
           placeholder={placeholderText}
@@ -309,6 +310,7 @@ export default function ArgInput(props) {
       className={className} // this grays out the label but doesn't actually disable the field
     >
       <FormLabel
+        inputId={inputId}
         argkey={argkey}
         argname={argSpec.name}
         argtype={argSpec.type}
