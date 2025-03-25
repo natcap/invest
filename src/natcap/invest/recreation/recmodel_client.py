@@ -1643,6 +1643,9 @@ def _build_regression(
         var_est = sigma2 * numpy.diag(numpy.linalg.pinv(
             numpy.dot(
                 data_matrix[:, 1:].T, data_matrix[:, 1:])))
+        # negative values that are effectively equal to 0
+        # have been observed on some platforms.
+        var_est[var_est < 0] = 0
         se_est = numpy.sqrt(var_est)
 
     else:
