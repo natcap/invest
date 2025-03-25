@@ -49,7 +49,7 @@ function FormLabel(props) {
   const includeComma = userFriendlyArgType && optional;
 
   return (
-    <Form.Label column sm="3" htmlFor={`${argkey}-${inputId}`}>
+    <Form.Label column sm="3" htmlFor={inputId}>
       <span className="argname">{argname} </span>
       {
        (userFriendlyArgType || optional) &&
@@ -157,7 +157,7 @@ function parseArgType(argtype) {
 }
 
 export default function ArgInput(props) {
-  const inputId = useId();
+  const uniqueId = useId();
   const inputRef = useRef();
 
   const {
@@ -176,6 +176,8 @@ export default function ArgInput(props) {
     scrollEventCount,
   } = props;
   let { validationMessage } = props;
+
+  const inputId = `${argkey}-${uniqueId}`;
 
   // Occasionaly we want to force a scroll to the end of input fields
   // so that the most important part of a filepath is visible.
@@ -222,7 +224,7 @@ export default function ArgInput(props) {
       <Button
         aria-label={`browse for ${argSpec.name}`}
         className="ml-2"
-        id={`${argkey}-${inputId}`}
+        id={inputId}
         variant="outline-dark"
         value={argSpec.type} // dialog will limit options accordingly
         name={argkey}
@@ -243,7 +245,7 @@ export default function ArgInput(props) {
       <Form.Check
         inline
         type="switch"
-        id={`${argkey}-${inputId}`}
+        id={inputId}
         name={argkey}
         checked={value}
         onChange={() => updateArgValues(argkey, !value)}
@@ -254,7 +256,7 @@ export default function ArgInput(props) {
   } else if (argSpec.type === 'option_string') {
     form = (
       <Form.Control
-        id={`${argkey}-${inputId}`}
+        id={inputId}
         as="select"
         name={argkey}
         value={value}
@@ -280,7 +282,7 @@ export default function ArgInput(props) {
       <React.Fragment>
         <Form.Control
           ref={inputRef}
-          id={`${argkey}-${inputId}`}
+          id={inputId}
           name={argkey}
           type="text"
           placeholder={placeholderText}
