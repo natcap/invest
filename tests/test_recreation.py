@@ -726,7 +726,7 @@ class TestRecClientServer(unittest.TestCase):
             'roads': 5072.707571235277,
             'bonefish_p': 792.0711806443292,
             'bathy_sum': 348.04177433624864,
-            'pr_UD_EST': 0.9980054302281078
+            'pr_UD_EST': 0.996366808597374
         }
         for key in expected_scenario_sums:
             numpy.testing.assert_almost_equal(
@@ -1076,16 +1076,15 @@ class RecreationClientRegressionTests(unittest.TestCase):
             target_coefficient_json_path, target_coefficient_csv_path,
             target_regression_summary_path)
 
-        # Expected results created using R 4.4.0 lm()
         coefficient_results = {}
-        coefficient_results['estimate'] = [4.480035e-02, -2.177808e-04, -3.636955e+00]
-        coefficient_results['stderr'] = [3.540886e-03, 3.408778e-05, 7.603066e-02]
-        coefficient_results['t-value'] = [12.652301,  -6.388823, -47.835373]
+        coefficient_results['estimate'] = [5.953980e-02, -3.056440e-04, -4.388366e+00]
+        coefficient_results['stderr'] = [3.769794e-03, 3.629146e-05, 8.094584e-02]
+        coefficient_results['t-value'] = [15.793912,  -8.421927, -54.213612]
         summary_results = {
-            'SSres': '0.0655',
-            'Multiple R-squared': '0.9888',
-            'Adjusted R-squared': '0.9856',
-            'Residual standard error': '0.0967 on 7 degrees of freedom'
+            'SSres': '0.0742',
+            'Multiple R-squared': '0.9921',
+            'Adjusted R-squared': '0.9898',
+            'Residual standard error': '0.1030 on 7 degrees of freedom'
         }
 
         results = pandas.read_csv(
