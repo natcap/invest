@@ -197,7 +197,7 @@ const UI_SPEC = {
       ['dem_path', 'lulc_path', 'runoff_proxy_path', 'watersheds_path', 'biophysical_table_path'],
       ['calc_p'],
       ['calc_n', 'subsurface_critical_length_n', 'subsurface_eff_n'],
-      ['algorithm', 'threshold_flow_accumulation', 'k_param', 'runoff_proxy_av'],
+      ['flow_dir_algorithm', 'threshold_flow_accumulation', 'k_param', 'runoff_proxy_av'],
     ],
     enabledFunctions: {
       subsurface_critical_length_n: isSufficient.bind(null, 'calc_n'),
@@ -281,7 +281,7 @@ const UI_SPEC = {
       ['dem_path', 'erosivity_path', 'erodibility_path'],
       ['lulc_path', 'biophysical_table_path'],
       ['watersheds_path', 'drainage_path'],
-      ['algorithm', 'threshold_flow_accumulation', 'k_param', 'sdr_max', 'ic_0_param', 'l_max'],
+      ['flow_dir_algorithm', 'threshold_flow_accumulation', 'k_param', 'sdr_max', 'ic_0_param', 'l_max'],
     ],
   },
   seasonal_water_yield: {
@@ -289,7 +289,7 @@ const UI_SPEC = {
       ['workspace_dir', 'results_suffix'],
       ['lulc_raster_path', 'biophysical_table_path'],
       ['dem_raster_path', 'aoi_path'],
-      ['algorithm', 'threshold_flow_accumulation', 'beta_i', 'gamma'],
+      ['flow_dir_algorithm', 'threshold_flow_accumulation', 'beta_i', 'gamma'],
       ['user_defined_local_recharge', 'l_path', 'et0_dir', 'precip_dir', 'soil_group_path'],
       ['monthly_alpha', 'alpha_m', 'monthly_alpha_path'],
       ['user_defined_climate_zones', 'rain_events_table_path', 'climate_zone_table_path', 'climate_zone_raster_path'],
