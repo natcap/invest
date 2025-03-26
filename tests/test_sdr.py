@@ -71,7 +71,7 @@ class SDRTests(unittest.TestCase):
             'watersheds_path': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
             'workspace_dir': workspace_dir,
             'n_workers': -1,
-            'algorithm': 'MFD'
+            'flow_dir_algorithm': 'MFD'
         }
         return args
 
@@ -203,7 +203,7 @@ class SDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
-        args['algorithm'] = 'D8'
+        args['flow_dir_algorithm'] = 'D8'
         args['threshold_flow_accumulation'] = 100
         # make args explicit that this is a base run of SWY
 

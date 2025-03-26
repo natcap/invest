@@ -48,7 +48,7 @@ class NDRTests(unittest.TestCase):
             'watersheds_path':
             os.path.join(REGRESSION_DATA, 'input', 'watersheds.shp'),
             'workspace_dir': workspace_dir,
-            'algorithm': 'MFD'
+            'flow_dir_algorithm': 'MFD'
         }
         return args.copy()
 
@@ -286,7 +286,7 @@ class NDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
-        args['algorithm'] = 'D8'
+        args['flow_dir_algorithm'] = 'D8'
         # make an empty output shapefile on top of where the new output
         # shapefile should reside to ensure the model overwrites it
         with open(
@@ -444,7 +444,7 @@ class NDRTests(unittest.TestCase):
             'k_param',
             'watersheds_path',
             'subsurface_eff_n',
-            'algorithm'
+            'flow_dir_algorithm'
         ]
         self.assertEqual(set(invalid_args), set(expected_missing_args))
 

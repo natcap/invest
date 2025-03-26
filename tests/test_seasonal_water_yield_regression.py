@@ -424,7 +424,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
-            'algorithm': 'MFD'
+            'flow_dir_algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(args['workspace_dir'],
@@ -486,7 +486,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
-            'algorithm': 'MFD'
+            'flow_dir_algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(args['workspace_dir'],
@@ -587,7 +587,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
-            'algorithm': 'MFD'
+            'flow_dir_algorithm': 'MFD'
         }
 
         biophysical_csv_path = os.path.join(args['workspace_dir'],
@@ -647,7 +647,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             'results_suffix': '',
             'threshold_flow_accumulation': '50',
             'workspace_dir': workspace_dir,
-            'algorithm': 'MFD'
+            'flow_dir_algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(workspace_dir, 'watershed.shp')
@@ -769,7 +769,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['user_defined_local_recharge'] = False
         args['monthly_alpha'] = False
         args['results_suffix'] = ''
-        args['algorithm'] = 'D8'
+        args['flow_dir_algorithm'] = 'D8'
 
         seasonal_water_yield.execute(args)
 
@@ -1489,7 +1489,7 @@ class SWYValidationTests(unittest.TestCase):
             'precip_dir',
             'threshold_flow_accumulation',
             'user_defined_local_recharge',
-            'algorithm'
+            'flow_dir_algorithm'
         ]
 
     def tearDown(self):

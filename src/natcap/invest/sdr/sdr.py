@@ -142,21 +142,7 @@ MODEL_SPEC = {
                 "streams. Pixels with 0 are not drainages."),
             "name": gettext("drainages")
         },
-        "algorithm": {
-            "type": "option_string",
-            "options": {
-                "D8": {
-                    "display_name": gettext("D8"),
-                    "description": "D8 flow direction"
-                },
-                "MFD": {
-                    "display_name": gettext("MFD"),
-                    "description": "Multiple flow direction"
-                }
-            },
-            "about": gettext("Flow direction algorithm to use."),
-            "name": gettext("flow direction algorithm")
-        }
+        **spec_utils.FLOW_DIR_ALGORITHM
     },
     "outputs": {
         "avoided_erosion.tif": {
@@ -697,7 +683,7 @@ def execute(args):
         dependent_task_list=[slope_task],
         task_name='threshold slope')
 
-    if args['algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'MFD':
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_mfd,
             args=(
@@ -851,7 +837,7 @@ def execute(args):
                 flow_accumulation_path=f_reg['flow_accumulation_path'],
                 accumulation_path=accumulation_path,
                 out_bar_path=out_bar_path,
-                algorithm=args['algorithm']),
+                algorithm=args['flow_dir_algorithm']),
             target_path_list=[accumulation_path, out_bar_path],
             dependent_task_list=[
                 factor_task, flow_accumulation_task, flow_dir_task],
@@ -938,7 +924,7 @@ def execute(args):
             f_path=f_reg['f_path'],
             sdr_path=f_reg['sdr_path'],
             target_sediment_deposition_path=f_reg['sed_deposition_path'],
-            algorithm=args['algorithm']),
+            algorithm=args['flow_dir_algorithm']),
         dependent_task_list=[e_prime_task, sdr_task, flow_dir_task],
         target_path_list=[f_reg['sed_deposition_path'], f_reg['f_path']],
         task_name='sediment deposition')
@@ -1389,7 +1375,7 @@ def _calculate_cp(lulc_to_cp, lulc_path, cp_factor_path):
 
 def _calculate_bar_factor(
         flow_direction_path, factor_path, flow_accumulation_path,
-        accumulation_path, out_bar_path, algorithm):
+        accumulation_path, out_bar_path, flow_dir_algorithm):
     """Route user defined source across DEM.
 
     Used for calculating S and W bar in the SDR operation.
@@ -1404,7 +1390,7 @@ def _calculate_bar_factor(
         out_bar_path (string): path to output raster that is the result of
             the factor accumulation raster divided by the flow accumulation
             raster.
-        algorithm (string): flow direction algorithm, 'D8' or 'MFD'
+        flow_dir_algorithm (string): flow direction algorithm, 'D8' or 'MFD'
 
     Returns:
         None.
@@ -1412,7 +1398,7 @@ def _calculate_bar_factor(
     """
     LOGGER.debug(f"doing flow accumulation on {factor_path}")
 
-    if algorithm == 'D8':
+    if flow_dir_algorithm == 'D8':
         flow_accum_func = pygeoprocessing.routing.flow_accumulation_d8
     else:  # MFD
         flow_accum_func = pygeoprocessing.routing.flow_accumulation_mfd

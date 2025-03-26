@@ -294,21 +294,7 @@ MODEL_SPEC = {
                 "Required if Use Monthly Alpha Table is selected."),
             "name": gettext("monthly alpha table")
         },
-        "algorithm": {
-            "type": "option_string",
-            "options": {
-                "D8": {
-                    "display_name": gettext("D8"),
-                    "description": "D8 flow direction"
-                },
-                "MFD": {
-                    "display_name": gettext("MFD"),
-                    "description": "Multiple flow direction"
-                }
-            },
-            "about": gettext("Flow direction algorithm to use."),
-            "name": gettext("flow direction algorithm")
-        }
+        **spec_utils.FLOW_DIR_ALGORITHM
     },
     "outputs": {
         "B.tif": {
@@ -726,7 +712,7 @@ def execute(args):
         dependent_task_list=[align_task],
         task_name='fill dem pits')
 
-    if args['algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'MFD':
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_mfd,
             args=(
@@ -928,7 +914,7 @@ def execute(args):
                 file_registry['l_sum_avail_path'],
                 file_registry['aet_path'],
                 file_registry['annual_precip_path'],
-                args['algorithm']),
+                args['flow_dir_algorithm']),
             target_path_list=[
                 file_registry['l_path'],
                 file_registry['l_avail_path'],
@@ -965,7 +951,7 @@ def execute(args):
         task_name='aggregate recharge')
 
     LOGGER.info('calculate L_sum')  # Eq. [12]
-    if args['algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'MFD':
         l_sum_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_mfd,
             args=(
@@ -1003,7 +989,7 @@ def execute(args):
             file_registry['stream_path'],
             file_registry['b_path'],
             file_registry['b_sum_path'],
-            args['algorithm']),
+            args['flow_dir_algorithm']),
         target_path_list=[
             file_registry['b_sum_path'], file_registry['b_path']],
         dependent_task_list=b_sum_dependent_task_list + [l_sum_task],

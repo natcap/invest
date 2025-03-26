@@ -175,21 +175,7 @@ MODEL_SPEC = {
                 "retention due to biochemical degradation in soils. Required "
                 "if Calculate Nitrogen is selected.")
         },
-        "algorithm": {
-            "type": "option_string",
-            "options": {
-                "D8": {
-                    "display_name": gettext("D8"),
-                    "description": "D8 flow direction"
-                },
-                "MFD": {
-                    "display_name": gettext("MFD"),
-                    "description": "Multiple flow direction"
-                }
-            },
-            "about": gettext("Flow direction algorithm to use."),
-            "name": gettext("flow direction algorithm")
-        }
+        **spec_utils.FLOW_DIR_ALGORITHM
     },
     "outputs": {
         "watershed_results_ndr.gpkg": {
@@ -723,7 +709,7 @@ def execute(args):
         dependent_task_list=[calculate_slope_task],
         task_name='threshold slope')
 
-    if args['algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'MFD':
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_mfd,
             args=(
@@ -838,7 +824,7 @@ def execute(args):
         dependent_task_list=[threshold_slope_task],
         task_name='s inv')
 
-    if args['algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'MFD':
         d_dn_task = task_graph.add_task(
             func=pygeoprocessing.routing.distance_to_channel_mfd,
             args=(
@@ -969,7 +955,7 @@ def execute(args):
                 f_reg['flow_direction_path'],
                 f_reg['stream_path'], eff_path,
                 crit_len_path, effective_retention_path,
-                args['algorithm']),
+                args['flow_dir_algorithm']),
             target_path_list=[effective_retention_path],
             dependent_task_list=[
                 stream_extraction_task, eff_task, crit_len_task],
