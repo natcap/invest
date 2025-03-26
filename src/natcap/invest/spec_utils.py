@@ -184,6 +184,24 @@ STREAM = {
     "bands": {1: {"type": "integer"}}
 }
 
+FLOW_DIR_ALGORITHM = {
+    "flow_dir_algorithm": {
+        "type": "option_string",
+        "options": {
+            "D8": {
+                "display_name": gettext("D8"),
+                "description": "D8 flow direction"
+            },
+            "MFD": {
+                "display_name": gettext("MFD"),
+                "description": "Multiple flow direction"
+            }
+        },
+        "about": gettext("Flow direction algorithm to use."),
+        "name": gettext("flow direction algorithm")
+    }
+}
+
 # geometry types ##############################################################
 # the full list of ogr geometry types is in an enum in
 # https://github.com/OSGeo/gdal/blob/master/gdal/ogr/ogr_core.h

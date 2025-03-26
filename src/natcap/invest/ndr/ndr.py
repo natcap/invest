@@ -174,7 +174,8 @@ MODEL_SPEC = {
                 "reached through subsurface flow. This characterizes the "
                 "retention due to biochemical degradation in soils. Required "
                 "if Calculate Nitrogen is selected.")
-        }
+        },
+        **spec_utils.FLOW_DIR_ALGORITHM
     },
     "outputs": {
         "watershed_results_ndr.gpkg": {
@@ -691,35 +692,6 @@ def execute(args):
         target_path_list=[f_reg['filled_dem_path']],
         task_name='fill pits')
 
-    flow_dir_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_dir_mfd,
-        args=(
-            (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
-        kwargs={'working_dir': intermediate_output_dir},
-        dependent_task_list=[fill_pits_task],
-        target_path_list=[f_reg['flow_direction_path']],
-        task_name='flow dir')
-
-    flow_accum_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_accumulation_mfd,
-        args=(
-            (f_reg['flow_direction_path'], 1),
-            f_reg['flow_accumulation_path']),
-        target_path_list=[f_reg['flow_accumulation_path']],
-        dependent_task_list=[flow_dir_task],
-        task_name='flow accum')
-
-    stream_extraction_task = task_graph.add_task(
-        func=pygeoprocessing.routing.extract_streams_mfd,
-        args=(
-            (f_reg['flow_accumulation_path'], 1),
-            (f_reg['flow_direction_path'], 1),
-            float(args['threshold_flow_accumulation']),
-            f_reg['stream_path']),
-        target_path_list=[f_reg['stream_path']],
-        dependent_task_list=[flow_accum_task],
-        task_name='stream extraction')
-
     calculate_slope_task = task_graph.add_task(
         func=pygeoprocessing.calculate_slope,
         args=((f_reg['filled_dem_path'], 1), f_reg['slope_path']),
@@ -737,6 +709,81 @@ def execute(args):
         dependent_task_list=[calculate_slope_task],
         task_name='threshold slope')
 
+    if args['flow_dir_algorithm'] == 'MFD':
+        flow_dir_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_dir_mfd,
+            args=(
+                (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
+            kwargs={'working_dir': intermediate_output_dir},
+            dependent_task_list=[fill_pits_task],
+            target_path_list=[f_reg['flow_direction_path']],
+            task_name='flow dir')
+
+        flow_accum_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_accumulation_mfd,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                f_reg['flow_accumulation_path']),
+            target_path_list=[f_reg['flow_accumulation_path']],
+            dependent_task_list=[flow_dir_task],
+            task_name='flow accum')
+
+        stream_extraction_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_streams_mfd,
+            args=(
+                (f_reg['flow_accumulation_path'], 1),
+                (f_reg['flow_direction_path'], 1),
+                float(args['threshold_flow_accumulation']),
+                f_reg['stream_path']),
+            target_path_list=[f_reg['stream_path']],
+            dependent_task_list=[flow_accum_task],
+            task_name='stream extraction')
+        s_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_accumulation_mfd,
+            args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
+            kwargs={
+                'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
+            target_path_list=[f_reg['s_accumulation_path']],
+            dependent_task_list=[flow_dir_task, threshold_slope_task],
+            task_name='route s')
+    else:  # D8
+        flow_dir_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_dir_d8,
+            args=(
+                (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
+            kwargs={'working_dir': intermediate_output_dir},
+            dependent_task_list=[fill_pits_task],
+            target_path_list=[f_reg['flow_direction_path']],
+            task_name='flow dir')
+
+        flow_accum_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_accumulation_d8,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                f_reg['flow_accumulation_path']),
+            target_path_list=[f_reg['flow_accumulation_path']],
+            dependent_task_list=[flow_dir_task],
+            task_name='flow accum')
+
+        stream_extraction_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_streams_d8,
+            kwargs=dict(
+                flow_accum_raster_path_band=(f_reg['flow_accumulation_path'], 1),
+                flow_threshold=float(args['threshold_flow_accumulation']),
+                target_stream_raster_path=f_reg['stream_path']),
+            target_path_list=[f_reg['stream_path']],
+            dependent_task_list=[flow_accum_task],
+            task_name='stream extraction')
+
+        s_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_accumulation_d8,
+            args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
+            kwargs={
+                'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
+            target_path_list=[f_reg['s_accumulation_path']],
+            dependent_task_list=[flow_dir_task, threshold_slope_task],
+            task_name='route s')
+
     runoff_proxy_index_task = task_graph.add_task(
         func=_normalize_raster,
         args=((f_reg['masked_runoff_proxy_path'], 1),
@@ -745,15 +792,6 @@ def execute(args):
         target_path_list=[f_reg['runoff_proxy_index_path']],
         dependent_task_list=[align_raster_task, mask_runoff_proxy_task],
         task_name='runoff proxy mean')
-
-    s_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_accumulation_mfd,
-        args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
-        kwargs={
-            'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
-        target_path_list=[f_reg['s_accumulation_path']],
-        dependent_task_list=[flow_dir_task, threshold_slope_task],
-        task_name='route s')
 
     s_bar_task = task_graph.add_task(
         func=pygeoprocessing.raster_map,
@@ -786,27 +824,50 @@ def execute(args):
         dependent_task_list=[threshold_slope_task],
         task_name='s inv')
 
-    d_dn_task = task_graph.add_task(
-        func=pygeoprocessing.routing.distance_to_channel_mfd,
-        args=(
-            (f_reg['flow_direction_path'], 1),
-            (f_reg['stream_path'], 1),
-            f_reg['d_dn_path']),
-        kwargs={'weight_raster_path_band': (
-            f_reg['s_factor_inverse_path'], 1)},
-        dependent_task_list=[stream_extraction_task, s_inv_task],
-        target_path_list=[f_reg['d_dn_path']],
-        task_name='d dn')
+    if args['flow_dir_algorithm'] == 'MFD':
+        d_dn_task = task_graph.add_task(
+            func=pygeoprocessing.routing.distance_to_channel_mfd,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                (f_reg['stream_path'], 1),
+                f_reg['d_dn_path']),
+            kwargs={'weight_raster_path_band': (
+                f_reg['s_factor_inverse_path'], 1)},
+            dependent_task_list=[stream_extraction_task, s_inv_task],
+            target_path_list=[f_reg['d_dn_path']],
+            task_name='d dn')
 
-    dist_to_channel_task = task_graph.add_task(
-        func=pygeoprocessing.routing.distance_to_channel_mfd,
-        args=(
-            (f_reg['flow_direction_path'], 1),
-            (f_reg['stream_path'], 1),
-            f_reg['dist_to_channel_path']),
-        dependent_task_list=[stream_extraction_task],
-        target_path_list=[f_reg['dist_to_channel_path']],
-        task_name='dist to channel')
+        dist_to_channel_task = task_graph.add_task(
+            func=pygeoprocessing.routing.distance_to_channel_mfd,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                (f_reg['stream_path'], 1),
+                f_reg['dist_to_channel_path']),
+            dependent_task_list=[stream_extraction_task],
+            target_path_list=[f_reg['dist_to_channel_path']],
+            task_name='dist to channel')
+    else: # D8
+        d_dn_task = task_graph.add_task(
+            func=pygeoprocessing.routing.distance_to_channel_d8,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                (f_reg['stream_path'], 1),
+                f_reg['d_dn_path']),
+            kwargs={'weight_raster_path_band': (
+                f_reg['s_factor_inverse_path'], 1)},
+            dependent_task_list=[stream_extraction_task, s_inv_task],
+            target_path_list=[f_reg['d_dn_path']],
+            task_name='d dn')
+
+        dist_to_channel_task = task_graph.add_task(
+            func=pygeoprocessing.routing.distance_to_channel_d8,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                (f_reg['stream_path'], 1),
+                f_reg['dist_to_channel_path']),
+            dependent_task_list=[stream_extraction_task],
+            target_path_list=[f_reg['dist_to_channel_path']],
+            task_name='dist to channel')
 
     _ = task_graph.add_task(
         func=sdr._calculate_what_drains_to_stream,
@@ -893,7 +954,8 @@ def execute(args):
             args=(
                 f_reg['flow_direction_path'],
                 f_reg['stream_path'], eff_path,
-                crit_len_path, effective_retention_path),
+                crit_len_path, effective_retention_path,
+                args['flow_dir_algorithm']),
             target_path_list=[effective_retention_path],
             dependent_task_list=[
                 stream_extraction_task, eff_task, crit_len_task],

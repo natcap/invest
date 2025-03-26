@@ -74,6 +74,8 @@ Highlights
   * Forest Carbon Edge Effect
   * NDR
   * SDR
+* NDR, SDR, and Seasonal Water Yield now support the D8 routing algorithm
+  in addition to MFD.
 
 General
 =======
@@ -183,6 +185,8 @@ NDR
   specify the average runoff proxy, preventing normalization issues across
   different climate scenarios and watershed selections.
   https://github.com/natcap/invest/issues/1741
+* D8 routing is now supported in addition to MFD
+  (`#1440 <https://github.com/natcap/invest/issues/1440>`_).
 
 Scenario Generator
 ==================
@@ -197,6 +201,13 @@ SDR
 * Raster outputs that previously contained per-pixel values (e.g., t/pixel)
   now contain per-hectare values (e.g., t/ha). (`InVEST #1270
   <https://github.com/natcap/invest/issues/1270>`_).
+* D8 routing is now supported in addition to MFD
+  (`#1440 <https://github.com/natcap/invest/issues/1440>`_).
+
+Seasonal Water Yield
+====================
+* D8 routing is now supported in addition to MFD
+  (`#1440 <https://github.com/natcap/invest/issues/1440>`_).
 
 Urban Cooling
 =============

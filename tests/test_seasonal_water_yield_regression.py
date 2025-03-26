@@ -424,6 +424,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
+            'flow_dir_algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(args['workspace_dir'],
@@ -485,6 +486,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
+            'flow_dir_algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(args['workspace_dir'],
@@ -585,6 +587,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
+            'flow_dir_algorithm': 'MFD'
         }
 
         biophysical_csv_path = os.path.join(args['workspace_dir'],
@@ -644,6 +647,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             'results_suffix': '',
             'threshold_flow_accumulation': '50',
             'workspace_dir': workspace_dir,
+            'flow_dir_algorithm': 'MFD'
         }
 
         watershed_shp_path = os.path.join(workspace_dir, 'watershed.shp')
@@ -729,6 +733,58 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             os.path.join(args['workspace_dir'], 'aggregated_results_swy.shp'),
             agg_results_csv_path)
+
+    def test_base_regression_d8(self):
+        """SWY base regression test on sample data in D8 mode.
+
+        Executes SWY in default mode and checks that the output files are
+        generated and that the aggregate shapefile fields are the same as the
+        regression case.
+        """
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # use predefined directory so test can clean up files during teardown
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir)
+
+        # Ensure the model can pass when a nodata value is not defined.
+        size = 100
+        lulc_array = numpy.zeros((size, size), dtype=numpy.int8)
+        lulc_array[size // 2:, :] = 1
+
+        driver = gdal.GetDriverByName('GTiff')
+        new_raster = driver.Create(
+            args['lulc_raster_path'], lulc_array.shape[0],
+            lulc_array.shape[1], 1, gdal.GDT_Byte)
+        band = new_raster.GetRasterBand(1)
+        band.WriteArray(lulc_array)
+        geotransform = [1180000, 1, 0, 690000, 0, -1]
+        new_raster.SetGeoTransform(geotransform)
+        band = None
+        new_raster = None
+        driver = None
+
+        # make args explicit that this is a base run of SWY
+        args['user_defined_climate_zones'] = False
+        args['user_defined_local_recharge'] = False
+        args['monthly_alpha'] = False
+        args['results_suffix'] = ''
+        args['flow_dir_algorithm'] = 'D8'
+
+        seasonal_water_yield.execute(args)
+
+        result_vector = ogr.Open(os.path.join(
+            args['workspace_dir'], 'aggregated_results_swy.shp'))
+        result_layer = result_vector.GetLayer()
+        result_feature = result_layer.GetFeature(0)
+        mismatch_list = []
+        for field, expected_value in [('vri_sum', 1), ('qb', 52.9128)]:
+            val = result_feature.GetField(field)
+            if not numpy.isclose(val, expected_value):
+                mismatch_list.append(
+                    (field, f'expected: {expected_value}', f'actual: {val}'))
+        if mismatch_list:
+            raise RuntimeError(f'results not expected: {mismatch_list}')
 
     def test_base_regression_nodata_inf(self):
         """SWY base regression test on sample data with really small nodata.
@@ -1276,7 +1332,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             [kc_path for i in range(12)], alpha_month_map, beta,
             gamma, stream_path, target_li_path, target_li_avail_path,
             target_l_sum_avail_path, target_aet_path,
-            os.path.join(self.workspace_dir, 'target_precip_path.tif'))
+            os.path.join(self.workspace_dir, 'target_precip_path.tif'),
+            algorithm='MFD')
 
         actual_li = pygeoprocessing.raster_to_numpy_array(target_li_path)
         actual_li_avail = pygeoprocessing.raster_to_numpy_array(target_li_avail_path)
@@ -1284,7 +1341,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         actual_aet = pygeoprocessing.raster_to_numpy_array(target_aet_path)
 
         # note: obtained these arrays by running `calculate_local_recharge`
-        expected_li = numpy.array([[60., -72., 73.915215],
+        expected_li = numpy.array([[60., -72., 73.91521],
                                    [0, 76.68, 828.]])
         expected_li_avail = numpy.array([[30., -72., 36.957607],
                                          [0, 38.34, 414.]])
@@ -1352,16 +1409,16 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         seasonal_water_yield_core.route_baseflow_sum(flow_dir_mfd_path, l_path,
                                                      l_avail_path, l_sum_path,
                                                      stream_path, target_b_path,
-                                                     target_b_sum_path)
+                                                     target_b_sum_path, 'MFD')
 
         actual_b = pygeoprocessing.raster_to_numpy_array(target_b_path)
         actual_b_sum = pygeoprocessing.raster_to_numpy_array(target_b_sum_path)
 
         # note: obtained these arrays by running `route_baseflow_sum`
-        expected_b = numpy.array([[10.5, 0.9999998, 0],
-                                  [0.1422222, 2.2666667, 0]])
-        expected_b_sum = numpy.array([[16.916666, 1.8666663, 0],
-                                      [0.1422222, 2.5333333, 0]])
+        expected_b = numpy.array([[10.5, 1, 0],
+                                  [0.14222223, 2.2666667, 0]])
+        expected_b_sum = numpy.array([[16.916666, 1.8666667, 0],
+                                      [0.14222223, 2.5333333, 0]])
 
         numpy.testing.assert_allclose(actual_b, expected_b, equal_nan=True,
                                       err_msg="Baseflow raster values do not match.")
@@ -1432,6 +1489,7 @@ class SWYValidationTests(unittest.TestCase):
             'precip_dir',
             'threshold_flow_accumulation',
             'user_defined_local_recharge',
+            'flow_dir_algorithm'
         ]
 
     def tearDown(self):
