@@ -837,7 +837,7 @@ def execute(args):
                 flow_accumulation_path=f_reg['flow_accumulation_path'],
                 accumulation_path=accumulation_path,
                 out_bar_path=out_bar_path,
-                algorithm=args['flow_dir_algorithm']),
+                flow_dir_algorithm=args['flow_dir_algorithm']),
             target_path_list=[accumulation_path, out_bar_path],
             dependent_task_list=[
                 factor_task, flow_accumulation_task, flow_dir_task],
