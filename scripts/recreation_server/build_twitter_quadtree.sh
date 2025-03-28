@@ -15,8 +15,9 @@
 # ----------------Load Modules--------------------
 # ----------------Commands------------------------
 
-
-CONTAINER=ghcr.io/davemfish/invest:exp.rec-twitter
+# If this script is re-used, the user should expect
+# to update these values.
+CONTAINER=ghcr.io/natcap/invest:3.15.0
 TWEETS_DIR=/scratch/users/woodsp/invest/csv
 TWEETS_LIST=$SCRATCH/tweets_full_list.txt
 find $TWEETS_DIR -name '*.csv' > $TWEETS_LIST

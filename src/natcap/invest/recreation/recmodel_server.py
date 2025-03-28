@@ -320,7 +320,8 @@ class RecModel(object):
                     ooc_qt_picklefilename, cache_workspace)
         else:
             LOGGER.info(
-                f'{ooc_qt_picklefilename} not found, constructing quadtree')
+                f'Pickle file {ooc_qt_picklefilename} does not exist, '
+                f'constructing quadtree from {raw_csv_filename}')
             if not os.path.exists(raw_csv_filename):
                 raise ValueError(f'{raw_csv_filename} does not exist.')
             construct_userday_quadtree(
