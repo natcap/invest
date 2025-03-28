@@ -232,7 +232,6 @@ Wind Energy
   Energy model with ``Taskgraph`` logging set to ``DEBUG`` (`InVEST #1497
   <https://github.com/natcap/invest/issues/1497>`_).
 
-
 3.14.3 (2024-12-19)
 -------------------
 * General
