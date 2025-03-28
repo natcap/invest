@@ -4,11 +4,12 @@ import tempfile
 import shutil
 import os
 
-from osgeo import gdal, osr, ogr
 import numpy
 import pandas
-import pygeoprocessing
+from osgeo import gdal, osr, ogr
 from shapely.geometry import Polygon
+import pygeoprocessing
+import pickle
 
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
@@ -19,8 +20,10 @@ REGRESSION_DATA = os.path.join(
 def make_simple_vector(path_to_shp):
     """
     Generate shapefile with one rectangular polygon
+
     Args:
         path_to_shp (str): path to target shapefile
+
     Returns:
         None
     """
@@ -34,11 +37,9 @@ def make_simple_vector(path_to_shp):
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(26910)
     projection_wkt = srs.ExportToWkt()
-
     vector_format = "ESRI Shapefile"
     fields = {"id": ogr.OFTReal}
     attribute_list = [{"id": 0}]
-
     pygeoprocessing.shapely_geometry_to_vector(shapely_geometry_list,
                                                path_to_shp, projection_wkt,
                                                vector_format, fields,
@@ -54,7 +55,7 @@ def make_simple_raster(base_raster_path, array, nodata_val=-1):
         nodata_val (int or None): for defining a raster's nodata value.
 
     Returns:
-        None.
+        None
 
     """
 
@@ -77,7 +78,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
     def setUp(self):
         """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
-        # the rest result
+        # test result
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
@@ -420,21 +421,96 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         ], dtype=numpy.int16)
         numpy.testing.assert_allclose(actual_output, expected_output)
 
-    def test_build_spatial_index(self):
-        """Test `build_spatial_index`"""
-        from natcap.invest.forest_carbon_edge_effect import _build_spatial_index
+    def test_calculate_tropical_forest_edge_carbon_map(self):
+        """Test `_calculate_tropical_forest_edge_carbon_map`"""
+        from natcap.invest.forest_carbon_edge_effect import \
+            _calculate_tropical_forest_edge_carbon_map
+        from scipy.spatial import cKDTree
 
-        base_raster_path = os.path.join(self.workspace_dir, "base.tif")
-        local_model_dir = os.path.join(self.workspace_dir, "model")
-        tropical_forest_edge_carbon_model_vector_path = os.path.join(
-            self.workspace_dir, "params.shp")
-        target_spatial_index_pickle_path = os.path.join(
-            self.workspace_dir, "index.pkl")
+        edge_dist_array = numpy.array([
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 1, 1, 0],
+            [0, 1, 2, 2, 2, 1, 0],
+            [0, 1, 1, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0]
+        ], dtype=numpy.int16)
+        edge_distance_path = os.path.join(self.workspace_dir, "edge_dist.tif")
+        make_simple_raster(edge_distance_path, edge_dist_array)
+        spatial_index_pickle_path = os.path.join(self.workspace_dir,
+                                                 "spatial_index.pkl")
 
-        _build_spatial_index(
-            base_raster_path, local_model_dir,
-            tropical_forest_edge_carbon_model_vector_path,
-            target_spatial_index_pickle_path)
+        def _create_spatial_index_pickle(spatial_index_pickle_path,
+                                         raster_path):
+            """
+            Create and save a KD-tree.
+
+            This function reads the spatial extent and resolution from a raster
+            file, then generates a grid of sample points in geographic space
+            (one point every other row, all columns). It builds a KD-tree from
+            these points for fast spatial lookup, along with synthetic theta
+            and method model parameters, and saves the result as a pickle file.
+
+            Args:
+                spatial_index_pickle_path (str): Path to save the pickle file.
+                raster_path (string): Path to the raster used to extract
+                    spatial metadata.
+
+            Return:
+                None
+
+            """
+            # Get origin and pixel_size
+            raster_info = pygeoprocessing.get_raster_info(raster_path)
+            gt = raster_info['geotransform']#461261, 4923265
+            origin_x, origin_y = gt[0], gt[3]
+            pixel_size_x, pixel_size_y = raster_info['pixel_size']
+            cols, rows = raster_info['raster_size']
+
+            # only create a point every other row and every col (in raster)
+            row_col_pairs = [(r, c) for r in range(0, rows, 2) for c in range(cols)]
+            # Get spatial coordinates
+            points = []
+            for row, col in row_col_pairs:
+                x = origin_x + col * pixel_size_x
+                y = origin_y + row * pixel_size_y
+                points.append((y, x))
+                # note: row → y, col → x (so KD-tree works with (lat, lon))
+
+            theta_model_parameters = numpy.linspace(
+                100, 200, len(points)*3).reshape(len(points), 3)  # Nx3
+
+            method_model_parameter = numpy.ones((len(points),))
+
+            kd_tree = cKDTree(points)
+
+            # Save the data as a tuple in a pickle file
+            with open(spatial_index_pickle_path, 'wb') as f:
+                pickle.dump((kd_tree, theta_model_parameters,
+                             method_model_parameter), f)
+
+        _create_spatial_index_pickle(spatial_index_pickle_path,
+                                     edge_distance_path)
+
+        n_nearest_model_points = 8
+        biomass_to_carbon_conversion_factor = 1000
+        tropical_forest_edge_carbon_map_path = os.path.join(self.workspace_dir,
+                                                            "output.tif")
+
+        _calculate_tropical_forest_edge_carbon_map(
+            edge_distance_path, spatial_index_pickle_path,
+            n_nearest_model_points, biomass_to_carbon_conversion_factor,
+            tropical_forest_edge_carbon_map_path)
+
+        actual_output = pygeoprocessing.raster_to_numpy_array(
+            tropical_forest_edge_carbon_map_path)
+        expected_output = numpy.array(
+            [[-1, -1, -1, -1, -1, -1, -1],
+             [-1, 1.3486482, 1.3903661, 1.5450714, 1.6976272, 1.7436424, -1],
+             [-1, 1.7600988, 3.716307, 4.004815, 3.8613932, 2.2213786, -1],
+             [-1, 2.2157857, 2.2673838, 2.448313, 2.6430724, 2.6987493, -1],
+             [-1, -1, -1, -1, -1, -1, -1]])
+
+        numpy.testing.assert_allclose(actual_output, expected_output)
 
 
     @staticmethod
