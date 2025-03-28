@@ -302,9 +302,8 @@ def viewshed(dem_raster_path_band,
     # Need to handle the case where the nodata value is not defined.
     if nodata_value is None:
         nodata_value = IMPROBABLE_NODATA
-    else:
-        if is_close(viewpoint_elevation, nodata_value):
-            raise LookupError('Viewpoint is over nodata')
+    elif is_close(viewpoint_elevation, nodata_value):
+        raise LookupError('Viewpoint is over nodata')
     cdef double nodata = nodata_value
 
     # Verify that pixels are very close to square.  The Wang et al algorithm
