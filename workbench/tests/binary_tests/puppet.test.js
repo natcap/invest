@@ -210,10 +210,10 @@ test('Run a real invest model', async () => {
   await aoi.type(TMP_AOI_PATH, { delay: typeDelay });
   const startYear = await argsForm.waitForSelector(
     'aria/[name="Start Year (number)"][role="textbox"]');
-  await startYear.type('2008', { delay: typeDelay });
+  await startYear.type('2012', { delay: typeDelay });
   const endYear = await argsForm.waitForSelector(
     'aria/[name="End Year (number)"][role="textbox"]');
-  await endYear.type('2012', { delay: typeDelay });
+  await endYear.type('2017', { delay: typeDelay });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
 
   const sidebar = await page.waitForSelector('.invest-sidebar-col');

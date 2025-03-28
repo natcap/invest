@@ -77,6 +77,8 @@ Highlights
 * NDR, SDR, and Seasonal Water Yield now support the D8 routing algorithm
   in addition to MFD.
 
+* Visitation: Recreation and Tourism model now includes twitter data.
+
 General
 =======
 * Fixed an issue where a user's PROJ_DATA environment variable could
@@ -219,6 +221,18 @@ Urban Cooling
 * Fixed bug in the calculation of Cooling Capacity (CC) provided by parks,
   where the CC Index was not being properly incorporated.
   https://github.com/natcap/invest/issues/1726
+
+Visitation: Recreation and Tourism
+==================================
+  * Added a database of geotagged tweets to support calculating
+    twitter-user-days (TUD) as proxy for visitation rates. The model now calculates
+    photo-user-days (PUD) and TUD and uses their average as the response
+    variable in the regression model. Please refer to the User's Guide for
+    more details on the regression model.
+  * Output data were updated to support the new TUD results, and vector outputs
+    are now in GeoPackage format instead of ESRI Shapefile.
+  * Regression coefficients are still listed in a summary text file, and are now
+    also included in a tabular output: "regression_coefficients.csv".
 
 Wind Energy
 ===========
