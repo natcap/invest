@@ -196,6 +196,12 @@ Scenario Generator
   converted during the model run.
   https://github.com/natcap/invest/issues/1295
 
+Scenic Quality
+==============
+* Fixed a bug where the visibility raster could be incorrectly set to 1
+  ('visible') if the DEM value was within floating point imprecision of the
+  DEM nodata value (`#1859 <https://github.com/natcap/invest/issues/1859>`_).
+
 SDR
 ===
 * Raster outputs that previously contained per-pixel values (e.g., t/pixel)
