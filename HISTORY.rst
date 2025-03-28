@@ -222,15 +222,9 @@ Urban Cooling
 
 Urban Stormwater Retention
 ==========================
-<<<<<<< HEAD
-  * Fixed a bug causing ``inf`` values in volume outputs because nodata
-    values were not being set correctly (`InVEST #1850
-    <https://github.com/natcap/invest/issues/1850>`_).
-=======
 * Fixed a bug causing ``inf`` values in volume outputs because nodata
   values were not being set correctly (`InVEST #1850
   <https://github.com/natcap/invest/issues/1850>`_).
->>>>>>> bebb07df3 (Re-added stormwater bugfix note)
 
 Wind Energy
 ===========
