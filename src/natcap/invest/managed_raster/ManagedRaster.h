@@ -851,6 +851,10 @@ public:
   UpslopeNeighborNoDivideIterator<T> end() { return UpslopeNeighborNoDivideIterator<T>(&endVal); }
 };
 
+// Note: I was concerned that checking each value for nan would be too slow, but
+// I compared its performance against another implementation where we first reclassify
+// nans to a regular float, and then skip the nan check, and that was much slower:
+// https://github.com/natcap/invest/issues/1714#issuecomment-2762134419
 inline bool is_close(double x, double y) {
   if (isnan(x) and isnan(y)) {
     return true;
