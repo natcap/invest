@@ -6,27 +6,37 @@ import tempfile
 import unittest
 
 import numpy
+import pandas
 import pygeoprocessing
-from osgeo import gdal
+from osgeo import gdal, gdal_array
 from osgeo import ogr
 from osgeo import osr
 from shapely.geometry import Polygon
 
 gdal.UseExceptions()
 
+
 def make_raster_from_array(
-        base_array, base_raster_path, nodata_val=-1, gdal_type=gdal.GDT_Int32):
+        base_array, base_raster_path, nodata_val=-1, gdal_type=None,
+        pixel_size=1):
     """Make a raster from an array on a designated path.
 
     Args:
         base_array (numpy.ndarray): the 2D array for making the raster.
+        base_raster_path (str): the path for the raster to be created.
         nodata_val (int; float): nodata value for the raster.
         gdal_type (gdal datatype; int): gdal datatype for the raster.
-        base_raster_path (str): the path for the raster to be created.
+        pixel_size (int): pixel size for the raster.
 
     Returns:
         None.
     """
+    if gdal_type is None:
+        numpy_dtype = base_array.dtype
+    else:
+        numpy_dtype = gdal_array.GDALTypeCodeToNumericTypeCode(gdal_type)
+    base_array = base_array.astype(numpy_dtype)
+
     # Projection to user for generated sample data UTM Zone 10N
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(26910)
@@ -34,7 +44,8 @@ def make_raster_from_array(
     origin = (1180000, 690000)
 
     pygeoprocessing.numpy_array_to_raster(
-        base_array, nodata_val, (1, -1), origin, project_wkt, base_raster_path)
+        base_array, nodata_val, (pixel_size, -pixel_size),
+        origin, project_wkt, base_raster_path)
 
 
 def make_access_shp(access_shp_path):
@@ -2178,3 +2189,88 @@ class HabitatQualityTests(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             habitat_quality.execute(args)
+
+    def test_calculate_total_degradation(self):
+        """Test `_calculate_total_degradation`"""
+        from natcap.invest.habitat_quality import _calculate_total_degradation
+
+        deg_raster_list = [os.path.join(self.workspace_dir, f"threat_{i}.tif")
+                           for i in range(6)]
+        deg_sum_raster_path = os.path.join(self.workspace_dir, "deg_sum.tif")
+
+        for i, raster in enumerate(deg_raster_list, start=1):
+            # make arbitrary arrays
+            array = numpy.array([[i/10, i/20], [i/8, i/6]])
+            make_raster_from_array(array, raster)
+
+        weight_list = [0.9, 0.2, 0.5]
+
+        _calculate_total_degradation(
+            deg_raster_list, deg_sum_raster_path, weight_list)
+
+        actual_result = pygeoprocessing.raster_to_numpy_array(
+            deg_sum_raster_path)
+        expected_result = numpy.array([[0.1152, 0.0144], [0.225, 0.533333333]])
+
+        numpy.testing.assert_allclose(actual_result, expected_result)
+
+    def test_compute_rarity_operation(self):
+        """Test `_compute_rarity_operation`"""
+        from natcap.invest.habitat_quality import _compute_rarity_operation
+
+        base_lulc_path_band = (os.path.join(self.workspace_dir, "base_lulc.tif"), 1)
+        lulc_path_band = (os.path.join(self.workspace_dir, "fut_lulc.tif"), 1)
+        new_cover_path = (os.path.join(self.workspace_dir, "new_cover.tif"), 1)
+        rarity_raster_path = os.path.join(self.workspace_dir, "out_rarity.tif")
+        rarity_csv_path = os.path.join(self.workspace_dir, "out_rarity.csv")
+
+        lulc_array = numpy.array([[1, 3, 1, 4], [1, 3, 3, 3]])
+        fut_array = numpy.array([[2, 1, 3, 3], [1, 3, 4, 4]])
+        make_raster_from_array(lulc_array, base_lulc_path_band[0])
+        make_raster_from_array(fut_array, lulc_path_band[0], pixel_size=2)
+
+        _compute_rarity_operation(
+            base_lulc_path_band, lulc_path_band, new_cover_path,
+            rarity_raster_path, rarity_csv_path)
+
+        actual_rarity = pandas.read_csv(rarity_csv_path)['rarity_value']
+        expected_rarity = [0.27272727, 0, 0.25, 0.1111111111]
+        numpy.testing.assert_allclose(actual_rarity, expected_rarity)
+
+    def test_raster_values_in_bounds(self):
+        """Test `_raster_values_in_bounds`"""
+        from natcap.invest.habitat_quality import _raster_values_in_bounds
+
+        raster_path_band = (os.path.join(self.workspace_dir, "ras.tif"), 1)
+        lower_bound = 1
+        upper_bound = 50
+
+        # create array with a value (0) outside of range(lower, upper)
+        array = numpy.array([[1, 0], [50, 4]])
+
+        make_raster_from_array(array, raster_path_band[0])
+
+        values_valid = _raster_values_in_bounds(
+            raster_path_band, lower_bound, upper_bound)
+
+        self.assertFalse(values_valid)
+
+    def test_decay_distance(self):
+        """Test `_decay_distance`"""
+        from natcap.invest.habitat_quality import _decay_distance
+
+        dist_raster_path = os.path.join(self.workspace_dir, "dist.tif")
+        max_dist = 2
+        decay_type = 'linear'
+        target_path = os.path.join(self.workspace_dir, "output.tif")
+
+        dist_array = numpy.array([[0, 21, 1], [2, 50, 600]], dtype=float)
+        make_raster_from_array(dist_array, dist_raster_path, pixel_size=100)
+
+        _decay_distance(dist_raster_path, max_dist, decay_type, target_path)
+
+        actual_output = pygeoprocessing.raster_to_numpy_array(target_path)
+        expected_output = numpy.array([[1.0, 0.0, 0.95],
+                                       [0.9, 0.0, 0.0]])
+
+        numpy.testing.assert_allclose(actual_output, expected_output)
