@@ -763,11 +763,18 @@ def _retrieve_user_days(
                 except (KeyError, AttributeError, IndexError):
                     pass
                 LOGGER.handle(logging.makeLogRecord(record_dict))
-        results = future.result()
+        result_dict = future.result()
 
     for dataset in datasets:
-        result_zip_file_binary, workspace_id, server_version = (
-            results[datasets[dataset]])
+        result = result_dict[datasets[dataset]]
+
+        # If an exception occurred on the server's worker, we returned it
+        # as a 2-tuple: ('ERROR', 'traceback as formatted string')
+        if result[0] == 'ERROR':
+            LOGGER.error(result[1])
+            raise RuntimeError('An error occurred on the server.')
+
+        result_zip_file_binary, workspace_id, server_version = result
 
         LOGGER.info(f'Server version {dataset}: {server_version}')
         LOGGER.info(f'workspace_id: {workspace_id}')

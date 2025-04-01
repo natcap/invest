@@ -11,8 +11,10 @@ import pickle
 import queue
 import random
 import subprocess
+import sys
 import threading
 import time
+import traceback
 import uuid
 import zipfile
 from io import StringIO
@@ -168,8 +170,8 @@ class RecManager(object):
                 GDAL vector.
             aoi_filename (string): the name of the AOI file extracted from
                 ``zip_file_binary``
-            start_year (int or string): formatted as 'YYYY'
-            end_year (int or string): formatted as 'YYYY'
+            start_year (int or string): formatted as 'YYYY' or YYYY
+            end_year (int or string): formatted as 'YYYY' or YYYY
             dataset_list (list): listing the names of RecModel servers to query
             client_id (string): a unique id sent by the Pyro client.
 
@@ -187,20 +189,25 @@ class RecManager(object):
             for dataset in dataset_list:
                 server = self.servers[dataset]
                 server.log_queue_map[client_id] = log_queue
-                # append jan 1 to start and dec 31 to end
-                date_range = (str(start_year)+'-01-01',
-                              str(end_year)+'-12-31')
 
                 results_filename = f'{server.acronym}_results.gpkg'
                 fut = executor.submit(
                     server.calc_user_days_in_aoi,
                     zip_file_binary, aoi_filename,
-                    date_range, results_filename, client_id)
+                    start_year, end_year, results_filename, client_id)
                 future_to_label[fut] = server.acronym
 
             for future in concurrent.futures.as_completed(future_to_label):
                 label = future_to_label[future]
-                results[label] = future.result()
+                try:
+                    # If an exception occurred in the worker, do not raise it
+                    # here in the process running the Pyro daemon.
+                    results[label] = future.result()
+                except Exception:
+                    # Exceptions are not pickle-able so return this instead:
+                    trace_str = '.'.join(traceback.format_exception(
+                        *sys.exc_info()))
+                    results[label] = ('ERROR', trace_str)
 
         LOGGER.info('all user-day calculations complete; sending binary back')
 
@@ -386,8 +393,8 @@ class RecModel(object):
         return global_qt.estimate_points_in_bounding_box(bounding_box)
 
     def calc_user_days_in_aoi(
-            self, zip_file_binary, aoi_filename, date_range, out_vector_filename,
-            client_id=None):
+            self, zip_file_binary, aoi_filename, start_year, end_year,
+            out_vector_filename, client_id=None):
         """Calculate annual average and per monthly average user days.
 
         Args:
@@ -395,8 +402,8 @@ class RecModel(object):
                 GDAL vector.
             aoi_filename (string): the filename for the AOI expected to be
                 extracted from ``zip_file_binary``.
-            date_range (string 2-tuple): a tuple that contains the inclusive
-                start and end date formatted as 'YYYY-MM-DD'
+            start_year (string | int): formatted as 'YYYY' or YYYY
+            end_year (string | int): formatted as 'YYYY' or YYYY
             out_vector_filename (string): base filename of output vector
             client_id (string): a unique id sent by the Pyro client.
 
@@ -443,12 +450,9 @@ class RecModel(object):
         aoi_path = os.path.join(workspace_path, aoi_filename)
 
         logger.info('running calc user days on %s', workspace_path)
-        numpy_date_range = (
-            numpy.datetime64(date_range[0]),
-            numpy.datetime64(date_range[1]))
         base_ud_aoi_path, monthly_table_path = (
             self._calc_aggregated_points_in_aoi(
-                aoi_path, workspace_path, numpy_date_range,
+                aoi_path, workspace_path, start_year, end_year,
                 out_vector_filename, logger))
 
         # ZIP and stream the result back
@@ -467,7 +471,7 @@ class RecModel(object):
             return aoi_ud_archive.read(), workspace_id, self.get_version()
 
     def _calc_aggregated_points_in_aoi(
-            self, aoi_path, workspace_path, date_range,
+            self, aoi_path, workspace_path, start_year, end_year,
             out_vector_filename, logger=None):
         """Aggregate the userdays in the AOI.
 
@@ -480,6 +484,8 @@ class RecModel(object):
                 It must have a unique ID integer field named 'poly_id'.
             workspace_path(string): path to a directory where working files
                 can be created
+            start_year (string | int): formatted as 'YYYY' or YYYY
+            end_year (string | int): formatted as 'YYYY' or YYYY
             date_range (datetime 2-tuple): a tuple that contains the inclusive
                 start and end date
             out_vector_filename (string): base filename of output vector
@@ -498,6 +504,25 @@ class RecModel(object):
         poly_id_field = 'poly_id'
         if logger is None:
             logger = LOGGER
+
+        if int(end_year) < int(start_year):
+            raise ValueError(
+                "Start year must be less than or equal to end year.\n"
+                f"start_year: {start_year}\nend_year: {end_year}")
+
+        min_year, max_year = self.get_valid_year_range()
+        if not min_year <= int(start_year) <= max_year:
+            raise ValueError(
+                f"Start year must be between {min_year} and {max_year}.\n"
+                f" User input: ({start_year})")
+        if not min_year <= int(end_year) <= max_year:
+            raise ValueError(
+                f"End year must be between {min_year} and {max_year}.\n"
+                f" User input: ({end_year})")
+        # append jan 1 to start and dec 31 to end
+        start_date = numpy.datetime64(str(start_year)+'-01-01')
+        end_date = numpy.datetime64(str(end_year)+'-12-31')
+        date_range = (start_date, end_date)
 
         aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
         out_aoi_ud_path = os.path.join(workspace_path, out_vector_filename)

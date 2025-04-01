@@ -1,23 +1,23 @@
 """InVEST Recreation model tests."""
 import datetime
-import glob
-import zipfile
-import socket
-import threading
-import unittest
-import tempfile
-import shutil
-import os
 import functools
 import logging
 import json
 import math
 import multiprocessing
+import os
 import pickle
 import queue
 import random
+import shutil
+import socket
 import string
+import tempfile
+import threading
 import time
+import unittest
+from unittest.mock import patch
+import zipfile
 
 import numpy
 from osgeo import gdal
@@ -266,12 +266,14 @@ class UnitTestRecServer(unittest.TestCase):
             zip_file_binary = file.read()
 
         # transfer zipped file to server
-        date_range = (('2005-01-01'), ('2014-12-31'))
+        start_year = '2005'
+        end_year = '2014'
         out_vector_filename = 'results_pud.gpkg'
 
         zip_result, workspace_id, version_str = (
             recreation_server.calc_user_days_in_aoi(
-                zip_file_binary, aoi_filename, date_range, out_vector_filename))
+                zip_file_binary, aoi_filename, start_year, end_year,
+                out_vector_filename))
 
         # unpack result
         result_zip_path = os.path.join(self.workspace_dir, 'pud_result.zip')
@@ -393,7 +395,6 @@ class UnitTestRecServer(unittest.TestCase):
     def test_reuse_of_existing_quadtree(self):
         """Test init RecModel can reuse an existing quadtree on disk."""
         from natcap.invest.recreation import recmodel_server
-        from unittest.mock import patch
 
         _ = recmodel_server.RecModel(
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
@@ -504,11 +505,10 @@ class UnitTestRecServer(unittest.TestCase):
             fields={'poly_id': ogr.OFTInteger},
             attribute_list=[{'poly_id': poly_id}])
 
-        numpy_date_range = (
-            numpy.datetime64('2017-01-01'),
-            numpy.datetime64('2017-12-31'))
+        start_year = '2017'
+        end_year = '2017'
         _, monthly_table_path = server._calc_aggregated_points_in_aoi(
-            aoi_path, self.workspace_dir, numpy_date_range, target_filename)
+            aoi_path, self.workspace_dir, start_year, end_year, target_filename)
 
         expected_result_table = pandas.DataFrame({
            'poly_id': [999],
@@ -529,6 +529,22 @@ class UnitTestRecServer(unittest.TestCase):
             monthly_table_path)
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
+
+    def test_local_query_bad_dates(self):
+        """Recreation test local AOI aggregation with invalid date range."""
+        from natcap.invest.recreation import recmodel_server
+
+        recreation_server = recmodel_server.RecModel(
+            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'),
+            raw_csv_filename=self.resampled_data_path)
+
+        start_year = 2005
+        end_year = 2099
+        with self.assertRaises(ValueError) as error:
+            recreation_server._calc_aggregated_points_in_aoi(
+                'aoi.gpkg', self.workspace_dir, start_year, end_year,
+                'results.gpkg')
+            self.assertIn('End year must be between', str(error.exception))
 
 
 def _synthesize_points_in_aoi(aoi_path, target_flickr_path, target_twitter_path, n_points):
