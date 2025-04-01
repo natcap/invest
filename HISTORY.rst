@@ -76,8 +76,9 @@ Highlights
   * SDR
 * NDR, SDR, and Seasonal Water Yield now support the D8 routing algorithm
   in addition to MFD.
-
-* Visitation: Recreation and Tourism model now includes twitter data.
+* Visitation: Recreation and Tourism model now includes Twitter data.
+* InVEST model outputs now include metadata. Open the '.yml' files
+  in a text editor to read and add to the metadata.
 
 General
 =======
