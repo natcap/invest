@@ -86,6 +86,7 @@ export default function PluginModal(props) {
       ipcMainChannels.OPEN_EXTERNAL_URL,
       'https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-microsoft-visual-c-redistributable-version'
     );
+    setShowPluginModal(false);
   }
 
   useEffect(() => {
