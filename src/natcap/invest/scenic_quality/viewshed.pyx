@@ -40,6 +40,7 @@ from libc cimport math
 cimport numpy
 cimport cython
 from ..managed_raster.managed_raster cimport ManagedRaster
+from ..managed_raster.managed_raster cimport is_close
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
@@ -297,12 +298,12 @@ def viewshed(dem_raster_path_band,
 
     band_to_array_index = dem_raster_path_band[1] - 1
     nodata_value = dem_raster_info['nodata'][band_to_array_index]
-    if viewpoint_elevation == nodata_value:
-        raise LookupError('Viewpoint is over nodata')
 
     # Need to handle the case where the nodata value is not defined.
     if nodata_value is None:
         nodata_value = IMPROBABLE_NODATA
+    elif is_close(viewpoint_elevation, nodata_value):
+        raise LookupError('Viewpoint is over nodata')
     cdef double nodata = nodata_value
 
     # Verify that pixels are very close to square.  The Wang et al algorithm
@@ -511,7 +512,7 @@ def viewshed(dem_raster_path_band,
             adjusted_dem_height = target_dem_height - adjustment
             if (adjusted_dem_height >= z and
                     target_distance < max_visible_radius and
-                    target_dem_height != nodata):
+                    not is_close(target_dem_height, nodata)):
                 visibility_managed_raster.set(ix_target, iy_target, 1)
                 aux_managed_raster.set(ix_target, iy_target, adjusted_dem_height)
             else:
@@ -638,22 +639,21 @@ def viewshed(dem_raster_path_band,
         # than or equal to the minimum-visible height AND is closer than the
         # maximum visible radius.
         target_dem_height = dem_managed_raster.get(n, m)
-        adjusted_dem_height = dem_managed_raster.get(n, m) - adjustment
-        if (adjusted_dem_height >= z and
-                target_pixel.distance_to_viewpoint < max_visible_radius and
-                target_dem_height != nodata):
-            visibility_managed_raster.set(n, m, 1)
+        adjusted_dem_height = target_dem_height - adjustment
+
+        # If it's close enough to nodata to be interpreted as nodata,
+        # consider it to be nodata.  Nodata implies that visibility is
+        # undefined ... which it is, since there's no defined DEM value for
+        # this pixel.
+        if is_close(target_dem_height, nodata):
+            visibility_managed_raster.set(n, m, VISIBILITY_NODATA)
+            aux_managed_raster.set(n, m, z)
+        elif (adjusted_dem_height >= z and
+                target_pixel.distance_to_viewpoint < max_visible_radius):
+            visibility_managed_raster.set(n, m, 1)  # the pixel is visible
             aux_managed_raster.set(n, m, adjusted_dem_height)
         else:
-            # If it's close enough to nodata to be interpreted as nodata,
-            # consider it to be nodata.  Nodata implies that visibility is
-            # undefined ... which it is, since there's no defined DEM value for
-            # this pixel.
-            if math.fabs(target_dem_height - nodata) <= 1.0e-7:
-                visibility_managed_raster.set(n, m, VISIBILITY_NODATA)
-            else:
-                # If we're not over nodata, then the pixel isn't visible.
-                visibility_managed_raster.set(n, m, 0)
+            visibility_managed_raster.set(n, m, 0)  # the pixel isn't visible
             aux_managed_raster.set(n, m, z)
         pixels_touched += 1
 
