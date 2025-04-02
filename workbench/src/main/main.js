@@ -27,7 +27,11 @@ import {
   setupLaunchPluginServerHandler,
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
-import { setupAddPlugin, setupRemovePlugin } from './setupAddRemovePlugin';
+import {
+  setupAddPlugin,
+  setupRemovePlugin,
+  setupCheckForWindowsDLL
+} from './setupAddRemovePlugin';
 import { ipcMainChannels } from './ipcMainChannels';
 import ELECTRON_DEV_MODE from './isDevMode';
 import { getLogger } from './logger';
@@ -110,6 +114,7 @@ export const createWindow = async () => {
   setupRendererLogger();
   setupAddPlugin();
   setupRemovePlugin();
+  setupCheckForWindowsDLL();
   setupBaseUrl();
 
   const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';

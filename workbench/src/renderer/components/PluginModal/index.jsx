@@ -19,6 +19,7 @@ export default function PluginModal(props) {
   const [revision, setRevision] = useState(undefined);
   const [path, setPath] = useState(undefined);
   const [err, setErr] = useState(undefined);
+  const [needsMSVC, setNeedsMSVC] = useState(undefined);
   const [pluginToRemove, setPluginToRemove] = useState(undefined);
   const [loading, setLoading] = useState(false);
   const [plugins, setPlugins] = useState({});
@@ -30,7 +31,12 @@ export default function PluginModal(props) {
     setErr(false);
     setShowPluginModal(false);
   };
-  const handleModalOpen = () => setShowPluginModal(true);
+  const handleModalOpen = () => {
+    ipcRenderer.invoke(ipcMainChannels.HAS_MSVC).then((hasMSVC) => {
+      setNeedsMSVC(!hasMSVC);
+    });
+    setShowPluginModal(true);
+  };
 
   const addPlugin = () => {
     setLoading(true);
@@ -63,6 +69,13 @@ export default function PluginModal(props) {
       setShowPluginModal(false);
     });
   };
+
+  const openMSVCLink = () => {
+    ipcRenderer.send(
+      ipcMainChannels.OPEN_EXTERNAL_URL,
+      'https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-microsoft-visual-c-redistributable-version'
+    );
+  }
 
   useEffect(() => {
     ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins').then(
@@ -188,6 +201,27 @@ export default function PluginModal(props) {
     modalBody = (
       <Modal.Body>
         {t('Plugin installation failed. Check the workbench log for details.')}
+      </Modal.Body>
+    );
+  }
+  if (needsMSVC) {
+    modalBody = (
+      <Modal.Body>
+        <h5>
+          {t('Microsoft Visual C++ Redistributable must be installed!')}
+        </h5>
+
+        {t(
+          `Plugin features require the Microsoft Visual C++ Redistributable.
+          You must download and install the redistributable before continuing.`
+        )}
+
+        <Button
+          className="mt-3"
+          onClick={openMSVCLink}
+        >
+          {t('Go to download page')}
+        </Button>
       </Modal.Body>
     );
   }

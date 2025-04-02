@@ -173,3 +173,12 @@ export function setupRemovePlugin() {
     }
   );
 }
+
+export function setupCheckForWindowsDLL() {
+  ipcMain.handle(
+    ipcMainChannels.HAS_MSVC,
+    () => {
+      return fs.existsSync(upath.join('C:', 'Windows', 'System32', 'VCRUNTIME140_1.dll'));
+    }
+  );
+}
