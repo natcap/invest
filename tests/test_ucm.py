@@ -6,11 +6,63 @@ import unittest
 
 import numpy
 import pandas
-from osgeo import gdal
+from osgeo import gdal, osr, ogr
+import pygeoprocessing
+from shapely import Polygon
 
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ucm')
+
+
+def make_simple_vector(path_to_shp):
+    """
+    Generate shapefile with one rectangular polygon
+    Args:
+        path_to_shp (str): path to target shapefile
+    Returns:
+        None
+    """
+    # (xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax), (xmin, ymin)
+    shapely_geometry_list = [
+        Polygon([(461251, 4923195), (461501, 4923195),
+                 (461501, 4923445), (461251, 4923445),
+                 (461251, 4923195)])
+    ]
+
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)
+    projection_wkt = srs.ExportToWkt()
+
+    vector_format = "ESRI Shapefile"
+    fields = {"id": ogr.OFTReal}
+    attribute_list = [{"id": 0}]
+
+    pygeoprocessing.shapely_geometry_to_vector(shapely_geometry_list,
+                                               path_to_shp, projection_wkt,
+                                               vector_format, fields,
+                                               attribute_list)
+
+
+def make_simple_raster(base_raster_path, array):
+    """Create a raster on designated path with arbitrary values.
+    Args:
+        base_raster_path (str): the raster path for making the new raster.
+    Returns:
+        None.
+    """
+    # UTM Zone 10N
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)
+    projection_wkt = srs.ExportToWkt()
+
+    origin = (461251, 4923445)
+    pixel_size = (30, -30)
+    no_data = -1
+
+    pygeoprocessing.numpy_array_to_raster(
+        array, no_data, pixel_size, origin, projection_wkt,
+        base_raster_path)
 
 
 class UCMTests(unittest.TestCase):
@@ -68,10 +120,10 @@ class UCMTests(unittest.TestCase):
 
         expected_results = {
             'avg_cc': 0.222150472947109,
-            'avg_tmp_v': 37.325275675470998,
-            'avg_tmp_an': 2.325275675470998,
-            'avd_eng_cn': 3520217.313878,
-            'avg_wbgt_v': 32.60417266705069,
+            'avg_tmp_v': 37.306549,
+            'avg_tmp_an': 2.306549,
+            'avd_eng_cn': 3602851.784639,
+            'avg_wbgt_v': 32.585935,
             'avg_ltls_v': 75.000000000000000,
             'avg_hvls_v': 75.000000000000000,
         }
@@ -89,7 +141,7 @@ class UCMTests(unittest.TestCase):
 
         # Assert that the decimal value of the energy savings value is what we
         # expect.
-        expected_energy_sav = 3564038.678764
+        expected_energy_sav = 3647696.209368
 
         energy_sav = 0.0
         n_nonetype = 0
@@ -110,7 +162,7 @@ class UCMTests(unittest.TestCase):
             # Expected energy savings is an accumulated value and may differ
             # past about 4 decimal places.
             numpy.testing.assert_allclose(energy_sav, expected_energy_sav, rtol=1e-4)
-            self.assertEqual(n_nonetype, 119)
+            self.assertEqual(n_nonetype, 121)
         finally:
             buildings_layer = None
             buildings_vector = None
@@ -149,7 +201,7 @@ class UCMTests(unittest.TestCase):
             # and may differ past about 4 decimal places.
             numpy.testing.assert_allclose(energy_sav, expected_energy_sav,
                                           rtol=1e-4)
-            self.assertEqual(n_nonetype, 119)
+            self.assertEqual(n_nonetype, 121)
         finally:
             buildings_layer = None
             buildings_vector = None
@@ -405,7 +457,7 @@ class UCMTests(unittest.TestCase):
                 header='column', header_name='green_area'))]
         self.assertEqual(result, expected)
 
-    def test_do_energy_valuation_option(self):
+    def test_do_energy_valuation_option(self): 
         """UCM: test separate valuation options."""
         import natcap.invest.urban_cooling_model
         args = {
@@ -534,3 +586,109 @@ class UCMTests(unittest.TestCase):
         for path in [intermediate_building_vector_path, t_air_stats_pickle_path,
                      energy_consumption_vector_path]:
             self.assertFalse(os.path.exists(path))
+
+    def test_cc_rasters(self):
+        """Test that `execute` creates correct cooling coefficient rasters with
+        synthetic data"""
+        from natcap.invest import urban_cooling_model
+
+        args = {}
+        args['workspace_dir'] = self.workspace_dir
+        args['results_suffix'] = "_01"
+        args['t_ref'] = 23.5
+        args['lulc_raster_path'] = os.path.join(self.workspace_dir,
+                                                "lulc.tif")
+        args['ref_eto_raster_path'] = os.path.join(self.workspace_dir,
+                                                   "evapotranspiration.tif")
+        args['aoi_vector_path'] = os.path.join(self.workspace_dir, "aoi.shp")
+        args['biophysical_table_path'] = os.path.join(self.workspace_dir,
+                                                      "biophysical_table.csv")
+        args['green_area_cooling_distance'] = 90
+        args['t_air_average_radius'] = 300
+        args['uhi_max'] = 2.05
+        args['do_energy_valuation'] = False
+        args['do_productivity_valuation'] = False
+        args['avg_rel_humidity'] = ''
+        args['building_vector_path'] = os.path.join(self.workspace_dir,
+                                                    "buildings.shp")
+        args['energy_consumption_table_path'] = os.path.join(self.workspace_dir,
+                                                             "ucm_energy.csv")
+        args['cc_method'] = "factors"
+        args['cc_weight_shade'] = ''  # 0.6
+        args['cc_weight_albedo'] = ''  # 0.2
+        args['cc_weight_eti'] = ''  # 0.2
+
+        def _make_input_data(args):
+            """ Create aoi shapefile, biophysical table csv, lulc tif,
+            and evapotranspiration tif"""
+
+            make_simple_vector(args['aoi_vector_path'])
+
+            biophysical_table = pandas.DataFrame({
+                "lucode": [1, 2, 3, 4, 5],
+                "lu_desc": ["water", "forest", "grassland", "urban", "barren"],
+                "green_area": [0, 1, 1, 0, 0],
+                "kc": [1, 1.1, .9, .3, .2],
+                "albedo": [.05, .1, .2, .3, .4],
+                "shade": [0, 1, 0, 0.2, 0]
+            })
+
+            biophysical_csv_path = args['biophysical_table_path']
+            biophysical_table.to_csv(biophysical_csv_path, index=False)
+
+            lulc_array = numpy.array([
+                [2, 3, 1, 5, 5, 5],
+                [3, 3, 1, 1, 4, 5],
+                [5, 5, 4, 2, 3, 1],
+                [4, 1, 4, 2, 2, 1],
+                [1, 5, 4, 1, 1, 2]
+            ], dtype=numpy.float32)
+            make_simple_raster(args['lulc_raster_path'], lulc_array)
+
+            et_array = numpy.array([
+                [800, 799, 567, 234, 422, 422],
+                [765, 867, 765, 654, 456, 677],
+                [556, 443, 456, 265, 876, 890],
+                [433, 266, 677, 776, 900, 687],
+                [456, 832, 234, 234, 234, 554]
+            ], dtype=numpy.float32)
+            make_simple_raster(args['ref_eto_raster_path'], et_array)
+
+        _make_input_data(args)
+        urban_cooling_model.execute(args)
+
+        # This array was generated by manually running through calculations
+        # Equation: cc = 0.6 * shade + 0.2 * albedo + 0.2 * eti
+        cc_array = numpy.array(
+            [[0.815556, 0.1998, 0.136, 0.0904, 0.098756, 0.098756],
+             [0.193, 0.2134, 0.18, 0.155333, 0.2104, 0.110089],
+             [0.10471112, 0.0996889, 0.2104, 0.6847778, 0.2152, 0.20777778],
+             [0.20886667, 0.06911112, 0.22513334, 0.8096889,  0.84, 0.1626668],
+             [0.11133333, 0.11697778, 0.1956, 0.062, 0.062, 0.75542223]]
+            )
+
+        cc_tif = gdal.Open(os.path.join(args["workspace_dir"], "intermediate",
+                                        f"cc{args['results_suffix']}.tif"))
+        band_cc = cc_tif.GetRasterBand(1)
+        actual_cc = band_cc.ReadAsArray()
+
+        numpy.testing.assert_allclose(actual_cc, cc_array, atol=1e-6)
+
+        # Check CC_park
+        cc_park_tif = gdal.Open(
+            os.path.join(args["workspace_dir"], "intermediate",
+                         f"cc_park{args['results_suffix']}.tif"))
+        band = cc_park_tif.GetRasterBand(1)
+        actual_cc_park = band.ReadAsArray()
+
+        # This array was created by running `convolve_2d_by_exponential`
+        # using a manually-calculated signal raster (cc * green_area)
+        expected_cc_park = numpy.array(
+            [[0.183541, 0.160865, 0.144615, 0.137877, 0.134337, 0.133191],
+             [0.15858, 0.152832, 0.147821, 0.150366, 0.14931, 0.146379],
+             [0.138345, 0.141573, 0.153495, 0.176796, 0.176097, 0.167245],
+             [0.12765204, 0.13550324, 0.15505734, 0.18876731, 0.20118835, 0.18913657],
+             [0.12391507, 0.13292464, 0.1511357, 0.17420742, 0.1924037, 0.21190241]])
+
+        numpy.testing.assert_allclose(
+            actual_cc_park, expected_cc_park, atol=1e-6)
