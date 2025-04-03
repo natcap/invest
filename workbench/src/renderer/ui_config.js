@@ -68,27 +68,22 @@ const UI_SPEC = {
   carbon: {
     order: [
       ['workspace_dir', 'results_suffix'],
-      ['lulc_cur_path', 'carbon_pools_path'],
-      ['calc_sequestration', 'lulc_fut_path'],
-      ['do_redd', 'lulc_redd_path'],
+      ['lulc_bas_path', 'carbon_pools_path'],
+      ['calc_sequestration', 'lulc_alt_path'],
       [
         'do_valuation',
-        'lulc_cur_year',
-        'lulc_fut_year',
+        'lulc_bas_year',
+        'lulc_alt_year',
         'price_per_metric_ton_of_c',
         'discount_rate',
         'rate_change',
       ],
     ],
     enabledFunctions: {
-      lulc_fut_path: isSufficient.bind(null, 'calc_sequestration'),
-
-      do_redd: isSufficient.bind(null, 'calc_sequestration'),
-      lulc_redd_path: isSufficient.bind(null, 'do_redd'),
-
+      lulc_alt_path: isSufficient.bind(null, 'calc_sequestration'),
       do_valuation: isSufficient.bind(null, 'calc_sequestration'),
-      lulc_cur_year: isSufficient.bind(null, 'do_valuation'),
-      lulc_fut_year: isSufficient.bind(null, 'do_valuation'),
+      lulc_bas_year: isSufficient.bind(null, 'do_valuation'),
+      lulc_alt_year: isSufficient.bind(null, 'do_valuation'),
       price_per_metric_ton_of_c: isSufficient.bind(null, 'do_valuation'),
       discount_rate: isSufficient.bind(null, 'do_valuation'),
       rate_change: isSufficient.bind(null, 'do_valuation'),
@@ -202,7 +197,7 @@ const UI_SPEC = {
       ['dem_path', 'lulc_path', 'runoff_proxy_path', 'watersheds_path', 'biophysical_table_path'],
       ['calc_p'],
       ['calc_n', 'subsurface_critical_length_n', 'subsurface_eff_n'],
-      ['threshold_flow_accumulation', 'k_param'],
+      ['flow_dir_algorithm', 'threshold_flow_accumulation', 'k_param', 'runoff_proxy_av'],
     ],
     enabledFunctions: {
       subsurface_critical_length_n: isSufficient.bind(null, 'calc_n'),
@@ -219,7 +214,8 @@ const UI_SPEC = {
   recreation: {
     order: [
       ['workspace_dir', 'results_suffix'],
-      ['aoi_path', 'start_year', 'end_year'],
+      ['aoi_path'],
+      ['start_year', 'end_year'],
       ['compute_regression', 'predictor_table_path', 'scenario_predictor_table_path'],
       ['grid_aoi', 'grid_type', 'cell_size'],
     ],
@@ -286,7 +282,7 @@ const UI_SPEC = {
       ['dem_path', 'erosivity_path', 'erodibility_path'],
       ['lulc_path', 'biophysical_table_path'],
       ['watersheds_path', 'drainage_path'],
-      ['threshold_flow_accumulation', 'k_param', 'sdr_max', 'ic_0_param', 'l_max'],
+      ['flow_dir_algorithm', 'threshold_flow_accumulation', 'k_param', 'sdr_max', 'ic_0_param', 'l_max'],
     ],
   },
   seasonal_water_yield: {
@@ -294,7 +290,7 @@ const UI_SPEC = {
       ['workspace_dir', 'results_suffix'],
       ['lulc_raster_path', 'biophysical_table_path'],
       ['dem_raster_path', 'aoi_path'],
-      ['threshold_flow_accumulation', 'beta_i', 'gamma'],
+      ['flow_dir_algorithm', 'threshold_flow_accumulation', 'beta_i', 'gamma'],
       ['user_defined_local_recharge', 'l_path', 'et0_dir', 'precip_dir', 'soil_group_path'],
       ['monthly_alpha', 'alpha_m', 'monthly_alpha_path'],
       ['user_defined_climate_zones', 'rain_events_table_path', 'climate_zone_table_path', 'climate_zone_raster_path'],

@@ -30,6 +30,7 @@ MISSING_CONVERT_OPTION_MSG = gettext(
     'must be selected')
 
 MODEL_SPEC = {
+    "model_id": "scenario_generator_proximity",
     "model_name": MODEL_METADATA["scenario_generator_proximity"].model_title,
     "pyname": MODEL_METADATA["scenario_generator_proximity"].pyname,
     "userguide": MODEL_METADATA["scenario_generator_proximity"].userguide,
@@ -69,7 +70,7 @@ MODEL_SPEC = {
             "regexp": "[0-9 ]+",
             "about": gettext(
                 "A space-separated list of LULC codes that can be "
-                "converted to be converted to agriculture."),
+                "converted to agriculture."),
             "name": gettext("convertible landcover codes")
         },
         "n_fragmentation_steps": {
@@ -122,11 +123,15 @@ MODEL_SPEC = {
         "nearest_to_edge.csv": {
             "about": gettext(
                 "Table of land cover classes and the amount of each that was converted for the nearest-to-edge conversion scenario."),
-            "index_col": "lucode",
+            "index_col": "original lucode",
             "columns": {
-                "lucode": {
+                "original lucode": {
                     "type": "integer",
-                    "about": "LULC code of the land cover class"
+                    "about": "Original LULC code of the land cover class"
+                },
+                "replacement lucode": {
+                    "type": "integer",
+                    "about": "LULC code to which habitat was converted"
                 },
                 "area converted (Ha)": {
                     "type": "number",
@@ -141,12 +146,16 @@ MODEL_SPEC = {
         },
         "farthest_from_edge.csv": {
             "about": gettext(
-                "Table of land cover classes and the amount of each that was converted for the nearest-to-edge conversion scenario."),
-            "index_col": "lucode",
+                "Table of land cover classes and the amount of each that was converted for the farthest-from-edge conversion scenario."),
+            "index_col": "original lucode",
             "columns": {
-                "lucode": {
+                "original lucode": {
                     "type": "integer",
-                    "about": "LULC code of the land cover class"
+                    "about": "Original LULC code of the land cover class"
+                },
+                "replacement lucode": {
+                    "type": "integer",
+                    "about": "LULC code to which habitat was converted"
                 },
                 "area converted (Ha)": {
                     "type": "number",
@@ -555,7 +564,7 @@ def _convert_landscape(
             output_landscape_raster_path, replacement_lucode, stats_cache,
             score_weight)
 
-    _log_stats(stats_cache, pixel_area_ha, stats_path)
+    _log_stats(stats_cache, replacement_lucode, pixel_area_ha, stats_path)
     try:
         shutil.rmtree(temp_dir)
     except OSError:
@@ -563,12 +572,13 @@ def _convert_landscape(
             "Could not delete temporary working directory '%s'", temp_dir)
 
 
-def _log_stats(stats_cache, pixel_area, stats_path):
+def _log_stats(stats_cache, replacement_lucode, pixel_area, stats_path):
     """Write pixel change statistics to a file in tabular format.
 
     Args:
         stats_cache (dict): a dictionary mapping pixel lucodes to number of
             pixels changed
+        replacement_lucode (int): lucode to which habitat was converted
         pixel_area (float): size of pixels in hectares so an area column can
             be generated
         stats_path (string): path to a csv file that the table should be
@@ -579,11 +589,14 @@ def _log_stats(stats_cache, pixel_area, stats_path):
 
     """
     with open(stats_path, 'w') as csv_output_file:
-        csv_output_file.write('lucode,area converted (Ha),pixels converted\n')
+        csv_output_file.write(
+            'original lucode,replacement lucode,'
+            'area converted (Ha),pixels converted\n')
         for lucode in sorted(stats_cache):
             csv_output_file.write(
-                '%s,%s,%s\n' % (
-                    lucode, stats_cache[lucode] * pixel_area,
+                '%s,%s,%s,%s\n' % (
+                    lucode, replacement_lucode,
+                    stats_cache[lucode] * pixel_area,
                     stats_cache[lucode]))
 
 

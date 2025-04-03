@@ -98,7 +98,7 @@ class TestPreprocessor(unittest.TestCase):
         with open(lulc_attributes_path, 'w') as attributes_table:
             attributes_table.write(textwrap.dedent(
                 """\
-                lulc-class,code,is_coastal_blue_carbon_habitat
+                lulc-class,lucode,is_coastal_blue_carbon_habitat
                 mangrove,1,TRUE
                 parkinglot,2,FALSE
                 """))
@@ -177,7 +177,7 @@ class TestPreprocessor(unittest.TestCase):
         expected_landcover_codes = set(range(0, 24))
         found_landcover_codes = set(pandas.read_csv(
             os.path.join(outputs_dir, 'carbon_biophysical_table_template_150225.csv')
-        )['code'].values)
+        )['lucode'].values)
         self.assertEqual(expected_landcover_codes, found_landcover_codes)
 
     def test_transition_table(self):
@@ -207,7 +207,7 @@ class TestPreprocessor(unittest.TestCase):
         landcover_table_path = os.path.join(self.workspace_dir,
                                             'lulc_table.csv')
         with open(landcover_table_path, 'w') as lulc_csv:
-            lulc_csv.write('code,lulc-class,is_coastal_blue_carbon_habitat\n')
+            lulc_csv.write('lucode,lulc-class,is_coastal_blue_carbon_habitat\n')
             lulc_csv.write('0,mangrove,True\n')
             lulc_csv.write('1,parking lot,False\n')
 
@@ -451,7 +451,7 @@ class TestCBC2(unittest.TestCase):
         wkt = srs.ExportToWkt()
 
         biophysical_table = [
-            ['code', 'lulc-class', 'biomass-initial', 'soil-initial',
+            ['lucode', 'lulc-class', 'biomass-initial', 'soil-initial',
                 'litter-initial', 'biomass-half-life',
                 'biomass-low-impact-disturb', 'biomass-med-impact-disturb',
                 'biomass-high-impact-disturb', 'biomass-yearly-accumulation',

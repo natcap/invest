@@ -1,6 +1,5 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
 import copy
-import itertools
 import logging
 import os
 import pickle
@@ -26,6 +25,7 @@ LOGGER = logging.getLogger(__name__)
 MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
 
 MODEL_SPEC = {
+    "model_id": "ndr",
     "model_name": MODEL_METADATA["ndr"].model_title,
     "pyname": MODEL_METADATA["ndr"].pyname,
     "userguide": MODEL_METADATA["ndr"].userguide,
@@ -94,16 +94,13 @@ MODEL_SPEC = {
                     "about": gettext(
                         "The distance after which it is assumed that this "
                         "LULC type retains the nutrient at its maximum "
-                        "capacity. If nutrients travel a shorter distance "
-                        "that this, the retention "
-                        "efficiency will be less than the maximum value "
-                        "eff_x, following an exponential decay.")},
+                        "capacity.")},
                 "proportion_subsurface_n": {
                     "type": "ratio",
                     "required": "calc_n",
                     "about": gettext(
                         "The proportion of the total amount of nitrogen that "
-                        "are dissolved into the subsurface. By default, this "
+                        "is dissolved into the subsurface. By default, this "
                         "value should be set to 0, indicating that all "
                         "nutrients are delivered via surface flow. There is "
                         "no equivalent of this for phosphorus.")}
@@ -143,6 +140,21 @@ MODEL_SPEC = {
                 "actually reaches the stream)."),
             "name": gettext("Borselli k parameter"),
         },
+        "runoff_proxy_av": {
+            "type": "number",
+            "units": u.none,
+            'expression': 'value > 0',
+            "required": False,
+            "name": gettext("average runoff proxy"),
+            "about": gettext(
+                "This parameter allows the user to specify a predefined "
+                "average value for the runoff proxy. This value is used "
+                "to normalize the Runoff Proxy raster when calculating "
+                "the Runoff Proxy Index (RPI). If a user does not specify "
+                "the runoff proxy average, this value will be automatically "
+                "calculated from the Runoff Proxy raster. The units will "
+                "be the same as those in the Runoff Proxy raster."),
+        },
         "subsurface_critical_length_n": {
             "type": "number",
             "units": u.meter,
@@ -162,7 +174,8 @@ MODEL_SPEC = {
                 "reached through subsurface flow. This characterizes the "
                 "retention due to biochemical degradation in soils. Required "
                 "if Calculate Nitrogen is selected.")
-        }
+        },
+        **spec_utils.FLOW_DIR_ALGORITHM
     },
     "outputs": {
         "watershed_results_ndr.gpkg": {
@@ -210,28 +223,28 @@ MODEL_SPEC = {
             "about": "A pixel level map showing how much phosphorus from each pixel eventually reaches the stream by surface flow.",
             "bands": {1: {
                 "type": "number",
-                "units": u.kilogram/u.pixel
+                "units": u.kilogram/u.hectare
             }}
         },
         "n_surface_export.tif": {
             "about": "A pixel level map showing how much nitrogen from each pixel eventually reaches the stream by surface flow.",
             "bands": {1: {
                 "type": "number",
-                "units": u.kilogram/u.pixel
+                "units": u.kilogram/u.hectare
             }}
         },
         "n_subsurface_export.tif": {
             "about": "A pixel level map showing how much nitrogen from each pixel eventually reaches the stream by subsurface flow.",
             "bands": {1: {
                 "type": "number",
-                "units": u.kilogram/u.pixel
+                "units": u.kilogram/u.hectare
             }}
         },
         "n_total_export.tif": {
             "about": "A pixel level map showing how much nitrogen from each pixel eventually reaches the stream by either flow.",
             "bands": {1: {
                 "type": "number",
-                "units": u.kilogram/u.pixel
+                "units": u.kilogram/u.hectare
             }}
         },
         "intermediate_outputs": {
@@ -525,6 +538,9 @@ def execute(args):
         args['k_param'] (number): The Borselli k parameter. This is a
             calibration parameter that determines the shape of the
             relationship between hydrologic connectivity.
+        args['runoff_proxy_av'] (number): (optional) The average runoff proxy.
+            Used to calculate the runoff proxy index. If not specified,
+            it will be automatically calculated.
         args['subsurface_critical_length_n'] (number): The distance (traveled
             subsurface and downslope) after which it is assumed that soil
             retains nutrient at its maximum capacity, given in meters. If
@@ -579,6 +595,11 @@ def execute(args):
         args['biophysical_table_path'],
         **MODEL_SPEC['args']['biophysical_table_path'])
 
+    # Ensure that if user doesn't explicitly assign a value,
+    # runoff_proxy_av = None
+    runoff_proxy_av = args.get("runoff_proxy_av")
+    runoff_proxy_av = float(runoff_proxy_av) if runoff_proxy_av else None
+
     # these are used for aggregation in the last step
     field_pickle_map = {}
 
@@ -601,7 +622,10 @@ def execute(args):
             base_raster_list, aligned_raster_list,
             ['near']*len(base_raster_list), dem_info['pixel_size'],
             'intersection'),
-        kwargs={'base_vector_path_list': [args['watersheds_path']]},
+        kwargs={
+            'base_vector_path_list': [args['watersheds_path']],
+            'raster_align_index': 0  # align to the grid of the DEM
+        },
         target_path_list=aligned_raster_list,
         task_name='align rasters')
 
@@ -668,35 +692,6 @@ def execute(args):
         target_path_list=[f_reg['filled_dem_path']],
         task_name='fill pits')
 
-    flow_dir_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_dir_mfd,
-        args=(
-            (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
-        kwargs={'working_dir': intermediate_output_dir},
-        dependent_task_list=[fill_pits_task],
-        target_path_list=[f_reg['flow_direction_path']],
-        task_name='flow dir')
-
-    flow_accum_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_accumulation_mfd,
-        args=(
-            (f_reg['flow_direction_path'], 1),
-            f_reg['flow_accumulation_path']),
-        target_path_list=[f_reg['flow_accumulation_path']],
-        dependent_task_list=[flow_dir_task],
-        task_name='flow accum')
-
-    stream_extraction_task = task_graph.add_task(
-        func=pygeoprocessing.routing.extract_streams_mfd,
-        args=(
-            (f_reg['flow_accumulation_path'], 1),
-            (f_reg['flow_direction_path'], 1),
-            float(args['threshold_flow_accumulation']),
-            f_reg['stream_path']),
-        target_path_list=[f_reg['stream_path']],
-        dependent_task_list=[flow_accum_task],
-        task_name='stream extraction')
-
     calculate_slope_task = task_graph.add_task(
         func=pygeoprocessing.calculate_slope,
         args=((f_reg['filled_dem_path'], 1), f_reg['slope_path']),
@@ -714,22 +709,89 @@ def execute(args):
         dependent_task_list=[calculate_slope_task],
         task_name='threshold slope')
 
+    if args['flow_dir_algorithm'] == 'MFD':
+        flow_dir_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_dir_mfd,
+            args=(
+                (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
+            kwargs={'working_dir': intermediate_output_dir},
+            dependent_task_list=[fill_pits_task],
+            target_path_list=[f_reg['flow_direction_path']],
+            task_name='flow dir')
+
+        flow_accum_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_accumulation_mfd,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                f_reg['flow_accumulation_path']),
+            target_path_list=[f_reg['flow_accumulation_path']],
+            dependent_task_list=[flow_dir_task],
+            task_name='flow accum')
+
+        stream_extraction_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_streams_mfd,
+            args=(
+                (f_reg['flow_accumulation_path'], 1),
+                (f_reg['flow_direction_path'], 1),
+                float(args['threshold_flow_accumulation']),
+                f_reg['stream_path']),
+            target_path_list=[f_reg['stream_path']],
+            dependent_task_list=[flow_accum_task],
+            task_name='stream extraction')
+        s_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_accumulation_mfd,
+            args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
+            kwargs={
+                'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
+            target_path_list=[f_reg['s_accumulation_path']],
+            dependent_task_list=[flow_dir_task, threshold_slope_task],
+            task_name='route s')
+    else:  # D8
+        flow_dir_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_dir_d8,
+            args=(
+                (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
+            kwargs={'working_dir': intermediate_output_dir},
+            dependent_task_list=[fill_pits_task],
+            target_path_list=[f_reg['flow_direction_path']],
+            task_name='flow dir')
+
+        flow_accum_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_accumulation_d8,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                f_reg['flow_accumulation_path']),
+            target_path_list=[f_reg['flow_accumulation_path']],
+            dependent_task_list=[flow_dir_task],
+            task_name='flow accum')
+
+        stream_extraction_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_streams_d8,
+            kwargs=dict(
+                flow_accum_raster_path_band=(f_reg['flow_accumulation_path'], 1),
+                flow_threshold=float(args['threshold_flow_accumulation']),
+                target_stream_raster_path=f_reg['stream_path']),
+            target_path_list=[f_reg['stream_path']],
+            dependent_task_list=[flow_accum_task],
+            task_name='stream extraction')
+
+        s_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_accumulation_d8,
+            args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
+            kwargs={
+                'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
+            target_path_list=[f_reg['s_accumulation_path']],
+            dependent_task_list=[flow_dir_task, threshold_slope_task],
+            task_name='route s')
+
     runoff_proxy_index_task = task_graph.add_task(
         func=_normalize_raster,
         args=((f_reg['masked_runoff_proxy_path'], 1),
               f_reg['runoff_proxy_index_path']),
+        kwargs={'user_provided_mean': runoff_proxy_av},
         target_path_list=[f_reg['runoff_proxy_index_path']],
         dependent_task_list=[align_raster_task, mask_runoff_proxy_task],
         task_name='runoff proxy mean')
-
-    s_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_accumulation_mfd,
-        args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
-        kwargs={
-            'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
-        target_path_list=[f_reg['s_accumulation_path']],
-        dependent_task_list=[flow_dir_task, threshold_slope_task],
-        task_name='route s')
 
     s_bar_task = task_graph.add_task(
         func=pygeoprocessing.raster_map,
@@ -762,27 +824,50 @@ def execute(args):
         dependent_task_list=[threshold_slope_task],
         task_name='s inv')
 
-    d_dn_task = task_graph.add_task(
-        func=pygeoprocessing.routing.distance_to_channel_mfd,
-        args=(
-            (f_reg['flow_direction_path'], 1),
-            (f_reg['stream_path'], 1),
-            f_reg['d_dn_path']),
-        kwargs={'weight_raster_path_band': (
-            f_reg['s_factor_inverse_path'], 1)},
-        dependent_task_list=[stream_extraction_task, s_inv_task],
-        target_path_list=[f_reg['d_dn_path']],
-        task_name='d dn')
+    if args['flow_dir_algorithm'] == 'MFD':
+        d_dn_task = task_graph.add_task(
+            func=pygeoprocessing.routing.distance_to_channel_mfd,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                (f_reg['stream_path'], 1),
+                f_reg['d_dn_path']),
+            kwargs={'weight_raster_path_band': (
+                f_reg['s_factor_inverse_path'], 1)},
+            dependent_task_list=[stream_extraction_task, s_inv_task],
+            target_path_list=[f_reg['d_dn_path']],
+            task_name='d dn')
 
-    dist_to_channel_task = task_graph.add_task(
-        func=pygeoprocessing.routing.distance_to_channel_mfd,
-        args=(
-            (f_reg['flow_direction_path'], 1),
-            (f_reg['stream_path'], 1),
-            f_reg['dist_to_channel_path']),
-        dependent_task_list=[stream_extraction_task],
-        target_path_list=[f_reg['dist_to_channel_path']],
-        task_name='dist to channel')
+        dist_to_channel_task = task_graph.add_task(
+            func=pygeoprocessing.routing.distance_to_channel_mfd,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                (f_reg['stream_path'], 1),
+                f_reg['dist_to_channel_path']),
+            dependent_task_list=[stream_extraction_task],
+            target_path_list=[f_reg['dist_to_channel_path']],
+            task_name='dist to channel')
+    else: # D8
+        d_dn_task = task_graph.add_task(
+            func=pygeoprocessing.routing.distance_to_channel_d8,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                (f_reg['stream_path'], 1),
+                f_reg['d_dn_path']),
+            kwargs={'weight_raster_path_band': (
+                f_reg['s_factor_inverse_path'], 1)},
+            dependent_task_list=[stream_extraction_task, s_inv_task],
+            target_path_list=[f_reg['d_dn_path']],
+            task_name='d dn')
+
+        dist_to_channel_task = task_graph.add_task(
+            func=pygeoprocessing.routing.distance_to_channel_d8,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                (f_reg['stream_path'], 1),
+                f_reg['dist_to_channel_path']),
+            dependent_task_list=[stream_extraction_task],
+            target_path_list=[f_reg['dist_to_channel_path']],
+            task_name='dist to channel')
 
     _ = task_graph.add_task(
         func=sdr._calculate_what_drains_to_stream,
@@ -869,7 +954,8 @@ def execute(args):
             args=(
                 f_reg['flow_direction_path'],
                 f_reg['stream_path'], eff_path,
-                crit_len_path, effective_retention_path),
+                crit_len_path, effective_retention_path,
+                args['flow_dir_algorithm']),
             target_path_list=[effective_retention_path],
             dependent_task_list=[
                 stream_extraction_task, eff_task, crit_len_task],
@@ -1029,11 +1115,14 @@ def execute(args):
 # raster_map equation: Multiply a series of arrays element-wise
 def _mult_op(*array_list): return numpy.prod(numpy.stack(array_list), axis=0)
 
+
 # raster_map equation: Sum a list of arrays element-wise
 def _sum_op(*array_list): return numpy.sum(array_list, axis=0)
 
+
 # raster_map equation: calculate inverse of S factor
 def _inverse_op(base_val): return numpy.where(base_val == 0, 0, 1 / base_val)
+
 
 # raster_map equation: rescale and threshold slope between 0.005 and 1
 def _slope_proportion_and_threshold_op(slope):
@@ -1135,8 +1224,13 @@ def _add_fields_to_shapefile(field_pickle_map, target_vector_path):
     for feature in target_layer:
         fid = feature.GetFID()
         for field_name in field_pickle_map:
+            # Since pixel values are kg/(ha•yr), raster sum is (kg•px)/(ha•yr).
+            # To convert to kg/yr, multiply by ha/px.
+            pixel_area = field_summaries[field_name]['pixel_area']
+            ha_per_px = pixel_area / 10000
             feature.SetField(
-                field_name, float(field_summaries[field_name][fid]['sum']))
+                field_name, float(
+                    field_summaries[field_name][fid]['sum']) * ha_per_px)
         # Save back to datasource
         target_layer.SetFeature(feature)
     target_layer = None
@@ -1190,7 +1284,8 @@ def validate(args, limit_to=None):
     return validation_warnings
 
 
-def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
+def _normalize_raster(base_raster_path_band, target_normalized_raster_path,
+                      user_provided_mean=None):
     """Calculate normalize raster by dividing by the mean value.
 
     Args:
@@ -1198,20 +1293,27 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
             mean.
         target_normalized_raster_path (string): path to target normalized
             raster from base_raster_path_band.
+        user_provided_mean (float, optional): user-provided average.
+            If provided, this value will be used instead of computing
+            the mean from the raster.
 
     Returns:
         None.
 
     """
-    value_sum, value_count = pygeoprocessing.raster_reduce(
-        function=lambda sum_count, block:  # calculate both in one pass
-            (sum_count[0] + numpy.sum(block), sum_count[1] + block.size),
-        raster_path_band=base_raster_path_band,
-        initializer=(0, 0))
-
-    value_mean = value_sum
-    if value_count > 0:
-        value_mean /= value_count
+    if user_provided_mean is None:
+        value_sum, value_count = pygeoprocessing.raster_reduce(
+            function=lambda sum_count, block: (  # calculate both in one pass
+                sum_count[0] + numpy.sum(block), sum_count[1] + block.size),
+            raster_path_band=base_raster_path_band,
+            initializer=(0, 0))
+        value_mean = value_sum
+        if value_count > 0:
+            value_mean /= value_count
+        LOGGER.info(f"Normalizing raster ({base_raster_path_band[0]}) using "
+                    f"auto-calculated mean: {value_mean}")
+    else:
+        value_mean = user_provided_mean
 
     pygeoprocessing.raster_map(
         op=lambda array: array if value_mean == 0 else array / value_mean,
@@ -1221,29 +1323,25 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
 
 
 def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
-    """Calculate load raster by mapping landcover and multiplying by area.
+    """Calculate load raster by mapping landcover.
 
     Args:
         lulc_raster_path (string): path to integer landcover raster.
         lucode_to_load (dict): a mapping of landcover IDs to per-area
             nutrient load.
         target_load_raster (string): path to target raster that will have
-            total load per pixel.
+            load values (kg/ha) mapped to pixels based on LULC.
 
     Returns:
         None.
 
     """
-    cell_area_ha = abs(numpy.prod(pygeoprocessing.get_raster_info(
-        lulc_raster_path)['pixel_size'])) * 0.0001
-
     def _map_load_op(lucode_array):
         """Convert unit load to total load & handle nodata."""
         result = numpy.empty(lucode_array.shape)
         for lucode in numpy.unique(lucode_array):
             try:
-                result[lucode_array == lucode] = (
-                    lucode_to_load[lucode] * cell_area_ha)
+                result[lucode_array == lucode] = (lucode_to_load[lucode])
             except KeyError:
                 raise KeyError(
                     'lucode: %d is present in the landuse raster but '
@@ -1438,6 +1536,12 @@ def _aggregate_and_pickle_total(
     result = pygeoprocessing.zonal_statistics(
         base_raster_path_band, aggregate_vector_path,
         working_dir=os.path.dirname(target_pickle_path))
+
+    # Write pixel area to pickle file so that _add_fields_to_shapefile
+    # can adjust totals as needed.
+    raster_info = pygeoprocessing.get_raster_info(base_raster_path_band[0])
+    pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+    result['pixel_area'] = pixel_area
 
     with open(target_pickle_path, 'wb') as target_pickle_file:
         pickle.dump(result, target_pickle_file)

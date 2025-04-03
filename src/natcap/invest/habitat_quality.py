@@ -26,8 +26,15 @@ MISSING_THREAT_RASTER_MSG = gettext(
     "A threat raster for threats: {threat_list} was not found or it "
     "could not be opened by GDAL.")
 DUPLICATE_PATHS_MSG = gettext("Threat paths must be unique. Duplicates: ")
+INVALID_MAX_DIST_MSG = gettext(
+    "The maximum distance value for threats: {threat_list} is less than "
+    "or equal to 0. MAX_DIST must be a positive value.")
+MISSING_MAX_DIST_MSG = gettext(
+    "Maximum distance value is missing for threats: {threat_list}.")
+MISSING_WEIGHT_MSG = gettext("Weight value is missing for threats: {threat_list}.")
 
 MODEL_SPEC = {
+    "model_id": "habitat_quality",
     "model_name": MODEL_METADATA["habitat_quality"].model_title,
     "pyname": MODEL_METADATA["habitat_quality"].pyname,
     "userguide": MODEL_METADATA["habitat_quality"].userguide,
@@ -83,7 +90,7 @@ MODEL_SPEC = {
                         "corresponding column in the Sensitivity table.")},
                 "max_dist": {
                     "type": "number",
-                    "units": u.kilometer,
+                    "units": u.meter,
                     "about": gettext(
                         "The maximum distance over which each threat affects "
                         "habitat quality. The impact of each degradation "
@@ -172,9 +179,9 @@ MODEL_SPEC = {
         },
         "sensitivity_table_path": {
             "type": "csv",
-            "index_col": "lulc",
+            "index_col": "lucode",
             "columns": {
-                "lulc": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "name": {
                     "type": "freestyle_string",
                     "required": False
@@ -282,9 +289,9 @@ MODEL_SPEC = {
                 "rarity_c.csv": {
                     "about": ("Table of rarity values by LULC code for the "
                               "current landscape."),
-                    "index_col": "lulc_code",
+                    "index_col": "lucode",
                     "columns": {
-                        "lulc_code": {
+                        "lucode": {
                             "type": "number",
                             "units": u.none,
                             "about": "LULC class",
@@ -314,9 +321,9 @@ MODEL_SPEC = {
                 "rarity_f.csv": {
                     "about": ("Table of rarity values by LULC code for the "
                               "future landscape."),
-                    "index_col": "lulc_code",
+                    "index_col": "lucode",
                     "columns": {
-                        "lulc_code": {
+                        "lucode": {
                             "type": "number",
                             "units": u.none,
                             "about": "LULC class",
@@ -362,6 +369,10 @@ MODEL_SPEC = {
                 },
                 "filtered_[THREAT]_aligned.tif": {
                     "about": "Filtered threat raster",
+                    "bands": {1: {"type": "ratio"}},
+                },
+                "degradation_[THREAT].tif": {
+                    "about": "Degradation raster for each threat",
                     "bands": {1: {"type": "ratio"}},
                 }
             }
@@ -640,6 +651,7 @@ def execute(args):
 
         threat_decay_task_list = []
         sensitivity_task_list = []
+        individual_degradation_task_list = []
 
         # Create raster of habitat based on habitat field
         habitat_raster_path = os.path.join(
@@ -657,12 +669,9 @@ def execute(args):
             dependent_task_list=[align_task],
             task_name=f'habitat_raster{lulc_key}')
 
-        # initialize a list that will store all the threat/threat rasters
+        # initialize a list that will store all the degradation rasters for each threat
         # after they have been adjusted for distance, weight, and access
-        deg_raster_list = []
-
-        # a list to keep track of the normalized weight for each threat
-        weight_list = numpy.array([])
+        indiv_deg_raster_list = []
 
         # variable to indicate whether we should break out of calculations
         # for a land cover because a threat raster was not found
@@ -736,28 +745,31 @@ def execute(args):
                 task_name=f'sens_raster_{row["decay"]}{lulc_key}_{threat}')
             sensitivity_task_list.append(sens_threat_task)
 
-            # get the normalized weight for each threat
+            # get the normalized weight for the threat
+            # which is used to calculate threat degradation
             weight_avg = row['weight'] / weight_sum
 
-            # add the threat raster adjusted by distance and the raster
-            # representing sensitivity to the list to be past to
-            # vectorized_rasters below
-            deg_raster_list.append(filtered_threat_raster_path)
-            deg_raster_list.append(sens_raster_path)
+            # Calculate degradation for each threat
+            indiv_threat_raster_path = os.path.join(
+                intermediate_output_dir, f'degradation_{threat}{lulc_key}{file_suffix}.tif')
 
-            # store the normalized weight for each threat in a list that
-            # will be used below in total_degradation
-            weight_list = numpy.append(weight_list, weight_avg)
+            individual_threat_task = task_graph.add_task(
+                func=_calculate_individual_degradation,
+                args=(filtered_threat_raster_path, sens_raster_path, weight_avg,
+                      access_raster_path, indiv_threat_raster_path),
+                target_path_list=[indiv_threat_raster_path],
+                dependent_task_list=[
+                    sens_threat_task, dist_decay_task,
+                    *access_task_list],
+                task_name=f'deg raster {lulc_key} {threat}')
+            individual_degradation_task_list.append(individual_threat_task)
+
+            indiv_deg_raster_list.append(indiv_threat_raster_path)
 
         # check to see if we got here because a threat raster was missing
         # for baseline lulc, if so then we want to skip to the next landcover
         if exit_landcover:
             continue
-
-        # add the access_raster onto the end of the collected raster list. The
-        # access_raster will be values from the shapefile if provided or a
-        # raster filled with all 1's if not
-        deg_raster_list.append(access_raster_path)
 
         deg_sum_raster_path = os.path.join(
             output_dir, f'deg_sum{lulc_key}{file_suffix}.tif')
@@ -766,11 +778,9 @@ def execute(args):
 
         total_degradation_task = task_graph.add_task(
             func=_calculate_total_degradation,
-            args=(deg_raster_list, deg_sum_raster_path, weight_list),
+            args=(indiv_deg_raster_list, deg_sum_raster_path),
             target_path_list=[deg_sum_raster_path],
-            dependent_task_list=[
-                *threat_decay_task_list, *sensitivity_task_list,
-                *access_task_list],
+            dependent_task_list=individual_degradation_task_list,
             task_name=f'tot_degradation_{row["decay"]}{lulc_key}_{threat}')
 
         # Compute habitat quality
@@ -846,53 +856,56 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
         target_path=quality_out_path)
 
 
-def _calculate_total_degradation(
-        deg_raster_list, deg_sum_raster_path, weight_list):
-    """Calculate habitat degradation.
-
+def _calculate_individual_degradation(
+        filtered_threat_raster_path, sens_raster_path, weight_avg, access_raster_path,
+        indiv_threat_raster_path):
+    """Calculate habitat degradation for a given threat.
     Args:
-        deg_raster_list (list): list of string paths for the degraded
-            threat rasters.
-        deg_sum_raster_path (string): path to output the habitat quality
-            degradation raster.
-        weight_list (list): normalized weight for each threat corresponding
-            to threats in ``deg_raster_list``.
+        filtered_threat_raster_path (string): path for the filtered threat raster
+        sens_raster_path (string): path for the sensitivity raster
+        weight_avg (float): normalized weight for the threat
+        access_raster_path (string): path for the access raster
+        indiv_threat_raster_path (string): path to output the habitat quality
+            degradation raster for the individual threat.
 
     Returns:
         None
     """
-    def total_degradation(*arrays):
-        """Computes the total degradation value.
+    def degradation(filtered_threat_array, sens_array, access_array):
+        """Computes the degradation value for a given threat.
 
         Args:
-            *raster (list): a list of numpy arrays of float type depicting
-                the adjusted threat value per pixel based on distance and
-                sensitivity. The values are in pairs so that the values for
-                each threat can be tracked:
-                [filtered_val_threat1, sens_val_threat1,
-                 filtered_val_threat2, sens_val_threat2, ...]
-                There is an optional last value in the list which is the
-                access_raster value, but it is only present if
-                access_raster is not None.
+            filtered_threat_array (numpy.ndarray): filtered threat raster values
+            sens_array (numpy.ndarray): sensitivity raster values
+            access_array (numpy.ndarray): access raster based on values from the
+                shapefile if provided or a raster filled with all 1s if not
 
         Returns:
-            The total degradation score for the pixel.
+            The degradation score for the pixel for the individual threat.
         """
-        # we can not be certain how many threats the user will enter,
-        # so we handle each filtered threat and sensitivity raster
-        # in pairs
-        sum_degradation = numpy.zeros(arrays[0].shape)
-        for index in range(len(arrays) // 2):
-            step = index * 2
-            sum_degradation += (
-                arrays[step] * arrays[step + 1] * weight_list[index])
-
-        # the last element in arrays is access
-        return sum_degradation * arrays[-1]
+        return filtered_threat_array * sens_array * weight_avg * access_array
 
     pygeoprocessing.raster_map(
-        op=total_degradation,
-        rasters=deg_raster_list,
+        op=degradation,
+        rasters=[filtered_threat_raster_path, sens_raster_path, access_raster_path],
+        target_path=indiv_threat_raster_path)
+
+
+def _calculate_total_degradation(indiv_deg_raster_list, deg_sum_raster_path):
+    """Calculate total habitat degradation.
+
+    Args:
+        indiv_deg_raster_list (list): list of string paths for the degraded
+            threat rasters for each threat.
+        deg_sum_raster_path (string): path to output the habitat quality
+            degradation raster.
+
+    Returns:
+        None
+    """
+    pygeoprocessing.raster_map(
+        op=lambda *indiv_arrays: numpy.sum(indiv_arrays, axis=0),
+        rasters=indiv_deg_raster_list,
         target_path=deg_sum_raster_path)
 
 
@@ -986,7 +999,7 @@ def _generate_rarity_csv(rarity_dict, target_csv_path):
     lulc_codes = sorted(rarity_dict)
     with open(target_csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(['lulc_code', 'rarity_value'])
+        writer.writerow(['lucode', 'rarity_value'])
         for lulc_code in lulc_codes:
             writer.writerow([lulc_code, rarity_dict[lulc_code]])
 
@@ -1055,7 +1068,7 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
         dist_raster_path (string): a filepath for the raster to decay.
             The raster is expected to be a euclidean distance transform with
             values measuring distance in pixels.
-        max_dist (float): max distance of threat in KM.
+        max_dist (float): max distance of threat in meters.
         decay_type (string): a string defining which decay method to use.
             Options include: 'linear' | 'exponential'.
         target_path (string): a filepath for a float output raster.
@@ -1067,12 +1080,9 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
     threat_pixel_size = pygeoprocessing.get_raster_info(
         dist_raster_path)['pixel_size']
 
-    # convert max distance (given in KM) to meters
-    max_dist_m = max_dist * 1000
-
     # convert max distance from meters to the number of pixels that
     # represents on the raster
-    max_dist_pixel = max_dist_m / abs(threat_pixel_size[0])
+    max_dist_pixel = max_dist / abs(threat_pixel_size[0])
     LOGGER.debug(f'Max distance in pixels: {max_dist_pixel}')
 
     def linear_op(dist):
@@ -1187,6 +1197,41 @@ def validate(args, limit_to=None):
 
             invalid_keys.add('sensitivity_table_path')
 
+        # check that max_dist and weight values are included in the
+        # threats table and that max_dist >= 0
+        invalid_max_dist = []
+        missing_max_dist = []
+        missing_weight = []
+        for threat, row in threat_df.iterrows():
+            if row['max_dist'] == '':
+                missing_max_dist.append(threat)
+            elif row['max_dist'] <= 0:
+                invalid_max_dist.append(threat)
+
+            if row['weight'] == '':
+                missing_weight.append(threat)
+
+        if invalid_max_dist:
+            validation_warnings.append((
+                ['threats_table_path'],
+                INVALID_MAX_DIST_MSG.format(threat_list=invalid_max_dist)
+            ))
+
+        if missing_max_dist:
+            validation_warnings.append((
+                ['threats_table_path'],
+                MISSING_MAX_DIST_MSG.format(threat_list=missing_max_dist)
+            ))
+
+        if missing_weight:
+            validation_warnings.append((
+                ['threats_table_path'],
+                MISSING_WEIGHT_MSG.format(threat_list=missing_weight)
+            ))
+
+        if invalid_max_dist or missing_max_dist or missing_weight:
+            invalid_keys.add('threats_table_path')
+
         # Validate threat raster paths and their nodata values
         bad_threat_paths = []
         duplicate_paths = []
@@ -1233,8 +1278,6 @@ def validate(args, limit_to=None):
             validation_warnings.append((
                 ['threats_table_path'],
                 DUPLICATE_PATHS_MSG + str(duplicate_paths)))
-
-            if 'threats_table_path' not in invalid_keys:
-                invalid_keys.add('threats_table_path')
+            invalid_keys.add('threats_table_path')
 
     return validation_warnings
