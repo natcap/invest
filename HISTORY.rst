@@ -61,8 +61,12 @@
 
 
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.15.0 (2025-04-03)
+-------------------
 Highlights
 ==========
 * Multiple models now use **per-hectare** units in their raster outputs. Prior
