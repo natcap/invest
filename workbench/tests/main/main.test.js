@@ -33,6 +33,7 @@ import { findInvestBinaries } from '../../src/main/findBinaries';
 import extractZipInplace from '../../src/main/extractZipInplace';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import investUsageLogger from '../../src/main/investUsageLogger';
+import { settingsStore } from '../../src/main/settingsStore';
 
 jest.mock('node-fetch');
 jest.mock('child_process');
@@ -256,10 +257,42 @@ describe('investUsageLogger', () => {
     expect(fetch.mock.calls).toHaveLength(2);
     const exitPayload = JSON.parse(fetch.mock.calls[1][1].body);
 
+    expect(startPayload.type).toBe('core');
     expect(startPayload.session_id).toBe(exitPayload.session_id);
     expect(startPayload.model_id).toBe(modelID);
     expect(JSON.parse(startPayload.model_args)).toMatchObject(args);
     expect(startPayload.invest_interface).toContain('Workbench');
     expect(exitPayload.status).toBe(investStdErr);
+  });
+
+  test('logs plugin usage correctly', () => {
+    const modelID = 'plugin';
+    const args = {
+      workspace_dir: 'foo',
+      aoi: 'bar',
+    };
+    const investStdErr = '';
+    const usageLogger = investUsageLogger();
+
+    settingsStore.set('plugins', {
+      pluginA: {
+        source: 'git+https://plugin'
+      },
+      pluginB: {
+        source: '/path/to/local/plugin'
+      }
+    });
+
+    usageLogger.start('pluginA', args, PORT);
+    let startPayload = JSON.parse(fetch.mock.calls[0][1].body);
+    expect(startPayload.type).toBe('plugin');
+    expect(startPayload.model_id).toBe('pluginA');
+    expect(startPayload.source).toBe('git+https://plugin');
+
+    usageLogger.start('pluginB', args, PORT);
+    startPayload = JSON.parse(fetch.mock.calls[1][1].body);
+    expect(startPayload.type).toBe('plugin');
+    expect(startPayload.model_id).toBe('pluginB');
+    expect(startPayload.source).toBe('local');
   });
 });
