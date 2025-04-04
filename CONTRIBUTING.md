@@ -10,7 +10,7 @@ Did you find a bug in the InVEST software?
 3. Do you know how to fix the bug? Learn how we handle code contributions in the [Contributing Code](#contributing-code) section of this guide.
 
 ## Requesting Features
-A feature is any addition or modification that affects users of the InVEST software but does not directly address a specific bug. A feature may be very small (e.g., minor styling updates in a small component of the Workbench) or very large (e.g., a new InVEST model), or somewhere in between.
+A feature is any addition or modification that affects users of the InVEST software but does not directly address a specific bug. A feature may be very small (e.g., minor styling updates in a small component of the Workbench), very large (e.g., a new InVEST model), or somewhere in between.
 
 If you want to suggest an InVEST feature:
 1. Search the [InVEST Open Issues on GitHub](https://github.com/natcap/invest/issues) to see if it has already been suggested.
@@ -24,7 +24,7 @@ Every proposed feature, large or small, will be weighed in terms of its potentia
 Any code you contribute to InVEST will fall under the same license as InVEST. Please read the [InVEST Contributor License Agreement](https://vpejnqubjf.us-east-2.awsapprunner.com/) and, if you agree to the terms, sign it. If you do not sign the Contributor License Agreement, you will not be able to contribute code to InVEST.
 
 ### Finding Open Issues
-1. Browse the [InVEST Open Issues on GitHub](https://github.com/natcap/invest/issues). You may wish to search by keyword and/or filter by label, such as the “good first issue” label.
+1. Browse the [InVEST Open Issues on GitHub](https://github.com/natcap/invest/issues). You may wish to search by keyword and/or filter by label, such as the `good first issue` label.
 2. When you find something you want to work on, comment on the issue to let us know you’re interested in working on it.
 3. Wait for a member of the NatCap team to respond. One of the following will happen:
     1. If it’s OK for you to work on the issue, a member of the NatCap team will let you know (in a comment on the issue) and assign the issue to you. Proceed to step 4.
