@@ -32,12 +32,14 @@
           - python3
           - python3-pexpect
           - python3-requests
+          - python3-yaml
           - wget
           - vim-nox
           - yubico-piv-tool
           - libengine-pkcs11-openssl
           - ykcs11
           - libssl-dev
+          - g++
           - google-cloud-sdk
           - google-cloud-cli
           - yubikey-manager
@@ -59,6 +61,23 @@
           # bookworm-backports is 2.9.  The issue (and solution) was similar to
           # https://stackoverflow.com/a/78308879
           - osslsigncode
+
+    - name: Install rust
+      ansible.builtin.shell:
+        # From https://github.com/rust-lang/rustup/issues/1085
+        cmd: |
+            RUSTUP_HOME=/opt/rust
+            export RUSTUP_HOME
+            CARGO_HOME=/opt/rust
+            export CARGO_HOME
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        creates: /opt/rust/bin/cargo
+
+    - name: Compile/install rcodesign from cargo (this can take a while)
+      community.general.cargo:
+        executable: /opt/rust/bin/cargo
+        path: /opt/rust
+        name: apple-codesign
 
     - name: Create the codesign directory
       ansible.builtin.file:
@@ -88,15 +107,23 @@
         dest: /opt/natcap-codesign/natcap-servers-1732552f0202.json
         mode: 0600
 
-    - name: Set up application credentials
-      ansible.builtin.shell:
-        cmd: gcloud auth activate-service-account --key-file=/opt/natcap-codesign/natcap-servers-1732552f0202.json
-
     - name: Install codesigning python script
       ansible.builtin.copy:
         src: natcap-codesign.py
         dest: /opt/natcap-codesign/natcap-codesign.py
         mode: 0755
+
+    - name: Update permissions on the natcap-codesign directory
+      ansible.builtin.file:
+        path: /opt/natcap-codesign
+        state: directory
+        recurse: true
+        owner: natcap-codesign
+        group: natcap-codesign
+
+    - name: Set up application credentials
+      ansible.builtin.shell:
+        cmd: su -c "gcloud auth activate-service-account --key-file=/opt/natcap-codesign/natcap-servers-1732552f0202.json" - natcap-codesign
 
     - name: Install the codesign service
       ansible.builtin.copy:

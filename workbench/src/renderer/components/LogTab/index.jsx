@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReactDom from 'react-dom';
 import PropTypes from 'prop-types';
 
@@ -13,15 +13,65 @@ const { ipcRenderer } = window.Workbench.electron;
 function LogDisplay(props) {
   const ref = useRef();
 
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [prevScrollTop, setPrevScrollTop] = useState(0);
+
+  // A scroll event doesn't tell us whether it was initiated by a user or by code,
+  // so we assume all scroll events are user-initiated unless otherwise specified.
+  const [userInitiatedScroll, setUserInitiatedScroll] = useState(true);
+
+  let scrollHandlerTimer;
+
+  // `scrollOffsetThreshold` is used to determine when user has scrolled to bottom of window.
+  // It includes a buffer to account for imprecision stemming from rounding errors and/or
+  // scroll event throttling. 24px (the height of one line of log output) seems to be
+  // large enough to detect scroll events we want, and small enough to avoid false positives.
+  const scrollOffsetThreshold = 24;
+
   useEffect(() => {
-    ref.current.scrollTop = ref.current.scrollHeight;
+    if (autoScroll) {
+      // Setting `ref.current.scrollTop` will fire a scroll event, which will
+      // result in a call to `handleScroll`. To avoid unnecessary operations in
+      // `handleScroll`, we flag the next scroll event as _not_ user-initiated.
+      setUserInitiatedScroll(false);
+      ref.current.scrollTop = ref.current.scrollHeight;
+    }
   }, [props.logdata]);
+
+  // Check scroll direction or position IFF scroll event was user-initiated.
+  // Always update `prevScrollTop` and reset `userInitiatedScroll` to `true`.
+  const handleScroll = () => {
+    if (scrollHandlerTimer) {
+      clearTimeout(scrollHandlerTimer);
+    }
+    scrollHandlerTimer = setTimeout(() => {
+      const currentScrollTop = ref.current.scrollTop;
+      if (userInitiatedScroll) {
+        if (autoScroll) {
+          // If user has scrolled up, halt auto-scrolling.
+          const scrollingUp = (currentScrollTop < prevScrollTop);
+          if (scrollingUp) {
+            setAutoScroll(false);
+          }
+        } else {
+          // If user has scrolled back to the bottom, resume auto-scrolling.
+          const currentScrollOffset = ref.current.scrollHeight - currentScrollTop;
+          if (Math.abs(ref.current.offsetHeight - currentScrollOffset) <= scrollOffsetThreshold) {
+            setAutoScroll(true);
+          }
+        }
+      }
+      setPrevScrollTop(currentScrollTop);
+      setUserInitiatedScroll(true);
+    }, 10);
+  };
 
   return (
     <Col
       className="text-break"
       id="log-display"
       ref={ref}
+      onScroll={handleScroll}
     >
       {
         props.logdata.map(([line, cls], idx) => (
