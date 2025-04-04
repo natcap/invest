@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or troubleshooting support
+    url: https://community.naturalcapitalproject.org/
+    about: If you have a question related to using InVEST or need help troubleshooting a specific issue, please visit the NatCap Community Forum.
