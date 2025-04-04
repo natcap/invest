@@ -15,7 +15,6 @@ import warnings
 
 import natcap.invest
 from natcap.invest import datastack
-from natcap.invest import model_metadata
 from natcap.invest import spec_utils
 from natcap.invest import ui_server
 from natcap.invest import utils
