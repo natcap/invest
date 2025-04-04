@@ -40,10 +40,11 @@ Any code you contribute to InVEST will fall under the same license as InVEST. Pl
 
 ### Working on Code Changes
 1. Make sure you have followed the instructions in [Forking the Repository and Creating a Branch](#forking-the-repository-and-creating-a-branch).
-2. As you work, use commit messages that are descriptive and include the issue number (e.g., “Validate input LULC raster against biophysical table (#1234)”) rather than generic (e.g., “update code”). This will make it easier to distinguish between commits in the commit history, and it will make it easier for you to write a PR description.
-3. Update automated tests as needed. If you are adding anything new, such as a new input parameter, a new output, more robust validation, or a larger feature, you should add tests to ensure the new behavior is covered.
-4. Manually test your code changes to catch any issues the automated tests might have missed. Manual tests may include interacting with the Workbench UI to verify visual appearance as well as behavior, running a model (via the CLI or the Workbench) and verifying the outputs in a GIS, and/or other related activities.
-5. Consistent code style keeps our codebase readable and helps us focus on the content of code changes. We follow the [PEP 8 Style Guide for Python Code](https://peps.python.org/pep-0008/) and [PEP 257 Python Docstring Conventions](https://peps.python.org/pep-0257/). When in doubt about how to format your code, please refer to existing InVEST code for examples.
+2. Refer to the [InVEST README](./README.rst) for guidance in setting up your local development environment.
+3. As you work, use commit messages that are descriptive and include the issue number (e.g., “Validate input LULC raster against biophysical table (#1234)”) rather than generic (e.g., “update code”). This will make it easier to distinguish between commits in the commit history, and it will make it easier for you to write a PR description.
+4. Update automated tests as needed. If you are adding anything new, such as a new input parameter, a new output, more robust validation, or a larger feature, you should add tests to ensure the new behavior is covered.
+5. Manually test your code changes to catch any issues the automated tests might have missed. Manual tests may include interacting with the Workbench UI to verify visual appearance as well as behavior, running a model (via the CLI or the Workbench) and verifying the outputs in a GIS, and/or other related activities.
+6. Consistent code style keeps our codebase readable and helps us focus on the content of code changes. We follow the [PEP 8 Style Guide for Python Code](https://peps.python.org/pep-0008/) and [PEP 257 Python Docstring Conventions](https://peps.python.org/pep-0257/). When in doubt about how to format your code, please refer to existing InVEST code for examples.
 
 ### Submitting a Pull Request
 1. Make sure you have followed the instructions in [Working on Code Changes](#working-on-code-changes).
