@@ -2,8 +2,9 @@ import upath from 'upath';
 import fs from 'fs';
 import { tmpdir } from 'os';
 import toml from 'toml';
-import { spawn } from 'child_process';
+import { execFile, spawn } from 'child_process';
 import { app, ipcMain } from 'electron';
+import { Downloader } from 'nodejs-file-downloader';
 
 import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
@@ -182,11 +183,33 @@ export function setupRemovePlugin() {
   );
 }
 
-export function setupCheckForWindowsDLL() {
+export function setupWindowsMSVCHandlers() {
   ipcMain.handle(
     ipcMainChannels.HAS_MSVC,
     () => {
       return fs.existsSync(upath.join('C:', 'Windows', 'System32', 'VCRUNTIME140_1.dll'));
+    }
+  );
+
+  ipcMain.handle(
+    ipcMainChannels.DOWNLOAD_MSVC,
+    async () => {
+      const tmpDir = app.getPath('temp');
+      const exeName = 'vc_redist.x64.exe';
+      const downloader = new Downloader({
+        url: 'https://aka.ms/vs/17/release/vc_redist.x64.exe',
+        directory: tmpDir,
+        fileName: exeName,
+      });
+      try {
+        await downloader.download();
+        logger.info("Download complete");
+      } catch (error) {
+        logger.error("Download failed", error);
+      }
+      logger.info('Launching MSVC installer');
+      const exePath = upath.join(tmpDir, exeName);
+      execFile(exePath);
     }
   );
 }

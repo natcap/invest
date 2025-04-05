@@ -4,6 +4,7 @@ export const ipcMainChannels = {
   CHANGE_LANGUAGE: 'change-language',
   CHECK_FILE_PERMISSIONS: 'check-file-permissions',
   CHECK_STORAGE_TOKEN: 'check-storage-token',
+  DOWNLOAD_MSVC: 'download-msvc',
   DOWNLOAD_URL: 'download-url',
   GET_ELECTRON_PATHS: 'get-electron-paths',
   GET_N_CPUS: 'get-n-cpus',

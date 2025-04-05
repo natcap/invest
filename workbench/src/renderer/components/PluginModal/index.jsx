@@ -36,9 +36,11 @@ export default function PluginModal(props) {
     setShowPluginModal(false);
   };
   const handleModalOpen = () => {
-    ipcRenderer.invoke(ipcMainChannels.HAS_MSVC).then((hasMSVC) => {
-      setNeedsMSVC(!hasMSVC);
-    });
+    if (window.Workbench.OS === 'win32') {
+      ipcRenderer.invoke(ipcMainChannels.HAS_MSVC).then((hasMSVC) => {
+        setNeedsMSVC(!hasMSVC);
+      });
+    }
     setShowPluginModal(true);
   };
 
@@ -81,11 +83,8 @@ export default function PluginModal(props) {
     });
   };
 
-  const openMSVCLink = () => {
-    ipcRenderer.send(
-      ipcMainChannels.OPEN_EXTERNAL_URL,
-      'https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-microsoft-visual-c-redistributable-version'
-    );
+  const downloadMSVC = () => {
+    ipcRenderer.invoke(ipcMainChannels.DOWNLOAD_MSVC);
     setShowPluginModal(false);
   }
 
@@ -268,16 +267,17 @@ export default function PluginModal(props) {
           {t('Microsoft Visual C++ Redistributable must be installed!')}
         </h5>
 
-        {t(
-          `Plugin features require the Microsoft Visual C++ Redistributable.
-          You must download and install the redistributable before continuing.`
-        )}
+        {t('Plugin features require the ')}
+        <a href="https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist">
+          {t('Microsoft Visual C++ Redistributable.')}
+        </a>
+        {t('You must download and install the redistributable before continuing.')}
 
         <Button
           className="mt-3"
-          onClick={openMSVCLink}
+          onClick={downloadMSVC}
         >
-          {t('Go to download page')}
+          {t('Continue to download and install')}
         </Button>
       </Modal.Body>
     );
