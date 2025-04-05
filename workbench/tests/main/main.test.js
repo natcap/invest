@@ -187,6 +187,7 @@ describe('createWindow', () => {
       ipcMainChannels.CHECK_FILE_PERMISSIONS,
       ipcMainChannels.GET_SETTING,
       ipcMainChannels.GET_N_CPUS,
+      ipcMainChannels.HAS_MSVC,
       ipcMainChannels.INVEST_VERSION,
       ipcMainChannels.IS_NEW_VERSION,
       ipcMainChannels.IS_FIRST_RUN,

@@ -26,7 +26,11 @@ import {
   setupLaunchPluginServerHandler,
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
-import { setupAddPlugin, setupRemovePlugin } from './setupAddRemovePlugin';
+import {
+  setupAddPlugin,
+  setupRemovePlugin,
+  setupWindowsMSVCHandlers
+} from './setupAddRemovePlugin';
 import { ipcMainChannels } from './ipcMainChannels';
 import ELECTRON_DEV_MODE from './isDevMode';
 import { getLogger } from './logger';
@@ -160,6 +164,7 @@ export const createWindow = async () => {
   setupLaunchPluginServerHandler();
   setupAddPlugin(i18n);
   setupRemovePlugin();
+  setupWindowsMSVCHandlers();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
   if (ELECTRON_DEV_MODE) {
     // The timing of this is fussy due a chromium bug. It seems to only
