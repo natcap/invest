@@ -692,6 +692,7 @@ input[type=text]::placeholder {
   overflow-wrap: break-word;
   color: #f13232;
   font-weight: bold;
+}
 
 code {
   color: inherit;
