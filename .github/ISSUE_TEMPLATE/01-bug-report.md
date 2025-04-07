@@ -12,6 +12,7 @@ Briefly describe the problem.
 
 ## To replicate
 Provide detailed steps to replicate the behavior.
+
 1.
 
 ## Expected behavior
