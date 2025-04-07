@@ -12,6 +12,9 @@ import numpy
 import pandas
 import pygeoprocessing
 import scipy.spatial
+import shapely.errors
+import shapely.geometry
+import shapely.wkb
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
@@ -409,6 +412,9 @@ def execute(args):
             f'tropical_forest_edge_carbon_stocks{file_suffix}.tif')
         output_file_registry['non_forest_mask'] = os.path.join(
             intermediate_dir, f'non_forest_mask{file_suffix}.tif')
+        output_file_registry['tropical_forest_edge_clipped'] = os.path.join(
+            intermediate_dir,
+            f'regression_model_params_clipped{file_suffix}.shp')
 
     # Map non-forest landcover codes to carbon biomasses
     LOGGER.info('Calculating direct mapped carbon stocks')
@@ -445,15 +451,26 @@ def execute(args):
                               output_file_registry['non_forest_mask']],
             task_name='map_distance_from_forest_edge')
 
+        # Clip global regression model vector to LULC raster bounding box
+        LOGGER.info('Clipping global forest carbon edge regression models vector')
+        clip_forest_edge_carbon_vector_task = task_graph.add_task(
+            func=_clip_global_regression_models_vector,
+            args=(args['lulc_raster_path'],
+                  args['tropical_forest_edge_carbon_model_vector_path'],
+                  output_file_registry['tropical_forest_edge_clipped']),
+            target_path_list=[output_file_registry['tropical_forest_edge_clipped']],
+            task_name='clip_forest_edge_carbon_vector')
+
         # Build spatial index for gridded global model for closest 3 points
         LOGGER.info('Building spatial index for forest edge models.')
         build_spatial_index_task = task_graph.add_task(
             func=_build_spatial_index,
             args=(args['lulc_raster_path'], intermediate_dir,
-                  args['tropical_forest_edge_carbon_model_vector_path'],
+                  output_file_registry['tropical_forest_edge_clipped'],
                   output_file_registry['spatial_index_pickle']),
             target_path_list=[output_file_registry['spatial_index_pickle']],
-            task_name='build_spatial_index')
+            task_name='build_spatial_index',
+            dependent_task_list=[clip_forest_edge_carbon_vector_task])
 
         # calculate the carbon edge effect on forests
         LOGGER.info('Calculating forest edge carbon')
@@ -731,6 +748,92 @@ def _map_distance_from_tropical_forest_edge(
             distance_block,
             xoff=offset_dict['xoff'],
             yoff=offset_dict['yoff'])
+
+
+def _clip_global_regression_models_vector(
+        lulc_raster_path, source_vector_path, target_vector_path):
+    """Clip the global carbon edge model shapefile
+
+    Clip the shapefile containing the global carbon edge model parameters
+    to the bounding box of the LULC raster (representing the target study area)
+    plus a buffer to account for the kd-tree lookup DISTANCE_UPPER_BOUND
+
+    Args:
+        lulc_raster_path (string): path to a raster that is used to define the
+            bounding box to use for clipping.
+        source_vector_path (string): a path to an OGR shapefile to be clipped.
+        target_vector_path (string): a path to an OGR shapefile to store the
+            clipped vector.
+
+    Returns:
+        None
+
+    """
+    raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
+    vector_info = pygeoprocessing.get_vector_info(source_vector_path)
+
+    bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = raster_info['bounding_box']
+    buffered_bb = [
+        bbox_minx - DISTANCE_UPPER_BOUND,
+        bbox_miny - DISTANCE_UPPER_BOUND,
+        bbox_maxx + DISTANCE_UPPER_BOUND,
+        bbox_maxy + DISTANCE_UPPER_BOUND,
+    ]
+
+    # Reproject the LULC bounding box to the vector's projection for clipping
+    mask_bb = pygeoprocessing.transform_bounding_box(buffered_bb,
+        raster_info['projection_wkt'], vector_info['projection_wkt'])
+    shapely_mask = shapely.geometry.box(*mask_bb)
+
+    base_vector = gdal.OpenEx(source_vector_path, gdal.OF_VECTOR)
+    base_layer = base_vector.GetLayer()
+    base_layer_defn = base_layer.GetLayerDefn()
+    base_geom_type = base_layer.GetGeomType()
+
+    target_driver = gdal.GetDriverByName('ESRI Shapefile')
+    target_vector = target_driver.Create(
+        target_vector_path, 0, 0, 0, gdal.GDT_Unknown)
+    target_layer = target_vector.CreateLayer(
+        base_layer_defn.GetName(), base_layer.GetSpatialRef(), base_geom_type)
+    target_layer.CreateFields(base_layer.schema)
+
+    target_layer.StartTransaction()
+    invalid_feature_count = 0
+    for feature in base_layer:
+        geometry = feature.GetGeometryRef()
+
+        try:
+            shapely_geom = shapely.wkb.loads(bytes(geometry.ExportToWkb()))
+            if not shapely_geom.is_valid:
+                invalid_feature_count += 1
+                LOGGER.warning(
+                    "The geometry at feature %s is invalid and will be "
+                    "skipped", feature.GetFID())
+                continue
+
+            # Check for intersection rather than use gdal.Layer.Clip()
+            # to preserve the shape of the polygons (we use the centroid
+            # when constructing the kd-tree)
+            if shapely_geom.intersects(shapely_mask):
+                new_feature = ogr.Feature(target_layer.GetLayerDefn())
+                new_feature.SetGeometry(ogr.CreateGeometryFromWkb(
+                    shapely_geom.wkb))
+                for field_name, field_value in feature.items().items():
+                    new_feature.SetField(field_name, field_value)
+                target_layer.CreateFeature(new_feature)
+
+        except (shapely.errors.ReadingError, ValueError):
+            invalid_feature_count += 1
+            LOGGER.warning(
+                "The geometry at feature %s is invalid and will be "
+                "skipped", feature.GetFID())
+
+    target_layer.CommitTransaction()
+
+    if invalid_feature_count:
+        LOGGER.warning(
+            f"{invalid_feature_count} features in {source_vector_path} "
+            "were found to be invalid during clipping and were skipped.")
 
 
 def _build_spatial_index(
