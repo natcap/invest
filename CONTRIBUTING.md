@@ -16,7 +16,7 @@ If you want to suggest an InVEST feature:
 1. Search the [InVEST Open Issues on GitHub](https://github.com/natcap/invest/issues) to see if it has already been suggested.
 2. If you don’t find an existing issue, create a new issue. Select “Feature request”, and provide as much detail as you can.
 
-Every proposed feature, large or small, will be weighed in terms of its potential impact on InVEST users and the capacity of the NatCap team to implement and maintain the feature. Please note that major features, including new InVEST models, must go through a peer-review process with our Platform Steering Committee.
+Every proposed feature, large or small, will be weighed in terms of its potential impact on InVEST users and the capacity of the NatCap team to implement and maintain the feature. Please note that major features, including new InVEST models, must go through a peer-review process with our Platform Steering Committee. In addition, requests for science-related changes to existing InVEST models, such as the modification of equations, or other changes to the way the model functions, will require a NatCap science review.
 
 ## Contributing Code
 
