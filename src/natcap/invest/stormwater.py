@@ -646,7 +646,8 @@ def execute(args):
                     files['ratio_average_path'],
                     files['near_connected_lulc_path'],
                     files['near_road_path']],
-                target_path=files['adjusted_retention_ratio_path']),
+                target_path=files['adjusted_retention_ratio_path'],
+                target_nodata=FLOAT_NODATA),
             target_path_list=[files['adjusted_retention_ratio_path']],
             task_name='adjust stormwater retention ratio',
             dependent_task_list=[retention_ratio_task, average_ratios_task,
@@ -681,7 +682,8 @@ def execute(args):
         kwargs=dict(
             op=retention_to_runoff_op,
             rasters=[final_retention_ratio_path],
-            target_path=files['runoff_ratio_path']),
+            target_path=files['runoff_ratio_path'],
+            target_nodata=FLOAT_NODATA),
         target_path_list=[files['runoff_ratio_path']],
         dependent_task_list=[final_retention_ratio_task],
         task_name='calculate stormwater runoff ratio'
@@ -884,6 +886,7 @@ def lookup_ratios(lulc_path, soil_group_path, ratio_lookup, sorted_lucodes,
             soil_group_array],
         rasters=[lulc_path, soil_group_path],
         target_path=output_path,
+        target_nodata=FLOAT_NODATA,
         target_dtype=numpy.float32)
 
 

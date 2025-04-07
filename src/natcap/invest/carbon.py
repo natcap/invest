@@ -4,7 +4,6 @@ import codecs
 import logging
 import os
 import time
-from functools import reduce
 
 from osgeo import gdal
 import numpy
@@ -26,7 +25,7 @@ CARBON_OUTPUTS = {
             "scenario, mapped from the Carbon Pools table to the LULC."),
         "bands": {1: {
             "type": "number",
-            "units": u.metric_ton/u.pixel
+            "units": u.metric_ton/u.hectare
         }}
     } for pool, pool_name in [
         ('above', 'aboveground'),
@@ -34,9 +33,8 @@ CARBON_OUTPUTS = {
         ('soil', 'soil'),
         ('dead', 'dead matter')
     ] for scenario, scenario_name in [
-        ('cur', 'current'),
-        ('fut', 'future'),
-        ('redd', 'REDD')
+        ('bas', 'baseline'),
+        ('alt', 'alternate')
     ]
 }
 
@@ -49,80 +47,52 @@ MODEL_SPEC = {
     "ui_spec": {
         "order": [
             ['workspace_dir', 'results_suffix'],
-            ['lulc_cur_path', 'carbon_pools_path'],
-            ['calc_sequestration', 'lulc_fut_path'],
-            ['do_redd', 'lulc_redd_path'],
-            ['do_valuation', 'lulc_cur_year', 'lulc_fut_year', 'price_per_metric_ton_of_c', 'discount_rate', 'rate_change'],
+            ['lulc_bas_path', 'carbon_pools_path'],
+            ['calc_sequestration', 'lulc_alt_path'],
+            ['do_valuation', 'lulc_bas_year', 'lulc_alt_year', 'price_per_metric_ton_of_c', 'discount_rate', 'rate_change'],
         ],
         "hidden": ["n_workers"],
         "forum_tag": 'carbon'
     },
     "args_with_spatial_overlap": {
-        "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_redd_path"],
+        "spatial_keys": ["lulc_bas_path", "lulc_alt_path"],
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
-        "lulc_cur_path": {
+        "lulc_bas_path": {
             **spec_utils.LULC,
             "projected": True,
             "projection_units": u.meter,
             "about": gettext(
-                "A map of LULC for the current scenario. "
-                "All values in this raster must have corresponding "
-                "entries in the Carbon Pools table."),
-            "name": gettext("current LULC")
+                "A map of LULC for the baseline scenario, which must occur "
+                "prior to the alternate scenario. All values in this raster "
+                "must have corresponding entries in the Carbon Pools table."),
+            "name": gettext("baseline LULC")
         },
         "calc_sequestration": {
             "type": "boolean",
-            "required": "do_valuation | do_redd",
+            "required": "do_valuation",
             "about": gettext(
                 "Run sequestration analysis. This requires inputs "
-                "of LULC maps for both current and future "
-                "scenarios. Required if REDD scenario analysis or "
-                "run valuation model is selected."),
+                "of LULC maps for both baseline and alternate "
+                "scenarios. Required if run valuation model is selected."),
             "name": gettext("calculate sequestration")
         },
-        "lulc_fut_path": {
+        "lulc_alt_path": {
             **spec_utils.LULC,
             "projected": True,
             "projection_units": u.meter,
             "required": "calc_sequestration",
             "allowed": "calc_sequestration",
             "about": gettext(
-                "A map of LULC for the future scenario. "
-                "If run valuation model is "
-                "selected, this should be the reference, or baseline, future "
-                "scenario against which to compare the REDD policy scenario. "
-                "All values in this raster must have corresponding entries in "
-                "the Carbon Pools table. Required if Calculate Sequestration "
-                "is selected."),
-            "name": gettext("future LULC")
-        },
-        "do_redd": {
-            "type": "boolean",
-            "required": False,
-            "allowed": "calc_sequestration",
-            "about": gettext(
-                "Run REDD scenario analysis. This requires three "
-                "LULC maps: one for the current scenario, one "
-                "for the future baseline scenario, and one for the future "
-                "REDD policy scenario."),
-            "name": gettext("REDD scenario analysis")
-        },
-        "lulc_redd_path": {
-            **spec_utils.LULC,
-            "projected": True,
-            "projection_units": u.meter,
-            "required": "do_redd",
-            "allowed": "do_redd",
-            "about": gettext(
-                "A map of LULC for the REDD policy scenario. "
-                "All values in this raster must have corresponding entries in "
-                "the Carbon Pools table. Required if REDD Scenario Analysis "
-                "is selected."),
-            "name": gettext("REDD LULC")
+                "A map of LULC for the alternate scenario, which must occur "
+                "after the baseline scenario. All values in this raster must "
+                "have corresponding entries in the Carbon Pools table. "
+                "This raster must align with the Baseline LULC raster. "
+                "Required if Calculate Sequestration is selected."),
+            "name": gettext("alternate LULC")
         },
         "carbon_pools_path": {
             "type": "csv",
@@ -151,36 +121,37 @@ MODEL_SPEC = {
                 "that LULC type."),
             "name": gettext("carbon pools")
         },
-        "lulc_cur_year": {
+        "lulc_bas_year": {
             "expression": "float(value).is_integer()",
             "type": "number",
             "units": u.year_AD,
             "required": "do_valuation",
             "allowed": "do_valuation",
             "about": gettext(
-                "The calendar year of the current scenario depicted in the "
-                "current LULC map. Required if Run Valuation model is selected."),
-            "name": gettext("current LULC year")
+                "The calendar year of the baseline scenario depicted in the "
+                "baseline LULC map. Must be < alternate LULC year. Required "
+                "if Run Valuation model is selected."),
+            "name": gettext("baseline LULC year")
         },
-        "lulc_fut_year": {
+        "lulc_alt_year": {
             "expression": "float(value).is_integer()",
             "type": "number",
             "units": u.year_AD,
             "required": "do_valuation",
             "allowed": "do_valuation",
             "about": gettext(
-                "The calendar year of the future scenario depicted in the "
-                "future LULC map. Required if Run Valuation model is selected."),
-            "name": f"future LULC year"
+                "The calendar year of the alternate scenario depicted in the "
+                "alternate LULC map. Must be > baseline LULC year. Required "
+                "if Run Valuation model is selected."),
+            "name": gettext("alternate LULC year")
         },
         "do_valuation": {
             "type": "boolean",
             "required": False,
             "allowed": "calc_sequestration",
             "about": gettext(
-                "Calculate net present value for the future scenario, and the "
-                "REDD scenario if provided, and report it in the final HTML "
-                "document."),
+                "Calculate net present value for the alternate scenario "
+                "and report it in the final HTML document."),
             "name": gettext("run valuation model")
         },
         "price_per_metric_ton_of_c": {
@@ -194,22 +165,23 @@ MODEL_SPEC = {
             "name": gettext("price of carbon")
         },
         "discount_rate": {
-            "type": "ratio",
+            "type": "percent",
             "required": "do_valuation",
             "allowed": "do_valuation",
             "about": gettext(
                 "The annual market discount rate in the price of carbon, "
                 "which reflects society's preference for immediate benefits "
                 "over future benefits. Required if Run Valuation model is "
-                "selected."),
+                "selected. This assumes that the baseline scenario is current "
+                "and the alternate scenario is in the future."),
             "name": gettext("annual market discount rate")
         },
         "rate_change": {
-            "type": "ratio",
+            "type": "percent",
             "required": "do_valuation",
             "allowed": "do_valuation",
             "about": gettext(
-                "The relative annual increase of the price of carbon. "
+                "The relative annual change of the price of carbon. "
                 "Required if Run Valuation model is selected."),
             "name": gettext("annual price change")
         }
@@ -218,60 +190,36 @@ MODEL_SPEC = {
         "report.html": {
             "about": "This file presents a summary of all data computed by the model. It also includes descriptions of all other output files produced by the model, so it is a good place to begin exploring and understanding model results. Because this is an HTML file, it can be opened with any web browser."
         },
-        "tot_c_cur.tif": {
-            "about": "Raster showing the amount of carbon stored in each pixel for the current scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
+        "c_storage_bas.tif": {
+            "about": "Raster showing the amount of carbon stored in each pixel for the baseline scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
-        "tot_c_fut.tif": {
-            "about": "Raster showing the amount of carbon stored in each pixel for the future scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
+        "c_storage_alt.tif": {
+            "about": "Raster showing the amount of carbon stored in each pixel for the alternate scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }},
-            "created_if": "lulc_fut_path"
+            "created_if": "lulc_alt_path"
         },
-        "tot_c_redd.tif": {
-            "about": "Raster showing the amount of carbon stored in each pixel for the REDD scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
+        "c_change_bas_alt.tif": {
+            "about": "Raster showing the difference in carbon stored between the alternate landscape and the baseline landscape. In this map some values may be negative and some positive. Positive values indicate sequestered carbon, negative values indicate carbon that was lost.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }},
-            "created_if": "lulc_redd_path"
+            "created_if": "lulc_alt_path"
         },
-        "delta_cur_fut.tif": {
-            "about": "Raster showing the difference in carbon stored between the future landscape and the current landscape. In this map some values may be negative and some positive. Positive values indicate sequestered carbon, negative values indicate carbon that was lost.",
+        "npv_alt.tif": {
+            "about": "Rasters showing the economic value of carbon sequestered between the baseline and the alternate landscape dates.",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.currency/u.hectare
             }},
-            "created_if": "lulc_fut_path"
-        },
-        "delta_cur_redd.tif": {
-            "about": "Raster showing the difference in carbon stored between the REDD landscape and the current landscape. In this map some values may be negative and some positive. Positive values indicate sequestered carbon, negative values indicate carbon that was lost.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.pixel
-            }},
-            "created_if": "lulc_redd_path"
-        },
-        "npv_fut.tif": {
-            "about": "Rasters showing the economic value of carbon sequestered between the current and the future landscape dates.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.currency/u.pixel
-            }},
-            "created_if": "lulc_fut_path"
-        },
-        "npv_redd.tif": {
-            "about": "Rasters showing the economic value of carbon sequestered between the current and the REDD landscape dates.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.currency/u.pixel
-            }},
-            "created_if": "lulc_redd_path"
+            "created_if": "lulc_alt_path"
         },
         "intermediate_outputs": {
             "type": "directory",
@@ -284,79 +232,61 @@ MODEL_SPEC = {
 }
 
 _OUTPUT_BASE_FILES = {
-    'tot_c_cur': 'tot_c_cur.tif',
-    'tot_c_fut': 'tot_c_fut.tif',
-    'tot_c_redd': 'tot_c_redd.tif',
-    'delta_cur_fut': 'delta_cur_fut.tif',
-    'delta_cur_redd': 'delta_cur_redd.tif',
-    'npv_fut': 'npv_fut.tif',
-    'npv_redd': 'npv_redd.tif',
+    'c_storage_bas': 'c_storage_bas.tif',
+    'c_storage_alt': 'c_storage_alt.tif',
+    'c_change_bas_alt': 'c_change_bas_alt.tif',
+    'npv_alt': 'npv_alt.tif',
     'html_report': 'report.html',
 }
 
 _INTERMEDIATE_BASE_FILES = {
-    'c_above_cur': 'c_above_cur.tif',
-    'c_below_cur': 'c_below_cur.tif',
-    'c_soil_cur': 'c_soil_cur.tif',
-    'c_dead_cur': 'c_dead_cur.tif',
-    'c_above_fut': 'c_above_fut.tif',
-    'c_below_fut': 'c_below_fut.tif',
-    'c_soil_fut': 'c_soil_fut.tif',
-    'c_dead_fut': 'c_dead_fut.tif',
-    'c_above_redd': 'c_above_redd.tif',
-    'c_below_redd': 'c_below_redd.tif',
-    'c_soil_redd': 'c_soil_redd.tif',
-    'c_dead_redd': 'c_dead_redd.tif',
-}
-
-_TMP_BASE_FILES = {
-    'aligned_lulc_cur_path': 'aligned_lulc_cur.tif',
-    'aligned_lulc_fut_path': 'aligned_lulc_fut.tif',
-    'aligned_lulc_redd_path': 'aligned_lulc_redd.tif',
+    'c_above_bas': 'c_above_bas.tif',
+    'c_below_bas': 'c_below_bas.tif',
+    'c_soil_bas': 'c_soil_bas.tif',
+    'c_dead_bas': 'c_dead_bas.tif',
+    'c_above_alt': 'c_above_alt.tif',
+    'c_below_alt': 'c_below_alt.tif',
+    'c_soil_alt': 'c_soil_alt.tif',
+    'c_dead_alt': 'c_dead_alt.tif',
 }
 
 # -1.0 since carbon stocks are 0 or greater
 _CARBON_NODATA = -1.0
 
+
 def execute(args):
     """Carbon.
 
     Calculate the amount of carbon stocks given a landscape, or the difference
-    due to a future change, and/or the tradeoffs between that and a REDD
-    scenario, and calculate economic valuation on those scenarios.
+    due to some change, and calculate economic valuation on those scenarios.
 
-    The model can operate on a single scenario, a combined present and future
-    scenario, as well as an additional REDD scenario.
+    The model can operate on a single scenario or a combined baseline and
+    alternate scenario.
 
     Args:
         args['workspace_dir'] (string): a path to the directory that will
             write output and other temporary files during calculation.
         args['results_suffix'] (string): appended to any output file name.
-        args['lulc_cur_path'] (string): a path to a raster representing the
-            current carbon stocks.
+        args['lulc_bas_path'] (string): a path to a raster representing the
+            baseline carbon stocks.
         args['calc_sequestration'] (bool): if true, sequestration should
-            be calculated and 'lulc_fut_path' and 'do_redd' should be defined.
-        args['lulc_fut_path'] (string): a path to a raster representing future
+            be calculated and 'lulc_alt_path' should be defined.
+        args['lulc_alt_path'] (string): a path to a raster representing alternate
             landcover scenario.  Optional, but if present and well defined
             will trigger a sequestration calculation.
-        args['do_redd'] ( bool): if true, REDD analysis should be calculated
-            and 'lulc_redd_path' should be defined
-        args['lulc_redd_path'] (string): a path to a raster representing the
-            alternative REDD scenario which is only possible if the
-            args['lulc_fut_path'] is present and well defined.
         args['carbon_pools_path'] (string): path to CSV or that indexes carbon
             storage density to lulc codes. (required if 'do_uncertainty' is
             false)
-        args['lulc_cur_year'] (int/string): an integer representing the year
-            of `args['lulc_cur_path']` used if `args['do_valuation']`
+        args['lulc_bas_year'] (int/string): an integer representing the year
+            of `args['lulc_bas_path']` used if `args['do_valuation']`
             is True.
-        args['lulc_fut_year'](int/string): an integer representing the year
-            of `args['lulc_fut_path']` used in valuation if it exists.
+        args['lulc_alt_year'](int/string): an integer representing the year
+            of `args['lulc_alt_path']` used in valuation if it exists.
             Required if  `args['do_valuation']` is True and
-            `args['lulc_fut_path']` is present and well defined.
+            `args['lulc_alt_path']` is present and well defined.
         args['do_valuation'] (bool): if true then run the valuation model on
-            available outputs. Calculate NPV for a future scenario or a REDD
-            scenario and report in final HTML document.
+            available outputs. Calculate NPV for an alternate scenario and
+            report in final HTML document.
         args['price_per_metric_ton_of_c'] (float): Is the present value of
             carbon per metric ton. Used if `args['do_valuation']` is present
             and True.
@@ -382,8 +312,15 @@ def execute(args):
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_TMP_BASE_FILES, output_dir)], file_suffix)
+         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),], file_suffix)
+
+    if args['do_valuation'] and args['lulc_bas_year'] >= args['lulc_alt_year']:
+        raise ValueError(
+            "Invalid input for lulc_bas_year or lulc_alt_year. The Alternate "
+            f"LULC Year ({args['lulc_alt_year']}) must be greater than the "
+            f"Baseline LULC Year ({args['lulc_bas_year']}). Ensure that the "
+            "Baseline LULC Year is earlier than the Alternate LULC Year."
+        )
 
     carbon_pool_df = validation.get_validated_dataframe(
         args['carbon_pools_path'], **MODEL_SPEC['args']['carbon_pools_path'])
@@ -404,7 +341,7 @@ def execute(args):
     valid_scenarios = []
     tifs_to_summarize = set()  # passed to _generate_report()
 
-    for scenario_type in ['cur', 'fut', 'redd']:
+    for scenario_type in ['bas', 'alt']:
         lulc_key = "lulc_%s_path" % (scenario_type)
         if lulc_key in args and args[lulc_key]:
             raster_info = pygeoprocessing.get_raster_info(args[lulc_key])
@@ -448,7 +385,7 @@ def execute(args):
             storage_path_list.append(file_registry[storage_key])
             carbon_map_task_lookup[scenario_type].append(carbon_map_task)
 
-        output_key = 'tot_c_' + scenario_type
+        output_key = 'c_storage_' + scenario_type
         LOGGER.info(
             "Calculate carbon storage for '%s'", output_key)
 
@@ -467,26 +404,24 @@ def execute(args):
 
     # calculate sequestration
     diff_rasters_task_lookup = {}
-    for scenario_type in ['fut', 'redd']:
-        if scenario_type not in valid_scenarios:
-            continue
-        output_key = 'delta_cur_' + scenario_type
+    if 'alt' in valid_scenarios:
+        output_key = 'c_change_bas_alt'
         LOGGER.info("Calculate sequestration scenario '%s'", output_key)
 
         diff_rasters_task = graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
-                op=numpy.subtract,  # delta = scenario C - current C
-                rasters=[file_registry['tot_c_' + scenario_type],
-                         file_registry['tot_c_cur']],
+                op=numpy.subtract,  # c_change = scenario C - baseline C
+                rasters=[file_registry['c_storage_alt'],
+                         file_registry['c_storage_bas']],
                 target_path=file_registry[output_key],
                 target_nodata=_CARBON_NODATA),
             target_path_list=[file_registry[output_key]],
             dependent_task_list=[
-                sum_rasters_task_lookup['cur'],
-                sum_rasters_task_lookup[scenario_type]],
+                sum_rasters_task_lookup['bas'],
+                sum_rasters_task_lookup['alt']],
             task_name='diff_rasters_for_%s' % output_key)
-        diff_rasters_task_lookup[scenario_type] = diff_rasters_task
+        diff_rasters_task_lookup['alt'] = diff_rasters_task
         tifs_to_summarize.add(file_registry[output_key])
 
     # calculate net present value
@@ -494,22 +429,20 @@ def execute(args):
     if 'do_valuation' in args and args['do_valuation']:
         LOGGER.info('Constructing valuation formula.')
         valuation_constant = _calculate_valuation_constant(
-            int(args['lulc_cur_year']), int(args['lulc_fut_year']),
+            int(args['lulc_bas_year']), int(args['lulc_alt_year']),
             float(args['discount_rate']), float(args['rate_change']),
             float(args['price_per_metric_ton_of_c']))
 
-        for scenario_type in ['fut', 'redd']:
-            if scenario_type not in valid_scenarios:
-                continue
-            output_key = 'npv_%s' % scenario_type
-            LOGGER.info("Calculating NPV for scenario '%s'", output_key)
+        if 'alt' in valid_scenarios:
+            output_key = 'npv_alt'
+            LOGGER.info("Calculating NPV for scenario 'alt'")
 
             calculate_npv_task = graph.add_task(
                 _calculate_npv,
-                args=(file_registry['delta_cur_%s' % scenario_type],
+                args=(file_registry['c_change_bas_alt'],
                       valuation_constant, file_registry[output_key]),
                 target_path_list=[file_registry[output_key]],
-                dependent_task_list=[diff_rasters_task_lookup[scenario_type]],
+                dependent_task_list=[diff_rasters_task_lookup['alt']],
                 task_name='calculate_%s' % output_key)
             calculate_npv_tasks.append(calculate_npv_task)
             tifs_to_summarize.add(file_registry[output_key])
@@ -525,16 +458,6 @@ def execute(args):
         dependent_task_list=tasks_to_report,
         task_name='generate_report')
     graph.join()
-
-    for tmp_filename_key in _TMP_BASE_FILES:
-        try:
-            tmp_filename = file_registry[tmp_filename_key]
-            if os.path.exists(tmp_filename):
-                os.remove(tmp_filename)
-        except OSError as os_error:
-            LOGGER.warning(
-                "Can't remove temporary file: %s\nOriginal Exception:\n%s",
-                file_registry[tmp_filename_key], os_error)
 
 
 # element-wise sum function to pass to raster_map
@@ -562,17 +485,15 @@ def _generate_carbon_map(
     Args:
         lulc_path (string): landcover raster with integer pixels.
         out_carbon_stock_path (string): path to output raster that will have
-            pixels with carbon storage values in them with units of Mg*C
+            pixels with carbon storage values in them with units of Mg/ha.
         carbon_pool_by_type (dict): a dictionary that maps landcover values
             to carbon storage densities per area (Mg C/Ha).
 
     Returns:
         None.
     """
-    lulc_info = pygeoprocessing.get_raster_info(lulc_path)
-    pixel_area = abs(numpy.prod(lulc_info['pixel_size']))
     carbon_stock_by_type = dict([
-        (lulcid, stock * pixel_area / 10**4)
+        (lulcid, stock)
         for lulcid, stock in carbon_pool_by_type.items()])
 
     reclass_error_details = {
@@ -584,22 +505,22 @@ def _generate_carbon_map(
 
 
 def _calculate_valuation_constant(
-        lulc_cur_year, lulc_fut_year, discount_rate, rate_change,
+        lulc_bas_year, lulc_alt_year, discount_rate, rate_change,
         price_per_metric_ton_of_c):
     """Calculate a net present valuation constant to multiply carbon storage.
 
     Args:
-        lulc_cur_year (int): calendar year in present
-        lulc_fut_year (int): calendar year in future
+        lulc_bas_year (int): calendar year for baseline
+        lulc_alt_year (int): calendar year for alternate
         discount_rate (float): annual discount rate as a percentage
         rate_change (float): annual change in price of carbon as a percentage
         price_per_metric_ton_of_c (float): currency amount of Mg of carbon
 
     Returns:
-        a floating point number that can be used to multiply a delta carbon
-        storage value by to calculate NPV.
+        a floating point number that can be used to multiply a carbon
+        storage change value by to calculate NPV.
     """
-    n_years = lulc_fut_year - lulc_cur_year
+    n_years = lulc_alt_year - lulc_bas_year
     ratio = (
         1 / ((1 + discount_rate / 100) *
              (1 + rate_change / 100)))
@@ -617,11 +538,11 @@ def _calculate_valuation_constant(
     return valuation_constant
 
 
-def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
+def _calculate_npv(c_change_carbon_path, valuation_constant, npv_out_path):
     """Calculate net present value.
 
     Args:
-        delta_carbon_path (string): path to change in carbon storage over
+        c_change_carbon_path (string): path to change in carbon storage over
             time.
         valuation_constant (float): value to multiply each carbon storage
             value by to calculate NPV.
@@ -632,7 +553,7 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
     """
     pygeoprocessing.raster_map(
         op=lambda carbon: carbon * valuation_constant,
-        rasters=[delta_carbon_path],
+        rasters=[c_change_carbon_path],
         target_path=npv_out_path)
 
 
@@ -725,27 +646,33 @@ def _generate_report(raster_file_set, model_args, file_registry):
             '<table><thead><tr><th>Description</th><th>Value</th><th>Units'
             '</th><th>Raw File</th></tr></thead><tbody>')
 
+        carbon_units = 'metric tons'
+
         # value lists are [sort priority, description, statistic, units]
         report = [
-            (file_registry['tot_c_cur'], 'Total cur', 'Mg of C'),
-            (file_registry['tot_c_fut'], 'Total fut', 'Mg of C'),
-            (file_registry['tot_c_redd'], 'Total redd', 'Mg of C'),
-            (file_registry['delta_cur_fut'], 'Change in C for fut', 'Mg of C'),
-            (file_registry['delta_cur_redd'],
-             'Change in C for redd', 'Mg of C'),
-            (file_registry['npv_fut'],
-             'Net present value from cur to fut', 'currency units'),
-            (file_registry['npv_redd'],
-             'Net present value from cur to redd', 'currency units'),
+            (file_registry['c_storage_bas'], 'Baseline Carbon Storage',
+             carbon_units),
+            (file_registry['c_storage_alt'], 'Alternate Carbon Storage',
+             carbon_units),
+            (file_registry['c_change_bas_alt'], 'Change in Carbon Storage',
+             carbon_units),
+            (file_registry['npv_alt'],
+             'Net Present Value of Carbon Change', 'currency units'),
         ]
 
         for raster_uri, description, units in report:
             if raster_uri in raster_file_set:
-                summary_stat = _accumulate_totals(raster_uri)
+                total = _accumulate_totals(raster_uri)
+                raster_info = pygeoprocessing.get_raster_info(raster_uri)
+                pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+                # Since each pixel value is in Mg/ha, ``total`` is in (Mg/ha * px) = Mg•px/ha.
+                # Adjusted sum = ([total] Mg•px/ha) * ([pixel_area] m^2 / 1 px) * (1 ha / 10000 m^2) = Mg.
+                summary_stat = total * pixel_area / 10000
                 report_doc.write(
-                    '<tr><td>%s</td><td class="number">%.2f</td><td>%s</td>'
-                    '<td>%s</td></tr>' % (
-                        description, summary_stat, units, raster_uri))
+                    '<tr><td>%s</td><td class="number" data-summary-stat="%s">'
+                    '%.2f</td><td>%s</td><td>%s</td></tr>' % (
+                        description, description, summary_stat, units,
+                        raster_uri))
         report_doc.write('</tbody></table></body></html>')
 
 

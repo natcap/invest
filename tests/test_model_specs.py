@@ -254,7 +254,6 @@ class ValidateModelSpecs(unittest.TestCase):
                 raise AssertionError(f'{key} has key(s) {attrs} that are not '
                                      'expected for its type')
 
-
     def validate_args(self, arg, name, parent_type=None):
         """
         Recursively validate nested args against the arg spec standard.

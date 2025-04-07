@@ -7,6 +7,7 @@ from osgeo import gdal
 from flask import Flask
 from flask import request
 from flask_cors import CORS
+import geometamaker
 import natcap.invest
 from natcap.invest import cli
 from natcap.invest import datastack
@@ -286,3 +287,30 @@ def log_model_exit():
 def get_supported_languages():
     """Return a mapping of supported languages to their display names."""
     return json.dumps(natcap.invest.LOCALE_NAME_MAP)
+
+
+@app.route(f'/{PREFIX}/get_geometamaker_profile', methods=['GET'])
+def get_geometamaker_profile():
+    """Return the user-profile from geometamaker."""
+    config = geometamaker.Config()
+    return config.profile.model_dump()
+
+
+@app.route(f'/{PREFIX}/set_geometamaker_profile', methods=['POST'])
+def set_geometamaker_profile():
+    """Set the user-profile for geometamaker.
+
+    Body (JSON string): deserializes to a dict with keys:
+        contact
+        license
+
+    """
+    payload = request.get_json()
+    profile = geometamaker.Profile(**payload)
+    config = geometamaker.Config()
+    config.save(profile)
+    LOGGER.debug(config)
+    return {
+        'message': 'Metadata profile saved',
+        'error': False
+    }

@@ -13,6 +13,11 @@ import sys
 import textwrap
 import warnings
 
+import natcap.invest
+from natcap.invest import datastack
+from natcap.invest import spec_utils
+from natcap.invest import ui_server
+from natcap.invest import utils
 from pygeoprocessing.geoprocessing_core import GDALUseExceptions
 with GDALUseExceptions():
     import natcap.invest
@@ -486,6 +491,14 @@ def main(user_args=None):
                 # written to stdout if this exception is uncaught.  This is by
                 # design.
                 model_module.execute(parsed_datastack.args)
+                LOGGER.info('Generating metadata for results')
+                try:
+                    # If there's an exception from creating metadata
+                    # I don't think we want to indicate a model failure
+                    spec_utils.generate_metadata(model_module, parsed_datastack.args)
+                except Exception as exc:
+                    LOGGER.warning(
+                        'Something went wrong while generating metadata', exc_info=exc)
 
         if args.subcommand == 'serve':
             ui_server.app.run(port=args.port)

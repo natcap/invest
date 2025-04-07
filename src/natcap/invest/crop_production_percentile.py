@@ -769,7 +769,6 @@ def execute(args):
                     args['landcover_raster_path'],
                     interpolated_yield_percentile_raster_path,
                     crop_lucode,
-                    pixel_area_ha,
                     percentile_crop_production_raster_path),
                 target_path_list=[percentile_crop_production_raster_path],
                 dependent_task_list=[
@@ -844,7 +843,7 @@ def execute(args):
             args=([(args['landcover_raster_path'], 1),
                    (interpolated_observed_yield_raster_path, 1),
                    (observed_yield_nodata, 'raw'), (landcover_nodata, 'raw'),
-                   (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
+                   (crop_lucode, 'raw')],
                   _mask_observed_yield_op, observed_production_raster_path,
                   gdal.GDT_Float32, observed_yield_nodata),
             target_path_list=[observed_production_raster_path],
@@ -861,7 +860,7 @@ def execute(args):
         output_dir, 'result_table%s.csv' % file_suffix)
 
     crop_names = crop_to_landcover_df.index.to_list()
-    tabulate_results_task = task_graph.add_task(
+    _ = task_graph.add_task(
         func=tabulate_results,
         args=(nutrient_df, yield_percentile_headers,
               crop_names, pixel_area_ha,
@@ -878,14 +877,14 @@ def execute(args):
             output_dir, _AGGREGATE_VECTOR_FILE_PATTERN % (file_suffix))
         aggregate_results_table_path = os.path.join(
             output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
-        aggregate_results_task = task_graph.add_task(
+        _ = task_graph.add_task(
             func=aggregate_to_polygons,
             args=(args['aggregate_polygon_path'],
                   target_aggregate_vector_path,
                   landcover_raster_info['projection_wkt'],
                   crop_names, nutrient_df,
-                  yield_percentile_headers, output_dir, file_suffix,
-                  aggregate_results_table_path),
+                  yield_percentile_headers, pixel_area_ha, output_dir,
+                  file_suffix, aggregate_results_table_path),
             target_path_list=[target_aggregate_vector_path,
                               aggregate_results_table_path],
             dependent_task_list=dependent_task_list,
@@ -896,14 +895,14 @@ def execute(args):
 
 
 def calculate_crop_production(lulc_path, yield_path, crop_lucode,
-                              pixel_area_ha, target_path):
+                              target_path):
     """Calculate crop production for a particular crop.
 
     The resulting production value is:
 
     - nodata, where either the LULC or yield input has nodata
     - 0, where the LULC does not match the given LULC code
-    - yield * pixel area, where the given LULC code exists
+    - yield (in Mg/ha), where the given LULC code exists
 
     Args:
         lulc_path (str): path to a raster of LULC codes
@@ -911,7 +910,6 @@ def calculate_crop_production(lulc_path, yield_path, crop_lucode,
             by ``crop_lucode``, in units per hectare
         crop_lucode (int): LULC code that identifies the crop of interest in
             the ``lulc_path`` raster.
-        pixel_area_ha (number): Pixel area in hectares for both input rasters
         target_path (str): Path to write the output crop production raster
 
     Returns:
@@ -919,7 +917,7 @@ def calculate_crop_production(lulc_path, yield_path, crop_lucode,
     """
     pygeoprocessing.raster_map(
         op=lambda lulc, _yield: numpy.where(
-            lulc == crop_lucode, _yield * pixel_area_ha, 0),
+            lulc == crop_lucode, _yield, 0),
         rasters=[lulc_path, yield_path],
         target_path=target_path,
         target_nodata=_NODATA_YIELD)
@@ -949,7 +947,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
 
 def _mask_observed_yield_op(
         lulc_array, observed_yield_array, observed_yield_nodata,
-        landcover_nodata, crop_lucode, pixel_area_ha):
+        landcover_nodata, crop_lucode):
     """Mask total observed yield to crop lulc type.
 
     Args:
@@ -958,7 +956,6 @@ def _mask_observed_yield_op(
         observed_yield_nodata (float): yield raster nodata value
         landcover_nodata (float): landcover raster nodata value
         crop_lucode (int): code used to mask in the current crop
-        pixel_area_ha (float): area of lulc raster cells (hectares)
 
     Returns:
         numpy.ndarray with float values of yields masked to crop_lucode
@@ -967,13 +964,13 @@ def _mask_observed_yield_op(
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
-        valid_mask = ~pygeoprocessing.array_equals_nodata(lulc_array, landcover_nodata)
+        valid_mask = ~pygeoprocessing.array_equals_nodata(lulc_array,
+                                                          landcover_nodata)
         result[valid_mask] = 0
     else:
         result[:] = 0
     lulc_mask = lulc_array == crop_lucode
-    result[lulc_mask] = (
-        observed_yield_array[lulc_mask] * pixel_area_ha)
+    result[lulc_mask] = observed_yield_array[lulc_mask]
     return result
 
 
@@ -994,7 +991,7 @@ def tabulate_results(
         landcover_raster_path (string): path to landcover raster
         landcover_nodata (float): landcover raster nodata value
         output_dir (string): the file path to the output workspace.
-        file_suffix (string): string to appened to any output filenames.
+        file_suffix (string): string to append to any output filenames.
         target_table_path (string): path to 'result_table.csv' in the output
             workspace
 
@@ -1015,6 +1012,11 @@ def tabulate_results(
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
         for yield_percentile_id in sorted(yield_percentile_headers) + [
             'yield_observed']]
+
+    # Since pixel values in observed and percentile rasters are Mg/(ha•yr),
+    # raster sums are (Mg•px)/(ha•yr). Before recording sums in
+    # production_lookup dictionary, convert to Mg/yr by multiplying by ha/px.
+
     with open(target_table_path, 'w') as result_table:
         result_table.write(
             'crop,area (ha),' + 'production_observed,' +
@@ -1046,6 +1048,7 @@ def tabulate_results(
                 production_pixel_count += numpy.count_nonzero(
                     valid_mask & (yield_block > 0))
                 yield_sum += numpy.sum(yield_block[valid_mask])
+            yield_sum *= pixel_area_ha
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
             result_table.write(',%f' % production_area)
@@ -1063,6 +1066,7 @@ def tabulate_results(
                     yield_sum += numpy.sum(
                         yield_block[~pygeoprocessing.array_equals_nodata(
                             yield_block, _NODATA_YIELD)])
+                yield_sum *= pixel_area_ha
                 production_lookup[yield_percentile_id] = yield_sum
                 result_table.write(",%f" % yield_sum)
 
@@ -1088,7 +1092,8 @@ def tabulate_results(
                 (landcover_raster_path, 1)):
             if landcover_nodata is not None:
                 total_area += numpy.count_nonzero(
-                    ~pygeoprocessing.array_equals_nodata(band_values, landcover_nodata))
+                    ~pygeoprocessing.array_equals_nodata(band_values,
+                                                         landcover_nodata))
             else:
                 total_area += band_values.size
         result_table.write(
@@ -1098,8 +1103,8 @@ def tabulate_results(
 
 def aggregate_to_polygons(
         base_aggregate_vector_path, target_aggregate_vector_path,
-        landcover_raster_projection, crop_names,
-        nutrient_df, yield_percentile_headers, output_dir, file_suffix,
+        landcover_raster_projection, crop_names, nutrient_df,
+        yield_percentile_headers, pixel_area_ha, output_dir, file_suffix,
         target_aggregate_table_path):
     """Write table with aggregate results of yield and nutrient values.
 
@@ -1116,8 +1121,9 @@ def aggregate_to_polygons(
         nutrient_df (pandas.DataFrame): a table of nutrient values by crop
         yield_percentile_headers (list): list of strings indicating percentiles
             at which yield was calculated.
+        pixel_area_ha (float): area of lulc raster cells (hectares)
         output_dir (string): the file path to the output workspace.
-        file_suffix (string): string to appened to any output filenames.
+        file_suffix (string): string to append to any output filenames.
         target_aggregate_table_path (string): path to 'aggregate_results.csv'
             in the output workspace
 
@@ -1131,6 +1137,10 @@ def aggregate_to_polygons(
         landcover_raster_projection,
         target_aggregate_vector_path,
         driver_name='ESRI Shapefile')
+
+    # Since pixel values are Mg/(ha•yr), zonal stats sum is (Mg•px)/(ha•yr).
+    # Before writing sum to results tables or when using sum to calculate
+    # nutrient yields, convert to Mg/yr by multiplying by ha/px.
 
     # loop over every crop and query with pgp function
     total_yield_lookup = {}
@@ -1161,11 +1171,12 @@ def aggregate_to_polygons(
                         crop_name, yield_percentile_id)]:
                     total_nutrient_table[nutrient_id][
                         yield_percentile_id][id_index] += (
-                            nutrient_factor *
-                            total_yield_lookup['%s_%s' % (
-                                crop_name, yield_percentile_id)][
-                                    id_index]['sum'] *
-                            nutrient_df[nutrient_id][crop_name])
+                            nutrient_factor
+                            * total_yield_lookup[
+                                    '%s_%s' % (crop_name, yield_percentile_id)
+                                ][id_index]['sum']
+                            * pixel_area_ha
+                            * nutrient_df[nutrient_id][crop_name])
 
         # process observed
         observed_yield_path = os.path.join(
@@ -1179,10 +1190,11 @@ def aggregate_to_polygons(
             for id_index in total_yield_lookup[f'{crop_name}_observed']:
                 total_nutrient_table[
                     nutrient_id]['observed'][id_index] += (
-                        nutrient_factor *
-                        total_yield_lookup[
-                            f'{crop_name}_observed'][id_index]['sum'] *
-                        nutrient_df[nutrient_id][crop_name])
+                        nutrient_factor
+                        * total_yield_lookup[
+                            f'{crop_name}_observed'][id_index]['sum']
+                        * pixel_area_ha
+                        * nutrient_df[nutrient_id][crop_name])
 
     # report everything to a table
     with open(target_aggregate_table_path, 'w') as aggregate_table:
@@ -1201,7 +1213,8 @@ def aggregate_to_polygons(
         for id_index in list(total_yield_lookup.values())[0]:
             aggregate_table.write('%s,' % id_index)
             aggregate_table.write(','.join([
-                str(total_yield_lookup[yield_header][id_index]['sum'])
+                str(total_yield_lookup[yield_header][id_index]['sum']
+                    * pixel_area_ha)
                 for yield_header in sorted(total_yield_lookup)]))
 
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:

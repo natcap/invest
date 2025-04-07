@@ -39,7 +39,7 @@ MODEL_SPEC = {
             ['dem_path', 'erosivity_path', 'erodibility_path'],
             ['lulc_path', 'biophysical_table_path'],
             ['watersheds_path', 'drainage_path'],
-            ['threshold_flow_accumulation', 'k_param', 'sdr_max', 'ic_0_param', 'l_max']
+            ['flow_dir_algorithm', 'threshold_flow_accumulation', 'k_param', 'sdr_max', 'ic_0_param', 'l_max']
         ],
         "hidden": ["n_workers"]
     },
@@ -151,27 +151,28 @@ MODEL_SPEC = {
                 "watershed. Pixels with 1 are drainages and are treated like "
                 "streams. Pixels with 0 are not drainages."),
             "name": gettext("drainages")
-        }
+        },
+        **spec_utils.FLOW_DIR_ALGORITHM
     },
     "outputs": {
         "avoided_erosion.tif": {
             "about": "The contribution of vegetation to keeping soil from eroding from each pixel. (Eq. (82))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "avoided_export.tif": {
             "about": "The contribution of vegetation to keeping erosion from entering a stream. This combines local/on-pixel sediment retention with trapping of erosion from upslope of the pixel. (Eq. (83))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "rkls.tif": {
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }},
             "about": "Total potential soil loss per pixel in the original land cover from the RKLS equation. Equivalent to the soil loss for bare soil. (Eq. (68), without applying the C or P factors)."
         },
@@ -179,14 +180,14 @@ MODEL_SPEC = {
             "about": "The total amount of sediment deposited on the pixel from upslope sources as a result of trapping. (Eq. (80))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "sed_export.tif": {
             "about": "The total amount of sediment exported from each pixel that reaches the stream. (Eq. (76))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "stream.tif": spec_utils.STREAM,
@@ -196,10 +197,10 @@ MODEL_SPEC = {
             "bands": {1: {"type": "integer"}}
         },
         "usle.tif": {
-            "about": "Total potential soil loss per pixel in the original land cover calculated from the USLE equation. (Eq. (68))",
+            "about": "Total potential soil loss per hectare in the original land cover calculated from the USLE equation. (Eq. (68))",
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "watershed_results_sdr.shp": {
@@ -692,23 +693,68 @@ def execute(args):
         dependent_task_list=[slope_task],
         task_name='threshold slope')
 
-    flow_dir_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_dir_mfd,
-        args=(
-            (f_reg['pit_filled_dem_path'], 1),
-            f_reg['flow_direction_path']),
-        target_path_list=[f_reg['flow_direction_path']],
-        dependent_task_list=[pit_fill_task],
-        task_name='flow direction calculation')
+    if args['flow_dir_algorithm'] == 'MFD':
+        flow_dir_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_dir_mfd,
+            args=(
+                (f_reg['pit_filled_dem_path'], 1),
+                f_reg['flow_direction_path']),
+            target_path_list=[f_reg['flow_direction_path']],
+            dependent_task_list=[pit_fill_task],
+            task_name='flow direction calculation')
 
-    flow_accumulation_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_accumulation_mfd,
-        args=(
-            (f_reg['flow_direction_path'], 1),
-            f_reg['flow_accumulation_path']),
-        target_path_list=[f_reg['flow_accumulation_path']],
-        dependent_task_list=[flow_dir_task],
-        task_name='flow accumulation calculation')
+        flow_accumulation_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_accumulation_mfd,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                f_reg['flow_accumulation_path']),
+            target_path_list=[f_reg['flow_accumulation_path']],
+            dependent_task_list=[flow_dir_task],
+            task_name='flow accumulation calculation')
+
+        stream_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_streams_mfd,
+            args=(
+                (f_reg['flow_accumulation_path'], 1),
+                (f_reg['flow_direction_path'], 1),
+                float(args['threshold_flow_accumulation']),
+                f_reg['stream_path']),
+            kwargs={'trace_threshold_proportion': 0.7},
+            target_path_list=[f_reg['stream_path']],
+            dependent_task_list=[flow_accumulation_task],
+            task_name='extract streams')
+
+        d_dn_func = pygeoprocessing.routing.distance_to_channel_mfd
+    else:
+
+        flow_dir_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_dir_d8,
+            args=(
+                (f_reg['pit_filled_dem_path'], 1),
+                f_reg['flow_direction_path']),
+            target_path_list=[f_reg['flow_direction_path']],
+            dependent_task_list=[pit_fill_task],
+            task_name='flow direction calculation')
+
+        flow_accumulation_task = task_graph.add_task(
+            func=pygeoprocessing.routing.flow_accumulation_d8,
+            args=(
+                (f_reg['flow_direction_path'], 1),
+                f_reg['flow_accumulation_path']),
+            target_path_list=[f_reg['flow_accumulation_path']],
+            dependent_task_list=[flow_dir_task],
+            task_name='flow accumulation calculation')
+
+        stream_task = task_graph.add_task(
+            func=pygeoprocessing.routing.extract_streams_d8,
+            kwargs=dict(
+                flow_accum_raster_path_band=(f_reg['flow_accumulation_path'], 1),
+                flow_threshold=float(args['threshold_flow_accumulation']),
+                target_stream_raster_path=f_reg['stream_path']),
+            target_path_list=[f_reg['stream_path']],
+            dependent_task_list=[flow_accumulation_task],
+            task_name='extract streams')
+        d_dn_func = pygeoprocessing.routing.distance_to_channel_d8
 
     ls_factor_task = task_graph.add_task(
         func=_calculate_ls_factor,
@@ -721,18 +767,6 @@ def execute(args):
         dependent_task_list=[
             flow_accumulation_task, slope_task],
         task_name='ls factor calculation')
-
-    stream_task = task_graph.add_task(
-        func=pygeoprocessing.routing.extract_streams_mfd,
-        args=(
-            (f_reg['flow_accumulation_path'], 1),
-            (f_reg['flow_direction_path'], 1),
-            float(args['threshold_flow_accumulation']),
-            f_reg['stream_path']),
-        kwargs={'trace_threshold_proportion': 0.7},
-        target_path_list=[f_reg['stream_path']],
-        dependent_task_list=[flow_accumulation_task],
-        task_name='extract streams')
 
     if drainage_present:
         drainage_task = task_graph.add_task(
@@ -807,14 +841,17 @@ def execute(args):
              's_bar')]:
         bar_task = task_graph.add_task(
             func=_calculate_bar_factor,
-            args=(
-                f_reg['flow_direction_path'], factor_path,
-                f_reg['flow_accumulation_path'],
-                accumulation_path, out_bar_path),
+            kwargs=dict(
+                flow_direction_path=f_reg['flow_direction_path'],
+                factor_path=factor_path,
+                flow_accumulation_path=f_reg['flow_accumulation_path'],
+                accumulation_path=accumulation_path,
+                out_bar_path=out_bar_path,
+                flow_dir_algorithm=args['flow_dir_algorithm']),
             target_path_list=[accumulation_path, out_bar_path],
             dependent_task_list=[
                 factor_task, flow_accumulation_task, flow_dir_task],
-            task_name='calculate %s' % bar_id)
+            task_name=f'calculate {bar_id}')
         bar_task_map[bar_id] = bar_task
 
     d_up_task = task_graph.add_task(
@@ -840,7 +877,7 @@ def execute(args):
         task_name='calculate inverse ws factor')
 
     d_dn_task = task_graph.add_task(
-        func=pygeoprocessing.routing.distance_to_channel_mfd,
+        func=d_dn_func,
         args=(
             (f_reg['flow_direction_path'], 1),
             (drainage_raster_path_task[0], 1),
@@ -891,10 +928,13 @@ def execute(args):
 
     sed_deposition_task = task_graph.add_task(
         func=sdr_core.calculate_sediment_deposition,
-        args=(
-            f_reg['flow_direction_path'], f_reg['e_prime_path'],
-            f_reg['f_path'], f_reg['sdr_path'],
-            f_reg['sed_deposition_path']),
+        kwargs=dict(
+            flow_direction_path=f_reg['flow_direction_path'],
+            e_prime_path=f_reg['e_prime_path'],
+            f_path=f_reg['f_path'],
+            sdr_path=f_reg['sdr_path'],
+            target_sediment_deposition_path=f_reg['sed_deposition_path'],
+            algorithm=args['flow_dir_algorithm']),
         dependent_task_list=[e_prime_task, sdr_task, flow_dir_task],
         target_path_list=[f_reg['sed_deposition_path'], f_reg['f_path']],
         task_name='sediment deposition')
@@ -971,6 +1011,7 @@ def _avoided_export_op(avoided_erosion, sdr, sed_deposition):
     # known as a modified USLE)
     return avoided_erosion * sdr + sed_deposition
 
+
 def add_drainage_op(stream, drainage):
     """raster_map equation: add drainage mask to stream layer.
 
@@ -985,63 +1026,63 @@ def add_drainage_op(stream, drainage):
     """
     return numpy.where(drainage == 1, 1, stream)
 
+
 # raster_map equation: calculate USLE
 def usle_op(rkls, cp_factor): return rkls * cp_factor
+
 
 # raster_map equation: calculate the inverse ws factor
 def inverse_ws_op(w_factor, s_factor): return 1 / (w_factor * s_factor)
 
 
 def _calculate_what_drains_to_stream(
-        flow_dir_mfd_path, dist_to_channel_mfd_path, target_mask_path):
+        flow_dir_path, dist_to_channel_path, target_mask_path):
     """Create a mask indicating regions that do or do not drain to a stream.
 
-    This is useful because ``pygeoprocessing.distance_to_stream_mfd`` may leave
+    This is useful because the distance-to-stream functions may leave
     some unexpected regions as nodata if they do not drain to a stream.  This
     may be confusing behavior, so this mask is intended to locate what drains
     to a stream and what does not. A pixel doesn't drain to a stream if it has
     a defined flow direction but undefined distance to stream.
 
     Args:
-        flow_dir_mfd_path (string): The path to an MFD flow direction raster.
-            This raster must have a nodata value defined.
-        dist_to_channel_mfd_path (string): The path to an MFD
-            distance-to-channel raster.  This raster must have a nodata value
-            defined.
+        flow_dir_path (string): The path to a flow direction raster
+            (MFD or D8). This raster must have a nodata value defined.
+        dist_to_channel_path (string): The path to a distance-to-channel
+            raster.  This raster must have a nodata value defined.
         target_mask_path (string): The path to where the mask raster should be
             written.
 
     Returns:
         ``None``
     """
-    flow_dir_mfd_nodata = pygeoprocessing.get_raster_info(
-        flow_dir_mfd_path)['nodata'][0]
+    flow_dir_nodata = pygeoprocessing.get_raster_info(
+        flow_dir_path)['nodata'][0]
     dist_to_channel_nodata = pygeoprocessing.get_raster_info(
-        dist_to_channel_mfd_path)['nodata'][0]
+        dist_to_channel_path)['nodata'][0]
 
-    def _what_drains_to_stream(flow_dir_mfd, dist_to_channel):
+    def _what_drains_to_stream(flow_dir, dist_to_channel):
         """Determine which pixels do and do not drain to a stream.
 
         Args:
-            flow_dir_mfd (numpy.array): A numpy array of MFD flow direction
-                values.
+            flow_dir (numpy.array): A numpy array of flow direction values.
             dist_to_channel (numpy.array): A numpy array of calculated
                 distances to the nearest channel.
 
         Returns:
             A ``numpy.array`` of dtype ``numpy.uint8`` with pixels where:
 
-                * ``255`` where ``flow_dir_mfd`` is nodata (and thus
+                * ``255`` where ``flow_dir`` is nodata (and thus
                   ``dist_to_channel`` is also nodata).
-                * ``0`` where ``flow_dir_mfd`` has data and ``dist_to_channel``
+                * ``0`` where ``flow_dir`` has data and ``dist_to_channel``
                   does not
-                * ``1`` where ``flow_dir_mfd`` has data, and
+                * ``1`` where ``flow_dir`` has data, and
                   ``dist_to_channel`` also has data.
         """
         drains_to_stream = numpy.full(
-            flow_dir_mfd.shape, _BYTE_NODATA, dtype=numpy.uint8)
+            flow_dir.shape, _BYTE_NODATA, dtype=numpy.uint8)
         valid_flow_dir = ~pygeoprocessing.array_equals_nodata(
-            flow_dir_mfd, flow_dir_mfd_nodata)
+            flow_dir, flow_dir_nodata)
         valid_dist_to_channel = (
             ~pygeoprocessing.array_equals_nodata(
                 dist_to_channel, dist_to_channel_nodata) &
@@ -1055,7 +1096,7 @@ def _calculate_what_drains_to_stream(
         return drains_to_stream
 
     pygeoprocessing.raster_calculator(
-        [(flow_dir_mfd_path, 1), (dist_to_channel_mfd_path, 1)],
+        [(flow_dir_path, 1), (dist_to_channel_path, 1)],
         _what_drains_to_stream, target_mask_path, gdal.GDT_Byte, _BYTE_NODATA)
 
 
@@ -1196,7 +1237,7 @@ def _calculate_ls_factor(
 def _calculate_rkls(
         ls_factor_path, erosivity_path, erodibility_path, stream_path,
         rkls_path):
-    """Calculate potential soil loss (tons / (pixel * year)) using RKLS.
+    """Calculate potential soil loss (tons / (ha * year)) using RKLS.
 
     (revised universal soil loss equation with no C or P).
 
@@ -1222,10 +1263,6 @@ def _calculate_rkls(
     stream_nodata = pygeoprocessing.get_raster_info(
         stream_path)['nodata'][0]
 
-    cell_size = abs(
-        pygeoprocessing.get_raster_info(ls_factor_path)['pixel_size'][0])
-    cell_area_ha = cell_size**2 / 10000.0  # hectares per pixel
-
     def rkls_function(ls_factor, erosivity, erodibility, stream):
         """Calculate the RKLS equation.
 
@@ -1238,7 +1275,7 @@ def _calculate_rkls(
             stream (numpy.ndarray): stream mask (1 stream, 0 no stream)
 
         Returns:
-            numpy.ndarray of RKLS values in tons / (pixel * year))
+            numpy.ndarray of RKLS values in tons / (ha * year))
         """
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
@@ -1254,11 +1291,10 @@ def _calculate_rkls(
         valid_mask = nodata_mask & (stream == 0)
         rkls[:] = _TARGET_NODATA
 
-        rkls[valid_mask] = (           # rkls units are tons / (pixel * year)
+        rkls[valid_mask] = (           # rkls units are tons / (ha * year)
             ls_factor[valid_mask] *    # unitless
             erosivity[valid_mask] *    # MJ * mm / (ha * hr * yr)
-            erodibility[valid_mask] *  # t * ha * hr / (MJ * ha * mm)
-            cell_area_ha)              # ha / pixel
+            erodibility[valid_mask])   # t * ha * hr / (MJ * ha * mm)
         return rkls
 
     # aligning with index 3 that's the stream and the most likely to be
@@ -1349,7 +1385,7 @@ def _calculate_cp(lulc_to_cp, lulc_path, cp_factor_path):
 
 def _calculate_bar_factor(
         flow_direction_path, factor_path, flow_accumulation_path,
-        accumulation_path, out_bar_path):
+        accumulation_path, out_bar_path, flow_dir_algorithm):
     """Route user defined source across DEM.
 
     Used for calculating S and W bar in the SDR operation.
@@ -1364,15 +1400,21 @@ def _calculate_bar_factor(
         out_bar_path (string): path to output raster that is the result of
             the factor accumulation raster divided by the flow accumulation
             raster.
+        flow_dir_algorithm (string): flow direction algorithm, 'D8' or 'MFD'
 
     Returns:
         None.
 
     """
-    LOGGER.debug("doing flow accumulation mfd on %s", factor_path)
+    LOGGER.debug(f"doing flow accumulation on {factor_path}")
+
+    if flow_dir_algorithm == 'D8':
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_d8
+    else:  # MFD
+        flow_accum_func = pygeoprocessing.routing.flow_accumulation_mfd
     # manually setting compression to DEFLATE because we got some LZW
     # errors when testing with large data.
-    pygeoprocessing.routing.flow_accumulation_mfd(
+    flow_accum_func(
         (flow_direction_path, 1), accumulation_path,
         weight_raster_path_band=(factor_path, 1),
         raster_driver_creation_tuple=('GTIFF', [
@@ -1395,18 +1437,6 @@ def _calculate_d_up(
             w_bar * s_bar * numpy.sqrt(flow_accum * cell_area)),
         rasters=[w_bar_path, s_bar_path, flow_accumulation_path],
         target_path=out_d_up_path)
-
-
-def _calculate_d_up_bare(
-        s_bar_path, flow_accumulation_path, out_d_up_bare_path):
-    """Calculate s_bar * sqrt(flow accumulation * cell area)."""
-    cell_area = abs(
-        pygeoprocessing.get_raster_info(s_bar_path)['pixel_size'][0])**2
-    pygeoprocessing.raster_map(
-        op=lambda s_bar, flow_accum: (
-            numpy.sqrt(flow_accum * cell_area) * s_bar),
-        rasters=[s_bar_path, flow_accumulation_path],
-        target_path=out_d_up_bare_path)
 
 
 def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
@@ -1532,13 +1562,20 @@ def _generate_report(
         field_def.SetPrecision(11)
         target_layer.CreateField(field_def)
 
+    # Since pixel values are t/(ha•yr), raster sum is (t•px)/(ha•yr).
+    # To convert to t/yr, multiply by ha/px.
+    raster_info = pygeoprocessing.get_raster_info(usle_path)
+    pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+    ha_per_px = pixel_area / 10000
+
     target_layer.ResetReading()
     for feature in target_layer:
         feature_id = feature.GetFID()
         for field_name in field_summaries:
             feature.SetField(
                 field_name,
-                float(field_summaries[field_name][feature_id]['sum']))
+                float(field_summaries[field_name][feature_id]['sum']
+                      * ha_per_px))
         target_layer.SetFeature(feature)
     target_vector = None
     target_layer = None

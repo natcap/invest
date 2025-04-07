@@ -4,16 +4,16 @@ import os
 import logging
 import urllib
 
-import Pyro4
+import Pyro5
+import Pyro5.api
 
+from natcap.invest.recreation import recmodel_client
 from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
-# This URL is a NatCap global constant
-RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'
 
 # this serializer lets us pass null bytes in strings unlike the default
-Pyro4.config.SERIALIZER = 'marshal'
+Pyro5.config.SERIALIZER = 'marshal'
 
 
 def execute(args):
@@ -28,6 +28,7 @@ def execute(args):
         args['hostname'] (string): FQDN to recreation server
         args['port'] (string or int): port on hostname for recreation server
         args['workspace_id'] (string): workspace identifier
+        args['server_id'] (string): one of ('flickr', 'twitter')
 
     Returns:
         None
@@ -37,20 +38,20 @@ def execute(args):
 
     # in case the user defines a hostname
     if 'hostname' in args:
-        path = "PYRO:natcap.invest.recreation@%s:%s" % (
+        server_url = "PYRO:natcap.invest.recreation@%s:%s" % (
             args['hostname'], args['port'])
     else:
         # else use a well known path to get active server
-        path = urllib.urlopen(RECREATION_SERVER_URL).read().rstrip()
+        server_url = urllib.urlopen(recmodel_client.SERVER_URL).read().rstrip()
     LOGGER.info("contacting server")
-    recmodel_server = Pyro4.Proxy(path)
+    recmodel_manager = Pyro5.api.Proxy(server_url)
 
     LOGGER.info("sending id request %s", args['workspace_id'])
-    workspace_aoi_binary = recmodel_server.fetch_workspace_aoi(
-        args['workspace_id'])
+    zip_binary = recmodel_manager.fetch_aoi_workspaces(
+        args['workspace_id'], args['server_id'])
 
-    # unpack result
     with open(os.path.join(
-            output_dir, '%s.zip' % args['workspace_id']), 'wb') as file:
-        file.write(workspace_aoi_binary)
-    LOGGER.info("fetched aoi")
+            output_dir,
+            f"{args['server_id']}_{args['workspace_id']}.zip"), 'wb') as file:
+        file.write(zip_binary)
+    LOGGER.info(f"fetched {args['server_id']}_{args['workspace_id']}.zip")

@@ -13,7 +13,8 @@ import {
   fetchValidation,
   fetchDatastackFromFile,
   fetchArgsEnabled,
-  getSupportedLanguages
+  getSupportedLanguages,
+  getGeoMetaMakerProfile,
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import {
@@ -384,6 +385,8 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
   });
 
   test('Recent Jobs: cleared by button', async () => {
+    // we need this mock because the settings dialog is opened
+    getGeoMetaMakerProfile.mockResolvedValue({});
     const job1 = new InvestJob({
       modelID: MOCK_MODEL_ID,
       modelTitle: 'Carbon Sequestration',
@@ -428,6 +431,7 @@ describe('InVEST global settings: dialog interactions', () => {
   beforeEach(async () => {
     getInvestModelIDs.mockResolvedValue({});
     getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
+    getGeoMetaMakerProfile.mockResolvedValue({});
   });
 
   test('Invest settings save on change', async () => {
@@ -485,5 +489,18 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(await findByText('Download InVEST sample data'))
       .toBeInTheDocument();
     expect(queryByText('Settings')).toBeNull();
+  });
+
+  test('Access metadata form from settings', async () => {
+    const { findByRole } = render(<App />);
+
+    const settingsBtn = await findByRole('button', { name: 'settings' });
+    await userEvent.click(settingsBtn);
+    await userEvent.click(
+      await findByRole('button', { name: 'Configure Metadata' })
+    );
+
+    expect(await findByRole('button', { name: 'Save Metadata' }))
+      .toBeInTheDocument();
   });
 });

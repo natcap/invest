@@ -5,6 +5,7 @@ import Modal from 'react-bootstrap/Modal';
 import { MdClose } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 
+import { openLinkInBrowser } from '../../utils';
 import pkg from '../../../../package.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
@@ -29,8 +30,10 @@ export default function Changelog(props) {
         // Find the section whose heading explicitly matches the current version.
         const versionStr = pkg.version;
         const escapedVersionStr = versionStr.split('.').join('\\.');
+        // Find section with h1 matching current version,
+        // and get everything up to (but not including) the next h1.
         const sectionRegex = new RegExp(
-          `<section.*?>[\\s]*?<h1>${escapedVersionStr}\\b[\\s\\S]*?</h1>[\\s\\S]*?</section>`
+          `<section.*?>[\\s]*?<h1>${escapedVersionStr}\\b[\\s\\S]*?</h1>[\\s\\S]*?<h1`
         );
         const sectionMatches = htmlString.match(sectionRegex);
         if (sectionMatches && sectionMatches.length) {
@@ -55,12 +58,6 @@ export default function Changelog(props) {
   // Once HTML content has loaded, set up links to open in browser
   // (instead of in an Electron window).
   useEffect(() => {
-    const openLinkInBrowser = (event) => {
-      event.preventDefault();
-      ipcRenderer.send(
-        ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
-      );
-    };
     document.querySelectorAll('.link-external').forEach(link => {
       link.addEventListener('click', openLinkInBrowser);
     });
