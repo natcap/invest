@@ -989,6 +989,7 @@ class CropProductionTests(unittest.TestCase):
         crop_names = ['corn', 'soybean']
         nutrient_df = create_nutrient_df()
         yield_percentile_headers = ['25', '50', '75']
+        pixel_area_ha = 1
         output_dir = os.path.join(workspace, "OUTPUT")
         os.makedirs(output_dir, exist_ok=True)
         file_suffix = 'v1'
@@ -1000,9 +1001,9 @@ class CropProductionTests(unittest.TestCase):
 
         aggregate_to_polygons(
             base_aggregate_vector_path, target_aggregate_vector_path,
-            landcover_raster_projection, crop_names,
-            nutrient_df, yield_percentile_headers, output_dir, file_suffix,
-            target_aggregate_table_path)
+            landcover_raster_projection, crop_names, nutrient_df,
+            yield_percentile_headers, pixel_area_ha, output_dir,
+            file_suffix, target_aggregate_table_path)
 
         actual_aggregate_pctl_table = pandas.read_csv(
             target_aggregate_table_path, dtype=float)
@@ -1018,7 +1019,7 @@ class CropProductionTests(unittest.TestCase):
 
         def _create_expected_result_table():
             return pandas.DataFrame({
-                "crop": ["corn", "soybean"], "area (ha)": [20, 40],
+                "crop": ["corn", "soybean"], "area (ha)": [2, 4],
                 "production_observed": [4, 7], "production_25": [1.25, 2.25],
                 "production_50": [2.5, 4.5], "production_75": [3.75, 6.75],
                 "protein_25": [488250, 675675], "protein_50": [976500, 1351350],
@@ -1099,7 +1100,7 @@ class CropProductionTests(unittest.TestCase):
         os.makedirs(output_dir, exist_ok=True)
         yield_percentile_headers = ['yield_25', 'yield_50', 'yield_75']
         crop_names = ['corn', 'soybean']
-        pixel_area_ha = 10
+        pixel_area_ha = 1
         landcover_raster_path = os.path.join(self.workspace_dir,
                                              "landcover.tif")
         landcover_nodata = -1

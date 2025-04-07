@@ -2343,30 +2343,6 @@ class HabitatQualityTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             habitat_quality.execute(args)
 
-    def test_calculate_total_degradation(self):
-        """Test `_calculate_total_degradation`"""
-        from natcap.invest.habitat_quality import _calculate_total_degradation
-
-        deg_raster_list = [os.path.join(self.workspace_dir, f"threat_{i}.tif")
-                           for i in range(6)]
-        deg_sum_raster_path = os.path.join(self.workspace_dir, "deg_sum.tif")
-
-        for i, raster in enumerate(deg_raster_list, start=1):
-            # make arbitrary arrays
-            array = numpy.array([[i/10, i/20], [i/8, i/6]])
-            make_raster_from_array(array, raster)
-
-        weight_list = [0.9, 0.2, 0.5]
-
-        _calculate_total_degradation(
-            deg_raster_list, deg_sum_raster_path, weight_list)
-
-        actual_result = pygeoprocessing.raster_to_numpy_array(
-            deg_sum_raster_path)
-        expected_result = numpy.array([[0.1152, 0.0144], [0.225, 0.533333333]])
-
-        numpy.testing.assert_allclose(actual_result, expected_result)
-
     def test_compute_rarity_operation(self):
         """Test `_compute_rarity_operation`"""
         from natcap.invest.habitat_quality import _compute_rarity_operation
@@ -2413,17 +2389,16 @@ class HabitatQualityTests(unittest.TestCase):
         from natcap.invest.habitat_quality import _decay_distance
 
         dist_raster_path = os.path.join(self.workspace_dir, "dist.tif")
-        max_dist = 2
+        max_dist = 20
         decay_type = 'linear'
         target_path = os.path.join(self.workspace_dir, "output.tif")
 
         dist_array = numpy.array([[0, 21, 1], [2, 50, 600]], dtype=float)
-        make_raster_from_array(dist_array, dist_raster_path, pixel_size=100)
+        make_raster_from_array(dist_array, dist_raster_path)
 
         _decay_distance(dist_raster_path, max_dist, decay_type, target_path)
 
         actual_output = pygeoprocessing.raster_to_numpy_array(target_path)
         expected_output = numpy.array([[1.0, 0.0, 0.95],
                                        [0.9, 0.0, 0.0]])
-
         numpy.testing.assert_allclose(actual_output, expected_output)
