@@ -118,7 +118,8 @@ MODEL_SPEC = {
             "about": spec_utils.LULC['about'] + " " + gettext(
                 "All values in this raster must "
                 "have corresponding entries in the Biophysical Table."),
-            "projected": True
+            "projected": True,
+            "projection_units": u.meter
         },
         "pools_to_calculate": {
             "type": "option_string",
@@ -170,6 +171,8 @@ MODEL_SPEC = {
                         "Used only for the asymptotic model.")}
             },
             "geometries": spec_utils.POLYGONS,
+            "projected": True,
+            "projection_units": u.meter,
             "required": "compute_forest_edge_effects",
             "about": gettext(
                 "Map storing the optimal regression model for each tropical "
@@ -254,6 +257,13 @@ MODEL_SPEC = {
                     "bands": {1: {
                         "type": "number", "units": u.metric_ton/u.hectare
                     }}
+                },
+                "regression_model_params_clipped.shp": {
+                    "about": (
+                        "The Global Regression Models shapefile clipped "
+                        "to the study area."),
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
                 }
             }
         },
