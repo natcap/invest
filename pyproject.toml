@@ -3,7 +3,8 @@ name = "natcap.invest"
 description = "InVEST Ecosystem Service models"
 readme = "README_PYTHON.rst"
 requires-python = ">=3.9"
-license = {file = "LICENSE.txt"}
+license = "Apache-2.0"
+license-files = ["LICENSE.txt"]
 maintainers = [
     {name = "Natural Capital Project Software Team"}
 ]
@@ -23,7 +24,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Cython",
-    "License :: OSI Approved :: BSD License",
     "Topic :: Scientific/Engineering :: GIS"
 ]
 # the version is provided dynamically by setuptools_scm
