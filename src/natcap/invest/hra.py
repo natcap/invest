@@ -1629,14 +1629,12 @@ def _simplify(source_vector_path, tolerance, target_vector_path,
     target_layer_name = os.path.splitext(
         os.path.basename(target_vector_path))[0]
 
-    # Using wkbUnknown is important here because a user can provide a single
-    # vector with multiple geometry types.  GPKG can handle whatever geom types
-    # we want it to use, but it will only be a conformant GPKG if and only if
-    # we set the layer type to ogr.wkbUnknown.  Otherwise, the GPKG standard
-    # would expect that all geometries in a layer match the geom type of the
-    # layer and GDAL will raise a warning if that's not the case.
+    # Use the same geometry type from the source layer. This may be wkbUnknown
+    # if the layer contains multiple geometry types.
     target_layer = target_vector.CreateLayer(
-        target_layer_name, source_layer.GetSpatialRef(), ogr.wkbUnknown)
+        target_layer_name,
+        srs=source_layer.GetSpatialRef(),
+        geom_type=source_layer.GetGeomType())
 
     for field in source_layer.schema:
         if field.GetName().lower() in preserve_columns:
