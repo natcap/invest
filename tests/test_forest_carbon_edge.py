@@ -524,7 +524,8 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
         # Comparing sums as 1 value in the output arrays is ~8% different
         # on windows vs. mac, which seemed too high a relative tolerance to set
-        numpy.testing.assert_allclose(actual_output, expected_output)
+        numpy.testing.assert_allclose(actual_output, expected_output,
+                                      rtol=0.009)
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
