@@ -508,7 +508,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         _create_spatial_index_pickle(spatial_index_pickle_path,
                                      edge_distance_path)
 
-        n_nearest_model_points = 8
+        n_nearest_model_points = 6
         biomass_to_carbon_conversion_factor = 10
         tropical_forest_edge_carbon_map_path = os.path.join(self.workspace_dir,
                                                             "output.tif")
@@ -522,13 +522,12 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             tropical_forest_edge_carbon_map_path)
         expected_output = numpy.array(
             [[-1, -1, -1, -1, -1, -1, -1],
-             [-1, 248.22801, 210.7338, 154.50714, 169.76271, 174.36424, -1],
-             [-1, 176.00987, 371.63068, 400.4815, 386.13931, 222.13785, -1],
-             [-1, 221.57858, 226.73837, 244.8313, 264.30722, 269.87493, -1],
+             [-1, 265.7061, 142.47273, 153.98717, 165.88376, 178.15967, -1],
+             [-1, 175.92271, 351.15747, 387.35364, 411.1204, 220.55798, -1],
+             [-1, 217.2353, 231.00058, 245.13129, 259.62473, 274.47815, -1],
              [-1, -1, -1, -1, -1, -1, -1]])
 
         numpy.testing.assert_allclose(actual_output, expected_output)
-
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
