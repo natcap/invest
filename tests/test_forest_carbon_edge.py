@@ -495,6 +495,8 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 100, 200, len(points)*3).reshape(len(points), 3)  # Nx3
 
             method_model_parameter = numpy.ones((len(points),))
+            # change method for one area
+            method_model_parameter[0] = 3
 
             kd_tree = cKDTree(points)
 
@@ -507,7 +509,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                                      edge_distance_path)
 
         n_nearest_model_points = 8
-        biomass_to_carbon_conversion_factor = 1000
+        biomass_to_carbon_conversion_factor = 10
         tropical_forest_edge_carbon_map_path = os.path.join(self.workspace_dir,
                                                             "output.tif")
 
@@ -520,9 +522,9 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             tropical_forest_edge_carbon_map_path)
         expected_output = numpy.array(
             [[-1, -1, -1, -1, -1, -1, -1],
-             [-1, 13486.482, 13903.661, 15450.714, 16976.272, 17436.426, -1],
-             [-1, 17600.988, 37163.07, 40048.15, 38613.932, 22213.786, -1],
-             [-1, 22157.857, 22673.838, 24483.13, 26430.724, 26987.493, -1],
+             [-1, 248.22801, 210.7338, 154.50714, 169.76271, 174.36424, -1],
+             [-1, 176.00987, 371.63068, 400.4815, 386.13931, 222.13785, -1],
+             [-1, 221.57858, 226.73837, 244.8313, 264.30722, 269.87493, -1],
              [-1, -1, -1, -1, -1, -1, -1]])
 
         numpy.testing.assert_allclose(actual_output, expected_output)
