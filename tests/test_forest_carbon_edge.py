@@ -526,7 +526,6 @@ class ForestCarbonEdgeTests(unittest.TestCase):
              [-1, 184.31717, 357.24908, 380.26678, 403.87314, 230.79578, -1],
              [-1, 215.34108, 232.61235, 243.14659, 257.5953, 276.23138, -1],
              [-1, -1, -1, -1, -1, -1, -1]])
-        print(actual_output)
 
         numpy.testing.assert_allclose(actual_output, expected_output)
 
