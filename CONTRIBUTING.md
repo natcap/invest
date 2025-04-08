@@ -21,7 +21,7 @@ Every proposed feature, large or small, will be weighed in terms of its potentia
 ## Contributing Code
 
 ### Contributor License Agreement
-Any code you contribute to InVEST will fall under the same license as InVEST. Please read the [InVEST Contributor License Agreement](https://vpejnqubjf.us-east-2.awsapprunner.com/) and, if you agree to the terms, sign it. If you do not sign the Contributor License Agreement, you will not be able to contribute code to InVEST.
+Any code you contribute to InVEST will fall under the same license as InVEST. Please read the [InVEST Contributor License Agreement](https://natcap.github.io/invest-cla) and, if you agree to the terms, sign it. If you do not sign the Contributor License Agreement, you will not be able to contribute code to InVEST.
 
 ### Finding Open Issues
 1. Browse the [InVEST Open Issues on GitHub](https://github.com/natcap/invest/issues). You may wish to search by keyword and/or filter by label, such as the `good first issue` label.
