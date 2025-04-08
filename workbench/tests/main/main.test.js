@@ -185,6 +185,7 @@ describe('createWindow', () => {
       ipcMainChannels.CHANGE_LANGUAGE,
       ipcMainChannels.CHECK_STORAGE_TOKEN,
       ipcMainChannels.CHECK_FILE_PERMISSIONS,
+      ipcMainChannels.DOWNLOAD_MSVC,
       ipcMainChannels.GET_SETTING,
       ipcMainChannels.GET_N_CPUS,
       ipcMainChannels.HAS_MSVC,
