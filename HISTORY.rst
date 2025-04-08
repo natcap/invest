@@ -61,9 +61,14 @@
 
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+
+HRA
+===
+* The intermediate simplified vectors will now inherit their geometry type from
+  the input vectors, rather than using ``ogr.wkbUnknown``
+  (`#1881 <https://github.com/natcap/invest/issues/1881>`_).
 
 3.15.0 (2025-04-03)
 -------------------
