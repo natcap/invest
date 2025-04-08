@@ -269,9 +269,9 @@ export default function PluginModal(props) {
 
         {t('Plugin features require the ')}
         <a href="https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist">
-          {t('Microsoft Visual C++ Redistributable.')}
+          {t('Microsoft Visual C++ Redistributable')}
         </a>
-        {t('You must download and install the redistributable before continuing.')}
+        {t('. You must download and install the redistributable before continuing.')}
 
         <Button
           className="mt-3"
