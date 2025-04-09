@@ -832,7 +832,7 @@ def _clip_global_regression_models_vector(
                     new_feature.SetField(field_name, field_value)
                 target_layer.CreateFeature(new_feature)
 
-        except (shapely.errors.ReadingError, ValueError):
+        except (shapely.errors.ShapelyError, ValueError):
             invalid_feature_count += 1
             LOGGER.warning(
                 "The geometry at feature %s is invalid and will be "
