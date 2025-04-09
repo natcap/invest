@@ -85,7 +85,6 @@ export default function PluginModal(props) {
 
   const downloadMSVC = () => {
     ipcRenderer.invoke(ipcMainChannels.DOWNLOAD_MSVC);
-    setShowPluginModal(false);
   }
 
   useEffect(() => {
