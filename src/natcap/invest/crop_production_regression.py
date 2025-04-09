@@ -523,14 +523,15 @@ def execute(args):
 
     LOGGER.info("Checking that crops correspond to known types.")
     for crop_name in crop_to_landcover_df.index:
-        crop_climate_bin_raster_path = os.path.join(
+        crop_regression_yield_table_path = os.path.join(
             args['model_data_path'],
-            _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
-        if not os.path.exists(crop_climate_bin_raster_path):
+            _REGRESSION_TABLE_PATTERN % crop_name)
+        if not os.path.exists(crop_regression_yield_table_path):
             raise ValueError(
-                "Expected climate bin map called %s for crop %s "
-                "specified in %s", crop_climate_bin_raster_path, crop_name,
-                args['landcover_to_crop_table_path'])
+                "Expected regression yield table called %s for crop %s "
+                "specified in %s"
+                % (crop_regression_yield_table_path, crop_name,
+                    args['landcover_to_crop_table_path']))
 
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
