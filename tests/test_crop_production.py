@@ -115,7 +115,7 @@ def create_nutrient_df():
          ]).set_index('crop')
 
 
-def _create_crop_rasters(output_dir, crop_names, file_suffix, pctls=None):
+def _create_crop_rasters(output_dir, crop_names, file_suffix):
     """Creates raster files for test setup."""
     _OBSERVED_PRODUCTION_FILE_PATTERN = os.path.join(
         '.', '%s_observed_production%s.tif')

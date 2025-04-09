@@ -519,13 +519,16 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             tropical_forest_edge_carbon_map_path)
 
         actual_output = pygeoprocessing.raster_to_numpy_array(
-            tropical_forest_edge_carbon_map_path).sum()
-        expected_output = 3659.7915
+            tropical_forest_edge_carbon_map_path)
+        actual_output_sum = actual_output.sum()
 
         # Comparing sums as 1 value in the output arrays is ~8% different
         # on windows vs. mac, which seemed too high a relative tolerance to set
-        numpy.testing.assert_allclose(actual_output, expected_output,
-                                      rtol=0.009)
+        numpy.testing.assert_allclose(actual_output_sum, 3659.7915, rtol=0.009)
+        # Spot checking several values too
+        self.assertAlmostEqual(actual_output[1, 2], 142.47273)
+        self.assertAlmostEqual(actual_output[3, 5], 274.47815)
+        self.assertAlmostEqual(actual_output[0, 1], -1)
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
