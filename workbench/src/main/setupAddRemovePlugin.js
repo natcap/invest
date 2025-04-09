@@ -209,7 +209,7 @@ export function setupWindowsMSVCHandlers() {
       }
       logger.info('Launching MSVC installer');
       const exePath = upath.join(tmpDir, exeName);
-      execFile(exePath, ['/norestart']);
+      await execFile(exePath, ['/norestart']);
     }
   );
 }
