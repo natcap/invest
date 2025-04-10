@@ -4,6 +4,7 @@ about: Did you find a problem in InVEST? Let us know!
 title: ''
 labels: ''
 assignees: ''
+type: 'Bug'
 
 ---
 
