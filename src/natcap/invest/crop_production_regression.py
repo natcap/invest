@@ -505,32 +505,40 @@ def execute(args):
         args['fertilization_rate_table_path'],
         **MODEL_SPEC['args']['fertilization_rate_table_path'])
 
-    crop_lucodes = list(crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER])
+    lucodes_in_table = list(crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER])
 
-    unique_lucodes = numpy.array([])
+    unique_lucodes_in_raster = numpy.array([])
     for _, lu_band_data in pygeoprocessing.iterblocks(
             (args['landcover_raster_path'], 1)):
         unique_block = numpy.unique(lu_band_data)
-        unique_lucodes = numpy.unique(numpy.concatenate(
-            (unique_lucodes, unique_block)))
+        unique_lucodes_in_raster = numpy.unique(numpy.concatenate(
+            (unique_lucodes_in_raster, unique_block)))
 
-    missing_lucodes = set(crop_lucodes).difference(
-        set(unique_lucodes))
-    if len(missing_lucodes) > 0:
+    lucodes_missing_from_raster = set(lucodes_in_table).difference(
+        set(unique_lucodes_in_raster))
+    if len(lucodes_missing_from_raster) > 0:
         LOGGER.warning(
             "The following lucodes are in the landcover to crop table but "
-            "aren't in the landcover raster: %s", missing_lucodes)
+            "aren't in the landcover raster: %s", lucodes_missing_from_raster)
+
+    lucodes_missing_from_table = set(unique_lucodes_in_raster).difference(
+        set(lucodes_in_table))
+    if len(lucodes_missing_from_table) > 0:
+        LOGGER.warning(
+            "The following lucodes are in the landcover raster but aren't "
+            "in the landcover to crop table: %s", lucodes_missing_from_table)
 
     LOGGER.info("Checking that crops correspond to known types.")
     for crop_name in crop_to_landcover_df.index:
-        crop_climate_bin_raster_path = os.path.join(
+        crop_regression_yield_table_path = os.path.join(
             args['model_data_path'],
-            _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
-        if not os.path.exists(crop_climate_bin_raster_path):
+            _REGRESSION_TABLE_PATTERN % crop_name)
+        if not os.path.exists(crop_regression_yield_table_path):
             raise ValueError(
-                "Expected climate bin map called %s for crop %s "
-                "specified in %s", crop_climate_bin_raster_path, crop_name,
-                args['landcover_to_crop_table_path'])
+                "Expected regression yield table called %s for crop %s "
+                "specified in %s"
+                % (crop_regression_yield_table_path, crop_name,
+                    args['landcover_to_crop_table_path']))
 
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])

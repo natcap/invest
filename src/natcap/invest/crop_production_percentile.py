@@ -611,6 +611,30 @@ def execute(args):
     crop_to_landcover_df = validation.get_validated_dataframe(
         args['landcover_to_crop_table_path'],
         **MODEL_SPEC['args']['landcover_to_crop_table_path'])
+
+    lucodes_in_table = list(crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER])
+
+    unique_lucodes_in_raster = numpy.array([])
+    for _, lu_band_data in pygeoprocessing.iterblocks(
+            (args['landcover_raster_path'], 1)):
+        unique_block = numpy.unique(lu_band_data)
+        unique_lucodes_in_raster = numpy.unique(numpy.concatenate(
+            (unique_lucodes_in_raster, unique_block)))
+
+    lucodes_missing_from_raster = set(lucodes_in_table).difference(
+        set(unique_lucodes_in_raster))
+    if len(lucodes_missing_from_raster) > 0:
+        LOGGER.warning(
+            "The following lucodes are in the landcover to crop table but "
+            "aren't in the landcover raster: %s", lucodes_missing_from_raster)
+
+    lucodes_missing_from_table = set(unique_lucodes_in_raster).difference(
+        set(lucodes_in_table))
+    if len(lucodes_missing_from_table) > 0:
+        LOGGER.warning(
+            "The following lucodes are in the landcover raster but aren't "
+            "in the landcover to crop table: %s", lucodes_missing_from_table)
+
     bad_crop_name_list = []
     for crop_name in crop_to_landcover_df.index:
         crop_climate_bin_raster_path = os.path.join(
