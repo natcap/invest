@@ -4,6 +4,7 @@ about: Have an idea for a new InVEST feature? Let us know!
 title: ''
 labels: ''
 assignees: ''
+type: 'Feature'
 
 ---
 
