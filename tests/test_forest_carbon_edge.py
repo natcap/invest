@@ -383,11 +383,8 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         layer = vector.GetLayer()
         self.assertEqual(layer.GetFeatureCount(), 3)
 
-        feat_ids = []
-        for i in range(layer.GetFeatureCount()):
-            feat_ids.append(layer.GetFeature(i).GetField('geom_id'))
+        feat_ids = [feat.GetField('geom_id') for feat in layer]
         self.assertEqual(feat_ids, [1, 2, 3])
-
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
