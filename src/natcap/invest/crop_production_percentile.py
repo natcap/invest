@@ -614,12 +614,14 @@ def execute(args):
 
     lucodes_in_table = list(crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER])
 
-    unique_lucodes_in_raster = numpy.array([])
-    for _, lu_band_data in pygeoprocessing.iterblocks(
-            (args['landcover_raster_path'], 1)):
-        unique_block = numpy.unique(lu_band_data)
-        unique_lucodes_in_raster = numpy.unique(numpy.concatenate(
-            (unique_lucodes_in_raster, unique_block)))
+    def update_unique_lucodes_in_raster(unique_codes, block):
+        unique_codes.update(numpy.unique(block))
+        return unique_codes
+
+    unique_lucodes_in_raster = pygeoprocessing.raster_reduce(
+        update_unique_lucodes_in_raster,
+        (args['landcover_raster_path'], 1),
+        set())
 
     lucodes_missing_from_raster = set(lucodes_in_table).difference(
         set(unique_lucodes_in_raster))
