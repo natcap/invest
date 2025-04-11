@@ -505,7 +505,8 @@ def execute(args):
         args['fertilization_rate_table_path'],
         **MODEL_SPEC['args']['fertilization_rate_table_path'])
 
-    lucodes_in_table = list(crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER])
+    lucodes_in_table = set(list(
+        crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER]))
 
     def update_unique_lucodes_in_raster(unique_codes, block):
         unique_codes.update(numpy.unique(block))
@@ -516,15 +517,15 @@ def execute(args):
         (args['landcover_raster_path'], 1),
         set())
 
-    lucodes_missing_from_raster = set(lucodes_in_table).difference(
-        set(unique_lucodes_in_raster))
+    lucodes_missing_from_raster = lucodes_in_table.difference(
+        unique_lucodes_in_raster)
     if len(lucodes_missing_from_raster) > 0:
         LOGGER.warning(
             "The following lucodes are in the landcover to crop table but "
             f"aren't in the landcover raster: {lucodes_missing_from_raster}")
 
-    lucodes_missing_from_table = set(unique_lucodes_in_raster).difference(
-        set(lucodes_in_table))
+    lucodes_missing_from_table = unique_lucodes_in_raster.difference(
+        lucodes_in_table)
     if len(lucodes_missing_from_table) > 0:
         LOGGER.warning(
             "The following lucodes are in the landcover raster but aren't "
