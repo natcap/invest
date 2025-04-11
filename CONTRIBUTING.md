@@ -29,7 +29,7 @@ Any code you contribute to InVEST will fall under the same license as InVEST. Pl
 3. Wait for a member of the NatCap team to respond. One of the following will happen:
     1. If it’s OK for you to work on the issue, a member of the NatCap team will let you know (in a comment on the issue) and assign the issue to you. Proceed to step 4.
     2. If there’s some reason you shouldn’t work on the issue (because the issue is invalid, or we are intentionally delaying work on it, or—oops—someone else is already working on it), a member of the NatCap team will let you know by leaving a comment on the issue. Return to step 1!
-4. Review the [InVEST Contributor License Agreement](https://vpejnqubjf.us-east-2.awsapprunner.com/), if you haven’t already. If you do not sign the Contributor License Agreement, you will not be able to contribute code to InVEST.
+4. Review the [InVEST Contributor License Agreement](https://natcap.github.io/invest-cla), if you haven’t already. If you do not sign the Contributor License Agreement, you will not be able to contribute code to InVEST.
 
 ### Forking the Repository and Creating a Branch
 1. Fork the `natcap/invest` repository. Check [GitHub’s “Fork a repository” guide](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) for details, if needed.
