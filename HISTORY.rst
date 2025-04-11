@@ -67,9 +67,10 @@
 
 Crop Production
 ===============
-* Both the Percentile and Regression models now issue a warning if any values
-  in the LULC raster are not present in the landcover to crop table
-  (`#925 <https://github.com/natcap/invest/issues/925>`_).
+* Both the Percentile and Regression models now issue a warning if any LULC
+  code in the LULC raster is not present in the landcover to crop table, or if
+  any LULC code in the landcover to crop table is not present in the LULC
+  raster (`#925 <https://github.com/natcap/invest/issues/925>`_).
 * The Regression model now correctly validates crop names against the existence
   of a corresponding regression yield table
   (`#1723 <https://github.com/natcap/invest/issues/1723>`_).
