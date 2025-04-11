@@ -23,12 +23,15 @@ def is_invest_compliant_model(module):
 # model id: identifier e.g. coastal_blue_carbon
 # model title: e.g. Coastal Blue Carbon
 pyname_to_module = {}
+
+# discover core invest models. we could maintain a list of these,
+# but this way it's one less thing to update
 for _, _name, _ispkg in pkgutil.iter_modules(natcap.invest.__path__):
     if _name in {'__main__', 'cli', 'ui_server'}:
         continue  # avoid a circular import
     if _name in {'delineateit', 'ndr', 'scenic_quality', 'sdr',
                  'seasonal_water_yield', 'recreation'}:
-        continue # avoid compiled modles for devoloped of plugin feature branch
+        continue # avoid compiled models for development of plugin feature branch
     _module = importlib.import_module(f'natcap.invest.{_name}')
     if _ispkg:
         for _, _sub_name, _ in pkgutil.iter_modules(_module.__path__):
@@ -38,6 +41,14 @@ for _, _name, _ispkg in pkgutil.iter_modules(natcap.invest.__path__):
     else:
         if is_invest_compliant_model(_module):
             pyname_to_module[f'natcap.invest.{_name}'] = _module
+
+# discover plugins: identify packages whose name starts with invest-
+# and meet the basic API criteria for an invest plugin
+for _, _name, _ispkg in pkgutil.iter_modules():
+    if _name.startswith('invest-'):
+        _module = importlib.import_module(_name)
+        if is_invest_compliant_model(_module):
+            pyname_to_module[_name] = _module
 
 model_id_to_pyname = {}
 pyname_to_model_id = {}
