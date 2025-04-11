@@ -86,7 +86,10 @@ export default function PluginModal(props) {
   const downloadMSVC = () => {
     setShowPluginModal(false);
     ipcRenderer.invoke(ipcMainChannels.DOWNLOAD_MSVC).then(
-      () => { handleModalOpen(); }
+      () => {
+        console.log('msvc done');
+        handleModalOpen();
+      }
     );
   }
 

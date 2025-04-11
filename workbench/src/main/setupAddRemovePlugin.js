@@ -3,6 +3,7 @@ import fs from 'fs';
 import { tmpdir } from 'os';
 import toml from 'toml';
 import { execFile, spawn } from 'child_process';
+import { promisify } from 'util';
 import { app, ipcMain } from 'electron';
 import { Downloader } from 'nodejs-file-downloader';
 
@@ -209,7 +210,7 @@ export function setupWindowsMSVCHandlers() {
       }
       logger.info('Launching MSVC installer');
       const exePath = upath.join(tmpDir, exeName);
-      await execFile(exePath, ['/norestart']);
+      await promisify(execFile)(exePath, ['/norestart']);
     }
   );
 }
