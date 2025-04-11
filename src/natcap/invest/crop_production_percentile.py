@@ -626,14 +626,14 @@ def execute(args):
     if len(lucodes_missing_from_raster) > 0:
         LOGGER.warning(
             "The following lucodes are in the landcover to crop table but "
-            "aren't in the landcover raster: %s", lucodes_missing_from_raster)
+            f"aren't in the landcover raster: {lucodes_missing_from_raster}")
 
     lucodes_missing_from_table = set(unique_lucodes_in_raster).difference(
         set(lucodes_in_table))
     if len(lucodes_missing_from_table) > 0:
         LOGGER.warning(
             "The following lucodes are in the landcover raster but aren't "
-            "in the landcover to crop table: %s", lucodes_missing_from_table)
+            f"in the landcover to crop table: {lucodes_missing_from_table}")
 
     bad_crop_name_list = []
     for crop_name in crop_to_landcover_df.index:

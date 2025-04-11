@@ -519,14 +519,14 @@ def execute(args):
     if len(lucodes_missing_from_raster) > 0:
         LOGGER.warning(
             "The following lucodes are in the landcover to crop table but "
-            "aren't in the landcover raster: %s", lucodes_missing_from_raster)
+            f"aren't in the landcover raster: {lucodes_missing_from_raster}")
 
     lucodes_missing_from_table = set(unique_lucodes_in_raster).difference(
         set(lucodes_in_table))
     if len(lucodes_missing_from_table) > 0:
         LOGGER.warning(
             "The following lucodes are in the landcover raster but aren't "
-            "in the landcover to crop table: %s", lucodes_missing_from_table)
+            f"in the landcover to crop table: {lucodes_missing_from_table}")
 
     LOGGER.info("Checking that crops correspond to known types.")
     for crop_name in crop_to_landcover_df.index:
@@ -535,10 +535,9 @@ def execute(args):
             _REGRESSION_TABLE_PATTERN % crop_name)
         if not os.path.exists(crop_regression_yield_table_path):
             raise ValueError(
-                "Expected regression yield table called %s for crop %s "
-                "specified in %s"
-                % (crop_regression_yield_table_path, crop_name,
-                    args['landcover_to_crop_table_path']))
+                f"Expected regression yield table called "
+                f"{crop_regression_yield_table_path} for crop {crop_name} "
+                f"specified in {args['landcover_to_crop_table_path']}"
 
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
