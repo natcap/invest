@@ -537,7 +537,7 @@ def execute(args):
             raise ValueError(
                 f"Expected regression yield table called "
                 f"{crop_regression_yield_table_path} for crop {crop_name} "
-                f"specified in {args['landcover_to_crop_table_path']}"
+                f"specified in {args['landcover_to_crop_table_path']}")
 
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
