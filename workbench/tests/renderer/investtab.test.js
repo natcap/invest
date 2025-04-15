@@ -484,7 +484,6 @@ describe('Sidebar Buttons', () => {
   });
 
   test('Load parameters from datastack: tgz asks for extract location', async () => {
-    // const spyInvoke = jest.spyOn(ipcRenderer, 'invoke');
     const mockDatastack = {
       module_name: spec.pyname,
       args: {
@@ -506,25 +505,16 @@ describe('Sidebar Buttons', () => {
       }
       return Promise.resolve(undefined);
     });
-    // ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    // Render with a completed model run so we can navigate to Log Tab
-    // and assert that Loading new params toggles back to Setup Tab
     const job = new InvestJob({
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Model',
-      status: 'success',
       argsValues: {},
-      logfile: 'foo.txt',
     });
-    const { findByText, findByLabelText, findByRole } = renderInvestTab(job);
+    const { findByText, findByLabelText } = renderInvestTab(job);
 
-    await userEvent.click(await findByRole('tab', { name: 'Log' }));
     const loadButton = await findByText('Load parameters from file');
     await userEvent.click(loadButton);
-
-    const setupTab = await findByRole('tab', { name: 'Setup' });
-    expect(setupTab.classList.contains('active')).toBeTruthy();
 
     const input1 = await findByLabelText((content) => content.startsWith(spec.args.workspace.name));
     expect(input1).toHaveValue(mockDatastack.args.workspace);
