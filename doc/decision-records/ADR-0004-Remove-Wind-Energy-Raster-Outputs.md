@@ -13,13 +13,15 @@ When run without the valuation component, the model outputs the following:
 - `harvested_energy_MWhr_per_yr.tif`: a raster representing the annual harvested energy from a farm centered on that pixel.
 - `wind_energy_points.shp`: a vector (with points corresponding to those in the input Wind Energy points CSV) that summarizes the outputs of the two rasters.
 
-When run with the valuation component, the model outputs three additional rasters in addition to the two listed above: `carbon_emissions_tons.tif`, `levelized_cost_price_per_kWh.tif`, and`npv.tif`. These values are not currently summarized in `wind_energy_points.shp`.
+When run with the valuation component, the model outputs three additional rasters in addition to the two listed above: `carbon_emissions_tons.tif`, `levelized_cost_price_per_kWh.tif`, and `npv.tif`. These values are not currently summarized in `wind_energy_points.shp`.
 
-Users noticed the raster outputs included data in areas outside of those covered by the input Wind Data, resulting from the the model's method of interpolating the vector data to the rasters. After some consideration, Rob proposed removing the raster outputs entirely and retaining the associated values in the output `wind_energy_points.shp` vector. He believes the model's current method of interpolation introduces too many potential violations of the constraints of the model and requires assumptions that may not be helpful for users.
+Users noticed the raster outputs included data in areas outside of those covered by the input Wind Data, resulting from the model's method of interpolating the vector data to the rasters. This led to a larger discussion around the validity of the interpolated raster results.
 
 ## Decision
 
-We have decided to move forward with removing the rasterized outputs:
+Based on Rob's own use of the model, and review and evaluation of the problem, the consensus is that the model's current use of interpolation introduces too many potential violations of the constraints of the model and requires assumptions that may not be helpful for users. Rob therefore recommended removing the raster outputs entirely and retaining the associated values in the output `wind_energy_points.shp` vector.
+
+As such, we have decided to move forward with removing the rasterized outputs:
 - `carbon_emissions_tons.tif`
 - `density_W_per_m2.tif`
 - `harvested_energy_MWhr_per_yr.tif`
