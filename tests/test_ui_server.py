@@ -219,7 +219,8 @@ class EndpointFunctionTests(unittest.TestCase):
                 'workspace_dir': 'foo'
             }),
             'invest_interface': 'Workbench',
-            'session_id': '12345'
+            'session_id': '12345',
+            'type': 'core'
         }
         response = test_client.post(
             f'{ROUTE_PREFIX}/log_model_start', json=payload)

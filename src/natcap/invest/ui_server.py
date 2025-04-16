@@ -272,7 +272,7 @@ def log_model_start():
         invest_interface=payload['invest_interface'],
         session_id=payload['session_id'],
         type=payload['type'],
-        source=payload['source'])
+        source=payload.get('source', None))  # source only used for plugins
     return 'OK'
 
 
