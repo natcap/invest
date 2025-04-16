@@ -132,22 +132,21 @@ jobs:
           NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --wheel
           ls -la dist
 
-      # # Uncomment this when we uncomment the C++ extensions
-      # # This produces a wheel that should work on any distro with glibc>=2.39.
-      # # This is a very recent version. If we want to support older versions, I
-      # # suspect we would need to build GDAL from source on an appropriate
-      # # system (such as a manylinux docker container) to ensure compatibility.
-      # # Symbols used in libgdal are the cause of the high minimum version,
-      # # possibly because of installing with conda.
-      # - name: Audit and repair wheel for manylinux
-      #   if: matrix.os == 'ubuntu-latest'
-      #   run: |
-      #     ldd --version
-      #     pip install auditwheel
-      #     WHEEL=$(find dist -name "natcap[._-]invest*.whl")
-      #     auditwheel show $WHEEL
-      #     auditwheel repair $WHEEL --plat manylinux_2_39_x86_64 -w dist
-      #     rm $WHEEL  # remove the original wheel
+      # This produces a wheel that should work on any distro with glibc>=2.39.
+      # This is a very recent version. If we want to support older versions, I
+      # suspect we would need to build GDAL from source on an appropriate
+      # system (such as a manylinux docker container) to ensure compatibility.
+      # Symbols used in libgdal are the cause of the high minimum version,
+      # possibly because of installing with conda.
+      - name: Audit and repair wheel for manylinux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          ldd --version
+          pip install auditwheel
+          WHEEL=$(find dist -name "natcap[._-]invest*.whl")
+          auditwheel show $WHEEL
+          auditwheel repair $WHEEL --plat manylinux_2_39_x86_64 -w dist
+          rm $WHEEL  # remove the original wheel
 
       - name: Install wheel and run model tests
         run: |
