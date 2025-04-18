@@ -17,7 +17,7 @@ def is_invest_compliant_model(module):
         hasattr(module, "execute") and callable(module.execute) and
         hasattr(module, "validate") and callable(module.validate) and
         # could also validate model spec structure
-        hasattr(module, "MODEL_SPEC") and isinstance(module.MODEL_SPEC, dict))
+        hasattr(module, "MODEL_SPEC"))
 
 # pyname: importable name e.g. natcap.invest.carbon, natcap.invest.sdr.sdr
 # model id: identifier e.g. coastal_blue_carbon
@@ -55,8 +55,8 @@ pyname_to_model_id = {}
 model_id_to_spec = {}
 model_alias_to_id = {}
 for _pyname, _model in pyname_to_module.items():
-    model_id_to_pyname[_model.MODEL_SPEC['model_id']] = _pyname
-    pyname_to_model_id[_pyname] = _model.MODEL_SPEC['model_id']
-    model_id_to_spec[_model.MODEL_SPEC['model_id']] = _model.MODEL_SPEC
-    for _alias in _model.MODEL_SPEC['aliases']:
-        model_alias_to_id[_alias] = _model.MODEL_SPEC['model_id']
+    model_id_to_pyname[_model.MODEL_SPEC.model_id] = _pyname
+    pyname_to_model_id[_pyname] = _model.MODEL_SPEC.model_id
+    model_id_to_spec[_model.MODEL_SPEC.model_id] = _model.MODEL_SPEC
+    for _alias in _model.MODEL_SPEC.aliases:
+        model_alias_to_id[_alias] = _model.MODEL_SPEC.model_id

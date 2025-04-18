@@ -18,7 +18,48 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+from natcap.invest.spec_utils import (
+    u,
+    ModelSpec,
+    ModelInputs,
+    UISpec,
+    Fields,
+    Contents,
+    InputSpec,
+    Rows,
+    Columns,
+    FileInputSpec,
+    CSVInputSpec,
+    StringInputSpec,
+    SingleBandRasterInputSpec,
+    DirectoryInputSpec,
+    VectorInputSpec,
+    NumberInputSpec,
+    RatioInputSpec,
+    PercentInputSpec,
+    OtherInputSpec)
+
 gdal.UseExceptions()
+
+def ui_spec_with_defaults(order=[], hidden=[]):
+    return UISpec(order=order, hidden=hidden)
+
+def model_spec_with_defaults(model_id='', model_title='', userguide='', aliases=None,
+                 ui_spec=ui_spec_with_defaults(), inputs=ModelInputs(), outputs=set(),
+                 args_with_spatial_overlap=[]):
+    return ModelSpec(model_id=model_id, model_title=model_title, userguide=userguide,
+            aliases=aliases, ui_spec=ui_spec, inputs=inputs, outputs=outputs,
+            args_with_spatial_overlap=args_with_spatial_overlap)
+
+def number_input_spec_with_defaults(id='', units=u.none, expression='', **kwargs):
+    return NumberInputSpec(id=id, units=units, expression=expression, **kwargs)
+
+def ratio_input_spec_with_defaults(id='', units=u.none, expression='', **kwargs):
+    return RatioInputSpec(id=id, units=units, expression=expression, **kwargs)
+
+def percent_input_spec_with_defaults(id='', units=u.none, expression='', **kwargs):
+    return PercentInputSpec(id=id, units=units, expression=expression, **kwargs)
+
 
 class SpatialOverlapTest(unittest.TestCase):
     """Test Spatial Overlap."""
@@ -232,13 +273,11 @@ class ValidatorTest(unittest.TestCase):
         from natcap.invest import spec_utils
         from natcap.invest import validation
 
-        args_spec = {
-            'n_workers': spec_utils.N_WORKERS,
-        }
+        input_spec = spec_utils.ModelInputs([spec_utils.N_WORKERS])
 
         @validation.invest_validator
         def validate(args, limit_to=None):
-            return validation.validate(args, args_spec)
+            return validation.validate(args, input_spec)
 
         args = {'n_workers': 'not a number'}
         validation_errors = validate(args)
@@ -315,9 +354,9 @@ class DirectoryValidation(unittest.TestCase):
     def test_valid_permissions(self):
         """Validation: folder permissions."""
         from natcap.invest import validation
-
+        spec = DirectoryInputSpec(permissions='rwx')
         self.assertEqual(None, validation.check_directory(
-            self.workspace_dir, permissions='rwx'))
+            self.workspace_dir, spec))
 
     def test_workspace_not_exists(self):
         """Validation: when a folder's parent must exist with permissions."""
@@ -325,9 +364,8 @@ class DirectoryValidation(unittest.TestCase):
 
         dirpath = 'foo'
         new_dir = os.path.join(self.workspace_dir, dirpath)
-
-        self.assertEqual(None, validation.check_directory(
-            new_dir, must_exist=False, permissions='rwx'))
+        spec = DirectoryInputSpec(must_exist=False, permissions='rwx')
+        self.assertEqual(None, validation.check_directory(new_dir, spec))
 
 
 @unittest.skipIf(
@@ -1728,14 +1766,9 @@ class TestValidationFromSpec(unittest.TestCase):
     def test_requirement_no_value(self):
         """Validation: verify absolute requirement without value."""
         from natcap.invest import validation
-        spec = {
-            "number_a": {
-                "name": "The first parameter",
-                "about": "About the first parameter",
-                "type": "number",
-                "required": True,
-            }
-        }
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            NumberInputSpec(id="number_a", units=u.none)
+        ))
 
         args = {'number_a': ''}
         self.assertEqual(
@@ -1750,14 +1783,9 @@ class TestValidationFromSpec(unittest.TestCase):
     def test_invalid_value(self):
         """Validation: verify invalidity."""
         from natcap.invest import validation
-        spec = {
-            "number_a": {
-                "name": "The first parameter",
-                "about": "About the first parameter",
-                "type": "number",
-                "required": True,
-            }
-        }
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            NumberInputSpec(id="number_a", units=u.none)
+        ))
 
         args = {'number_a': 'not a number'}
         self.assertEqual(
@@ -1768,20 +1796,9 @@ class TestValidationFromSpec(unittest.TestCase):
     def test_conditionally_required_no_value(self):
         """Validation: verify conditional requirement when no value."""
         from natcap.invest import validation
-        spec = {
-            "number_a": {
-                "name": "The first parameter",
-                "about": "About the first parameter",
-                "type": "number",
-                "required": True,
-            },
-            "string_a": {
-                "name": "The first parameter",
-                "about": "About the first parameter",
-                "type": "freestyle_string",
-                "required": "number_a",
-            }
-        }
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            NumberInputSpec(id="number_a", units=u.none),
+            StringInputSpec(id="string_a", required="number_a")))
 
         args = {'string_a': None, "number_a": 1}
 
@@ -1792,21 +1809,14 @@ class TestValidationFromSpec(unittest.TestCase):
     def test_conditionally_required_invalid(self):
         """Validation: verify conditional validity behavior when invalid."""
         from natcap.invest import validation
-        spec = {
-            "number_a": {
-                "name": "The first parameter",
-                "about": "About the first parameter",
-                "type": "number",
-                "required": True,
-            },
-            "string_a": {
-                "name": "The first parameter",
-                "about": "About the first parameter",
-                "type": "option_string",
-                "required": "number_a",
-                "options": ['AAA', 'BBB']
-            }
-        }
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            NumberInputSpec(id="number_a", units=u.none),
+            OptionStringInputSpec(
+                id="string_a",
+                required="number_a",
+                options=['AAA', 'BBB']
+            )
+        ))
 
         args = {'string_a': "ZZZ", "number_a": 1}
 
@@ -1819,32 +1829,21 @@ class TestValidationFromSpec(unittest.TestCase):
         """Validation: conditionally required vector fields."""
         from natcap.invest import spec_utils
         from natcap.invest import validation
-        spec = {
-            "some_number": {
-                "name": "A number",
-                "about": "About the number",
-                "type": "number",
-                "required": True,
-                "expression": "value > 0.5",
-            },
-            "vector": {
-                "name": "A vector",
-                "about": "About the vector",
-                "type": "vector",
-                "required": True,
-                "geometries": spec_utils.POINTS,
-                "fields": {
-                    "field_a": {
-                        "type": "ratio",
-                        "required": True,
-                    },
-                    "field_b": {
-                        "type": "ratio",
-                        "required": "some_number == 2",
-                    }
-                }
-            }
-        }
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            NumberInputSpec(
+                id="some_number",
+                expression="value > 0.5",
+                units=u.none
+            ),
+            VectorInputSpec(
+                id="vector",
+                geometries=spec_utils.POINTS,
+                fields=Fields(
+                    RatioInputSpec(id="field_a"),
+                    RatioInputSpec(id="field_b", required="some_number == 2")
+                )
+            )
+        ))
 
         def _create_vector(filepath, fields=[]):
             gpkg_driver = gdal.GetDriverByName('GPKG')
@@ -1891,31 +1890,20 @@ class TestValidationFromSpec(unittest.TestCase):
     def test_conditionally_required_csv_columns(self):
         """Validation: conditionally required csv columns."""
         from natcap.invest import validation
-        spec = {
-            "some_number": {
-                "name": "A number",
-                "about": "About the number",
-                "type": "number",
-                "required": True,
-                "expression": "value > 0.5",
-            },
-            "csv": {
-                "name": "A table",
-                "about": "About the table",
-                "type": "csv",
-                "required": True,
-                "columns": {
-                    "field_a": {
-                        "type": "ratio",
-                        "required": True,
-                    },
-                    "field_b": {
-                        "type": "ratio",
-                        "required": "some_number == 2",
-                    }
-                }
-            }
-        }
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            number_input_spec_with_defaults(
+                id="some_number",
+                expression="value > 0.5"
+            ),
+            CSVInputSpec(
+                id="csv",
+                columns=Columns(
+                    RatioInputSpec(id="field_a"),
+                    RatioInputSpec(id="field_b", required="some_number == 2")
+                )
+            )
+        ))
+
         # Create a CSV file with only field_a
         csv_path = os.path.join(self.workspace_dir, 'table1.csv')
         with open(csv_path, 'w') as csv_file:
@@ -1958,31 +1946,26 @@ class TestValidationFromSpec(unittest.TestCase):
     def test_conditionally_required_csv_rows(self):
         """Validation: conditionally required csv rows."""
         from natcap.invest import validation
-        spec = {
-            "some_number": {
-                "name": "A number",
-                "about": "About the number",
-                "type": "number",
-                "required": True,
-                "expression": "value > 0.5",
-            },
-            "csv": {
-                "name": "A table",
-                "about": "About the table",
-                "type": "csv",
-                "required": True,
-                "rows": {
-                    "field_a": {
-                        "type": "ratio",
-                        "required": True,
-                    },
-                    "field_b": {
-                        "type": "ratio",
-                        "required": "some_number == 2",
-                    }
-                }
-            }
-        }
+        spec = model_spec_with_defaults(
+            inputs=ModelInputs(
+                number_input_spec_with_defaults(
+                    id="some_number",
+                    expression="value > 0.5"
+                ),
+                CSVInputSpec(
+                    id="csv",
+                    rows=Rows(
+                        RatioInputSpec(
+                            id="field_a",
+                            required=True),
+                        RatioInputSpec(
+                            id="field_b",
+                            required="some_number == 2"
+                        )
+                    )
+                )
+            )
+        )
         # Create a CSV file with only field_a
         csv_path = os.path.join(self.workspace_dir, 'table1.csv')
         with open(csv_path, 'w') as csv_file:
@@ -2023,21 +2006,15 @@ class TestValidationFromSpec(unittest.TestCase):
     def test_validation_exception(self):
         """Validation: Verify error when an unexpected exception occurs."""
         from natcap.invest import validation
-        spec = {
-            "number_a": {
-                "name": "The first parameter",
-                "about": "About the first parameter",
-                "type": "number",
-                "required": True,
-            },
-        }
-
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            number_input_spec_with_defaults(id="number_a")
+        ))
         args = {'number_a': 1}
         try:
             # Patch in a new function that raises an exception into the
             # validation functions dictionary.
             patched_function = Mock(side_effect=ValueError('foo'))
-            validation._VALIDATION_FUNCS['number'] = patched_function
+            validation._VALIDATION_FUNCS[NumberInputSpec] = patched_function
 
             validation_warnings = validation.validate(args, spec)
         finally:
@@ -2053,31 +2030,26 @@ class TestValidationFromSpec(unittest.TestCase):
     def test_conditionally_required_directory_contents(self):
         """Validation: conditionally required directory contents."""
         from natcap.invest import validation
-        spec = {
-            "some_number": {
-                "name": "A number",
-                "about": "About the number",
-                "type": "number",
-                "required": True,
-                "expression": "value > 0.5",
-            },
-            "directory": {
-                "name": "A folder",
-                "about": "About the folder",
-                "type": "directory",
-                "required": True,
-                "contents": {
-                    "file.1": {
-                        "type": "csv",
-                        "required": True,
-                    },
-                    "file.2": {
-                        "type": "csv",
-                        "required": "some_number == 2",
-                    }
-                }
-            }
-        }
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            NumberInputSpec(
+                id="some_number",
+                expression="value > 0.5",
+                units=u.none
+            ),
+            DirectoryInputSpec(
+                id="directory",
+                contents=Contents(
+                    CSVInputSpec(
+                        id="file.1",
+                        required=True,
+                    ),
+                    CSVInputSpec(
+                        id="file.2",
+                        required="some_number == 2"
+                    )
+                )
+            )
+        ))
         path_1 = os.path.join(self.workspace_dir, 'file.1')
         with open(path_1, 'w') as my_file:
             my_file.write('col1,col2')
@@ -2108,15 +2080,9 @@ class TestValidationFromSpec(unittest.TestCase):
     def test_validation_other(self):
         """Validation: verify no error when 'other' type."""
         from natcap.invest import validation
-        spec = {
-            "number_a": {
-                "name": "The first parameter",
-                "about": "About the first parameter",
-                "type": "other",
-                "required": True,
-            },
-        }
-
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            OtherInputSpec(id="number_a")
+        ))
         args = {'number_a': 1}
         self.assertEqual([], validation.validate(args, spec))
 
@@ -2124,17 +2090,15 @@ class TestValidationFromSpec(unittest.TestCase):
         """Validation: check that we can require from nested conditions."""
         from natcap.invest import validation
 
-        spec = {}
+        specs = []
         previous_key = None
         args = {}
         for letter in string.ascii_uppercase[:10]:
-            key = 'arg_%s' % letter
-            spec[key] = {
-                'name': 'name ' + key,
-                'about': 'about ' + key,
-                'type': 'freestyle_string',
-                'required': previous_key
-            }
+            key = f'arg_{letter}'
+            specs.append(StringInputSpec(
+                id=key,
+                required=previous_key
+            ))
             previous_key = key
             args[key] = key
 
@@ -2148,28 +2112,23 @@ class TestValidationFromSpec(unittest.TestCase):
         """Validation: check that we return an error on spatial mismatch."""
         from natcap.invest import validation
 
-        spec = {
-            'raster_a': {
-                'type': 'raster',
-                'name': 'raster 1',
-                'about': 'raster 1',
-                'required': True,
-            },
-            'raster_b': {
-                'type': 'raster',
-                'name': 'raster 2',
-                'about': 'raster 2',
-                'required': True,
-            },
-            'vector_a': {
-                'type': 'vector',
-                'name': 'vector 1',
-                'about': 'vector 1',
-                'required': True,
-                'fields': {},
-                'geometries': {'POINT'}
-            }
-        }
+        spec = model_spec_with_defaults(
+            inputs=ModelInputs(
+                SingleBandRasterInputSpec(
+                    id='raster_a',
+                    band=NumberInputSpec(units=u.none)
+                ),
+                SingleBandRasterInputSpec(
+                    id='raster_b',
+                    band=NumberInputSpec(units=u.none)
+                ),
+                VectorInputSpec(
+                    id='vector_a',
+                    fields={},
+                    geometries={'POINT'}
+                )
+            )
+        )
 
         driver = gdal.GetDriverByName('GTiff')
         filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
@@ -2221,20 +2180,18 @@ class TestValidationFromSpec(unittest.TestCase):
         """Validation: check spatial overlap message when no projection"""
         from natcap.invest import validation
 
-        spec = {
-            'raster_a': {
-                'type': 'raster',
-                'name': 'raster 1',
-                'about': 'raster 1',
-                'required': True,
-            },
-            'raster_b': {
-                'type': 'raster',
-                'name': 'raster 2',
-                'about': 'raster 2',
-                'required': True,
-            }
-        }
+        spec = model_spec_with_defaults(
+            inputs=ModelInputs(
+                SingleBandRasterInputSpec(
+                    id='raster_a',
+                    band=NumberInputSpec(units=u.none)
+                ),
+                SingleBandRasterInputSpec(
+                    id='raster_b',
+                    band=NumberInputSpec(units=u.none)
+                )
+            )
+        )
 
         driver = gdal.GetDriverByName('GTiff')
         filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
@@ -2265,27 +2222,24 @@ class TestValidationFromSpec(unittest.TestCase):
         """Validation: check for spatial mismatch with insufficient args."""
         from natcap.invest import validation
 
-        spec = {
-            'raster_a': {
-                'type': 'raster',
-                'name': 'raster 1',
-                'about': 'raster 1',
-                'required': True,
-            },
-            'raster_b': {
-                'type': 'raster',
-                'name': 'raster 2',
-                'about': 'raster 2',
-                'required': False,
-            },
-            'vector_a': {
-                'type': 'vector',
-                'name': 'vector 1',
-                'about': 'vector 1',
-                'required': False,
-                'geometries': {'POINT'}
-            }
-        }
+        spec = model_spec_with_defaults(
+            inputs=ModelInputs(
+                SingleBandRasterInputSpec(
+                    id='raster_a',
+                    band=NumberInputSpec(units=u.none)
+                ),
+                SingleBandRasterInputSpec(
+                    id='raster_b',
+                    band=NumberInputSpec(units=u.none)
+                ),
+                VectorInputSpec(
+                    id='vector_a',
+                    required=False,
+                    fields=Fields(),
+                    geometries={'POINT'}
+                )
+            )
+        )
 
         driver = gdal.GetDriverByName('GTiff')
         filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
@@ -2308,7 +2262,7 @@ class TestValidationFromSpec(unittest.TestCase):
         # There should not be a spatial overlap check at all
         # when less than 2 of the spatial keys are sufficient.
         validation_warnings = validation.validate(
-            args, spec, {'spatial_keys': list(spec.keys()),
+            args, spec, {'spatial_keys': [i.id for i in spec.inputs],
                          'different_projections_ok': True})
         self.assertEqual(len(validation_warnings), 0)
 
@@ -2319,7 +2273,7 @@ class TestValidationFromSpec(unittest.TestCase):
             'raster_b': filepath_2,
         }
         validation_warnings = validation.validate(
-            args, spec, {'spatial_keys': list(spec.keys()),
+            args, spec, {'spatial_keys': [i.id for i in spec.inputs],
                          'different_projections_ok': True})
         self.assertEqual(len(validation_warnings), 1)
         formatted_bbox_list = ''  # allows str matching w/o real bbox str
@@ -2333,14 +2287,7 @@ class TestValidationFromSpec(unittest.TestCase):
         from natcap.invest import validation
 
         args = {'a': 'a', 'b': 'b'}
-        spec = {
-            'a': {
-                'type': 'freestyle_string',
-                'name': 'a',
-                'about': 'a freestyle string',
-                'required': True
-            }
-        }
+        spec = StringInputSpec(id='a')
         message = 'DEBUG:natcap.invest.validation:Provided key b does not exist in MODEL_SPEC'
 
         with self.assertLogs('natcap.invest.validation', level='DEBUG') as cm:
@@ -2381,7 +2328,8 @@ class TestValidationFromSpec(unittest.TestCase):
             'e': '55.5',   # middle
             'f': '100'     # upper bound
         }
-        spec = {name: {'type': 'percent'} for name in args}
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            *[PercentInputSpec(id=name) for name in args]))
 
         expected_warnings = [
             (['a'], validation.MESSAGES['NOT_A_NUMBER'].format(value=args['a'])),
@@ -2402,7 +2350,8 @@ class TestValidationFromSpec(unittest.TestCase):
             'c': '-1',     # negative integers are ok
             'd': '0'
         }
-        spec = {name: {'type': 'integer'} for name in args}
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            *[IntegerInputSpec(id=name) for name in args]))
 
         expected_warnings = [
             (['a'], validation.MESSAGES['NOT_A_NUMBER'].format(value=args['a'])),
@@ -2415,12 +2364,12 @@ class TestValidationFromSpec(unittest.TestCase):
     def test_get_headers_to_validate(self):
         """Validation: test getting header patterns from a spec."""
         from natcap.invest import validation
-        spec = {
-            'a': {},
-            'foo_[BAR]': {},
-            'c': {'required': 'conditional statement'},
-            'd': {'required': False}
-        }
+        spec = Columns(
+            InputSpec(id='a'),
+            InputSpec(id='foo_[BAR]'),
+            InputSpec(id='c', required='conditional statement'),
+            InputSpec(id='d', required=False)
+        )
         patterns = validation.get_headers_to_validate(spec)
         # should only get the patterns that are static and always required
         self.assertEqual(sorted(patterns), ['a'])
@@ -2431,12 +2380,12 @@ class TestArgsEnabled(unittest.TestCase):
     def test_args_enabled(self):
         """Validation: test getting args enabled/disabled status."""
         from natcap.invest import validation
-        spec = {'args': {
-            'a': {},
-            'b': {'allowed': 'a'},
-            'c': {'allowed': 'not a'},
-            'd': {'allowed': 'b <= 3'}
-        }}
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            InputSpec(id='a'),
+            InputSpec(id='b', allowed='a'),
+            InputSpec(id='c', allowed='not a'),
+            InputSpec(id='d', allowed='b <= 3')
+        ))
         args = {
             'a': 'foo',
             'b': 2,

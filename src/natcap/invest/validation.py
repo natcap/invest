@@ -158,7 +158,7 @@ def get_sufficient_keys(args):
     return sufficient_keys
 
 
-def check_directory(dirpath, spec, **kwargs):
+def check_directory(dirpath, spec):
     """Validate a directory.
 
     Args:
@@ -168,6 +168,7 @@ def check_directory(dirpath, spec, **kwargs):
         A string error message if an error was found.  ``None`` otherwise.
 
     """
+    print('check directory', dirpath)
     if spec.must_exist:
         if not os.path.exists(dirpath):
             return MESSAGES['DIR_NOT_FOUND']
@@ -879,14 +880,14 @@ def get_headers_to_validate(specs):
         list of expected header names to validate against
     """
     headers = []
-    for key, spec in specs.__dict__.items():
+    for spec in specs:
         # if 'required' isn't a key, it defaults to True
         if spec.required:
             # brackets are a special character for our args spec syntax
             # they surround the part of the key that's user-defined
             # user-defined rows/columns/fields are not validated here, so skip
-            if '[' not in key:
-                headers.append(key)
+            if '[' not in spec.id:
+                headers.append(spec.id)
     return headers
 
 
@@ -895,18 +896,19 @@ def get_headers_to_validate(specs):
 # set a timeout for these functions.
 _VALIDATION_FUNCS = {
     spec_utils.BooleanInputSpec: check_boolean,
-    spec_utils.CSVInputSpec: functools.partial(timeout, check_csv),
-    spec_utils.FileInputSpec: functools.partial(timeout, check_file),
-    spec_utils.DirectoryInputSpec: functools.partial(timeout, check_directory),
+    spec_utils.CSVInputSpec: check_csv, #functools.partial(timeout, check_csv),
+    spec_utils.FileInputSpec: check_file, #functools.partial(timeout, check_file),
+    spec_utils.DirectoryInputSpec: check_directory, #functools.partial(timeout, check_directory),
     spec_utils.StringInputSpec: check_freestyle_string,
     spec_utils.NumberInputSpec: check_number,
     spec_utils.RatioInputSpec: check_ratio,
     spec_utils.PercentInputSpec: check_percent,
     spec_utils.IntegerInputSpec: check_integer,
     spec_utils.OptionStringInputSpec: check_option_string,
-    spec_utils.SingleBandRasterInputSpec: functools.partial(timeout, check_raster),
-    spec_utils.VectorInputSpec: functools.partial(timeout, check_vector),
-    spec_utils.RasterOrVectorInputSpec: functools.partial(timeout, check_raster_or_vector)
+    spec_utils.SingleBandRasterInputSpec: check_raster, #functools.partial(timeout, check_raster),
+    spec_utils.VectorInputSpec: check_vector, #functools.partial(timeout, check_vector),
+    spec_utils.RasterOrVectorInputSpec: check_raster_or_vector, #functools.partial(timeout, check_raster_or_vector)
+    spec_utils.OtherInputSpec: None
 }
 
 
@@ -942,9 +944,10 @@ def validate(args, spec, spatial_overlap_opts=None):
     missing_keys = set()
     required_keys_with_no_value = set()
     expression_values = {
-        input_key: args.get(input_key, False) for input_key in spec.__dict__.keys()}
+        input_spec.id: args.get(input_spec.id, False) for input_spec in spec.inputs}
     keys_with_falsey_values = set()
-    for key, parameter_spec in spec.__dict__.items():
+    for parameter_spec in spec.inputs:
+        key = parameter_spec.id
         required = parameter_spec.required
 
         if isinstance(required, str):
@@ -981,7 +984,7 @@ def validate(args, spec, spatial_overlap_opts=None):
         # we don't need to try to validate them
         try:
             # Using deepcopy to make sure we don't modify the original spec
-            parameter_spec = copy.deepcopy(getattr(spec, key))
+            parameter_spec = copy.deepcopy(getattr(spec.inputs, key))
         except KeyError:
             LOGGER.debug(f'Provided key {key} does not exist in MODEL_SPEC')
             continue
@@ -999,7 +1002,7 @@ def validate(args, spec, spatial_overlap_opts=None):
             for axis_key in axis_keys:
                 if getattr(parameter_spec, axis_key) is None:
                     continue
-                for nested_key, nested_spec in getattr(parameter_spec, axis_key).__dict__.items():
+                for nested_spec in getattr(parameter_spec, axis_key):
                     if (isinstance(nested_spec.required, str)):
                         nested_spec.required = (
                             bool(_evaluate_expression(
@@ -1010,6 +1013,7 @@ def validate(args, spec, spatial_overlap_opts=None):
         if type_validation_func is None:
             # Validation for 'other' type must be performed by the user.
             continue
+        print(type_validation_func)
         # try:
         # pass the entire arg spec into the validation function as kwargs
         # each type validation function allows extra kwargs with **kwargs
@@ -1181,11 +1185,11 @@ def args_enabled(args, spec):
     """
     enabled = {}
     expression_values = {
-        arg_key: args.get(arg_key, False) for arg_key in spec['args'].keys()}
-    for key, arg_spec in spec['args'].items():
-        if 'allowed' in arg_spec:
-            enabled[key] = bool(_evaluate_expression(
-                arg_spec['allowed'], expression_values))
+        arg_spec.id: args.get(arg_spec.id, False) for arg_spec in spec.inputs}
+    for arg_spec in spec.inputs:
+        if isinstance(arg_spec.allowed, str):
+            enabled[arg_spec.id] = bool(_evaluate_expression(
+                arg_spec.allowed, expression_values))
         else:
-            enabled[key] = True
+            enabled[arg_spec.id] = True
     return enabled

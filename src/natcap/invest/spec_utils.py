@@ -17,6 +17,44 @@ from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
+class IterableWithDotAccess():
+    def __init__(self, *args):
+        self.args = args
+        self.inputs_dict = {i.id: i for i in args}
+        self.iter_index = 0
+
+    def __getattr__(self, key):
+        return self.inputs_dict.get(key)
+
+    def __iter__(self):
+        print('iter')
+        return iter(self.args)
+
+    # def __next__(self):
+    #     print('next')
+    #     if self.iter_index < len(self.args):
+    #         result = self.args[self.iter_index]
+    #         self.iter_index += 1
+    #         return result
+    #     else:
+    #         raise StopIteration
+
+
+class ModelInputs(IterableWithDotAccess):
+    pass
+
+class Rows(IterableWithDotAccess):
+    pass
+
+class Columns(IterableWithDotAccess):
+    pass
+
+class Fields(IterableWithDotAccess):
+    pass
+
+class Contents(IterableWithDotAccess):
+    pass
+
 
 @dataclasses.dataclass(kw_only=True)
 class VectorFields:
@@ -24,10 +62,11 @@ class VectorFields:
 
 @dataclasses.dataclass(kw_only=True)
 class InputSpec:
-    name: str
-    about: str
-    required: bool | str
-    allowed: bool | str
+    id: str = ''
+    name: str = ''
+    about: str = ''
+    required: bool | str = True
+    allowed: bool | str = True
 
 @dataclasses.dataclass(kw_only=True)
 class OutputSpec:
@@ -41,40 +80,40 @@ class FileInputSpec(InputSpec):
 @dataclasses.dataclass(kw_only=True)
 class SingleBandRasterInputSpec(FileInputSpec):
     band: InputSpec
-    projected: bool
-    projection_units: pint.Unit
+    projected: bool | None = None
+    projection_units: pint.Unit | None = None
 
 @dataclasses.dataclass(kw_only=True)
 class VectorInputSpec(FileInputSpec):
     geometries: set
-    fields: types.SimpleNamespace
-    projected: bool
-    projection_units: pint.Unit
+    fields: Fields
+    projected: bool | None = None
+    projection_units: pint.Unit | None = None
 
 @dataclasses.dataclass(kw_only=True)
 class RasterOrVectorInputSpec(FileInputSpec):
     band: InputSpec
     geometries: set
-    fields: types.SimpleNamespace
-    projected: bool
-    projection_units: pint.Unit
+    fields: Fields
+    projected: bool | None = None
+    projection_units: pint.Unit | None = None
 
 @dataclasses.dataclass(kw_only=True)
 class CSVInputSpec(FileInputSpec):
-    columns: types.SimpleNamespace
-    rows: types.SimpleNamespace
-    index_col: str
+    columns: Columns | None = None
+    rows: Rows | None = None
+    index_col: str | None = None
 
 @dataclasses.dataclass(kw_only=True)
 class DirectoryInputSpec(InputSpec):
-    contents: types.SimpleNamespace
-    permissions: str
-    must_exist: bool
+    contents: Contents
+    permissions: str = 'rx'
+    must_exist: bool = True
 
 @dataclasses.dataclass(kw_only=True)
 class NumberInputSpec(InputSpec):
     units: pint.Unit
-    expression: str
+    expression: str | None = None
 
 @dataclasses.dataclass(kw_only=True)
 class IntegerInputSpec(InputSpec):
@@ -103,8 +142,8 @@ class OptionStringInputSpec(InputSpec):
 @dataclasses.dataclass(kw_only=True)
 class SingleBandRasterOutputSpec(OutputSpec):
     band: InputSpec
-    projected: bool
-    projection_units: pint.Unit
+    projected: bool | None = None
+    projection_units: pint.Unit | None = None
 
 @dataclasses.dataclass(kw_only=True)
 class VectorOutputSpec(OutputSpec):
@@ -155,10 +194,15 @@ class OptionStringOutputSpec(OutputSpec):
     options: list
 
 @dataclasses.dataclass(kw_only=True)
+class OtherInputSpec(InputSpec):
+    pass
+
+@dataclasses.dataclass(kw_only=True)
 class UISpec:
     order: list
     hidden: list
-    dropdown_functions: dict
+    dropdown_functions: dict = dataclasses.field(default_factory=dict)
+
 
 @dataclasses.dataclass(kw_only=True)
 class ModelSpec:
@@ -167,14 +211,14 @@ class ModelSpec:
     userguide: str
     aliases: set
     ui_spec: UISpec
-    inputs: set
+    inputs: ModelInputs
     outputs: set
     args_with_spatial_overlap: list
 
 
 def build_model_spec(model_spec):
-    inputs = types.SimpleNamespace({
-        argkey: build_input_spec(argspec) for argkey, argspec in model_spec['args'].items()
+    inputs = ModelInputs({
+        build_input_spec(argkey, argspec) for argkey, argspec in model_spec['args'].items()
     })
     outputs = types.SimpleNamespace({
         argkey: build_output_spec(argspec, argkey) for argkey, argspec in model_spec['outputs'].items()
@@ -194,8 +238,9 @@ def build_model_spec(model_spec):
         args_with_spatial_overlap=model_spec.get('args_with_spatial_overlap', None))
 
 
-def build_input_spec(arg):
+def build_input_spec(argkey, arg):
     base_attrs = {
+        'id': argkey,
         'name': arg.get('name', None),
         'about': arg.get('about', None),
         'required': arg.get('required', True),
@@ -409,19 +454,19 @@ SUFFIX = {
     "regexp": "[a-zA-Z0-9_-]*"
 }
 
-N_WORKERS = {
-    "name": gettext("taskgraph n_workers parameter"),
-    "about": gettext(
+N_WORKERS = NumberInputSpec(
+    id="n_workers",
+    name=gettext("taskgraph n_workers parameter"),
+    about=gettext(
         "The n_workers parameter to provide to taskgraph. "
         "-1 will cause all jobs to run synchronously. "
         "0 will run all jobs in the same process, but scheduling will take "
         "place asynchronously. Any other positive integer will cause that "
         "many processes to be spawned to execute tasks."),
-    "type": "number",
-    "units": u.none,
-    "required": False,
-    "expression": "value >= -1"
-}
+    units=u.none,
+    required=False,
+    expression="value >= -1"
+)
 
 METER_RASTER = {
     "type": "raster",

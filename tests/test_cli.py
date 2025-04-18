@@ -397,7 +397,7 @@ class CLIUnitTests(unittest.TestCase):
         target_model = models.model_id_to_pyname[target_model]
         model_module = importlib.import_module(name=target_model)
         spec = model_module.MODEL_SPEC
-        expected_args = {key: '' for key in spec['args'].keys()}
+        expected_args = {key: '' for key in spec.inputs.__dict__.keys()}
 
         module_name = str(uuid.uuid4()) + 'testscript'
         spec = importlib.util.spec_from_file_location(module_name, target_filepath)
