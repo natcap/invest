@@ -64,6 +64,11 @@
 ..
   Unreleased Changes
   ------------------
+General
+=======
+* Handle exceptions that can arise during ``validation.check_spatial_overlap``
+  when a layer's bounding box cannot be transformed to EPSG:4326.
+  (`#1849 <https://github.com/natcap/invest/issues/1849>`_).
 
 Workbench
 =========

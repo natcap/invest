@@ -811,7 +811,7 @@ def check_spatial_overlap(spatial_filepaths_list,
             except (ValueError, RuntimeError) as err:
                 LOGGER.debug(err)
                 LOGGER.warning(
-                    f'Skipping spatial overlap check for {filepath} '
+                    f'Skipping spatial overlap check for {filepath}. '
                     'Bounding box cannot be transformed to EPSG:4326')
                 continue
 
@@ -820,7 +820,8 @@ def check_spatial_overlap(spatial_filepaths_list,
 
         if all([numpy.isinf(coord) for coord in bounding_box]):
             LOGGER.warning(
-                'Skipping infinite bounding box for file %s', filepath)
+                f'Skipping spatial overlap check for {filepath} '
+                f'because of infinite bounding box {bounding_box}')
             continue
 
         bounding_boxes.append(bounding_box)
