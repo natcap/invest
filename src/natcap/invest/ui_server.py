@@ -267,10 +267,12 @@ def build_datastack_archive():
 def log_model_start():
     payload = request.get_json()
     usage._log_model(
-        models.model_id_to_pyname[payload['model_id']],
-        json.loads(payload['model_args']),
-        payload['invest_interface'],
-        payload['session_id'])
+        pyname=models.model_id_to_pyname[payload['model_id']],
+        model_args=json.loads(payload['model_args']),
+        invest_interface=payload['invest_interface'],
+        session_id=payload['session_id'],
+        type=payload['type'],
+        source=payload.get('source', None))  # source only used for plugins
     return 'OK'
 
 
