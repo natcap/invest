@@ -6,7 +6,6 @@ import { ipcMain } from 'electron';
 
 import { ipcMainChannels } from './ipcMainChannels';
 import { getLogger } from './logger';
-import { checkFirstRun } from './setupCheckFirstRun';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
