@@ -58,6 +58,8 @@ describe('Add plugin modal', () => {
             },
           });
         }
+      } else if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
       }
       return Promise.resolve();
     });
@@ -138,6 +140,8 @@ describe('Add plugin modal', () => {
         }
       } else if (channel === ipcMainChannels.REMOVE_PLUGIN) {
         plugins = {};
+      } else if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
       }
       return Promise.resolve();
     });
