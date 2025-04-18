@@ -64,6 +64,7 @@
 ..
   Unreleased Changes
   ------------------
+
 General
 =======
 * Handle exceptions that can arise during ``validation.check_spatial_overlap``
