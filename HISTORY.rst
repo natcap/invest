@@ -87,6 +87,12 @@ Crop Production
   of a corresponding regression yield table
   (`#1723 <https://github.com/natcap/invest/issues/1723>`_).
 
+Seasonal Water Yield
+====================
+* Fixed bug in quickflow calculation where `NoData` values in precipitation
+  were being incorrectly converted to 0's
+  (`#1592 <https://github.com/natcap/invest/issues/1592>`_).
+
 
 3.15.0 (2025-04-03)
 -------------------

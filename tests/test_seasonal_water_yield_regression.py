@@ -61,7 +61,7 @@ def make_simple_shp(base_shp_path, origin):
     data_source = None
 
 
-def make_raster_from_array(base_array, base_raster_path):
+def make_raster_from_array(base_array, base_raster_path, nodata=-1):
     """Make a raster from an array on a designated path.
 
     Args:
@@ -78,7 +78,7 @@ def make_raster_from_array(base_array, base_raster_path):
 
     # Each pixel is 1x1 m
     pygeoprocessing.numpy_array_to_raster(
-        base_array, -1, (1, -1), (1180000, 690000), project_wkt,
+        base_array, nodata, (1, -1), (1180000, 690000), project_wkt,
         base_raster_path)
 
 
@@ -1262,6 +1262,52 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             pygeoprocessing.raster_to_numpy_array(output_path),
             expected_quickflow_array, atol=1e-5)
+
+    def test_monthly_quickflow_nodata_propagation(self):
+        """Test correct nodata propagation in `_calculate_monthly_quick_flow`
+
+        This test checks that:
+        1. If n=nodata: output is nodata
+        2. If precip=nodata: output is nodata
+        3. If precip<0 and not nodata & n is valid: output is 0
+        4. If precip and n are valid & stream=1 & SI=nodata: output is valid
+        5. If precip and n are valid & stream=nodata: output is nodata
+        """
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # Test a variety of valid/nodata combinations across the input layers
+        precip_array = numpy.array([[-1, -6, 32767, 32767],
+                                    [5, 6, 30, 8]], dtype=numpy.float32)
+        n_events_array = numpy.array([[-1, 1, -8, 8],
+                                      [-1, 6, 2, 9]], dtype=numpy.float32)
+        si_array = numpy.array([[1, -1, 3, 4],
+                                [5, -1, 7, 8]], dtype=numpy.float32)
+        stream_mask = numpy.array([[1, -1, 1, 1],
+                                   [1, 1, 0, -1]], dtype=numpy.float32)
+        expected_quickflow_array = numpy.array([[-1, 0, -1, -1],
+                                                [-1, 6, 0.382035, -1]])
+
+        precip_path = os.path.join(self.workspace_dir, 'precip.tif')
+        si_path = os.path.join(self.workspace_dir, 'si.tif')
+        n_events_path = os.path.join(self.workspace_dir, 'n_events.tif')
+        stream_path = os.path.join(self.workspace_dir, 'stream.tif')
+        output_path = os.path.join(self.workspace_dir, 'quickflow.tif')
+
+        # write all the test arrays to raster files
+        for array, path in [(n_events_array, n_events_path),
+                            (si_array, si_path),
+                            (stream_mask, stream_path)]:
+            # define a nodata value for intermediate outputs
+            make_raster_from_array(array, path)
+
+        # Ensure positive nodata value for precip is handled correctly
+        make_raster_from_array(precip_array, precip_path, nodata=32767)
+
+        seasonal_water_yield._calculate_monthly_quick_flow(
+            precip_path, n_events_path, stream_path, si_path, output_path)
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(output_path),
+            expected_quickflow_array, atol=1e-6)
 
     def test_local_recharge_undefined_nodata(self):
         """Test `calculate_local_recharge` with undefined nodata values"""
