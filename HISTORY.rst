@@ -65,6 +65,18 @@
   Unreleased Changes
   ------------------
 
+General
+=======
+* Handle exceptions that can arise during ``validation.check_spatial_overlap``
+  when a layer's bounding box cannot be transformed to EPSG:4326.
+  (`#1849 <https://github.com/natcap/invest/issues/1849>`_).
+
+Workbench
+=========
+* Fixed a bug that did not allow users to select a folder as the location
+  to extract a datastack archive.
+  (`#1879 <https://github.com/natcap/invest/issues/1879>`_).
+
 Crop Production
 ===============
 * Both the Percentile and Regression models now issue a warning if any LULC

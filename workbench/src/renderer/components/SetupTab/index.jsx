@@ -299,18 +299,29 @@ class SetupTab extends React.Component {
     const { pyModuleName, switchTabs, t } = this.props;
     let datastack;
     try {
-      if (filepath.endsWith('gz')) {  // .tar.gz, .tgz
+      if (filepath.endsWith('gz')) { // .tar.gz, .tgz
         const extractLocation = await ipcRenderer.invoke(
-          ipcMainChannels.SHOW_SAVE_DIALOG,
-          { title: t('Choose location to extract archive') }
+          ipcMainChannels.SHOW_OPEN_DIALOG,
+          {
+            title: t('Choose location to extract archive'),
+            properties: ['openDirectory'],
+          }
         );
-        if (extractLocation.filePath) {
-          datastack = await fetchDatastackFromFile({
-            filepath: filepath,
-            extractPath: extractLocation.filePath});
-        } else {
-          return;
-        }
+        if (extractLocation.filePaths.length) {
+          const directoryPath = extractLocation.filePaths[0];
+          const writable = await ipcRenderer.invoke(
+            ipcMainChannels.CHECK_FILE_PERMISSIONS, directoryPath);
+          if (writable) {
+            datastack = await fetchDatastackFromFile({
+              filepath: filepath,
+              extractPath: directoryPath,
+            });
+          } else {
+            alert( // eslint-disable-line no-alert
+              `${t('Permission denied extracting files to:')}\n${directoryPath}`
+            );
+          }
+        } else { return; } // dialog closed without selection
       } else {
         datastack = await fetchDatastackFromFile({ filepath: filepath });
       }
