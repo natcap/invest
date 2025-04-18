@@ -213,7 +213,7 @@ class TestPreprocessor(unittest.TestCase):
 
         landcover_df = validation.get_validated_dataframe(
             landcover_table_path,
-            **preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path'])
+            preprocessor.MODEL_SPEC.inputs.lulc_lookup_table_path)
         target_table_path = os.path.join(self.workspace_dir,
                                          'transition_table.csv')
 
@@ -229,7 +229,7 @@ class TestPreprocessor(unittest.TestCase):
         # Re-load the landcover table
         landcover_df = validation.get_validated_dataframe(
             landcover_table_path,
-            **preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path'])
+            preprocessor.MODEL_SPEC.inputs.lulc_lookup_table_path)
         preprocessor._create_transition_table(
             landcover_df, [filename_a, filename_b], target_table_path)
 
@@ -643,7 +643,7 @@ class TestCBC2(unittest.TestCase):
 
         prior_snapshots = validation.get_validated_dataframe(
             args['landcover_snapshot_csv'],
-            **coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
+            coastal_blue_carbon.MODEL_SPEC.inputs.landcover_snapshot_csv
         )['raster_path'].to_dict()
         baseline_year = min(prior_snapshots.keys())
         baseline_raster = prior_snapshots[baseline_year]
@@ -821,7 +821,7 @@ class TestCBC2(unittest.TestCase):
 
         prior_snapshots = validation.get_validated_dataframe(
             args['landcover_snapshot_csv'],
-            **coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
+            coastal_blue_carbon.MODEL_SPEC.inputs.landcover_snapshot_csv
         )['raster_path'].to_dict()
         baseline_year = min(prior_snapshots.keys())
         baseline_raster = prior_snapshots[baseline_year]
@@ -881,7 +881,7 @@ class TestCBC2(unittest.TestCase):
         # test validation: invalid analysis year
         prior_snapshots = validation.get_validated_dataframe(
             args['landcover_snapshot_csv'],
-            **coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
+            coastal_blue_carbon.MODEL_SPEC.inputs.landcover_snapshot_csv
         )['raster_path'].to_dict()
         baseline_year = min(prior_snapshots)
         # analysis year must be >= the last transition year.

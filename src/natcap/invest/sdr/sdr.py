@@ -27,7 +27,7 @@ from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "sdr",
     "model_title": gettext("Sediment Delivery Ratio"),
     "pyname": "natcap.invest.sdr.sdr",
@@ -462,7 +462,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 _OUTPUT_BASE_FILES = {
     'rkls_path': 'rkls.tif',
@@ -565,7 +565,7 @@ def execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     biophysical_df = validation.get_validated_dataframe(
         args['biophysical_table_path'],
-        **MODEL_SPEC['args']['biophysical_table_path'])
+        MODEL_SPEC.inputs.biophysical_table_path)
 
     # Test to see if c or p values are outside of 0..1
     for key in ['usle_c', 'usle_p']:
@@ -1601,4 +1601,4 @@ def validate(args, limit_to=None):
 
     """
     return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)

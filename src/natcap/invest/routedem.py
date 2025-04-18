@@ -16,7 +16,7 @@ LOGGER = logging.getLogger(__name__)
 
 INVALID_BAND_INDEX_MSG = gettext('Must be between 1 and {maximum}')
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "routedem",
     "model_title": gettext("RouteDEM"),
     "pyname": "natcap.invest.routedem",
@@ -278,7 +278,7 @@ MODEL_SPEC = {
             },
         },
     }
-}
+})
 
 
 # replace %s with file suffix
@@ -540,7 +540,7 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC['args'])
+    validation_warnings = validation.validate(args, MODEL_SPEC.inputs)
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     sufficient_keys = validation.get_sufficient_keys(args)

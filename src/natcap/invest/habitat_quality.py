@@ -32,7 +32,7 @@ MISSING_MAX_DIST_MSG = gettext(
     "Maximum distance value is missing for threats: {threat_list}.")
 MISSING_WEIGHT_MSG = gettext("Weight value is missing for threats: {threat_list}.")
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "habitat_quality",
     "model_title": gettext("Habitat Quality"),
     "pyname": "natcap.invest.habitat_quality",
@@ -387,7 +387,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 # All out rasters besides rarity should be gte to 0. Set nodata accordingly.
 _OUT_NODATA = float(numpy.finfo(numpy.float32).min)
 # Scaling parameter from User's Guide eq. 4 for quality of habitat
@@ -457,11 +457,11 @@ def execute(args):
     LOGGER.info("Checking Threat and Sensitivity tables for compliance")
     # Get CSVs as dictionaries and ensure the key is a string for threats.
     threat_df = validation.get_validated_dataframe(
-        args['threats_table_path'], **MODEL_SPEC['args']['threats_table_path']
+        args['threats_table_path'], MODEL_SPEC.inputs.threats_table_path
     ).fillna('')
     sensitivity_df = validation.get_validated_dataframe(
         args['sensitivity_table_path'],
-        **MODEL_SPEC['args']['sensitivity_table_path'])
+        MODEL_SPEC.inputs.sensitivity_table_path)
 
     half_saturation_constant = float(args['half_saturation_constant'])
 
@@ -1175,7 +1175,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
     """
     validation_warnings = validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 
@@ -1185,10 +1185,10 @@ def validate(args, limit_to=None):
         # Get CSVs as dictionaries and ensure the key is a string for threats.
         threat_df = validation.get_validated_dataframe(
                 args['threats_table_path'],
-                **MODEL_SPEC['args']['threats_table_path']).fillna('')
+                MODEL_SPEC.inputs.threats_table_path).fillna('')
         sensitivity_df = validation.get_validated_dataframe(
             args['sensitivity_table_path'],
-            **MODEL_SPEC['args']['sensitivity_table_path'])
+            MODEL_SPEC.inputs.sensitivity_table_path)
 
         # check that the threat names in the threats table match with the
         # threats columns in the sensitivity table.

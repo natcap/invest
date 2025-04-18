@@ -23,7 +23,7 @@ LOGGER = logging.getLogger(__name__)
 
 MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "ndr",
     "model_title": gettext("Nutrient Delivery Ratio"),
     "pyname": "natcap.invest.ndr.ndr",
@@ -455,7 +455,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 _OUTPUT_BASE_FILES = {
     'n_surface_export_path': 'n_surface_export.tif',
@@ -605,7 +605,7 @@ def execute(args):
 
     biophysical_df = validation.get_validated_dataframe(
         args['biophysical_table_path'],
-        **MODEL_SPEC['args']['biophysical_table_path'])
+        MODEL_SPEC.inputs.biophysical_table_path)
 
     # Ensure that if user doesn't explicitly assign a value,
     # runoff_proxy_av = None
@@ -1268,7 +1268,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    spec_copy = copy.deepcopy(MODEL_SPEC['args'])
+    spec_copy = copy.deepcopy(MODEL_SPEC.inputs)
     # Check required fields given the state of ``calc_n`` and ``calc_p``
     nutrients_selected = []
     for nutrient_letter in ('n', 'p'):
@@ -1277,17 +1277,16 @@ def validate(args, limit_to=None):
 
     for param in ['load', 'eff', 'crit_len']:
         for nutrient in nutrients_selected:
-            spec_copy['biophysical_table_path']['columns'][f'{param}_{nutrient}'] = (
-                spec_copy['biophysical_table_path']['columns'][f'{param}_[NUTRIENT]'])
-            spec_copy['biophysical_table_path']['columns'][f'{param}_{nutrient}']['required'] = True
-        spec_copy['biophysical_table_path']['columns'].pop(f'{param}_[NUTRIENT]')
+            spec_copy.biophysical_table_path.columns[f'{param}_{nutrient}'] = (
+                spec_copy.biophysical_table_path.columns[f'{param}_[NUTRIENT]'])
+            spec_copy.biophysical_table_path.columns.[f'{param}_{nutrient}']['required'] = True
+        spec_copy.biophysical_table_path.columns.pop(f'{param}_[NUTRIENT]')
 
     if 'n' in nutrients_selected:
-        spec_copy['biophysical_table_path']['columns']['proportion_subsurface_n'][
-            'required'] = True
+        spec_copy.biophysical_table_path.columns.proportion_subsurface_n.required = True
 
     validation_warnings = validation.validate(
-        args, spec_copy, MODEL_SPEC['args_with_spatial_overlap'])
+        args, spec_copy, MODEL_SPEC.args_with_spatial_overlap)
 
     if not nutrients_selected:
         validation_warnings.append(

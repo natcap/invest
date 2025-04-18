@@ -28,6 +28,8 @@ from .unit_registry import u
 LOGGER = logging.getLogger(__name__)
 speedups.enable()
 
+
+
 INPUT_WIND_DATA_FIELDS = {
     "long": {
         "type": "number",
@@ -90,7 +92,7 @@ OUTPUT_WIND_DATA_FIELDS = {
     }
 }
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "wind_energy",
     "model_title": gettext("Wind Energy Production"),
     "pyname": "natcap.invest.wind_energy",
@@ -548,7 +550,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 
 # The _SCALE_KEY is used in getting the right wind energy arguments that are
@@ -718,12 +720,12 @@ def execute(args):
     # Read the biophysical turbine parameters into a dictionary
     turbine_dict = validation.get_validated_dataframe(
         args['turbine_parameters_path'],
-        **MODEL_SPEC['args']['turbine_parameters_path']
+        MODEL_SPEC.inputs.turbine_parameters_path
     ).iloc[0].to_dict()
     # Read the biophysical global parameters into a dictionary
     global_params_dict = validation.get_validated_dataframe(
         args['global_wind_parameters_path'],
-        **MODEL_SPEC['args']['global_wind_parameters_path']
+        MODEL_SPEC.inputs.global_wind_parameters_path
     ).iloc[0].to_dict()
 
     # Combine the turbine and global parameters into one dictionary
@@ -743,7 +745,7 @@ def execute(args):
         time = parameters_dict['time_period']
         if args['price_table']:
             wind_price_df = validation.get_validated_dataframe(
-                args['wind_schedule'], **MODEL_SPEC['args']['wind_schedule']
+                args['wind_schedule'], MODEL_SPEC.inputs.wind_schedule
             ).sort_index()  # sort by year
 
             year_count = len(wind_price_df)
@@ -1114,7 +1116,7 @@ def execute(args):
 
         # Read the grid points csv, and convert it to land and grid dictionary
         grid_land_df = validation.get_validated_dataframe(
-            args['grid_points_path'], **MODEL_SPEC['args']['grid_points_path'])
+            args['grid_points_path'], MODEL_SPEC.inputs.grid_points_path)
 
         # Convert the dataframes to dictionaries, using 'ID' (the index) as key
         grid_dict = grid_land_df[grid_land_df['type'] == 'grid'].to_dict('index')
@@ -1935,7 +1937,7 @@ def _compute_density_harvested_fields(
     # Read the wind energy data into a dictionary
     LOGGER.info('Reading in Wind Data into a dictionary')
     wind_point_df = validation.get_validated_dataframe(
-        wind_data_path, **MODEL_SPEC['args']['wind_data_path'])
+        wind_data_path, MODEL_SPEC.inputs.wind_data_path)
     wind_point_df.columns = wind_point_df.columns.str.upper()
     # Calculate scale value at new hub height given reference values.
     # See equation 3 in users guide
@@ -2664,8 +2666,8 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the str validation warning.
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC['args'],
-                               MODEL_SPEC['args_with_spatial_overlap'])
+    validation_warnings = validation.validate(args, MODEL_SPEC.inputs,
+                               MODEL_SPEC.args_with_spatial_overlap)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     sufficient_keys = validation.get_sufficient_keys(args)
     valid_sufficient_keys = sufficient_keys - invalid_keys

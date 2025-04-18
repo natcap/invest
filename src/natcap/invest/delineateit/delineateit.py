@@ -23,7 +23,7 @@ from . import delineateit_core
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "delineateit",
     "model_title": gettext("DelineateIt"),
     "pyname": "natcap.invest.delineateit.delineateit",
@@ -152,7 +152,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 _OUTPUT_FILES = {
     'preprocessed_geometries': 'preprocessed_geometries.gpkg',
@@ -831,4 +831,4 @@ def validate(args, limit_to=None):
 
     """
     return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)

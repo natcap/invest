@@ -30,7 +30,7 @@ DISTANCE_UPPER_BOUND = 500e3
 # helpful to have a global nodata defined for the whole model
 NODATA_VALUE = -1
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "forest_carbon_edge_effect",
     "model_title": gettext("Forest Carbon Edge Effect"),
     "pyname": "natcap.invest.forest_carbon_edge_effect",
@@ -268,7 +268,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 
 def execute(args):
@@ -427,7 +427,7 @@ def execute(args):
     carbon_maps = []
     biophysical_df = validation.get_validated_dataframe(
         args['biophysical_table_path'],
-        **MODEL_SPEC['args']['biophysical_table_path'])
+        MODEL_SPEC.inputs.biophysical_table_path)
     pool_list = [('c_above', True)]
     if args['pools_to_calculate'] == 'all':
         pool_list.extend([
@@ -645,7 +645,7 @@ def _calculate_lulc_carbon_map(
     """
     # classify forest pixels from lulc
     biophysical_df = validation.get_validated_dataframe(
-        biophysical_table_path, **MODEL_SPEC['args']['biophysical_table_path'])
+        biophysical_table_path, MODEL_SPEC.inputs.biophysical_table_path)
 
     lucode_to_per_cell_carbon = {}
 
@@ -705,7 +705,7 @@ def _map_distance_from_tropical_forest_edge(
     """
     # Build a list of forest lucodes
     biophysical_df = validation.get_validated_dataframe(
-        biophysical_table_path, **MODEL_SPEC['args']['biophysical_table_path'])
+        biophysical_table_path, MODEL_SPEC.inputs.biophysical_table_path)
     forest_codes = biophysical_df[biophysical_df['is_tropical_forest']].index.values
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
@@ -1034,7 +1034,7 @@ def validate(args, limit_to=None):
 
     """
     validation_warnings = validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)
 
     invalid_keys = set([])
     for affected_keys, error_msg in validation_warnings:

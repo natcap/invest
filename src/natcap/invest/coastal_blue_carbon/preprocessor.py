@@ -17,10 +17,7 @@ from . import coastal_blue_carbon
 
 LOGGER = logging.getLogger(__name__)
 
-BIOPHYSICAL_COLUMNS_SPEC = coastal_blue_carbon.MODEL_SPEC[
-    'args']['biophysical_table_path']['columns']
-
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "coastal_blue_carbon_preprocessor",
     "model_title": gettext("Coastal Blue Carbon Preprocessor"),
     "pyname": "natcap.invest.coastal_blue_carbon.preprocessor",
@@ -124,14 +121,14 @@ MODEL_SPEC = {
                 "create the biophysical table input to the main model."),
             "index_col": "lucode",
             "columns": {
-                **BIOPHYSICAL_COLUMNS_SPEC,
+                **coastal_blue_carbon.BIOPHYSICAL_TABLE_COLUMNS,
                 # remove "expression" property which doesn't go in output spec
                 "biomass-half-life": dict(
-                    set(BIOPHYSICAL_COLUMNS_SPEC["biomass-half-life"].items()) -
+                    set(coastal_blue_carbon.BIOPHYSICAL_TABLE_COLUMNS["biomass-half-life"].items()) -
                     {("expression", "value > 0")}
                 ),
                 "soil-half-life": dict(
-                    set(BIOPHYSICAL_COLUMNS_SPEC["soil-half-life"].items()) -
+                    set(coastal_blue_carbon.BIOPHYSICAL_TABLE_COLUMNS["soil-half-life"].items()) -
                     {("expression", "value > 0")}
                 )
             }
@@ -144,7 +141,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 
 ALIGNED_LULC_RASTER_TEMPLATE = 'aligned_lulc_{year}{suffix}.tif'
@@ -190,7 +187,7 @@ def execute(args):
 
     snapshots_dict = validation.get_validated_dataframe(
         args['landcover_snapshot_csv'],
-        **MODEL_SPEC['args']['landcover_snapshot_csv']
+        MODEL_SPEC.inputs.landcover_snapshot_csv
     )['raster_path'].to_dict()
 
     # Align the raster stack for analyzing the various transitions.
@@ -223,7 +220,7 @@ def execute(args):
 
     landcover_df = validation.get_validated_dataframe(
         args['lulc_lookup_table_path'],
-        **MODEL_SPEC['args']['lulc_lookup_table_path'])
+        MODEL_SPEC.inputs.lulc_lookup_table_path)
 
     target_transition_table = os.path.join(
         output_dir, TRANSITION_TABLE.format(suffix=suffix))
@@ -392,8 +389,8 @@ def _create_biophysical_table(landcover_df, target_biophysical_table_path):
         ``None``
     """
     target_column_names = [
-        colname.lower() for colname in coastal_blue_carbon.MODEL_SPEC['args'][
-            'biophysical_table_path']['columns']]
+        colname.lower() for colname in
+        coastal_blue_carbon.MODEL_SPEC.inputs.biophysical_table_path.columns.__dict__]
 
     with open(target_biophysical_table_path, 'w') as bio_table:
         bio_table.write(f"{','.join(target_column_names)}\n")
@@ -427,4 +424,4 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    return validation.validate(args, MODEL_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC.inputs)

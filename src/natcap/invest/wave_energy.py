@@ -130,7 +130,7 @@ CAPTURED_WEM_FIELDS = {
     }
 }
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "wave_energy",
     "model_title": gettext("Wave Energy Production"),
     "pyname": "natcap.invest.wave_energy",
@@ -590,7 +590,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 
 # Set nodata value and target_pixel_type for new rasters
@@ -768,7 +768,7 @@ def execute(args):
         # Create a grid_land_df dataframe for later use in valuation
         grid_land_df = validation.get_validated_dataframe(
             args['land_gridPts_path'],
-            **MODEL_SPEC['args']['land_gridPts_path'])
+            MODEL_SPEC.inputs.land_gridPts_path)
         missing_grid_land_fields = []
         for field in ['id', 'type', 'lat', 'long', 'location']:
             if field not in grid_land_df.columns:
@@ -2383,4 +2383,4 @@ def validate(args, limit_to=None):
             validation warning.
 
     """
-    return validation.validate(args, MODEL_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC.inputs)

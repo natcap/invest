@@ -22,7 +22,7 @@ from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "pollination",
     "model_title": gettext("Crop Pollination"),
     "pyname": "natcap.invest.pollination",
@@ -326,7 +326,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 _INDEX_NODATA = -1
 
@@ -1223,7 +1223,7 @@ def _parse_scenario_variables(args):
         farm_vector_path = None
 
     guild_df = validation.get_validated_dataframe(
-        guild_table_path, **MODEL_SPEC['args']['guild_table_path'])
+        guild_table_path, MODEL_SPEC.inputs.guild_table_path)
 
     LOGGER.info('Checking to make sure guild table has all expected headers')
     for header in _EXPECTED_GUILD_HEADERS:
@@ -1236,7 +1236,7 @@ def _parse_scenario_variables(args):
 
     landcover_biophysical_df = validation.get_validated_dataframe(
         landcover_biophysical_table_path,
-        **MODEL_SPEC['args']['landcover_biophysical_table_path'])
+        MODEL_SPEC.inputs.landcover_biophysical_table_path)
     biophysical_table_headers = landcover_biophysical_df.columns
     for header in _EXPECTED_BIOPHYSICAL_HEADERS:
         matches = re.findall(header, " ".join(biophysical_table_headers))
@@ -1500,4 +1500,4 @@ def validate(args, limit_to=None):
     # Deliberately not validating the interrelationship of the columns between
     # the biophysical table and the guilds table as the model itself already
     # does extensive checking for this.
-    return validation.validate(args, MODEL_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC.inputs)

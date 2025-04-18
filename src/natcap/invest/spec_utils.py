@@ -1,3 +1,4 @@
+import dataclasses
 import importlib
 import json
 import logging
@@ -15,6 +16,375 @@ from .unit_registry import u
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+@dataclasses.dataclass(kw_only=True)
+class VectorFields:
+    pass
+
+@dataclasses.dataclass(kw_only=True)
+class InputSpec:
+    name: str
+    about: str
+    required: bool | str
+    allowed: bool | str
+
+@dataclasses.dataclass(kw_only=True)
+class OutputSpec:
+    about: str
+    created_if: bool | str
+
+@dataclasses.dataclass(kw_only=True)
+class FileInputSpec(InputSpec):
+    permissions: str = 'r'
+
+@dataclasses.dataclass(kw_only=True)
+class SingleBandRasterInputSpec(FileInputSpec):
+    band: InputSpec
+    projected: bool
+    projection_units: pint.Unit
+
+@dataclasses.dataclass(kw_only=True)
+class VectorInputSpec(FileInputSpec):
+    geometries: set
+    fields: types.SimpleNamespace
+    projected: bool
+    projection_units: pint.Unit
+
+@dataclasses.dataclass(kw_only=True)
+class RasterOrVectorInputSpec(FileInputSpec):
+    band: InputSpec
+    geometries: set
+    fields: types.SimpleNamespace
+    projected: bool
+    projection_units: pint.Unit
+
+@dataclasses.dataclass(kw_only=True)
+class CSVInputSpec(FileInputSpec):
+    columns: types.SimpleNamespace
+    rows: types.SimpleNamespace
+    index_col: str
+
+@dataclasses.dataclass(kw_only=True)
+class DirectoryInputSpec(InputSpec):
+    contents: types.SimpleNamespace
+    permissions: str
+    must_exist: bool
+
+@dataclasses.dataclass(kw_only=True)
+class NumberInputSpec(InputSpec):
+    units: pint.Unit
+    expression: str
+
+@dataclasses.dataclass(kw_only=True)
+class IntegerInputSpec(InputSpec):
+    pass
+
+@dataclasses.dataclass(kw_only=True)
+class RatioInputSpec(InputSpec):
+    pass
+
+@dataclasses.dataclass(kw_only=True)
+class PercentInputSpec(InputSpec):
+    pass
+
+@dataclasses.dataclass(kw_only=True)
+class BooleanInputSpec(InputSpec):
+    pass
+
+@dataclasses.dataclass(kw_only=True)
+class StringInputSpec(InputSpec):
+    regexp: str
+
+@dataclasses.dataclass(kw_only=True)
+class OptionStringInputSpec(InputSpec):
+    options: list
+
+@dataclasses.dataclass(kw_only=True)
+class SingleBandRasterOutputSpec(OutputSpec):
+    band: InputSpec
+    projected: bool
+    projection_units: pint.Unit
+
+@dataclasses.dataclass(kw_only=True)
+class VectorOutputSpec(OutputSpec):
+    geometries: set
+    fields: types.SimpleNamespace
+    projected: bool
+    projection_units: pint.Unit
+
+@dataclasses.dataclass(kw_only=True)
+class CSVOutputSpec(OutputSpec):
+    columns: types.SimpleNamespace
+    rows: types.SimpleNamespace
+    index_col: str
+
+@dataclasses.dataclass(kw_only=True)
+class DirectoryOutputSpec(OutputSpec):
+    contents: types.SimpleNamespace
+    permissions: str
+    must_exist: bool
+
+@dataclasses.dataclass(kw_only=True)
+class FileOutputSpec(OutputSpec):
+    pass
+
+@dataclasses.dataclass(kw_only=True)
+class NumberOutputSpec(OutputSpec):
+    units: pint.Unit
+    expression: str
+
+@dataclasses.dataclass(kw_only=True)
+class IntegerOutputSpec(OutputSpec):
+    pass
+
+@dataclasses.dataclass(kw_only=True)
+class RatioOutputSpec(OutputSpec):
+    pass
+
+@dataclasses.dataclass(kw_only=True)
+class PercentOutputSpec(OutputSpec):
+    pass
+
+@dataclasses.dataclass(kw_only=True)
+class StringOutputSpec(OutputSpec):
+    regexp: str
+
+@dataclasses.dataclass(kw_only=True)
+class OptionStringOutputSpec(OutputSpec):
+    options: list
+
+@dataclasses.dataclass(kw_only=True)
+class UISpec:
+    order: list
+    hidden: list
+    dropdown_functions: dict
+
+@dataclasses.dataclass(kw_only=True)
+class ModelSpec:
+    model_id: str
+    model_title: str
+    userguide: str
+    aliases: set
+    ui_spec: UISpec
+    inputs: set
+    outputs: set
+    args_with_spatial_overlap: list
+
+
+def build_model_spec(model_spec):
+    inputs = types.SimpleNamespace({
+        argkey: build_input_spec(argspec) for argkey, argspec in model_spec['args'].items()
+    })
+    outputs = types.SimpleNamespace({
+        argkey: build_output_spec(argspec, argkey) for argkey, argspec in model_spec['outputs'].items()
+    })
+    ui_spec = UISpec(
+        order=model_spec['ui_spec']['order'],
+        hidden=model_spec['ui_spec']['hidden'],
+        dropdown_functions=model_spec['ui_spec'].get('dropdown_functions', None))
+    return ModelSpec(
+        model_id=model_spec['model_id'],
+        model_title=model_spec['model_title'],
+        userguide=model_spec['userguide'],
+        aliases=model_spec['aliases'],
+        ui_spec=ui_spec,
+        inputs=inputs,
+        outputs=outputs,
+        args_with_spatial_overlap=model_spec.get('args_with_spatial_overlap', None))
+
+
+def build_input_spec(arg):
+    base_attrs = {
+        'name': arg.get('name', None),
+        'about': arg.get('about', None),
+        'required': arg.get('required', True),
+        'allowed': arg.get('allowed', True)
+    }
+
+    t = arg['type']
+
+    if t == 'option_string':
+        return OptionStringInputSpec(
+            **base_attrs,
+            options=arg['options'])
+
+    elif t == 'freestyle_string':
+        return StringInputSpec(
+            **base_attrs,
+            regexp=arg.get('regexp', None))
+
+    elif t == 'number':
+        return NumberInputSpec(
+            **base_attrs,
+            units=arg['units'],
+            expression=arg.get('expression', None))
+
+    elif t == 'integer':
+        return IntegerInputSpec(**base_attrs)
+
+    elif t == 'ratio':
+        return RatioInputSpec(**base_attrs)
+
+    elif t == 'percent':
+        return PercentInputSpec(**base_attrs)
+
+    elif t == 'boolean':
+        return BooleanInputSpec(**base_attrs)
+
+    elif t == 'raster':
+        return SingleBandRasterInputSpec(
+            **base_attrs,
+            band=build_input_spec(arg['bands'][1]),
+            projected=arg.get('projected', None),
+            projection_units=arg.get('projection_units', None))
+
+    elif t == 'vector':
+        return VectorInputSpec(
+            **base_attrs,
+            geometries=arg['geometries'],
+            fields=types.SimpleNamespace({
+                key: build_input_spec(field_spec) for key, field_spec in arg['fields'].items()
+            }),
+            projected=arg.get('projected', None),
+            projection_units=arg.get('projection_units', None))
+
+    elif t == 'csv':
+        columns = None
+        rows = None
+        if 'columns' in arg:
+            columns = types.SimpleNamespace()
+            for col_name, col_spec in arg['columns'].items():
+                setattr(columns, col_name, build_input_spec(col_spec))
+        elif 'rows' in arg:
+            rows = types.SimpleNamespace()
+            for row_name, row_spec in arg['rows'].items():
+                setattr(rows, row_name, build_input_spec(row_spec))
+
+        return CSVInputSpec(
+            **base_attrs,
+            columns=columns,
+            rows=rows,
+            index_col=arg.get('index_col', None))
+
+    elif t == 'directory':
+        return DirectoryInputSpec(
+            contents=types.SimpleNamespace({
+                k: build_input_spec(v) for k, v in arg['contents'].items()
+            }),
+            permissions=arg.get('permissions', None),
+            must_exist=arg.get('must_exist', None),
+            **base_attrs)
+
+    elif t == 'file':
+        return FileInputSpec(**base_attrs)
+
+    elif t == {'raster', 'vector'}:
+        return RasterOrVectorInputSpec(
+            **base_attrs,
+            geometries=arg['geometries'],
+            fields=types.SimpleNamespace({
+                key: build_input_spec(field_spec) for key, field_spec in arg['fields'].items()
+            }),
+            band=build_input_spec(arg['bands'][1]),
+            projected=arg.get('projected', None),
+            projection_units=arg.get('projection_units', None))
+
+    else:
+        raise ValueError
+
+
+def build_output_spec(spec, key=None):
+    base_attrs = {
+        'about': spec.get('about', None),
+        'created_if': spec.get('created_if', None)
+    }
+
+    if 'type' in spec:
+        t = spec['type']
+    else:
+        file_extension = key.split('.')[-1]
+        if file_extension == 'tif':
+            t = 'raster'
+        elif file_extension in {'shp', 'gpkg', 'geojson'}:
+            t = 'vector'
+        elif file_extension == 'csv':
+            t = 'csv'
+        elif file_extension in {'json', 'txt', 'pickle', 'db', 'zip',
+                                'dat', 'idx', 'html'}:
+            t = 'file'
+        else:
+            raise Warning(
+                f'output {key} has no recognized file extension and '
+                'no "type" property')
+
+    if t == 'number':
+        return NumberOutputSpec(
+            **base_attrs,
+            units=spec['units'],
+            expression=None)
+
+    elif t == 'integer':
+        return IntegerOutputSpec(**base_attrs)
+
+    elif t == 'ratio':
+        return RatioOutputSpec(**base_attrs)
+
+    elif t == 'percent':
+        return PercentOutputSpec(**base_attrs)
+
+    elif t == 'raster':
+        return SingleBandRasterOutputSpec(
+            **base_attrs,
+            band=build_output_spec(spec['bands'][1]),
+            projected=None,
+            projection_units=None)
+
+    elif t == 'vector':
+        return VectorOutputSpec(
+            **base_attrs,
+            geometries=spec['geometries'],
+            fields=types.SimpleNamespace({
+                key: build_output_spec(field_spec) for key, field_spec in spec['fields'].items()
+            }),
+            projected=None,
+            projection_units=None)
+
+    elif t == 'csv':
+        columns = types.SimpleNamespace()
+        for col_name, col_spec in spec['columns'].items():
+            setattr(columns, col_name, build_output_spec(col_spec))
+        return CSVOutputSpec(
+            **base_attrs,
+            columns=columns,
+            rows=None,
+            index_col=spec.get('index_col', None))
+
+    elif t == 'directory':
+        return DirectoryOutputSpec(
+            contents=types.SimpleNamespace({
+                k: build_output_spec(v, k) for k, v in spec['contents'].items()
+            }),
+            permissions=None,
+            must_exist=None,
+            **base_attrs)
+
+    elif t == 'freestyle_string':
+        return StringOutputSpec(
+            **base_attrs,
+            regexp=spec.get('regexp', None))
+
+    elif t == 'option_string':
+        return OptionStringOutputSpec(
+            **base_attrs,
+            options=spec['options'])
+
+    elif t == 'file':
+        return FileOutputSpec(**base_attrs)
+
+    else:
+        raise ValueError()
+
 
 # Specs for common arg types ##################################################
 WORKSPACE = {

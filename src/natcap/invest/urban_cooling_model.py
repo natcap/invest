@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
 _LOGGING_PERIOD = 5
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "urban_cooling_model",
     "model_title": gettext("Urban Cooling"),
     "pyname": "natcap.invest.urban_cooling_model",
@@ -410,7 +410,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 
 def execute(args):
@@ -477,7 +477,7 @@ def execute(args):
     utils.make_directories([args['workspace_dir'], intermediate_dir])
     biophysical_df = validation.get_validated_dataframe(
         args['biophysical_table_path'],
-        **MODEL_SPEC['args']['biophysical_table_path'])
+        MODEL_SPEC.inputs.biophysical_table_path)
 
     # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide
@@ -1162,7 +1162,7 @@ def calculate_energy_savings(
 
     energy_consumption_df = validation.get_validated_dataframe(
         energy_consumption_table_path,
-        **MODEL_SPEC['args']['energy_consumption_table_path'])
+        MODEL_SPEC.inputs.energy_consumption_table_path)
 
     target_building_layer.StartTransaction()
     last_time = time.time()
@@ -1537,7 +1537,7 @@ def validate(args, limit_to=None):
 
     """
     validation_warnings = validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC.args, MODEL_SPEC.args_with_spatial_overlap)
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     if ('biophysical_table_path' not in invalid_keys and

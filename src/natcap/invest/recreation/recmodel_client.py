@@ -99,7 +99,7 @@ predictor_table_columns = {
 }
 
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "recreation",
     "model_title": gettext("Visitation: Recreation and Tourism"),
     "pyname": "natcap.invest.recreation.recmodel_client",
@@ -414,7 +414,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 
 # Have 5 seconds between timed progress outputs
@@ -612,7 +612,7 @@ def execute(args):
             intermediate_dir, 'predictor_estimates.json')
         predictor_df = validation.get_validated_dataframe(
             args['predictor_table_path'],
-            **MODEL_SPEC['args']['predictor_table_path'])
+            MODEL_SPEC.inputs.predictor_table_path)
         predictor_id_list = predictor_df.index
         compute_regression_task = task_graph.add_task(
             func=_compute_and_summarize_regression,
@@ -998,7 +998,7 @@ def _schedule_predictor_data_processing(
     }
 
     predictor_df = validation.get_validated_dataframe(
-        predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
+        predictor_table_path, MODEL_SPEC.inputs.predictor_table_path)
     predictor_task_list = []
     predictor_json_list = []  # tracks predictor files to add to gpkg
 
@@ -1767,7 +1767,7 @@ def _validate_same_id_lengths(table_path):
 
     """
     predictor_df = validation.get_validated_dataframe(
-        table_path, **MODEL_SPEC['args']['predictor_table_path'])
+        table_path, MODEL_SPEC.inputs.predictor_table_path)
     too_long = set()
     for p_id in predictor_df.index:
         if len(p_id) > 10:
@@ -1796,11 +1796,11 @@ def _validate_same_ids_and_types(
         between tables.
     """
     predictor_df = validation.get_validated_dataframe(
-        predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
+        predictor_table_path, MODEL_SPEC.inputs.predictor_table_path)
 
     scenario_predictor_df = validation.get_validated_dataframe(
         scenario_predictor_table_path,
-        **MODEL_SPEC['args']['scenario_predictor_table_path'])
+        MODEL_SPEC.inputs.scenario_predictor_table_path)
 
     predictor_pairs = set([
         (p_id, row['type']) for p_id, row in predictor_df.iterrows()])
@@ -1826,7 +1826,7 @@ def _validate_same_projection(base_vector_path, table_path):
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
     data_paths = validation.get_validated_dataframe(
-        table_path, **MODEL_SPEC['args']['predictor_table_path']
+        table_path, MODEL_SPEC.inputs.predictor_table_path
     )['path'].tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
@@ -1869,7 +1869,7 @@ def _validate_predictor_types(table_path):
         valid type, ignoring leading/trailing whitespace.
     """
     df = validation.get_validated_dataframe(
-        table_path, **MODEL_SPEC['args']['predictor_table_path'])
+        table_path, MODEL_SPEC.inputs.predictor_table_path)
     # ignore leading/trailing whitespace because it will be removed
     # when the type values are used
     valid_types = set({'raster_mean', 'raster_sum', 'point_count',
@@ -1928,7 +1928,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_messages = validation.validate(args, MODEL_SPEC['args'])
+    validation_messages = validation.validate(args, MODEL_SPEC.inputs)
     sufficient_valid_keys = (validation.get_sufficient_keys(args) -
                              validation.get_invalid_keys(validation_messages))
 

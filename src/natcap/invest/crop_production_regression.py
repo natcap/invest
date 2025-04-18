@@ -66,7 +66,7 @@ NUTRIENTS = [
     ("vitk", "vitamin K", u.microgram/u.hectogram)
 ]
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "crop_production_regression",
     "model_title": gettext("Crop Production: Regression"),
     "pyname": "natcap.invest.crop_production_regression",
@@ -332,7 +332,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 _INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
 
@@ -506,11 +506,11 @@ def execute(args):
         "Checking if the landcover raster is missing lucodes")
     crop_to_landcover_df = validation.get_validated_dataframe(
         args['landcover_to_crop_table_path'],
-        **MODEL_SPEC['args']['landcover_to_crop_table_path'])
+        MODEL_SPEC.inputs.landcover_to_crop_table_path)
 
     crop_to_fertilization_rate_df = validation.get_validated_dataframe(
         args['fertilization_rate_table_path'],
-        **MODEL_SPEC['args']['fertilization_rate_table_path'])
+        MODEL_SPEC.inputs.fertilization_rate_table_path)
 
     crop_lucodes = list(crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER])
 
@@ -588,7 +588,7 @@ def execute(args):
         crop_regression_df = validation.get_validated_dataframe(
             os.path.join(args['model_data_path'],
                          _REGRESSION_TABLE_PATTERN % crop_name),
-            **MODEL_SPEC['args']['model_data_path']['contents'][
+            MODEL_SPEC.inputs.model_data_path['contents'][
                 'climate_regression_yield_tables']['contents'][
                 '[CROP]_regression_yield_table.csv'])
         for _, row in crop_regression_df.iterrows():
@@ -811,7 +811,7 @@ def execute(args):
     # this model data.
     nutrient_df = validation.get_validated_dataframe(
         os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
-        **MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv'])
+        MODEL_SPEC.inputs.model_data_path['contents']['crop_nutrient.csv'])
 
     LOGGER.info("Generating report table")
     crop_names = list(crop_to_landcover_df.index)
@@ -1175,4 +1175,4 @@ def validate(args, limit_to=None):
 
     """
     return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)

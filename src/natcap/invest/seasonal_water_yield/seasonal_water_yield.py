@@ -28,7 +28,7 @@ MONTH_ID_TO_LABEL = [
     'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct',
     'nov', 'dec']
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "seasonal_water_yield",
     "model_title": gettext("Seasonal Water Yield"),
     "pyname": "natcap.invest.seasonal_water_yield.seasonal_water_yield",
@@ -509,7 +509,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 
 _OUTPUT_BASE_FILES = {
@@ -628,17 +628,17 @@ def execute(args):
             not args['user_defined_climate_zones']):
         rain_events_df = validation.get_validated_dataframe(
             args['rain_events_table_path'],
-            **MODEL_SPEC['args']['rain_events_table_path'])
+            MODEL_SPEC.inputs.rain_events_table_path)
 
     biophysical_df = validation.get_validated_dataframe(
         args['biophysical_table_path'],
-        **MODEL_SPEC['args']['biophysical_table_path'])
+        MODEL_SPEC.inputs.biophysical_table_path)
 
     if args['monthly_alpha']:
         # parse out the alpha lookup table of the form (month_id: alpha_val)
         alpha_month_map = validation.get_validated_dataframe(
             args['monthly_alpha_path'],
-            **MODEL_SPEC['args']['monthly_alpha_path']
+            MODEL_SPEC.inputs.monthly_alpha_path
         )['alpha'].to_dict()
     else:
         # make all 12 entries equal to args['alpha_m']
@@ -818,7 +818,7 @@ def execute(args):
             if args['user_defined_climate_zones']:
                 cz_rain_events_df = validation.get_validated_dataframe(
                     args['climate_zone_table_path'],
-                    **MODEL_SPEC['args']['climate_zone_table_path'])
+                    MODEL_SPEC.inputs.climate_zone_table_path)
                 climate_zone_rain_events_month = (
                     cz_rain_events_df[MONTH_ID_TO_LABEL[month_id]].to_dict())
                 n_events_task = task_graph.add_task(
@@ -1486,5 +1486,5 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(args, MODEL_SPEC['args'],
-                               MODEL_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC.inputs,
+                               MODEL_SPEC.args_with_spatial_overlap)

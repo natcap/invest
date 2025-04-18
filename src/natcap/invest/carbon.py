@@ -38,7 +38,7 @@ CARBON_OUTPUTS = {
     ]
 }
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "carbon",
     "model_title": gettext("Carbon Storage and Sequestration"),
     "pyname": "natcap.invest.carbon",
@@ -229,7 +229,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 _OUTPUT_BASE_FILES = {
     'c_storage_bas': 'c_storage_bas.tif',
@@ -323,7 +323,7 @@ def execute(args):
         )
 
     carbon_pool_df = validation.get_validated_dataframe(
-        args['carbon_pools_path'], **MODEL_SPEC['args']['carbon_pools_path'])
+        args['carbon_pools_path'], MODEL_SPEC.inputs.carbon_pools_path)
 
     try:
         n_workers = int(args['n_workers'])
@@ -695,4 +695,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
     """
     return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)

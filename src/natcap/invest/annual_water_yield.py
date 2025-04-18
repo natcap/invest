@@ -104,7 +104,7 @@ WATERSHED_OUTPUT_FIELDS = {
     **VALUATION_OUTPUT_FIELDS
 }
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "annual_water_yield",
     "model_title": gettext("Annual Water Yield"),
     "pyname": "natcap.invest.annual_water_yield",
@@ -447,7 +447,7 @@ MODEL_SPEC = {
         },
         "taskgraph_dir": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 
 def execute(args):
@@ -538,7 +538,7 @@ def execute(args):
         # Open/read in valuation parameters from CSV file
         valuation_df = validation.get_validated_dataframe(
             args['valuation_table_path'],
-            **MODEL_SPEC['args']['valuation_table_path'])
+            MODEL_SPEC.inputs.valuation_table_path)
         watershed_vector = gdal.OpenEx(
             args['watersheds_path'], gdal.OF_VECTOR)
         watershed_layer = watershed_vector.GetLayer()
@@ -661,14 +661,14 @@ def execute(args):
 
     # Open/read in the csv file into a dictionary and add to arguments
     bio_df = validation.get_validated_dataframe(args['biophysical_table_path'],
-                                         **MODEL_SPEC['args']['biophysical_table_path'])
+                                         MODEL_SPEC.inputs.biophysical_table_path)
     bio_lucodes = set(bio_df.index.values)
     bio_lucodes.add(nodata_dict['lulc'])
     LOGGER.debug(f'bio_lucodes: {bio_lucodes}')
 
     if 'demand_table_path' in args and args['demand_table_path'] != '':
         demand_df = validation.get_validated_dataframe(
-            args['demand_table_path'], **MODEL_SPEC['args']['demand_table_path'])
+            args['demand_table_path'], MODEL_SPEC.inputs.demand_table_path)
         demand_reclassify_dict = dict(
             [(lucode, row['demand']) for lucode, row in demand_df.iterrows()])
         demand_lucodes = set(demand_df.index.values)
@@ -1325,4 +1325,4 @@ def validate(args, limit_to=None):
 
     """
     return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)

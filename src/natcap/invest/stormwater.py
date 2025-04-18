@@ -25,7 +25,7 @@ UINT8_NODATA = 255
 UINT16_NODATA = 65535
 NONINTEGER_SOILS_RASTER_MESSAGE = 'Soil group raster data type must be integer'
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "stormwater",
     "model_title": gettext("Urban Stormwater Retention"),
     "pyname": "natcap.invest.stormwater",
@@ -382,7 +382,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 INTERMEDIATE_OUTPUTS = {
     'lulc_aligned_path': 'lulc_aligned.tif',
@@ -499,7 +499,7 @@ def execute(args):
     # sort by the LULC codes upfront because we use the sorted list in multiple
     # places. it's more efficient to do this once.
     biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table'], **MODEL_SPEC['args']['biophysical_table']
+        args['biophysical_table'], MODEL_SPEC.inputs.biophysical_table
     ).sort_index()
     sorted_lucodes = biophysical_df.index.to_list()
 
@@ -1189,8 +1189,8 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC['args'],
-                               MODEL_SPEC['args_with_spatial_overlap'])
+    validation_warnings = validation.validate(args, MODEL_SPEC.inputs,
+                               MODEL_SPEC.args_with_spatial_overlap)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     if 'soil_group_path' not in invalid_keys:
         # check that soil group raster has integer type

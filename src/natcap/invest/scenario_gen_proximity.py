@@ -28,7 +28,7 @@ MISSING_CONVERT_OPTION_MSG = gettext(
     'One or more of "convert_nearest_to_edge" or "convert_farthest_from_edge" '
     'must be selected')
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "scenario_generator_proximity",
     "model_title": gettext("Scenario Generator: Proximity Based"),
     "pyname": "natcap.invest.scenario_gen_proximity",
@@ -201,7 +201,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 
 # This sets the largest number of elements that will be packed at once and
@@ -917,7 +917,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC['args'])
+    validation_warnings = validation.validate(args, MODEL_SPEC.inputs)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 
     if ('convert_nearest_to_edge' not in invalid_keys and

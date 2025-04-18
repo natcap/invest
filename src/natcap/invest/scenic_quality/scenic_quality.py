@@ -46,7 +46,7 @@ _INTERMEDIATE_BASE_FILES = {
     'value_pattern': 'value_{id}.tif',
 }
 
-MODEL_SPEC = {
+MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "scenic_quality",
     "model_title": gettext("Scenic Quality"),
     "pyname": "natcap.invest.scenic_quality.scenic_quality",
@@ -227,7 +227,7 @@ MODEL_SPEC = {
         },
         "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
-}
+})
 
 
 def execute(args):
@@ -1122,4 +1122,4 @@ def validate(args, limit_to=None):
 
     """
     return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)
