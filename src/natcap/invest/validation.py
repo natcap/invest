@@ -805,8 +805,16 @@ def check_spatial_overlap(spatial_filepaths_list,
             return MESSAGES['NO_PROJECTION'].format(filepath=filepath)
 
         if different_projections_ok:
-            bounding_box = pygeoprocessing.transform_bounding_box(
-                info['bounding_box'], info['projection_wkt'], wgs84_wkt)
+            try:
+                bounding_box = pygeoprocessing.transform_bounding_box(
+                    info['bounding_box'], info['projection_wkt'], wgs84_wkt)
+            except (ValueError, RuntimeError) as err:
+                LOGGER.debug(err)
+                LOGGER.warning(
+                    f'Skipping spatial overlap check for {filepath} '
+                    'Bounding box cannot be transformed to EPSG:4326')
+                continue
+
         else:
             bounding_box = info['bounding_box']
 
