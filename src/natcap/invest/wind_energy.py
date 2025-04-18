@@ -93,7 +93,6 @@ OUTPUT_WIND_DATA_FIELDS = {
 MODEL_SPEC = {
     "model_id": "wind_energy",
     "model_title": gettext("Wind Energy Production"),
-    "pyname": "natcap.invest.wind_energy",
     "userguide": "wind_energy.html",
     "aliases": (),
     "ui_spec": {

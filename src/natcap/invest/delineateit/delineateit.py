@@ -26,7 +26,6 @@ LOGGER = logging.getLogger(__name__)
 MODEL_SPEC = {
     "model_id": "delineateit",
     "model_title": gettext("DelineateIt"),
-    "pyname": "natcap.invest.delineateit.delineateit",
     "userguide": "delineateit.html",
     "aliases": (),
     "ui_spec": {

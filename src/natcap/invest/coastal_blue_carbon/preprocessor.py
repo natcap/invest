@@ -23,7 +23,6 @@ BIOPHYSICAL_COLUMNS_SPEC = coastal_blue_carbon.MODEL_SPEC[
 MODEL_SPEC = {
     "model_id": "coastal_blue_carbon_preprocessor",
     "model_title": gettext("Coastal Blue Carbon Preprocessor"),
-    "pyname": "natcap.invest.coastal_blue_carbon.preprocessor",
     "userguide": "coastal_blue_carbon.html",
     "aliases": ("cbc_pre",),
     "ui_spec": {

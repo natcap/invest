@@ -31,7 +31,6 @@ MONTH_ID_TO_LABEL = [
 MODEL_SPEC = {
     "model_id": "seasonal_water_yield",
     "model_title": gettext("Seasonal Water Yield"),
-    "pyname": "natcap.invest.seasonal_water_yield.seasonal_water_yield",
     "userguide": "seasonal_water_yield.html",
     "aliases": ("swy",),
     "ui_spec": {

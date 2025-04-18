@@ -67,7 +67,7 @@ describe('requests to flask endpoints', () => {
 
   test('fetch invest model args spec', async () => {
     const spec = await serverRequests.getSpec('carbon');
-    const expectedKeys = ['model_id', 'model_title', 'pyname', 'userguide', 'args'];
+    const expectedKeys = ['model_id', 'model_title', 'userguide', 'args'];
     expectedKeys.forEach((key) => {
       expect(spec[key]).toBeDefined();
     });
