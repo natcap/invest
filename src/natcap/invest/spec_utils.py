@@ -23,12 +23,15 @@ class IterableWithDotAccess():
         self.inputs_dict = {i.id: i for i in args}
         self.iter_index = 0
 
-    def __getattr__(self, key):
-        return self.inputs_dict.get(key)
+    # def __getattr__(self, key):
+    #     return self.inputs_dict.get(key)
 
     def __iter__(self):
         print('iter')
         return iter(self.args)
+
+    def get(self, key):
+        return self.inputs_dict[key]
 
     # def __next__(self):
     #     print('next')
@@ -112,7 +115,7 @@ class DirectoryInputSpec(InputSpec):
 
 @dataclasses.dataclass(kw_only=True)
 class NumberInputSpec(InputSpec):
-    units: pint.Unit
+    units: pint.Unit | None = None
     expression: str | None = None
 
 @dataclasses.dataclass(kw_only=True)
@@ -133,7 +136,7 @@ class BooleanInputSpec(InputSpec):
 
 @dataclasses.dataclass(kw_only=True)
 class StringInputSpec(InputSpec):
-    regexp: str
+    regexp: str | None = None
 
 @dataclasses.dataclass(kw_only=True)
 class OptionStringInputSpec(InputSpec):

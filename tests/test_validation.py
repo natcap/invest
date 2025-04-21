@@ -31,10 +31,14 @@ from natcap.invest.spec_utils import (
     FileInputSpec,
     CSVInputSpec,
     StringInputSpec,
+    OptionStringInputSpec,
     SingleBandRasterInputSpec,
+    RasterOrVectorInputSpec,
     DirectoryInputSpec,
     VectorInputSpec,
+    BooleanInputSpec,
     NumberInputSpec,
+    IntegerInputSpec,
     RatioInputSpec,
     PercentInputSpec,
     OtherInputSpec)
@@ -273,11 +277,12 @@ class ValidatorTest(unittest.TestCase):
         from natcap.invest import spec_utils
         from natcap.invest import validation
 
-        input_spec = spec_utils.ModelInputs([spec_utils.N_WORKERS])
+        args_spec = model_spec_with_defaults(inputs=ModelInputs(
+            spec_utils.N_WORKERS))
 
         @validation.invest_validator
         def validate(args, limit_to=None):
-            return validation.validate(args, input_spec)
+            return validation.validate(args, args_spec)
 
         args = {'n_workers': 'not a number'}
         validation_errors = validate(args)
@@ -354,9 +359,8 @@ class DirectoryValidation(unittest.TestCase):
     def test_valid_permissions(self):
         """Validation: folder permissions."""
         from natcap.invest import validation
-        spec = DirectoryInputSpec(permissions='rwx')
         self.assertEqual(None, validation.check_directory(
-            self.workspace_dir, spec))
+            self.workspace_dir, permissions='rwx'))
 
     def test_workspace_not_exists(self):
         """Validation: when a folder's parent must exist with permissions."""
@@ -364,8 +368,7 @@ class DirectoryValidation(unittest.TestCase):
 
         dirpath = 'foo'
         new_dir = os.path.join(self.workspace_dir, dirpath)
-        spec = DirectoryInputSpec(must_exist=False, permissions='rwx')
-        self.assertEqual(None, validation.check_directory(new_dir, spec))
+        self.assertEqual(None, validation.check_directory(new_dir, must_exist=False, permissions='rwx'))
 
 
 @unittest.skipIf(
@@ -629,7 +632,8 @@ class VectorValidation(unittest.TestCase):
 
         error_msg = validation.check_vector(
             filepath, geometries={'POINT'},
-            fields={'col_a': {}, 'col_b': {}, 'col_c': {}})
+            fields=Fields(InputSpec(id='col_a'),
+                InputSpec(id='col_b'), InputSpec(id='col_c')))
         expected = validation.MESSAGES['MATCHED_NO_HEADERS'].format(
             header='field', header_name='col_c')
         self.assertEqual(error_msg, expected)
@@ -849,8 +853,8 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file)
 
         self.assertEqual(None, validation.check_csv(
-            target_file, columns={
-                'foo': {'type': 'integer'}, 'bar': {'type': 'integer'}}))
+            target_file, columns=Columns(
+                IntegerInputSpec(id='foo'), IntegerInputSpec(id='bar'))))
 
     def test_csv_bom_fieldnames(self):
         """Validation: test that we can check fieldnames in a CSV with BOM."""
@@ -865,8 +869,8 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file, encoding='utf-8-sig')
 
         self.assertEqual(None, validation.check_csv(
-            target_file, columns={
-                'foo': {'type': 'integer'}, 'bar': {'type': 'integer'}}))
+            target_file, columns=Columns(
+                IntegerInputSpec(id='foo'), IntegerInputSpec(id='bar'))))
 
     def test_csv_missing_fieldnames(self):
         """Validation: test that we can check missing fieldnames in a CSV."""
@@ -881,7 +885,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file)
 
         error_msg = validation.check_csv(
-            target_file, columns={'field_a': {}})
+            target_file, columns=Columns(InputSpec(id='field_a')))
         expected_msg = validation.MESSAGES['MATCHED_NO_HEADERS'].format(
             header='column', header_name='field_a')
         self.assertEqual(error_msg, expected_msg)
@@ -910,14 +914,8 @@ class CSVValidation(unittest.TestCase):
         with open(path, 'w') as file:
             file.write('1,2,3')
 
-        spec = {
-            "mock_csv_path": {
-                "type": "csv",
-                "required": True,
-                "about": "A CSV that will be mocked.",
-                "name": "CSV"
-            }
-        }
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            CSVInputSpec(id="mock_csv_path")))
 
         # validate a mocked CSV that will take 6 seconds to return a value
         args = {"mock_csv_path": path}
@@ -930,7 +928,7 @@ class CSVValidation(unittest.TestCase):
 
         # make a copy of the real _VALIDATION_FUNCS and override the CSV function
         mock_validation_funcs = validation._VALIDATION_FUNCS.copy()
-        mock_validation_funcs['csv'] = functools.partial(
+        mock_validation_funcs[CSVInputSpec] = functools.partial(
             validation.timeout, delay)
 
         # replace the validation.check_csv with the mock function, and try to validate
@@ -940,7 +938,7 @@ class CSVValidation(unittest.TestCase):
                 # cause all warnings to always be triggered
                 warnings.simplefilter("always")
                 validation.validate(args, spec)
-                self.assertTrue(len(ws) == 1)
+                self.assertEqual(len(ws), 1)
                 self.assertTrue('timed out' in str(ws[0].message))
 
     def test_check_headers(self):
@@ -997,7 +995,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         df = validation.get_validated_dataframe(
             csv_file,
-            columns={'header': {'type': 'freestyle_string'}})
+            columns=Columns(StringInputSpec(id='header')))
         # header and table values should be lowercased
         self.assertEqual(df.columns[0], 'header')
         self.assertEqual(df['header'][0], 'a')
@@ -1018,12 +1016,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
         df = validation.get_validated_dataframe(
             table_path,
             index_col='lucode',
-            columns={
-                    'desc': {'type': 'freestyle_string'},
-                    'lucode': {'type': 'integer'},
-                    'val1': {'type': 'number'},
-                    'val2': {'type': 'number'}
-            })
+            columns=Columns(
+                StringInputSpec(id='desc'),
+                IntegerInputSpec(id='lucode'),
+                NumberInputSpec(id='val1'),
+                NumberInputSpec(id='val2')
+            ))
         self.assertEqual(df.index.name, 'lucode')
         self.assertEqual(list(df.index.values), [1, 2, 3, 4])
         self.assertEqual(df['desc'][2], 'bread')
@@ -1044,12 +1042,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
             validation.get_validated_dataframe(
                 table_path,
                 index_col='lucode',
-                columns={
-                    'desc': {'type': 'freestyle_string'},
-                    'lucode': {'type': 'integer'},
-                    'val1': {'type': 'number'},
-                    'val2': {'type': 'number'}
-                })
+                columns=Columns(
+                    StringInputSpec(id='desc'),
+                    IntegerInputSpec(id='lucode'),
+                    NumberInputSpec(id='val1'),
+                    NumberInputSpec(id='val2')
+                ))
 
     def test_missing_key_field(self):
         """validation: test error is raised when missing key field."""
@@ -1067,12 +1065,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
             validation.get_validated_dataframe(
                 table_path,
                 index_col='lucode',
-                columns={
-                    'desc': {'type': 'freestyle_string'},
-                    'lucode': {'type': 'integer'},
-                    'val1': {'type': 'number'},
-                    'val2': {'type': 'number'}
-                })
+                columns=Columns(
+                    StringInputSpec(id='desc'),
+                    IntegerInputSpec(id='lucode'),
+                    NumberInputSpec(id='val1'),
+                    NumberInputSpec(id='val2')
+                ))
 
     def test_column_subset(self):
         """validation: test column subset is properly returned."""
@@ -1087,11 +1085,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 "4,butter,9,1")
         df = validation.get_validated_dataframe(
             table_path,
-            columns={
-                'lucode': {'type': 'integer'},
-                'val1': {'type': 'number'},
-                'val2': {'type': 'number'}
-            })
+            columns=Columns(
+                IntegerInputSpec(id='lucode'),
+                NumberInputSpec(id='val1'),
+                NumberInputSpec(id='val2')
+            ))
         self.assertEqual(list(df.columns), ['lucode', 'val1', 'val2'])
 
     def test_column_pattern_matching(self):
@@ -1107,10 +1105,10 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 "4,9,1")
         df = validation.get_validated_dataframe(
             table_path,
-            columns={
-                'lucode': {'type': 'integer'},
-                '[HABITAT]_value': {'type': 'number'}
-            })
+            columns=Columns(
+                IntegerInputSpec(id='lucode'),
+                NumberInputSpec(id='[HABITAT]_value')
+            ))
         self.assertEqual(
             list(df.columns), ['lucode', 'grassland_value', 'forest_value'])
 
@@ -1127,12 +1125,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 "4,butter,9,1")
         result = validation.get_validated_dataframe(
             table_path,
-            columns={
-                'desc': {'type': 'freestyle_string'},
-                'lucode': {'type': 'integer'},
-                'val1': {'type': 'number'},
-                'val2': {'type': 'number'}
-            })
+            columns=Columns(
+                StringInputSpec(id='desc'),
+                IntegerInputSpec(id='lucode'),
+                NumberInputSpec(id='val1'),
+                NumberInputSpec(id='val2')
+            ))
         self.assertEqual(result['val2'][0], 2)
         self.assertEqual(result['lucode'][1], 2)
 
@@ -1151,12 +1149,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
         result = validation.get_validated_dataframe(
             table_path,
             index_col='lucode',
-            columns={
-                'desc': {'type': 'freestyle_string'},
-                'lucode': {'type': 'integer'},
-                'val1': {'type': 'number'},
-                'val2': {'type': 'number'}
-            }).to_dict(orient='index')
+            columns=Columns(
+                StringInputSpec(id='desc'),
+                IntegerInputSpec(id='lucode'),
+                NumberInputSpec(id='val1'),
+                NumberInputSpec(id='val2')
+            )).to_dict(orient='index')
 
         expected_result = {
             1: {'desc': 'corn', 'val1': 0.5, 'val2': 2},
@@ -1182,7 +1180,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         df = validation.get_validated_dataframe(
             csv_file,
-            columns={'header': {'type': 'freestyle_string'}})
+            columns=Columns(StringInputSpec(id='header')))
         self.assertEqual(df['header'][0], 'a')
 
     def test_convert_vals_to_lower(self):
@@ -1200,7 +1198,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 """
             ))
         df = validation.get_validated_dataframe(
-            csv_file, columns={'header': {'type': 'freestyle_string'}})
+            csv_file, columns=Columns(StringInputSpec(id='header')))
         self.assertEqual(df.columns[0], 'header')
 
     def test_integer_type_columns(self):
@@ -1218,9 +1216,9 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         df = validation.get_validated_dataframe(
             csv_file,
-            columns={
-                'id': {'type': 'integer'},
-                'header': {'type': 'integer'}})
+            columns=Columns(
+                IntegerInputSpec(id='id'),
+                IntegerInputSpec(id='header')))
         self.assertIsInstance(df['header'][0], numpy.int64)
         self.assertIsInstance(df['header'][1], numpy.int64)
         # empty values are returned as pandas.NA
@@ -1240,11 +1238,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         df = validation.get_validated_dataframe(
             csv_file,
-            columns={
-                'h1': {'type': 'number'},
-                'h2': {'type': 'ratio'},
-                'h3': {'type': 'percent'},
-            })
+            columns=Columns(
+                NumberInputSpec(id='h1'),
+                RatioInputSpec(id='h2'),
+                PercentInputSpec(id='h3')
+            ))
         self.assertEqual(df['h1'].dtype, float)
         self.assertEqual(df['h2'].dtype, float)
         self.assertEqual(df['h3'].dtype, float)
@@ -1265,11 +1263,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         df = validation.get_validated_dataframe(
             csv_file,
-            columns={
-                'h1': {'type': 'freestyle_string'},
-                'h2': {'type': 'option_string', 'options': ['a', 'b']},
-                'h3': {'type': 'freestyle_string'},
-            })
+            columns=Columns(
+                StringInputSpec(id='h1'),
+                OptionStringInputSpec(id='h2', options=['a', 'b']),
+                StringInputSpec(id='h3')
+            ))
         self.assertEqual(df['h1'][0], '1')
         self.assertEqual(df['h2'][1], 'b')
         # empty values are returned as NA
@@ -1290,9 +1288,9 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         df = validation.get_validated_dataframe(
             csv_file,
-            columns={
-                'index': {'type': 'freestyle_string'},
-                'h1': {'type': 'boolean'}})
+            columns=Columns(
+                StringInputSpec(id='index'),
+                BooleanInputSpec(id='h1')))
         self.assertEqual(df['h1'][0], True)
         self.assertEqual(df['h1'][1], False)
         # empty values are returned as pandas.NA
@@ -1318,10 +1316,10 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         df = validation.get_validated_dataframe(
             csv_file,
-            columns={
-                'bar': {'type': 'integer'},
-                'path': {'type': 'file'}
-            })
+            columns=Columns(
+                IntegerInputSpec(id='bar'),
+                FileInputSpec(id='path')
+            ))
         self.assertEqual(
             f'{self.workspace_dir}{os.sep}foo.txt',
             df['path'][0])
@@ -1352,10 +1350,10 @@ class TestGetValidatedDataframe(unittest.TestCase):
         # it should infer what the separator is
         df = validation.get_validated_dataframe(
             csv_file,
-            columns={
-                'h1': {'type': 'freestyle_string'},
-                'h2': {'type': 'freestyle_string'},
-                'h3': {'type': 'freestyle_string'}},
+            columns=Columns(
+                StringInputSpec(id='h1'),
+                StringInputSpec(id='h2'),
+                StringInputSpec(id='h3')),
             read_csv_kwargs={'converters': {'h2': lambda val: f'foo_{val}'}})
 
         self.assertEqual(df.columns[0], 'h1')
@@ -1382,11 +1380,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         df = validation.get_validated_dataframe(
             csv_file,
-            columns={
-                '1': {'type': 'freestyle_string'},
-                '2': {'type': 'freestyle_string'},
-                '3': {'type': 'freestyle_string'}
-            })
+            columns=Columns(
+                StringInputSpec(id='1'),
+                StringInputSpec(id='2'),
+                StringInputSpec(id='3')
+            ))
         # expect headers to be strings
         self.assertEqual(df.columns[0], '1')
         self.assertEqual(df['1'][0], 'a')
@@ -1403,11 +1401,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write(" , 2 1 ,  ")
         df = validation.get_validated_dataframe(
             csv_file,
-            columns={
-                'col1': {'type': 'freestyle_string'},
-                'col2': {'type': 'freestyle_string'},
-                'col3': {'type': 'freestyle_string'}
-            })
+            columns=Columns(
+                StringInputSpec(id='col1'),
+                StringInputSpec(id='col2'),
+                StringInputSpec(id='col3')
+            ))
         # header should have no leading / trailing whitespace
         self.assertEqual(list(df.columns), ['col1', 'col2', 'col3'])
 
@@ -1434,12 +1432,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
         result = validation.get_validated_dataframe(
             table_path,
             index_col='lucode',
-            columns={
-                'desc': {'type': 'freestyle_string'},
-                'lucode': {'type': 'integer'},
-                'val1': {'type': 'number'},
-                'val2': {'type': 'number'}
-            }).to_dict(orient='index')
+            columns=Columns(
+                StringInputSpec(id='desc'),
+                IntegerInputSpec(id='lucode'),
+                NumberInputSpec(id='val1'),
+                NumberInputSpec(id='val2')
+            )).to_dict(orient='index')
         expected_result = {
             1: {'desc': 'corn', 'val1': 0.5, 'val2': 2},
             3: {'desc': 'beans', 'val1': 0.5, 'val2': 4},
@@ -1458,10 +1456,10 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write("row2,1,3\n")
         df = validation.get_validated_dataframe(
             csv_file,
-            rows={
-                'row1': {'type': 'freestyle_string'},
-                'row2': {'type': 'number'},
-            })
+            rows=Rows(
+                StringInputSpec(id='row1'),
+                NumberInputSpec(id='row2'),
+            ))
         # header should have no leading / trailing whitespace
         self.assertEqual(list(df.columns), ['row1', 'row2'])
 
@@ -1485,10 +1483,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             validation.get_validated_dataframe(
                 csv_path,
-                columns={
-                    'col1': {'type': 'number'},
-                    'col2': {'type': 'raster'}
-                })
+                columns=Columns(
+                    NumberInputSpec(id='col1'),
+                    SingleBandRasterInputSpec(id='col2', band=NumberInputSpec())
+                )
+            )
         self.assertIn('File not found', str(cm.exception))
 
     def test_csv_raster_validation_not_projected(self):
@@ -1511,10 +1510,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             validation.get_validated_dataframe(
                 csv_path,
-                columns={
-                    'col1': {'type': 'number'},
-                    'col2': {'type': 'raster', 'projected': True}
-                })
+                columns=Columns(
+                    NumberInputSpec(id='col1'),
+                    SingleBandRasterInputSpec(
+                        id='col2', projected=True, band=NumberInputSpec())
+                )
+            )
         self.assertIn('must be projected', str(cm.exception))
 
     def test_csv_vector_validation_missing_field(self):
@@ -1541,17 +1542,18 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             validation.get_validated_dataframe(
                 csv_path,
-                columns={
-                    'col1': {'type': 'number'},
-                    'col2': {
-                        'type': 'vector',
-                        'fields': {
-                            'a': {'type': 'integer'},
-                            'b': {'type': 'integer'}
-                        },
-                        'geometries': ['POINT']
-                    }
-                })
+                columns=Columns(
+                    NumberInputSpec(id='col1'),
+                    VectorInputSpec(
+                        id='col2',
+                        fields=Fields(
+                            IntegerInputSpec(id='a'),
+                            IntegerInputSpec(id='b')
+                        ),
+                        geometries=['POINT']
+                    )
+                )
+            )
         self.assertIn(
             'Expected the field "a" but did not find it',
             str(cm.exception))
@@ -1578,14 +1580,16 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             validation.get_validated_dataframe(
                 csv_path,
-                columns={
-                    'col1': {'type': 'number'},
-                    'col2': {
-                        'type': {'raster', 'vector'},
-                        'fields': {},
-                        'geometries': ['POLYGON']
-                    }
-                })
+                columns=Columns(
+                    NumberInputSpec(id='col1'),
+                    RasterOrVectorInputSpec(
+                        id='col2',
+                        band=NumberInputSpec(),
+                        fields={},
+                        geometries=['POLYGON']
+                    )
+                )
+            )
         self.assertIn(
             "Geometry type must be one of ['POLYGON']",
             str(cm.exception))
@@ -1606,44 +1610,14 @@ class TestValidationFromSpec(unittest.TestCase):
         """Validation: check that conditional requirements works."""
         from natcap.invest import validation
 
-        spec = {
-            "number_a": {
-                "name": "The first parameter",
-                "about": "About the first parameter",
-                "type": "number",
-                "required": True,
-            },
-            "number_b": {
-                "name": "The second parameter",
-                "about": "About the second parameter",
-                "type": "number",
-                "required": False,
-            },
-            "number_c": {
-                "name": "The third parameter",
-                "about": "About the third parameter",
-                "type": "number",
-                "required": "number_b",
-            },
-            "number_d": {
-                "name": "The fourth parameter",
-                "about": "About the fourth parameter",
-                "type": "number",
-                "required": "number_b | number_c",
-            },
-            "number_e": {
-                "name": "The fifth parameter",
-                "about": "About the fifth parameter",
-                "type": "number",
-                "required": "number_b & number_d"
-            },
-            "number_f": {
-                "name": "The sixth parameter",
-                "about": "About the sixth parameter",
-                "type": "number",
-                "required": "not number_b"
-            }
-        }
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            NumberInputSpec(id="number_a"),
+            NumberInputSpec(id="number_b", required=False),
+            NumberInputSpec(id="number_c", required="number_b"),
+            NumberInputSpec(id="number_d", required="number_b | number_c"),
+            NumberInputSpec(id="number_e", required="number_b & number_d"),
+            NumberInputSpec(id="number_f", required="not number_b")
+        ))
 
         args = {
             "number_a": 123,
@@ -1675,26 +1649,11 @@ class TestValidationFromSpec(unittest.TestCase):
         """Validation: check AssertionError if expression is missing a var."""
         from natcap.invest import validation
 
-        spec = {
-            "number_a": {
-                "name": "The first parameter",
-                "about": "About the first parameter",
-                "type": "number",
-                "required": True,
-            },
-            "number_b": {
-                "name": "The second parameter",
-                "about": "About the second parameter",
-                "type": "number",
-                "required": False,
-            },
-            "number_c": {
-                "name": "The third parameter",
-                "about": "About the third parameter",
-                "type": "number",
-                "required": "some_var_not_in_args",
-            }
-        }
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            NumberInputSpec(id="number_a"),
+            NumberInputSpec(id="number_b", required=False),
+            NumberInputSpec(id="number_c", required="some_var_not_in_args")
+        ))
 
         args = {
             "number_a": 123,
@@ -1716,26 +1675,11 @@ class TestValidationFromSpec(unittest.TestCase):
         with open(csv_b_path, 'w') as csv:
             csv.write('1,2,3')
 
-        spec = {
-            "condition": {
-                "name": "A condition that determines requirements",
-                "about": "About the condition",
-                "type": "boolean",
-                "required": False,
-            },
-            "csv_a": {
-                "name": "Conditionally required CSV A",
-                "about": "About CSV A",
-                "type": "csv",
-                "required": "condition",
-            },
-            "csv_b": {
-                "name": "Conditonally required CSV B",
-                "about": "About CSV B",
-                "type": "csv",
-                "required": "not condition",
-            }
-        }
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            BooleanInputSpec(id="condition", required=False),
+            CSVInputSpec(id="csv_a", required="condition"),
+            CSVInputSpec(id="csv_b", required="not condition")
+        ))
 
         args = {
             "condition": True,
@@ -1749,15 +1693,9 @@ class TestValidationFromSpec(unittest.TestCase):
     def test_requirement_missing(self):
         """Validation: verify absolute requirement on missing key."""
         from natcap.invest import validation
-        spec = {
-            "number_a": {
-                "name": "The first parameter",
-                "about": "About the first parameter",
-                "type": "number",
-                "required": True,
-            }
-        }
-
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            NumberInputSpec(id="number_a", units=u.none)
+        ))
         args = {}
         self.assertEqual(
             [(['number_a'], validation.MESSAGES['MISSING_KEY'])],
@@ -1822,7 +1760,7 @@ class TestValidationFromSpec(unittest.TestCase):
 
         self.assertEqual(
             [(['string_a'], validation.MESSAGES['INVALID_OPTION'].format(
-                option_list=spec['string_a']['options']))],
+                option_list=spec.inputs.get('string_a').options))],
             validation.validate(args, spec))
 
     def test_conditionally_required_vector_fields(self):
@@ -2007,7 +1945,7 @@ class TestValidationFromSpec(unittest.TestCase):
         """Validation: Verify error when an unexpected exception occurs."""
         from natcap.invest import validation
         spec = model_spec_with_defaults(inputs=ModelInputs(
-            number_input_spec_with_defaults(id="number_a")
+            NumberInputSpec(id="number_a")
         ))
         args = {'number_a': 1}
         try:
@@ -2104,6 +2042,7 @@ class TestValidationFromSpec(unittest.TestCase):
 
         del args[previous_key]  # delete the last addition to the dict.
 
+        spec = model_spec_with_defaults(inputs=ModelInputs(*specs))
         self.assertEqual(
             [(['arg_J'], validation.MESSAGES['MISSING_KEY'])],
             validation.validate(args, spec))
@@ -2230,7 +2169,8 @@ class TestValidationFromSpec(unittest.TestCase):
                 ),
                 SingleBandRasterInputSpec(
                     id='raster_b',
-                    band=NumberInputSpec(units=u.none)
+                    band=NumberInputSpec(units=u.none),
+                    required=False
                 ),
                 VectorInputSpec(
                     id='vector_a',
@@ -2264,6 +2204,7 @@ class TestValidationFromSpec(unittest.TestCase):
         validation_warnings = validation.validate(
             args, spec, {'spatial_keys': [i.id for i in spec.inputs],
                          'different_projections_ok': True})
+        print(validation_warnings)
         self.assertEqual(len(validation_warnings), 0)
 
         # And even though there are three spatial keys in the spec,
@@ -2287,7 +2228,8 @@ class TestValidationFromSpec(unittest.TestCase):
         from natcap.invest import validation
 
         args = {'a': 'a', 'b': 'b'}
-        spec = StringInputSpec(id='a')
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            StringInputSpec(id='a')))
         message = 'DEBUG:natcap.invest.validation:Provided key b does not exist in MODEL_SPEC'
 
         with self.assertLogs('natcap.invest.validation', level='DEBUG') as cm:
@@ -2305,7 +2247,8 @@ class TestValidationFromSpec(unittest.TestCase):
             'e': '0.5',  # middle
             'f': '1'     # upper bound
         }
-        spec = {name: {'type': 'ratio'} for name in args}
+        spec = model_spec_with_defaults(inputs=ModelInputs(
+            *(RatioInputSpec(id=name) for name in args)))
 
         expected_warnings = [
             (['a'], validation.MESSAGES['NOT_A_NUMBER'].format(value=args['a'])),

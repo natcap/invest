@@ -158,18 +158,22 @@ def get_sufficient_keys(args):
     return sufficient_keys
 
 
-def check_directory(dirpath, spec):
+def check_directory(dirpath, must_exist=True, permissions='rx', **kwargs):
     """Validate a directory.
 
     Args:
         dirpath (string): The directory path to validate.
-        spec (DirectoryInputSpec):
+        must_exist=True (bool): If ``True``, the directory at ``dirpath``
+            must already exist on the filesystem.
+        permissions='rx' (string): A string that includes the lowercase
+            characters ``r``, ``w`` and/or ``x``, indicating read, write, and
+            execute permissions (respectively) required for this directory.
+
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
 
     """
-    print('check directory', dirpath)
-    if spec.must_exist:
+    if must_exist:
         if not os.path.exists(dirpath):
             return MESSAGES['DIR_NOT_FOUND']
 
@@ -190,7 +194,7 @@ def check_directory(dirpath, spec):
 
     MESSAGE_KEY = 'NEED_PERMISSION_DIRECTORY'
 
-    if 'r' in spec.permissions:
+    if 'r' in permissions:
         try:
             os.scandir(dirpath).close()
         except OSError:
@@ -198,7 +202,7 @@ def check_directory(dirpath, spec):
 
     # Check for x access before checking for w,
     # since w operations to a dir are dependent on x access
-    if 'x' in spec.permissions:
+    if 'x' in permissions:
         try:
             cwd = os.getcwd()
             os.chdir(dirpath)
@@ -207,7 +211,7 @@ def check_directory(dirpath, spec):
         finally:
             os.chdir(cwd)
 
-    if 'w' in spec.permissions:
+    if 'w' in permissions:
         try:
             temp_path = os.path.join(dirpath, 'temp__workspace_validation.txt')
             with open(temp_path, 'w') as temp:
@@ -217,12 +221,14 @@ def check_directory(dirpath, spec):
             return MESSAGES[MESSAGE_KEY].format(permission='write')
 
 
-def check_file(filepath, spec):
+def check_file(filepath, permissions='r', **kwargs):
     """Validate a single file.
 
     Args:
         filepath (string): The filepath to validate.
-        spec (FileInputSpec):
+        permissions='r' (string): A string that includes the lowercase
+            characters ``r``, ``w`` and/or ``x``, indicating read, write, and
+            execute permissions (respectively) required for this file.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -235,7 +241,7 @@ def check_file(filepath, spec):
             ('r', os.R_OK, 'read'),
             ('w', os.W_OK, 'write'),
             ('x', os.X_OK, 'execute')):
-        if letter in spec.permissions and not os.access(filepath, mode):
+        if letter in permissions and not os.access(filepath, mode):
             return MESSAGES['NEED_PERMISSION_FILE'].format(permission=descriptor)
 
 
@@ -279,19 +285,22 @@ def _check_projection(srs, projected, projection_units):
     return None
 
 
-def check_raster(filepath, spec):
+def check_raster(filepath, projected=False, projection_units=None, **kwargs):
     """Validate a GDAL Raster on disk.
 
     Args:
         filepath (string): The path to the raster on disk.  The file must exist
             and be readable.
-        spec (SingleBandRasterInputSpec):
+        projected=False (bool): Whether the spatial reference must be projected
+            in linear units.
+        projection_units=None (pint.Units): The required linear units of the
+            projection. If ``None``, the projection units will not be checked.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
 
     """
-    file_warning = check_file(filepath, spec)
+    file_warning = check_file(filepath, permissions='r')
     if file_warning:
         return file_warning
 
@@ -305,7 +314,7 @@ def check_raster(filepath, spec):
         return MESSAGES['OVR_FILE']
 
     srs = gdal_dataset.GetSpatialRef()
-    projection_warning = _check_projection(srs, spec.projected, spec.projection_units)
+    projection_warning = _check_projection(srs, projected, projection_units)
     if projection_warning:
         gdal_dataset = None
         return projection_warning
@@ -336,7 +345,8 @@ def load_fields_from_vector(filepath, layer_id=0):
     return fieldnames
 
 
-def check_vector(filepath, spec):
+def check_vector(filepath, geometries, fields=None, projected=False,
+                 projection_units=None, **kwargs):
     """Validate a GDAL vector on disk.
 
     Note:
@@ -346,7 +356,6 @@ def check_vector(filepath, spec):
     Args:
         filepath (string): The path to the vector on disk.  The file must exist
             and be readable.
-        spec (VectorInputSpec):
         geometries (set): Set of geometry type(s) that are allowed. Options are
             'POINT', 'LINESTRING', 'POLYGON', 'MULTIPOINT', 'MULTILINESTRING',
             and 'MULTIPOLYGON'.
@@ -362,7 +371,7 @@ def check_vector(filepath, spec):
         A string error message if an error was found.  ``None`` otherwise.
 
     """
-    file_warning = check_file(filepath, spec)
+    file_warning = check_file(filepath, permissions='r')
     if file_warning:
         return file_warning
 
@@ -388,7 +397,7 @@ def check_vector(filepath, spec):
     }
 
     allowed_geom_types = []
-    for geom in spec.geometries:
+    for geom in geometries:
         allowed_geom_types += geom_map[geom]
 
     # NOTE: this only checks the layer geometry type, not the types of the
@@ -398,10 +407,10 @@ def check_vector(filepath, spec):
     # Currently not supporting ogr.wkbUnknown which allows mixed types.
     layer = gdal_dataset.GetLayer()
     if layer.GetGeomType() not in allowed_geom_types:
-        return MESSAGES['WRONG_GEOM_TYPE'].format(allowed=spec.geometries)
+        return MESSAGES['WRONG_GEOM_TYPE'].format(allowed=geometries)
 
-    if spec.fields:
-        field_patterns = get_headers_to_validate(spec.fields)
+    if fields:
+        field_patterns = get_headers_to_validate(fields)
         fieldnames = [defn.GetName() for defn in layer.schema]
         required_field_warning = check_headers(
             field_patterns, fieldnames, 'field')
@@ -409,16 +418,17 @@ def check_vector(filepath, spec):
             return required_field_warning
 
     srs = layer.GetSpatialRef()
-    projection_warning = _check_projection(srs, spec.projected, spec.projection_units)
+    projection_warning = _check_projection(srs, projected, projection_units)
     return projection_warning
 
 
-def check_raster_or_vector(filepath, spec):
+def check_raster_or_vector(filepath, **kwargs):
     """Validate an input that may be a raster or vector.
 
     Args:
         filepath (string):  The path to the raster or vector.
-        spec (RasterOrVectorInputSpec):
+        **kwargs: kwargs of the raster and vector spec. Will be
+            passed to ``check_raster`` or ``check_vector``.
 
     Returns:
         A string error message if an error was found. ``None`` otherwise.
@@ -428,36 +438,36 @@ def check_raster_or_vector(filepath, spec):
     except ValueError as err:
         return str(err)
     if gis_type == pygeoprocessing.RASTER_TYPE:
-        return check_raster(filepath, spec)
+        return check_raster(filepath, **kwargs)
     else:
-        return check_vector(filepath, spec)
+        return check_vector(filepath, **kwargs)
 
 
-def check_freestyle_string(value, spec):
+def check_freestyle_string(value, regexp=None, **kwargs):
     """Validate an arbitrary string.
 
     Args:
         value: The value to check.  Must be able to be cast to a string.
-        spec (StringInputSpec):
+        regexp=None (string): a string interpreted as a regular expression.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
 
     """
-    if spec.regexp:
-        matches = re.fullmatch(spec.regexp, str(value))
+    if regexp:
+        matches = re.fullmatch(regexp, str(value))
         if not matches:
-            return MESSAGES['REGEXP_MISMATCH'].format(regexp=spec.regexp)
+            return MESSAGES['REGEXP_MISMATCH'].format(regexp=regexp)
     return None
 
 
-def check_option_string(value, spec):
+def check_option_string(value, options, **kwargs):
     """Validate that a string is in a set of options.
 
     Args:
         value: The value to test. Will be cast to a string before comparing
             against the allowed options.
-        spec (OptionStringInputSpec):
+        options (dict): option spec to validate against.
 
     Returns:
         A string error message if ``value`` is not in ``options``.  ``None``
@@ -466,16 +476,20 @@ def check_option_string(value, spec):
     """
     # if options is empty, that means it's dynamically populated
     # so validation should be left to the model's validate function.
-    if spec.options and str(value) not in spec.options:
-        return MESSAGES['INVALID_OPTION'].format(option_list=sorted(spec.options))
+    if options and str(value) not in options:
+        return MESSAGES['INVALID_OPTION'].format(option_list=sorted(options))
 
 
-def check_number(value, spec):
+def check_number(value, expression=None, **kwargs):
     """Validate numbers.
 
     Args:
         value: A python value. This should be able to be cast to a float.
-        spec (NumberInputSpec):
+        expression=None (string): A string expression to be evaluated with the
+            intent of determining that the value is within a specific range.
+            The expression must contain the string ``value``, which will
+            represent the user-provided value (after it has been cast to a
+            float).  Example expression: ``"(value >= 0) & (value <= 1)"``.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -486,29 +500,28 @@ def check_number(value, spec):
     except (TypeError, ValueError):
         return MESSAGES['NOT_A_NUMBER'].format(value=value)
 
-    if spec.expression:
+    if expression:
         # Check to make sure that 'value' is in the expression.
-        if 'value' not in spec.expression:
+        if 'value' not in expression:
             raise AssertionError(
                 'The variable name value is not found in the '
-                f'expression: {spec.expression}')
+                f'expression: {expression}')
 
         # Expression is assumed to return a boolean, something like
         # "value > 0" or "(value >= 0) & (value < 1)".  An exception will
         # be raised if asteval can't evaluate the expression.
-        result = _evaluate_expression(spec.expression, {'value': float(value)})
+        result = _evaluate_expression(expression, {'value': float(value)})
         if not result:  # A python bool object is returned.
-            return MESSAGES['INVALID_VALUE'].format(condition=spec.expression)
+            return MESSAGES['INVALID_VALUE'].format(condition=expression)
 
     return None
 
 
-def check_ratio(value, spec):
+def check_ratio(value, **kwargs):
     """Validate a ratio (a proportion expressed as a value from 0 to 1).
 
     Args:
         value: A python value. This should be able to be cast to a float.
-        spec (RatioInputSpec):
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -527,12 +540,11 @@ def check_ratio(value, spec):
     return None
 
 
-def check_percent(value, spec):
+def check_percent(value, **kwargs):
     """Validate a percent (a proportion expressed as a value from 0 to 100).
 
     Args:
         value: A python value. This should be able to be cast to a float.
-        spec (PercentInputSpec):
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -551,15 +563,15 @@ def check_percent(value, spec):
     return None
 
 
-def check_integer(value, spec):
+def check_integer(value, **kwargs):
     """Validate an integer.
 
     Args:
         value: A python value. This should be able to be cast to an int.
-        spec (IntegerInputSpec):
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
+
     """
     try:
         # must first cast to float, to handle both string and float inputs
@@ -571,15 +583,15 @@ def check_integer(value, spec):
     return None
 
 
-def check_boolean(value, spec):
+def check_boolean(value, **kwargs):
     """Validate a boolean value.
 
     If the value provided is not a python boolean, an error message is
     returned.
 
+
     Args:
         value: The value to evaluate.
-        spec (BooleanInputSpec):
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
@@ -589,35 +601,35 @@ def check_boolean(value, spec):
         return MESSAGES['NOT_BOOLEAN'].format(value=value)
 
 
-def get_validated_dataframe(csv_path, spec, read_csv_kwargs={}, **kwargs):
+def get_validated_dataframe(
+        csv_path, columns=None, rows=None, index_col=None,
+        read_csv_kwargs={}, **kwargs):
     """Read a CSV into a dataframe that is guaranteed to match the spec."""
 
-    if not (spec.columns or spec.rows):
+    if not (columns or rows):
         raise ValueError('One of columns or rows must be provided')
 
     # build up a list of regex patterns to match columns against columns from
     # the table that match a pattern in this list (after stripping whitespace
     # and lowercasing) will be included in the dataframe
-    axis = 'column' if spec.columns else 'row'
+    axis = 'column' if columns else 'row'
 
-    if spec.rows:
+    if rows:
         read_csv_kwargs = read_csv_kwargs.copy()
         read_csv_kwargs['header'] = None
 
     df = utils.read_csv_to_dataframe(csv_path, **read_csv_kwargs)
 
-    if spec.rows:
+    if rows:
         # swap rows and column
         df = df.set_index(df.columns[0]).rename_axis(
             None, axis=0).T.reset_index(drop=True)
 
-    columns = spec.columns if spec.columns else spec.rows
-
-    print(spec)
+    columns = columns if columns else rows
 
     patterns = []
-    for column in columns.__dict__.keys():
-        column = column.lower()
+    for column in columns:
+        column = column.id.lower()
         match = re.match(r'(.*)\[(.+)\](.*)', column)
         if match:
             # for column name patterns, convert it to a regex pattern
@@ -636,13 +648,12 @@ def get_validated_dataframe(csv_path, spec, read_csv_kwargs={}, **kwargs):
 
     available_cols = set(df.columns)
 
-    for (col_name, col_spec), pattern in zip(columns.__dict__.items(), patterns):
-        print(col_name, col_spec, pattern)
+    for col_spec, pattern in zip(columns, patterns):
         matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
-        if col_spec.required and '[' not in col_name and not matching_cols:
+        if col_spec.required and '[' not in col_spec.id and not matching_cols:
             raise ValueError(MESSAGES['MATCHED_NO_HEADERS'].format(
                 header=axis,
-                header_name=col_name))
+                header_name=col_spec.id))
         available_cols -= set(matching_cols)
         for col in matching_cols:
             try:
@@ -676,7 +687,7 @@ def get_validated_dataframe(csv_path, spec, read_csv_kwargs={}, **kwargs):
                 def check_value(value):
                     if pandas.isna(value):
                         return
-                    err_msg = _VALIDATION_FUNCS[type(col_spec)](value, col_spec)
+                    err_msg = _VALIDATION_FUNCS[type(col_spec)](value, **col_spec.__dict__)
                     if err_msg:
                         raise ValueError(
                             f'Error in {axis} "{col}", value "{value}": {err_msg}')
@@ -690,8 +701,8 @@ def get_validated_dataframe(csv_path, spec, read_csv_kwargs={}, **kwargs):
             number=count)
 
     # set the index column, if specified
-    if spec.index_col is not None:
-        index_col = spec.index_col.lower()
+    if index_col is not None:
+        index_col = index_col.lower()
         try:
             df = df.set_index(index_col, verify_integrity=True)
         except KeyError:
@@ -704,7 +715,7 @@ def get_validated_dataframe(csv_path, spec, read_csv_kwargs={}, **kwargs):
     return df
 
 
-def check_csv(filepath, spec):
+def check_csv(filepath, columns=None, rows=None, **kwargs):
     """Validate a table.
 
     Args:
@@ -714,12 +725,12 @@ def check_csv(filepath, spec):
         A string error message if an error was found. ``None`` otherwise.
 
     """
-    file_warning = check_file(filepath, spec)
+    file_warning = check_file(filepath, permissions='r')
     if file_warning:
         return file_warning
-    if spec.columns or spec.rows:
+    if columns or rows:
         try:
-            get_validated_dataframe(filepath, spec)
+            get_validated_dataframe(filepath, columns=columns, rows=rows, **kwargs)
         except Exception as e:
             return str(e)
 
@@ -882,7 +893,7 @@ def get_headers_to_validate(specs):
     headers = []
     for spec in specs:
         # if 'required' isn't a key, it defaults to True
-        if spec.required:
+        if spec.required is True:
             # brackets are a special character for our args spec syntax
             # they surround the part of the key that's user-defined
             # user-defined rows/columns/fields are not validated here, so skip
@@ -896,18 +907,18 @@ def get_headers_to_validate(specs):
 # set a timeout for these functions.
 _VALIDATION_FUNCS = {
     spec_utils.BooleanInputSpec: check_boolean,
-    spec_utils.CSVInputSpec: check_csv, #functools.partial(timeout, check_csv),
-    spec_utils.FileInputSpec: check_file, #functools.partial(timeout, check_file),
-    spec_utils.DirectoryInputSpec: check_directory, #functools.partial(timeout, check_directory),
+    spec_utils.CSVInputSpec: functools.partial(timeout, check_csv),
+    spec_utils.FileInputSpec: functools.partial(timeout, check_file),
+    spec_utils.DirectoryInputSpec: functools.partial(timeout, check_directory),
     spec_utils.StringInputSpec: check_freestyle_string,
     spec_utils.NumberInputSpec: check_number,
     spec_utils.RatioInputSpec: check_ratio,
     spec_utils.PercentInputSpec: check_percent,
     spec_utils.IntegerInputSpec: check_integer,
     spec_utils.OptionStringInputSpec: check_option_string,
-    spec_utils.SingleBandRasterInputSpec: check_raster, #functools.partial(timeout, check_raster),
-    spec_utils.VectorInputSpec: check_vector, #functools.partial(timeout, check_vector),
-    spec_utils.RasterOrVectorInputSpec: check_raster_or_vector, #functools.partial(timeout, check_raster_or_vector)
+    spec_utils.SingleBandRasterInputSpec: functools.partial(timeout, check_raster),
+    spec_utils.VectorInputSpec: functools.partial(timeout, check_vector),
+    spec_utils.RasterOrVectorInputSpec: functools.partial(timeout, check_raster_or_vector),
     spec_utils.OtherInputSpec: None
 }
 
@@ -984,7 +995,7 @@ def validate(args, spec, spatial_overlap_opts=None):
         # we don't need to try to validate them
         try:
             # Using deepcopy to make sure we don't modify the original spec
-            parameter_spec = copy.deepcopy(getattr(spec.inputs, key))
+            parameter_spec = copy.deepcopy(spec.inputs.get(key))
         except KeyError:
             LOGGER.debug(f'Provided key {key} does not exist in MODEL_SPEC')
             continue
@@ -1013,19 +1024,18 @@ def validate(args, spec, spatial_overlap_opts=None):
         if type_validation_func is None:
             # Validation for 'other' type must be performed by the user.
             continue
-        print(type_validation_func)
-        # try:
-        # pass the entire arg spec into the validation function as kwargs
-        # each type validation function allows extra kwargs with **kwargs
-        warning_msg = type_validation_func(args[key], parameter_spec)
-        if warning_msg:
-            validation_warnings.append(([key], warning_msg))
-            invalid_keys.add(key)
-        # except Exception:
-        #     LOGGER.exception(
-        #         'Error when validating key %s with value %s',
-        #         key, args[key])
-        #     validation_warnings.append(([key], MESSAGES['UNEXPECTED_ERROR']))
+        try:
+            # pass the entire arg spec into the validation function as kwargs
+            # each type validation function allows extra kwargs with **kwargs
+            warning_msg = type_validation_func(args[key], **parameter_spec.__dict__)
+            if warning_msg:
+                validation_warnings.append(([key], warning_msg))
+                invalid_keys.add(key)
+        except Exception:
+            LOGGER.exception(
+                'Error when validating key %s with value %s',
+                key, args[key])
+            validation_warnings.append(([key], MESSAGES['UNEXPECTED_ERROR']))
 
     # Phase 3: Check spatial overlap if applicable
     if spatial_overlap_opts:
@@ -1122,7 +1132,7 @@ def invest_validator(validate_func):
         # If the module has an MODEL_SPEC defined, validate against that.
         if hasattr(model_module, 'MODEL_SPEC'):
             LOGGER.debug('Using MODEL_SPEC for validation')
-            args_spec = getattr(model_module, 'MODEL_SPEC').inputs
+            args_spec = model_module.MODEL_SPEC.inputs
 
             if limit_to is None:
                 LOGGER.info('Starting whole-model validation with MODEL_SPEC')
