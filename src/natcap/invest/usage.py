@@ -189,7 +189,7 @@ def _log_exit_status(session_id, status):
             f'an exception encountered in _log_exit_status: {str(exception)}')
 
 
-def _log_model(pyname, model_args, invest_interface, session_id=None):
+def _log_model(pyname, model_args, invest_interface, type, source, session_id=None):
     """Log information about a model run to a remote server.
 
     Args:
@@ -197,6 +197,10 @@ def _log_model(pyname, model_args, invest_interface, session_id=None):
         model_args (dict): the traditional InVEST argument dictionary.
         invest_interface (string): a string identifying the calling UI,
             e.g. `Qt` or 'Workbench'.
+        type (string): 'core' or 'plugin'
+        source (string): For plugins, a string identifying the source of the
+            plugin (e.g. 'git+https://github.com/foo/bar' or 'local'). For
+            core models, this is None.
 
     Returns:
         None
@@ -233,6 +237,8 @@ def _log_model(pyname, model_args, invest_interface, session_id=None):
             'bounding_box_intersection': str(bounding_box_intersection),
             'bounding_box_union': str(bounding_box_union),
             'session_id': session_id,
+            'type': type,
+            'source': source
         })
     except Exception as exception:
         # An exception was thrown, we don't care.
