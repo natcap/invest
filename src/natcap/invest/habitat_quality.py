@@ -35,7 +35,6 @@ MISSING_WEIGHT_MSG = gettext("Weight value is missing for threats: {threat_list}
 MODEL_SPEC = {
     "model_id": "habitat_quality",
     "model_title": gettext("Habitat Quality"),
-    "pyname": "natcap.invest.habitat_quality",
     "userguide": "habitat_quality.html",
     "aliases": ("hq",),
     "ui_spec": {
