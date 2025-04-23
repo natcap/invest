@@ -18,6 +18,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+from natcap.invest import spec_utils
 from natcap.invest.spec_utils import (
     u,
     ModelSpec,
@@ -278,7 +279,7 @@ class ValidatorTest(unittest.TestCase):
         from natcap.invest import validation
 
         args_spec = model_spec_with_defaults(inputs=ModelInputs(
-            spec_utils.N_WORKERS))
+            spec_utils.build_input_spec('n_workers', spec_utils.N_WORKERS)))
 
         @validation.invest_validator
         def validate(args, limit_to=None):
@@ -301,7 +302,7 @@ class ValidatorTest(unittest.TestCase):
 
         # this will raise an error if the timeout is exceeded
         # timeout defaults to 5 seconds so this should pass
-        validation.timeout(func, 'arg1', 'arg2', kwarg='kwarg')
+        spec_utils.timeout(func, 'arg1', 'arg2', kwarg='kwarg')
 
     def test_timeout_fail(self):
         from natcap.invest import validation
@@ -315,7 +316,7 @@ class ValidatorTest(unittest.TestCase):
         with warnings.catch_warnings(record=True) as ws:
             # cause all warnings to always be triggered
             warnings.simplefilter("always")
-            validation.timeout(func, 'arg')
+            spec_utils.timeout(func, 'arg')
             self.assertTrue(len(ws) == 1)
             self.assertTrue('timed out' in str(ws[0].message))
 
@@ -335,14 +336,14 @@ class DirectoryValidation(unittest.TestCase):
         """Validation: when a folder must exist and does."""
         from natcap.invest import validation
 
-        self.assertEqual(None, validation.check_directory(self.workspace_dir))
+        self.assertIsNone(DirectoryInputSpec().validate(self.workspace_dir))
 
     def test_not_exists(self):
         """Validation: when a folder must exist but does not."""
         from natcap.invest import validation
 
         dirpath = os.path.join(self.workspace_dir, 'nonexistent_dir')
-        validation_warning = validation.check_directory(dirpath)
+        validation_warning = DirectoryInputSpec().validate(dirpath)
         self.assertEqual(validation_warning, validation.MESSAGES['DIR_NOT_FOUND'])
 
     def test_file(self):
@@ -353,14 +354,14 @@ class DirectoryValidation(unittest.TestCase):
         with open(filepath, 'w') as opened_file:
             opened_file.write('the text itself does not matter.')
 
-        validation_warning = validation.check_directory(filepath)
+        validation_warning = DirectoryInputSpec().validate(filepath)
         self.assertEqual(validation_warning, validation.MESSAGES['NOT_A_DIR'])
 
     def test_valid_permissions(self):
         """Validation: folder permissions."""
         from natcap.invest import validation
-        self.assertEqual(None, validation.check_directory(
-            self.workspace_dir, permissions='rwx'))
+        self.assertIsNone(DirectoryInputSpec(
+            permissions='rwx').validate(self.workspace_dir))
 
     def test_workspace_not_exists(self):
         """Validation: when a folder's parent must exist with permissions."""
@@ -368,7 +369,8 @@ class DirectoryValidation(unittest.TestCase):
 
         dirpath = 'foo'
         new_dir = os.path.join(self.workspace_dir, dirpath)
-        self.assertEqual(None, validation.check_directory(new_dir, must_exist=False, permissions='rwx'))
+        self.assertIsNone(DirectoryInputSpec(
+            must_exist=False, permissions='rwx').validate(new_dir))
 
 
 @unittest.skipIf(
@@ -384,8 +386,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IREAD)
-            validation_warning = validation.check_directory(tempdir,
-                                                            permissions='rwx')
+            validation_warning = DirectoryInputSpec(permissions='rwx').validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='execute'))
@@ -397,8 +398,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IWRITE)
-            validation_warning = validation.check_directory(tempdir,
-                                                            permissions='rwx')
+            validation_warning = DirectoryInputSpec(permissions='rwx').validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='read'))
@@ -410,8 +410,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IEXEC)
-            validation_warning = validation.check_directory(tempdir,
-                                                            permissions='rwx')
+            validation_warning = DirectoryInputSpec(permissions='rwx').validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='read'))
@@ -423,8 +422,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IREAD | stat.S_IWRITE)
-            validation_warning = validation.check_directory(tempdir,
-                                                            permissions='rwx')
+            validation_warning = DirectoryInputSpec(permissions='rwx').validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='execute'))
@@ -436,8 +434,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IREAD | stat.S_IEXEC)
-            validation_warning = validation.check_directory(tempdir,
-                                                            permissions='rwx')
+            validation_warning = DirectoryInputSpec(permissions='rwx').validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='write'))
@@ -449,8 +446,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IWRITE | stat.S_IEXEC)
-            validation_warning = validation.check_directory(tempdir,
-                                                            permissions='rwx')
+            validation_warning = DirectoryInputSpec(permissions='rwx').validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='read'))
@@ -474,14 +470,14 @@ class FileValidation(unittest.TestCase):
         with open(filepath, 'w') as new_file:
             new_file.write("Here's some text.")
 
-        self.assertEqual(None, validation.check_file(filepath))
+        self.assertIsNone(FileInputSpec().validate(filepath))
 
     def test_file_not_found(self):
         """Validation: test when a file is not found."""
         from natcap.invest import validation
         filepath = os.path.join(self.workspace_dir, 'file.txt')
 
-        error_msg = validation.check_file(filepath)
+        error_msg = FileInputSpec().validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['FILE_NOT_FOUND'])
 
 
@@ -501,7 +497,7 @@ class RasterValidation(unittest.TestCase):
         from natcap.invest import validation
 
         filepath = os.path.join(self.workspace_dir, 'file.txt')
-        error_msg = validation.check_raster(filepath)
+        error_msg = SingleBandRasterInputSpec(band=InputSpec()).validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['FILE_NOT_FOUND'])
 
     def test_invalid_raster(self):
@@ -512,7 +508,7 @@ class RasterValidation(unittest.TestCase):
         with open(filepath, 'w') as bad_raster:
             bad_raster.write('not a raster')
 
-        error_msg = validation.check_raster(filepath)
+        error_msg = SingleBandRasterInputSpec(band=InputSpec()).validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['NOT_GDAL_RASTER'])
 
     def test_invalid_ovr_raster(self):
@@ -536,7 +532,8 @@ class RasterValidation(unittest.TestCase):
         raster = None
 
         filepath_ovr = os.path.join(self.workspace_dir, 'raster.tif.ovr')
-        error_msg = validation.check_raster(filepath_ovr)
+        error_msg = SingleBandRasterInputSpec(
+            band=InputSpec()).validate(filepath_ovr)
         self.assertEqual(error_msg, validation.MESSAGES['OVR_FILE'])
 
     def test_raster_not_projected(self):
@@ -552,7 +549,8 @@ class RasterValidation(unittest.TestCase):
         raster.SetProjection(wgs84_srs.ExportToWkt())
         raster = None
 
-        error_msg = validation.check_raster(filepath, projected=True)
+        error_msg = SingleBandRasterInputSpec(
+            band=InputSpec(), projected=True).validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['NOT_PROJECTED'])
 
     def test_raster_incorrect_units(self):
@@ -569,8 +567,9 @@ class RasterValidation(unittest.TestCase):
         raster.SetProjection(wgs84_srs.ExportToWkt())
         raster = None
 
-        error_msg = validation.check_raster(
-            filepath, projected=True, projection_units=spec_utils.u.meter)
+        error_msg = SingleBandRasterInputSpec(
+            band=InputSpec(), projected=True, projection_units=spec_utils.u.meter
+        ).validate(filepath)
         expected_msg = validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
             unit_a='meter', unit_b='us_survey_foot')
         self.assertEqual(expected_msg, error_msg)
@@ -592,7 +591,8 @@ class VectorValidation(unittest.TestCase):
         from natcap.invest import validation
 
         filepath = os.path.join(self.workspace_dir, 'file.txt')
-        error_msg = validation.check_vector(filepath, geometries={'POINT'})
+        error_msg = VectorInputSpec(
+            geometries={'POINT'}, fields={}).validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['FILE_NOT_FOUND'])
 
     def test_invalid_vector(self):
@@ -603,7 +603,8 @@ class VectorValidation(unittest.TestCase):
         with open(filepath, 'w') as bad_vector:
             bad_vector.write('not a vector')
 
-        error_msg = validation.check_vector(filepath, geometries={'POINT'})
+        error_msg = VectorInputSpec(
+            geometries={'POINT'}, fields={}).validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['NOT_GDAL_VECTOR'])
 
     def test_missing_fieldnames(self):
@@ -630,10 +631,13 @@ class VectorValidation(unittest.TestCase):
         layer = None
         vector = None
 
-        error_msg = validation.check_vector(
-            filepath, geometries={'POINT'},
-            fields=Fields(InputSpec(id='col_a'),
-                InputSpec(id='col_b'), InputSpec(id='col_c')))
+        error_msg = VectorInputSpec(
+            geometries={'POINT'},
+            fields=Fields(
+                InputSpec(id='col_a'),
+                InputSpec(id='col_b'),
+                InputSpec(id='col_c'))
+            ).validate(filepath)
         expected = validation.MESSAGES['MATCHED_NO_HEADERS'].format(
             header='field', header_name='col_c')
         self.assertEqual(error_msg, expected)
@@ -653,16 +657,16 @@ class VectorValidation(unittest.TestCase):
         layer = None
         vector = None
 
-        error_msg = validation.check_vector(
-            filepath, geometries={'POINT'}, projected=True,
-            projection_units=spec_utils.u.foot)
+        error_msg = VectorInputSpec(
+            fields={}, geometries={'POINT'}, projected=True, projection_units=spec_utils.u.foot
+        ).validate(filepath)
         expected_msg = validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
             unit_a='foot', unit_b='metre')
         self.assertEqual(error_msg, expected_msg)
 
-        self.assertEqual(None, validation.check_vector(
-            filepath, geometries={'POINT'}, projected=True,
-            projection_units=spec_utils.u.meter))
+        self.assertIsNone(VectorInputSpec(
+            fields={}, geometries={'POINT'}, projected=True, projection_units=spec_utils.u.meter
+        ).validate(filepath))
 
     def test_wrong_geom_type(self):
         """Validation: checks that the vector's geometry type is correct."""
@@ -675,11 +679,10 @@ class VectorValidation(unittest.TestCase):
         layer = vector.CreateLayer('sample_layer', meters_srs, ogr.wkbPoint)
         layer = None
         vector = None
+        self.assertIsNone(VectorInputSpec(
+            geometries={'POLYGON', 'POINT'}, fields=None).validate(filepath))
         self.assertEqual(
-            validation.check_vector(filepath, geometries={'POLYGON', 'POINT'}),
-            None)
-        self.assertEqual(
-            validation.check_vector(filepath, geometries={'MULTIPOINT'}),
+            VectorInputSpec(fields=None, geometries={'MULTIPOINT'}).validate(filepath),
             validation.MESSAGES['WRONG_GEOM_TYPE'].format(allowed={'MULTIPOINT'}))
 
 
@@ -689,29 +692,27 @@ class FreestyleStringValidation(unittest.TestCase):
     def test_int(self):
         """Validation: test that an int can be a valid string."""
         from natcap.invest import validation
-        self.assertEqual(None, validation.check_freestyle_string(1234))
+        self.assertIsNone(StringInputSpec().validate(1234))
 
     def test_float(self):
         """Validation: test that a float can be a valid string."""
         from natcap.invest import validation
-        self.assertEqual(None, validation.check_freestyle_string(1.234))
+        self.assertIsNone(StringInputSpec().validate(1.234))
 
     def test_regexp(self):
         """Validation: test that we can check regex patterns on strings."""
         from natcap.invest import validation
         from natcap.invest.spec_utils import SUFFIX
 
-        self.assertEqual(None, validation.check_freestyle_string(
-            1.234, regexp='^1.[0-9]+$'))
+        self.assertEqual(
+            None, StringInputSpec(regexp='^1.[0-9]+$').validate(1.234))
 
         regexp = '^[a-zA-Z]+$'
-        error_msg = validation.check_freestyle_string(
-            'foobar12', regexp=regexp)
+        error_msg = StringInputSpec(regexp=regexp).validate('foobar12')
         self.assertEqual(
             error_msg, validation.MESSAGES['REGEXP_MISMATCH'].format(regexp=regexp))
 
-        error_msg = validation.check_freestyle_string(
-            '4/20', regexp=SUFFIX['regexp'])
+        error_msg = StringInputSpec(regexp=SUFFIX['regexp']).validate('4/20')
         self.assertEqual(
             error_msg, validation.MESSAGES['REGEXP_MISMATCH'].format(regexp=SUFFIX['regexp']))
 
@@ -722,14 +723,14 @@ class OptionStringValidation(unittest.TestCase):
     def test_valid_option_set(self):
         """Validation: test that a string is a valid option in a set."""
         from natcap.invest import validation
-        self.assertEqual(None, validation.check_option_string(
-            'foo', options={'foo', 'bar', 'Baz'}))
+        self.assertIsNone(OptionStringInputSpec(
+            options={'foo', 'bar', 'Baz'}).validate('foo'))
 
     def test_invalid_option_set(self):
         """Validation: test when a string is not a valid option in a set."""
         from natcap.invest import validation
         options = ['foo', 'bar', 'Baz']
-        error_msg = validation.check_option_string('FOO', options=options)
+        error_msg = OptionStringInputSpec(options=options).validate('FOO')
         self.assertEqual(
             error_msg,
             validation.MESSAGES['INVALID_OPTION'].format(
@@ -738,15 +739,14 @@ class OptionStringValidation(unittest.TestCase):
     def test_valid_option_dict(self):
         """Validation: test that a string is a valid option in a dict."""
         from natcap.invest import validation
-        self.assertEqual(None, validation.check_option_string(
-            'foo', options={'foo': 'desc', 'bar': 'desc', 'Baz': 'desc'}))
+        self.assertIsNone(OptionStringInputSpec(
+            options={'foo': 'desc', 'bar': 'desc', 'Baz': 'desc'}).validate('foo'))
 
     def test_invalid_option_dict(self):
         """Validation: test when a string is not a valid option in a dict."""
         from natcap.invest import validation
         options = {'foo': 'desc', 'bar': 'desc', 'Baz': 'desc'}
-        error_msg = validation.check_option_string(
-            'FOO', options=options)
+        error_msg = OptionStringInputSpec(options=options).validate('FOO')
         self.assertEqual(
             error_msg,
             validation.MESSAGES['INVALID_OPTION'].format(
@@ -760,29 +760,28 @@ class NumberValidation(unittest.TestCase):
         """Validation: test when a string is not a number."""
         from natcap.invest import validation
         value = 'this is a string'
-        error_msg = validation.check_number(value)
+        error_msg = NumberInputSpec().validate(value)
         self.assertEqual(
             error_msg, validation.MESSAGES['NOT_A_NUMBER'].format(value=value))
 
     def test_expression(self):
         """Validation: test that we can use numeric expressions."""
         from natcap.invest import validation
-        self.assertEqual(
-            None, validation.check_number(
-                35, '(value < 100) & (value > 4)'))
+        self.assertIsNone(NumberInputSpec(
+            expression='(value < 100) & (value > 4)').validate(35))
 
     def test_expression_missing_value(self):
         """Validation: test the expression string for the 'value' term."""
         from natcap.invest import validation
         with self.assertRaises(AssertionError):
-            error_msg = validation.check_number(35, 'foo < 5')
+            error_msg = NumberInputSpec(expression='foo < 5').validate(35)
 
     def test_expression_failure(self):
         """Validation: test when a number does not meet the expression."""
         from natcap.invest import validation
         value = 35
         condition = 'float(value) < 0'
-        error_msg = validation.check_number(value, condition)
+        error_msg = NumberInputSpec(expression=condition).validate(value)
         self.assertEqual(error_msg, validation.MESSAGES['INVALID_VALUE'].format(
             value=value, condition=condition))
 
@@ -791,7 +790,7 @@ class NumberValidation(unittest.TestCase):
         from natcap.invest import validation
         value = '35'
         condition = 'int(value) < 0'
-        error_msg = validation.check_number(value, condition)
+        error_msg = NumberInputSpec(expression=condition).validate(value)
         self.assertEqual(error_msg, validation.MESSAGES['INVALID_VALUE'].format(
             value=value, condition=condition))
 
@@ -802,21 +801,21 @@ class BooleanValidation(unittest.TestCase):
     def test_actual_bool(self):
         """Validation: test when boolean type objects are passed."""
         from natcap.invest import validation
-        self.assertEqual(None, validation.check_boolean(True))
-        self.assertEqual(None, validation.check_boolean(False))
+        self.assertIsNone(BooleanInputSpec().validate(True))
+        self.assertIsNone(BooleanInputSpec().validate(False))
 
     def test_string_boolean(self):
         """Validation: an error should be raised when the type is wrong."""
         from natcap.invest import validation
         for non_boolean_value in ('true', 1, [], set()):
-            self.assertTrue(
-                isinstance(validation.check_boolean(non_boolean_value), str))
+            self.assertIsInstance(
+                BooleanInputSpec().validate(non_boolean_value), str)
 
     def test_invalid_string(self):
         """Validation: test when invalid strings are passed."""
         from natcap.invest import validation
         value = 'not clear'
-        error_msg = validation.check_boolean(value)
+        error_msg = BooleanInputSpec().validate(value)
         self.assertEqual(
             error_msg, validation.MESSAGES['NOT_BOOLEAN'].format(value=value))
 
@@ -837,7 +836,7 @@ class CSVValidation(unittest.TestCase):
         from natcap.invest import validation
 
         nonexistent_file = os.path.join(self.workspace_dir, 'nope.txt')
-        error_msg = validation.check_csv(nonexistent_file)
+        error_msg = CSVInputSpec().validate(nonexistent_file)
         self.assertEqual(error_msg, validation.MESSAGES['FILE_NOT_FOUND'])
 
     def test_csv_fieldnames(self):
@@ -852,9 +851,11 @@ class CSVValidation(unittest.TestCase):
         target_file = os.path.join(self.workspace_dir, 'test.csv')
         df.to_csv(target_file)
 
-        self.assertEqual(None, validation.check_csv(
-            target_file, columns=Columns(
-                IntegerInputSpec(id='foo'), IntegerInputSpec(id='bar'))))
+        self.assertIsNone(
+            CSVInputSpec(columns=Columns(
+                IntegerInputSpec(id='foo'),
+                IntegerInputSpec(id='bar'))
+            ).validate(target_file))
 
     def test_csv_bom_fieldnames(self):
         """Validation: test that we can check fieldnames in a CSV with BOM."""
@@ -868,9 +869,11 @@ class CSVValidation(unittest.TestCase):
         target_file = os.path.join(self.workspace_dir, 'test.csv')
         df.to_csv(target_file, encoding='utf-8-sig')
 
-        self.assertEqual(None, validation.check_csv(
-            target_file, columns=Columns(
-                IntegerInputSpec(id='foo'), IntegerInputSpec(id='bar'))))
+        self.assertIsNone(
+            CSVInputSpec(columns=Columns(
+                IntegerInputSpec(id='foo'),
+                IntegerInputSpec(id='bar'))
+            ).validate(target_file))
 
     def test_csv_missing_fieldnames(self):
         """Validation: test that we can check missing fieldnames in a CSV."""
@@ -884,8 +887,8 @@ class CSVValidation(unittest.TestCase):
         target_file = os.path.join(self.workspace_dir, 'test.csv')
         df.to_csv(target_file)
 
-        error_msg = validation.check_csv(
-            target_file, columns=Columns(InputSpec(id='field_a')))
+        error_msg = CSVInputSpec(
+            columns=Columns(InputSpec(id='field_a'))).validate(target_file)
         expected_msg = validation.MESSAGES['MATCHED_NO_HEADERS'].format(
             header='column', header_name='field_a')
         self.assertEqual(error_msg, expected_msg)
@@ -902,7 +905,8 @@ class CSVValidation(unittest.TestCase):
         target_file = os.path.join(self.workspace_dir, 'test.pckl')
         df.to_pickle(target_file)
 
-        error_msg = validation.check_csv(target_file, columns={'field_a': {}})
+        error_msg = CSVInputSpec(
+            columns=Columns(InputSpec(id='field_a'))).validate(target_file)
         self.assertIn('must be encoded as UTF-8', error_msg)
 
     def test_slow_to_open(self):
@@ -926,14 +930,9 @@ class CSVValidation(unittest.TestCase):
             time.sleep(7)
             return []
 
-        # make a copy of the real _VALIDATION_FUNCS and override the CSV function
-        mock_validation_funcs = validation._VALIDATION_FUNCS.copy()
-        mock_validation_funcs[CSVInputSpec] = functools.partial(
-            validation.timeout, delay)
-
         # replace the validation.check_csv with the mock function, and try to validate
-        with unittest.mock.patch('natcap.invest.validation._VALIDATION_FUNCS',
-                                 mock_validation_funcs):
+        with unittest.mock.patch('natcap.invest.spec_utils.CSVInputSpec.validate',
+                                 staticmethod(functools.partial(spec_utils.timeout, delay))):
             with warnings.catch_warnings(record=True) as ws:
                 # cause all warnings to always be triggered
                 warnings.simplefilter("always")
@@ -946,26 +945,26 @@ class CSVValidation(unittest.TestCase):
         from natcap.invest import validation
         expected_headers = ['hello', '1']
         actual = ['hello', '1', '2']
-        result = validation.check_headers(expected_headers, actual)
+        result = spec_utils.check_headers(expected_headers, actual)
         self.assertEqual(result, None)
 
         # each pattern should match at least one header
         actual = ['1', '2']
-        result = validation.check_headers(expected_headers, actual)
+        result = spec_utils.check_headers(expected_headers, actual)
         expected_msg = validation.MESSAGES['MATCHED_NO_HEADERS'].format(
             header='header', header_name='hello')
         self.assertEqual(result, expected_msg)
 
         # duplicate headers that match a pattern are not allowed
         actual = ['hello', '1', '1']
-        result = validation.check_headers(expected_headers, actual, 'column')
+        result = spec_utils.check_headers(expected_headers, actual, 'column')
         expected_msg = validation.MESSAGES['DUPLICATE_HEADER'].format(
             header='column', header_name='1', number=2)
         self.assertEqual(result, expected_msg)
 
         # duplicate headers that don't match a pattern are allowed
         actual = ['hello', '1', 'x', 'x']
-        result = validation.check_headers(expected_headers, actual)
+        result = spec_utils.check_headers(expected_headers, actual)
         self.assertEqual(result, None)
 
 
@@ -993,9 +992,8 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 b,c
                 """
             ))
-        df = validation.get_validated_dataframe(
-            csv_file,
-            columns=Columns(StringInputSpec(id='header')))
+        spec = CSVInputSpec(columns=Columns(StringInputSpec(id='header')))
+        df = spec.get_validated_dataframe(csv_file)
         # header and table values should be lowercased
         self.assertEqual(df.columns[0], 'header')
         self.assertEqual(df['header'][0], 'a')
@@ -1013,15 +1011,16 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with open(table_path, 'w') as table_file:
             table_file.write(csv_text)
 
-        df = validation.get_validated_dataframe(
-            table_path,
+        spec = CSVInputSpec(
             index_col='lucode',
             columns=Columns(
                 StringInputSpec(id='desc'),
                 IntegerInputSpec(id='lucode'),
                 NumberInputSpec(id='val1'),
                 NumberInputSpec(id='val2')
-            ))
+        ))
+        df = spec.get_validated_dataframe(table_path)
+
         self.assertEqual(df.index.name, 'lucode')
         self.assertEqual(list(df.index.values), [1, 2, 3, 4])
         self.assertEqual(df['desc'][2], 'bread')
@@ -1038,16 +1037,15 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with open(table_path, 'w') as table_file:
             table_file.write(csv_text)
 
+        spec = CSVInputSpec(
+            index_col='lucode',
+            columns=Columns(
+                StringInputSpec(id='desc'),
+                IntegerInputSpec(id='lucode'),
+                NumberInputSpec(id='val1'),
+                NumberInputSpec(id='val2')))
         with self.assertRaises(ValueError):
-            validation.get_validated_dataframe(
-                table_path,
-                index_col='lucode',
-                columns=Columns(
-                    StringInputSpec(id='desc'),
-                    IntegerInputSpec(id='lucode'),
-                    NumberInputSpec(id='val1'),
-                    NumberInputSpec(id='val2')
-                ))
+            spec.get_validated_dataframe(table_path)
 
     def test_missing_key_field(self):
         """validation: test error is raised when missing key field."""
@@ -1061,16 +1059,15 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with open(table_path, 'w') as table_file:
             table_file.write(csv_text)
 
+        spec = CSVInputSpec(
+            index_col='lucode',
+            columns=Columns(
+                StringInputSpec(id='desc'),
+                IntegerInputSpec(id='lucode'),
+                NumberInputSpec(id='val1'),
+                NumberInputSpec(id='val2')))
         with self.assertRaises(ValueError):
-            validation.get_validated_dataframe(
-                table_path,
-                index_col='lucode',
-                columns=Columns(
-                    StringInputSpec(id='desc'),
-                    IntegerInputSpec(id='lucode'),
-                    NumberInputSpec(id='val1'),
-                    NumberInputSpec(id='val2')
-                ))
+            spec.get_validated_dataframe(table_path)
 
     def test_column_subset(self):
         """validation: test column subset is properly returned."""
@@ -1083,13 +1080,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 "2,bread,1,4\n"
                 "3,beans,0.5,4\n"
                 "4,butter,9,1")
-        df = validation.get_validated_dataframe(
-            table_path,
-            columns=Columns(
-                IntegerInputSpec(id='lucode'),
-                NumberInputSpec(id='val1'),
-                NumberInputSpec(id='val2')
-            ))
+        spec = CSVInputSpec(columns=Columns(
+            IntegerInputSpec(id='lucode'),
+            NumberInputSpec(id='val1'),
+            NumberInputSpec(id='val2')
+        ))
+        df = spec.get_validated_dataframe(table_path)
         self.assertEqual(list(df.columns), ['lucode', 'val1', 'val2'])
 
     def test_column_pattern_matching(self):
@@ -1103,12 +1099,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 "2,1,4\n"
                 "3,0.5,4\n"
                 "4,9,1")
-        df = validation.get_validated_dataframe(
-            table_path,
-            columns=Columns(
-                IntegerInputSpec(id='lucode'),
-                NumberInputSpec(id='[HABITAT]_value')
-            ))
+        spec = CSVInputSpec(columns=Columns(
+            IntegerInputSpec(id='lucode'),
+            NumberInputSpec(id='[HABITAT]_value')
+        ))
+        df = spec.get_validated_dataframe(table_path)
         self.assertEqual(
             list(df.columns), ['lucode', 'grassland_value', 'forest_value'])
 
@@ -1123,14 +1118,13 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 "2,bread,1,4\n"
                 "3,beans,0.5,4\n"
                 "4,butter,9,1")
-        result = validation.get_validated_dataframe(
-            table_path,
+        spec = CSVInputSpec(
             columns=Columns(
                 StringInputSpec(id='desc'),
                 IntegerInputSpec(id='lucode'),
                 NumberInputSpec(id='val1'),
-                NumberInputSpec(id='val2')
-            ))
+                NumberInputSpec(id='val2')))
+        result = spec.get_validated_dataframe(table_path)
         self.assertEqual(result['val2'][0], 2)
         self.assertEqual(result['lucode'][1], 2)
 
@@ -1146,15 +1140,14 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with open(table_path, 'w') as table_file:
             table_file.write(csv_text)
 
-        result = validation.get_validated_dataframe(
-            table_path,
+        spec = CSVInputSpec(
             index_col='lucode',
             columns=Columns(
                 StringInputSpec(id='desc'),
                 IntegerInputSpec(id='lucode'),
                 NumberInputSpec(id='val1'),
-                NumberInputSpec(id='val2')
-            )).to_dict(orient='index')
+                NumberInputSpec(id='val2')))
+        result = spec.get_validated_dataframe(table_path).to_dict(orient='index')
 
         expected_result = {
             1: {'desc': 'corn', 'val1': 0.5, 'val2': 2},
@@ -1178,9 +1171,8 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 b
                 """
             ))
-        df = validation.get_validated_dataframe(
-            csv_file,
-            columns=Columns(StringInputSpec(id='header')))
+        spec = CSVInputSpec(columns=Columns(StringInputSpec(id='header')))
+        df = spec.get_validated_dataframe(csv_file)
         self.assertEqual(df['header'][0], 'a')
 
     def test_convert_vals_to_lower(self):
@@ -1197,8 +1189,8 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 b
                 """
             ))
-        df = validation.get_validated_dataframe(
-            csv_file, columns=Columns(StringInputSpec(id='header')))
+        spec = CSVInputSpec(columns=Columns(StringInputSpec(id='header')))
+        df = spec.get_validated_dataframe(csv_file)
         self.assertEqual(df.columns[0], 'header')
 
     def test_integer_type_columns(self):
@@ -1214,11 +1206,10 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 3,
                 """
             ))
-        df = validation.get_validated_dataframe(
-            csv_file,
-            columns=Columns(
+        spec = CSVInputSpec(columns=Columns(
                 IntegerInputSpec(id='id'),
                 IntegerInputSpec(id='header')))
+        df = spec.get_validated_dataframe(csv_file)
         self.assertIsInstance(df['header'][0], numpy.int64)
         self.assertIsInstance(df['header'][1], numpy.int64)
         # empty values are returned as pandas.NA
@@ -1236,13 +1227,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 -1,.3,
                 """
             ))
-        df = validation.get_validated_dataframe(
-            csv_file,
-            columns=Columns(
-                NumberInputSpec(id='h1'),
-                RatioInputSpec(id='h2'),
-                PercentInputSpec(id='h3')
-            ))
+        spec = CSVInputSpec(columns=Columns(
+            NumberInputSpec(id='h1'),
+            RatioInputSpec(id='h2'),
+            PercentInputSpec(id='h3')
+        ))
+        df = spec.get_validated_dataframe(csv_file)
         self.assertEqual(df['h1'].dtype, float)
         self.assertEqual(df['h2'].dtype, float)
         self.assertEqual(df['h3'].dtype, float)
@@ -1261,13 +1251,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 2,b,
                 """
             ))
-        df = validation.get_validated_dataframe(
-            csv_file,
-            columns=Columns(
-                StringInputSpec(id='h1'),
-                OptionStringInputSpec(id='h2', options=['a', 'b']),
-                StringInputSpec(id='h3')
-            ))
+        spec = CSVInputSpec(columns=Columns(
+            StringInputSpec(id='h1'),
+            OptionStringInputSpec(id='h2', options=['a', 'b']),
+            StringInputSpec(id='h3')
+        ))
+        df = spec.get_validated_dataframe(csv_file)
         self.assertEqual(df['h1'][0], '1')
         self.assertEqual(df['h2'][1], 'b')
         # empty values are returned as NA
@@ -1286,11 +1275,10 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 c,
                 """
             ))
-        df = validation.get_validated_dataframe(
-            csv_file,
-            columns=Columns(
-                StringInputSpec(id='index'),
-                BooleanInputSpec(id='h1')))
+        spec = CSVInputSpec(columns=Columns(
+            StringInputSpec(id='index'),
+            BooleanInputSpec(id='h1')))
+        df = spec.get_validated_dataframe(csv_file)
         self.assertEqual(df['h1'][0], True)
         self.assertEqual(df['h1'][1], False)
         # empty values are returned as pandas.NA
@@ -1314,12 +1302,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 4,
                 """
             ))
-        df = validation.get_validated_dataframe(
-            csv_file,
-            columns=Columns(
-                IntegerInputSpec(id='bar'),
-                FileInputSpec(id='path')
-            ))
+        spec = CSVInputSpec(columns=Columns(
+            IntegerInputSpec(id='bar'),
+            FileInputSpec(id='path')
+        ))
+        df = spec.get_validated_dataframe(csv_file)
+
         self.assertEqual(
             f'{self.workspace_dir}{os.sep}foo.txt',
             df['path'][0])
@@ -1348,12 +1336,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         # using sep=None with the default engine='python',
         # it should infer what the separator is
-        df = validation.get_validated_dataframe(
-            csv_file,
-            columns=Columns(
+        spec = CSVInputSpec(columns=Columns(
                 StringInputSpec(id='h1'),
                 StringInputSpec(id='h2'),
-                StringInputSpec(id='h3')),
+                StringInputSpec(id='h3')))
+        df = spec.get_validated_dataframe(
+            csv_file,
             read_csv_kwargs={'converters': {'h2': lambda val: f'foo_{val}'}})
 
         self.assertEqual(df.columns[0], 'h1')
@@ -1378,13 +1366,13 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 d,e,f
                 """
             ))
-        df = validation.get_validated_dataframe(
-            csv_file,
-            columns=Columns(
-                StringInputSpec(id='1'),
-                StringInputSpec(id='2'),
-                StringInputSpec(id='3')
-            ))
+        spec = CSVInputSpec(columns=Columns(
+            StringInputSpec(id='1'),
+            StringInputSpec(id='2'),
+            StringInputSpec(id='3')
+        ))
+        df = spec.get_validated_dataframe(csv_file)
+
         # expect headers to be strings
         self.assertEqual(df.columns[0], '1')
         self.assertEqual(df['1'][0], 'a')
@@ -1399,13 +1387,13 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write(" Col1, Col2 ,Col3 \n")
             file_obj.write(" val1, val2 ,val3 \n")
             file_obj.write(" , 2 1 ,  ")
-        df = validation.get_validated_dataframe(
-            csv_file,
-            columns=Columns(
-                StringInputSpec(id='col1'),
-                StringInputSpec(id='col2'),
-                StringInputSpec(id='col3')
-            ))
+        spec = CSVInputSpec(columns=Columns(
+            StringInputSpec(id='col1'),
+            StringInputSpec(id='col2'),
+            StringInputSpec(id='col3')
+        ))
+        df = spec.get_validated_dataframe(csv_file)
+
         # header should have no leading / trailing whitespace
         self.assertEqual(list(df.columns), ['col1', 'col2', 'col3'])
 
@@ -1429,15 +1417,15 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with open(table_path, 'w') as table_file:
             table_file.write(csv_text)
 
-        result = validation.get_validated_dataframe(
-            table_path,
+        spec = CSVInputSpec(
             index_col='lucode',
             columns=Columns(
                 StringInputSpec(id='desc'),
                 IntegerInputSpec(id='lucode'),
                 NumberInputSpec(id='val1'),
-                NumberInputSpec(id='val2')
-            )).to_dict(orient='index')
+                NumberInputSpec(id='val2')))
+        result = spec.get_validated_dataframe(
+            table_path).to_dict(orient='index')
         expected_result = {
             1: {'desc': 'corn', 'val1': 0.5, 'val2': 2},
             3: {'desc': 'beans', 'val1': 0.5, 'val2': 4},
@@ -1454,12 +1442,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with open(csv_file, 'w') as file_obj:
             file_obj.write("row1, a ,b\n")
             file_obj.write("row2,1,3\n")
-        df = validation.get_validated_dataframe(
-            csv_file,
-            rows=Rows(
-                StringInputSpec(id='row1'),
-                NumberInputSpec(id='row2'),
-            ))
+        spec = CSVInputSpec(rows=Rows(
+            StringInputSpec(id='row1'),
+            NumberInputSpec(id='row2'),
+        ))
+        df = spec.get_validated_dataframe(csv_file)
         # header should have no leading / trailing whitespace
         self.assertEqual(list(df.columns), ['row1', 'row2'])
 
@@ -1480,14 +1467,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write('col1,col2\n')
             file_obj.write(f'1,{raster_path}\n')
 
+        spec = CSVInputSpec(columns=Columns(
+            NumberInputSpec(id='col1'),
+            SingleBandRasterInputSpec(id='col2', band=NumberInputSpec())
+        ))
         with self.assertRaises(ValueError) as cm:
-            validation.get_validated_dataframe(
-                csv_path,
-                columns=Columns(
-                    NumberInputSpec(id='col1'),
-                    SingleBandRasterInputSpec(id='col2', band=NumberInputSpec())
-                )
-            )
+            spec.get_validated_dataframe(csv_path)
         self.assertIn('File not found', str(cm.exception))
 
     def test_csv_raster_validation_not_projected(self):
@@ -1507,15 +1492,13 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write('col1,col2\n')
             file_obj.write(f'1,{raster_path}\n')
 
+        spec = CSVInputSpec(columns=Columns(
+            NumberInputSpec(id='col1'),
+            SingleBandRasterInputSpec(
+                id='col2', projected=True, band=NumberInputSpec())
+        ))
         with self.assertRaises(ValueError) as cm:
-            validation.get_validated_dataframe(
-                csv_path,
-                columns=Columns(
-                    NumberInputSpec(id='col1'),
-                    SingleBandRasterInputSpec(
-                        id='col2', projected=True, band=NumberInputSpec())
-                )
-            )
+            spec.get_validated_dataframe(csv_path)
         self.assertIn('must be projected', str(cm.exception))
 
     def test_csv_vector_validation_missing_field(self):
@@ -1538,22 +1521,20 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with open(csv_path, 'w') as file_obj:
             file_obj.write('col1,col2\n')
             file_obj.write(f'1,{vector_path}\n')
+        spec = CSVInputSpec(columns=Columns(
+            NumberInputSpec(id='col1'),
+            VectorInputSpec(
+                id='col2',
+                fields=Fields(
+                    IntegerInputSpec(id='a'),
+                    IntegerInputSpec(id='b')
+                ),
+                geometries=['POINT']
+            )
+        ))
 
         with self.assertRaises(ValueError) as cm:
-            validation.get_validated_dataframe(
-                csv_path,
-                columns=Columns(
-                    NumberInputSpec(id='col1'),
-                    VectorInputSpec(
-                        id='col2',
-                        fields=Fields(
-                            IntegerInputSpec(id='a'),
-                            IntegerInputSpec(id='b')
-                        ),
-                        geometries=['POINT']
-                    )
-                )
-            )
+            spec.get_validated_dataframe(csv_path)
         self.assertIn(
             'Expected the field "a" but did not find it',
             str(cm.exception))
@@ -1577,19 +1558,18 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write('col1,col2\n')
             file_obj.write(f'1,{vector_path}\n')
 
-        with self.assertRaises(ValueError) as cm:
-            validation.get_validated_dataframe(
-                csv_path,
-                columns=Columns(
-                    NumberInputSpec(id='col1'),
-                    RasterOrVectorInputSpec(
-                        id='col2',
-                        band=NumberInputSpec(),
-                        fields={},
-                        geometries=['POLYGON']
-                    )
-                )
+        spec = CSVInputSpec(columns=Columns(
+            NumberInputSpec(id='col1'),
+            RasterOrVectorInputSpec(
+                id='col2',
+                band=NumberInputSpec(),
+                fields={},
+                geometries=['POLYGON']
             )
+        ))
+        with self.assertRaises(ValueError) as cm:
+            spec.get_validated_dataframe(csv_path)
+
         self.assertIn(
             "Geometry type must be one of ['POLYGON']",
             str(cm.exception))
@@ -1948,18 +1928,11 @@ class TestValidationFromSpec(unittest.TestCase):
             NumberInputSpec(id="number_a")
         ))
         args = {'number_a': 1}
-        try:
-            # Patch in a new function that raises an exception into the
-            # validation functions dictionary.
-            patched_function = Mock(side_effect=ValueError('foo'))
-            validation._VALIDATION_FUNCS[NumberInputSpec] = patched_function
 
-            validation_warnings = validation.validate(args, spec)
-        finally:
-            # No matter what happens with this test, always restore the state
-            # of the validation functions dict.
-            validation._VALIDATION_FUNCS['number'] = (
-                validation.check_number)
+        # Patch in a new function that raises an exception
+        with unittest.mock.patch('natcap.invest.spec_utils.NumberInputSpec.validate',
+                                 Mock(side_effect=ValueError('foo'))):
+          validation_warnings = validation.validate(args, spec)
 
         self.assertEqual(
             validation_warnings,
@@ -2313,7 +2286,7 @@ class TestValidationFromSpec(unittest.TestCase):
             InputSpec(id='c', required='conditional statement'),
             InputSpec(id='d', required=False)
         )
-        patterns = validation.get_headers_to_validate(spec)
+        patterns = spec_utils.get_headers_to_validate(spec)
         # should only get the patterns that are static and always required
         self.assertEqual(sorted(patterns), ['a'])
 

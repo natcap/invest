@@ -4,21 +4,179 @@ import json
 import logging
 import os
 import pprint
+import queue
+import re
+import threading
 import types
+import warnings
 
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 import geometamaker
 import natcap.invest
+import pandas
 import pint
+import pygeoprocessing
 
 from natcap.invest import utils
+from natcap.invest.validation import MESSAGES, _evaluate_expression
 from . import gettext
 from .unit_registry import u
 
 
 LOGGER = logging.getLogger(__name__)
 
+
+
+
+# accessing a file could take a long time if it's in a file streaming service
+# to prevent the UI from hanging due to slow validation,
+# set a timeout for these functions.
+def timeout(func, *args, timeout=5, **kwargs):
+    """Stop a function after a given amount of time.
+
+    Args:
+        func (function): function to apply the timeout to
+        args: arguments to pass to the function
+        timeout (number): how many seconds to allow the function to run.
+            Defaults to 5.
+
+    Returns:
+        A string warning message if the thread completed in time and returned
+        warnings, ``None`` otherwise.
+
+    Raises:
+        ``RuntimeWarning`` if the thread does not complete in time.
+    """
+    # use a queue to share the return value from the file checking thread
+    # the target function puts the return value from `func` into shared memory
+    message_queue = queue.Queue()
+
+    def wrapper_func():
+        message_queue.put(func(*args, **kwargs))
+
+    thread = threading.Thread(target=wrapper_func)
+    LOGGER.debug(f'Starting file checking thread with timeout={timeout}')
+    thread.start()
+    thread.join(timeout=timeout)
+    if thread.is_alive():
+        # first arg to `check_csv`, `check_raster`, `check_vector` is the path
+        warnings.warn(
+            f'Validation of file {args[0]} timed out. If this file '
+            'is stored in a file streaming service, it may be taking a long '
+            'time to download. Try storing it locally instead.')
+        return None
+
+    else:
+        LOGGER.debug('File checking thread completed.')
+        # get any warning messages returned from the thread
+        a = message_queue.get()
+        return a
+
+def check_headers(expected_headers, actual_headers, header_type='header'):
+    """Validate that expected headers are in a list of actual headers.
+
+    - Each expected header should be found exactly once.
+    - Actual headers may contain extra headers that are not expected.
+    - Headers are converted to lowercase before matching.
+
+    Args:
+        expected_headers (list[str]): A list of headers that are expected to
+            exist in `actual_headers`.
+        actual_headers (list[str]): A list of actual headers to validate
+            against `expected_headers`.
+        header_type (str): A string to use in the error message to refer to the
+            header (typically one of 'column', 'row', 'field')
+
+    Returns:
+        None, if validation passes; or a string describing the problem, if a
+        validation rule is broken.
+    """
+    actual_headers = [header.lower()
+                      for header in actual_headers]  # case insensitive
+    for expected in expected_headers:
+        count = actual_headers.count(expected)
+        if count == 0:
+            return MESSAGES['MATCHED_NO_HEADERS'].format(
+                header=header_type,
+                header_name=expected)
+        elif count > 1:
+            return MESSAGES['DUPLICATE_HEADER'].format(
+                header=header_type,
+                header_name=expected,
+                number=count)
+    return None
+
+def get_headers_to_validate(specs):
+    """Get header names to validate from a row/column/field spec dictionary.
+
+    This module only validates row/column/field names that are static and
+    always required. If `'required'` is anything besides `True`, or if the name
+    contains brackets indicating it's user-defined, it is not returned.
+
+    Args:
+        specs (dict): a row/column/field spec dictionary that maps row/column/
+            field names to specs for them
+
+    Returns:
+        list of expected header names to validate against
+    """
+    headers = []
+    for spec in specs:
+        # if 'required' isn't a key, it defaults to True
+        if spec.required is True:
+            # brackets are a special character for our args spec syntax
+            # they surround the part of the key that's user-defined
+            # user-defined rows/columns/fields are not validated here, so skip
+            if '[' not in spec.id:
+                headers.append(spec.id)
+    return headers
+
+
+def _check_projection(srs, projected, projection_units):
+    """Validate a GDAL projection.
+
+    Args:
+        srs (osr.SpatialReference): A GDAL Spatial Reference object
+            representing the spatial reference of a GDAL dataset.
+        projected (bool): Whether the spatial reference must be projected in
+            linear units.
+        projection_units (pint.Unit): The projection's required linear units.
+
+    Returns:
+        A string error message if an error was found. ``None`` otherwise.
+
+    """
+    empty_srs = osr.SpatialReference()
+    if srs is None or srs.IsSame(empty_srs):
+        return MESSAGES['INVALID_PROJECTION']
+
+    if projected:
+        if not srs.IsProjected():
+            return MESSAGES['NOT_PROJECTED']
+
+    if projection_units:
+        # pint uses underscores in multi-word units e.g. 'survey_foot'
+        # it is case-sensitive
+        layer_units_name = srs.GetLinearUnitsName().lower().replace(' ', '_')
+        try:
+            # this will parse common synonyms: m, meter, meters, metre, metres
+            layer_units = u.Unit(layer_units_name)
+            # Compare pint Unit objects
+            if projection_units != layer_units:
+                return MESSAGES['WRONG_PROJECTION_UNIT'].format(
+                    unit_a=projection_units, unit_b=layer_units_name)
+        except pint.errors.UndefinedUnitError:
+            return MESSAGES['WRONG_PROJECTION_UNIT'].format(
+                unit_a=projection_units, unit_b=layer_units_name)
+
+    return None
+
+
 class IterableWithDotAccess():
     def __init__(self, *args):
+        print(args)
         self.args = args
         self.inputs_dict = {i.id: i for i in args}
         self.iter_index = 0
@@ -27,7 +185,6 @@ class IterableWithDotAccess():
     #     return self.inputs_dict.get(key)
 
     def __iter__(self):
-        print('iter')
         return iter(self.args)
 
     def get(self, key):
@@ -80,11 +237,77 @@ class OutputSpec:
 class FileInputSpec(InputSpec):
     permissions: str = 'r'
 
+    # @timeout
+    def validate(self, filepath):
+        """Validate a single file.
+
+        Args:
+            filepath (string): The filepath to validate.
+            permissions='r' (string): A string that includes the lowercase
+                characters ``r``, ``w`` and/or ``x``, indicating read, write, and
+                execute permissions (respectively) required for this file.
+
+        Returns:
+            A string error message if an error was found.  ``None`` otherwise.
+
+        """
+        if not os.path.exists(filepath):
+            return MESSAGES['FILE_NOT_FOUND']
+
+        for letter, mode, descriptor in (
+                ('r', os.R_OK, 'read'),
+                ('w', os.W_OK, 'write'),
+                ('x', os.X_OK, 'execute')):
+            if letter in self.permissions and not os.access(filepath, mode):
+                return MESSAGES['NEED_PERMISSION_FILE'].format(permission=descriptor)
+
+    @staticmethod
+    def format_column(col, base_path):
+        return col.apply(
+            lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), base_path)
+        ).astype(pandas.StringDtype())
+
 @dataclasses.dataclass(kw_only=True)
 class SingleBandRasterInputSpec(FileInputSpec):
     band: InputSpec
     projected: bool | None = None
     projection_units: pint.Unit | None = None
+
+    # @timeout
+    def validate(self, filepath):
+        """Validate a GDAL Raster on disk.
+
+        Args:
+            filepath (string): The path to the raster on disk.  The file must exist
+                and be readable.
+            projected=False (bool): Whether the spatial reference must be projected
+                in linear units.
+            projection_units=None (pint.Units): The required linear units of the
+                projection. If ``None``, the projection units will not be checked.
+
+        Returns:
+            A string error message if an error was found.  ``None`` otherwise.
+
+        """
+        file_warning = super().validate(filepath)
+        if file_warning:
+            return file_warning
+
+        try:
+            gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
+        except RuntimeError:
+            return MESSAGES['NOT_GDAL_RASTER']
+
+        # Check that an overview .ovr file wasn't opened.
+        if os.path.splitext(filepath)[1] == '.ovr':
+            return MESSAGES['OVR_FILE']
+
+        srs = gdal_dataset.GetSpatialRef()
+        projection_warning = _check_projection(srs, self.projected, self.projection_units)
+        if projection_warning:
+            return projection_warning
+
+        return None
 
 @dataclasses.dataclass(kw_only=True)
 class VectorInputSpec(FileInputSpec):
@@ -93,13 +316,113 @@ class VectorInputSpec(FileInputSpec):
     projected: bool | None = None
     projection_units: pint.Unit | None = None
 
+    # @timeout
+    def validate(self, filepath):
+        """Validate a GDAL vector on disk.
+
+        Note:
+            If the provided vector has multiple layers, only the first layer will
+            be checked.
+
+        Args:
+            filepath (string): The path to the vector on disk.  The file must exist
+                and be readable.
+            geometries (set): Set of geometry type(s) that are allowed. Options are
+                'POINT', 'LINESTRING', 'POLYGON', 'MULTIPOINT', 'MULTILINESTRING',
+                and 'MULTIPOLYGON'.
+            fields=None (dict): A dictionary spec of field names that the vector is
+                expected to have. See the docstring of ``check_headers`` for
+                details on validation rules.
+            projected=False (bool): Whether the spatial reference must be projected
+                in linear units.  If None, the projection will not be checked.
+            projection_units=None (pint.Units): The required linear units of the
+                projection. If ``None``, the projection units will not be checked.
+
+        Returns:
+            A string error message if an error was found.  ``None`` otherwise.
+        """
+        file_warning = super().validate(filepath)
+        if file_warning:
+            return file_warning
+
+        try:
+            gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
+        except RuntimeError:
+            return MESSAGES['NOT_GDAL_VECTOR']
+
+        geom_map = {
+            'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM,
+                      ogr.wkbPoint25D],
+            'LINESTRING': [ogr.wkbLineString, ogr.wkbLineStringM,
+                           ogr.wkbLineStringZM, ogr.wkbLineString25D],
+            'POLYGON': [ogr.wkbPolygon, ogr.wkbPolygonM,
+                        ogr.wkbPolygonZM, ogr.wkbPolygon25D],
+            'MULTIPOINT': [ogr.wkbMultiPoint, ogr.wkbMultiPointM,
+                           ogr.wkbMultiPointZM, ogr.wkbMultiPoint25D],
+            'MULTILINESTRING': [ogr.wkbMultiLineString, ogr.wkbMultiLineStringM,
+                                ogr.wkbMultiLineStringZM,
+                                ogr.wkbMultiLineString25D],
+            'MULTIPOLYGON': [ogr.wkbMultiPolygon, ogr.wkbMultiPolygonM,
+                             ogr.wkbMultiPolygonZM, ogr.wkbMultiPolygon25D]
+        }
+
+        allowed_geom_types = []
+        for geom in self.geometries:
+            allowed_geom_types += geom_map[geom]
+
+        # NOTE: this only checks the layer geometry type, not the types of the
+        # actual geometries (layer.GetGeometryTypes()). This is probably equivalent
+        # in most cases, and it's more efficient than checking every geometry, but
+        # we might need to change this in the future if it becomes a problem.
+        # Currently not supporting ogr.wkbUnknown which allows mixed types.
+        layer = gdal_dataset.GetLayer()
+        if layer.GetGeomType() not in allowed_geom_types:
+            return MESSAGES['WRONG_GEOM_TYPE'].format(allowed=self.geometries)
+
+        if self.fields:
+            field_patterns = get_headers_to_validate(self.fields)
+            fieldnames = [defn.GetName() for defn in layer.schema]
+            required_field_warning = check_headers(
+                field_patterns, fieldnames, 'field')
+            if required_field_warning:
+                return required_field_warning
+
+        srs = layer.GetSpatialRef()
+        projection_warning = _check_projection(srs, self.projected, self.projection_units)
+        return projection_warning
+
+
+
 @dataclasses.dataclass(kw_only=True)
-class RasterOrVectorInputSpec(FileInputSpec):
+class RasterOrVectorInputSpec(SingleBandRasterInputSpec, VectorInputSpec):
     band: InputSpec
     geometries: set
     fields: Fields
     projected: bool | None = None
     projection_units: pint.Unit | None = None
+
+    # @timeout
+    def validate(self, filepath):
+        """Validate an input that may be a raster or vector.
+
+        Args:
+            filepath (string):  The path to the raster or vector.
+            **kwargs: kwargs of the raster and vector spec. Will be
+                passed to ``check_raster`` or ``check_vector``.
+
+        Returns:
+            A string error message if an error was found. ``None`` otherwise.
+        """
+        try:
+            gis_type = pygeoprocessing.get_gis_type(filepath)
+        except ValueError as err:
+            return str(err)
+        if gis_type == pygeoprocessing.RASTER_TYPE:
+            return SingleBandRasterInputSpec.validate(self, filepath)
+        else:
+            return VectorInputSpec.validate(self, filepath)
+
+
 
 @dataclasses.dataclass(kw_only=True)
 class CSVInputSpec(FileInputSpec):
@@ -107,40 +430,388 @@ class CSVInputSpec(FileInputSpec):
     rows: Rows | None = None
     index_col: str | None = None
 
+    # @timeout
+    def validate(self, filepath):
+        """Validate a table.
+
+        Args:
+            filepath (string): The string filepath to the table.
+
+        Returns:
+            A string error message if an error was found. ``None`` otherwise.
+
+        """
+        file_warning = super().validate(filepath)
+        if file_warning:
+            return file_warning
+        if self.columns or self.rows:
+            try:
+                self.get_validated_dataframe(filepath)
+            except Exception as e:
+                return str(e)
+
+    def get_validated_dataframe(self, csv_path, read_csv_kwargs={}):
+        """Read a CSV into a dataframe that is guaranteed to match the spec."""
+
+        if not (self.columns or self.rows):
+            raise ValueError('One of columns or rows must be provided')
+
+        # build up a list of regex patterns to match columns against columns from
+        # the table that match a pattern in this list (after stripping whitespace
+        # and lowercasing) will be included in the dataframe
+        axis = 'column' if self.columns else 'row'
+
+        if self.rows:
+            read_csv_kwargs = read_csv_kwargs.copy()
+            read_csv_kwargs['header'] = None
+
+        df = utils.read_csv_to_dataframe(csv_path, **read_csv_kwargs)
+
+        if self.rows:
+            # swap rows and column
+            df = df.set_index(df.columns[0]).rename_axis(
+                None, axis=0).T.reset_index(drop=True)
+
+        columns = self.columns if self.columns else self.rows
+
+        patterns = []
+        for column in columns:
+            column = column.id.lower()
+            match = re.match(r'(.*)\[(.+)\](.*)', column)
+            if match:
+                # for column name patterns, convert it to a regex pattern
+                groups = match.groups()
+                patterns.append(f'{groups[0]}(.+){groups[2]}')
+            else:
+                # for regular column names, use the exact name as the pattern
+                patterns.append(column.replace('(', r'\(').replace(')', r'\)'))
+
+        # select only the columns that match a pattern
+        df = df[[col for col in df.columns if any(
+            re.fullmatch(pattern, col) for pattern in patterns)]]
+
+        # drop any empty rows
+        df = df.dropna(how="all").reset_index(drop=True)
+
+        available_cols = set(df.columns)
+
+        for col_spec, pattern in zip(columns, patterns):
+            matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
+            if col_spec.required is True and '[' not in col_spec.id and not matching_cols:
+                raise ValueError(MESSAGES['MATCHED_NO_HEADERS'].format(
+                    header=axis,
+                    header_name=col_spec.id))
+            available_cols -= set(matching_cols)
+            for col in matching_cols:
+                try:
+                    print(df[col])
+                    df[col] = col_spec.format_column(df[col], csv_path)
+                except Exception as err:
+                    raise ValueError(
+                        f'Value(s) in the "{col}" column could not be interpreted '
+                        f'as {type(col_spec)}s. Original error: {err}')
+
+                if type(col_spec) in {SingleBandRasterInputSpec,
+                                      VectorInputSpec, RasterOrVectorInputSpec}:
+                    # recursively validate the files within the column
+                    def check_value(value):
+                        if pandas.isna(value):
+                            return
+                        err_msg = col_spec.validate(value)
+                        if err_msg:
+                            raise ValueError(
+                                f'Error in {axis} "{col}", value "{value}": {err_msg}')
+                    df[col].apply(check_value)
+
+        if any(df.columns.duplicated()):
+            duplicated_columns = df.columns[df.columns.duplicated]
+            return MESSAGES['DUPLICATE_HEADER'].format(
+                header=header_type,
+                header_name=expected,
+                number=count)
+
+        # set the index column, if specified
+        if self.index_col is not None:
+            index_col = self.index_col.lower()
+            try:
+                df = df.set_index(index_col, verify_integrity=True)
+            except KeyError:
+                # If 'index_col' is not a column then KeyError is raised for using
+                # it as the index column
+                LOGGER.error(f"The column '{index_col}' could not be found "
+                             f"in the table {csv_path}")
+                raise
+
+        return df
+
+
 @dataclasses.dataclass(kw_only=True)
 class DirectoryInputSpec(InputSpec):
-    contents: Contents
+    contents: Contents | None = None
     permissions: str = 'rx'
     must_exist: bool = True
+
+    # @timeout
+    def validate(self, dirpath):
+        """Validate a directory.
+
+        Args:
+            dirpath (string): The directory path to validate.
+            must_exist=True (bool): If ``True``, the directory at ``dirpath``
+                must already exist on the filesystem.
+            permissions='rx' (string): A string that includes the lowercase
+                characters ``r``, ``w`` and/or ``x``, indicating read, write, and
+                execute permissions (respectively) required for this directory.
+
+        Returns:
+            A string error message if an error was found.  ``None`` otherwise.
+        """
+        if self.must_exist:
+            if not os.path.exists(dirpath):
+                return MESSAGES['DIR_NOT_FOUND']
+
+        if os.path.exists(dirpath):
+            if not os.path.isdir(dirpath):
+                return MESSAGES['NOT_A_DIR']
+        else:
+            # find the parent directory that does exist and check permissions
+            child = dirpath
+            parent = os.path.normcase(os.path.abspath(dirpath))
+            while child:
+                # iterate child because if this gets back to the root dir,
+                # child becomes an empty string and parent remains root string.
+                parent, child = os.path.split(parent)
+                if os.path.exists(parent):
+                    dirpath = parent
+                    break
+
+        MESSAGE_KEY = 'NEED_PERMISSION_DIRECTORY'
+
+        if 'r' in self.permissions:
+            try:
+                os.scandir(dirpath).close()
+            except OSError:
+                return MESSAGES[MESSAGE_KEY].format(permission='read')
+
+        # Check for x access before checking for w,
+        # since w operations to a dir are dependent on x access
+        if 'x' in self.permissions:
+            try:
+                cwd = os.getcwd()
+                os.chdir(dirpath)
+            except OSError:
+                return MESSAGES[MESSAGE_KEY].format(permission='execute')
+            finally:
+                os.chdir(cwd)
+
+        if 'w' in self.permissions:
+            try:
+                temp_path = os.path.join(dirpath, 'temp__workspace_validation.txt')
+                with open(temp_path, 'w') as temp:
+                    temp.close()
+                    os.remove(temp_path)
+            except OSError:
+                return MESSAGES[MESSAGE_KEY].format(permission='write')
+
+
 
 @dataclasses.dataclass(kw_only=True)
 class NumberInputSpec(InputSpec):
     units: pint.Unit | None = None
     expression: str | None = None
 
+    def validate(self, value):
+        """Validate numbers.
+
+        Args:
+            value: A python value. This should be able to be cast to a float.
+            expression=None (string): A string expression to be evaluated with the
+                intent of determining that the value is within a specific range.
+                The expression must contain the string ``value``, which will
+                represent the user-provided value (after it has been cast to a
+                float).  Example expression: ``"(value >= 0) & (value <= 1)"``.
+
+        Returns:
+            A string error message if an error was found.  ``None`` otherwise.
+        """
+        try:
+            float(value)
+        except (TypeError, ValueError):
+            return MESSAGES['NOT_A_NUMBER'].format(value=value)
+
+        if self.expression:
+            # Check to make sure that 'value' is in the expression.
+            if 'value' not in self.expression:
+                raise AssertionError(
+                    'The variable name value is not found in the '
+                    f'expression: {self.expression}')
+
+            # Expression is assumed to return a boolean, something like
+            # "value > 0" or "(value >= 0) & (value < 1)".  An exception will
+            # be raised if asteval can't evaluate the expression.
+            result = _evaluate_expression(self.expression, {'value': float(value)})
+            if not result:  # A python bool object is returned.
+                return MESSAGES['INVALID_VALUE'].format(condition=self.expression)
+
+    @staticmethod
+    def format_column(col, *args):
+        return col.astype(float)
+
 @dataclasses.dataclass(kw_only=True)
 class IntegerInputSpec(InputSpec):
-    pass
+    def validate(self, value):
+        """Validate an integer.
+
+        Args:
+            value: A python value. This should be able to be cast to an int.
+
+        Returns:
+            A string error message if an error was found.  ``None`` otherwise.
+        """
+        try:
+            # must first cast to float, to handle both string and float inputs
+            as_float = float(value)
+            if not as_float.is_integer():
+                return MESSAGES['NOT_AN_INTEGER'].format(value=value)
+        except (TypeError, ValueError):
+            return MESSAGES['NOT_A_NUMBER'].format(value=value)
+        return None
+
+    @staticmethod
+    def format_column(col, *args):
+        return col.astype(pandas.Int64Dtype())
+
 
 @dataclasses.dataclass(kw_only=True)
 class RatioInputSpec(InputSpec):
-    pass
+    def validate(self, value):
+        """Validate a ratio (a proportion expressed as a value from 0 to 1).
+
+        Args:
+            value: A python value. This should be able to be cast to a float.
+
+        Returns:
+            A string error message if an error was found.  ``None`` otherwise.
+
+        """
+        try:
+            as_float = float(value)
+        except (TypeError, ValueError):
+            return MESSAGES['NOT_A_NUMBER'].format(value=value)
+
+        if as_float < 0 or as_float > 1:
+            return MESSAGES['NOT_WITHIN_RANGE'].format(
+                value=as_float,
+                range='[0, 1]')
+
+    @staticmethod
+    def format_column(col, *args):
+        return col.astype(float)
 
 @dataclasses.dataclass(kw_only=True)
 class PercentInputSpec(InputSpec):
-    pass
+    def validate(self, value):
+        """Validate a percent (a proportion expressed as a value from 0 to 100).
+
+        Args:
+            value: A python value. This should be able to be cast to a float.
+
+        Returns:
+            A string error message if an error was found.  ``None`` otherwise.
+        """
+        try:
+            as_float = float(value)
+        except (TypeError, ValueError):
+            return MESSAGES['NOT_A_NUMBER'].format(value=value)
+
+        if as_float < 0 or as_float > 100:
+            return MESSAGES['NOT_WITHIN_RANGE'].format(
+                value=as_float,
+                range='[0, 100]')
+
+    @staticmethod
+    def format_column(col, *args):
+        return col.astype(float)
 
 @dataclasses.dataclass(kw_only=True)
 class BooleanInputSpec(InputSpec):
-    pass
+    def validate(self, value):
+        """Validate a boolean value.
+
+        If the value provided is not a python boolean, an error message is
+        returned.
+
+        Args:
+            value: The value to evaluate.
+
+        Returns:
+            A string error message if an error was found.  ``None`` otherwise.
+        """
+        if not isinstance(value, bool):
+            return MESSAGES['NOT_BOOLEAN'].format(value=value)
+
+    @staticmethod
+    def format_column(col, *args):
+        return col.astype('boolean')
 
 @dataclasses.dataclass(kw_only=True)
 class StringInputSpec(InputSpec):
     regexp: str | None = None
 
+    def validate(self, value):
+        """Validate an arbitrary string.
+
+        Args:
+            value: The value to check.  Must be able to be cast to a string.
+            regexp=None (string): a string interpreted as a regular expression.
+
+        Returns:
+            A string error message if an error was found.  ``None`` otherwise.
+        """
+        if self.regexp:
+            matches = re.fullmatch(self.regexp, str(value))
+            if not matches:
+                return MESSAGES['REGEXP_MISMATCH'].format(regexp=self.regexp)
+        return None
+
+    @staticmethod
+    def format_column(col, *args):
+        return col.apply(
+            lambda s: s if pandas.isna(s) else str(s).strip().lower()
+        ).astype(pandas.StringDtype())
+
 @dataclasses.dataclass(kw_only=True)
 class OptionStringInputSpec(InputSpec):
     options: list
+
+    def validate(self, value):
+        """Validate that a string is in a set of options.
+
+        Args:
+            value: The value to test. Will be cast to a string before comparing
+                against the allowed options.
+            options (dict): option spec to validate against.
+
+        Returns:
+            A string error message if ``value`` is not in ``options``.  ``None``
+            otherwise.
+
+        """
+        # if options is empty, that means it's dynamically populated
+        # so validation should be left to the model's validate function.
+        if self.options and str(value) not in self.options:
+            return MESSAGES['INVALID_OPTION'].format(option_list=sorted(self.options))
+
+    @staticmethod
+    def format_column(col, *args):
+        return col.apply(
+            lambda s: s if pandas.isna(s) else str(s).strip().lower()
+        ).astype(pandas.StringDtype())
+
+@dataclasses.dataclass(kw_only=True)
+class OtherInputSpec(InputSpec):
+    def validate(self, value):
+        pass
 
 @dataclasses.dataclass(kw_only=True)
 class SingleBandRasterOutputSpec(OutputSpec):
@@ -197,10 +868,6 @@ class OptionStringOutputSpec(OutputSpec):
     options: list
 
 @dataclasses.dataclass(kw_only=True)
-class OtherInputSpec(InputSpec):
-    pass
-
-@dataclasses.dataclass(kw_only=True)
 class UISpec:
     order: list
     hidden: list
@@ -220,9 +887,12 @@ class ModelSpec:
 
 
 def build_model_spec(model_spec):
-    inputs = ModelInputs({
-        build_input_spec(argkey, argspec) for argkey, argspec in model_spec['args'].items()
-    })
+    x = [build_input_spec(argkey, argspec) for argkey, argspec in model_spec['args'].items()]
+    print(x)
+    print(*x)
+    inputs = ModelInputs(*x)
+    for i in inputs:
+        print(i.id)
     outputs = types.SimpleNamespace({
         argkey: build_output_spec(argspec, argkey) for argkey, argspec in model_spec['outputs'].items()
     })
@@ -283,7 +953,7 @@ def build_input_spec(argkey, arg):
     elif t == 'raster':
         return SingleBandRasterInputSpec(
             **base_attrs,
-            band=build_input_spec(arg['bands'][1]),
+            band=build_input_spec('1', arg['bands'][1]),
             projected=arg.get('projected', None),
             projection_units=arg.get('projection_units', None))
 
@@ -291,9 +961,9 @@ def build_input_spec(argkey, arg):
         return VectorInputSpec(
             **base_attrs,
             geometries=arg['geometries'],
-            fields=types.SimpleNamespace({
-                key: build_input_spec(field_spec) for key, field_spec in arg['fields'].items()
-            }),
+            fields=Fields(
+                *[build_input_spec(key, field_spec) for key, field_spec in arg['fields'].items()]
+            ),
             projected=arg.get('projected', None),
             projection_units=arg.get('projection_units', None))
 
@@ -301,13 +971,13 @@ def build_input_spec(argkey, arg):
         columns = None
         rows = None
         if 'columns' in arg:
-            columns = types.SimpleNamespace()
-            for col_name, col_spec in arg['columns'].items():
-                setattr(columns, col_name, build_input_spec(col_spec))
+            columns = Columns(*[
+                build_input_spec(col_name, col_spec)
+                for col_name, col_spec in arg['columns'].items()])
         elif 'rows' in arg:
-            rows = types.SimpleNamespace()
-            for row_name, row_spec in arg['rows'].items():
-                setattr(rows, row_name, build_input_spec(row_spec))
+            rows = Rows(*[
+                build_input_spec(row_name, row_spec)
+                for row_name, row_spec in arg['rows'].items()])
 
         return CSVInputSpec(
             **base_attrs,
@@ -317,9 +987,8 @@ def build_input_spec(argkey, arg):
 
     elif t == 'directory':
         return DirectoryInputSpec(
-            contents=types.SimpleNamespace({
-                k: build_input_spec(v) for k, v in arg['contents'].items()
-            }),
+            contents=Contents(*[
+                build_input_spec(k, v) for k, v in arg['contents'].items()]),
             permissions=arg.get('permissions', None),
             must_exist=arg.get('must_exist', None),
             **base_attrs)
@@ -331,10 +1000,9 @@ def build_input_spec(argkey, arg):
         return RasterOrVectorInputSpec(
             **base_attrs,
             geometries=arg['geometries'],
-            fields=types.SimpleNamespace({
-                key: build_input_spec(field_spec) for key, field_spec in arg['fields'].items()
-            }),
-            band=build_input_spec(arg['bands'][1]),
+            fields=Fields(*[
+                build_input_spec(key, field_spec) for key, field_spec in arg['fields'].items()]),
+            band=build_input_spec('1', arg['bands'][1]),
             projected=arg.get('projected', None),
             projection_units=arg.get('projection_units', None))
 
@@ -457,19 +1125,19 @@ SUFFIX = {
     "regexp": "[a-zA-Z0-9_-]*"
 }
 
-N_WORKERS = NumberInputSpec(
-    id="n_workers",
-    name=gettext("taskgraph n_workers parameter"),
-    about=gettext(
+N_WORKERS = {
+    "name": gettext("taskgraph n_workers parameter"),
+    "about": gettext(
         "The n_workers parameter to provide to taskgraph. "
         "-1 will cause all jobs to run synchronously. "
         "0 will run all jobs in the same process, but scheduling will take "
         "place asynchronously. Any other positive integer will cause that "
         "many processes to be spawned to execute tasks."),
-    units=u.none,
-    required=False,
-    expression="value >= -1"
-)
+    "type": "number",
+    "units": u.none,
+    "required": False,
+    "expression": "value >= -1"
+}
 
 METER_RASTER = {
     "type": "raster",
