@@ -2,6 +2,7 @@ import importlib
 import json
 import logging
 import os
+import pathlib
 import pprint
 
 import geometamaker
@@ -613,14 +614,23 @@ def describe_arg_from_name(module_name, *arg_keys):
     return f'.. _{anchor_name}:\n\n{rst_description}'
 
 
-def write_metadata_file(datasource_path, spec, lineage_statement, keywords_list):
-    """Write a metadata sidecar file for an invest output dataset.
+def write_metadata_file(datasource_path, spec, lineage_statement,
+                        keywords_list, replace_path=None):
+    """Write a metadata sidecar file for an invest dataset.
+
+    Create metadata for invest data taking care to preserve existing
+    human-modified attributes. If ``replace_path`` is set to a string path,
+    it will be used to replace the paths in the metadata's 'source'
+    and 'path' attributes which represent the temporary location of files
+    before datastack compression.
 
     Args:
-        datasource_path (str) - filepath to the invest output
-        spec (dict) -  the invest specification for ``datasource_path``
+        datasource_path (str) - filepath to the data to describe
+        spec (dict) - the invest specification for ``datasource_path``
         lineage_statement (str) - string to describe origin of the dataset.
         keywords_list (list) - sequence of strings
+        replace_path (str or None) - filepath of datastack, used to replace
+            temporary filepath in metadata's path and sources attributes
 
     Returns:
         None
@@ -630,8 +640,15 @@ def write_metadata_file(datasource_path, spec, lineage_statement, keywords_list)
     def _get_key(key, resource):
         """Map name of actual key in yml from model_spec key name."""
         names = {field.name.lower(): field.name for field in resource.data_model.fields}
-        # print("names",names)
         return names[key]
+
+    def _get_temp_root_dir(path_str):
+        """Extract temp filepath up to 'data' folder"""
+        parts = pathlib.Path(path_str).parts
+        if 'data' in parts:
+            idx = len(parts) - 1 - parts[::-1].index('data')
+            return pathlib.Path(*parts[:idx + 1]).as_posix()
+        return None
 
     resource = geometamaker.describe(datasource_path)
     resource.set_lineage(lineage_statement)
@@ -653,9 +670,10 @@ def write_metadata_file(datasource_path, spec, lineage_statement, keywords_list)
             try:
                 yaml_key = _get_key(key, resource)
                 # Field description only gets set if its empty, i.e. ''
-                if len(resource.get_field_description(yaml_key).description) < 1: 
-                    resource.set_field_description(
-                        yaml_key, description=about, units=units)
+                if len(resource.get_field_description(yaml_key).description) < 1:
+                    resource.set_field_description(yaml_key, description=about)
+                if len(resource.get_field_description(yaml_key).units) < 1:
+                    resource.set_field_description(yaml_key, units=units)
             except KeyError as error:
                 # fields that are in the spec but missing
                 # from model results because they are conditional.
@@ -668,6 +686,16 @@ def write_metadata_file(datasource_path, spec, lineage_statement, keywords_list)
                 except KeyError:
                     units = ''
                 resource.set_band_description(idx, units=units)
+
+    if replace_path:
+        # Replace temp paths in metadata's path and sources
+        # with datastack destination path 
+        temp_path = _get_temp_root_dir(resource.path)
+        target_path = os.path.join(replace_path, "data")
+        resource.path = resource.path.replace(temp_path, target_path)
+        if resource.sources:
+            resource.sources = [source.replace(temp_path, target_path)
+                                for source in resource.sources]
 
     resource.write()
 
@@ -713,27 +741,23 @@ def generate_metadata(model_module, args_dict):
     _walk_spec(model_module.MODEL_SPEC['outputs'], args_dict['workspace_dir'])
 
 
-def generate_metadata_from_args(model_module, args_dict, workspace_dir):
+def generate_metadata_for_datastack(model_module, args_dict, workspace_dir,
+                                    datastack_path):
     """Create metadata for all items in invest model args.
 
     Args:
-        model_module (object): the natcap.invest module containing
+        model_module (object) - the natcap.invest module containing
             the MODEL_SPEC attribute
-        args_dict (dict): the arguments dictionary passed to the
+        args_dict (dict) - the arguments dictionary passed to the
             model's ``execute`` function.
-        workspace_dir (string): where to look for files
+        workspace_dir (str) - where to look for files
+        datastack_path (str) - path where datastack will be saved
 
     Returns:
         None
 
     """
-    LOGGER.info("running generate_metadata!")
-    # file_suffix = utils.make_suffix_string(args_dict, 'results_suffix')
-    formatted_args = pprint.pformat(args_dict)
-    lineage_statement = (
-        f'Created by {model_module.__name__}.execute(\n{formatted_args})\n'
-        f'Version {natcap.invest.__version__}')
-    keywords = [model_module.MODEL_SPEC['model_id'], 'InVEST' , "temp"]
+    keywords = [model_module.MODEL_SPEC['model_id'], 'InVEST']
 
     def _walk_spec(output_spec, workspace):
         for filename, spec_data in output_spec.items():
@@ -744,21 +768,14 @@ def generate_metadata_from_args(model_module, args_dict, workspace_dir):
                     spec_data['contents'],
                     os.path.join(workspace, filename))
             else:
-                LOGGER.info(f"filename: {filename}")
                 if filename in args_dict and type(args_dict[filename]) is str:
-                    print("filename:", filename, args_dict)
                     full_path = os.path.join(workspace, args_dict[filename])
-                    print(full_path, 'is full apth')
-                    LOGGER.info(f"FUll_path: {full_path}")
-                    if os.path.exists(full_path) and args_dict[filename]!='':
-                        LOGGER.info("path exists.")
+                    if os.path.exists(full_path) and args_dict[filename] != '':
                         try:
-                            print(spec_data, 'spec data')
                             write_metadata_file(
-                                full_path, spec_data, lineage_statement, keywords)
-
+                                full_path, spec_data, '', keywords,
+                                replace_path=datastack_path)
                         except ValueError as error:
                             # Some unsupported file formats, e.g. html
                             LOGGER.debug(error)
-    LOGGER.info(f"output spec:{model_module.MODEL_SPEC['args']}")
     _walk_spec(model_module.MODEL_SPEC['args'], workspace_dir)
