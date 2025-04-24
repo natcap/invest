@@ -14,6 +14,7 @@ import pygeoprocessing
 import scipy.spatial
 import shapely.errors
 import shapely.geometry
+import shapely.prepared
 import shapely.wkb
 import taskgraph
 from osgeo import gdal
@@ -748,7 +749,8 @@ def _map_distance_from_tropical_forest_edge(
     edge_distance_raster = gdal.OpenEx(edge_distance_path, gdal.GA_Update)
     edge_distance_band = edge_distance_raster.GetRasterBand(1)
 
-    for offset_dict in pygeoprocessing.iterblocks((base_lulc_raster_path, 1), offset_only=True):
+    for offset_dict in pygeoprocessing.iterblocks((base_lulc_raster_path, 1),
+            offset_only=True):
         # where LULC has nodata, overwrite edge distance with nodata value
         lulc_block = lulc_band.ReadAsArray(**offset_dict)
         distance_block = edge_distance_band.ReadAsArray(**offset_dict)
@@ -793,7 +795,7 @@ def _clip_global_regression_models_vector(
     # Reproject the LULC bounding box to the vector's projection for clipping
     mask_bb = pygeoprocessing.transform_bounding_box(buffered_bb,
         raster_info['projection_wkt'], vector_info['projection_wkt'])
-    shapely_mask = shapely.geometry.box(*mask_bb)
+    shapely_mask = shapely.prepared.prep(shapely.geometry.box(*mask_bb))
 
     base_vector = gdal.OpenEx(source_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
@@ -814,29 +816,32 @@ def _clip_global_regression_models_vector(
 
         try:
             shapely_geom = shapely.wkb.loads(bytes(geometry.ExportToWkb()))
-            if not shapely_geom.is_valid:
-                invalid_feature_count += 1
-                LOGGER.warning(
-                    "The geometry at feature %s is invalid and will be "
-                    "skipped", feature.GetFID())
-                continue
-
-            # Check for intersection rather than use gdal.Layer.Clip()
-            # to preserve the shape of the polygons (we use the centroid
-            # when constructing the kd-tree)
-            if shapely_geom.intersects(shapely_mask):
-                new_feature = ogr.Feature(target_layer.GetLayerDefn())
-                new_feature.SetGeometry(ogr.CreateGeometryFromWkb(
-                    shapely_geom.wkb))
-                for field_name, field_value in feature.items().items():
-                    new_feature.SetField(field_name, field_value)
-                target_layer.CreateFeature(new_feature)
-
-        except (shapely.errors.ShapelyError, ValueError):
+        # Invalid geometries that cannot be loaded by Shapely;
+        # e.g. polygons with too few points for their type
+        except shapely.errors.ShapelyError:
             invalid_feature_count += 1
             LOGGER.warning(
-                "The geometry at feature %s is invalid and will be "
-                "skipped", feature.GetFID())
+                f"The geometry at feature {feature.GetFID()} is invalid "
+                "and will be skipped.")
+            continue
+
+        if not shapely_geom.is_valid:
+            invalid_feature_count += 1
+            LOGGER.warning(
+                f"The geometry at feature {feature.GetFID()} is invalid "
+                "and will be skipped.")
+            continue
+
+        # Check for intersection rather than use gdal.Layer.Clip()
+        # to preserve the shape of the polygons (we use the centroid
+        # when constructing the kd-tree)
+        if shapely_mask.intersects(shapely_geom):
+            new_feature = ogr.Feature(target_layer.GetLayerDefn())
+            new_feature.SetGeometry(ogr.CreateGeometryFromWkb(
+                shapely_geom.wkb))
+            for field_name, field_value in feature.items().items():
+                new_feature.SetField(field_name, field_value)
+            target_layer.CreateFeature(new_feature)
 
     target_layer.CommitTransaction()
 
