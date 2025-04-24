@@ -626,13 +626,20 @@ def write_metadata_file(datasource_path, spec, lineage_statement, keywords_list)
         None
 
     """
+
+    def _get_key(key, resource):
+        """Map name of actual key in yml from model_spec key name."""
+        names = {field.name.lower(): field.name for field in resource.data_model.fields}
+        # print("names",names)
+        return names[key]
+
     resource = geometamaker.describe(datasource_path)
     resource.set_lineage(lineage_statement)
     # a pre-existing metadata doc could have keywords
     words = resource.get_keywords()
     resource.set_keywords(set(words + keywords_list))
 
-    if 'about' in spec:
+    if 'about' in spec and len(resource.get_description()) < 1:
         resource.set_description(spec['about'])
     attr_spec = None
     if 'columns' in spec:
@@ -644,19 +651,23 @@ def write_metadata_file(datasource_path, spec, lineage_statement, keywords_list)
             about = value['about'] if 'about' in value else ''
             units = format_unit(value['units']) if 'units' in value else ''
             try:
-                resource.set_field_description(
-                    key, description=about, units=units)
+                yaml_key = _get_key(key, resource)
+                # Field description only gets set if its empty, i.e. ''
+                if len(resource.get_field_description(yaml_key).description) < 1: 
+                    resource.set_field_description(
+                        yaml_key, description=about, units=units)
             except KeyError as error:
                 # fields that are in the spec but missing
                 # from model results because they are conditional.
                 LOGGER.debug(error)
     if 'bands' in spec:
         for idx, value in spec['bands'].items():
-            try:
-                units = format_unit(spec['bands'][idx]['units'])
-            except KeyError:
-                units = ''
-            resource.set_band_description(idx, units=units)
+            if len(resource.get_band_description(idx).description) < 1:
+                try:
+                    units = format_unit(spec['bands'][idx]['units'])
+                except KeyError:
+                    units = ''
+                resource.set_band_description(idx, units=units)
 
     resource.write()
 
@@ -699,5 +710,55 @@ def generate_metadata(model_module, args_dict):
                     except ValueError as error:
                         # Some unsupported file formats, e.g. html
                         LOGGER.debug(error)
-
     _walk_spec(model_module.MODEL_SPEC['outputs'], args_dict['workspace_dir'])
+
+
+def generate_metadata_from_args(model_module, args_dict, workspace_dir):
+    """Create metadata for all items in invest model args.
+
+    Args:
+        model_module (object): the natcap.invest module containing
+            the MODEL_SPEC attribute
+        args_dict (dict): the arguments dictionary passed to the
+            model's ``execute`` function.
+        workspace_dir (string): where to look for files
+
+    Returns:
+        None
+
+    """
+    LOGGER.info("running generate_metadata!")
+    # file_suffix = utils.make_suffix_string(args_dict, 'results_suffix')
+    formatted_args = pprint.pformat(args_dict)
+    lineage_statement = (
+        f'Created by {model_module.__name__}.execute(\n{formatted_args})\n'
+        f'Version {natcap.invest.__version__}')
+    keywords = [model_module.MODEL_SPEC['model_id'], 'InVEST' , "temp"]
+
+    def _walk_spec(output_spec, workspace):
+        for filename, spec_data in output_spec.items():
+            if 'type' in spec_data and spec_data['type'] == 'directory':
+                if 'taskgraph.db' in spec_data['contents']:
+                    continue
+                _walk_spec(
+                    spec_data['contents'],
+                    os.path.join(workspace, filename))
+            else:
+                LOGGER.info(f"filename: {filename}")
+                if filename in args_dict and type(args_dict[filename]) is str:
+                    print("filename:", filename, args_dict)
+                    full_path = os.path.join(workspace, args_dict[filename])
+                    print(full_path, 'is full apth')
+                    LOGGER.info(f"FUll_path: {full_path}")
+                    if os.path.exists(full_path) and args_dict[filename]!='':
+                        LOGGER.info("path exists.")
+                        try:
+                            print(spec_data, 'spec data')
+                            write_metadata_file(
+                                full_path, spec_data, lineage_statement, keywords)
+
+                        except ValueError as error:
+                            # Some unsupported file formats, e.g. html
+                            LOGGER.debug(error)
+    LOGGER.info(f"output spec:{model_module.MODEL_SPEC['args']}")
+    _walk_spec(model_module.MODEL_SPEC['args'], workspace_dir)
