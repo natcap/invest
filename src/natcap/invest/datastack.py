@@ -488,7 +488,8 @@ def build_datastack_archive(args, model_name, datastack_path):
     build_parameter_set(
         rewritten_args, model_name, param_file_uri, relative=True)
 
-    spec_utils.generate_metadata_args(module, rewritten_args, data_dir)
+    spec_utils.generate_metadata_for_datastack(module, rewritten_args,
+                                               data_dir, datastack_path)
 
     # Remove the handler before archiving the working dir (and the logfile)
     archive_filehandler.close()
