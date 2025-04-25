@@ -803,8 +803,8 @@ def execute(args):
             target_path_list=[bathymetry_proj_raster_path],
             task_name='clip_to_projection_with_square_pixels')
 
-        # Creation of depth mask raster is dependent on the final bathymetry
-        depth_mask_dependent_task_list = [clip_bathy_to_projection_task]
+        # Raster alignment will be dependent on the final bathymetry
+        align_and_resize_dependent_task_list = [clip_bathy_to_projection_task]
 
         # Since an AOI was provided the wind energy points shapefile will need
         # to be clipped and projected. Thus save the construction of the
@@ -828,7 +828,7 @@ def execute(args):
         # Clip the wind energy point shapefile to AOI
         LOGGER.info('Clip and project wind points to AOI')
         clipped_wind_point_vector_path = os.path.join(
-            out_dir, 'wind_energy_points%s.shp' % suffix)
+            inter_dir, 'intermediate_wind_energy_points%s.shp' % suffix)
         clip_wind_vector_task = task_graph.add_task(
             func=_clip_vector_by_vector,
             args=(wind_point_vector_path, aoi_vector_path,
@@ -837,15 +837,14 @@ def execute(args):
             task_name='clip_wind_point_by_aoi',
             dependent_task_list=[wind_data_to_vector_task])
 
-        # Creating density and harvested rasters depends on the clipped wind
-        # vector
-        density_harvest_rasters_dependent_task_list = [clip_wind_vector_task]
+        # Creating harvested raster depends on the clipped wind vector
+        harvest_raster_dependent_task_list = [clip_wind_vector_task]
 
         # Set the bathymetry and points path to use in the rest of the model.
         # In this case these paths refer to the projected files. This may not
         # be the case if an AOI is not provided
         final_bathy_raster_path = bathymetry_proj_raster_path
-        final_wind_point_vector_path = clipped_wind_point_vector_path
+        intermediate_wind_point_vector_path = clipped_wind_point_vector_path
 
         # Try to handle the distance inputs and land datasource if they
         # are present
@@ -898,26 +897,9 @@ def execute(args):
                 dependent_task_list=[
                     create_aoi_raster_task, clip_reproject_land_poly_task])
 
-            # Mask the distance raster by the min and max distances
-            dist_mask_path = os.path.join(inter_dir,
-                                          'distance_mask%s.tif' % suffix)
-            mask_by_distance_task = task_graph.add_task(
-                func=_mask_by_distance,
-                args=(dist_trans_path, min_distance, max_distance,
-                      _TARGET_NODATA, dist_mask_path),
-                target_path_list=[dist_mask_path],
-                task_name='mask_raster_by_distance',
-                dependent_task_list=[create_distance_raster_task])
-
     else:
         LOGGER.info("AOI argument was not selected")
         mask_by_distance = False
-
-        # Since no AOI was provided the wind energy points shapefile that is
-        # created directly from dictionary will be the final output, so set the
-        # path to point to the output folder
-        wind_point_vector_path = os.path.join(
-            out_dir, 'wind_energy_points%s.shp' % suffix)
 
         # Create point shapefile from wind data dictionary
         LOGGER.info('Create point shapefile from wind data')
@@ -928,20 +910,79 @@ def execute(args):
             task_name='wind_data_to_vector_without_aoi',
             dependent_task_list=[compute_density_harvested_task])
 
-        # Creating density and harvested rasters depends on the wind vector
-        density_harvest_rasters_dependent_task_list = [
-            wind_data_to_vector_task]
+        # Creating harvested raster depends on the wind vector
+        harvest_raster_dependent_task_list = [wind_data_to_vector_task]
 
         # Set the bathymetry and points path to use in the rest of the model.
         # In this case these paths refer to the unprojected files. This may not
         # be the case if an AOI is provided
-        final_wind_point_vector_path = wind_point_vector_path
         final_bathy_raster_path = bathymetry_path
+        intermediate_wind_point_vector_path = os.path.join(
+            inter_dir, 'intermediate_wind_energy_points%s.shp' % suffix)
 
-        # Creation of depth mask is not dependent on creating additional
+        # Aligning bathymetry raster is not dependent on creating additional
         # bathymetry mask
-        depth_mask_dependent_task_list = None
+        align_and_resize_dependent_task_list = []
 
+    # Rasterize harvested values:
+    initial_harvested_raster_path = os.path.join(
+        inter_dir, 'harvested_unmasked%s.tif' % suffix)
+    LOGGER.info('Creating Harvested Raster')
+    create_harvested_raster_task = task_graph.add_task(
+        func=pygeoprocessing.create_raster_from_vector_extents,
+        args=(intermediate_wind_point_vector_path, initial_harvested_raster_path,
+              target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA),
+        target_path_list=[initial_harvested_raster_path],
+        task_name='create_harvested_raster',
+        dependent_task_list=harvest_raster_dependent_task_list)
+
+    LOGGER.info('Rasterizing Harvested Points')
+    rasterize_harvested_task = task_graph.add_task(
+        func=pygeoprocessing.rasterize,
+        args=(intermediate_wind_point_vector_path, initial_harvested_raster_path),
+        kwargs={'option_list': [f'ATTRIBUTE={_HARVESTED_FIELD_NAME}']},
+        task_name='rasterize_harvested_points',
+        dependent_task_list=[create_harvested_raster_task])
+
+    # Align the harvested, bathymetry (and distance, if relevant) rasters
+    # prior to mask-creation so that we can write depth (and dist) values
+    # to the output vector
+    rasters_to_align_list = [initial_harvested_raster_path, final_bathy_raster_path]
+    # Raster alignment will be dependent on creation of the harvested raster
+    align_and_resize_dependent_task_list.append(rasterize_harvested_task)
+
+    aligned_harvested_raster_path = initial_harvested_raster_path.replace(
+        '%s.tif' % suffix, '_aligned%s.tif' % suffix)
+    aligned_bathy_raster_path = final_bathy_raster_path.replace(
+        '%s.tif' % suffix, '_aligned%s.tif' % suffix)
+
+    aligned_rasters_list = [aligned_harvested_raster_path,
+        aligned_bathy_raster_path]
+
+    # If we will be masking by distance, align the distance raster as well
+    if mask_by_distance:
+        rasters_to_align_list.append(dist_trans_path)
+        # Raster alignment will be dependent on creation of the distance raster
+        align_and_resize_dependent_task_list.append(create_distance_raster_task)
+
+        aligned_dist_raster_path = dist_trans_path.replace(
+            '%s.tif' % suffix, '_aligned%s.tif' % suffix)
+        aligned_rasters_list.append(aligned_dist_raster_path)
+    else:
+        # No mask_by_distance_task is added to taskgraph
+        LOGGER.info('NO Distance Mask to add to list')
+
+    # Align and resize harvest, bathymetry, and (possibly) distance rasters
+    align_and_resize_raster_task = task_graph.add_task(
+        func=pygeoprocessing.align_and_resize_raster_stack,
+        args=(rasters_to_align_list, aligned_rasters_list,
+              [_TARGET_RESAMPLE_METHOD] * len(rasters_to_align_list),
+              target_pixel_size, 'intersection'),
+        task_name='align_and_resize_harvest_list',
+        target_path_list=aligned_rasters_list,
+        dependent_task_list=align_and_resize_dependent_task_list)
+
+    # Now do the masking:
     # Get the min and max depth values from the arguments and set to a negative
     # value indicating below sea level
     min_depth = abs(float(args['min_depth'])) * -1
@@ -952,133 +993,72 @@ def execute(args):
     LOGGER.info('Creating Depth Mask')
     depth_mask_path = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
 
-    task_graph.add_task(
+    create_depth_mask_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(final_bathy_raster_path, 1), (min_depth, 'raw'),
+        args=([(aligned_bathy_raster_path, 1), (min_depth, 'raw'),
                (max_depth, 'raw')], _depth_op, depth_mask_path,
               _TARGET_DATA_TYPE, _TARGET_NODATA),
         target_path_list=[depth_mask_path],
         task_name='mask_depth_on_bathymetry',
-        dependent_task_list=depth_mask_dependent_task_list)
+        dependent_task_list=[align_and_resize_raster_task])
 
-    # Set paths for creating density and harvested rasters
-    temp_density_raster_path = os.path.join(
-        inter_dir, 'temp_density%s.tif' % suffix)
-    temp_harvested_raster_path = os.path.join(
-        inter_dir, 'temp_harvested%s.tif' % suffix)
+    harvest_mask_list = [aligned_harvested_raster_path, depth_mask_path]
+    mask_dependent_task_list = [align_and_resize_raster_task,
+        create_depth_mask_task]
 
-    # Create rasters for density and harvested values
-    LOGGER.info('Create Density Raster')
-    create_density_raster_task = task_graph.add_task(
-        func=pygeoprocessing.create_raster_from_vector_extents,
-        args=(final_wind_point_vector_path, temp_density_raster_path,
-              target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA),
-        target_path_list=[temp_density_raster_path],
-        task_name='create_density_raster',
-        dependent_task_list=density_harvest_rasters_dependent_task_list)
-
-    LOGGER.info('Create Harvested Raster')
-    create_harvested_raster_task = task_graph.add_task(
-        func=pygeoprocessing.create_raster_from_vector_extents,
-        args=(final_wind_point_vector_path, temp_harvested_raster_path,
-              target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA),
-        target_path_list=[temp_harvested_raster_path],
-        task_name='create_harvested_raster',
-        dependent_task_list=density_harvest_rasters_dependent_task_list)
-
-    # Rasterize density values and harvested values:
-    LOGGER.info('Rasterizing Density Points')
-    rasterize_density_task = task_graph.add_task(
-        func=pygeoprocessing.rasterize,
-        args=(final_wind_point_vector_path, temp_density_raster_path),
-        kwargs={'option_list': [f'ATTRIBUTE={_DENSITY_FIELD_NAME}']},
-        task_name='rasterize_density_points',
-        dependent_task_list=[create_density_raster_task])
-
-    LOGGER.info('Rasterizing Harvested Points')
-    rasterize_harvested_task = task_graph.add_task(
-        func=pygeoprocessing.rasterize,
-        args=(final_wind_point_vector_path, temp_harvested_raster_path),
-        kwargs={'option_list': [f'ATTRIBUTE={_HARVESTED_FIELD_NAME}']},
-        task_name='rasterize_harvested_points',
-        dependent_task_list=[create_harvested_raster_task])
-
-    # List of paths to pass to raster_calculator for operations
-    harvested_mask_list = [temp_harvested_raster_path, depth_mask_path]
-
-    align_and_resize_dependent_task_list = [
-        rasterize_density_task, rasterize_harvested_task]
-    # If a distance mask was created then add it to the raster list to pass in
-    # for masking out the output datasets
     if mask_by_distance:
-        harvested_mask_list.append(dist_mask_path)
-
-        # The align_and_resize_density_and_harvest_task will be dependent on
-        # the density, harvested rasterization tasks, as well as
-        # masking by distance task
-        align_and_resize_dependent_task_list.append(mask_by_distance_task)
-    else:
-        # No mask_by_distance_task is added to taskgraph
-        LOGGER.info('NO Distance Mask to add to list')
-
-    # Align and resize the mask rasters
-    LOGGER.info('Align and resize the Density and Harvested rasters')
-    aligned_harvested_mask_list = [
-        path.replace('%s.tif' % suffix, '_aligned%s.tif' % suffix)
-        for path in harvested_mask_list
-    ]
-
-    aligned_density_raster_path = temp_density_raster_path.replace(
-            '%s.tif' % suffix, '_aligned%s.tif' % suffix)
-
-    merged_mask_list = harvested_mask_list + [temp_density_raster_path]
-    merged_aligned_mask_list = aligned_harvested_mask_list + [
-        aligned_density_raster_path]
-
-    # Align and resize rasters in the density and harvest lists
-    align_and_resize_density_and_harvest_task = task_graph.add_task(
-        func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(merged_mask_list, merged_aligned_mask_list,
-              [_TARGET_RESAMPLE_METHOD] * len(merged_mask_list),
-              target_pixel_size, 'intersection'),
-        task_name='align_and_resize_density_and_harvest_list',
-        target_path_list=merged_aligned_mask_list,
-        dependent_task_list=align_and_resize_dependent_task_list)
+        # Mask the distance raster by the min and max distances
+        LOGGER.info('Creating Distance Mask')
+        dist_mask_path = os.path.join(inter_dir,
+                                      'distance_mask%s.tif' % suffix)
+        create_dist_mask_task = task_graph.add_task(
+            func=_mask_by_distance,
+            args=(aligned_dist_raster_path, min_distance, max_distance,
+                  _TARGET_NODATA, dist_mask_path),
+            target_path_list=[dist_mask_path],
+            task_name='mask_raster_by_distance',
+            dependent_task_list=[align_and_resize_raster_task])
+        harvest_mask_list.append(dist_mask_path)
+        mask_dependent_task_list.append(create_dist_mask_task)
 
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
     LOGGER.info('Mask out depth [and distance] areas from Harvested raster')
-    harvested_masked_path = temp_harvested_raster_path.replace(
-            '%s.tif' % suffix, '_aligned_masked%s.tif' % suffix)
+    harvested_masked_path = os.path.join(
+        inter_dir, 'harvested_energy_MWhr_per_yr%s.tif' % suffix)
 
     masked_harvested_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(path, 1) for path in aligned_harvested_mask_list],
+        args=([(path, 1) for path in harvest_mask_list],
               _mask_out_depth_dist, harvested_masked_path, _TARGET_DATA_TYPE,
               _TARGET_NODATA),
         task_name='mask_harvested_raster',
         target_path_list=[harvested_masked_path],
-        dependent_task_list=[align_and_resize_density_and_harvest_task])
+        dependent_task_list=mask_dependent_task_list)
+
+    rasters_fields_to_vector_list = [
+        (harvested_masked_path, _HARVESTED_FIELD_NAME),
+        (aligned_bathy_raster_path, _DEPTH_FIELD_NAME),
+    ]
+    if mask_by_distance:
+        rasters_fields_to_vector_list.append(
+            (aligned_dist_raster_path, _DIST_FIELD_NAME))
 
     if 'valuation_container' in args and args['valuation_container'] is True:
         LOGGER.info('Starting Wind Energy Valuation Model')
-
-        # path for final distance transform used in valuation calculations
-        final_dist_raster_path = os.path.join(
-            inter_dir, 'val_distance_trans%s.tif' % suffix)
     else:
         # Write Distance and Harvested [mask] values to Wind Points Shapefile
         LOGGER.info("Adding mask values to shapefile")
-        expanded_wind_point_vector_path = os.path.join(
-            out_dir, 'expanded_wind_energy_points%s.shp' % suffix)
+        final_wind_point_vector_path = os.path.join(
+            out_dir, 'wind_energy_points%s.shp' % suffix)
         task_graph.add_task(
             func=_index_raster_values_to_point_vector,
-            args=(final_wind_point_vector_path,
+            args=(intermediate_wind_point_vector_path,
                   [harvested_masked_path],
                   [_HARVESTED_FIELD_NAME],
-                  expanded_wind_point_vector_path),
+                  final_wind_point_vector_path),
             kwargs={'overwrite_fields': [_HARVESTED_FIELD_NAME]},
-            target_path_list=[expanded_wind_point_vector_path],
+            target_path_list=[final_wind_point_vector_path],
             task_name='add_masked_vals_to_wind_vector',
             dependent_task_list=[masked_harvested_task])
 
@@ -1088,6 +1068,11 @@ def execute(args):
         task_graph.join()
         LOGGER.info('Valuation Not Selected. Model completed')
         return
+
+    # Begin the valuation model run:
+    # path for final distance transform used in valuation calculations
+    final_dist_raster_path = os.path.join(
+        inter_dir, 'val_distance_trans%s.tif' % suffix)
 
     if 'grid_points_path' in args and args['grid_points_path']:
         # Handle Grid Points
@@ -1297,18 +1282,19 @@ def execute(args):
 
     # Write Valuation values to Wind Points shapefile
     LOGGER.info("Adding valuation results to shapefile")
-    expanded_wind_point_vector_path = os.path.join(
-        out_dir, 'expanded_wind_energy_points%s.shp' % suffix)
+    rasters_fields_to_vector_list.extend([
+        (carbon_raster_path, _CARBON_FIELD_NAME),
+        (levelized_raster_path, _LEVELIZED_COST_FIELD_NAME),
+        (npv_raster_path, _NPV_FIELD_NAME)])
+    final_wind_point_vector_path = os.path.join(
+        out_dir, 'wind_energy_points%s.shp' % suffix)
     task_graph.add_task(
         func=_index_raster_values_to_point_vector,
-        args=(final_wind_point_vector_path,
-              [harvested_masked_path, carbon_raster_path,
-               levelized_raster_path, npv_raster_path],
-              [_HARVESTED_FIELD_NAME, _CARBON_FIELD_NAME,
-               _LEVELIZED_COST_FIELD_NAME, _NPV_FIELD_NAME],
-              expanded_wind_point_vector_path),
+        args=(intermediate_wind_point_vector_path,
+              rasters_fields_to_vector_list,
+              final_wind_point_vector_path),
         kwargs={'overwrite_fields': [_HARVESTED_FIELD_NAME]},
-        target_path_list=[expanded_wind_point_vector_path],
+        target_path_list=[final_wind_point_vector_path],
         task_name='add_harv_valuation_to_wind_vector',
         dependent_task_list=[npv_levelized_task, carbon_task])
 
@@ -1318,7 +1304,7 @@ def execute(args):
 
 
 def _index_raster_values_to_point_vector(
-        base_point_vector_path, base_raster_path_list, field_name_list,
+        base_point_vector_path, rasters_fieldnames_tuples,
         target_point_vector_path, overwrite_fields=None):
     """Add raster values to vector point feature fields.
 
@@ -1338,11 +1324,8 @@ def _index_raster_values_to_point_vector(
         None
 
     """
-    if len(base_raster_path_list) != len(field_name_list):
-        raise ValueError(
-            "Lengths of `base_raster_path_list` and `field_name_list` are "
-            "not equal. Every raster to be added to the vector needs a "
-            "corresponding field name.")
+    base_raster_path_list = [tup[0] for tup in rasters_fieldnames_tuples]
+    field_name_list = [tup[1] for tup in rasters_fieldnames_tuples]
 
     # Check that raster inputs are all the same dimensions
     raster_info_list = [
