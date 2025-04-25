@@ -65,6 +65,18 @@
   Unreleased Changes
   ------------------
 
+General
+=======
+* Handle exceptions that can arise during ``validation.check_spatial_overlap``
+  when a layer's bounding box cannot be transformed to EPSG:4326.
+  (`#1849 <https://github.com/natcap/invest/issues/1849>`_).
+
+Workbench
+=========
+* Fixed a bug that did not allow users to select a folder as the location
+  to extract a datastack archive.
+  (`#1879 <https://github.com/natcap/invest/issues/1879>`_).
+
 Crop Production
 ===============
 * Both the Percentile and Regression models now issue a warning if any LULC
@@ -74,6 +86,12 @@ Crop Production
 * The Regression model now correctly validates crop names against the existence
   of a corresponding regression yield table
   (`#1723 <https://github.com/natcap/invest/issues/1723>`_).
+
+Seasonal Water Yield
+====================
+* Fixed bug in quickflow calculation where `NoData` values in precipitation
+  were being incorrectly converted to 0's
+  (`#1592 <https://github.com/natcap/invest/issues/1592>`_).
 
 
 3.15.0 (2025-04-03)
