@@ -89,6 +89,41 @@ OUTPUT_WIND_DATA_FIELDS = {
         "about": gettext(
             "Predicted energy harvested from a wind "
             "farm centered on this point.")
+    },
+    "DepthVal": {
+        "type": "number",
+        "units": u.meter,
+        "about": gettext(
+            "Ocean depth at this point.")
+    },
+    "DistVal": {
+        "type": "number",
+        "units": u.meter,
+        "about": gettext(
+            "Distance to shore from this point. Included only "
+            "if distance parameters were provided.")
+    },
+    "CO2_Tons": {
+        "type": "number",
+        "units": u.metric_ton/u.year,
+        "about": gettext(
+            "Offset carbon emissions for a farm centered "
+            "on this point. Included only if Valuation is run.")
+    },
+    "Level_Cost": {
+        "type": "number",
+        "units": u.currency/u.kilowatt_hour,
+        "about": gettext(
+            "Energy price that would be required to set the "
+            "present value of a farm centered on this point "
+            "equal to zero. Included only if Valuation is run.")
+    },
+    "NPV": {
+        "type": "number",
+        "units": u.currency,
+        "about": gettext(
+            "The net present value of a farm centered on "
+            "this point. Included only if Valuation is run.")
     }
 }
 
@@ -457,13 +492,6 @@ MODEL_SPEC = {
                         "units": u.metric_ton/u.year
                     }}
                 },
-                "density_W_per_m2.tif": {
-                    "about": gettext("Map of power density."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.watt/u.meter**2
-                    }}
-                },
                 "depth_mask.tif": {
                     "about": (
                         "Bathymetry map masked to show only the pixels that "
@@ -510,14 +538,6 @@ MODEL_SPEC = {
                 },
                 "projection_params.pickle": {
                     "about": "Pickled bathymetry reprojection parameters"
-                },
-                "temp_density.tif": {
-                    "about": "Interpolated wind power density",
-                    "bands": {1: {"type": "number", "units": u.watt/u.meter**2}}
-                },
-                "temp_harvested.tif": {
-                    "about": "Interpolated harvested wind energy",
-                    "bands": {1: {"type": "number", "units": u.megawatt_hour/u.year}}
                 },
                 "wind_data.pickle": {"about": "Pickled wind data dictionary"},
                 "wind_energy_points_from_data.shp": {
