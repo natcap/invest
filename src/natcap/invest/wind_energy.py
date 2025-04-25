@@ -901,12 +901,18 @@ def execute(args):
         LOGGER.info("AOI argument was not selected")
         mask_by_distance = False
 
+        # Wind point vector that will be supply the template for the final
+        # shapefile; does not need to be clipped to AOI
+        intermediate_wind_point_vector_path = os.path.join(
+            inter_dir, 'intermediate_wind_energy_points%s.shp' % suffix)
+
         # Create point shapefile from wind data dictionary
         LOGGER.info('Create point shapefile from wind data')
         wind_data_to_vector_task = task_graph.add_task(
             func=_wind_data_to_point_vector,
-            args=(wind_data_pickle_path, 'wind_data', wind_point_vector_path),
-            target_path_list=[wind_point_vector_path],
+            args=(wind_data_pickle_path, 'wind_data',
+                  intermediate_wind_point_vector_path),
+            target_path_list=[intermediate_wind_point_vector_path],
             task_name='wind_data_to_vector_without_aoi',
             dependent_task_list=[compute_density_harvested_task])
 
@@ -917,8 +923,6 @@ def execute(args):
         # In this case these paths refer to the unprojected files. This may not
         # be the case if an AOI is provided
         final_bathy_raster_path = bathymetry_path
-        intermediate_wind_point_vector_path = os.path.join(
-            inter_dir, 'intermediate_wind_energy_points%s.shp' % suffix)
 
         # Aligning bathymetry raster is not dependent on creating additional
         # bathymetry mask
@@ -1054,10 +1058,9 @@ def execute(args):
         task_graph.add_task(
             func=_index_raster_values_to_point_vector,
             args=(intermediate_wind_point_vector_path,
-                  [harvested_masked_path],
-                  [_HARVESTED_FIELD_NAME],
+                  rasters_fields_to_vector_list,
                   final_wind_point_vector_path),
-            kwargs={'overwrite_fields': [_HARVESTED_FIELD_NAME]},
+            kwargs={'delete_fields': [_HARVESTED_FIELD_NAME]},
             target_path_list=[final_wind_point_vector_path],
             task_name='add_masked_vals_to_wind_vector',
             dependent_task_list=[masked_harvested_task])
@@ -1293,7 +1296,7 @@ def execute(args):
         args=(intermediate_wind_point_vector_path,
               rasters_fields_to_vector_list,
               final_wind_point_vector_path),
-        kwargs={'overwrite_fields': [_HARVESTED_FIELD_NAME]},
+        kwargs={'delete_fields': [_HARVESTED_FIELD_NAME]},
         target_path_list=[final_wind_point_vector_path],
         task_name='add_harv_valuation_to_wind_vector',
         dependent_task_list=[npv_levelized_task, carbon_task])
@@ -1305,20 +1308,21 @@ def execute(args):
 
 def _index_raster_values_to_point_vector(
         base_point_vector_path, rasters_fieldnames_tuples,
-        target_point_vector_path, overwrite_fields=None):
+        target_point_vector_path, delete_fields=[]):
     """Add raster values to vector point feature fields.
 
     Args:
         base_point_vector_path (str): a path to an OGR point vector file.
-        base_raster_path_list (list): a list of paths to rasters, the values
-            of which will be added to the vector's features. All rasters must
-            already be aligned.
-        field_name_list (list): a list of names of new fields that will be
-            added to the point features. An exception will be raised if this
-            field already exists in the base point vector.
+        rasters_fieldnames_tuples (list): a list of (raster_path, field_name)
+            tuples. The values of rasters in this list will be added to the
+            vector's features under the associated field name. All rasters must
+            already be aligned. An exception will be raised if a field already
+            exists in the base point vector and is not included in the list of
+            fields to overwrite.
         target_point_vector_path (str): a path to a shapefile that has the
             target field name in addition to the existing fields in the base
             point vector.
+        delete_fields (list): a list of fields to remove from the base vector.
 
     Returns:
         None
@@ -1355,8 +1359,8 @@ def _index_raster_values_to_point_vector(
         abs(raster_gt[1]), abs(raster_gt[5]), raster_gt[0], raster_gt[3]
 
     # If a vector field needs to be overwritten, delete it
-    if overwrite_fields:
-        for field_name in overwrite_fields:
+    if delete_fields:
+        for field_name in delete_fields:
             idx = target_layer.FindFieldIndex(field_name, 1)
         if idx > -1: # -1 is index if field does not exist
             target_layer.DeleteField(idx)
@@ -1373,7 +1377,8 @@ def _index_raster_values_to_point_vector(
             target_layer.CreateField(field_defn)
         else:
             raise ValueError(
-                "'%s' field already exists in the input shapefile. "
+                "'%s' field already exists in the input shapefile and was not "
+                "included in the list of fields to overwrite. "
                 "Please rename it or remove it from the attribute table."
                 % field_name)
 
