@@ -812,36 +812,34 @@ def _clip_global_regression_models_vector(
     target_layer.StartTransaction()
     invalid_feature_count = 0
     for feature in base_layer:
+        invalid = False
         geometry = feature.GetGeometryRef()
-
         try:
             shapely_geom = shapely.wkb.loads(bytes(geometry.ExportToWkb()))
-        # Invalid geometries that cannot be loaded by Shapely;
+        # Catch invalid geometries that cannot be loaded by Shapely;
         # e.g. polygons with too few points for their type
         except shapely.errors.ShapelyError:
-            invalid_feature_count += 1
-            LOGGER.warning(
-                f"The geometry at feature {feature.GetFID()} is invalid "
-                "and will be skipped.")
-            continue
-
-        if not shapely_geom.is_valid:
-            invalid_feature_count += 1
-            LOGGER.warning(
-                f"The geometry at feature {feature.GetFID()} is invalid "
-                "and will be skipped.")
-            continue
-
-        # Check for intersection rather than use gdal.Layer.Clip()
-        # to preserve the shape of the polygons (we use the centroid
-        # when constructing the kd-tree)
-        if shapely_mask.intersects(shapely_geom):
-            new_feature = ogr.Feature(target_layer.GetLayerDefn())
-            new_feature.SetGeometry(ogr.CreateGeometryFromWkb(
-                shapely_geom.wkb))
-            for field_name, field_value in feature.items().items():
-                new_feature.SetField(field_name, field_value)
-            target_layer.CreateFeature(new_feature)
+            invalid = True
+        else:
+            if shapely_geom.is_valid:
+                # Check for intersection rather than use gdal.Layer.Clip()
+                # to preserve the shape of the polygons (we use the centroid
+                # when constructing the kd-tree)
+                if shapely_mask.intersects(shapely_geom):
+                    new_feature = ogr.Feature(target_layer.GetLayerDefn())
+                    new_feature.SetGeometry(ogr.CreateGeometryFromWkb(
+                        shapely_geom.wkb))
+                    for field_name, field_value in feature.items().items():
+                        new_feature.SetField(field_name, field_value)
+                    target_layer.CreateFeature(new_feature)
+            else:
+                invalid = True
+        finally:
+            if invalid:
+                invalid_feature_count += 1
+                LOGGER.warning(
+                    f"The geometry at feature {feature.GetFID()} is invalid "
+                    "and will be skipped.")
 
     target_layer.CommitTransaction()
 
