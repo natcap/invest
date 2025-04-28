@@ -704,8 +704,9 @@ def write_metadata_file(datasource_path, spec, lineage_statement,
     resource.write()
 
 
-def _walk_spec_and_write_metadata(invest_spec, workspace, keywords, lineage, file_suffix=None,
-               datastack_path=None, args_dict=None):
+def _walk_spec_and_write_metadata(
+        invest_spec, workspace, keywords, lineage, file_suffix=None,
+        datastack_path=None, args_dict=None):
     """
     Recursively walk an InVEST MODEL_SPEC and write metadata files for
     matching input or output files found in the given workspace.
@@ -752,9 +753,12 @@ def _walk_spec_and_write_metadata(invest_spec, workspace, keywords, lineage, fil
                 pre, post = os.path.splitext(filename)
                 full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
 
-            # Ensure that path to data file exists and, if case 1, file is given in input args
-            # Note: if filename is not in args_dict this could raise an error? But theoretically this should never happen
-            if os.path.exists(full_path) and (args_dict is None or args_dict[filename] != ''):
+            # Ensure that path to data file exists and, if case 1,
+            # file is given in input args
+            # Note: if filename is not in args_dict this could raise an error
+            # but theoretically this should never happen
+            if os.path.exists(full_path) and (args_dict is None or
+                                              args_dict[filename] != ''):
                 try:
                     write_metadata_file(
                         full_path, spec_data, lineage, keywords,

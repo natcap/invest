@@ -1,3 +1,4 @@
+import numpy
 import os
 import shutil
 import tempfile
@@ -7,10 +8,39 @@ import unittest
 import geometamaker
 from natcap.invest import spec_utils
 from natcap.invest.unit_registry import u
+import pygeoprocessing
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
+from shapely.geometry import Point
 
 gdal.UseExceptions()
+
+
+def make_simple_raster(base_raster_path, array, nodata_val=-1):
+    """Create a raster on designated path.
+
+    Args:
+        base_raster_path (str): the raster path for the new raster.
+        array (array): numpy array to convert to tif.
+        nodata_val (int or None): for defining a raster's nodata value.
+
+    Returns:
+        None
+
+    """
+
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)  # UTM Zone 10N
+    projection_wkt = srs.ExportToWkt()
+    # origin hand-picked for this epsg:
+    origin = (461261, 4923265)
+
+    pixel_size = (1, -1)
+
+    pygeoprocessing.numpy_array_to_raster(
+        array, nodata_val, pixel_size, origin, projection_wkt,
+        base_raster_path)
 
 
 class SpecUtilsUnitTests(unittest.TestCase):
@@ -338,7 +368,7 @@ class TestMetadataFromSpec(unittest.TestCase):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_write_metadata(self):
+    def test_write_metadata_for_outputs(self):
         """Test writing metadata for an invest output workspace."""
 
         # An example invest output spec
@@ -398,5 +428,62 @@ class TestMetadataFromSpec(unittest.TestCase):
         resource = geometamaker.describe(
             os.path.join(args_dict['workspace_dir'], 'output',
                          'urban_nature_supply_percapita.tif'))
+        self.assertCountEqual(resource.get_keywords(),
+                              [model_module.MODEL_SPEC['model_id'], 'InVEST'])
+
+    def test_generate_metadata_for_datastack(self):
+        """Test `generate_metadata_for_datastack`"""
+        from natcap.invest import urban_cooling_model
+
+        data_dir = os.path.join(self.workspace_dir, 'data')
+        os.mkdir(data_dir)
+        datastack_path = os.path.join(self.workspace_dir, 'out_datastack_dir')
+        model_module = urban_cooling_model
+        args_dict = {
+             'workspace_dir': self.workspace_dir,
+             'results_suffix': '_1',
+             'lulc_raster_path': os.path.join(data_dir, "lulc.tif"),
+             'ref_eto_raster_path': os.path.join(data_dir, "eto.tif"),
+             'aoi_vector_path': os.path.join(data_dir, "aoi.shp"),
+             'biophysical_table_path': os.path.join(data_dir, "bio.csv"),
+             't_ref': '27',
+             'uhi_max': '5',
+             't_air_average_radius': '500',
+             'green_area_cooling_distance': '450',
+             'cc_method': 'factors',
+             'do_energy_valuation': False,
+             'building_vector_path': '',
+             'energy_consumption_table_path': '',
+             'do_productivity_valuation': True,
+             'avg_rel_humidity': '61.4',
+             'cc_weight_shade': '',
+             'cc_weight_albedo': '',
+             'cc_weight_eti': ''}
+
+        array = numpy.array([[1, 2], [1, 2]])
+        make_simple_raster(args_dict['lulc_raster_path'], array)
+        make_simple_raster(args_dict['ref_eto_raster_path'], array)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        pygeoprocessing.shapely_geometry_to_vector(
+            [Point([461261, 4923265])], args_dict['aoi_vector_path'],
+            srs.ExportToWkt(), "ESRI Shapefile", ogr_geom_type=ogr.wkbPoint)
+
+        data = [["lulc", "desc"], [1, "water"]]
+        with open(args_dict['biophysical_table_path'], "w") as file:
+            for row in data:
+                line = ",".join(str(x) for x in row) + "\n"
+                file.write(line)
+
+        spec_utils.generate_metadata_for_datastack(
+            model_module, args_dict, data_dir, datastack_path)
+
+        files, messages = geometamaker.validate_dir(data_dir, recursive=True)
+        self.assertEqual(len(files), 4)
+        self.assertFalse(any(messages))
+
+        resource = geometamaker.describe(
+            os.path.join(data_dir, args_dict['lulc_raster_path']))
         self.assertCountEqual(resource.get_keywords(),
                               [model_module.MODEL_SPEC['model_id'], 'InVEST'])
