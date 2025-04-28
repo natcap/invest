@@ -2039,7 +2039,11 @@ class TestValidationFromSpec(unittest.TestCase):
                     fields={},
                     geometries={'POINT'}
                 )
-            )
+            ),
+            args_with_spatial_overlap={
+                'spatial_keys': ['raster_a', 'raster_b', 'vector_a'],
+                'different_projections_ok': True
+            }
         )
 
         driver = gdal.GetDriverByName('GTiff')
@@ -2078,9 +2082,7 @@ class TestValidationFromSpec(unittest.TestCase):
             'vector_a': reference_filepath,
         }
 
-        validation_warnings = validation.validate(
-            args, spec, {'spatial_keys': list(args.keys()),
-                         'different_projections_ok': True})
+        validation_warnings = validation.validate(args, spec)
         self.assertEqual(len(validation_warnings), 1)
         self.assertEqual(set(args.keys()), set(validation_warnings[0][0]))
         formatted_bbox_list = ''  # allows str matching w/o real bbox str
@@ -2102,7 +2104,11 @@ class TestValidationFromSpec(unittest.TestCase):
                     id='raster_b',
                     band=NumberInputSpec(units=u.none)
                 )
-            )
+            ),
+            args_with_spatial_overlap={
+                'spatial_keys': ['raster_a', 'raster_b'],
+                'different_projections_ok': True
+            }
         )
 
         driver = gdal.GetDriverByName('GTiff')
@@ -2124,9 +2130,7 @@ class TestValidationFromSpec(unittest.TestCase):
             'raster_b': filepath_2
         }
 
-        validation_warnings = validation.validate(
-            args, spec, {'spatial_keys': list(args.keys()),
-                         'different_projections_ok': True})
+        validation_warnings = validation.validate(args, spec)
         expected = [(['raster_b'], validation.MESSAGES['INVALID_PROJECTION'])]
         self.assertEqual(validation_warnings, expected)
 
@@ -2151,7 +2155,11 @@ class TestValidationFromSpec(unittest.TestCase):
                     fields=Fields(),
                     geometries={'POINT'}
                 )
-            )
+            ),
+            args_with_spatial_overlap={
+                'spatial_keys': ['raster_a', 'raster_b', 'vector_a'],
+                'different_projections_ok': True
+            }
         )
 
         driver = gdal.GetDriverByName('GTiff')
@@ -2174,9 +2182,7 @@ class TestValidationFromSpec(unittest.TestCase):
         }
         # There should not be a spatial overlap check at all
         # when less than 2 of the spatial keys are sufficient.
-        validation_warnings = validation.validate(
-            args, spec, {'spatial_keys': [i.id for i in spec.inputs],
-                         'different_projections_ok': True})
+        validation_warnings = validation.validate(args, spec)
         print(validation_warnings)
         self.assertEqual(len(validation_warnings), 0)
 
@@ -2186,9 +2192,7 @@ class TestValidationFromSpec(unittest.TestCase):
             'raster_a': filepath_1,
             'raster_b': filepath_2,
         }
-        validation_warnings = validation.validate(
-            args, spec, {'spatial_keys': [i.id for i in spec.inputs],
-                         'different_projections_ok': True})
+        validation_warnings = validation.validate(args, spec)
         self.assertEqual(len(validation_warnings), 1)
         formatted_bbox_list = ''  # allows str matching w/o real bbox str
         self.assertTrue(

@@ -322,8 +322,8 @@ def execute(args):
             "Baseline LULC Year is earlier than the Alternate LULC Year."
         )
 
-    carbon_pool_df = validation.get_validated_dataframe(
-        args['carbon_pools_path'], MODEL_SPEC.inputs.carbon_pools_path)
+    carbon_pool_df = MODEL_SPEC.inputs.get(
+        'carbon_pools_path').get_validated_dataframe(args['carbon_pools_path'])
 
     try:
         n_workers = int(args['n_workers'])
@@ -694,5 +694,4 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(
-        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)
+    return validation.validate(args, MODEL_SPEC)

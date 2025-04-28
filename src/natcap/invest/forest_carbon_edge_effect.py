@@ -425,9 +425,9 @@ def execute(args):
     # Map non-forest landcover codes to carbon biomasses
     LOGGER.info('Calculating direct mapped carbon stocks')
     carbon_maps = []
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table_path'],
-        MODEL_SPEC.inputs.biophysical_table_path)
+    biophysical_df = MODEL_SPEC.inputs.get(
+        'biophysical_table_path').get_validated_dataframe(
+        args['biophysical_table_path'])
     pool_list = [('c_above', True)]
     if args['pools_to_calculate'] == 'all':
         pool_list.extend([
@@ -644,8 +644,8 @@ def _calculate_lulc_carbon_map(
 
     """
     # classify forest pixels from lulc
-    biophysical_df = validation.get_validated_dataframe(
-        biophysical_table_path, MODEL_SPEC.inputs.biophysical_table_path)
+    biophysical_df = MODEL_SPEC.inputs.get(
+        'biophysical_table_path').get_validated_dataframe(biophysical_table_path)
 
     lucode_to_per_cell_carbon = {}
 
@@ -704,8 +704,9 @@ def _map_distance_from_tropical_forest_edge(
 
     """
     # Build a list of forest lucodes
-    biophysical_df = validation.get_validated_dataframe(
-        biophysical_table_path, MODEL_SPEC.inputs.biophysical_table_path)
+    biophysical_df = MODEL_SPEC.inputs.get(
+        'biophysical_table_path').get_validated_dataframe(
+        biophysical_table_path)
     forest_codes = biophysical_df[biophysical_df['is_tropical_forest']].index.values
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
@@ -1033,8 +1034,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(
-        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)
+    validation_warnings = validation.validate(args, MODEL_SPEC)
 
     invalid_keys = set([])
     for affected_keys, error_msg in validation_warnings:

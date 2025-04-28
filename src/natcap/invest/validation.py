@@ -238,24 +238,15 @@ def _format_bbox_list(file_list, bbox_list):
                 file_list, bbox_list)])
 
 
-def validate(args, spec, spatial_overlap_opts=None):
+def validate(args, spec):
     """Validate an args dict against a model spec.
 
     Validates an arguments dictionary according to the rules laid out in
-    ``spec``.  If ``spatial_overlap_opts`` is also provided, valid spatial
-    inputs will be checked for spatial overlap.
+    ``spec``.
 
     Args:
         args (dict): The InVEST model args dict to validate.
         spec (dict): The InVEST model spec dict to validate against.
-        spatial_overlap_opts=None (dict): A dict.  If provided, the key
-        ``"spatial_keys"`` is required to be a list of keys that may be present
-            in the args dict and (if provided in args) will be checked for
-            overlap with all other keys in this list.  If the key
-            ``"reference_key"`` is also present in this dict, the bounding
-            boxes of each of the files represented by
-            ``spatial_overlap_opts["spatial_keys"]`` will be transformed to the
-            SRS of the dataset at this key.
 
     Returns:
         A list of tuples where the first element of the tuple is an iterable of
@@ -339,8 +330,8 @@ def validate(args, spec, spatial_overlap_opts=None):
             validation_warnings.append(([key], MESSAGES['UNEXPECTED_ERROR']))
 
     # Phase 3: Check spatial overlap if applicable
-    if spatial_overlap_opts:
-        spatial_keys = set(spatial_overlap_opts['spatial_keys'])
+    if spec.args_with_spatial_overlap:
+        spatial_keys = set(spec.args_with_spatial_overlap['spatial_keys'])
 
         # Only test for spatial overlap once all the sufficient spatial keys
         # are otherwise valid. And then only when there are at least 2.
@@ -357,7 +348,7 @@ def validate(args, spec, spatial_overlap_opts=None):
 
             try:
                 different_projections_ok = (
-                    spatial_overlap_opts['different_projections_ok'])
+                    spec.args_with_spatial_overlap['different_projections_ok'])
             except KeyError:
                 different_projections_ok = False
 
@@ -422,62 +413,43 @@ def invest_validator(validate_func):
         # which gets imported into itself here and fails.
         # Since this decorator might not be needed in the future,
         # just ignore failed imports; assume they have no MODEL_SPEC.
-        try:
-            model_module = importlib.import_module(validate_func.__module__)
-        except Exception:
-            LOGGER.warning(
-                'Unable to import module %s: assuming no MODEL_SPEC.',
-                validate_func.__module__)
-            model_module = None
-
-        # If the module has an MODEL_SPEC defined, validate against that.
-        if hasattr(model_module, 'MODEL_SPEC'):
-            LOGGER.debug('Using MODEL_SPEC for validation')
-            args_spec = model_module.MODEL_SPEC.inputs
-
-            if limit_to is None:
-                LOGGER.info('Starting whole-model validation with MODEL_SPEC')
-                warnings_ = validate_func(args)
-            else:
-                LOGGER.info('Starting single-input validation with MODEL_SPEC')
-                args_key_spec = args_spec[limit_to]
-
-                args_value = args[limit_to]
-                error_msg = None
-
-                # We're only validating a single input.  This is not officially
-                # supported in the validation function, but we can make it work
-                # within this decorator.
-                try:
-                    if args_key_spec['required'] is True:
-                        if args_value in ('', None):
-                            error_msg = "Value is required"
-                except KeyError:
-                    # If required is not defined in the args_spec, we default
-                    # to False.  If 'required' is an expression, we can't
-                    # validate that outside of whole-model validation.
-                    pass
-
-                # If the input is not required and does not have a value, no
-                # need to validate it.
-                if args_value not in ('', None):
-                    input_type = args_key_spec['type']
-                    if isinstance(input_type, set):
-                        input_type = frozenset(input_type)
-                    validator_func = _VALIDATION_FUNCS[input_type]
-                    error_msg = validator_func(args_value, **args_key_spec)
-
-                if error_msg is None:
-                    warnings_ = []
-                else:
-                    warnings_ = [([limit_to], error_msg)]
-        else:  # args_spec is not defined for this function.
-            LOGGER.warning('MODEL_SPEC not defined for this model')
+        model_module = importlib.import_module(validate_func.__module__)
+        if model_module.__name__ == 'test_validation':
             warnings_ = validate_func(args, limit_to)
+            return warnings_
 
-        LOGGER.debug('Validation warnings: %s',
-                     pprint.pformat(warnings_))
+        args_spec = model_module.MODEL_SPEC.inputs
 
+        if limit_to is None:
+            LOGGER.info('Starting whole-model validation with MODEL_SPEC')
+            warnings_ = validate_func(args)
+        else:
+            LOGGER.info('Starting single-input validation with MODEL_SPEC')
+            args_key_spec = args_spec.get(limit_to)
+
+            args_value = args[limit_to]
+            error_msg = None
+
+            # We're only validating a single input.  This is not officially
+            # supported in the validation function, but we can make it work
+            # within this decorator.
+            # If 'required' is an expression, we can't
+            # validate that outside of whole-model validation.
+            if args_key_spec.required is True:
+                if args_value in ('', None):
+                    error_msg = "Value is required"
+
+            # If the input is not required and does not have a value, no
+            # need to validate it.
+            if args_value not in ('', None):
+                error_msg = args_key_spec.validate(args_value)
+
+            if error_msg is None:
+                warnings_ = []
+            else:
+                warnings_ = [([limit_to], error_msg)]
+
+        LOGGER.debug(f'Validation warnings: {pprint.pformat(warnings_)}')
         return warnings_
 
     return _wrapped_validate_func

@@ -610,9 +610,9 @@ def execute(args):
         # Compute the regression
         coefficient_json_path = os.path.join(
             intermediate_dir, 'predictor_estimates.json')
-        predictor_df = validation.get_validated_dataframe(
-            args['predictor_table_path'],
-            MODEL_SPEC.inputs.predictor_table_path)
+        predictor_df = MODEL_SPEC.inputs.get(
+            'predictor_table_path').get_validated_dataframe(
+            args['predictor_table_path'])
         predictor_id_list = predictor_df.index
         compute_regression_task = task_graph.add_task(
             func=_compute_and_summarize_regression,
@@ -997,8 +997,8 @@ def _schedule_predictor_data_processing(
         'line_intersect_length': _line_intersect_length,
     }
 
-    predictor_df = validation.get_validated_dataframe(
-        predictor_table_path, MODEL_SPEC.inputs.predictor_table_path)
+    predictor_df = MODEL_SPEC.inputs.get(
+        'predictor_table_path').get_validated_dataframe(predictor_table_path)
     predictor_task_list = []
     predictor_json_list = []  # tracks predictor files to add to gpkg
 
@@ -1766,8 +1766,8 @@ def _validate_same_id_lengths(table_path):
         string message if IDs are too long
 
     """
-    predictor_df = validation.get_validated_dataframe(
-        table_path, MODEL_SPEC.inputs.predictor_table_path)
+    predictor_df = MODEL_SPEC.inputs.get(
+        'predictor_table_path').get_validated_dataframe(table_path)
     too_long = set()
     for p_id in predictor_df.index:
         if len(p_id) > 10:
@@ -1795,12 +1795,13 @@ def _validate_same_ids_and_types(
         string message if any of the fields in 'id' and 'type' don't match
         between tables.
     """
-    predictor_df = validation.get_validated_dataframe(
-        predictor_table_path, MODEL_SPEC.inputs.predictor_table_path)
+    predictor_df = MODEL_SPEC.inputs.get(
+        'predictor_table_path').get_validated_dataframe(
+        predictor_table_path)
 
-    scenario_predictor_df = validation.get_validated_dataframe(
-        scenario_predictor_table_path,
-        MODEL_SPEC.inputs.scenario_predictor_table_path)
+    scenario_predictor_df = MODEL_SPEC.inputs.get(
+        'scenario_predictor_table_path').get_validated_dataframe(
+        scenario_predictor_table_path)
 
     predictor_pairs = set([
         (p_id, row['type']) for p_id, row in predictor_df.iterrows()])
@@ -1825,9 +1826,9 @@ def _validate_same_projection(base_vector_path, table_path):
     """
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
-    data_paths = validation.get_validated_dataframe(
-        table_path, MODEL_SPEC.inputs.predictor_table_path
-    )['path'].tolist()
+    data_paths = MODEL_SPEC.inputs.get(
+        'predictor_table_path').get_validated_dataframe(
+        table_path)['path'].tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
@@ -1868,8 +1869,8 @@ def _validate_predictor_types(table_path):
         string message if any value in the ``type`` column does not match a
         valid type, ignoring leading/trailing whitespace.
     """
-    df = validation.get_validated_dataframe(
-        table_path, MODEL_SPEC.inputs.predictor_table_path)
+    df = MODEL_SPEC.inputs.get(
+        'predictor_table_path').get_validated_dataframe(table_path)
     # ignore leading/trailing whitespace because it will be removed
     # when the type values are used
     valid_types = set({'raster_mean', 'raster_sum', 'point_count',
@@ -1928,7 +1929,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_messages = validation.validate(args, MODEL_SPEC.inputs)
+    validation_messages = validation.validate(args, MODEL_SPEC)
     sufficient_valid_keys = (validation.get_sufficient_keys(args) -
                              validation.get_invalid_keys(validation_messages))
 

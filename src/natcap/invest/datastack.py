@@ -37,6 +37,7 @@ from osgeo import gdal
 from . import utils
 from . import validation
 from . import models
+from . import spec_utils
 
 try:
     from . import __version__
@@ -198,10 +199,11 @@ def build_datastack_archive(args, model_id, datastack_path):
     # For tracking existing files so we don't copy files in twice
     files_found = {}
     LOGGER.debug(f'Keys: {sorted(args.keys())}')
-    args_spec = module.MODEL_SPEC['args']
 
-    spatial_types = {'raster', 'vector'}
-    file_based_types = spatial_types.union({'csv', 'file', 'directory'})
+    spatial_types = {spec_utils.SingleBandRasterInputSpec, spec_utils.VectorInputSpec,
+        spec_utils.RasterOrVectorInputSpec}
+    file_based_types = spatial_types.union({
+        spec_utils.CSVInputSpec, spec_utils.FileInputSpec, spec_utils.DirectoryInputSpec})
     rewritten_args = {}
     for key in args:
         # Allow the model to override specific arguments in datastack archive
@@ -234,11 +236,11 @@ def build_datastack_archive(args, model_id, datastack_path):
         LOGGER.info(f'Starting to archive arg "{key}": {args[key]}')
         # Possible that a user might pass an args key that doesn't belong to
         # this model.  Skip if so.
-        if key not in args_spec:
+        if key not in module.MODEL_SPEC.inputs:
             LOGGER.info(f'Skipping arg {key}; not in model MODEL_SPEC')
 
-        input_type = args_spec[key]['type']
-        if input_type in file_based_types:
+        input_spec = module.MODEL_SPEC.inputs.get(key)
+        if input_spec.__class__ in file_based_types:
             if args[key] in {None, ''}:
                 LOGGER.info(
                     f'Skipping key {key}, value is empty and cannot point to '
@@ -258,22 +260,16 @@ def build_datastack_archive(args, model_id, datastack_path):
                 rewritten_args[key] = files_found[source_path]
                 continue
 
-        if input_type == 'csv':
+        if input_spec.__class__ is spec_utils.CSVInputSpec:
             # check the CSV for columns that may be spatial.
             # But also, the columns specification might not be listed, so don't
             # require that 'columns' exists in the MODEL_SPEC.
             spatial_columns = []
-            if 'columns' in args_spec[key]:
-                for col_name, col_definition in (
-                        args_spec[key]['columns'].items()):
-                    # Type attribute may be a string (one type) or set
-                    # (multiple types allowed), so always convert to a set for
-                    # easier comparison.
-                    col_types = col_definition['type']
-                    if isinstance(col_types, str):
-                        col_types = set([col_types])
-                    if col_types.intersection(spatial_types):
-                        spatial_columns.append(col_name)
+            if input_spec.columns:
+                for col_spec in input_spec.columns:
+                    if col_spec.__class__ in spatial_types:
+                        spatial_columns.append(col_spec.id)
+
             LOGGER.debug(f'Detected spatial columns: {spatial_columns}')
 
             target_csv_path = os.path.join(
@@ -286,8 +282,7 @@ def build_datastack_archive(args, model_id, datastack_path):
                 contained_files_dir = os.path.join(
                     data_dir, f'{key}_csv_data')
 
-                dataframe = validation.get_validated_dataframe(
-                    source_path, **args_spec[key])
+                dataframe = input_spec.get_validated_dataframe(source_path)
                 csv_source_dir = os.path.abspath(os.path.dirname(source_path))
                 for spatial_column_name in spatial_columns:
                     # Iterate through the spatial columns, identify the set of
@@ -347,7 +342,7 @@ def build_datastack_archive(args, model_id, datastack_path):
             target_arg_value = target_csv_path
             files_found[source_path] = target_arg_value
 
-        elif input_type == 'file':
+        elif input_spec.__class__ is spec_utils.FileInputSpec:
             target_filepath = os.path.join(
                 data_dir, f'{key}_file')
             shutil.copyfile(source_path, target_filepath)
@@ -356,7 +351,7 @@ def build_datastack_archive(args, model_id, datastack_path):
             target_arg_value = target_filepath
             files_found[source_path] = target_arg_value
 
-        elif input_type == 'directory':
+        elif input_spec.__class__ is spec_utils.DirectoryInputSpec:
             # copy the whole folder
             target_directory = os.path.join(data_dir, f'{key}_directory')
             os.makedirs(target_directory)
@@ -376,22 +371,17 @@ def build_datastack_archive(args, model_id, datastack_path):
             target_arg_value = target_directory
             files_found[source_path] = target_arg_value
 
-        elif input_type in spatial_types:
+        elif input_spec.__class__ in spatial_types:
             # Create a directory with a readable name, something like
             # "aoi_path_vector" or "lulc_cur_path_raster".
-            spatial_dir = os.path.join(data_dir, f'{key}_{input_type}')
+            spatial_dir = os.path.join(data_dir, f'{key}_{input_spec.__class__}')
             target_arg_value = utils.copy_spatial_files(
                 source_path, spatial_dir)
             files_found[source_path] = target_arg_value
 
-        elif input_type == 'other':
-            # Note that no models currently use this to the best of my
-            # knowledge, so better to raise a NotImplementedError
-            raise NotImplementedError(
-                'The "other" MODEL_SPEC input type is not supported')
         else:
             LOGGER.debug(
-                f"Type {input_type} is not filesystem-based; "
+                f"Type {input_spec.__class__} is not filesystem-based; "
                 "recording value directly")
             # not a filesystem-based type
             # Record the value directly

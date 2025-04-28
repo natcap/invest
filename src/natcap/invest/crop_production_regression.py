@@ -504,13 +504,13 @@ def execute(args):
 
     LOGGER.info(
         "Checking if the landcover raster is missing lucodes")
-    crop_to_landcover_df = validation.get_validated_dataframe(
-        args['landcover_to_crop_table_path'],
-        MODEL_SPEC.inputs.landcover_to_crop_table_path)
+    crop_to_landcover_df = MODEL_SPEC.inputs.get(
+        'landcover_to_crop_table_path').get_validated_dataframe(
+        args['landcover_to_crop_table_path'])
 
-    crop_to_fertilization_rate_df = validation.get_validated_dataframe(
-        args['fertilization_rate_table_path'],
-        MODEL_SPEC.inputs.fertilization_rate_table_path)
+    crop_to_fertilization_rate_df = MODEL_SPEC.inputs.get(
+        'fertilization_rate_table_path').get_validated_dataframe(
+        args['fertilization_rate_table_path'])
 
     crop_lucodes = list(crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER])
 
@@ -585,12 +585,11 @@ def execute(args):
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
-        crop_regression_df = validation.get_validated_dataframe(
-            os.path.join(args['model_data_path'],
-                         _REGRESSION_TABLE_PATTERN % crop_name),
-            MODEL_SPEC.inputs.model_data_path['contents'][
-                'climate_regression_yield_tables']['contents'][
-                '[CROP]_regression_yield_table.csv'])
+        crop_regression_df = MODEL_SPEC.inputs.get('model_data_path').contents.get(
+                'climate_regression_yield_tables').contents.get(
+                '[CROP]_regression_yield_table.csv').get_validated_dataframe(
+                    os.path.join(args['model_data_path'],
+                         _REGRESSION_TABLE_PATTERN % crop_name))
         for _, row in crop_regression_df.iterrows():
             for header in _EXPECTED_REGRESSION_TABLE_HEADERS:
                 if numpy.isnan(row[header]):
@@ -809,9 +808,9 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_df = validation.get_validated_dataframe(
-        os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
-        MODEL_SPEC.inputs.model_data_path['contents']['crop_nutrient.csv'])
+    nutrient_df = MODEL_SPEC.inputs.get('model_data_path').contents.get(
+        'crop_nutrient.csv').get_validated_dataframe(
+            os.path.join(args['model_data_path'], 'crop_nutrient.csv'))
 
     LOGGER.info("Generating report table")
     crop_names = list(crop_to_landcover_df.index)
@@ -1174,5 +1173,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(
-        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)
+    return validation.validate(args, MODEL_SPEC)

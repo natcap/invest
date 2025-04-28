@@ -448,8 +448,8 @@ MODEL_SPEC = spec_utils.build_model_spec({
     }
 })
 
-_VALID_RISK_EQS = set(MODEL_SPEC.inputs.risk_eq.options.keys())
-_VALID_DECAY_TYPES = set(MODEL_SPEC.inputs.decay_eq.options.keys())
+_VALID_RISK_EQS = set(MODEL_SPEC.inputs.get('risk_eq').options.keys())
+_VALID_DECAY_TYPES = set(MODEL_SPEC.inputs.get('decay_eq').options.keys())
 
 
 def execute(args):
@@ -1792,8 +1792,8 @@ def _parse_info_table(info_table_path):
     info_table_path = os.path.abspath(info_table_path)
 
     try:
-        table = validation.get_validated_dataframe(
-            info_table_path, MODEL_SPEC.inputs.info_table_path)
+        table = MODEL_SPEC.inputs.get(
+            'info_table_path').get_validated_dataframe(info_table_path)
     except ValueError as err:
         if 'Index has duplicate keys' in str(err):
             raise ValueError("Habitat and stressor names may not overlap.")
@@ -2475,4 +2475,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(args, MODEL_SPEC.inputs)
+    return validation.validate(args, MODEL_SPEC)

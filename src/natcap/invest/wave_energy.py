@@ -315,6 +315,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": gettext("Value of the machine parameter.")
                 }
             },
+            "index_col": "name",
             "about": gettext("Table of parameters for the wave energy machine in use."),
             "name": gettext("machine parameter table")
         },
@@ -365,6 +366,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": gettext("Value of the machine parameter.")
                 }
             },
+            "index_col": "name",
             "required": "valuation_container",
             "allowed": "valuation_container",
             "about": gettext(
@@ -754,21 +756,15 @@ def execute(args):
     LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
     LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
 
-    machine_param_dict = validation.get_validated_dataframe(
-        args['machine_param_path'],
-        index_col='name',
-        columns={
-            'name': {'type': 'option_string'},
-            'value': {'type': 'number'}
-        },
-    )['value'].to_dict()
+    machine_param_dict = MODEL_SPEC.inputs.get(
+        'machine_param_path').get_validated_dataframe(
+        args['machine_param_path'])['value'].to_dict()
 
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_df dataframe for later use in valuation
-        grid_land_df = validation.get_validated_dataframe(
-            args['land_gridPts_path'],
-            MODEL_SPEC.inputs.land_gridPts_path)
+        grid_land_df = MODEL_SPEC.inputs.get(
+            'land_gridPts_path').get_validated_dataframe(args['land_gridPts_path'])
         missing_grid_land_fields = []
         for field in ['id', 'type', 'lat', 'long', 'location']:
             if field not in grid_land_df.columns:
@@ -780,14 +776,9 @@ def execute(args):
                 'Connection Points File: %s' % missing_grid_land_fields)
 
     if 'valuation_container' in args and args['valuation_container']:
-        machine_econ_dict = validation.get_validated_dataframe(
-            args['machine_econ_path'],
-            index_col='name',
-            columns={
-                'name': {'type': 'option_string'},
-                'value': {'type': 'number'}
-            }
-        )['value'].to_dict()
+        machine_econ_dict = MODEL_SPEC.inputs.get(
+            'machine_econ_path').get_validated_dataframe(
+            args['machine_econ_path'])['value'].to_dict()
 
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
@@ -2383,4 +2374,4 @@ def validate(args, limit_to=None):
             validation warning.
 
     """
-    return validation.validate(args, MODEL_SPEC.inputs)
+    return validation.validate(args, MODEL_SPEC)

@@ -945,9 +945,8 @@ def execute(args):
                     aoi_reprojection_task, lulc_mask_task]
             )
 
-    attr_table = validation.get_validated_dataframe(
-        args['lulc_attribute_table'],
-        MODEL_SPEC.inputs.lulc_attribute_table)
+    attr_table = MODEL_SPEC.inputs.get(
+        'lulc_attribute_table').get_validated_dataframe(args['lulc_attribute_table'])
     kernel_paths = {}  # search_radius, kernel path
     kernel_tasks = {}  # search_radius, kernel task
 
@@ -965,15 +964,15 @@ def execute(args):
         lucode_to_search_radii = list(
             urban_nature_attrs[['search_radius_m']].itertuples(name=None))
     elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
-        pop_group_table = validation.get_validated_dataframe(
-            args['population_group_radii_table'],
-            MODEL_SPEC.inputs.population_group_radii_table)
+        pop_group_table = MODEL_SPEC.inputs.get(
+            'population_group_radii_table').get_validated_dataframe(
+            args['population_group_radii_table'])
         search_radii = set(pop_group_table['search_radius_m'].unique())
         # Build a dict of {pop_group: search_radius_m}
         search_radii_by_pop_group = pop_group_table['search_radius_m'].to_dict()
     else:
         valid_options = ', '.join(
-            MODEL_SPEC['args']['search_radius_mode']['options'].keys())
+            MODEL_SPEC.inputs.get('search_radius_mode').options.keys())
         raise ValueError(
             "Invalid search radius mode provided: "
             f"{args['search_radius_mode']}; must be one of {valid_options}")
@@ -1845,8 +1844,8 @@ def _reclassify_urban_nature_area(
     Returns:
         ``None``
     """
-    lulc_attribute_df = validation.get_validated_dataframe(
-        lulc_attribute_table, MODEL_SPEC.inputs.lulc_attribute_table)
+    lulc_attribute_df = MODEL_SPEC.inputs.get(
+        'lulc_attribute_table').get_validated_dataframe(lulc_attribute_table)
 
     squared_pixel_area = abs(
         numpy.multiply(*_square_off_pixels(lulc_raster_path)))
@@ -1878,9 +1877,9 @@ def _reclassify_urban_nature_area(
         target_datatype=gdal.GDT_Float32,
         target_nodata=FLOAT32_NODATA,
         error_details={
-            'raster_name': MODEL_SPEC['args']['lulc_raster_path']['name'],
+            'raster_name': MODEL_SPEC.inputs.get('lulc_raster_path').name,
             'column_name': 'urban_nature',
-            'table_name': MODEL_SPEC['args']['lulc_attribute_table']['name'],
+            'table_name': MODEL_SPEC.inputs.get('lulc_attribute_table').name
         }
     )
 
@@ -2602,5 +2601,4 @@ def _mask_raster(source_raster_path, mask_raster_path, target_raster_path):
 
 
 def validate(args, limit_to=None):
-    return validation.validate(
-        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)
+    return validation.validate(args, MODEL_SPEC)

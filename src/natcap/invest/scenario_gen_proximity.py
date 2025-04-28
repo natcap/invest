@@ -917,7 +917,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC.inputs)
+    validation_warnings = validation.validate(args, MODEL_SPEC)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 
     if ('convert_nearest_to_edge' not in invalid_keys and

@@ -1222,8 +1222,8 @@ def _parse_scenario_variables(args):
     else:
         farm_vector_path = None
 
-    guild_df = validation.get_validated_dataframe(
-        guild_table_path, MODEL_SPEC.inputs.guild_table_path)
+    guild_df = MODEL_SPEC.inputs.get(
+        'guild_table_path').get_validated_dataframe(guild_table_path)
 
     LOGGER.info('Checking to make sure guild table has all expected headers')
     for header in _EXPECTED_GUILD_HEADERS:
@@ -1234,9 +1234,9 @@ def _parse_scenario_variables(args):
                 f"'{header}' but was unable to find one. Here are all the "
                 f"headers from {guild_table_path}: {', '.join(guild_df.columns)}")
 
-    landcover_biophysical_df = validation.get_validated_dataframe(
-        landcover_biophysical_table_path,
-        MODEL_SPEC.inputs.landcover_biophysical_table_path)
+    landcover_biophysical_df = MODEL_SPEC.inputs.get(
+        'landcover_biophysical_table_path').get_validated_dataframe(
+        landcover_biophysical_table_path)
     biophysical_table_headers = landcover_biophysical_df.columns
     for header in _EXPECTED_BIOPHYSICAL_HEADERS:
         matches = re.findall(header, " ".join(biophysical_table_headers))
@@ -1500,4 +1500,4 @@ def validate(args, limit_to=None):
     # Deliberately not validating the interrelationship of the columns between
     # the biophysical table and the guilds table as the model itself already
     # does extensive checking for this.
-    return validation.validate(args, MODEL_SPEC.inputs)
+    return validation.validate(args, MODEL_SPEC)

@@ -30,6 +30,7 @@ class UsageLoggingTests(unittest.TestCase):
         """Usage logger test that we can extract bounding boxes."""
         from natcap.invest import utils
         from natcap.invest import usage
+        from natcap.invest import spec_utils
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)  # WGS84 / UTM zone 31s
@@ -64,20 +65,23 @@ class UsageLoggingTests(unittest.TestCase):
             'blank_vector_path': '',
         }
 
-        args_spec = {
-            'args': {
-                'raster': {'type': 'raster'},
-                'vector': {'type': 'vector'},
-                'not_a_gis_input': {'type': 'freestyle_string'},
-                'blank_raster_path': {'type': 'raster'},
-                'blank_vector_path': {'type': 'vector'},
-            }
-        }
+        model_spec = spec_utils.ModelSpec(
+            model_id='', model_title='', userguide=None,
+            aliases=None, ui_spec=spec_utils.UISpec(order=[], hidden={}),
+            inputs=spec_utils.ModelInputs(
+                spec_utils.SingleBandRasterInputSpec(id='raster', band=spec_utils.InputSpec()),
+                spec_utils.VectorInputSpec(id='vector', geometries={}, fields={}),
+                spec_utils.StringInputSpec(id='not_a_gis_input'),
+                spec_utils.SingleBandRasterInputSpec(id='blank_raster_path', band=spec_utils.InputSpec()),
+                spec_utils.VectorInputSpec(id='blank_vector_path', geometries={}, fields={})
+            ),
+            outputs={},
+            args_with_spatial_overlap=None)
 
         output_logfile = os.path.join(self.workspace_dir, 'logfile.txt')
         with utils.log_to_file(output_logfile):
             bb_inter, bb_union = usage._calculate_args_bounding_box(
-                model_args, args_spec)
+                model_args, model_spec)
 
         numpy.testing.assert_allclose(
             bb_inter, [-87.234108, -85.526151, -87.233424, -85.526205])

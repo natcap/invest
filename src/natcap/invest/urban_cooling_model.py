@@ -1,4 +1,5 @@
 """Urban Cooling Model."""
+import copy
 import logging
 import math
 import os
@@ -475,9 +476,9 @@ def execute(args):
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate')
     utils.make_directories([args['workspace_dir'], intermediate_dir])
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table_path'],
-        MODEL_SPEC.inputs.biophysical_table_path)
+    biophysical_df = MODEL_SPEC.inputs.get(
+        'biophysical_table_path').get_validated_dataframe(
+        args['biophysical_table_path'])
 
     # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide
@@ -1160,9 +1161,9 @@ def calculate_energy_savings(
                   for field in target_building_layer.schema]
     type_field_index = fieldnames.index('type')
 
-    energy_consumption_df = validation.get_validated_dataframe(
-        energy_consumption_table_path,
-        MODEL_SPEC.inputs.energy_consumption_table_path)
+    energy_consumption_df = MODEL_SPEC.inputs.get(
+        'energy_consumption_table_path').get_validated_dataframe(
+        energy_consumption_table_path)
 
     target_building_layer.StartTransaction()
     last_time = time.time()
@@ -1536,26 +1537,24 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(
-        args, MODEL_SPEC.args, MODEL_SPEC.args_with_spatial_overlap)
+    validation_warnings = validation.validate(args, MODEL_SPEC)
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     if ('biophysical_table_path' not in invalid_keys and
             'cc_method' not in invalid_keys):
+        spec = copy.deepcopy(MODEL_SPEC.inputs.get('biophysical_table_path'))
         if args['cc_method'] == 'factors':
-            extra_biophysical_keys = ['shade', 'albedo']
+            spec.columns.get('shade').required = True
+            spec.columns.get('albedo').required = True
         else:
             # args['cc_method'] must be 'intensity'.
             # If args['cc_method'] isn't one of these two allowed values
             # ('intensity' or 'factors'), it'll be caught by
             # validation.validate due to the allowed values stated in
             # MODEL_SPEC.
-            extra_biophysical_keys = ['building_intensity']
+            spec.columns.get('building_intensity').required = True
 
-        error_msg = validation.check_csv(
-            args['biophysical_table_path'],
-            header_patterns=extra_biophysical_keys,
-            axis=1)
+        error_msg = spec.validate(args['biophysical_table_path'])
         if error_msg:
             validation_warnings.append((['biophysical_table_path'], error_msg))
 

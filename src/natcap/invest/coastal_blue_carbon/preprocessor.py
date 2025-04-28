@@ -185,10 +185,9 @@ def execute(args):
         os.path.join(args['workspace_dir'], 'taskgraph_cache'),
         n_workers, reporting_interval=5.0)
 
-    snapshots_dict = validation.get_validated_dataframe(
-        args['landcover_snapshot_csv'],
-        MODEL_SPEC.inputs.landcover_snapshot_csv
-    )['raster_path'].to_dict()
+    snapshots_dict = MODEL_SPEC.inputs.get(
+        'landcover_snapshot_csv').get_validated_dataframe(
+            args['landcover_snapshot_csv'])['raster_path'].to_dict()
 
     # Align the raster stack for analyzing the various transitions.
     min_pixel_size = float('inf')
@@ -218,9 +217,9 @@ def execute(args):
         target_path_list=aligned_snapshot_paths,
         task_name='Align input landcover rasters')
 
-    landcover_df = validation.get_validated_dataframe(
-        args['lulc_lookup_table_path'],
-        MODEL_SPEC.inputs.lulc_lookup_table_path)
+    landcover_df = MODEL_SPEC.inputs.get(
+        'lulc_lookup_table_path').get_validated_dataframe(
+            args['lulc_lookup_table_path'])
 
     target_transition_table = os.path.join(
         output_dir, TRANSITION_TABLE.format(suffix=suffix))
@@ -389,8 +388,8 @@ def _create_biophysical_table(landcover_df, target_biophysical_table_path):
         ``None``
     """
     target_column_names = [
-        colname.lower() for colname in
-        coastal_blue_carbon.MODEL_SPEC.inputs.biophysical_table_path.columns.__dict__]
+        spec.id.lower() for spec in
+        coastal_blue_carbon.MODEL_SPEC.inputs.get('biophysical_table_path').columns]
 
     with open(target_biophysical_table_path, 'w') as bio_table:
         bio_table.write(f"{','.join(target_column_names)}\n")
@@ -424,4 +423,4 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    return validation.validate(args, MODEL_SPEC.inputs)
+    return validation.validate(args, MODEL_SPEC)

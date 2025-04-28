@@ -87,23 +87,47 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
-                "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
+                "load_n": {
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
+                    "required": "calc_n",
                     "about": gettext(
-                        "The nutrient loading for this land use class.")},
-                "eff_[NUTRIENT]": {  # nutrient retention capacities
+                        "The nitrogen loading for this land use class.")},
+                "load_p": {
+                    "type": "number",
+                    "units": u.kilogram/u.hectare/u.year,
+                    "required": "calc_p",
+                    "about": gettext(
+                        "The phosphorus loading for this land use class.")},
+                "eff_n": {
                     "type": "ratio",
+                    "required": "calc_n",
                     "about": gettext(
-                        "Maximum nutrient retention efficiency. This is the "
-                        "maximum proportion of the nutrient that is retained "
+                        "Maximum nitrogen retention efficiency. This is the "
+                        "maximum proportion of the nitrogen that is retained "
                         "on this LULC class.")},
-                "crit_len_[NUTRIENT]": {  # nutrient critical lengths
+                "eff_p": {
+                    "type": "ratio",
+                    "required": "calc_p",
+                    "about": gettext(
+                        "Maximum phosphorus retention efficiency. This is the "
+                        "maximum proportion of the phosphorus that is retained "
+                        "on this LULC class.")},
+                "crit_len_n": {
                     "type": "number",
                     "units": u.meter,
+                    "required": "calc_n",
                     "about": gettext(
                         "The distance after which it is assumed that this "
-                        "LULC type retains the nutrient at its maximum "
+                        "LULC type retains nitrogen at its maximum "
+                        "capacity.")},
+                "crit_len_p": {
+                    "type": "number",
+                    "units": u.meter,
+                    "required": "calc_p",
+                    "about": gettext(
+                        "The distance after which it is assumed that this "
+                        "LULC type retains phosphorus at its maximum "
                         "capacity.")},
                 "proportion_subsurface_n": {
                     "type": "ratio",
@@ -117,13 +141,11 @@ MODEL_SPEC = spec_utils.build_model_spec({
             },
             "about": gettext(
                 "A table mapping each LULC class to its biophysical "
-                "properties related to nutrient load and retention. Replace "
-                "'[NUTRIENT]' in the column names with 'n' or 'p' for "
-                "nitrogen or phosphorus respectively. Nitrogen data must be "
-                "provided if Calculate Nitrogen is selected. Phosphorus data "
-                "must be provided if Calculate Phosphorus is selected. All "
-                "LULC codes in the LULC raster must have corresponding "
-                "entries in this table."),
+                "properties related to nutrient load and retention. Nitrogen "
+                "data must be provided if Calculate Nitrogen is selected. "
+                "Phosphorus data must be provided if Calculate Phosphorus is "
+                "selected. All LULC codes in the LULC raster must have "
+                "corresponding entries in this table."),
             "name": gettext("biophysical table")
         },
         "calc_p": {
@@ -603,9 +625,9 @@ def execute(args):
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
 
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table_path'],
-        MODEL_SPEC.inputs.biophysical_table_path)
+    biophysical_df = MODEL_SPEC.inputs.get(
+        'biophysical_table_path').get_validated_dataframe(
+        args['biophysical_table_path'])
 
     # Ensure that if user doesn't explicitly assign a value,
     # runoff_proxy_av = None
@@ -1268,7 +1290,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    spec_copy = copy.deepcopy(MODEL_SPEC.inputs)
+    spec_copy = copy.deepcopy(MODEL_SPEC)
     # Check required fields given the state of ``calc_n`` and ``calc_p``
     nutrients_selected = []
     for nutrient_letter in ('n', 'p'):
@@ -1277,16 +1299,14 @@ def validate(args, limit_to=None):
 
     for param in ['load', 'eff', 'crit_len']:
         for nutrient in nutrients_selected:
-            spec_copy.biophysical_table_path.columns[f'{param}_{nutrient}'] = (
-                spec_copy.biophysical_table_path.columns[f'{param}_[NUTRIENT]'])
-            spec_copy.biophysical_table_path.columns.[f'{param}_{nutrient}']['required'] = True
-        spec_copy.biophysical_table_path.columns.pop(f'{param}_[NUTRIENT]')
+            spec_copy.inputs.get('biophysical_table_path').columns.get(
+                f'{param}_{nutrient}').required = True
 
     if 'n' in nutrients_selected:
-        spec_copy.biophysical_table_path.columns.proportion_subsurface_n.required = True
+        spec_copy.inputs.get('biophysical_table_path').columns.get(
+            'proportion_subsurface_n').required = True
 
-    validation_warnings = validation.validate(
-        args, spec_copy, MODEL_SPEC.args_with_spatial_overlap)
+    validation_warnings = validation.validate(args, spec_copy)
 
     if not nutrients_selected:
         validation_warnings.append(

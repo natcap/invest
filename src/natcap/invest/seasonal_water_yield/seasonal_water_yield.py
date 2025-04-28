@@ -626,20 +626,19 @@ def execute(args):
     # fail early on a missing required rain events table
     if (not args['user_defined_local_recharge'] and
             not args['user_defined_climate_zones']):
-        rain_events_df = validation.get_validated_dataframe(
-            args['rain_events_table_path'],
-            MODEL_SPEC.inputs.rain_events_table_path)
+        rain_events_df = MODEL_SPEC.inputs.get(
+            'rain_events_table_path').get_validated_dataframe(
+            args['rain_events_table_path'])
 
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table_path'],
-        MODEL_SPEC.inputs.biophysical_table_path)
+    biophysical_df = MODEL_SPEC.inputs.get(
+        'biophysical_table_path').get_validated_dataframe(
+        args['biophysical_table_path'])
 
     if args['monthly_alpha']:
         # parse out the alpha lookup table of the form (month_id: alpha_val)
-        alpha_month_map = validation.get_validated_dataframe(
-            args['monthly_alpha_path'],
-            MODEL_SPEC.inputs.monthly_alpha_path
-        )['alpha'].to_dict()
+        alpha_month_map = MODEL_SPEC.inputs.get(
+            'monthly_alpha_path').get_validated_dataframe(
+            args['monthly_alpha_path'])['alpha'].to_dict()
     else:
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
@@ -816,9 +815,9 @@ def execute(args):
             'table_name': 'Climate Zone'}
         for month_id in range(N_MONTHS):
             if args['user_defined_climate_zones']:
-                cz_rain_events_df = validation.get_validated_dataframe(
-                    args['climate_zone_table_path'],
-                    MODEL_SPEC.inputs.climate_zone_table_path)
+                cz_rain_events_df = MODEL_SPEC.inputs.get(
+                    'climate_zone_table_path').get_validated_dataframe(
+                    args['climate_zone_table_path'])
                 climate_zone_rain_events_month = (
                     cz_rain_events_df[MONTH_ID_TO_LABEL[month_id]].to_dict())
                 n_events_task = task_graph.add_task(
@@ -1486,5 +1485,4 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(args, MODEL_SPEC.inputs,
-                               MODEL_SPEC.args_with_spatial_overlap)
+    return validation.validate(args, MODEL_SPEC)

@@ -18,6 +18,7 @@ import pygeoprocessing
 import requests
 
 from . import utils
+from . import spec_utils
 
 ENCODING = sys.getfilesystemencoding()
 LOGGER = logging.getLogger(__name__)
@@ -65,12 +66,12 @@ def log_run(model_pyname, args):
         log_exit_thread.start()
 
 
-def _calculate_args_bounding_box(args, args_spec):
+def _calculate_args_bounding_box(args, model_spec):
     """Calculate the bounding boxes of any GIS types found in `args_dict`.
 
     Args:
         args (dict): a string key and any value pair dictionary.
-        args_spec (dict): the model MODEL_SPEC describing args
+        model_spec (dict): the model's MODEL_SPEC
 
     Returns:
         bb_intersection, bb_union tuple that's either the lat/lng bounding
@@ -119,10 +120,11 @@ def _calculate_args_bounding_box(args, args_spec):
         # should already have been validated so the path is either valid or
         # blank.
         spatial_info = None
-        if args_spec['args'][key]['type'] == 'raster' and value.strip() != '':
+        if (isinstance(model_spec.inputs.get(key),
+                spec_utils.SingleBandRasterInputSpec) and value.strip() != ''):
             spatial_info = pygeoprocessing.get_raster_info(value)
-        elif (args_spec['args'][key]['type'] == 'vector'
-                and value.strip() != ''):
+        elif (isinstance(model_spec.inputs.get(key),
+                spec_utils.SingleBandRasterInputSpec) and value.strip() != ''):
             spatial_info = pygeoprocessing.get_vector_info(value)
 
         if spatial_info:
@@ -156,7 +158,7 @@ def _calculate_args_bounding_box(args, args_spec):
                 LOGGER.exception(
                     f'Error when transforming coordinates: {transform_error}')
         else:
-            LOGGER.debug(f'Arg {key} of type {args_spec["args"][key]["type"]} '
+            LOGGER.debug(f'Arg {key} of type {model_spec.inputs.get(key).__class__} '
                           'excluded from bounding box calculation')
 
     return bb_intersection, bb_union
@@ -216,11 +218,11 @@ def _log_model(pyname, model_args, invest_interface, session_id=None):
         md5.update(json.dumps(data).encode('utf-8'))
         return md5.hexdigest()
 
-    args_spec = importlib.import_module(pyname).MODEL_SPEC
+    model_spec = importlib.import_module(pyname).MODEL_SPEC
 
     try:
         bounding_box_intersection, bounding_box_union = (
-            _calculate_args_bounding_box(model_args, args_spec))
+            _calculate_args_bounding_box(model_args, model_spec))
         log_start_url = requests.get(_ENDPOINTS_INDEX_URL).json()['START']
         requests.post(log_start_url, data={
             'model_name': pyname,

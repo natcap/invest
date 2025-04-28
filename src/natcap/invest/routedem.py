@@ -540,7 +540,7 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC.inputs)
+    validation_warnings = validation.validate(args, MODEL_SPEC)
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     sufficient_keys = validation.get_sufficient_keys(args)

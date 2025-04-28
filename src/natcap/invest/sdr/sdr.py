@@ -563,9 +563,9 @@ def execute(args):
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table_path'],
-        MODEL_SPEC.inputs.biophysical_table_path)
+    biophysical_df = MODEL_SPEC.inputs.get(
+        'biophysical_table_path').get_validated_dataframe(
+        args['biophysical_table_path'])
 
     # Test to see if c or p values are outside of 0..1
     for key in ['usle_c', 'usle_p']:
@@ -1600,5 +1600,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(
-        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)
+    return validation.validate(args, MODEL_SPEC)

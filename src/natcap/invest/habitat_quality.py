@@ -456,12 +456,12 @@ def execute(args):
 
     LOGGER.info("Checking Threat and Sensitivity tables for compliance")
     # Get CSVs as dictionaries and ensure the key is a string for threats.
-    threat_df = validation.get_validated_dataframe(
-        args['threats_table_path'], MODEL_SPEC.inputs.threats_table_path
-    ).fillna('')
-    sensitivity_df = validation.get_validated_dataframe(
-        args['sensitivity_table_path'],
-        MODEL_SPEC.inputs.sensitivity_table_path)
+    threat_df = MODEL_SPEC.inputs.get(
+        'threats_table_path').get_validated_dataframe(
+        args['threats_table_path']).fillna('')
+    sensitivity_df = MODEL_SPEC.inputs.get(
+        'sensitivity_table_path').get_validated_dataframe(
+        args['sensitivity_table_path'])
 
     half_saturation_constant = float(args['half_saturation_constant'])
 
@@ -1174,8 +1174,7 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    validation_warnings = validation.validate(
-        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)
+    validation_warnings = validation.validate(args, MODEL_SPEC)
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 
@@ -1183,12 +1182,12 @@ def validate(args, limit_to=None):
             "sensitivity_table_path" not in invalid_keys and
             "threat_raster_folder" not in invalid_keys):
         # Get CSVs as dictionaries and ensure the key is a string for threats.
-        threat_df = validation.get_validated_dataframe(
-                args['threats_table_path'],
-                MODEL_SPEC.inputs.threats_table_path).fillna('')
-        sensitivity_df = validation.get_validated_dataframe(
-            args['sensitivity_table_path'],
-            MODEL_SPEC.inputs.sensitivity_table_path)
+        threat_df = MODEL_SPEC.inputs.get(
+            'threats_table_path').get_validated_dataframe(
+            args['threats_table_path']).fillna('')
+        sensitivity_df = MODEL_SPEC.inputs.get(
+            'sensitivity_table_path').get_validated_dataframe(
+            args['sensitivity_table_path'])
 
         # check that the threat names in the threats table match with the
         # threats columns in the sensitivity table.

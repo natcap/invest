@@ -41,82 +41,75 @@ class TestDescribeArgFromSpec(unittest.TestCase):
     """Test building RST for various invest args specifications."""
 
     def test_number_spec(self):
-        spec = {
-            "name": "Bar",
-            "about": "Description",
-            "type": "number",
-            "units": u.meter**3/u.month,
-            "expression": "value >= 0"
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.NumberInputSpec(
+            name="Bar",
+            about="Description",
+            units=u.meter**3/u.month,
+            expression="value >= 0"
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = ([
             '**Bar** (`number <input_types.html#number>`__, '
             'units: **m³/month**, *required*): Description'])
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_ratio_spec(self):
-        spec = {
-            "name": "Bar",
-            "about": "Description",
-            "type": "ratio"
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.RatioInputSpec(
+            name="Bar",
+            about="Description"
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = (['**Bar** (`ratio <input_types.html#ratio>`__, '
                          '*required*): Description'])
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_percent_spec(self):
-        spec = {
-            "name": "Bar",
-            "about": "Description",
-            "type": "percent",
-            "required": False
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.PercentInputSpec(
+            name="Bar",
+            about="Description",
+            required=False
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = (['**Bar** (`percent <input_types.html#percent>`__, '
                          '*optional*): Description'])
         self.assertEqual(repr(out), repr(expected_rst))
 
-    def test_code_spec(self):
-        spec = {
-            "name": "Bar",
-            "about": "Description",
-            "type": "integer",
-            "required": True
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+    def test_integer_spec(self):
+        spec = spec_utils.IntegerInputSpec(
+            name="Bar",
+            about="Description",
+            required=True
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = (['**Bar** (`integer <input_types.html#integer>`__, '
                          '*required*): Description'])
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_boolean_spec(self):
-        spec = {
-            "name": "Bar",
-            "about": "Description",
-            "type": "boolean"
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.BooleanInputSpec(
+            name="Bar",
+            about="Description"
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = (['**Bar** (`true/false <input_types.html#truefalse>'
                          '`__): Description'])
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_freestyle_string_spec(self):
-        spec = {
-            "name": "Bar",
-            "about": "Description",
-            "type": "freestyle_string"
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.StringInputSpec(
+            name="Bar",
+            about="Description"
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = (['**Bar** (`text <input_types.html#text>`__, '
                          '*required*): Description'])
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_option_string_spec_dictionary(self):
-        spec = {
-            "name": "Bar",
-            "about": "Description",
-            "type": "option_string",
-            "options": {
+        spec = spec_utils.OptionStringInputSpec(
+            name="Bar",
+            about="Description",
+            options={
                 "option_a": {
                     "display_name": "A"
                 },
@@ -128,10 +121,10 @@ class TestDescribeArgFromSpec(unittest.TestCase):
                     "description": "do something else"
                 }
             }
-        }
+        )
         # expect that option case is ignored
         # otherwise, c would sort before A
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = ([
             '**Bar** (`option <input_types.html#option>`__, *required*): Description',
             '\tOptions:',
@@ -142,13 +135,12 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_option_string_spec_list(self):
-        spec = {
-            "name": "Bar",
-            "about": "Description",
-            "type": "option_string",
-            "options": ["option_a", "Option_b"]
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.OptionStringInputSpec(
+            name="Bar",
+            about="Description",
+            options=["option_a", "Option_b"]
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = ([
             '**Bar** (`option <input_types.html#option>`__, *required*): Description',
             '\tOptions: option_a, Option_b'
@@ -156,77 +148,69 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_raster_spec(self):
-        spec = {
-            "type": "raster",
-            "bands": {1: {"type": "integer"}},
-            "about": "Description",
-            "name": "Bar"
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.SingleBandRasterInputSpec(
+            band=spec_utils.IntegerInputSpec(),
+            about="Description",
+            name="Bar"
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = ([
             '**Bar** (`raster <input_types.html#raster>`__, *required*): Description'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
-        spec = {
-            "type": "raster",
-            "bands": {1: {
-                "type": "number",
-                "units": u.millimeter/u.year
-            }},
-            "about": "Description",
-            "name": "Bar"
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.SingleBandRasterInputSpec(
+            band=spec_utils.NumberInputSpec(units=u.millimeter/u.year),
+            about="Description",
+            name="Bar"
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = ([
             '**Bar** (`raster <input_types.html#raster>`__, units: **mm/year**, *required*): Description'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_vector_spec(self):
-        spec = {
-            "type": "vector",
-            "fields": {},
-            "geometries": {"LINESTRING"},
-            "about": "Description",
-            "name": "Bar"
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.VectorInputSpec(
+            fields={},
+            geometries={"LINESTRING"},
+            about="Description",
+            name="Bar"
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = ([
             '**Bar** (`vector <input_types.html#vector>`__, linestring, *required*): Description'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
-        spec = {
-            "type": "vector",
-            "fields": {
-                "id": {
-                    "type": "integer",
-                    "about": "Unique identifier for each feature"
-                },
-                "precipitation": {
-                    "type": "number",
-                    "units": u.millimeter/u.year,
-                    "about": "Average annual precipitation over the area"
-                }
-            },
-            "geometries": {"POLYGON", "MULTIPOLYGON"},
-            "about": "Description",
-            "name": "Bar"
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.VectorInputSpec(
+            fields=spec_utils.Fields(
+                spec_utils.IntegerInputSpec(
+                    id="id",
+                    about="Unique identifier for each feature"
+                ),
+                spec_utils.NumberInputSpec(
+                    id="precipitation",
+                    units=u.millimeter/u.year,
+                    about="Average annual precipitation over the area"
+                )
+            ),
+            geometries={"POLYGON", "MULTIPOLYGON"},
+            about="Description",
+            name="Bar"
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = ([
             '**Bar** (`vector <input_types.html#vector>`__, polygon/multipolygon, *required*): Description',
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_csv_spec(self):
-        spec = {
-            "type": "csv",
-            "about": "Description.",
-            "name": "Bar"
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.CSVInputSpec(
+            about="Description.",
+            name="Bar"
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = ([
             '**Bar** (`CSV <input_types.html#csv>`__, *required*): Description. '
             'Please see the sample data table for details on the format.'
@@ -235,15 +219,17 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
         # Test every type that can be nested in a CSV column:
         # number, ratio, percent, code,
-        spec = {
-            "type": "csv",
-            "about": "Description",
-            "name": "Bar",
-            "columns": {
-                "b": {"type": "ratio", "about": "description"}
-            }
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.CSVInputSpec(
+            about="Description",
+            name="Bar",
+            columns=spec_utils.Columns(
+                spec_utils.RatioInputSpec(
+                    id="b",
+                    about="description"
+                )
+            )
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = ([
             '**Bar** (`CSV <input_types.html#csv>`__, *required*): Description'
         ])
@@ -251,28 +237,26 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_directory_spec(self):
         self.maxDiff = None
-        spec = {
-            "type": "directory",
-            "about": "Description",
-            "name": "Bar",
-            "contents": {}
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.DirectoryInputSpec(
+            about="Description",
+            name="Bar",
+            contents={}
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = ([
             '**Bar** (`directory <input_types.html#directory>`__, *required*): Description'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_multi_type_spec(self):
-        spec = {
-            "type": {"raster", "vector"},
-            "about": "Description",
-            "name": "Bar",
-            "bands": {1: {"type": "integer"}},
-            "geometries": {"POLYGON"},
-            "fields": {}
-        }
-        out = spec_utils.describe_arg_from_spec(spec['name'], spec)
+        spec = spec_utils.RasterOrVectorInputSpec(
+            about="Description",
+            name="Bar",
+            band=spec_utils.IntegerInputSpec(),
+            geometries={"POLYGON"},
+            fields={}
+        )
+        out = spec_utils.describe_arg_from_spec(spec.name, spec)
         expected_rst = ([
             '**Bar** (`raster <input_types.html#raster>`__ or `vector <input_types.html#vector>`__, *required*): Description'
         ])
@@ -285,42 +269,34 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         expected_rst = (
             '.. _carbon-pools-path-columns-lucode:\n\n' +
             '**lucode** (`integer <input_types.html#integer>`__, *required*): ' +
-            carbon.MODEL_SPEC['args']['carbon_pools_path']['columns']['lucode']['about']
+            carbon.MODEL_SPEC.inputs.get('carbon_pools_path').columns.get('lucode').about
         )
         self.assertEqual(repr(out), repr(expected_rst))
 
 
 def _generate_files_from_spec(output_spec, workspace):
     """A utility function to support the metadata test."""
-    for filename, spec_data in output_spec.items():
-        if 'type' in spec_data and spec_data['type'] == 'directory':
-            os.mkdir(os.path.join(workspace, filename))
+    for spec_data in output_spec:
+        print(spec_data.__class__)
+        if spec_data.__class__ is spec_utils.DirectoryOutputSpec:
+            os.mkdir(os.path.join(workspace, spec_data.id))
             _generate_files_from_spec(
-                spec_data['contents'], os.path.join(workspace, filename))
+                spec_data.contents, os.path.join(workspace, spec_data.id))
         else:
-            filepath = os.path.join(workspace, filename)
-            if 'bands' in spec_data:
+            filepath = os.path.join(workspace, spec_data.id)
+            if hasattr(spec_data, 'band'):
                 driver = gdal.GetDriverByName('GTIFF')
-                n_bands = len(spec_data['bands'])
-                raster = driver.Create(
-                    filepath, 2, 2, n_bands, gdal.GDT_Byte)
-                for i in range(n_bands):
-                    band = raster.GetRasterBand(i + 1)
-                    band.SetNoDataValue(2)
-            elif 'fields' in spec_data:
-                if 'geometries' in spec_data:
-                    driver = gdal.GetDriverByName('GPKG')
-                    target_vector = driver.CreateDataSource(filepath)
-                    layer_name = os.path.basename(os.path.splitext(filepath)[0])
-                    target_layer = target_vector.CreateLayer(
-                        layer_name, geom_type=ogr.wkbPolygon)
-                    for field_name, field_data in spec_data['fields'].items():
-                        target_layer.CreateField(ogr.FieldDefn(field_name, ogr.OFTInteger))
-                else:
-                    # Write a CSV if it has fields but no geometry
-                    with open(filepath, 'w') as file:
-                        file.write(
-                            f"{','.join([field for field in spec_data['fields']])}")
+                raster = driver.Create(filepath, 2, 2, 1, gdal.GDT_Byte)
+                band = raster.GetRasterBand(1)
+                band.SetNoDataValue(2)
+            elif hasattr(spec_data, 'fields'):
+                driver = gdal.GetDriverByName('GPKG')
+                target_vector = driver.CreateDataSource(filepath)
+                layer_name = os.path.basename(os.path.splitext(filepath)[0])
+                target_layer = target_vector.CreateLayer(
+                    layer_name, geom_type=ogr.wkbPolygon)
+                for field_spec in spec_data.fields:
+                    target_layer.CreateField(ogr.FieldDefn(field_spec.id, ogr.OFTInteger))
             else:
                 # Such as taskgraph.db, just create the file.
                 with open(filepath, 'w') as file:
@@ -342,40 +318,37 @@ class TestMetadataFromSpec(unittest.TestCase):
         """Test writing metadata for an invest output workspace."""
 
         # An example invest output spec
-        output_spec = {
-            'output': {
-                "type": "directory",
-                "contents": {
-                    "urban_nature_supply_percapita.tif": {
-                        "about": (
-                            "The calculated supply per capita of urban nature."),
-                        "bands": {1: {
-                            "type": "number",
-                            "units": u.m**2,
-                        }}},
-                    "admin_boundaries.gpkg": {
-                        "about": (
-                            "A copy of the user's administrative boundaries "
-                            "vector with a single layer."),
-                        "geometries": spec_utils.POLYGONS,
-                        "fields": {
-                            "SUP_DEMadm_cap": {
-                                "type": "number",
-                                "units": u.m**2/u.person,
-                                "about": (
-                                    "The average urban nature supply/demand ")
-                            }
-                        }
-                    }
-                },
-            },
-            'intermediate': {
-                'type': 'directory',
-                'contents': {
-                    'taskgraph_cache': spec_utils.TASKGRAPH_DIR,
-                }
-            }
-        }
+        output_spec = spec_utils.ModelOutputs(
+            spec_utils.DirectoryOutputSpec(
+                id='output',
+                contents=spec_utils.Contents(
+                    spec_utils.SingleBandRasterOutputSpec(
+                        id="urban_nature_supply_percapita.tif",
+                        about="The calculated supply per capita of urban nature.",
+                        band=spec_utils.NumberInputSpec(units=u.m**2)
+                    ),
+                    spec_utils.VectorOutputSpec(
+                        id="admin_boundaries.gpkg",
+                        about=("A copy of the user's administrative boundaries "
+                               "vector with a single layer."),
+                        geometries=spec_utils.POLYGONS,
+                        fields=spec_utils.Fields(
+                            spec_utils.NumberInputSpec(
+                                id="SUP_DEMadm_cap",
+                                units=u.m**2/u.person,
+                                about="The average urban nature supply/demand"
+                            )
+                        )
+                    )
+                )
+            ),
+            spec_utils.DirectoryOutputSpec(
+                id='intermediate',
+                contents=spec_utils.Contents(
+                    spec_utils.build_output_spec('taskgraph_cache', spec_utils.TASKGRAPH_DIR)
+                )
+            )
+        )
         # Generate an output workspace with real files, without
         # running an invest model.
         _generate_files_from_spec(output_spec, self.workspace_dir)
@@ -383,9 +356,17 @@ class TestMetadataFromSpec(unittest.TestCase):
         model_module = types.SimpleNamespace(
             __name__='urban_nature_access',
             execute=lambda: None,
-            MODEL_SPEC={
-                'model_id': 'urban_nature_access',
-                'outputs': output_spec})
+            MODEL_SPEC=spec_utils.ModelSpec(
+                model_id='urban_nature_access',
+                model_title='Urban Nature Access',
+                userguide='',
+                aliases=[],
+                ui_spec={},
+                inputs=spec_utils.ModelInputs(),
+                args_with_spatial_overlap={},
+                outputs=output_spec
+            )
+        )
 
         args_dict = {'workspace_dir': self.workspace_dir}
 
@@ -399,4 +380,4 @@ class TestMetadataFromSpec(unittest.TestCase):
             os.path.join(args_dict['workspace_dir'], 'output',
                          'urban_nature_supply_percapita.tif'))
         self.assertCountEqual(resource.get_keywords(),
-                              [model_module.MODEL_SPEC['model_id'], 'InVEST'])
+                              [model_module.MODEL_SPEC.model_id, 'InVEST'])

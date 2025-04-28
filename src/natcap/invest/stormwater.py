@@ -498,9 +498,9 @@ def execute(args):
     # Build a lookup dictionary mapping each LULC code to its row
     # sort by the LULC codes upfront because we use the sorted list in multiple
     # places. it's more efficient to do this once.
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table'], MODEL_SPEC.inputs.biophysical_table
-    ).sort_index()
+    biophysical_df = MODEL_SPEC.inputs.get(
+        'biophysical_table').get_validated_dataframe(
+        args['biophysical_table']).sort_index()
     sorted_lucodes = biophysical_df.index.to_list()
 
     # convert the nested dictionary in to a 2D array where rows are LULC codes
@@ -1171,7 +1171,7 @@ def raster_average(raster_path, radius, kernel_path, out_path):
         target_nodata=FLOAT_NODATA)
 
 
-@ validation.invest_validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
@@ -1189,8 +1189,7 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC.inputs,
-                               MODEL_SPEC.args_with_spatial_overlap)
+    validation_warnings = validation.validate(args, MODEL_SPEC)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     if 'soil_group_path' not in invalid_keys:
         # check that soil group raster has integer type

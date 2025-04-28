@@ -44,8 +44,8 @@ SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
 LOGGER = logging.getLogger('test_recreation')
 
 # Skipping all compiled model tests temporarily for feature/plugins
-pytestmark = pytest.mark.skip(
-        reason="Temporarily ignoring compiled models for feature/plugins")
+# pytestmark = pytest.mark.skip(
+#         reason="Temporarily ignoring compiled models for feature/plugins")
 
 def _timeout(max_timeout):
     """Timeout decorator, parameter in seconds."""
@@ -710,9 +710,9 @@ class TestRecClientServer(unittest.TestCase):
         out_regression_vector_path = os.path.join(
             args['workspace_dir'], f'regression_data_{suffix}.gpkg')
 
-        predictor_df = validation.get_validated_dataframe(
-            os.path.join(SAMPLE_DATA, 'predictors_all.csv'),
-            **recmodel_client.MODEL_SPEC['args']['predictor_table_path'])
+        predictor_df = recmodel_client.MODEL_SPEC.inputs.get(
+            'predictor_table_path').get_validated_dataframe(
+            os.path.join(SAMPLE_DATA, 'predictors_all.csv'))
         field_list = list(predictor_df.index) + ['pr_TUD', 'pr_PUD', 'avg_pr_UD']
 
         # For convenience, assert the sums of the columns instead of all
@@ -1284,10 +1284,9 @@ class RecreationClientRegressionTests(unittest.TestCase):
         predictor_table_path = os.path.join(SAMPLE_DATA, 'predictors.csv')
 
         # make outputs to be overwritten
-        predictor_dict = validation.get_validated_dataframe(
-            predictor_table_path,
-            **recmodel_client.MODEL_SPEC['args']['predictor_table_path']
-        ).to_dict(orient='index')
+        predictor_dict = recmodel_client.MODEL_SPEC.inputs.get(
+            'predictor_table_path').get_validated_dataframe(
+            predictor_table_path).to_dict(orient='index')
         predictor_list = predictor_dict.keys()
         tmp_working_dir = tempfile.mkdtemp(dir=self.workspace_dir)
         empty_json_list = [

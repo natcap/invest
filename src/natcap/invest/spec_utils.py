@@ -28,7 +28,8 @@ from .unit_registry import u
 LOGGER = logging.getLogger(__name__)
 
 
-
+def get_validated_dataframe(key, model_spec, args):
+    return MODEL_SPEC.inputs.get(key).get_validated_dataframe(args[key])
 
 # accessing a file could take a long time if it's in a file streaming service
 # to prevent the UI from hanging due to slow validation,
@@ -176,7 +177,6 @@ def _check_projection(srs, projected, projection_units):
 
 class IterableWithDotAccess():
     def __init__(self, *args):
-        print(args)
         self.args = args
         self.inputs_dict = {i.id: i for i in args}
         self.iter_index = 0
@@ -190,6 +190,9 @@ class IterableWithDotAccess():
     def get(self, key):
         return self.inputs_dict[key]
 
+    def to_json(self):
+        return self.inputs_dict
+
     # def __next__(self):
     #     print('next')
     #     if self.iter_index < len(self.args):
@@ -201,6 +204,9 @@ class IterableWithDotAccess():
 
 
 class ModelInputs(IterableWithDotAccess):
+    pass
+
+class ModelOutputs(IterableWithDotAccess):
     pass
 
 class Rows(IterableWithDotAccess):
@@ -230,8 +236,9 @@ class InputSpec:
 
 @dataclasses.dataclass(kw_only=True)
 class OutputSpec:
-    about: str
-    created_if: bool | str
+    id: str = ''
+    about: str = ''
+    created_if: bool | str = True
 
 @dataclasses.dataclass(kw_only=True)
 class FileInputSpec(InputSpec):
@@ -289,7 +296,7 @@ class SingleBandRasterInputSpec(FileInputSpec):
             A string error message if an error was found.  ``None`` otherwise.
 
         """
-        file_warning = super().validate(filepath)
+        file_warning = FileInputSpec.validate(self, filepath)
         if file_warning:
             return file_warning
 
@@ -504,12 +511,11 @@ class CSVInputSpec(FileInputSpec):
             available_cols -= set(matching_cols)
             for col in matching_cols:
                 try:
-                    print(df[col])
                     df[col] = col_spec.format_column(df[col], csv_path)
                 except Exception as err:
                     raise ValueError(
                         f'Value(s) in the "{col}" column could not be interpreted '
-                        f'as {type(col_spec)}s. Original error: {err}')
+                        f'as {type(col_spec).__name__}s. Original error: {err}')
 
                 if type(col_spec) in {SingleBandRasterInputSpec,
                                       VectorInputSpec, RasterOrVectorInputSpec}:
@@ -548,7 +554,7 @@ class CSVInputSpec(FileInputSpec):
 @dataclasses.dataclass(kw_only=True)
 class DirectoryInputSpec(InputSpec):
     contents: Contents | None = None
-    permissions: str = 'rx'
+    permissions: str = ''
     must_exist: bool = True
 
     # @timeout
@@ -822,21 +828,21 @@ class SingleBandRasterOutputSpec(OutputSpec):
 @dataclasses.dataclass(kw_only=True)
 class VectorOutputSpec(OutputSpec):
     geometries: set
-    fields: types.SimpleNamespace
-    projected: bool
-    projection_units: pint.Unit
+    fields: Fields
+    projected: bool | None = None
+    projection_units: pint.Unit | None = None
 
 @dataclasses.dataclass(kw_only=True)
 class CSVOutputSpec(OutputSpec):
-    columns: types.SimpleNamespace
-    rows: types.SimpleNamespace
+    columns: Columns
+    rows: Rows
     index_col: str
 
 @dataclasses.dataclass(kw_only=True)
 class DirectoryOutputSpec(OutputSpec):
-    contents: types.SimpleNamespace
-    permissions: str
-    must_exist: bool
+    contents: Contents | None = None
+    permissions: str = ''
+    must_exist: bool = True
 
 @dataclasses.dataclass(kw_only=True)
 class FileOutputSpec(OutputSpec):
@@ -870,7 +876,7 @@ class OptionStringOutputSpec(OutputSpec):
 @dataclasses.dataclass(kw_only=True)
 class UISpec:
     order: list
-    hidden: list
+    hidden: list = None
     dropdown_functions: dict = dataclasses.field(default_factory=dict)
 
 
@@ -887,18 +893,16 @@ class ModelSpec:
 
 
 def build_model_spec(model_spec):
-    x = [build_input_spec(argkey, argspec) for argkey, argspec in model_spec['args'].items()]
-    print(x)
-    print(*x)
-    inputs = ModelInputs(*x)
-    for i in inputs:
-        print(i.id)
-    outputs = types.SimpleNamespace({
-        argkey: build_output_spec(argspec, argkey) for argkey, argspec in model_spec['outputs'].items()
-    })
+    input_specs = [
+        build_input_spec(argkey, argspec)
+        for argkey, argspec in model_spec['args'].items()]
+    output_specs = [
+        build_output_spec(argkey, argspec) for argkey, argspec in model_spec['outputs'].items()]
+    inputs = ModelInputs(*input_specs)
+    outputs = ModelOutputs(*output_specs)
     ui_spec = UISpec(
         order=model_spec['ui_spec']['order'],
-        hidden=model_spec['ui_spec']['hidden'],
+        hidden=model_spec['ui_spec'].get('hidden', None),
         dropdown_functions=model_spec['ui_spec'].get('dropdown_functions', None))
     return ModelSpec(
         model_id=model_spec['model_id'],
@@ -989,7 +993,7 @@ def build_input_spec(argkey, arg):
         return DirectoryInputSpec(
             contents=Contents(*[
                 build_input_spec(k, v) for k, v in arg['contents'].items()]),
-            permissions=arg.get('permissions', None),
+            permissions=arg.get('permissions', 'rx'),
             must_exist=arg.get('must_exist', None),
             **base_attrs)
 
@@ -1010,8 +1014,9 @@ def build_input_spec(argkey, arg):
         raise ValueError
 
 
-def build_output_spec(spec, key=None):
+def build_output_spec(key, spec):
     base_attrs = {
+        'id': key,
         'about': spec.get('about', None),
         'created_if': spec.get('created_if', None)
     }
@@ -1052,7 +1057,7 @@ def build_output_spec(spec, key=None):
     elif t == 'raster':
         return SingleBandRasterOutputSpec(
             **base_attrs,
-            band=build_output_spec(spec['bands'][1]),
+            band=build_output_spec(1, spec['bands'][1]),
             projected=None,
             projection_units=None)
 
@@ -1060,27 +1065,23 @@ def build_output_spec(spec, key=None):
         return VectorOutputSpec(
             **base_attrs,
             geometries=spec['geometries'],
-            fields=types.SimpleNamespace({
-                key: build_output_spec(field_spec) for key, field_spec in spec['fields'].items()
-            }),
+            fields=Fields(*[
+                build_output_spec(key, field_spec) for key, field_spec in spec['fields'].items()]),
             projected=None,
             projection_units=None)
 
     elif t == 'csv':
-        columns = types.SimpleNamespace()
-        for col_name, col_spec in spec['columns'].items():
-            setattr(columns, col_name, build_output_spec(col_spec))
         return CSVOutputSpec(
             **base_attrs,
-            columns=columns,
+            columns=Columns(*[
+                build_output_spec(key, col_spec) for key, col_spec in spec['columns'].items()]),
             rows=None,
             index_col=spec.get('index_col', None))
 
     elif t == 'directory':
         return DirectoryOutputSpec(
-            contents=types.SimpleNamespace({
-                k: build_output_spec(v, k) for k, v in spec['contents'].items()
-            }),
+            contents=Contents(*[
+                build_output_spec(k, v) for k, v in spec['contents'].items()]),
             permissions=None,
             must_exist=None,
             **base_attrs)
@@ -1390,9 +1391,15 @@ def serialize_args_spec(spec):
             return str(obj)
         elif isinstance(obj, types.FunctionType):
             return str(obj)
+        elif dataclasses.is_dataclass(obj):
+            return dataclasses.asdict(obj)
+        elif isinstance(obj, IterableWithDotAccess):
+            return obj.to_json()
         raise TypeError(f'fallback serializer is missing for {type(obj)}')
 
-    return json.dumps(spec, default=fallback_serializer)
+    x = json.dumps(spec, default=fallback_serializer)
+    print(x)
+    return x
 
 
 # accepted geometries for a vector will be displayed in this order
@@ -1534,50 +1541,40 @@ def format_type_string(arg_type):
     # some types need a more user-friendly name
     # all types are listed here so that they can be marked up for translation
     type_names = {
-        'boolean': gettext('true/false'),
-        'csv': gettext('CSV'),
-        'directory': gettext('directory'),
-        'file': gettext('file'),
-        'freestyle_string': gettext('text'),
-        'integer': gettext('integer'),
-        'number': gettext('number'),
-        'option_string': gettext('option'),
-        'percent': gettext('percent'),
-        'raster': gettext('raster'),
-        'ratio': gettext('ratio'),
-        'vector': gettext('vector')
+        BooleanInputSpec: gettext('true/false'),
+        CSVInputSpec: gettext('CSV'),
+        DirectoryInputSpec: gettext('directory'),
+        FileInputSpec: gettext('file'),
+        StringInputSpec: gettext('text'),
+        IntegerInputSpec: gettext('integer'),
+        NumberInputSpec: gettext('number'),
+        OptionStringInputSpec: gettext('option'),
+        PercentInputSpec: gettext('percent'),
+        SingleBandRasterInputSpec: gettext('raster'),
+        RatioInputSpec: gettext('ratio'),
+        VectorInputSpec: gettext('vector'),
+        RasterOrVectorInputSpec: gettext('raster or vector')
     }
-
-    def format_single_type(arg_type):
-        """Represent a type as a link to the corresponding Input Types section.
-
-        Args:
-            arg_type (str): the type to format.
-
-        Returns:
-            formatted string that links to a description of the input type
-        """
-        # Represent the type as a string. Some need a more user-friendly name.
-        # we can only use standard docutils features here, so no :ref:
-        # this syntax works to link to a section in a different page, but it
-        # isn't universally supported and depends on knowing the built page name.
-        if arg_type == 'freestyle_string':
-            section_name = 'text'
-        elif arg_type == 'option_string':
-            section_name = 'option'
-        elif arg_type == 'boolean':
-            section_name = 'truefalse'
-        elif arg_type == 'csv':
-            section_name = 'csv'
-        else:
-            section_name = arg_type
-
-        return f'`{type_names[arg_type]} <{INPUT_TYPES_HTML_FILE}#{section_name}>`__'
-
-    if isinstance(arg_type, set):
-        return ' or '.join(format_single_type(t) for t in sorted(arg_type))
-    else:
-        return format_single_type(arg_type)
+    type_sections = {  # names of section headers to link to in the RST
+        BooleanInputSpec: 'truefalse',
+        CSVInputSpec: 'csv',
+        DirectoryInputSpec: 'directory',
+        FileInputSpec: 'file',
+        StringInputSpec: 'text',
+        IntegerInputSpec: 'integer',
+        NumberInputSpec: 'number',
+        OptionStringInputSpec: 'option',
+        PercentInputSpec: 'percent',
+        SingleBandRasterInputSpec: 'raster',
+        RatioInputSpec: 'ratio',
+        VectorInputSpec: 'vector',
+        RasterOrVectorInputSpec: 'raster'
+    }
+    if arg_type is RasterOrVectorInputSpec:
+        return (
+            f'`{type_names[SingleBandRasterInputSpec]} <{INPUT_TYPES_HTML_FILE}#{type_sections[SingleBandRasterInputSpec]}>`__ or '
+            f'`{type_names[VectorInputSpec]} <{INPUT_TYPES_HTML_FILE}#{type_sections[VectorInputSpec]}>`__')
+    return f'`{type_names[arg_type]} <{INPUT_TYPES_HTML_FILE}#{type_sections[arg_type]}>`__'
 
 
 def describe_arg_from_spec(name, spec):
@@ -1603,15 +1600,15 @@ def describe_arg_from_spec(name, spec):
         lines that are indented, that describe details of the arg such as
         vector fields and geometries, option_string options, etc.
     """
-    type_string = format_type_string(spec['type'])
+    type_string = format_type_string(spec.__class__)
     in_parentheses = [type_string]
 
     # For numbers and rasters that have units, display the units
     units = None
-    if spec['type'] == 'number':
-        units = spec['units']
-    elif spec['type'] == 'raster' and spec['bands'][1]['type'] == 'number':
-        units = spec['bands'][1]['units']
+    if spec.__class__ is NumberInputSpec:
+        units = spec.units
+    elif spec.__class__ is SingleBandRasterInputSpec and spec.band.__class__ is NumberInputSpec:
+        units = spec.band.units
     if units:
         units_string = format_unit(units)
         if units_string:
@@ -1619,19 +1616,18 @@ def describe_arg_from_spec(name, spec):
             translated_units = gettext("units")
             in_parentheses.append(f'{translated_units}: **{units_string}**')
 
-    if spec['type'] == 'vector':
-        in_parentheses.append(format_geometries_string(spec["geometries"]))
+    if spec.__class__ is VectorInputSpec:
+        in_parentheses.append(format_geometries_string(spec.geometries))
 
     # Represent the required state as a string, defaulting to required
     # It doesn't make sense to include this for boolean checkboxes
-    if spec['type'] != 'boolean':
-        # get() returns None if the key doesn't exist in the dictionary
-        required_string = format_required_string(spec.get('required'))
+    if spec.__class__ is not BooleanInputSpec:
+        required_string = format_required_string(spec.required)
         in_parentheses.append(f'*{required_string}*')
 
     # Nested args may not have an about section
-    if 'about' in spec:
-        sanitized_about_string = spec["about"].replace("_", "\\_")
+    if spec.about:
+        sanitized_about_string = spec.about.replace("_", "\\_")
         about_string = f': {sanitized_about_string}'
     else:
         about_string = ''
@@ -1640,19 +1636,19 @@ def describe_arg_from_spec(name, spec):
 
     # Add details for the types that have them
     indented_block = []
-    if spec['type'] == 'option_string':
+    if spec.__class__ is OptionStringInputSpec:
         # may be either a dict or set. if it's empty, the options are
         # dynamically generated. don't try to document them.
-        if spec['options']:
-            if isinstance(spec['options'], dict):
+        if spec.options:
+            if isinstance(spec.options, dict):
                 indented_block.append(gettext('Options:'))
-                indented_block += format_options_string_from_dict(spec['options'])
+                indented_block += format_options_string_from_dict(spec.options)
             else:
-                formatted_options = format_options_string_from_list(spec['options'])
+                formatted_options = format_options_string_from_list(spec.options)
                 indented_block.append(gettext('Options:') + f' {formatted_options}')
 
-    elif spec['type'] == 'csv':
-        if 'columns' not in spec and 'rows' not in spec:
+    elif spec.__class__ is CSVInputSpec:
+        if not spec.columns and not spec.rows:
             first_line += gettext(
                 ' Please see the sample data table for details on the format.')
 
@@ -1676,22 +1672,25 @@ def describe_arg_from_name(module_name, *arg_keys):
     module = importlib.import_module(module_name)
     # start with the spec for all args
     # narrow down to the nested spec indicated by the sequence of arg keys
-    spec = module.MODEL_SPEC['args']
+    spec = module.MODEL_SPEC.inputs
     for i, key in enumerate(arg_keys):
         # convert raster band numbers to ints
         if arg_keys[i - 1] == 'bands':
             key = int(key)
-        try:
-            spec = spec[key]
-        except KeyError:
-            keys_so_far = '.'.join(arg_keys[:i + 1])
-            raise ValueError(
-                f"Could not find the key '{keys_so_far}' in the "
-                f"{module_name} model's MODEL_SPEC")
+        if key in {'bands', 'fields', 'contents', 'columns', 'rows'}:
+            spec = getattr(spec, key)
+        else:
+            try:
+                spec = spec.get(key)
+            except KeyError:
+                keys_so_far = '.'.join(arg_keys[:i + 1])
+                raise ValueError(
+                    f"Could not find the key '{keys_so_far}' in the "
+                    f"{module_name} model's MODEL_SPEC")
 
     # format spec into an RST formatted description string
-    if 'name' in spec:
-        arg_name = capitalize(spec['name'])
+    if spec.name:
+        arg_name = capitalize(spec.name)
     else:
         arg_name = arg_keys[-1]
 
@@ -1721,31 +1720,26 @@ def write_metadata_file(datasource_path, spec, lineage_statement, keywords_list)
     words = resource.get_keywords()
     resource.set_keywords(set(words + keywords_list))
 
-    if 'about' in spec:
-        resource.set_description(spec['about'])
-    attr_spec = None
-    if 'columns' in spec:
-        attr_spec = spec['columns']
-    if 'fields' in spec:
-        attr_spec = spec['fields']
-    if attr_spec:
-        for key, value in attr_spec.items():
-            about = value['about'] if 'about' in value else ''
-            units = format_unit(value['units']) if 'units' in value else ''
+    if spec.about:
+        resource.set_description(spec.about)
+    attr_specs = None
+    if hasattr(spec, 'columns') and spec.columns:
+        attr_specs = spec.columns
+    if hasattr(spec, 'fields') and spec.fields:
+        attr_specs = spec.fields
+    if attr_specs:
+        for nested_spec in attr_specs:
+            units = format_unit(nested_spec.units) if hasattr(nested_spec, 'units') else ''
             try:
                 resource.set_field_description(
-                    key, description=about, units=units)
+                    nested_spec.id, description=nested_spec.about, units=units)
             except KeyError as error:
                 # fields that are in the spec but missing
                 # from model results because they are conditional.
                 LOGGER.debug(error)
-    if 'bands' in spec:
-        for idx, value in spec['bands'].items():
-            try:
-                units = format_unit(spec['bands'][idx]['units'])
-            except KeyError:
-                units = ''
-            resource.set_band_description(idx, units=units)
+    if hasattr(spec, 'band'):
+        units = format_unit(spec.band.units)
+        resource.set_band_description(1, units=units)
 
     resource.write()
 
@@ -1768,18 +1762,19 @@ def generate_metadata(model_module, args_dict):
     lineage_statement = (
         f'Created by {model_module.__name__}.execute(\n{formatted_args})\n'
         f'Version {natcap.invest.__version__}')
-    keywords = [model_module.MODEL_SPEC['model_id'], 'InVEST']
+    keywords = [model_module.MODEL_SPEC.model_id, 'InVEST']
 
     def _walk_spec(output_spec, workspace):
-        for filename, spec_data in output_spec.items():
-            if 'type' in spec_data and spec_data['type'] == 'directory':
-                if 'taskgraph.db' in spec_data['contents']:
+        for spec_data in output_spec:
+            print(spec_data)
+            if spec_data.__class__ is DirectoryOutputSpec:
+                if 'taskgraph.db' in [s.id for s in spec_data.contents]:
                     continue
                 _walk_spec(
-                    spec_data['contents'],
-                    os.path.join(workspace, filename))
+                    spec_data.contents,
+                    os.path.join(workspace, spec_data.id))
             else:
-                pre, post = os.path.splitext(filename)
+                pre, post = os.path.splitext(spec_data.id)
                 full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
                 if os.path.exists(full_path):
                     try:
@@ -1789,4 +1784,4 @@ def generate_metadata(model_module, args_dict):
                         # Some unsupported file formats, e.g. html
                         LOGGER.debug(error)
 
-    _walk_spec(model_module.MODEL_SPEC['outputs'], args_dict['workspace_dir'])
+    _walk_spec(model_module.MODEL_SPEC.outputs, args_dict['workspace_dir'])

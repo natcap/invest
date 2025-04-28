@@ -308,9 +308,9 @@ def execute(args):
         task_name='align raster stack')
 
     # Load CN table
-    cn_df = validation.get_validated_dataframe(
-        args['curve_number_table_path'],
-        MODEL_SPEC.inputs.curve_number_table_path)
+    cn_df = MODEL_SPEC.inputs.get(
+        'curve_number_table_path').get_validated_dataframe(
+        args['curve_number_table_path'])
 
     # make cn_table into a 2d array where first dim is lucode, second is
     # 0..3 to correspond to CN_A..CN_D
@@ -637,10 +637,9 @@ def _calculate_damage_to_infrastructure_in_aoi(
     infrastructure_vector = gdal.OpenEx(structures_vector_path, gdal.OF_VECTOR)
     infrastructure_layer = infrastructure_vector.GetLayer()
 
-    damage_type_map = validation.get_validated_dataframe(
-        structures_damage_table,
-        MODEL_SPEC.inputs.infrastructure_damage_loss_table_path
-    )['damage'].to_dict()
+    damage_type_map = MODEL_SPEC.inputs.get(
+        'infrastructure_damage_loss_table_path').get_validated_dataframe(
+        structures_damage_table)['damage'].to_dict()
 
     infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()
     type_index = -1
@@ -930,8 +929,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(
-        args, MODEL_SPEC.inputs, MODEL_SPEC.args_with_spatial_overlap)
+    validation_warnings = validation.validate(args, MODEL_SPEC)
 
     sufficient_keys = validation.get_sufficient_keys(args)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
@@ -939,9 +937,9 @@ def validate(args, limit_to=None):
     if ("curve_number_table_path" not in invalid_keys and
             "curve_number_table_path" in sufficient_keys):
         # Load CN table. Resulting DF has index and CN_X columns only.
-        cn_df = validation.get_validated_dataframe(
-            args['curve_number_table_path'],
-            MODEL_SPEC.inputs.curve_number_table_path)
+        cn_df = MODEL_SPEC.inputs.get(
+            'curve_number_table_path').get_validated_dataframe(
+            args['curve_number_table_path'])
         # Check for NaN values.
         nan_mask = cn_df.isna()
         if nan_mask.any(axis=None):
