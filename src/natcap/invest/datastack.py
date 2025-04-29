@@ -35,6 +35,7 @@ import warnings
 from osgeo import gdal
 import geometamaker
 
+from . import spec_utils
 from . import utils
 from . import validation
 
@@ -259,7 +260,6 @@ def build_datastack_archive(args, model_name, datastack_path):
     Returns:
         ``None``
     """
-    from natcap.invest import spec_utils
     module = importlib.import_module(name=model_name)
 
     args = args.copy()
@@ -488,7 +488,7 @@ def build_datastack_archive(args, model_name, datastack_path):
         rewritten_args, model_name, param_file_uri, relative=True)
 
     spec_utils.generate_metadata_for_datastack(module, rewritten_args,
-                                               data_dir, datastack_path)
+                                               data_dir)
 
     # Remove the handler before archiving the working dir (and the logfile)
     archive_filehandler.close()

@@ -615,24 +615,21 @@ def describe_arg_from_name(module_name, *arg_keys):
 
 
 def write_metadata_file(datasource_path, spec, lineage_statement,
-                        keywords_list, replace_path=None):
+                        keywords_list, use_relative_path=False):
     """Write a metadata sidecar file for an invest dataset.
 
-    Create metadata for invest data taking care to preserve existing
-    human-modified attributes. If ``replace_path`` is set to a string path,
-    it will be used to replace the paths in the metadata's 'source'
-    and 'path' attributes which represent the temporary location of files
-    before datastack compression.
+    Create metadata for invest model inputs or outputs, taking care to
+    preserve existinghuman-modified attributes.
 
     Args:
         datasource_path (str) - filepath to the data to describe
         spec (dict) - the invest specification for ``datasource_path``
         lineage_statement (str) - string to describe origin of the dataset.
         keywords_list (list) - sequence of strings
-        replace_path (str or None) - root path of the final datastack.
-            If provided, replaces the temporary workspace prefix in metadata
-            paths with `<replace_path>/data`.
-
+        use_relative_path (bool) - whether to use relative paths in metadata
+            'path' and 'sources' attributes (default: False). Should be set to
+            True when creating metadata for datastack and False when creating
+            metadata for outputs.
 
     Returns:
         None
@@ -641,16 +638,19 @@ def write_metadata_file(datasource_path, spec, lineage_statement,
 
     def _get_key(key, resource):
         """Map name of actual key in yml from model_spec key name."""
-        names = {field.name.lower(): field.name for field in resource.data_model.fields}
+        names = {field.name.lower(): field.name
+                 for field in resource.data_model.fields}
         return names[key]
 
-    def _get_temp_root_dir(path_str):
-        """Extract temp filepath up to 'data' folder"""
+    def _get_relative_path(path_str):
+        """Extract filepath to data beginning with 'data' folder"""
         parts = pathlib.Path(path_str).parts
-        if 'data' in parts:
+        try:
             idx = len(parts) - 1 - parts[::-1].index('data')
-            return pathlib.Path(*parts[:idx + 1]).as_posix()
-        return None
+            return pathlib.Path(*parts[idx:]).as_posix()
+        except ValueError:
+            raise (f"Could not get relative path: 'data' folder not in {path_str}."
+                  "Only set use_relative_path=True when creating metadata for datastack")
 
     resource = geometamaker.describe(datasource_path)
     resource.set_lineage(lineage_statement)
@@ -691,22 +691,18 @@ def write_metadata_file(datasource_path, spec, lineage_statement,
                     units = ''
                 resource.set_band_description(idx, units=units)
 
-    if replace_path:
-        # Replace temp paths in metadata's path and sources
-        # with datastack destination path
-        temp_path = _get_temp_root_dir(resource.path)
-        target_path = os.path.join(replace_path, "data")
-        resource.path = resource.path.replace(temp_path, target_path)
+    if use_relative_path:
+        # Remove temp paths in metadata's path and sources; only keep relative paths
+        resource.path = _get_relative_path(resource.path)
         if resource.sources:
-            resource.sources = [source.replace(temp_path, target_path)
-                                for source in resource.sources]
+            resource.sources = [_get_relative_path(f) for f in resource.sources]
 
     resource.write()
 
 
 def _walk_spec_and_write_metadata(
         invest_spec, workspace, keywords, lineage, file_suffix=None,
-        datastack_path=None, args_dict=None):
+        args_dict=None, use_relative_path=False):
     """
     Recursively walk an InVEST MODEL_SPEC and write metadata files for
     matching input or output files found in the given workspace.
@@ -726,10 +722,11 @@ def _walk_spec_and_write_metadata(
         lineage (str): Lineage string describing the origin of the data.
         file_suffix (str, optional): Suffix used for output filenames.
             Required when writing output metadata.
-        datastack_path (str, optional): Root path of the datastack. If
-            provide, will replace temporary paths in metadata with this path.
         args_dict (dict, optional): Parameters passed to the model.
             Required when writing input metadata for datastacks.
+        use_relative_path (bool): Whether to set metadata's `path` and
+            `sources` attributes to relative path instead of using absolute
+            filepaths (default: False).
 
     Returns:
         None
@@ -742,7 +739,7 @@ def _walk_spec_and_write_metadata(
                 continue
             _walk_spec_and_write_metadata(
                 spec_data['contents'], os.path.join(workspace, filename),
-                keywords, lineage, file_suffix, datastack_path, args_dict)
+                keywords, lineage, file_suffix, args_dict, use_relative_path)
         else:
             if args_dict:  # case 1: i.e., if creating metadata for datastack
                 if filename in args_dict and isinstance(args_dict[filename], str):
@@ -762,7 +759,7 @@ def _walk_spec_and_write_metadata(
                 try:
                     write_metadata_file(
                         full_path, spec_data, lineage, keywords,
-                        replace_path=datastack_path)
+                        use_relative_path=use_relative_path)
                 except ValueError as error:
                     # Some unsupported file formats, e.g. html
                     LOGGER.debug(error)
@@ -793,8 +790,7 @@ def generate_metadata(model_module, args_dict):
         keywords, lineage_statement, file_suffix)
 
 
-def generate_metadata_for_datastack(model_module, args_dict, workspace_dir,
-                                    datastack_path):
+def generate_metadata_for_datastack(model_module, args_dict, workspace_dir):
     """Create metadata for all items in invest model args.
 
     Args:
@@ -803,7 +799,6 @@ def generate_metadata_for_datastack(model_module, args_dict, workspace_dir,
         args_dict (dict) - the arguments dictionary passed to the
             model's ``execute`` function.
         workspace_dir (str) - where to look for files
-        datastack_path (str) - path where datastack will be saved
 
     Returns:
         None
@@ -811,5 +806,5 @@ def generate_metadata_for_datastack(model_module, args_dict, workspace_dir,
     """
     keywords = [model_module.MODEL_SPEC['model_id'], 'InVEST']
     _walk_spec_and_write_metadata(
-        model_module.MODEL_SPEC['args'], workspace_dir, keywords, '',
-        datastack_path=datastack_path, args_dict=args_dict)
+        model_module.MODEL_SPEC['args'], workspace_dir, keywords, lineage='',
+        args_dict=args_dict, use_relative_path=True)
