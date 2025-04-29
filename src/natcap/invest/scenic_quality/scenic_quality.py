@@ -49,7 +49,6 @@ _INTERMEDIATE_BASE_FILES = {
 MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "scenic_quality",
     "model_title": gettext("Scenic Quality"),
-    "pyname": "natcap.invest.scenic_quality.scenic_quality",
     "userguide": "scenic_quality.html",
     "aliases": ("sq",),
     "ui_spec": {

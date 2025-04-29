@@ -51,7 +51,6 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
 MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "habitat_risk_assessment",
     "model_title": gettext("Habitat Risk Assessment"),
-    "pyname": "natcap.invest.hra",
     "userguide": "habitat_risk_assessment.html",
     "aliases": ("hra",),
     "ui_spec": {

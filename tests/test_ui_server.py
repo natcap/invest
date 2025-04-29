@@ -37,15 +37,15 @@
     #     for model in models_dict.values():
     #         self.assertEqual(set(model), {'model_title', 'aliases'})
 
-    # def test_get_invest_spec(self):
-    #     """UI server: get_invest_spec endpoint."""
-    #     test_client = ui_server.app.test_client()
-    #     response = test_client.post(f'{ROUTE_PREFIX}/getspec', json='carbon')
-    #     spec = json.loads(response.get_data(as_text=True))
-    #     self.assertEqual(
-    #         set(spec),
-    #         {'model_id', 'model_title', 'userguide', 'aliases',
-    #          'ui_spec', 'args_with_spatial_overlap', 'inputs', 'outputs'})
+    def test_get_invest_spec(self):
+        """UI server: get_invest_spec endpoint."""
+        test_client = ui_server.app.test_client()
+        response = test_client.post(f'{ROUTE_PREFIX}/getspec', json='carbon')
+        spec = json.loads(response.get_data(as_text=True))
+        self.assertEqual(
+            set(spec),
+            {'model_id', 'model_title', 'userguide', 'aliases',
+             'ui_spec', 'args_with_spatial_overlap', 'inputs', 'outputs'})
 
     # def test_get_invest_validate(self):
     #     """UI server: get_invest_validate endpoint."""
@@ -203,40 +203,41 @@
     #         self.assertEqual(
     #             response.json,
     #             {'message': error_message, 'error': True})
-
-    # @patch('natcap.invest.ui_server.usage.requests.post')
-    # @patch('natcap.invest.ui_server.usage.requests.get')
-    # def test_log_model_start(self, mock_get, mock_post):
-    #     """UI server: log_model_start endpoint."""
-    #     mock_response = Mock()
-    #     mock_url = 'http://foo.org/bar.html'
-    #     mock_response.json.return_value = {'START': mock_url}
-    #     mock_get.return_value = mock_response
-    #     test_client = ui_server.app.test_client()
-    #     payload = {
-    #         'model_id': 'carbon',
-    #         'model_args': json.dumps({
-    #             'workspace_dir': 'foo'
-    #         }),
-    #         'invest_interface': 'Workbench',
-    #         'session_id': '12345'
-    #     }
-    #     response = test_client.post(
-    #         f'{ROUTE_PREFIX}/log_model_start', json=payload)
-    #     self.assertEqual(response.status_code, 200)
-    #     self.assertEqual(response.get_data(as_text=True), 'OK')
-    #     mock_get.assert_called_once()
-    #     mock_post.assert_called_once()
-    #     self.assertEqual(mock_post.call_args.args[0], mock_url)
-    #     self.assertEqual(
-    #         mock_post.call_args.kwargs['data']['model_name'],
-    #         'natcap.invest.carbon')
-    #     self.assertEqual(
-    #         mock_post.call_args.kwargs['data']['invest_interface'],
-    #         payload['invest_interface'])
-    #     self.assertEqual(
-    #         mock_post.call_args.kwargs['data']['session_id'],
-    #         payload['session_id'])
+    
+    @patch('natcap.invest.ui_server.usage.requests.post')
+    @patch('natcap.invest.ui_server.usage.requests.get')
+    def test_log_model_start(self, mock_get, mock_post):
+        """UI server: log_model_start endpoint."""
+        mock_response = Mock()
+        mock_url = 'http://foo.org/bar.html'
+        mock_response.json.return_value = {'START': mock_url}
+        mock_get.return_value = mock_response
+        test_client = ui_server.app.test_client()
+        payload = {
+            'model_id': 'carbon',
+            'model_args': json.dumps({
+                'workspace_dir': 'foo'
+            }),
+            'invest_interface': 'Workbench',
+            'session_id': '12345',
+            'type': 'core'
+        }
+        response = test_client.post(
+            f'{ROUTE_PREFIX}/log_model_start', json=payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_data(as_text=True), 'OK')
+        mock_get.assert_called_once()
+        mock_post.assert_called_once()
+        self.assertEqual(mock_post.call_args.args[0], mock_url)
+        self.assertEqual(
+            mock_post.call_args.kwargs['data']['model_name'],
+            'natcap.invest.carbon')
+        self.assertEqual(
+            mock_post.call_args.kwargs['data']['invest_interface'],
+            payload['invest_interface'])
+        self.assertEqual(
+            mock_post.call_args.kwargs['data']['session_id'],
+            payload['session_id'])
 
     # @patch('natcap.invest.ui_server.usage.requests.post')
     # @patch('natcap.invest.ui_server.usage.requests.get')

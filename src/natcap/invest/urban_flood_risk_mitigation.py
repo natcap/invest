@@ -24,7 +24,6 @@ LOGGER = logging.getLogger(__name__)
 MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "urban_flood_risk_mitigation",
     "model_title": gettext("Urban Flood Risk Mitigation"),
-    "pyname": "natcap.invest.urban_flood_risk_mitigation",
     "userguide": "urban_flood_mitigation.html",
     "aliases": ("ufrm",),
     "ui_spec": {

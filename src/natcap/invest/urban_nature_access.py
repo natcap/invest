@@ -41,7 +41,6 @@ ID_FIELDNAME = 'adm_unit_id'
 MODEL_SPEC = spec_utils.build_model_spec({
     'model_id': 'urban_nature_access',
     'model_title': gettext('Urban Nature Access'),
-    'pyname': 'natcap.invest.urban_nature_access',
     'userguide': 'urban_nature_access.html',
     'aliases': ('una',),
     'ui_spec': {

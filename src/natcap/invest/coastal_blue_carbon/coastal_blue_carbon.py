@@ -254,7 +254,6 @@ BIOPHYSICAL_TABLE_COLUMNS = {
 MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "coastal_blue_carbon",
     "model_title": gettext("Coastal Blue Carbon"),
-    "pyname": "natcap.invest.coastal_blue_carbon.coastal_blue_carbon",
     "userguide": "coastal_blue_carbon.html",
     "aliases": ("cbc",),
     "ui_spec": {

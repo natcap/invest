@@ -41,7 +41,6 @@ CARBON_OUTPUTS = {
 MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "carbon",
     "model_title": gettext("Carbon Storage and Sequestration"),
-    "pyname": "natcap.invest.carbon",
     "userguide": "carbonstorage.html",
     "aliases": (),
     "ui_spec": {

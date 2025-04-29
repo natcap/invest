@@ -19,7 +19,6 @@ INVALID_BAND_INDEX_MSG = gettext('Must be between 1 and {maximum}')
 MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "routedem",
     "model_title": gettext("RouteDEM"),
-    "pyname": "natcap.invest.routedem",
     "userguide": "routedem.html",
     "aliases": (),
     "ui_spec": {

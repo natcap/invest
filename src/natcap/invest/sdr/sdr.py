@@ -30,7 +30,6 @@ LOGGER = logging.getLogger(__name__)
 MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "sdr",
     "model_title": gettext("Sediment Delivery Ratio"),
-    "pyname": "natcap.invest.sdr.sdr",
     "userguide": "sdr.html",
     "aliases": (),
     "ui_spec": {

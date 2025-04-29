@@ -102,7 +102,6 @@ predictor_table_columns = {
 MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "recreation",
     "model_title": gettext("Visitation: Recreation and Tourism"),
-    "pyname": "natcap.invest.recreation.recmodel_client",
     "userguide": "recreation.html",
     "aliases": (),
     "ui_spec": {

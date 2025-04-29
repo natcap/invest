@@ -133,7 +133,6 @@ CAPTURED_WEM_FIELDS = {
 MODEL_SPEC = spec_utils.build_model_spec({
     "model_id": "wave_energy",
     "model_title": gettext("Wave Energy Production"),
-    "pyname": "natcap.invest.wave_energy",
     "userguide": "wave_energy.html",
     "aliases": (),
     "ui_spec": {
