@@ -17,32 +17,6 @@ from shapely.geometry import Point
 gdal.UseExceptions()
 
 
-def make_simple_raster(base_raster_path, array, nodata_val=-1):
-    """Create a raster on designated path.
-
-    Args:
-        base_raster_path (str): the raster path for the new raster.
-        array (array): numpy array to convert to tif.
-        nodata_val (int or None): for defining a raster's nodata value.
-
-    Returns:
-        None
-
-    """
-
-    srs = osr.SpatialReference()
-    srs.ImportFromEPSG(26910)  # UTM Zone 10N
-    projection_wkt = srs.ExportToWkt()
-    # origin hand-picked for this epsg:
-    origin = (461261, 4923265)
-
-    pixel_size = (1, -1)
-
-    pygeoprocessing.numpy_array_to_raster(
-        array, nodata_val, pixel_size, origin, projection_wkt,
-        base_raster_path)
-
-
 class SpecUtilsUnitTests(unittest.TestCase):
     """Unit tests for natcap.invest.spec_utils."""
 
@@ -320,37 +294,43 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
 
-def _generate_files_from_spec(output_spec, workspace):
-    """A utility function to support the metadata test."""
-    for filename, spec_data in output_spec.items():
+def _generate_files_from_spec(spec, workspace):
+    """A utility function to support the metadata tests."""
+    for filename, spec_data in spec.items():
         if 'type' in spec_data and spec_data['type'] == 'directory':
             os.mkdir(os.path.join(workspace, filename))
             _generate_files_from_spec(
                 spec_data['contents'], os.path.join(workspace, filename))
         else:
             filepath = os.path.join(workspace, filename)
+            ext = ".tif" if os.path.splitext(filepath)[-1] == '' else ''
             if 'bands' in spec_data:
                 driver = gdal.GetDriverByName('GTIFF')
                 n_bands = len(spec_data['bands'])
                 raster = driver.Create(
-                    filepath, 2, 2, n_bands, gdal.GDT_Byte)
+                    filepath+ext, 2, 2, n_bands, gdal.GDT_Byte)
                 for i in range(n_bands):
                     band = raster.GetRasterBand(i + 1)
                     band.SetNoDataValue(2)
-            elif 'fields' in spec_data:
+            elif 'fields' in spec_data or 'columns' in spec_data:
                 if 'geometries' in spec_data:
+                    ext = ".gpkg" if os.path.splitext(filepath)[-1] == '' else ''
                     driver = gdal.GetDriverByName('GPKG')
-                    target_vector = driver.CreateDataSource(filepath)
+                    target_vector = driver.CreateDataSource(filepath+ext)
                     layer_name = os.path.basename(os.path.splitext(filepath)[0])
                     target_layer = target_vector.CreateLayer(
                         layer_name, geom_type=ogr.wkbPolygon)
                     for field_name, field_data in spec_data['fields'].items():
                         target_layer.CreateField(ogr.FieldDefn(field_name, ogr.OFTInteger))
                 else:
-                    # Write a CSV if it has fields but no geometry
-                    with open(filepath, 'w') as file:
-                        file.write(
-                            f"{','.join([field for field in spec_data['fields']])}")
+                    ext = ".csv" if os.path.splitext(filepath)[-1] == '' else ''
+                    # Write a CSV if it has fields (or columns) but no geometry
+                    if 'fields' in spec_data:
+                        fields = spec_data['fields']
+                    else:
+                        fields = spec_data['columns']
+                    with open(filepath+ext, 'w') as file:
+                        file.write(f"{','.join([field for field in fields])}")
             else:
                 # Such as taskgraph.db, just create the file.
                 with open(filepath, 'w') as file:
@@ -441,17 +421,21 @@ class TestMetadataFromSpec(unittest.TestCase):
         args_dict = {
              'workspace_dir': self.workspace_dir,
              'results_suffix': '_1',
-             'lulc_raster_path': os.path.join(data_dir, "lulc.tif"),
-             'ref_eto_raster_path': os.path.join(data_dir, "eto.tif"),
-             'aoi_vector_path': os.path.join(data_dir, "aoi.shp"),
-             'biophysical_table_path': os.path.join(data_dir, "bio.csv"),
+             'lulc_raster_path': os.path.join(
+                 data_dir, "lulc_raster_path.tif"),
+             'ref_eto_raster_path': os.path.join(
+                 data_dir, "ref_eto_raster_path.tif"),
+             'aoi_vector_path': os.path.join(data_dir, "aoi_vector_path.gpkg"),
+             'biophysical_table_path': os.path.join(
+                 data_dir, "biophysical_table_path.csv"),
              't_ref': '27',
              'uhi_max': '5',
              't_air_average_radius': '500',
              'green_area_cooling_distance': '450',
              'cc_method': 'factors',
              'do_energy_valuation': False,
-             'building_vector_path': '',
+             'building_vector_path': os.path.join(
+                 data_dir, "building_vector_path.gpkg"),
              'energy_consumption_table_path': '',
              'do_productivity_valuation': True,
              'avg_rel_humidity': '61.4',
@@ -459,27 +443,15 @@ class TestMetadataFromSpec(unittest.TestCase):
              'cc_weight_albedo': '',
              'cc_weight_eti': ''}
 
-        array = numpy.array([[1, 2], [1, 2]])
-        make_simple_raster(args_dict['lulc_raster_path'], array)
-        make_simple_raster(args_dict['ref_eto_raster_path'], array)
-
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(26910)
-        pygeoprocessing.shapely_geometry_to_vector(
-            [Point([461261, 4923265])], args_dict['aoi_vector_path'],
-            srs.ExportToWkt(), "ESRI Shapefile", ogr_geom_type=ogr.wkbPoint)
-
-        data = [["lulc", "desc"], [1, "water"]]
-        with open(args_dict['biophysical_table_path'], "w") as file:
-            for row in data:
-                line = ",".join(str(x) for x in row) + "\n"
-                file.write(line)
+        _generate_files_from_spec(model_module.MODEL_SPEC["args"], data_dir)
 
         spec_utils.generate_metadata_for_datastack(model_module, args_dict,
                                                    data_dir)
 
         files, messages = geometamaker.validate_dir(data_dir, recursive=True)
-        self.assertEqual(len(files), 4)
+        # 5 yml files (not 6) b/c energy consumption table not in args_dict
+        # (data is generated in _generate_files_from_spec but metadata isn't).
+        self.assertEqual(len(files), 5)
         self.assertFalse(any(messages))
 
         resource = geometamaker.describe(
