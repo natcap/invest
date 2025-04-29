@@ -414,7 +414,6 @@ def invest_validator(validate_func):
         # import one another. This causes a problem in test_validation.py,
         # which gets imported into itself here and fails, so skip it.
         model_module = importlib.import_module(validate_func.__module__)
-        print(model_module.__name__)
         if 'test_validation' in model_module.__name__:
             warnings_ = validate_func(args, limit_to)
             return warnings_
