@@ -19,7 +19,7 @@ Users noticed the raster outputs included data in areas outside of those covered
 
 ## Decision
 
-Based on Rob's own use of the model, and review and evaluation of the problem, the consensus is that the model's current use of interpolation introduces too many potential violations of the constraints of the model and requires assumptions that may not be helpful for users. Rob therefore recommended removing the raster outputs entirely and retaining the associated values in the output `wind_energy_points.shp` vector.
+Based on Rob's own use of the model, and review and evaluation of the problem, the consensus is that the model's current use of interpolation introduces too many potential violations of the constraints of the model (e.g. interpolating over areas that are invlaid due to ocean depth or distance from shore, or are outside of the areas included in the input wind speed data) and requires assumptions that may not be helpful for users. Rob therefore recommended removing the raster outputs entirely and retaining the associated values in the output `wind_energy_points.shp` vector.
 
 As such, we have decided to move forward with removing the rasterized outputs:
 - `carbon_emissions_tons.tif`
@@ -39,6 +39,6 @@ Once released, the model will no longer provide the rasterized outputs that it p
 ## References
 
 GitHub:
-  * Pull Request (to be added)
+  * [Pull Request](https://github.com/natcap/invest/pull/1898)
   * [Discussion: Raster result values returned outside of wind data](https://github.com/natcap/invest/issues/1698)
   * User's Guide PR (to be added)
