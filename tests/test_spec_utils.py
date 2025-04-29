@@ -437,7 +437,6 @@ class TestMetadataFromSpec(unittest.TestCase):
 
         data_dir = os.path.join(self.workspace_dir, 'data')
         os.mkdir(data_dir)
-        datastack_path = os.path.join(self.workspace_dir, 'out_datastack_dir')
         model_module = urban_cooling_model
         args_dict = {
              'workspace_dir': self.workspace_dir,
@@ -476,8 +475,8 @@ class TestMetadataFromSpec(unittest.TestCase):
                 line = ",".join(str(x) for x in row) + "\n"
                 file.write(line)
 
-        spec_utils.generate_metadata_for_datastack(
-            model_module, args_dict, data_dir, datastack_path)
+        spec_utils.generate_metadata_for_datastack(model_module, args_dict,
+                                                   data_dir)
 
         files, messages = geometamaker.validate_dir(data_dir, recursive=True)
         self.assertEqual(len(files), 4)
