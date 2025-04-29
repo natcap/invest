@@ -424,10 +424,8 @@ def main(user_args=None):
 
             # Even validation errors will have an exit code of 0
             if args.json:
-                print(validation_result)
                 message = json.dumps({
                     'validation_results': validation_result})
-                print(json.loads(message))
             else:
                 message = pprint.pformat(validation_result)
 

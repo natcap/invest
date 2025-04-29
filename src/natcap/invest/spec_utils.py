@@ -344,7 +344,6 @@ class VectorInputSpec(FileInputSpec):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        print('vector validate')
         file_warning = super().validate(filepath)
         if file_warning:
             return file_warning
@@ -417,7 +416,6 @@ class RasterOrVectorInputSpec(SingleBandRasterInputSpec, VectorInputSpec):
         Returns:
             A string error message if an error was found. ``None`` otherwise.
         """
-        print('raster or vector validate')
         try:
             gis_type = pygeoprocessing.get_gis_type(filepath)
         except ValueError as err:
@@ -455,7 +453,6 @@ class CSVInputSpec(FileInputSpec):
 
     def get_validated_dataframe(self, csv_path, read_csv_kwargs={}):
         """Read a CSV into a dataframe that is guaranteed to match the spec."""
-        print('get validated dataframe')
         if not (self.columns or self.rows):
             raise ValueError('One of columns or rows must be provided')
 
@@ -500,19 +497,15 @@ class CSVInputSpec(FileInputSpec):
 
         for col_spec, pattern in zip(columns, patterns):
             matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
-            print(col_spec)
             if col_spec.required is True and '[' not in col_spec.id and not matching_cols:
                 raise ValueError(get_message('MATCHED_NO_HEADERS').format(
                     header=axis,
                     header_name=col_spec.id))
             available_cols -= set(matching_cols)
-            print(matching_cols)
             for col in matching_cols:
-                print(col, col_spec, isinstance(col_spec, RasterOrVectorInputSpec))
                 try:
                     df[col] = col_spec.format_column(df[col], csv_path)
                 except Exception as err:
-                    print('err')
                     raise ValueError(
                         f'Value(s) in the "{col}" column could not be interpreted '
                         f'as {type(col_spec).__name__}s. Original error: {err}')
@@ -522,7 +515,6 @@ class CSVInputSpec(FileInputSpec):
                     isinstance(col_spec, RasterOrVectorInputSpec)):
                     # recursively validate the files within the column
                     def check_value(value):
-                        print('check value', type(col_spec))
                         if pandas.isna(value):
                             return
                         err_msg = col_spec.validate(value)
@@ -642,7 +634,6 @@ class NumberInputSpec(InputSpec):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        print('validate number')
         try:
             float(value)
         except (TypeError, ValueError):
@@ -1401,7 +1392,6 @@ def serialize_args_spec(spec):
         raise TypeError(f'fallback serializer is missing for {type(obj)}')
 
     x = json.dumps(spec, default=fallback_serializer, ensure_ascii=False)
-    print(x)
     return x
 
 
@@ -1769,7 +1759,6 @@ def generate_metadata(model_module, args_dict):
 
     def _walk_spec(output_spec, workspace):
         for spec_data in output_spec:
-            print(spec_data)
             if spec_data.__class__ is DirectoryOutputSpec:
                 if 'taskgraph.db' in [s.id for s in spec_data.contents]:
                     continue
