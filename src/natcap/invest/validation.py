@@ -416,6 +416,7 @@ def invest_validator(validate_func):
         # Since this decorator might not be needed in the future,
         # just ignore failed imports; assume they have no MODEL_SPEC.
         model_module = importlib.import_module(validate_func.__module__)
+        print(model_module.__name__)
         if model_module.__name__ == 'test_validation':
             warnings_ = validate_func(args, limit_to)
             return warnings_
