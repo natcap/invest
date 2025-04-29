@@ -65,7 +65,7 @@ def get_invest_getspec():
     set_locale(request.args.get('language', 'en'))
     target_model = request.get_json()
     target_module = models.model_id_to_pyname[target_model]
-    importlib.reload(natcap.invest.spec_utils)
+    importlib.reload(natcap.invest.validation)
     model_module = importlib.reload(
         importlib.import_module(name=target_module))
     return spec_utils.serialize_args_spec(model_module.MODEL_SPEC)

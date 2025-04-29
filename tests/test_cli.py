@@ -241,6 +241,7 @@ class CLIHeadlessTests(unittest.TestCase):
                     'validate',
                     parameter_set_path,
                 ])
+        print(stdout_stream.getvalue())
         self.assertTrue(len(stdout_stream.getvalue()) > 0)
 
         # Validation failed, not the program.
@@ -264,8 +265,11 @@ class CLIHeadlessTests(unittest.TestCase):
                     '--json',
                 ])
         stdout = stdout_stream.getvalue()
+        print(stdout, type(stdout), len(stdout))
+        x = json.loads(stdout)
+        print(x)
         self.assertTrue(len(stdout) > 0)
-        self.assertEqual(len(json.loads(stdout)), 1)  # workspace_dir invalid
+        self.assertEqual(x, 1)  # workspace_dir invalid
 
         # Validation failed, not the program.
         self.assertEqual(exit_cm.exception.code, 0)

@@ -66,6 +66,8 @@ MESSAGES = {
     'WRONG_GEOM_TYPE': gettext('Geometry type must be one of {allowed}')
 }
 
+def get_message(key):
+    return gettext(MESSAGES[key])
 
 def _evaluate_expression(expression, variable_map):
     """Evaluate a python expression.
@@ -75,7 +77,7 @@ def _evaluate_expression(expression, variable_map):
     Args:
         expression (string): A string expression that returns a value.
         variable_map (dict): A dict mapping string variable names to their
-            python object values.  This is the variable map that will be used
+            python object values.  This is the variable map that will be usedf
             when evaluating the expression.
 
     Returns:
@@ -206,7 +208,7 @@ def check_spatial_overlap(spatial_filepaths_list,
             info = pygeoprocessing.get_vector_info(filepath)
 
         if info['projection_wkt'] is None:
-            return MESSAGES['NO_PROJECTION'].format(filepath=filepath)
+            return get_message('NO_PROJECTION').format(filepath=filepath)
 
         if different_projections_ok:
             bounding_box = pygeoprocessing.transform_bounding_box(
@@ -227,7 +229,7 @@ def check_spatial_overlap(spatial_filepaths_list,
     except ValueError as error:
         LOGGER.debug(error)
         formatted_lists = _format_bbox_list(checked_file_list, bounding_boxes)
-        return MESSAGES['BBOX_NOT_INTERSECT'].format(bboxes=formatted_lists)
+        return get_message('BBOX_NOT_INTERSECT').format(bboxes=formatted_lists)
     return None
 
 
@@ -285,11 +287,11 @@ def validate(args, spec):
 
     if missing_keys:
         validation_warnings.append(
-            (sorted(missing_keys), MESSAGES['MISSING_KEY']))
+            (sorted(missing_keys), get_message('MISSING_KEY')))
 
     if required_keys_with_no_value:
         validation_warnings.append(
-            (sorted(required_keys_with_no_value), MESSAGES['MISSING_VALUE']))
+            (sorted(required_keys_with_no_value), get_message('MISSING_VALUE')))
 
     # Phase 2: Check whether any input with a value validates with its
     # type-specific check function.
@@ -327,7 +329,7 @@ def validate(args, spec):
                 invalid_keys.add(key)
         except Exception:
             LOGGER.exception(f'Error when validating key {key} with value {args[key]}')
-            validation_warnings.append(([key], MESSAGES['UNEXPECTED_ERROR']))
+            validation_warnings.append(([key], get_message('UNEXPECTED_ERROR')))
 
     # Phase 3: Check spatial overlap if applicable
     if spec.args_with_spatial_overlap:

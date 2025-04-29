@@ -20,16 +20,12 @@ import pint
 import pygeoprocessing
 
 from natcap.invest import utils
-from natcap.invest.validation import MESSAGES, _evaluate_expression
+from natcap.invest.validation import get_message, _evaluate_expression
 from . import gettext
 from .unit_registry import u
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-def get_validated_dataframe(key, model_spec, args):
-    return MODEL_SPEC.inputs.get(key).get_validated_dataframe(args[key])
 
 # accessing a file could take a long time if it's in a file streaming service
 # to prevent the UI from hanging due to slow validation,
@@ -99,11 +95,11 @@ def check_headers(expected_headers, actual_headers, header_type='header'):
     for expected in expected_headers:
         count = actual_headers.count(expected)
         if count == 0:
-            return MESSAGES['MATCHED_NO_HEADERS'].format(
+            return get_message('MATCHED_NO_HEADERS').format(
                 header=header_type,
                 header_name=expected)
         elif count > 1:
-            return MESSAGES['DUPLICATE_HEADER'].format(
+            return get_message('DUPLICATE_HEADER').format(
                 header=header_type,
                 header_name=expected,
                 number=count)
@@ -151,11 +147,11 @@ def _check_projection(srs, projected, projection_units):
     """
     empty_srs = osr.SpatialReference()
     if srs is None or srs.IsSame(empty_srs):
-        return MESSAGES['INVALID_PROJECTION']
+        return get_message('INVALID_PROJECTION')
 
     if projected:
         if not srs.IsProjected():
-            return MESSAGES['NOT_PROJECTED']
+            return get_message('NOT_PROJECTED')
 
     if projection_units:
         # pint uses underscores in multi-word units e.g. 'survey_foot'
@@ -166,10 +162,10 @@ def _check_projection(srs, projected, projection_units):
             layer_units = u.Unit(layer_units_name)
             # Compare pint Unit objects
             if projection_units != layer_units:
-                return MESSAGES['WRONG_PROJECTION_UNIT'].format(
+                return get_message('WRONG_PROJECTION_UNIT').format(
                     unit_a=projection_units, unit_b=layer_units_name)
         except pint.errors.UndefinedUnitError:
-            return MESSAGES['WRONG_PROJECTION_UNIT'].format(
+            return get_message('WRONG_PROJECTION_UNIT').format(
                 unit_a=projection_units, unit_b=layer_units_name)
 
     return None
@@ -259,14 +255,14 @@ class FileInputSpec(InputSpec):
 
         """
         if not os.path.exists(filepath):
-            return MESSAGES['FILE_NOT_FOUND']
+            return get_message('FILE_NOT_FOUND')
 
         for letter, mode, descriptor in (
                 ('r', os.R_OK, 'read'),
                 ('w', os.W_OK, 'write'),
                 ('x', os.X_OK, 'execute')):
             if letter in self.permissions and not os.access(filepath, mode):
-                return MESSAGES['NEED_PERMISSION_FILE'].format(permission=descriptor)
+                return get_message('NEED_PERMISSION_FILE').format(permission=descriptor)
 
     @staticmethod
     def format_column(col, base_path):
@@ -303,11 +299,11 @@ class SingleBandRasterInputSpec(FileInputSpec):
         try:
             gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
         except RuntimeError:
-            return MESSAGES['NOT_GDAL_RASTER']
+            return get_message('NOT_GDAL_RASTER')
 
         # Check that an overview .ovr file wasn't opened.
         if os.path.splitext(filepath)[1] == '.ovr':
-            return MESSAGES['OVR_FILE']
+            return get_message('OVR_FILE')
 
         srs = gdal_dataset.GetSpatialRef()
         projection_warning = _check_projection(srs, self.projected, self.projection_units)
@@ -348,6 +344,7 @@ class VectorInputSpec(FileInputSpec):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
+        print('vector validate')
         file_warning = super().validate(filepath)
         if file_warning:
             return file_warning
@@ -355,7 +352,7 @@ class VectorInputSpec(FileInputSpec):
         try:
             gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
         except RuntimeError:
-            return MESSAGES['NOT_GDAL_VECTOR']
+            return get_message('NOT_GDAL_VECTOR')
 
         geom_map = {
             'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM,
@@ -384,7 +381,7 @@ class VectorInputSpec(FileInputSpec):
         # Currently not supporting ogr.wkbUnknown which allows mixed types.
         layer = gdal_dataset.GetLayer()
         if layer.GetGeomType() not in allowed_geom_types:
-            return MESSAGES['WRONG_GEOM_TYPE'].format(allowed=self.geometries)
+            return get_message('WRONG_GEOM_TYPE').format(allowed=self.geometries)
 
         if self.fields:
             field_patterns = get_headers_to_validate(self.fields)
@@ -420,6 +417,7 @@ class RasterOrVectorInputSpec(SingleBandRasterInputSpec, VectorInputSpec):
         Returns:
             A string error message if an error was found. ``None`` otherwise.
         """
+        print('raster or vector validate')
         try:
             gis_type = pygeoprocessing.get_gis_type(filepath)
         except ValueError as err:
@@ -428,8 +426,6 @@ class RasterOrVectorInputSpec(SingleBandRasterInputSpec, VectorInputSpec):
             return SingleBandRasterInputSpec.validate(self, filepath)
         else:
             return VectorInputSpec.validate(self, filepath)
-
-
 
 @dataclasses.dataclass(kw_only=True)
 class CSVInputSpec(FileInputSpec):
@@ -459,7 +455,7 @@ class CSVInputSpec(FileInputSpec):
 
     def get_validated_dataframe(self, csv_path, read_csv_kwargs={}):
         """Read a CSV into a dataframe that is guaranteed to match the spec."""
-
+        print('get validated dataframe')
         if not (self.columns or self.rows):
             raise ValueError('One of columns or rows must be provided')
 
@@ -504,23 +500,29 @@ class CSVInputSpec(FileInputSpec):
 
         for col_spec, pattern in zip(columns, patterns):
             matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
+            print(col_spec)
             if col_spec.required is True and '[' not in col_spec.id and not matching_cols:
-                raise ValueError(MESSAGES['MATCHED_NO_HEADERS'].format(
+                raise ValueError(get_message('MATCHED_NO_HEADERS').format(
                     header=axis,
                     header_name=col_spec.id))
             available_cols -= set(matching_cols)
+            print(matching_cols)
             for col in matching_cols:
+                print(col, col_spec, isinstance(col_spec, RasterOrVectorInputSpec))
                 try:
                     df[col] = col_spec.format_column(df[col], csv_path)
                 except Exception as err:
+                    print('err')
                     raise ValueError(
                         f'Value(s) in the "{col}" column could not be interpreted '
                         f'as {type(col_spec).__name__}s. Original error: {err}')
 
-                if type(col_spec) in {SingleBandRasterInputSpec,
-                                      VectorInputSpec, RasterOrVectorInputSpec}:
+                if (isinstance(col_spec, SingleBandRasterInputSpec) or
+                    isinstance(col_spec, VectorInputSpec) or
+                    isinstance(col_spec, RasterOrVectorInputSpec)):
                     # recursively validate the files within the column
                     def check_value(value):
+                        print('check value', type(col_spec))
                         if pandas.isna(value):
                             return
                         err_msg = col_spec.validate(value)
@@ -531,7 +533,7 @@ class CSVInputSpec(FileInputSpec):
 
         if any(df.columns.duplicated()):
             duplicated_columns = df.columns[df.columns.duplicated]
-            return MESSAGES['DUPLICATE_HEADER'].format(
+            return get_message('DUPLICATE_HEADER').format(
                 header=header_type,
                 header_name=expected,
                 number=count)
@@ -574,11 +576,11 @@ class DirectoryInputSpec(InputSpec):
         """
         if self.must_exist:
             if not os.path.exists(dirpath):
-                return MESSAGES['DIR_NOT_FOUND']
+                return get_message('DIR_NOT_FOUND')
 
         if os.path.exists(dirpath):
             if not os.path.isdir(dirpath):
-                return MESSAGES['NOT_A_DIR']
+                return get_message('NOT_A_DIR')
         else:
             # find the parent directory that does exist and check permissions
             child = dirpath
@@ -597,7 +599,7 @@ class DirectoryInputSpec(InputSpec):
             try:
                 os.scandir(dirpath).close()
             except OSError:
-                return MESSAGES[MESSAGE_KEY].format(permission='read')
+                return get_message(MESSAGE_KEY).format(permission='read')
 
         # Check for x access before checking for w,
         # since w operations to a dir are dependent on x access
@@ -606,7 +608,7 @@ class DirectoryInputSpec(InputSpec):
                 cwd = os.getcwd()
                 os.chdir(dirpath)
             except OSError:
-                return MESSAGES[MESSAGE_KEY].format(permission='execute')
+                return get_message(MESSAGE_KEY).format(permission='execute')
             finally:
                 os.chdir(cwd)
 
@@ -617,7 +619,7 @@ class DirectoryInputSpec(InputSpec):
                     temp.close()
                     os.remove(temp_path)
             except OSError:
-                return MESSAGES[MESSAGE_KEY].format(permission='write')
+                return get_message(MESSAGE_KEY).format(permission='write')
 
 
 
@@ -640,10 +642,11 @@ class NumberInputSpec(InputSpec):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
+        print('validate number')
         try:
             float(value)
         except (TypeError, ValueError):
-            return MESSAGES['NOT_A_NUMBER'].format(value=value)
+            return get_message('NOT_A_NUMBER').format(value=value)
 
         if self.expression:
             # Check to make sure that 'value' is in the expression.
@@ -657,7 +660,7 @@ class NumberInputSpec(InputSpec):
             # be raised if asteval can't evaluate the expression.
             result = _evaluate_expression(self.expression, {'value': float(value)})
             if not result:  # A python bool object is returned.
-                return MESSAGES['INVALID_VALUE'].format(condition=self.expression)
+                return get_message('INVALID_VALUE').format(condition=self.expression)
 
     @staticmethod
     def format_column(col, *args):
@@ -678,9 +681,9 @@ class IntegerInputSpec(InputSpec):
             # must first cast to float, to handle both string and float inputs
             as_float = float(value)
             if not as_float.is_integer():
-                return MESSAGES['NOT_AN_INTEGER'].format(value=value)
+                return get_message('NOT_AN_INTEGER').format(value=value)
         except (TypeError, ValueError):
-            return MESSAGES['NOT_A_NUMBER'].format(value=value)
+            return get_message('NOT_A_NUMBER').format(value=value)
         return None
 
     @staticmethod
@@ -703,10 +706,10 @@ class RatioInputSpec(InputSpec):
         try:
             as_float = float(value)
         except (TypeError, ValueError):
-            return MESSAGES['NOT_A_NUMBER'].format(value=value)
+            return get_message('NOT_A_NUMBER').format(value=value)
 
         if as_float < 0 or as_float > 1:
-            return MESSAGES['NOT_WITHIN_RANGE'].format(
+            return get_message('NOT_WITHIN_RANGE').format(
                 value=as_float,
                 range='[0, 1]')
 
@@ -728,10 +731,10 @@ class PercentInputSpec(InputSpec):
         try:
             as_float = float(value)
         except (TypeError, ValueError):
-            return MESSAGES['NOT_A_NUMBER'].format(value=value)
+            return get_message('NOT_A_NUMBER').format(value=value)
 
         if as_float < 0 or as_float > 100:
-            return MESSAGES['NOT_WITHIN_RANGE'].format(
+            return get_message('NOT_WITHIN_RANGE').format(
                 value=as_float,
                 range='[0, 100]')
 
@@ -754,7 +757,7 @@ class BooleanInputSpec(InputSpec):
             A string error message if an error was found.  ``None`` otherwise.
         """
         if not isinstance(value, bool):
-            return MESSAGES['NOT_BOOLEAN'].format(value=value)
+            return get_message('NOT_BOOLEAN').format(value=value)
 
     @staticmethod
     def format_column(col, *args):
@@ -777,7 +780,7 @@ class StringInputSpec(InputSpec):
         if self.regexp:
             matches = re.fullmatch(self.regexp, str(value))
             if not matches:
-                return MESSAGES['REGEXP_MISMATCH'].format(regexp=self.regexp)
+                return get_message('REGEXP_MISMATCH').format(regexp=self.regexp)
         return None
 
     @staticmethod
@@ -806,7 +809,7 @@ class OptionStringInputSpec(InputSpec):
         # if options is empty, that means it's dynamically populated
         # so validation should be left to the model's validate function.
         if self.options and str(value) not in self.options:
-            return MESSAGES['INVALID_OPTION'].format(option_list=sorted(self.options))
+            return get_message('INVALID_OPTION').format(option_list=sorted(self.options))
 
     @staticmethod
     def format_column(col, *args):
@@ -889,7 +892,7 @@ class ModelSpec:
     ui_spec: UISpec
     inputs: ModelInputs
     outputs: set
-    args_with_spatial_overlap: list
+    args_with_spatial_overlap: dict
 
 
 def build_model_spec(model_spec):
@@ -1397,7 +1400,7 @@ def serialize_args_spec(spec):
             return obj.to_json()
         raise TypeError(f'fallback serializer is missing for {type(obj)}')
 
-    x = json.dumps(spec, default=fallback_serializer)
+    x = json.dumps(spec, default=fallback_serializer, ensure_ascii=False)
     print(x)
     return x
 

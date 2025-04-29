@@ -424,8 +424,10 @@ def main(user_args=None):
 
             # Even validation errors will have an exit code of 0
             if args.json:
+                print(validation_result)
                 message = json.dumps({
                     'validation_results': validation_result})
+                print(json.loads(message))
             else:
                 message = pprint.pformat(validation_result)
 
@@ -438,10 +440,7 @@ def main(user_args=None):
                 importlib.import_module(name=target_model))
             spec = model_module.MODEL_SPEC
 
-            if args.json:
-                message = spec_utils.serialize_args_spec(spec)
-            else:
-                message = pprint.pformat(spec)
+            message = spec_utils.serialize_args_spec(spec)
             sys.stdout.write(message)
             parser.exit(0)
 
