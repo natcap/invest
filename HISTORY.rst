@@ -93,6 +93,12 @@ Seasonal Water Yield
   were being incorrectly converted to 0's
   (`#1592 <https://github.com/natcap/invest/issues/1592>`_).
 
+Wind Energy
+===========
+* Fixed a bug where the model would error if no AOI was provided when run from
+  the workbench or from a datastack file where the value for 'aoi_vector_path'
+  was an empty string. (`#1900 <https://github.com/natcap/invest/issues/1900`)
+
 
 3.15.0 (2025-04-03)
 -------------------
