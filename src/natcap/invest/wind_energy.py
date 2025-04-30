@@ -1080,7 +1080,7 @@ def execute(args):
             args=(intermediate_wind_point_vector_path,
                   rasters_fields_to_vector_list,
                   final_wind_point_vector_path),
-            kwargs={'delete_fields': [_HARVESTED_FIELD_NAME]},
+            kwargs={'overwrite': True},
             target_path_list=[final_wind_point_vector_path],
             task_name='add_masked_vals_to_wind_vector',
             dependent_task_list=[masked_harvested_task])
@@ -1316,7 +1316,7 @@ def execute(args):
         args=(intermediate_wind_point_vector_path,
               rasters_fields_to_vector_list,
               final_wind_point_vector_path),
-        kwargs={'delete_fields': [_HARVESTED_FIELD_NAME]},
+        kwargs={'overwrite': True},
         target_path_list=[final_wind_point_vector_path],
         task_name='add_harv_valuation_to_wind_vector',
         dependent_task_list=[npv_levelized_task, carbon_task])
@@ -1328,7 +1328,7 @@ def execute(args):
 
 def _index_raster_values_to_point_vector(
         base_point_vector_path, rasters_fieldnames_tuples,
-        target_point_vector_path, delete_fields=[]):
+        target_point_vector_path, overwrite=False):
     """Add raster values to vector point feature fields.
 
     Args:
@@ -1337,12 +1337,13 @@ def _index_raster_values_to_point_vector(
             tuples. The values of rasters in this list will be added to the
             vector's features under the associated field name. All rasters must
             already be aligned. An exception will be raised if a field already
-            exists in the base point vector and is not included in the list of
-            fields to overwrite.
+            exists in the base point vector and overwrite is False.
         target_point_vector_path (str): a path to a shapefile that has the
             target field name in addition to the existing fields in the base
             point vector.
-        delete_fields (list): a list of fields to remove from the base vector.
+        overwrite (boolean): defaults to False. If True, if a fieldname passed
+            in rasters_fieldnames_tuples already exists in the source shapefile,
+            its value will be overwritten in the copy.
 
     Returns:
         None
@@ -1378,29 +1379,22 @@ def _index_raster_values_to_point_vector(
     pixel_size_x, pixel_size_y, raster_min_x, raster_max_y = \
         abs(raster_gt[1]), abs(raster_gt[5]), raster_gt[0], raster_gt[3]
 
-    # If a vector field needs to be overwritten, delete it
-    if delete_fields:
-        for field_name in delete_fields:
-            idx = target_layer.FindFieldIndex(field_name, 1)
-        if idx > -1: # -1 is index if field does not exist
-            target_layer.DeleteField(idx)
-
-    # Create a new field for the VECTOR attribute
+    # Create new fields for the vector attributes
     for field_name in field_name_list:
         field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
         field_defn.SetWidth(24)
         field_defn.SetPrecision(11)
 
-        # Raise an exception if the field name already exists in the vector
-        exact_match = True
-        if target_layer.FindFieldIndex(field_name, exact_match) == -1:
-            target_layer.CreateField(field_defn)
-        else:
+        field_index = target_layer.FindFieldIndex(field_name, True)
+        # If the field exists and overwrite = False, raise an exception
+        if field_index != -1 and not overwrite:
             raise ValueError(
-                "'%s' field already exists in the input shapefile and was not "
-                "included in the list of fields to overwrite. "
-                "Please rename it or remove it from the attribute table."
-                % field_name)
+                "'%s' field already exists in the input shapefile and "
+                "overwrite is set to False. Please rename it or remove it "
+                "from the attribute table." % field_name)
+        # If the field doesn't already exist, create it
+        elif field_index == -1:
+            target_layer.CreateField(field_defn)
 
     # Create coordinate transformation from vector to raster, to make sure the
     # vector points are in the same projection as raster
