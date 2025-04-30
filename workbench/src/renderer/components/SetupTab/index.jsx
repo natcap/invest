@@ -608,7 +608,6 @@ class SetupTab extends React.Component {
             </React.Fragment>
           </Portal>
           <Portal elId={sidebarFooterElementId}>
-            {/* @TODO: re-enable button when model status is is cleared */}
             <Button
               block
               variant="primary"
