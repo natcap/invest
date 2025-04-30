@@ -76,6 +76,10 @@ Workbench
 * Fixed a bug that did not allow users to select a folder as the location
   to extract a datastack archive.
   (`#1879 <https://github.com/natcap/invest/issues/1879>`_).
+* When a parameter from a previous model run is changed, the model status
+  indicator (e.g., the "Model Complete" notice) is cleared to help prevent
+  confusion about which parameters went into the most recent model run
+  (`#1655 <https://github.com/natcap/invest/issues/1655>`_).
 
 Crop Production
 ===============
@@ -97,7 +101,7 @@ Wind Energy
 ===========
 * Fixed a bug where the model would error if no AOI was provided when run from
   the workbench or from a datastack file where the value for 'aoi_vector_path'
-  was an empty string. (`#1900 <https://github.com/natcap/invest/issues/1900`)
+  was an empty string. (`#1900 <https://github.com/natcap/invest/issues/1900>`_)
 
 
 3.15.0 (2025-04-03)
