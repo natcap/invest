@@ -217,12 +217,7 @@ class Fields(IterableWithDotAccess):
 class Contents(IterableWithDotAccess):
     pass
 
-
-@dataclasses.dataclass(kw_only=True)
-class VectorFields:
-    pass
-
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class InputSpec:
     id: str = ''
     name: str = ''
@@ -230,13 +225,13 @@ class InputSpec:
     required: bool | str = True
     allowed: bool | str = True
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class OutputSpec:
     id: str = ''
     about: str = ''
     created_if: bool | str = True
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class FileInputSpec(InputSpec):
     permissions: str = 'r'
 
@@ -270,9 +265,9 @@ class FileInputSpec(InputSpec):
             lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), base_path)
         ).astype(pandas.StringDtype())
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class SingleBandRasterInputSpec(FileInputSpec):
-    band: InputSpec
+    band: InputSpec | None = None
     projected: bool | None = None
     projection_units: pint.Unit | None = None
 
@@ -312,10 +307,10 @@ class SingleBandRasterInputSpec(FileInputSpec):
 
         return None
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class VectorInputSpec(FileInputSpec):
-    geometries: set
-    fields: Fields
+    geometries: set = dataclasses.field(default_factory=dict)
+    fields: Fields | None = None
     projected: bool | None = None
     projection_units: pint.Unit | None = None
 
@@ -396,11 +391,11 @@ class VectorInputSpec(FileInputSpec):
 
 
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class RasterOrVectorInputSpec(SingleBandRasterInputSpec, VectorInputSpec):
-    band: InputSpec
-    geometries: set
-    fields: Fields
+    band: InputSpec | None = None
+    geometries: set = dataclasses.field(default_factory=dict)
+    fields: Fields | None = None
     projected: bool | None = None
     projection_units: pint.Unit | None = None
 
@@ -425,7 +420,7 @@ class RasterOrVectorInputSpec(SingleBandRasterInputSpec, VectorInputSpec):
         else:
             return VectorInputSpec.validate(self, filepath)
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class CSVInputSpec(FileInputSpec):
     columns: Columns | None = None
     rows: Rows | None = None
@@ -545,7 +540,7 @@ class CSVInputSpec(FileInputSpec):
         return df
 
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class DirectoryInputSpec(InputSpec):
     contents: Contents | None = None
     permissions: str = ''
@@ -615,7 +610,7 @@ class DirectoryInputSpec(InputSpec):
 
 
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class NumberInputSpec(InputSpec):
     units: pint.Unit | None = None
     expression: str | None = None
@@ -657,7 +652,7 @@ class NumberInputSpec(InputSpec):
     def format_column(col, *args):
         return col.astype(float)
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class IntegerInputSpec(InputSpec):
     def validate(self, value):
         """Validate an integer.
@@ -682,7 +677,7 @@ class IntegerInputSpec(InputSpec):
         return col.astype(pandas.Int64Dtype())
 
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class RatioInputSpec(InputSpec):
     def validate(self, value):
         """Validate a ratio (a proportion expressed as a value from 0 to 1).
@@ -708,7 +703,7 @@ class RatioInputSpec(InputSpec):
     def format_column(col, *args):
         return col.astype(float)
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class PercentInputSpec(InputSpec):
     def validate(self, value):
         """Validate a percent (a proportion expressed as a value from 0 to 100).
@@ -733,7 +728,7 @@ class PercentInputSpec(InputSpec):
     def format_column(col, *args):
         return col.astype(float)
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class BooleanInputSpec(InputSpec):
     def validate(self, value):
         """Validate a boolean value.
@@ -754,7 +749,7 @@ class BooleanInputSpec(InputSpec):
     def format_column(col, *args):
         return col.astype('boolean')
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class StringInputSpec(InputSpec):
     regexp: str | None = None
 
@@ -780,9 +775,9 @@ class StringInputSpec(InputSpec):
             lambda s: s if pandas.isna(s) else str(s).strip().lower()
         ).astype(pandas.StringDtype())
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class OptionStringInputSpec(InputSpec):
-    options: list
+    options: list | None = None
 
     def validate(self, value):
         """Validate that a string is in a set of options.
@@ -808,73 +803,73 @@ class OptionStringInputSpec(InputSpec):
             lambda s: s if pandas.isna(s) else str(s).strip().lower()
         ).astype(pandas.StringDtype())
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class OtherInputSpec(InputSpec):
     def validate(self, value):
         pass
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class SingleBandRasterOutputSpec(OutputSpec):
-    band: InputSpec
+    band: InputSpec | None = None
     projected: bool | None = None
     projection_units: pint.Unit | None = None
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class VectorOutputSpec(OutputSpec):
-    geometries: set
-    fields: Fields
+    geometries: set = dataclasses.field(default_factory=dict)
+    fields: Fields | None = None
     projected: bool | None = None
     projection_units: pint.Unit | None = None
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class CSVOutputSpec(OutputSpec):
-    columns: Columns
-    rows: Rows
-    index_col: str
+    columns: Columns | None = None
+    rows: Rows | None = None
+    index_col: str | None = None
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class DirectoryOutputSpec(OutputSpec):
     contents: Contents | None = None
     permissions: str = ''
     must_exist: bool = True
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class FileOutputSpec(OutputSpec):
     pass
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class NumberOutputSpec(OutputSpec):
-    units: pint.Unit
-    expression: str
+    units: pint.Unit | None = None
+    expression: str | None = None
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class IntegerOutputSpec(OutputSpec):
     pass
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class RatioOutputSpec(OutputSpec):
     pass
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class PercentOutputSpec(OutputSpec):
     pass
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class StringOutputSpec(OutputSpec):
-    regexp: str
+    regexp: str | None = None
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class OptionStringOutputSpec(OutputSpec):
-    options: list
+    options: list | None = None
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class UISpec:
-    order: list
+    order: list | None = None
     hidden: list = None
     dropdown_functions: dict = dataclasses.field(default_factory=dict)
 
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass
 class ModelSpec:
     model_id: str
     model_title: str
