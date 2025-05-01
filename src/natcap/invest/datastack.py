@@ -374,7 +374,7 @@ def build_datastack_archive(args, model_id, datastack_path):
         elif input_spec.__class__ in spatial_types:
             # Create a directory with a readable name, something like
             # "aoi_path_vector" or "lulc_cur_path_raster".
-            spatial_dir = os.path.join(data_dir, f'{key}_{input_spec.__class__}')
+            spatial_dir = os.path.join(data_dir, f'{key}_{input_spec.__class__.__name__}')
             target_arg_value = utils.copy_spatial_files(
                 source_path, spatial_dir)
             files_found[source_path] = target_arg_value
