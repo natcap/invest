@@ -399,7 +399,7 @@ class TestMetadataFromSpec(unittest.TestCase):
 
         args_dict = {'workspace_dir': self.workspace_dir}
 
-        spec_utils.generate_metadata(model_module, args_dict)
+        spec_utils.generate_metadata_for_outputs(model_module, args_dict)
         files, messages = geometamaker.validate_dir(
             self.workspace_dir, recursive=True)
         self.assertEqual(len(files), 2)
@@ -434,8 +434,7 @@ class TestMetadataFromSpec(unittest.TestCase):
              'green_area_cooling_distance': '450',
              'cc_method': 'factors',
              'do_energy_valuation': False,
-             'building_vector_path': os.path.join(
-                 data_dir, "building_vector_path.gpkg"),
+             'building_vector_path': "",
              'energy_consumption_table_path': '',
              'do_productivity_valuation': True,
              'avg_rel_humidity': '61.4',
@@ -445,13 +444,13 @@ class TestMetadataFromSpec(unittest.TestCase):
 
         _generate_files_from_spec(model_module.MODEL_SPEC["args"], data_dir)
 
+        param_set = {"args": args_dict}
+
         spec_utils.generate_metadata_for_datastack(model_module, args_dict,
-                                                   data_dir)
+                                                   param_set, data_dir)
 
         files, messages = geometamaker.validate_dir(data_dir, recursive=True)
-        # 5 yml files (not 6) b/c energy consumption table not in args_dict
-        # (data is generated in _generate_files_from_spec but metadata isn't).
-        self.assertEqual(len(files), 5)
+        self.assertEqual(len(files), 4)
         self.assertFalse(any(messages))
 
         resource = geometamaker.describe(

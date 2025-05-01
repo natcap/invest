@@ -13,6 +13,8 @@ from natcap.invest import utils
 from . import gettext
 from .unit_registry import u
 
+from pydantic import ValidationError
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -614,23 +616,27 @@ def describe_arg_from_name(module_name, *arg_keys):
     return f'.. _{anchor_name}:\n\n{rst_description}'
 
 
-def write_metadata_file(datasource_path, spec, lineage_statement,
-                        keywords_list, use_relative_path=False):
+def write_metadata_file(datasource_path, spec, keywords_list,
+                        lineage_statement='', out_workspace=None):
     """Write a metadata sidecar file for an invest dataset.
 
     Create metadata for invest model inputs or outputs, taking care to
-    preserve existinghuman-modified attributes.
+    preserve existing human-modified attributes.
+
+    Note: We do not want to overwrite any existing metadata so if there is
+    invalid metadata for the datasource (i.e., doesn't pass geometamaker
+    validation in ``describe``), this function will NOT create new metadata.
+    Instead, if ``out_workspace`` specified, the existing metadata will be
+    copied here.
 
     Args:
         datasource_path (str) - filepath to the data to describe
         spec (dict) - the invest specification for ``datasource_path``
-        lineage_statement (str) - string to describe origin of the dataset.
         keywords_list (list) - sequence of strings
-        use_relative_path (bool) - whether to use relative paths in metadata
-            'path' and 'sources' attributes (default: False). Should be set to
-            True when creating metadata for datastack and False when creating
-            metadata for outputs.
-
+        lineage_statement (str, optional) - string to describe origin of
+            the dataset
+        out_workspace (str, optional) - where to write metadata if different
+            from data location
     Returns:
         None
 
@@ -642,17 +648,14 @@ def write_metadata_file(datasource_path, spec, lineage_statement,
                  for field in resource.data_model.fields}
         return names[key]
 
-    def _get_relative_path(path_str):
-        """Extract filepath to data beginning with 'data' folder"""
-        parts = pathlib.Path(path_str).parts
-        try:
-            idx = len(parts) - 1 - parts[::-1].index('data')
-            return pathlib.Path(*parts[idx:]).as_posix()
-        except ValueError:
-            raise (f"Could not get relative path: 'data' folder not in {path_str}."
-                  "Only set use_relative_path=True when creating metadata for datastack")
+    try:
+        resource = geometamaker.describe(datasource_path)
+    except ValidationError:
+        LOGGER.debug(
+            f"Did not create metadata for {datasource_path} as invalid "
+            "metadata exists. Please fix or delete existing metadata")
+        return None
 
-    resource = geometamaker.describe(datasource_path)
     resource.set_lineage(lineage_statement)
     # a pre-existing metadata doc could have keywords
     words = resource.get_keywords()
@@ -691,81 +694,10 @@ def write_metadata_file(datasource_path, spec, lineage_statement,
                     units = ''
                 resource.set_band_description(idx, units=units)
 
-    if use_relative_path:
-        # Remove temp paths in metadata's path and sources; only keep relative paths
-        resource.path = _get_relative_path(resource.path)
-        if resource.sources:
-            resource.sources = [_get_relative_path(f) for f in resource.sources]
-
-    resource.write()
+    resource.write(workspace=out_workspace)
 
 
-def _walk_spec_and_write_metadata(
-        invest_spec, workspace, keywords, lineage, file_suffix=None,
-        args_dict=None, use_relative_path=False):
-    """
-    Recursively walk an InVEST MODEL_SPEC and write metadata files for
-    matching input or output files found in the given workspace.
-
-    This function supports two use cases:
-      - Writing metadata for InVEST model outputs
-      - Writing metadata for InVEST model input arguments (e.g., those
-        included in the datastack). In this case, `args_dict` is used to
-        determine the files which should have metadata written, and
-        `datastack_path` is used to replace temporary paths in metadata.
-
-    Args:
-        output_spec (dict): A dictionary of file specs from either the
-            model's `MODEL_SPEC['outputs']` or `MODEL_SPEC['args']`.
-        workspace (str): Root directory where the files are located.
-        keywords (list[str]): Keywords to include in each metadata file.
-        lineage (str): Lineage string describing the origin of the data.
-        file_suffix (str, optional): Suffix used for output filenames.
-            Required when writing output metadata.
-        args_dict (dict, optional): Parameters passed to the model.
-            Required when writing input metadata for datastacks.
-        use_relative_path (bool): Whether to set metadata's `path` and
-            `sources` attributes to relative path instead of using absolute
-            filepaths (default: False).
-
-    Returns:
-        None
-
-    """
-
-    for filename, spec_data in invest_spec.items():
-        if 'type' in spec_data and spec_data['type'] == 'directory':
-            if 'taskgraph.db' in spec_data['contents']:
-                continue
-            _walk_spec_and_write_metadata(
-                spec_data['contents'], os.path.join(workspace, filename),
-                keywords, lineage, file_suffix, args_dict, use_relative_path)
-        else:
-            if args_dict:  # case 1: i.e., if creating metadata for datastack
-                if filename in args_dict and isinstance(args_dict[filename], str):
-                    full_path = os.path.join(workspace, args_dict[filename])
-                else:
-                    continue
-            else:  # case 2: if creating metadata for invest model outputs
-                pre, post = os.path.splitext(filename)
-                full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
-
-            # Ensure that path to data file exists and, if case 1,
-            # file is given in input args
-            # Note: if filename is not in args_dict this could raise an error
-            # but theoretically this should never happen
-            if os.path.exists(full_path) and (args_dict is None or
-                                              args_dict[filename] != ''):
-                try:
-                    write_metadata_file(
-                        full_path, spec_data, lineage, keywords,
-                        use_relative_path=use_relative_path)
-                except ValueError as error:
-                    # Some unsupported file formats, e.g. html
-                    LOGGER.debug(error)
-
-
-def generate_metadata(model_module, args_dict):
+def generate_metadata_for_outputs(model_module, args_dict):
     """Create metadata for all items in an invest model output workspace.
 
     Args:
@@ -785,12 +717,30 @@ def generate_metadata(model_module, args_dict):
         f'Version {natcap.invest.__version__}')
     keywords = [model_module.MODEL_SPEC['model_id'], 'InVEST']
 
-    _walk_spec_and_write_metadata(
-        model_module.MODEL_SPEC['outputs'], args_dict['workspace_dir'],
-        keywords, lineage_statement, file_suffix)
+    def _walk_spec(output_spec, workspace):
+        for filename, spec_data in output_spec.items():
+            if 'type' in spec_data and spec_data['type'] == 'directory':
+                if 'taskgraph.db' in spec_data['contents']:
+                    continue
+                _walk_spec(
+                    spec_data['contents'],
+                    os.path.join(workspace, filename))
+            else:
+                pre, post = os.path.splitext(filename)
+                full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
+                if os.path.exists(full_path):
+                    try:
+                        write_metadata_file(
+                            full_path, spec_data, keywords, lineage_statement)
+                    except ValueError as error:
+                        # Some unsupported file formats, e.g. html
+                        LOGGER.debug(error)
+
+    _walk_spec(model_module.MODEL_SPEC['outputs'], args_dict['workspace_dir'])
 
 
-def generate_metadata_for_datastack(model_module, args_dict, workspace_dir):
+def generate_metadata_for_datastack(model_module, args_dict, param_set,
+                                    temp_dir):
     """Create metadata for all items in invest model args.
 
     Args:
@@ -798,13 +748,20 @@ def generate_metadata_for_datastack(model_module, args_dict, workspace_dir):
             the MODEL_SPEC attribute
         args_dict (dict) - the arguments dictionary passed to the
             model's ``execute`` function.
-        workspace_dir (str) - where to look for files
+        param_set (dict) - parameter set which contains relative filepaths
+        temp_dir (str) - directory where datastack is temporarily stored
+            before compression
 
     Returns:
         None
 
     """
     keywords = [model_module.MODEL_SPEC['model_id'], 'InVEST']
-    _walk_spec_and_write_metadata(
-        model_module.MODEL_SPEC['args'], workspace_dir, keywords, lineage='',
-        args_dict=args_dict, use_relative_path=True)
+    for k, v in args_dict.items():
+        if isinstance(v, str) and os.path.isfile(v):
+            this_arg_spec = model_module.MODEL_SPEC['args'][k]
+            # write metadata file to target location (in temp dir)
+            subdir = os.path.dirname(param_set['args'][k])
+            target_location = os.path.join(temp_dir, subdir)
+            write_metadata_file(v, this_arg_spec, keywords,
+                                out_workspace=target_location)

@@ -484,11 +484,11 @@ def build_datastack_archive(args, model_name, datastack_path):
     # write parameters to a new json file in the temp workspace
     param_file_uri = os.path.join(temp_workspace,
                                   'parameters' + PARAMETER_SET_EXTENSION)
-    build_parameter_set(
+    parameter_set = build_parameter_set(
         rewritten_args, model_name, param_file_uri, relative=True)
 
-    spec_utils.generate_metadata_for_datastack(module, rewritten_args,
-                                               data_dir)
+    spec_utils.generate_metadata_for_datastack(
+        module, args, parameter_set, temp_workspace)
 
     # Remove the handler before archiving the working dir (and the logfile)
     archive_filehandler.close()
@@ -568,7 +568,7 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
             directory of ``paramset_path``.
 
     Returns:
-        ``None``
+        parameter dictionary saved in ``paramset_path``
 
     Raises:
         ValueError if creating a relative path fails.
@@ -617,6 +617,8 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
             json.dumps(parameter_data,
                        indent=4,
                        sort_keys=True))
+
+    return parameter_data
 
 
 def extract_parameter_set(paramset_path):
