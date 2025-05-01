@@ -9,7 +9,7 @@ import re
 import threading
 import types
 import warnings
-from typing import Union
+from typing import Union, ClassVar
 
 from osgeo import gdal
 from osgeo import ogr
@@ -235,6 +235,7 @@ class OutputSpec:
 @dataclasses.dataclass
 class FileInputSpec(InputSpec):
     permissions: str = 'r'
+    type: ClassVar[str] = 'file'
 
     # @timeout
     def validate(self, filepath):
@@ -271,6 +272,7 @@ class SingleBandRasterInputSpec(FileInputSpec):
     band: Union[InputSpec, None] = None
     projected: Union[bool, None] = None
     projection_units: Union[pint.Unit, None] = None
+    type: ClassVar[str] = 'raster'
 
     # @timeout
     def validate(self, filepath):
@@ -314,6 +316,7 @@ class VectorInputSpec(FileInputSpec):
     fields: Union[Fields, None] = None
     projected: Union[bool, None] = None
     projection_units: Union[pint.Unit, None] = None
+    type: ClassVar[str] = 'vector'
 
     # @timeout
     def validate(self, filepath):
@@ -399,6 +402,7 @@ class RasterOrVectorInputSpec(SingleBandRasterInputSpec, VectorInputSpec):
     fields: Union[Fields, None] = None
     projected: Union[bool, None] = None
     projection_units: Union[pint.Unit, None] = None
+    type: ClassVar[str] = 'raster_or_vector'
 
     # @timeout
     def validate(self, filepath):
@@ -426,6 +430,7 @@ class CSVInputSpec(FileInputSpec):
     columns: Union[Columns, None] = None
     rows: Union[Rows, None] = None
     index_col: Union[str, None] = None
+    type: ClassVar[str] = 'csv'
 
     # @timeout
     def validate(self, filepath):
@@ -546,6 +551,7 @@ class DirectoryInputSpec(InputSpec):
     contents: Union[Contents, None] = None
     permissions: str = ''
     must_exist: bool = True
+    type: ClassVar[str] = 'directory'
 
     # @timeout
     def validate(self, dirpath):
@@ -615,6 +621,7 @@ class DirectoryInputSpec(InputSpec):
 class NumberInputSpec(InputSpec):
     units: Union[pint.Unit, None] = None
     expression: Union[str, None] = None
+    type: ClassVar[str] = 'number'
 
     def validate(self, value):
         """Validate numbers.
@@ -655,6 +662,8 @@ class NumberInputSpec(InputSpec):
 
 @dataclasses.dataclass
 class IntegerInputSpec(InputSpec):
+    type: ClassVar[str] = 'integer'
+
     def validate(self, value):
         """Validate an integer.
 
@@ -680,6 +689,8 @@ class IntegerInputSpec(InputSpec):
 
 @dataclasses.dataclass
 class RatioInputSpec(InputSpec):
+    type: ClassVar[str] = 'ratio'
+
     def validate(self, value):
         """Validate a ratio (a proportion expressed as a value from 0 to 1).
 
@@ -706,6 +717,8 @@ class RatioInputSpec(InputSpec):
 
 @dataclasses.dataclass
 class PercentInputSpec(InputSpec):
+    type: ClassVar[str] = 'percent'
+
     def validate(self, value):
         """Validate a percent (a proportion expressed as a value from 0 to 100).
 
@@ -731,6 +744,8 @@ class PercentInputSpec(InputSpec):
 
 @dataclasses.dataclass
 class BooleanInputSpec(InputSpec):
+    type: ClassVar[str] = 'boolean'
+
     def validate(self, value):
         """Validate a boolean value.
 
@@ -753,6 +768,7 @@ class BooleanInputSpec(InputSpec):
 @dataclasses.dataclass
 class StringInputSpec(InputSpec):
     regexp: Union[str, None] = None
+    type: ClassVar[str] = 'string'
 
     def validate(self, value):
         """Validate an arbitrary string.
@@ -779,6 +795,7 @@ class StringInputSpec(InputSpec):
 @dataclasses.dataclass
 class OptionStringInputSpec(InputSpec):
     options: Union[list, None] = None
+    type: ClassVar[str] = 'option_string'
 
     def validate(self, value):
         """Validate that a string is in a set of options.
@@ -1382,13 +1399,19 @@ def serialize_args_spec(spec):
         elif isinstance(obj, types.FunctionType):
             return str(obj)
         elif dataclasses.is_dataclass(obj):
-            return dataclasses.asdict(obj)
+            as_dict = dataclasses.asdict(obj)
+            if hasattr(obj, 'type'):
+                as_dict['type'] = obj.type
+            print(as_dict)
+            return as_dict
         elif isinstance(obj, IterableWithDotAccess):
             return obj.to_json()
         raise TypeError(f'fallback serializer is missing for {type(obj)}')
 
-    x = json.dumps(spec, default=fallback_serializer, ensure_ascii=False)
-    return x
+    spec_dict = json.loads(json.dumps(spec, default=fallback_serializer, ensure_ascii=False))
+    spec_dict['args'] = spec_dict.pop('inputs')
+    print(spec_dict)
+    return json.dumps(spec_dict)
 
 
 # accepted geometries for a vector will be displayed in this order
