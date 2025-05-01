@@ -9,6 +9,7 @@ import re
 import threading
 import types
 import warnings
+from typing import Union
 
 from osgeo import gdal
 from osgeo import ogr
@@ -222,14 +223,14 @@ class InputSpec:
     id: str = ''
     name: str = ''
     about: str = ''
-    required: bool | str = True
-    allowed: bool | str = True
+    required: Union[bool, str] = True
+    allowed: Union[bool, str] = True
 
 @dataclasses.dataclass
 class OutputSpec:
     id: str = ''
     about: str = ''
-    created_if: bool | str = True
+    created_if: Union[bool, str] = True
 
 @dataclasses.dataclass
 class FileInputSpec(InputSpec):
@@ -267,9 +268,9 @@ class FileInputSpec(InputSpec):
 
 @dataclasses.dataclass
 class SingleBandRasterInputSpec(FileInputSpec):
-    band: InputSpec | None = None
-    projected: bool | None = None
-    projection_units: pint.Unit | None = None
+    band: Union[InputSpec, None] = None
+    projected: Union[bool, None] = None
+    projection_units: Union[pint.Unit, None] = None
 
     # @timeout
     def validate(self, filepath):
@@ -310,9 +311,9 @@ class SingleBandRasterInputSpec(FileInputSpec):
 @dataclasses.dataclass
 class VectorInputSpec(FileInputSpec):
     geometries: set = dataclasses.field(default_factory=dict)
-    fields: Fields | None = None
-    projected: bool | None = None
-    projection_units: pint.Unit | None = None
+    fields: Union[Fields, None] = None
+    projected: Union[bool, None] = None
+    projection_units: Union[pint.Unit, None] = None
 
     # @timeout
     def validate(self, filepath):
@@ -393,11 +394,11 @@ class VectorInputSpec(FileInputSpec):
 
 @dataclasses.dataclass
 class RasterOrVectorInputSpec(SingleBandRasterInputSpec, VectorInputSpec):
-    band: InputSpec | None = None
+    band: Union[InputSpec, None] = None
     geometries: set = dataclasses.field(default_factory=dict)
-    fields: Fields | None = None
-    projected: bool | None = None
-    projection_units: pint.Unit | None = None
+    fields: Union[Fields, None] = None
+    projected: Union[bool, None] = None
+    projection_units: Union[pint.Unit, None] = None
 
     # @timeout
     def validate(self, filepath):
@@ -422,9 +423,9 @@ class RasterOrVectorInputSpec(SingleBandRasterInputSpec, VectorInputSpec):
 
 @dataclasses.dataclass
 class CSVInputSpec(FileInputSpec):
-    columns: Columns | None = None
-    rows: Rows | None = None
-    index_col: str | None = None
+    columns: Union[Columns, None] = None
+    rows: Union[Rows, None] = None
+    index_col: Union[str, None] = None
 
     # @timeout
     def validate(self, filepath):
@@ -542,7 +543,7 @@ class CSVInputSpec(FileInputSpec):
 
 @dataclasses.dataclass
 class DirectoryInputSpec(InputSpec):
-    contents: Contents | None = None
+    contents: Union[Contents, None] = None
     permissions: str = ''
     must_exist: bool = True
 
@@ -612,8 +613,8 @@ class DirectoryInputSpec(InputSpec):
 
 @dataclasses.dataclass
 class NumberInputSpec(InputSpec):
-    units: pint.Unit | None = None
-    expression: str | None = None
+    units: Union[pint.Unit, None] = None
+    expression: Union[str, None] = None
 
     def validate(self, value):
         """Validate numbers.
@@ -751,7 +752,7 @@ class BooleanInputSpec(InputSpec):
 
 @dataclasses.dataclass
 class StringInputSpec(InputSpec):
-    regexp: str | None = None
+    regexp: Union[str, None] = None
 
     def validate(self, value):
         """Validate an arbitrary string.
@@ -777,7 +778,7 @@ class StringInputSpec(InputSpec):
 
 @dataclasses.dataclass
 class OptionStringInputSpec(InputSpec):
-    options: list | None = None
+    options: Union[list, None] = None
 
     def validate(self, value):
         """Validate that a string is in a set of options.
@@ -810,26 +811,26 @@ class OtherInputSpec(InputSpec):
 
 @dataclasses.dataclass
 class SingleBandRasterOutputSpec(OutputSpec):
-    band: InputSpec | None = None
-    projected: bool | None = None
-    projection_units: pint.Unit | None = None
+    band: Union[InputSpec, None] = None
+    projected: Union[bool, None] = None
+    projection_units: Union[pint.Unit, None] = None
 
 @dataclasses.dataclass
 class VectorOutputSpec(OutputSpec):
     geometries: set = dataclasses.field(default_factory=dict)
-    fields: Fields | None = None
-    projected: bool | None = None
-    projection_units: pint.Unit | None = None
+    fields: Union[Fields, None] = None
+    projected: Union[bool, None] = None
+    projection_units: Union[pint.Unit, None] = None
 
 @dataclasses.dataclass
 class CSVOutputSpec(OutputSpec):
-    columns: Columns | None = None
-    rows: Rows | None = None
-    index_col: str | None = None
+    columns: Union[Columns, None] = None
+    rows: Union[Rows, None] = None
+    index_col: Union[str, None] = None
 
 @dataclasses.dataclass
 class DirectoryOutputSpec(OutputSpec):
-    contents: Contents | None = None
+    contents: Union[Contents, None] = None
     permissions: str = ''
     must_exist: bool = True
 
@@ -839,8 +840,8 @@ class FileOutputSpec(OutputSpec):
 
 @dataclasses.dataclass
 class NumberOutputSpec(OutputSpec):
-    units: pint.Unit | None = None
-    expression: str | None = None
+    units: Union[pint.Unit, None] = None
+    expression: Union[str, None] = None
 
 @dataclasses.dataclass
 class IntegerOutputSpec(OutputSpec):
@@ -856,15 +857,15 @@ class PercentOutputSpec(OutputSpec):
 
 @dataclasses.dataclass
 class StringOutputSpec(OutputSpec):
-    regexp: str | None = None
+    regexp: Union[str, None] = None
 
 @dataclasses.dataclass
 class OptionStringOutputSpec(OutputSpec):
-    options: list | None = None
+    options: Union[list, None] = None
 
 @dataclasses.dataclass
 class UISpec:
-    order: list | None = None
+    order: Union[list, None] = None
     hidden: list = None
     dropdown_functions: dict = dataclasses.field(default_factory=dict)
 
