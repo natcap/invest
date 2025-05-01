@@ -3,6 +3,7 @@
 An implementation of the model described in 'Degradation in carbon stocks
 near tropical forest edges', by Chaplin-Kramer et. al (2015).
 """
+import copy
 import logging
 import os
 import pickle
@@ -1033,24 +1034,9 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC)
-
-    invalid_keys = set([])
-    for affected_keys, error_msg in validation_warnings:
-        for key in affected_keys:
-            invalid_keys.add(key)
-
-    if ('pools_to_calculate' not in invalid_keys and
-            'biophysical_table_path' not in invalid_keys):
-        if args['pools_to_calculate'] == 'all':
-            # other fields have already been checked by validate
-            required_fields = ['c_above', 'c_below', 'c_soil', 'c_dead']
-            error_msg = validation.check_csv(
-                args['biophysical_table_path'],
-                header_patterns=required_fields,
-                axis=1)
-            if error_msg:
-                validation_warnings.append(
-                    (['biophysical_table_path'], error_msg))
-
-    return validation_warnings
+    model_spec = copy.deepcopy(MODEL_SPEC)
+    if 'pools_to_calculate' in args and args['pools_to_calculate'] == 'all':
+        model_spec.inputs.get('biophysical_table_path').columns.get('c_below').required = True
+        model_spec.inputs.get('biophysical_table_path').columns.get('c_soil').required = True
+        model_spec.inputs.get('biophysical_table_path').columns.get('c_dead').required = True
+    return validation.validate(args, model_spec)
