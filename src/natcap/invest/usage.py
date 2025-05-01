@@ -124,7 +124,7 @@ def _calculate_args_bounding_box(args, model_spec):
                 spec_utils.SingleBandRasterInputSpec) and value.strip() != ''):
             spatial_info = pygeoprocessing.get_raster_info(value)
         elif (isinstance(model_spec.inputs.get(key),
-                spec_utils.SingleBandRasterInputSpec) and value.strip() != ''):
+                spec_utils.VectorInputSpec) and value.strip() != ''):
             spatial_info = pygeoprocessing.get_vector_info(value)
 
         if spatial_info:
