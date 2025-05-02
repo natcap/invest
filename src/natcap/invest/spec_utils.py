@@ -1409,7 +1409,6 @@ def serialize_args_spec(spec):
 
     spec_dict = json.loads(json.dumps(spec, default=fallback_serializer, ensure_ascii=False))
     spec_dict['args'] = spec_dict.pop('inputs')
-    print(spec_dict)
     return json.dumps(spec_dict)
 
 
