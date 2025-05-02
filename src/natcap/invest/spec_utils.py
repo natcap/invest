@@ -652,8 +652,12 @@ def write_metadata_file(datasource_path, spec, keywords_list,
         resource = geometamaker.describe(datasource_path)
     except ValidationError:
         LOGGER.debug(
-            f"Did not create metadata for {datasource_path} as invalid "
-            "metadata exists. Please fix or delete existing metadata")
+            f"Skipping metadata creation for {datasource_path}, as invalid "
+            "metadata exists.")
+        return None
+    # Don't want function to fail bc can't create metadata due to invalid filetype
+    except ValueError as e:
+        LOGGER.debug(f"Skipping metadata creation for {datasource_path}: {e}")
         return None
 
     resource.set_lineage(lineage_statement)

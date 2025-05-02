@@ -137,7 +137,7 @@ def _copy_spatial_files(spatial_filepath, target_dir):
     # Copy any existing geometamaker metadata
     spatial_metadata = spatial_filepath + ".yml"
     if os.path.exists(spatial_metadata):
-        LOGGER.info(f"Metadata detected for {spatial_filepath}."
+        LOGGER.info(f"Metadata detected for {spatial_filepath}. "
                     f"Copying to {target_dir}")
         metadata_target = os.path.join(target_dir,
                                        os.path.basename(spatial_metadata))
