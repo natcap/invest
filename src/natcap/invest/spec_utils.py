@@ -1402,7 +1402,6 @@ def serialize_args_spec(spec):
             as_dict = dataclasses.asdict(obj)
             if hasattr(obj, 'type'):
                 as_dict['type'] = obj.type
-            print(as_dict)
             return as_dict
         elif isinstance(obj, IterableWithDotAccess):
             return obj.to_json()
