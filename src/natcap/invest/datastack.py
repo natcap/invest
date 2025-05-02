@@ -200,10 +200,10 @@ def build_datastack_archive(args, model_id, datastack_path):
     files_found = {}
     LOGGER.debug(f'Keys: {sorted(args.keys())}')
 
-    spatial_types = {spec_utils.SingleBandRasterInputSpec, spec_utils.VectorInputSpec,
-        spec_utils.RasterOrVectorInputSpec}
+    spatial_types = {spec_utils.SingleBandRasterInput, spec_utils.VectorInput,
+        spec_utils.RasterOrVectorInput}
     file_based_types = spatial_types.union({
-        spec_utils.CSVInputSpec, spec_utils.FileInputSpec, spec_utils.DirectoryInputSpec})
+        spec_utils.CSVInput, spec_utils.FileInput, spec_utils.DirectoryInput})
     rewritten_args = {}
     for key in args:
         # Allow the model to override specific arguments in datastack archive
@@ -260,7 +260,7 @@ def build_datastack_archive(args, model_id, datastack_path):
                 rewritten_args[key] = files_found[source_path]
                 continue
 
-        if input_spec.__class__ is spec_utils.CSVInputSpec:
+        if input_spec.__class__ is spec_utils.CSVInput:
             # check the CSV for columns that may be spatial.
             # But also, the columns specification might not be listed, so don't
             # require that 'columns' exists in the MODEL_SPEC.
@@ -342,7 +342,7 @@ def build_datastack_archive(args, model_id, datastack_path):
             target_arg_value = target_csv_path
             files_found[source_path] = target_arg_value
 
-        elif input_spec.__class__ is spec_utils.FileInputSpec:
+        elif input_spec.__class__ is spec_utils.FileInput:
             target_filepath = os.path.join(
                 data_dir, f'{key}_file')
             shutil.copyfile(source_path, target_filepath)
@@ -351,7 +351,7 @@ def build_datastack_archive(args, model_id, datastack_path):
             target_arg_value = target_filepath
             files_found[source_path] = target_arg_value
 
-        elif input_spec.__class__ is spec_utils.DirectoryInputSpec:
+        elif input_spec.__class__ is spec_utils.DirectoryInput:
             # copy the whole folder
             target_directory = os.path.join(data_dir, f'{key}_directory')
             os.makedirs(target_directory)

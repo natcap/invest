@@ -16,100 +16,100 @@ PLUGIN_NAME = 'foo-model'
 gdal.UseExceptions()
 valid_nested_input_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
-        spec_utils.IntegerInputSpec,
-        spec_utils.NumberInputSpec,
-        spec_utils.RatioInputSpec,
-        spec_utils.PercentInputSpec,
-        spec_utils.StringInputSpec,
-        spec_utils.OptionStringInputSpec,
-        spec_utils.BooleanInputSpec,
-        spec_utils.SingleBandRasterInputSpec,
-        spec_utils.VectorInputSpec,
-        spec_utils.RasterOrVectorInputSpec,
-        spec_utils.CSVInputSpec,
-        spec_utils.DirectoryInputSpec,
-        spec_utils.FileInputSpec
+        spec_utils.IntegerInput,
+        spec_utils.NumberInput,
+        spec_utils.RatioInput,
+        spec_utils.PercentInput,
+        spec_utils.StringInput,
+        spec_utils.OptionStringInput,
+        spec_utils.BooleanInput,
+        spec_utils.SingleBandRasterInput,
+        spec_utils.VectorInput,
+        spec_utils.RasterOrVectorInput,
+        spec_utils.CSVInput,
+        spec_utils.DirectoryInput,
+        spec_utils.FileInput
     },
-    spec_utils.SingleBandRasterInputSpec: {
-        spec_utils.IntegerInputSpec,
-        spec_utils.NumberInputSpec,
-        spec_utils.RatioInputSpec,
-        spec_utils.PercentInputSpec
+    spec_utils.SingleBandRasterInput: {
+        spec_utils.IntegerInput,
+        spec_utils.NumberInput,
+        spec_utils.RatioInput,
+        spec_utils.PercentInput
     },
-    spec_utils.VectorInputSpec: {
-        spec_utils.IntegerInputSpec,
-        spec_utils.NumberInputSpec,
-        spec_utils.RatioInputSpec,
-        spec_utils.PercentInputSpec,
-        spec_utils.StringInputSpec,
-        spec_utils.OptionStringInputSpec
+    spec_utils.VectorInput: {
+        spec_utils.IntegerInput,
+        spec_utils.NumberInput,
+        spec_utils.RatioInput,
+        spec_utils.PercentInput,
+        spec_utils.StringInput,
+        spec_utils.OptionStringInput
     },
-    spec_utils.CSVInputSpec: {
-        spec_utils.IntegerInputSpec,
-        spec_utils.NumberInputSpec,
-        spec_utils.RatioInputSpec,
-        spec_utils.PercentInputSpec,
-        spec_utils.StringInputSpec,
-        spec_utils.OptionStringInputSpec,
-        spec_utils.BooleanInputSpec,
-        spec_utils.SingleBandRasterInputSpec,
-        spec_utils.VectorInputSpec,
-        spec_utils.RasterOrVectorInputSpec
+    spec_utils.CSVInput: {
+        spec_utils.IntegerInput,
+        spec_utils.NumberInput,
+        spec_utils.RatioInput,
+        spec_utils.PercentInput,
+        spec_utils.StringInput,
+        spec_utils.OptionStringInput,
+        spec_utils.BooleanInput,
+        spec_utils.SingleBandRasterInput,
+        spec_utils.VectorInput,
+        spec_utils.RasterOrVectorInput
     },
-    spec_utils.DirectoryInputSpec: {
-        spec_utils.CSVInputSpec,
-        spec_utils.DirectoryInputSpec,
-        spec_utils.FileInputSpec,
-        spec_utils.SingleBandRasterInputSpec,
-        spec_utils.VectorInputSpec,
-        spec_utils.RasterOrVectorInputSpec
+    spec_utils.DirectoryInput: {
+        spec_utils.CSVInput,
+        spec_utils.DirectoryInput,
+        spec_utils.FileInput,
+        spec_utils.SingleBandRasterInput,
+        spec_utils.VectorInput,
+        spec_utils.RasterOrVectorInput
     }
 }
 
 valid_nested_output_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
-        spec_utils.IntegerOutputSpec,
-        spec_utils.NumberOutputSpec,
-        spec_utils.RatioOutputSpec,
-        spec_utils.PercentOutputSpec,
-        spec_utils.StringOutputSpec,
-        spec_utils.OptionStringOutputSpec,
-        spec_utils.SingleBandRasterOutputSpec,
-        spec_utils.VectorOutputSpec,
-        spec_utils.CSVOutputSpec,
-        spec_utils.DirectoryOutputSpec,
-        spec_utils.FileOutputSpec
+        spec_utils.IntegerOutput,
+        spec_utils.NumberOutput,
+        spec_utils.RatioOutput,
+        spec_utils.PercentOutput,
+        spec_utils.StringOutput,
+        spec_utils.OptionStringOutput,
+        spec_utils.SingleBandRasterOutput,
+        spec_utils.VectorOutput,
+        spec_utils.CSVOutput,
+        spec_utils.DirectoryOutput,
+        spec_utils.FileOutput
     },
-    spec_utils.SingleBandRasterOutputSpec: {
-        spec_utils.IntegerOutputSpec,
-        spec_utils.NumberOutputSpec,
-        spec_utils.RatioOutputSpec,
-        spec_utils.PercentOutputSpec
+    spec_utils.SingleBandRasterOutput: {
+        spec_utils.IntegerOutput,
+        spec_utils.NumberOutput,
+        spec_utils.RatioOutput,
+        spec_utils.PercentOutput
     },
-    spec_utils.VectorOutputSpec: {
-        spec_utils.IntegerOutputSpec,
-        spec_utils.NumberOutputSpec,
-        spec_utils.RatioOutputSpec,
-        spec_utils.PercentOutputSpec,
-        spec_utils.StringOutputSpec,
-        spec_utils.OptionStringOutputSpec
+    spec_utils.VectorOutput: {
+        spec_utils.IntegerOutput,
+        spec_utils.NumberOutput,
+        spec_utils.RatioOutput,
+        spec_utils.PercentOutput,
+        spec_utils.StringOutput,
+        spec_utils.OptionStringOutput
     },
-    spec_utils.CSVOutputSpec: {
-        spec_utils.IntegerOutputSpec,
-        spec_utils.NumberOutputSpec,
-        spec_utils.RatioOutputSpec,
-        spec_utils.PercentOutputSpec,
-        spec_utils.StringOutputSpec,
-        spec_utils.OptionStringOutputSpec,
-        spec_utils.SingleBandRasterOutputSpec,
-        spec_utils.VectorOutputSpec
+    spec_utils.CSVOutput: {
+        spec_utils.IntegerOutput,
+        spec_utils.NumberOutput,
+        spec_utils.RatioOutput,
+        spec_utils.PercentOutput,
+        spec_utils.StringOutput,
+        spec_utils.OptionStringOutput,
+        spec_utils.SingleBandRasterOutput,
+        spec_utils.VectorOutput
     },
-    spec_utils.DirectoryOutputSpec: {
-        spec_utils.CSVOutputSpec,
-        spec_utils.DirectoryOutputSpec,
-        spec_utils.FileOutputSpec,
-        spec_utils.SingleBandRasterOutputSpec,
-        spec_utils.VectorOutputSpec
+    spec_utils.DirectoryOutput: {
+        spec_utils.CSVOutput,
+        spec_utils.DirectoryOutput,
+        spec_utils.FileOutput,
+        spec_utils.SingleBandRasterOutput,
+        spec_utils.VectorOutput
     }
 }
 
@@ -191,13 +191,13 @@ class ValidateModelSpecs(unittest.TestCase):
             t = type(spec)
             self.assertIn(t, valid_nested_output_types[parent_type])
 
-            if t is spec_utils.NumberOutputSpec:
+            if t is spec_utils.NumberOutput:
                 # number type should have a units property
                 self.assertTrue(hasattr(spec, 'units'))
                 # Undefined units should use the custom u.none unit
                 self.assertIsInstance(spec.units, pint.Unit)
 
-            elif t is spec_utils.SingleBandRasterOutputSpec:
+            elif t is spec_utils.SingleBandRasterOutput:
                 # raster type should have a bands property that maps each band
                 # index to a nested type dictionary describing the band's data
                 self.assertTrue(hasattr(spec, 'band'))
@@ -206,7 +206,7 @@ class ValidateModelSpecs(unittest.TestCase):
                     f'{key}.band',
                     parent_type=t)
 
-            elif t is spec_utils.VectorOutputSpec:
+            elif t is spec_utils.VectorOutput:
                 # vector type should have:
                 # - a fields property that maps each field header to a nested
                 #   type dictionary describing the data in that field
@@ -222,7 +222,7 @@ class ValidateModelSpecs(unittest.TestCase):
                 self.assertTrue(hasattr(spec, 'geometries'))
                 self.assertIsInstance(spec.geometries, set)
 
-            elif t is spec_utils.CSVOutputSpec:
+            elif t is spec_utils.CSVOutput:
                 # csv type may have a columns property.
                 # the columns property maps each expected column header
                 # name/pattern to a nested type dictionary describing the data
@@ -238,7 +238,7 @@ class ValidateModelSpecs(unittest.TestCase):
                 if spec.index_col:
                     self.assertIn(spec.index_col, [s.id for s in spec.columns])
 
-            elif t is spec_utils.DirectoryOutputSpec:
+            elif t is spec_utils.DirectoryOutput:
                 # directory type should have a contents property that maps each
                 # expected path name/pattern within the directory to a nested
                 # type dictionary describing the data at that filepath
@@ -250,7 +250,7 @@ class ValidateModelSpecs(unittest.TestCase):
                         f'{key}.contents.{path}',
                         parent_type=t)
 
-            elif t is spec_utils.OptionStringOutputSpec:
+            elif t is spec_utils.OptionStringOutput:
                     # option_string type should have an options property that
                     # describes the valid options
                     self.assertTrue(hasattr(spec, 'options'))
@@ -260,7 +260,7 @@ class ValidateModelSpecs(unittest.TestCase):
                             isinstance(option, str) or
                             isinstance(option, int))
 
-            elif t is spec_utils.FileOutputSpec:
+            elif t is spec_utils.FileOutput:
                 pass
 
             # iterate over the remaining attributes
@@ -298,7 +298,7 @@ class ValidateModelSpecs(unittest.TestCase):
             t = type(arg)
             self.assertIn(t, valid_nested_input_types[parent_type])
 
-            if t is spec_utils.OptionStringInputSpec:
+            if t is spec_utils.OptionStringInput:
                 # option_string type should have an options property that
                 # describes the valid options
                 self.assertTrue(hasattr(arg, 'options'))
@@ -330,7 +330,7 @@ class ValidateModelSpecs(unittest.TestCase):
 
                 attrs.remove('options')
 
-            elif t is spec_utils.StringInputSpec:
+            elif t is spec_utils.StringInput:
                 # freestyle_string may optionally have a regexp attribute
                 # this is a regular expression that the string must match
                 if arg.regexp:
@@ -338,7 +338,7 @@ class ValidateModelSpecs(unittest.TestCase):
                     re.compile(arg.regexp)  # should be regex compilable
                     attrs.remove('regexp')
 
-            elif t is spec_utils.NumberInputSpec:
+            elif t is spec_utils.NumberInput:
                 # number type should have a units property
                 self.assertTrue(hasattr(arg, 'units'))
                 # Undefined units should use the custom u.none unit
@@ -353,7 +353,7 @@ class ValidateModelSpecs(unittest.TestCase):
                 if arg.expression:
                     self.assertIsInstance(arg.expression, str)
 
-            elif t is spec_utils.SingleBandRasterInputSpec:
+            elif t is spec_utils.SingleBandRasterInput:
                 # raster type should have a bands property that maps each band
                 # index to a nested type dictionary describing the band's data
                 self.assertTrue(hasattr(arg, 'band'))
@@ -377,7 +377,7 @@ class ValidateModelSpecs(unittest.TestCase):
                         arg.projection_units, pint.Unit)
                     attrs.remove('projection_units')
 
-            elif t is spec_utils.VectorInputSpec:
+            elif t is spec_utils.VectorInput:
                 # vector type should have:
                 # - a fields property that maps each field header to a nested
                 #   type dictionary describing the data in that field
@@ -411,7 +411,7 @@ class ValidateModelSpecs(unittest.TestCase):
                         arg.projection_units, pint.Unit)
                     attrs.remove('projection_units')
 
-            elif t is spec_utils.CSVInputSpec:
+            elif t is spec_utils.CSVInput:
                 # csv type should have a rows property, columns property, or
                 # neither. rows or columns properties map each expected header
                 # name/pattern to a nested type dictionary describing the data
@@ -435,7 +435,7 @@ class ValidateModelSpecs(unittest.TestCase):
                 if arg.index_col:
                     self.assertIn(arg.index_col, [s.id for s in arg.columns])
 
-            elif t is spec_utils.DirectoryInputSpec:
+            elif t is spec_utils.DirectoryInput:
                 # directory type should have a contents property that maps each
                 # expected path name/pattern within the directory to a nested
                 # type dictionary describing the data at that filepath
@@ -460,7 +460,7 @@ class ValidateModelSpecs(unittest.TestCase):
                     self.assertIsInstance(arg.must_exist, bool)
                     attrs.remove('must_exist')
 
-            elif t is spec_utils.FileInputSpec:
+            elif t is spec_utils.FileInput:
                 # file type may optionally have a 'permissions' attribute
                 # this is a string listing the permissions e.g. 'rwx'
                 if arg.permissions:
@@ -509,13 +509,7 @@ class ValidateModelSpecs(unittest.TestCase):
 
         for pyname in model_id_to_pyname.values():
             model = importlib.import_module(pyname)
-            try:
-                _ = spec_utils.serialize_args_spec(model.MODEL_SPEC)
-            except TypeError as error:
-                self.fail(
-                    f'Failed to avoid TypeError when serializing '
-                    f'{pyname}.MODEL_SPEC: \n'
-                    f'{error}')
+            spec_utils.serialize_args_spec(model.MODEL_SPEC)
 
 
 class SpecUtilsTests(unittest.TestCase):

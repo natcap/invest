@@ -219,7 +219,7 @@ class Contents(IterableWithDotAccess):
     pass
 
 @dataclasses.dataclass
-class InputSpec:
+class Input:
     id: str = ''
     name: str = ''
     about: str = ''
@@ -227,13 +227,13 @@ class InputSpec:
     allowed: Union[bool, str] = True
 
 @dataclasses.dataclass
-class OutputSpec:
+class Output:
     id: str = ''
     about: str = ''
     created_if: Union[bool, str] = True
 
 @dataclasses.dataclass
-class FileInputSpec(InputSpec):
+class FileInput(Input):
     permissions: str = 'r'
     type: ClassVar[str] = 'file'
 
@@ -268,8 +268,8 @@ class FileInputSpec(InputSpec):
         ).astype(pandas.StringDtype())
 
 @dataclasses.dataclass
-class SingleBandRasterInputSpec(FileInputSpec):
-    band: Union[InputSpec, None] = None
+class SingleBandRasterInput(FileInput):
+    band: Union[Input, None] = None
     projected: Union[bool, None] = None
     projection_units: Union[pint.Unit, None] = None
     type: ClassVar[str] = 'raster'
@@ -290,7 +290,7 @@ class SingleBandRasterInputSpec(FileInputSpec):
             A string error message if an error was found.  ``None`` otherwise.
 
         """
-        file_warning = FileInputSpec.validate(self, filepath)
+        file_warning = FileInput.validate(self, filepath)
         if file_warning:
             return file_warning
 
@@ -311,7 +311,7 @@ class SingleBandRasterInputSpec(FileInputSpec):
         return None
 
 @dataclasses.dataclass
-class VectorInputSpec(FileInputSpec):
+class VectorInput(FileInput):
     geometries: set = dataclasses.field(default_factory=dict)
     fields: Union[Fields, None] = None
     projected: Union[bool, None] = None
@@ -396,8 +396,8 @@ class VectorInputSpec(FileInputSpec):
 
 
 @dataclasses.dataclass
-class RasterOrVectorInputSpec(SingleBandRasterInputSpec, VectorInputSpec):
-    band: Union[InputSpec, None] = None
+class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
+    band: Union[Input, None] = None
     geometries: set = dataclasses.field(default_factory=dict)
     fields: Union[Fields, None] = None
     projected: Union[bool, None] = None
@@ -421,12 +421,12 @@ class RasterOrVectorInputSpec(SingleBandRasterInputSpec, VectorInputSpec):
         except ValueError as err:
             return str(err)
         if gis_type == pygeoprocessing.RASTER_TYPE:
-            return SingleBandRasterInputSpec.validate(self, filepath)
+            return SingleBandRasterInput.validate(self, filepath)
         else:
-            return VectorInputSpec.validate(self, filepath)
+            return VectorInput.validate(self, filepath)
 
 @dataclasses.dataclass
-class CSVInputSpec(FileInputSpec):
+class CSVInput(FileInput):
     columns: Union[Columns, None] = None
     rows: Union[Rows, None] = None
     index_col: Union[str, None] = None
@@ -511,9 +511,9 @@ class CSVInputSpec(FileInputSpec):
                         f'Value(s) in the "{col}" column could not be interpreted '
                         f'as {type(col_spec).__name__}s. Original error: {err}')
 
-                if (isinstance(col_spec, SingleBandRasterInputSpec) or
-                    isinstance(col_spec, VectorInputSpec) or
-                    isinstance(col_spec, RasterOrVectorInputSpec)):
+                if (isinstance(col_spec, SingleBandRasterInput) or
+                    isinstance(col_spec, VectorInput) or
+                    isinstance(col_spec, RasterOrVectorInput)):
                     # recursively validate the files within the column
                     def check_value(value):
                         if pandas.isna(value):
@@ -547,7 +547,7 @@ class CSVInputSpec(FileInputSpec):
 
 
 @dataclasses.dataclass
-class DirectoryInputSpec(InputSpec):
+class DirectoryInput(Input):
     contents: Union[Contents, None] = None
     permissions: str = ''
     must_exist: bool = True
@@ -618,7 +618,7 @@ class DirectoryInputSpec(InputSpec):
 
 
 @dataclasses.dataclass
-class NumberInputSpec(InputSpec):
+class NumberInput(Input):
     units: Union[pint.Unit, None] = None
     expression: Union[str, None] = None
     type: ClassVar[str] = 'number'
@@ -661,7 +661,7 @@ class NumberInputSpec(InputSpec):
         return col.astype(float)
 
 @dataclasses.dataclass
-class IntegerInputSpec(InputSpec):
+class IntegerInput(Input):
     type: ClassVar[str] = 'integer'
 
     def validate(self, value):
@@ -688,7 +688,7 @@ class IntegerInputSpec(InputSpec):
 
 
 @dataclasses.dataclass
-class RatioInputSpec(InputSpec):
+class RatioInput(Input):
     type: ClassVar[str] = 'ratio'
 
     def validate(self, value):
@@ -716,7 +716,7 @@ class RatioInputSpec(InputSpec):
         return col.astype(float)
 
 @dataclasses.dataclass
-class PercentInputSpec(InputSpec):
+class PercentInput(Input):
     type: ClassVar[str] = 'percent'
 
     def validate(self, value):
@@ -743,7 +743,7 @@ class PercentInputSpec(InputSpec):
         return col.astype(float)
 
 @dataclasses.dataclass
-class BooleanInputSpec(InputSpec):
+class BooleanInput(Input):
     type: ClassVar[str] = 'boolean'
 
     def validate(self, value):
@@ -766,7 +766,7 @@ class BooleanInputSpec(InputSpec):
         return col.astype('boolean')
 
 @dataclasses.dataclass
-class StringInputSpec(InputSpec):
+class StringInput(Input):
     regexp: Union[str, None] = None
     type: ClassVar[str] = 'string'
 
@@ -793,7 +793,7 @@ class StringInputSpec(InputSpec):
         ).astype(pandas.StringDtype())
 
 @dataclasses.dataclass
-class OptionStringInputSpec(InputSpec):
+class OptionStringInput(Input):
     options: Union[list, None] = None
     type: ClassVar[str] = 'option_string'
 
@@ -822,62 +822,62 @@ class OptionStringInputSpec(InputSpec):
         ).astype(pandas.StringDtype())
 
 @dataclasses.dataclass
-class OtherInputSpec(InputSpec):
+class OtherInput(Input):
     def validate(self, value):
         pass
 
 @dataclasses.dataclass
-class SingleBandRasterOutputSpec(OutputSpec):
-    band: Union[InputSpec, None] = None
+class SingleBandRasterOutput(Output):
+    band: Union[Input, None] = None
     projected: Union[bool, None] = None
     projection_units: Union[pint.Unit, None] = None
 
 @dataclasses.dataclass
-class VectorOutputSpec(OutputSpec):
+class VectorOutput(Output):
     geometries: set = dataclasses.field(default_factory=dict)
     fields: Union[Fields, None] = None
     projected: Union[bool, None] = None
     projection_units: Union[pint.Unit, None] = None
 
 @dataclasses.dataclass
-class CSVOutputSpec(OutputSpec):
+class CSVOutput(Output):
     columns: Union[Columns, None] = None
     rows: Union[Rows, None] = None
     index_col: Union[str, None] = None
 
 @dataclasses.dataclass
-class DirectoryOutputSpec(OutputSpec):
+class DirectoryOutput(Output):
     contents: Union[Contents, None] = None
     permissions: str = ''
     must_exist: bool = True
 
 @dataclasses.dataclass
-class FileOutputSpec(OutputSpec):
+class FileOutput(Output):
     pass
 
 @dataclasses.dataclass
-class NumberOutputSpec(OutputSpec):
+class NumberOutput(Output):
     units: Union[pint.Unit, None] = None
     expression: Union[str, None] = None
 
 @dataclasses.dataclass
-class IntegerOutputSpec(OutputSpec):
+class IntegerOutput(Output):
     pass
 
 @dataclasses.dataclass
-class RatioOutputSpec(OutputSpec):
+class RatioOutput(Output):
     pass
 
 @dataclasses.dataclass
-class PercentOutputSpec(OutputSpec):
+class PercentOutput(Output):
     pass
 
 @dataclasses.dataclass
-class StringOutputSpec(OutputSpec):
+class StringOutput(Output):
     regexp: Union[str, None] = None
 
 @dataclasses.dataclass
-class OptionStringOutputSpec(OutputSpec):
+class OptionStringOutput(Output):
     options: Union[list, None] = None
 
 @dataclasses.dataclass
@@ -934,42 +934,42 @@ def build_input_spec(argkey, arg):
     t = arg['type']
 
     if t == 'option_string':
-        return OptionStringInputSpec(
+        return OptionStringInput(
             **base_attrs,
             options=arg['options'])
 
     elif t == 'freestyle_string':
-        return StringInputSpec(
+        return StringInput(
             **base_attrs,
             regexp=arg.get('regexp', None))
 
     elif t == 'number':
-        return NumberInputSpec(
+        return NumberInput(
             **base_attrs,
             units=arg['units'],
             expression=arg.get('expression', None))
 
     elif t == 'integer':
-        return IntegerInputSpec(**base_attrs)
+        return IntegerInput(**base_attrs)
 
     elif t == 'ratio':
-        return RatioInputSpec(**base_attrs)
+        return RatioInput(**base_attrs)
 
     elif t == 'percent':
-        return PercentInputSpec(**base_attrs)
+        return PercentInput(**base_attrs)
 
     elif t == 'boolean':
-        return BooleanInputSpec(**base_attrs)
+        return BooleanInput(**base_attrs)
 
     elif t == 'raster':
-        return SingleBandRasterInputSpec(
+        return SingleBandRasterInput(
             **base_attrs,
             band=build_input_spec('1', arg['bands'][1]),
             projected=arg.get('projected', None),
             projection_units=arg.get('projection_units', None))
 
     elif t == 'vector':
-        return VectorInputSpec(
+        return VectorInput(
             **base_attrs,
             geometries=arg['geometries'],
             fields=Fields(
@@ -990,14 +990,14 @@ def build_input_spec(argkey, arg):
                 build_input_spec(row_name, row_spec)
                 for row_name, row_spec in arg['rows'].items()])
 
-        return CSVInputSpec(
+        return CSVInput(
             **base_attrs,
             columns=columns,
             rows=rows,
             index_col=arg.get('index_col', None))
 
     elif t == 'directory':
-        return DirectoryInputSpec(
+        return DirectoryInput(
             contents=Contents(*[
                 build_input_spec(k, v) for k, v in arg['contents'].items()]),
             permissions=arg.get('permissions', 'rx'),
@@ -1005,10 +1005,10 @@ def build_input_spec(argkey, arg):
             **base_attrs)
 
     elif t == 'file':
-        return FileInputSpec(**base_attrs)
+        return FileInput(**base_attrs)
 
     elif t == {'raster', 'vector'}:
-        return RasterOrVectorInputSpec(
+        return RasterOrVectorInput(
             **base_attrs,
             geometries=arg['geometries'],
             fields=Fields(*[
@@ -1047,29 +1047,29 @@ def build_output_spec(key, spec):
                 'no "type" property')
 
     if t == 'number':
-        return NumberOutputSpec(
+        return NumberOutput(
             **base_attrs,
             units=spec['units'],
             expression=None)
 
     elif t == 'integer':
-        return IntegerOutputSpec(**base_attrs)
+        return IntegerOutput(**base_attrs)
 
     elif t == 'ratio':
-        return RatioOutputSpec(**base_attrs)
+        return RatioOutput(**base_attrs)
 
     elif t == 'percent':
-        return PercentOutputSpec(**base_attrs)
+        return PercentOutput(**base_attrs)
 
     elif t == 'raster':
-        return SingleBandRasterOutputSpec(
+        return SingleBandRasterOutput(
             **base_attrs,
             band=build_output_spec(1, spec['bands'][1]),
             projected=None,
             projection_units=None)
 
     elif t == 'vector':
-        return VectorOutputSpec(
+        return VectorOutput(
             **base_attrs,
             geometries=spec['geometries'],
             fields=Fields(*[
@@ -1078,7 +1078,7 @@ def build_output_spec(key, spec):
             projection_units=None)
 
     elif t == 'csv':
-        return CSVOutputSpec(
+        return CSVOutput(
             **base_attrs,
             columns=Columns(*[
                 build_output_spec(key, col_spec) for key, col_spec in spec['columns'].items()]),
@@ -1086,7 +1086,7 @@ def build_output_spec(key, spec):
             index_col=spec.get('index_col', None))
 
     elif t == 'directory':
-        return DirectoryOutputSpec(
+        return DirectoryOutput(
             contents=Contents(*[
                 build_output_spec(k, v) for k, v in spec['contents'].items()]),
             permissions=None,
@@ -1094,17 +1094,17 @@ def build_output_spec(key, spec):
             **base_attrs)
 
     elif t == 'freestyle_string':
-        return StringOutputSpec(
+        return StringOutput(
             **base_attrs,
             regexp=spec.get('regexp', None))
 
     elif t == 'option_string':
-        return OptionStringOutputSpec(
+        return OptionStringOutput(
             **base_attrs,
             options=spec['options'])
 
     elif t == 'file':
-        return FileOutputSpec(**base_attrs)
+        return FileOutput(**base_attrs)
 
     else:
         raise ValueError()
@@ -1551,39 +1551,39 @@ def format_type_string(arg_type):
     # some types need a more user-friendly name
     # all types are listed here so that they can be marked up for translation
     type_names = {
-        BooleanInputSpec: gettext('true/false'),
-        CSVInputSpec: gettext('CSV'),
-        DirectoryInputSpec: gettext('directory'),
-        FileInputSpec: gettext('file'),
-        StringInputSpec: gettext('text'),
-        IntegerInputSpec: gettext('integer'),
-        NumberInputSpec: gettext('number'),
-        OptionStringInputSpec: gettext('option'),
-        PercentInputSpec: gettext('percent'),
-        SingleBandRasterInputSpec: gettext('raster'),
-        RatioInputSpec: gettext('ratio'),
-        VectorInputSpec: gettext('vector'),
-        RasterOrVectorInputSpec: gettext('raster or vector')
+        BooleanInput: gettext('true/false'),
+        CSVInput: gettext('CSV'),
+        DirectoryInput: gettext('directory'),
+        FileInput: gettext('file'),
+        StringInput: gettext('text'),
+        IntegerInput: gettext('integer'),
+        NumberInput: gettext('number'),
+        OptionStringInput: gettext('option'),
+        PercentInput: gettext('percent'),
+        SingleBandRasterInput: gettext('raster'),
+        RatioInput: gettext('ratio'),
+        VectorInput: gettext('vector'),
+        RasterOrVectorInput: gettext('raster or vector')
     }
     type_sections = {  # names of section headers to link to in the RST
-        BooleanInputSpec: 'truefalse',
-        CSVInputSpec: 'csv',
-        DirectoryInputSpec: 'directory',
-        FileInputSpec: 'file',
-        StringInputSpec: 'text',
-        IntegerInputSpec: 'integer',
-        NumberInputSpec: 'number',
-        OptionStringInputSpec: 'option',
-        PercentInputSpec: 'percent',
-        SingleBandRasterInputSpec: 'raster',
-        RatioInputSpec: 'ratio',
-        VectorInputSpec: 'vector',
-        RasterOrVectorInputSpec: 'raster'
+        BooleanInput: 'truefalse',
+        CSVInput: 'csv',
+        DirectoryInput: 'directory',
+        FileInput: 'file',
+        StringInput: 'text',
+        IntegerInput: 'integer',
+        NumberInput: 'number',
+        OptionStringInput: 'option',
+        PercentInput: 'percent',
+        SingleBandRasterInput: 'raster',
+        RatioInput: 'ratio',
+        VectorInput: 'vector',
+        RasterOrVectorInput: 'raster'
     }
-    if arg_type is RasterOrVectorInputSpec:
+    if arg_type is RasterOrVectorInput:
         return (
-            f'`{type_names[SingleBandRasterInputSpec]} <{INPUT_TYPES_HTML_FILE}#{type_sections[SingleBandRasterInputSpec]}>`__ or '
-            f'`{type_names[VectorInputSpec]} <{INPUT_TYPES_HTML_FILE}#{type_sections[VectorInputSpec]}>`__')
+            f'`{type_names[SingleBandRasterInput]} <{INPUT_TYPES_HTML_FILE}#{type_sections[SingleBandRasterInput]}>`__ or '
+            f'`{type_names[VectorInput]} <{INPUT_TYPES_HTML_FILE}#{type_sections[VectorInput]}>`__')
     return f'`{type_names[arg_type]} <{INPUT_TYPES_HTML_FILE}#{type_sections[arg_type]}>`__'
 
 
@@ -1615,9 +1615,9 @@ def describe_arg_from_spec(name, spec):
 
     # For numbers and rasters that have units, display the units
     units = None
-    if spec.__class__ is NumberInputSpec:
+    if spec.__class__ is NumberInput:
         units = spec.units
-    elif spec.__class__ is SingleBandRasterInputSpec and spec.band.__class__ is NumberInputSpec:
+    elif spec.__class__ is SingleBandRasterInput and spec.band.__class__ is NumberInput:
         units = spec.band.units
     if units:
         units_string = format_unit(units)
@@ -1626,12 +1626,12 @@ def describe_arg_from_spec(name, spec):
             translated_units = gettext("units")
             in_parentheses.append(f'{translated_units}: **{units_string}**')
 
-    if spec.__class__ is VectorInputSpec:
+    if spec.__class__ is VectorInput:
         in_parentheses.append(format_geometries_string(spec.geometries))
 
     # Represent the required state as a string, defaulting to required
     # It doesn't make sense to include this for boolean checkboxes
-    if spec.__class__ is not BooleanInputSpec:
+    if spec.__class__ is not BooleanInput:
         required_string = format_required_string(spec.required)
         in_parentheses.append(f'*{required_string}*')
 
@@ -1646,7 +1646,7 @@ def describe_arg_from_spec(name, spec):
 
     # Add details for the types that have them
     indented_block = []
-    if spec.__class__ is OptionStringInputSpec:
+    if spec.__class__ is OptionStringInput:
         # may be either a dict or set. if it's empty, the options are
         # dynamically generated. don't try to document them.
         if spec.options:
@@ -1657,7 +1657,7 @@ def describe_arg_from_spec(name, spec):
                 formatted_options = format_options_string_from_list(spec.options)
                 indented_block.append(gettext('Options:') + f' {formatted_options}')
 
-    elif spec.__class__ is CSVInputSpec:
+    elif spec.__class__ is CSVInput:
         if not spec.columns and not spec.rows:
             first_line += gettext(
                 ' Please see the sample data table for details on the format.')
@@ -1776,7 +1776,7 @@ def generate_metadata(model_module, args_dict):
 
     def _walk_spec(output_spec, workspace):
         for spec_data in output_spec:
-            if spec_data.__class__ is DirectoryOutputSpec:
+            if spec_data.__class__ is DirectoryOutput:
                 if 'taskgraph.db' in [s.id for s in spec_data.contents]:
                     continue
                 _walk_spec(

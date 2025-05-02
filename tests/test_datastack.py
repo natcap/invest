@@ -408,11 +408,11 @@ class DatastackArchiveTests(unittest.TestCase):
             self.assertTrue(
                 filecmp.cmp(archive_params[key], params[key], shallow=False))
 
-        spatial_csv_dict = spec_utils.CSVInputSpec(
+        spatial_csv_dict = spec_utils.CSVInput(
             index_col='id',
             columns=spec_utils.Columns(
-                spec_utils.IntegerInputSpec(id='id'),
-                spec_utils.FileInputSpec(id='path'))
+                spec_utils.IntegerInput(id='id'),
+                spec_utils.FileInput(id='path'))
         ).get_validated_dataframe(
             archive_params['spatial_table']
         ).to_dict(orient='index')

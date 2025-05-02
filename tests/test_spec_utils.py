@@ -41,7 +41,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
     """Test building RST for various invest args specifications."""
 
     def test_number_spec(self):
-        spec = spec_utils.NumberInputSpec(
+        spec = spec_utils.NumberInput(
             name="Bar",
             about="Description",
             units=u.meter**3/u.month,
@@ -54,7 +54,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_ratio_spec(self):
-        spec = spec_utils.RatioInputSpec(
+        spec = spec_utils.RatioInput(
             name="Bar",
             about="Description"
         )
@@ -64,7 +64,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_percent_spec(self):
-        spec = spec_utils.PercentInputSpec(
+        spec = spec_utils.PercentInput(
             name="Bar",
             about="Description",
             required=False
@@ -75,7 +75,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_integer_spec(self):
-        spec = spec_utils.IntegerInputSpec(
+        spec = spec_utils.IntegerInput(
             name="Bar",
             about="Description",
             required=True
@@ -86,7 +86,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_boolean_spec(self):
-        spec = spec_utils.BooleanInputSpec(
+        spec = spec_utils.BooleanInput(
             name="Bar",
             about="Description"
         )
@@ -96,7 +96,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_freestyle_string_spec(self):
-        spec = spec_utils.StringInputSpec(
+        spec = spec_utils.StringInput(
             name="Bar",
             about="Description"
         )
@@ -106,7 +106,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_option_string_spec_dictionary(self):
-        spec = spec_utils.OptionStringInputSpec(
+        spec = spec_utils.OptionStringInput(
             name="Bar",
             about="Description",
             options={
@@ -135,7 +135,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_option_string_spec_list(self):
-        spec = spec_utils.OptionStringInputSpec(
+        spec = spec_utils.OptionStringInput(
             name="Bar",
             about="Description",
             options=["option_a", "Option_b"]
@@ -148,8 +148,8 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_raster_spec(self):
-        spec = spec_utils.SingleBandRasterInputSpec(
-            band=spec_utils.IntegerInputSpec(),
+        spec = spec_utils.SingleBandRasterInput(
+            band=spec_utils.IntegerInput(),
             about="Description",
             name="Bar"
         )
@@ -159,8 +159,8 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
-        spec = spec_utils.SingleBandRasterInputSpec(
-            band=spec_utils.NumberInputSpec(units=u.millimeter/u.year),
+        spec = spec_utils.SingleBandRasterInput(
+            band=spec_utils.NumberInput(units=u.millimeter/u.year),
             about="Description",
             name="Bar"
         )
@@ -171,7 +171,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_vector_spec(self):
-        spec = spec_utils.VectorInputSpec(
+        spec = spec_utils.VectorInput(
             fields={},
             geometries={"LINESTRING"},
             about="Description",
@@ -183,13 +183,13 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
-        spec = spec_utils.VectorInputSpec(
+        spec = spec_utils.VectorInput(
             fields=spec_utils.Fields(
-                spec_utils.IntegerInputSpec(
+                spec_utils.IntegerInput(
                     id="id",
                     about="Unique identifier for each feature"
                 ),
-                spec_utils.NumberInputSpec(
+                spec_utils.NumberInput(
                     id="precipitation",
                     units=u.millimeter/u.year,
                     about="Average annual precipitation over the area"
@@ -206,7 +206,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_csv_spec(self):
-        spec = spec_utils.CSVInputSpec(
+        spec = spec_utils.CSVInput(
             about="Description.",
             name="Bar"
         )
@@ -219,11 +219,11 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
         # Test every type that can be nested in a CSV column:
         # number, ratio, percent, code,
-        spec = spec_utils.CSVInputSpec(
+        spec = spec_utils.CSVInput(
             about="Description",
             name="Bar",
             columns=spec_utils.Columns(
-                spec_utils.RatioInputSpec(
+                spec_utils.RatioInput(
                     id="b",
                     about="description"
                 )
@@ -237,7 +237,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_directory_spec(self):
         self.maxDiff = None
-        spec = spec_utils.DirectoryInputSpec(
+        spec = spec_utils.DirectoryInput(
             about="Description",
             name="Bar",
             contents={}
@@ -249,10 +249,10 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
     def test_multi_type_spec(self):
-        spec = spec_utils.RasterOrVectorInputSpec(
+        spec = spec_utils.RasterOrVectorInput(
             about="Description",
             name="Bar",
-            band=spec_utils.IntegerInputSpec(),
+            band=spec_utils.IntegerInput(),
             geometries={"POLYGON"},
             fields={}
         )
@@ -278,7 +278,7 @@ def _generate_files_from_spec(output_spec, workspace):
     """A utility function to support the metadata test."""
     for spec_data in output_spec:
         print(spec_data.__class__)
-        if spec_data.__class__ is spec_utils.DirectoryOutputSpec:
+        if spec_data.__class__ is spec_utils.DirectoryOutput:
             os.mkdir(os.path.join(workspace, spec_data.id))
             _generate_files_from_spec(
                 spec_data.contents, os.path.join(workspace, spec_data.id))
@@ -319,21 +319,21 @@ class TestMetadataFromSpec(unittest.TestCase):
 
         # An example invest output spec
         output_spec = spec_utils.ModelOutputs(
-            spec_utils.DirectoryOutputSpec(
+            spec_utils.DirectoryOutput(
                 id='output',
                 contents=spec_utils.Contents(
-                    spec_utils.SingleBandRasterOutputSpec(
+                    spec_utils.SingleBandRasterOutput(
                         id="urban_nature_supply_percapita.tif",
                         about="The calculated supply per capita of urban nature.",
-                        band=spec_utils.NumberInputSpec(units=u.m**2)
+                        band=spec_utils.NumberInput(units=u.m**2)
                     ),
-                    spec_utils.VectorOutputSpec(
+                    spec_utils.VectorOutput(
                         id="admin_boundaries.gpkg",
                         about=("A copy of the user's administrative boundaries "
                                "vector with a single layer."),
                         geometries=spec_utils.POLYGONS,
                         fields=spec_utils.Fields(
-                            spec_utils.NumberInputSpec(
+                            spec_utils.NumberInput(
                                 id="SUP_DEMadm_cap",
                                 units=u.m**2/u.person,
                                 about="The average urban nature supply/demand"
@@ -342,7 +342,7 @@ class TestMetadataFromSpec(unittest.TestCase):
                     )
                 )
             ),
-            spec_utils.DirectoryOutputSpec(
+            spec_utils.DirectoryOutput(
                 id='intermediate',
                 contents=spec_utils.Contents(
                     spec_utils.build_output_spec('taskgraph_cache', spec_utils.TASKGRAPH_DIR)
