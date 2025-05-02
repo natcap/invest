@@ -230,7 +230,7 @@ class FileInput(Input):
     permissions: str = 'r'
     type: typing.ClassVar[str] = 'file'
 
-    # @timeout
+    @timeout
     def validate(self, filepath):
         """Validate a single file.
 
@@ -267,7 +267,7 @@ class SingleBandRasterInput(FileInput):
     projection_units: typing.Union[pint.Unit, None] = None
     type: typing.ClassVar[str] = 'raster'
 
-    # @timeout
+    @timeout
     def validate(self, filepath):
         """Validate a GDAL Raster on disk.
 
@@ -311,7 +311,7 @@ class VectorInput(FileInput):
     projection_units: typing.Union[pint.Unit, None] = None
     type: typing.ClassVar[str] = 'vector'
 
-    # @timeout
+    @timeout
     def validate(self, filepath):
         """Validate a GDAL vector on disk.
 
@@ -397,7 +397,7 @@ class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
     projection_units: typing.Union[pint.Unit, None] = None
     type: typing.ClassVar[str] = 'raster_or_vector'
 
-    # @timeout
+    @timeout
     def validate(self, filepath):
         """Validate an input that may be a raster or vector.
 
@@ -425,7 +425,7 @@ class CSVInput(FileInput):
     index_col: typing.Union[str, None] = None
     type: typing.ClassVar[str] = 'csv'
 
-    # @timeout
+    @timeout
     def validate(self, filepath):
         """Validate a table.
 
@@ -546,7 +546,7 @@ class DirectoryInput(Input):
     must_exist: bool = True
     type: typing.ClassVar[str] = 'directory'
 
-    # @timeout
+    @timeout
     def validate(self, dirpath):
         """Validate a directory.
 
