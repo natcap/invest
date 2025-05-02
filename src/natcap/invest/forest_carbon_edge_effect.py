@@ -425,7 +425,7 @@ def execute(args):
     # Map non-forest landcover codes to carbon biomasses
     LOGGER.info('Calculating direct mapped carbon stocks')
     carbon_maps = []
-    biophysical_df = MODEL_SPEC.inputs.get(
+    biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
         args['biophysical_table_path'])
     pool_list = [('c_above', True)]
@@ -644,7 +644,7 @@ def _calculate_lulc_carbon_map(
 
     """
     # classify forest pixels from lulc
-    biophysical_df = MODEL_SPEC.inputs.get(
+    biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(biophysical_table_path)
 
     lucode_to_per_cell_carbon = {}
@@ -704,7 +704,7 @@ def _map_distance_from_tropical_forest_edge(
 
     """
     # Build a list of forest lucodes
-    biophysical_df = MODEL_SPEC.inputs.get(
+    biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
         biophysical_table_path)
     forest_codes = biophysical_df[biophysical_df['is_tropical_forest']].index.values
@@ -1036,7 +1036,7 @@ def validate(args, limit_to=None):
     """
     model_spec = copy.deepcopy(MODEL_SPEC)
     if 'pools_to_calculate' in args and args['pools_to_calculate'] == 'all':
-        model_spec.inputs.get('biophysical_table_path').columns.get('c_below').required = True
-        model_spec.inputs.get('biophysical_table_path').columns.get('c_soil').required = True
-        model_spec.inputs.get('biophysical_table_path').columns.get('c_dead').required = True
+        model_spec.get_input('biophysical_table_path').columns.get('c_below').required = True
+        model_spec.get_input('biophysical_table_path').columns.get('c_soil').required = True
+        model_spec.get_input('biophysical_table_path').columns.get('c_dead').required = True
     return validation.validate(args, model_spec)

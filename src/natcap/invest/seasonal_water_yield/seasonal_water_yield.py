@@ -625,17 +625,17 @@ def execute(args):
     # fail early on a missing required rain events table
     if (not args['user_defined_local_recharge'] and
             not args['user_defined_climate_zones']):
-        rain_events_df = MODEL_SPEC.inputs.get(
+        rain_events_df = MODEL_SPEC.get_input(
             'rain_events_table_path').get_validated_dataframe(
             args['rain_events_table_path'])
 
-    biophysical_df = MODEL_SPEC.inputs.get(
+    biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
         args['biophysical_table_path'])
 
     if args['monthly_alpha']:
         # parse out the alpha lookup table of the form (month_id: alpha_val)
-        alpha_month_map = MODEL_SPEC.inputs.get(
+        alpha_month_map = MODEL_SPEC.get_input(
             'monthly_alpha_path').get_validated_dataframe(
             args['monthly_alpha_path'])['alpha'].to_dict()
     else:
@@ -814,7 +814,7 @@ def execute(args):
             'table_name': 'Climate Zone'}
         for month_id in range(N_MONTHS):
             if args['user_defined_climate_zones']:
-                cz_rain_events_df = MODEL_SPEC.inputs.get(
+                cz_rain_events_df = MODEL_SPEC.get_input(
                     'climate_zone_table_path').get_validated_dataframe(
                     args['climate_zone_table_path'])
                 climate_zone_rain_events_month = (

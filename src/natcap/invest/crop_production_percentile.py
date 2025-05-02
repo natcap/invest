@@ -614,7 +614,7 @@ def execute(args):
         None.
 
     """
-    crop_to_landcover_df = MODEL_SPEC.inputs.get(
+    crop_to_landcover_df = MODEL_SPEC.get_input(
         'landcover_to_crop_table_path').get_validated_dataframe(
             args['landcover_to_crop_table_path'])
 
@@ -696,7 +696,7 @@ def execute(args):
         climate_percentile_yield_table_path = os.path.join(
             args['model_data_path'],
             _CLIMATE_PERCENTILE_TABLE_PATTERN % crop_name)
-        crop_climate_percentile_df = MODEL_SPEC.inputs.get(
+        crop_climate_percentile_df = MODEL_SPEC.get_input(
             'model_data_path').contents.get(
             'climate_percentile_yield_tables').contents.get(
             '[CROP]_percentile_yield_table.csv').get_validated_dataframe(
@@ -853,7 +853,7 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_df = MODEL_SPEC.inputs.get(
+    nutrient_df = MODEL_SPEC.get_input(
         'model_data_path').contents.get(
         'crop_nutrient.csv').get_validated_dataframe(
             os.path.join(args['model_data_path'], 'crop_nutrient.csv'))

@@ -710,7 +710,7 @@ class TestRecClientServer(unittest.TestCase):
         out_regression_vector_path = os.path.join(
             args['workspace_dir'], f'regression_data_{suffix}.gpkg')
 
-        predictor_df = recmodel_client.MODEL_SPEC.inputs.get(
+        predictor_df = recmodel_client.MODEL_SPEC.get_input(
             'predictor_table_path').get_validated_dataframe(
             os.path.join(SAMPLE_DATA, 'predictors_all.csv'))
         field_list = list(predictor_df.index) + ['pr_TUD', 'pr_PUD', 'avg_pr_UD']
@@ -1284,7 +1284,7 @@ class RecreationClientRegressionTests(unittest.TestCase):
         predictor_table_path = os.path.join(SAMPLE_DATA, 'predictors.csv')
 
         # make outputs to be overwritten
-        predictor_dict = recmodel_client.MODEL_SPEC.inputs.get(
+        predictor_dict = recmodel_client.MODEL_SPEC.get_input(
             'predictor_table_path').get_validated_dataframe(
             predictor_table_path).to_dict(orient='index')
         predictor_list = predictor_dict.keys()

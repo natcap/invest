@@ -475,7 +475,7 @@ def execute(args):
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate')
     utils.make_directories([args['workspace_dir'], intermediate_dir])
-    biophysical_df = MODEL_SPEC.inputs.get(
+    biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
         args['biophysical_table_path'])
 
@@ -1160,7 +1160,7 @@ def calculate_energy_savings(
                   for field in target_building_layer.schema]
     type_field_index = fieldnames.index('type')
 
-    energy_consumption_df = MODEL_SPEC.inputs.get(
+    energy_consumption_df = MODEL_SPEC.get_input(
         'energy_consumption_table_path').get_validated_dataframe(
         energy_consumption_table_path)
 
@@ -1541,7 +1541,7 @@ def validate(args, limit_to=None):
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     if ('biophysical_table_path' not in invalid_keys and
             'cc_method' not in invalid_keys):
-        spec = copy.deepcopy(MODEL_SPEC.inputs.get('biophysical_table_path'))
+        spec = copy.deepcopy(MODEL_SPEC.get_input('biophysical_table_path'))
         if args['cc_method'] == 'factors':
             spec.columns.get('shade').required = True
             spec.columns.get('albedo').required = True

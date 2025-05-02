@@ -447,8 +447,8 @@ MODEL_SPEC = spec_utils.build_model_spec({
     }
 })
 
-_VALID_RISK_EQS = set(MODEL_SPEC.inputs.get('risk_eq').options.keys())
-_VALID_DECAY_TYPES = set(MODEL_SPEC.inputs.get('decay_eq').options.keys())
+_VALID_RISK_EQS = set(MODEL_SPEC.get_input('risk_eq').options.keys())
+_VALID_DECAY_TYPES = set(MODEL_SPEC.get_input('decay_eq').options.keys())
 
 
 def execute(args):
@@ -1791,7 +1791,7 @@ def _parse_info_table(info_table_path):
     info_table_path = os.path.abspath(info_table_path)
 
     try:
-        table = MODEL_SPEC.inputs.get(
+        table = MODEL_SPEC.get_input(
             'info_table_path').get_validated_dataframe(info_table_path)
     except ValueError as err:
         if 'Index has duplicate keys' in str(err):

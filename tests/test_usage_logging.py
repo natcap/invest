@@ -68,13 +68,13 @@ class UsageLoggingTests(unittest.TestCase):
         model_spec = spec_utils.ModelSpec(
             model_id='', model_title='', userguide=None,
             aliases=None, ui_spec=spec_utils.UISpec(order=[], hidden={}),
-            inputs=spec_utils.ModelInputs(
+            inputs=[
                 spec_utils.SingleBandRasterInput(id='raster', band=spec_utils.Input()),
                 spec_utils.VectorInput(id='vector', geometries={}, fields={}),
                 spec_utils.StringInput(id='not_a_gis_input'),
                 spec_utils.SingleBandRasterInput(id='blank_raster_path', band=spec_utils.Input()),
                 spec_utils.VectorInput(id='blank_vector_path', geometries={}, fields={})
-            ),
+            ],
             outputs={},
             args_with_spatial_overlap=None)
 

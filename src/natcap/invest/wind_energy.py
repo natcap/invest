@@ -717,11 +717,11 @@ def execute(args):
     number_of_turbines = int(args['number_of_turbines'])
 
     # Read the biophysical turbine parameters into a dictionary
-    turbine_dict = MODEL_SPEC.inputs.get(
+    turbine_dict = MODEL_SPEC.get_input(
         'turbine_parameters_path').get_validated_dataframe(
         args['turbine_parameters_path']).iloc[0].to_dict()
     # Read the biophysical global parameters into a dictionary
-    global_params_dict = MODEL_SPEC.inputs.get(
+    global_params_dict = MODEL_SPEC.get_input(
         'global_wind_parameters_path').get_validated_dataframe(
         args['global_wind_parameters_path']).iloc[0].to_dict()
 
@@ -741,7 +741,7 @@ def execute(args):
         # If Price Table provided use that for price of energy, validate inputs
         time = parameters_dict['time_period']
         if args['price_table']:
-            wind_price_df = MODEL_SPEC.inputs.get(
+            wind_price_df = MODEL_SPEC.get_input(
                 'wind_schedule').get_validated_dataframe(
                 args['wind_schedule']).sort_index()  # sort by year
 
@@ -1112,7 +1112,7 @@ def execute(args):
         LOGGER.info('Grid Points Provided. Reading in the grid points')
 
         # Read the grid points csv, and convert it to land and grid dictionary
-        grid_land_df = MODEL_SPEC.inputs.get(
+        grid_land_df = MODEL_SPEC.get_input(
             'grid_points_path').get_validated_dataframe(args['grid_points_path'])
 
         # Convert the dataframes to dictionaries, using 'ID' (the index) as key
@@ -1933,7 +1933,7 @@ def _compute_density_harvested_fields(
 
     # Read the wind energy data into a dictionary
     LOGGER.info('Reading in Wind Data into a dictionary')
-    wind_point_df = MODEL_SPEC.inputs.get(
+    wind_point_df = MODEL_SPEC.get_input(
         'wind_data_path').get_validated_dataframe(wind_data_path)
     wind_point_df.columns = wind_point_df.columns.str.upper()
     # Calculate scale value at new hub height given reference values.
@@ -2672,7 +2672,7 @@ def validate(args, limit_to=None):
             'global_wind_parameters_path' in valid_sufficient_keys):
         year_count = utils.read_csv_to_dataframe(
             args['wind_schedule']).shape[0]
-        time = MODEL_SPEC.inputs.get(
+        time = MODEL_SPEC.get_input(
             'global_wind_parameters_path').get_validated_dataframe(
             args['global_wind_parameters_path']).iloc[0]['time_period']
         if year_count != time + 1:

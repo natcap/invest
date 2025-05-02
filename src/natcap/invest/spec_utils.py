@@ -8,8 +8,8 @@ import queue
 import re
 import threading
 import types
+import typing
 import warnings
-from typing import Union, ClassVar
 
 from osgeo import gdal
 from osgeo import ogr
@@ -199,13 +199,6 @@ class IterableWithDotAccess():
     #     else:
     #         raise StopIteration
 
-
-class ModelInputs(IterableWithDotAccess):
-    pass
-
-class ModelOutputs(IterableWithDotAccess):
-    pass
-
 class Rows(IterableWithDotAccess):
     pass
 
@@ -223,19 +216,19 @@ class Input:
     id: str = ''
     name: str = ''
     about: str = ''
-    required: Union[bool, str] = True
-    allowed: Union[bool, str] = True
+    required: typing.Union[bool, str] = True
+    allowed: typing.Union[bool, str] = True
 
 @dataclasses.dataclass
 class Output:
     id: str = ''
     about: str = ''
-    created_if: Union[bool, str] = True
+    created_if: typing.Union[bool, str] = True
 
 @dataclasses.dataclass
 class FileInput(Input):
     permissions: str = 'r'
-    type: ClassVar[str] = 'file'
+    type: typing.ClassVar[str] = 'file'
 
     # @timeout
     def validate(self, filepath):
@@ -269,10 +262,10 @@ class FileInput(Input):
 
 @dataclasses.dataclass
 class SingleBandRasterInput(FileInput):
-    band: Union[Input, None] = None
-    projected: Union[bool, None] = None
-    projection_units: Union[pint.Unit, None] = None
-    type: ClassVar[str] = 'raster'
+    band: typing.Union[Input, None] = None
+    projected: typing.Union[bool, None] = None
+    projection_units: typing.Union[pint.Unit, None] = None
+    type: typing.ClassVar[str] = 'raster'
 
     # @timeout
     def validate(self, filepath):
@@ -313,10 +306,10 @@ class SingleBandRasterInput(FileInput):
 @dataclasses.dataclass
 class VectorInput(FileInput):
     geometries: set = dataclasses.field(default_factory=dict)
-    fields: Union[Fields, None] = None
-    projected: Union[bool, None] = None
-    projection_units: Union[pint.Unit, None] = None
-    type: ClassVar[str] = 'vector'
+    fields: typing.Union[Fields, None] = None
+    projected: typing.Union[bool, None] = None
+    projection_units: typing.Union[pint.Unit, None] = None
+    type: typing.ClassVar[str] = 'vector'
 
     # @timeout
     def validate(self, filepath):
@@ -397,12 +390,12 @@ class VectorInput(FileInput):
 
 @dataclasses.dataclass
 class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
-    band: Union[Input, None] = None
+    band: typing.Union[Input, None] = None
     geometries: set = dataclasses.field(default_factory=dict)
-    fields: Union[Fields, None] = None
-    projected: Union[bool, None] = None
-    projection_units: Union[pint.Unit, None] = None
-    type: ClassVar[str] = 'raster_or_vector'
+    fields: typing.Union[Fields, None] = None
+    projected: typing.Union[bool, None] = None
+    projection_units: typing.Union[pint.Unit, None] = None
+    type: typing.ClassVar[str] = 'raster_or_vector'
 
     # @timeout
     def validate(self, filepath):
@@ -427,10 +420,10 @@ class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
 
 @dataclasses.dataclass
 class CSVInput(FileInput):
-    columns: Union[Columns, None] = None
-    rows: Union[Rows, None] = None
-    index_col: Union[str, None] = None
-    type: ClassVar[str] = 'csv'
+    columns: typing.Union[Columns, None] = None
+    rows: typing.Union[Rows, None] = None
+    index_col: typing.Union[str, None] = None
+    type: typing.ClassVar[str] = 'csv'
 
     # @timeout
     def validate(self, filepath):
@@ -548,10 +541,10 @@ class CSVInput(FileInput):
 
 @dataclasses.dataclass
 class DirectoryInput(Input):
-    contents: Union[Contents, None] = None
+    contents: typing.Union[Contents, None] = None
     permissions: str = ''
     must_exist: bool = True
-    type: ClassVar[str] = 'directory'
+    type: typing.ClassVar[str] = 'directory'
 
     # @timeout
     def validate(self, dirpath):
@@ -619,9 +612,9 @@ class DirectoryInput(Input):
 
 @dataclasses.dataclass
 class NumberInput(Input):
-    units: Union[pint.Unit, None] = None
-    expression: Union[str, None] = None
-    type: ClassVar[str] = 'number'
+    units: typing.Union[pint.Unit, None] = None
+    expression: typing.Union[str, None] = None
+    type: typing.ClassVar[str] = 'number'
 
     def validate(self, value):
         """Validate numbers.
@@ -662,7 +655,7 @@ class NumberInput(Input):
 
 @dataclasses.dataclass
 class IntegerInput(Input):
-    type: ClassVar[str] = 'integer'
+    type: typing.ClassVar[str] = 'integer'
 
     def validate(self, value):
         """Validate an integer.
@@ -689,7 +682,7 @@ class IntegerInput(Input):
 
 @dataclasses.dataclass
 class RatioInput(Input):
-    type: ClassVar[str] = 'ratio'
+    type: typing.ClassVar[str] = 'ratio'
 
     def validate(self, value):
         """Validate a ratio (a proportion expressed as a value from 0 to 1).
@@ -717,7 +710,7 @@ class RatioInput(Input):
 
 @dataclasses.dataclass
 class PercentInput(Input):
-    type: ClassVar[str] = 'percent'
+    type: typing.ClassVar[str] = 'percent'
 
     def validate(self, value):
         """Validate a percent (a proportion expressed as a value from 0 to 100).
@@ -744,7 +737,7 @@ class PercentInput(Input):
 
 @dataclasses.dataclass
 class BooleanInput(Input):
-    type: ClassVar[str] = 'boolean'
+    type: typing.ClassVar[str] = 'boolean'
 
     def validate(self, value):
         """Validate a boolean value.
@@ -767,8 +760,8 @@ class BooleanInput(Input):
 
 @dataclasses.dataclass
 class StringInput(Input):
-    regexp: Union[str, None] = None
-    type: ClassVar[str] = 'string'
+    regexp: typing.Union[str, None] = None
+    type: typing.ClassVar[str] = 'string'
 
     def validate(self, value):
         """Validate an arbitrary string.
@@ -794,8 +787,8 @@ class StringInput(Input):
 
 @dataclasses.dataclass
 class OptionStringInput(Input):
-    options: Union[list, None] = None
-    type: ClassVar[str] = 'option_string'
+    options: typing.Union[list, None] = None
+    type: typing.ClassVar[str] = 'option_string'
 
     def validate(self, value):
         """Validate that a string is in a set of options.
@@ -828,26 +821,26 @@ class OtherInput(Input):
 
 @dataclasses.dataclass
 class SingleBandRasterOutput(Output):
-    band: Union[Input, None] = None
-    projected: Union[bool, None] = None
-    projection_units: Union[pint.Unit, None] = None
+    band: typing.Union[Input, None] = None
+    projected: typing.Union[bool, None] = None
+    projection_units: typing.Union[pint.Unit, None] = None
 
 @dataclasses.dataclass
 class VectorOutput(Output):
     geometries: set = dataclasses.field(default_factory=dict)
-    fields: Union[Fields, None] = None
-    projected: Union[bool, None] = None
-    projection_units: Union[pint.Unit, None] = None
+    fields: typing.Union[Fields, None] = None
+    projected: typing.Union[bool, None] = None
+    projection_units: typing.Union[pint.Unit, None] = None
 
 @dataclasses.dataclass
 class CSVOutput(Output):
-    columns: Union[Columns, None] = None
-    rows: Union[Rows, None] = None
-    index_col: Union[str, None] = None
+    columns: typing.Union[Columns, None] = None
+    rows: typing.Union[Rows, None] = None
+    index_col: typing.Union[str, None] = None
 
 @dataclasses.dataclass
 class DirectoryOutput(Output):
-    contents: Union[Contents, None] = None
+    contents: typing.Union[Contents, None] = None
     permissions: str = ''
     must_exist: bool = True
 
@@ -857,8 +850,8 @@ class FileOutput(Output):
 
 @dataclasses.dataclass
 class NumberOutput(Output):
-    units: Union[pint.Unit, None] = None
-    expression: Union[str, None] = None
+    units: typing.Union[pint.Unit, None] = None
+    expression: typing.Union[str, None] = None
 
 @dataclasses.dataclass
 class IntegerOutput(Output):
@@ -874,15 +867,15 @@ class PercentOutput(Output):
 
 @dataclasses.dataclass
 class StringOutput(Output):
-    regexp: Union[str, None] = None
+    regexp: typing.Union[str, None] = None
 
 @dataclasses.dataclass
 class OptionStringOutput(Output):
-    options: Union[list, None] = None
+    options: typing.Union[list, None] = None
 
 @dataclasses.dataclass
 class UISpec:
-    order: Union[list, None] = None
+    order: typing.Union[list, None] = None
     hidden: list = None
     dropdown_functions: dict = dataclasses.field(default_factory=dict)
 
@@ -892,21 +885,26 @@ class ModelSpec:
     model_id: str
     model_title: str
     userguide: str
-    aliases: set
     ui_spec: UISpec
-    inputs: ModelInputs
-    outputs: set
+    inputs: typing.Iterable[Input]
+    outputs: typing.Iterable[Output]
     args_with_spatial_overlap: dict
+    aliases: set = dataclasses.field(default_factory=set)
+
+    def __post_init__(self):
+        self.inputs_dict = {_input.id: _input for _input in self.inputs}
+        self.outputs_dict = {_output.id: _output for _output in self.outputs}
+
+    def get_input(self, key):
+        return self.inputs_dict[key]
 
 
 def build_model_spec(model_spec):
-    input_specs = [
+    inputs = [
         build_input_spec(argkey, argspec)
         for argkey, argspec in model_spec['args'].items()]
-    output_specs = [
+    outputs = [
         build_output_spec(argkey, argspec) for argkey, argspec in model_spec['outputs'].items()]
-    inputs = ModelInputs(*input_specs)
-    outputs = ModelOutputs(*output_specs)
     ui_spec = UISpec(
         order=model_spec['ui_spec']['order'],
         hidden=model_spec['ui_spec'].get('hidden', None),
@@ -1682,8 +1680,8 @@ def describe_arg_from_name(module_name, *arg_keys):
     module = importlib.import_module(module_name)
     # start with the spec for all args
     # narrow down to the nested spec indicated by the sequence of arg keys
-    spec = module.MODEL_SPEC.inputs
-    for i, key in enumerate(arg_keys):
+    spec = module.MODEL_SPEC.get_input(arg_keys[0])
+    for i, key in enumerate(arg_keys[1:]):
         # convert raster band numbers to ints
         if arg_keys[i - 1] == 'bands':
             key = int(key)

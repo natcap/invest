@@ -455,10 +455,10 @@ def execute(args):
 
     LOGGER.info("Checking Threat and Sensitivity tables for compliance")
     # Get CSVs as dictionaries and ensure the key is a string for threats.
-    threat_df = MODEL_SPEC.inputs.get(
+    threat_df = MODEL_SPEC.get_input(
         'threats_table_path').get_validated_dataframe(
         args['threats_table_path']).fillna('')
-    sensitivity_df = MODEL_SPEC.inputs.get(
+    sensitivity_df = MODEL_SPEC.get_input(
         'sensitivity_table_path').get_validated_dataframe(
         args['sensitivity_table_path'])
 
@@ -1181,10 +1181,10 @@ def validate(args, limit_to=None):
             "sensitivity_table_path" not in invalid_keys and
             "threat_raster_folder" not in invalid_keys):
         # Get CSVs as dictionaries and ensure the key is a string for threats.
-        threat_df = MODEL_SPEC.inputs.get(
+        threat_df = MODEL_SPEC.get_input(
             'threats_table_path').get_validated_dataframe(
             args['threats_table_path']).fillna('')
-        sensitivity_df = MODEL_SPEC.inputs.get(
+        sensitivity_df = MODEL_SPEC.get_input(
             'sensitivity_table_path').get_validated_dataframe(
             args['sensitivity_table_path'])
 

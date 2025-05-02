@@ -120,10 +120,10 @@ def _calculate_args_bounding_box(args, model_spec):
         # should already have been validated so the path is either valid or
         # blank.
         spatial_info = None
-        if (isinstance(model_spec.inputs.get(key),
+        if (isinstance(model_spec.get_input(key),
                 spec_utils.SingleBandRasterInput) and value.strip() != ''):
             spatial_info = pygeoprocessing.get_raster_info(value)
-        elif (isinstance(model_spec.inputs.get(key),
+        elif (isinstance(model_spec.get_input(key),
                 spec_utils.VectorInput) and value.strip() != ''):
             spatial_info = pygeoprocessing.get_vector_info(value)
 
@@ -158,7 +158,7 @@ def _calculate_args_bounding_box(args, model_spec):
                 LOGGER.exception(
                     f'Error when transforming coordinates: {transform_error}')
         else:
-            LOGGER.debug(f'Arg {key} of type {model_spec.inputs.get(key).__class__} '
+            LOGGER.debug(f'Arg {key} of type {model_spec.get_input(key).__class__} '
                           'excluded from bounding box calculation')
 
     return bb_intersection, bb_union

@@ -503,11 +503,11 @@ def execute(args):
 
     LOGGER.info(
         "Checking if the landcover raster is missing lucodes")
-    crop_to_landcover_df = MODEL_SPEC.inputs.get(
+    crop_to_landcover_df = MODEL_SPEC.get_input(
         'landcover_to_crop_table_path').get_validated_dataframe(
         args['landcover_to_crop_table_path'])
 
-    crop_to_fertilization_rate_df = MODEL_SPEC.inputs.get(
+    crop_to_fertilization_rate_df = MODEL_SPEC.get_input(
         'fertilization_rate_table_path').get_validated_dataframe(
         args['fertilization_rate_table_path'])
 
@@ -584,7 +584,7 @@ def execute(args):
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
-        crop_regression_df = MODEL_SPEC.inputs.get('model_data_path').contents.get(
+        crop_regression_df = MODEL_SPEC.get_input('model_data_path').contents.get(
                 'climate_regression_yield_tables').contents.get(
                 '[CROP]_regression_yield_table.csv').get_validated_dataframe(
                     os.path.join(args['model_data_path'],
@@ -807,7 +807,7 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_df = MODEL_SPEC.inputs.get('model_data_path').contents.get(
+    nutrient_df = MODEL_SPEC.get_input('model_data_path').contents.get(
         'crop_nutrient.csv').get_validated_dataframe(
             os.path.join(args['model_data_path'], 'crop_nutrient.csv'))
 

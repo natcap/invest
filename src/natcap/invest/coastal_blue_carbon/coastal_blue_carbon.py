@@ -585,7 +585,7 @@ def execute(args):
     task_graph, n_workers, intermediate_dir, output_dir, suffix = (
         _set_up_workspace(args))
 
-    snapshots = MODEL_SPEC.inputs.get(
+    snapshots = MODEL_SPEC.get_input(
         'landcover_snapshot_csv').get_validated_dataframe(
             args['landcover_snapshot_csv'])['raster_path'].to_dict()
 
@@ -607,7 +607,7 @@ def execute(args):
 
     # We're assuming that the LULC initial variables and the carbon pool
     # transient table are combined into a single lookup table.
-    biophysical_df = MODEL_SPEC.inputs.get(
+    biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
             args['biophysical_table_path'])
 
@@ -977,7 +977,7 @@ def execute(args):
     prices = None
     if args.get('do_economic_analysis', False):  # Do if truthy
         if args.get('use_price_table', False):
-            prices = MODEL_SPEC.inputs.get(
+            prices = MODEL_SPEC.get_input(
                 'price_table_path').get_validated_dataframe(
                     args['price_table_path'])['price'].to_dict()
         else:
@@ -1961,7 +1961,7 @@ def _read_transition_matrix(transition_csv_path, biophysical_df):
         landcover transition, and the second contains accumulation rates for
         the pool for the landcover transition.
     """
-    table = MODEL_SPEC.inputs.get(
+    table = MODEL_SPEC.get_input(
         'landcover_transitions_table').get_validated_dataframe(
             transition_csv_path).reset_index()
 
@@ -2183,7 +2183,7 @@ def validate(args, limit_to=None):
 
     if ("landcover_snapshot_csv" not in invalid_keys and
             "landcover_snapshot_csv" in sufficient_keys):
-        snapshots = MODEL_SPEC.inputs.get(
+        snapshots = MODEL_SPEC.get_input(
             'landcover_snapshot_csv').get_validated_dataframe(
                 args['landcover_snapshot_csv']
         )['raster_path'].to_dict()
@@ -2205,7 +2205,7 @@ def validate(args, limit_to=None):
     # check for invalid options in the translation table
     if ("landcover_transitions_table" not in invalid_keys and
             "landcover_transitions_table" in sufficient_keys):
-        transitions_spec = MODEL_SPEC.inputs.get('landcover_transitions_table')
+        transitions_spec = MODEL_SPEC.get_input('landcover_transitions_table')
         transition_options = list(
             transitions_spec.columns.get('[LULC CODE]').options.keys())
         # lowercase options since utils call will lowercase table values

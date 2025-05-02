@@ -755,14 +755,14 @@ def execute(args):
     LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
     LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
 
-    machine_param_dict = MODEL_SPEC.inputs.get(
+    machine_param_dict = MODEL_SPEC.get_input(
         'machine_param_path').get_validated_dataframe(
         args['machine_param_path'])['value'].to_dict()
 
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_df dataframe for later use in valuation
-        grid_land_df = MODEL_SPEC.inputs.get(
+        grid_land_df = MODEL_SPEC.get_input(
             'land_gridPts_path').get_validated_dataframe(args['land_gridPts_path'])
         missing_grid_land_fields = []
         for field in ['id', 'type', 'lat', 'long', 'location']:
@@ -775,7 +775,7 @@ def execute(args):
                 'Connection Points File: %s' % missing_grid_land_fields)
 
     if 'valuation_container' in args and args['valuation_container']:
-        machine_econ_dict = MODEL_SPEC.inputs.get(
+        machine_econ_dict = MODEL_SPEC.get_input(
             'machine_econ_path').get_validated_dataframe(
             args['machine_econ_path'])['value'].to_dict()
 

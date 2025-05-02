@@ -321,7 +321,7 @@ def execute(args):
             "Baseline LULC Year is earlier than the Alternate LULC Year."
         )
 
-    carbon_pool_df = MODEL_SPEC.inputs.get(
+    carbon_pool_df = MODEL_SPEC.get_input(
         'carbon_pools_path').get_validated_dataframe(args['carbon_pools_path'])
 
     try:

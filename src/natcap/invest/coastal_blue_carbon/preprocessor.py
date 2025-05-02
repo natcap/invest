@@ -184,7 +184,7 @@ def execute(args):
         os.path.join(args['workspace_dir'], 'taskgraph_cache'),
         n_workers, reporting_interval=5.0)
 
-    snapshots_dict = MODEL_SPEC.inputs.get(
+    snapshots_dict = MODEL_SPEC.get_input(
         'landcover_snapshot_csv').get_validated_dataframe(
             args['landcover_snapshot_csv'])['raster_path'].to_dict()
 
@@ -216,7 +216,7 @@ def execute(args):
         target_path_list=aligned_snapshot_paths,
         task_name='Align input landcover rasters')
 
-    landcover_df = MODEL_SPEC.inputs.get(
+    landcover_df = MODEL_SPEC.get_input(
         'lulc_lookup_table_path').get_validated_dataframe(
             args['lulc_lookup_table_path'])
 
@@ -388,7 +388,7 @@ def _create_biophysical_table(landcover_df, target_biophysical_table_path):
     """
     target_column_names = [
         spec.id.lower() for spec in
-        coastal_blue_carbon.MODEL_SPEC.inputs.get('biophysical_table_path').columns]
+        coastal_blue_carbon.MODEL_SPEC.get_input('biophysical_table_path').columns]
 
     with open(target_biophysical_table_path, 'w') as bio_table:
         bio_table.write(f"{','.join(target_column_names)}\n")

@@ -303,7 +303,7 @@ def validate(args, spec):
         # we don't need to try to validate them
         try:
             # Using deepcopy to make sure we don't modify the original spec
-            parameter_spec = copy.deepcopy(spec.inputs.get(key))
+            parameter_spec = copy.deepcopy(spec.get_input(key))
         except KeyError:
             LOGGER.debug(f'Provided key {key} does not exist in MODEL_SPEC')
             continue
@@ -418,14 +418,12 @@ def invest_validator(validate_func):
             warnings_ = validate_func(args, limit_to)
             return warnings_
 
-        args_spec = model_module.MODEL_SPEC.inputs
-
         if limit_to is None:
             LOGGER.info('Starting whole-model validation with MODEL_SPEC')
             warnings_ = validate_func(args)
         else:
             LOGGER.info('Starting single-input validation with MODEL_SPEC')
-            args_key_spec = args_spec.get(limit_to)
+            args_key_spec = model_module.MODEL_SPEC.get_input(limit_to)
 
             args_value = args[limit_to]
             error_msg = None

@@ -624,7 +624,7 @@ def execute(args):
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
 
-    biophysical_df = MODEL_SPEC.inputs.get(
+    biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
         args['biophysical_table_path'])
 
@@ -1298,11 +1298,11 @@ def validate(args, limit_to=None):
 
     for param in ['load', 'eff', 'crit_len']:
         for nutrient in nutrients_selected:
-            spec_copy.inputs.get('biophysical_table_path').columns.get(
+            spec_copy.get_input('biophysical_table_path').columns.get(
                 f'{param}_{nutrient}').required = True
 
     if 'n' in nutrients_selected:
-        spec_copy.inputs.get('biophysical_table_path').columns.get(
+        spec_copy.get_input('biophysical_table_path').columns.get(
             'proportion_subsurface_n').required = True
 
     validation_warnings = validation.validate(args, spec_copy)

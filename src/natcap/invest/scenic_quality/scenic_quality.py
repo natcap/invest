@@ -283,7 +283,7 @@ def execute(args):
             'b': float(args['b_coef']),
         }
         if (args['valuation_function'] not in
-                MODEL_SPEC.inputs.get('valuation_function').options):
+                MODEL_SPEC.get_input('valuation_function').options):
             raise ValueError('Valuation function type %s not recognized' %
                              args['valuation_function'])
         max_valuation_radius = float(args['max_valuation_radius'])

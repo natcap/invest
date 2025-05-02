@@ -239,7 +239,7 @@ def build_datastack_archive(args, model_id, datastack_path):
         if key not in module.MODEL_SPEC.inputs:
             LOGGER.info(f'Skipping arg {key}; not in model MODEL_SPEC')
 
-        input_spec = module.MODEL_SPEC.inputs.get(key)
+        input_spec = module.MODEL_SPEC.get_input(key)
         if input_spec.__class__ in file_based_types:
             if args[key] in {None, ''}:
                 LOGGER.info(

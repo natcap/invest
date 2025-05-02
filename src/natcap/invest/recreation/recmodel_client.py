@@ -609,7 +609,7 @@ def execute(args):
         # Compute the regression
         coefficient_json_path = os.path.join(
             intermediate_dir, 'predictor_estimates.json')
-        predictor_df = MODEL_SPEC.inputs.get(
+        predictor_df = MODEL_SPEC.get_input(
             'predictor_table_path').get_validated_dataframe(
             args['predictor_table_path'])
         predictor_id_list = predictor_df.index
@@ -996,7 +996,7 @@ def _schedule_predictor_data_processing(
         'line_intersect_length': _line_intersect_length,
     }
 
-    predictor_df = MODEL_SPEC.inputs.get(
+    predictor_df = MODEL_SPEC.get_input(
         'predictor_table_path').get_validated_dataframe(predictor_table_path)
     predictor_task_list = []
     predictor_json_list = []  # tracks predictor files to add to gpkg
@@ -1765,7 +1765,7 @@ def _validate_same_id_lengths(table_path):
         string message if IDs are too long
 
     """
-    predictor_df = MODEL_SPEC.inputs.get(
+    predictor_df = MODEL_SPEC.get_input(
         'predictor_table_path').get_validated_dataframe(table_path)
     too_long = set()
     for p_id in predictor_df.index:
@@ -1794,11 +1794,11 @@ def _validate_same_ids_and_types(
         string message if any of the fields in 'id' and 'type' don't match
         between tables.
     """
-    predictor_df = MODEL_SPEC.inputs.get(
+    predictor_df = MODEL_SPEC.get_input(
         'predictor_table_path').get_validated_dataframe(
         predictor_table_path)
 
-    scenario_predictor_df = MODEL_SPEC.inputs.get(
+    scenario_predictor_df = MODEL_SPEC.get_input(
         'scenario_predictor_table_path').get_validated_dataframe(
         scenario_predictor_table_path)
 
@@ -1825,7 +1825,7 @@ def _validate_same_projection(base_vector_path, table_path):
     """
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
-    data_paths = MODEL_SPEC.inputs.get(
+    data_paths = MODEL_SPEC.get_input(
         'predictor_table_path').get_validated_dataframe(
         table_path)['path'].tolist()
 
@@ -1868,7 +1868,7 @@ def _validate_predictor_types(table_path):
         string message if any value in the ``type`` column does not match a
         valid type, ignoring leading/trailing whitespace.
     """
-    df = MODEL_SPEC.inputs.get(
+    df = MODEL_SPEC.get_input(
         'predictor_table_path').get_validated_dataframe(table_path)
     # ignore leading/trailing whitespace because it will be removed
     # when the type values are used

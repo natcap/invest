@@ -269,7 +269,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         expected_rst = (
             '.. _carbon-pools-path-columns-lucode:\n\n' +
             '**lucode** (`integer <input_types.html#integer>`__, *required*): ' +
-            carbon.MODEL_SPEC.inputs.get('carbon_pools_path').columns.get('lucode').about
+            carbon.MODEL_SPEC.get_input('carbon_pools_path').columns.get('lucode').about
         )
         self.assertEqual(repr(out), repr(expected_rst))
 
@@ -318,7 +318,7 @@ class TestMetadataFromSpec(unittest.TestCase):
         """Test writing metadata for an invest output workspace."""
 
         # An example invest output spec
-        output_spec = spec_utils.ModelOutputs(
+        output_spec = [
             spec_utils.DirectoryOutput(
                 id='output',
                 contents=spec_utils.Contents(
@@ -348,7 +348,7 @@ class TestMetadataFromSpec(unittest.TestCase):
                     spec_utils.build_output_spec('taskgraph_cache', spec_utils.TASKGRAPH_DIR)
                 )
             )
-        )
+        ]
         # Generate an output workspace with real files, without
         # running an invest model.
         _generate_files_from_spec(output_spec, self.workspace_dir)
@@ -362,7 +362,7 @@ class TestMetadataFromSpec(unittest.TestCase):
                 userguide='',
                 aliases=[],
                 ui_spec={},
-                inputs=spec_utils.ModelInputs(),
+                inputs={},
                 args_with_spatial_overlap={},
                 outputs=output_spec
             )
