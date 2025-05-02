@@ -1409,7 +1409,7 @@ def serialize_args_spec(spec):
 
     spec_dict = json.loads(json.dumps(spec, default=fallback_serializer, ensure_ascii=False))
     spec_dict['args'] = spec_dict.pop('inputs')
-    return json.dumps(spec_dict)
+    return json.dumps(spec_dict, ensure_ascii=False)
 
 
 # accepted geometries for a vector will be displayed in this order
