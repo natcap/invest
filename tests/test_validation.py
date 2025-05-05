@@ -295,18 +295,20 @@ class ValidatorTest(unittest.TestCase):
         from natcap.invest import validation
 
         # both args and the kwarg should be passed to the function
+        @spec_utils.timeout
         def func(arg1, arg2, kwarg=None):
             self.assertEqual(kwarg, 'kwarg')
             time.sleep(1)
 
         # this will raise an error if the timeout is exceeded
         # timeout defaults to 5 seconds so this should pass
-        spec_utils.timeout(func, 'arg1', 'arg2', kwarg='kwarg')
+        func('arg1', 'arg2', kwarg='kwarg')
 
     def test_timeout_fail(self):
         from natcap.invest import validation
 
         # both args and the kwarg should be passed to the function
+        @spec_utils.timeout
         def func(arg):
             time.sleep(6)
 
@@ -315,7 +317,7 @@ class ValidatorTest(unittest.TestCase):
         with warnings.catch_warnings(record=True) as ws:
             # cause all warnings to always be triggered
             warnings.simplefilter("always")
-            spec_utils.timeout(func, 'arg')
+            func('arg')
             self.assertTrue(len(ws) == 1)
             self.assertTrue('timed out' in str(ws[0].message))
 
@@ -924,13 +926,13 @@ class CSVValidation(unittest.TestCase):
 
         # define a side effect for the mock that will sleep
         # for longer than the allowed timeout
+        @spec_utils.timeout
         def delay(*args, **kwargs):
             time.sleep(7)
             return []
 
         # replace the validation.check_csv with the mock function, and try to validate
-        with unittest.mock.patch('natcap.invest.spec_utils.CSVInput.validate',
-                                 staticmethod(functools.partial(spec_utils.timeout, delay))):
+        with unittest.mock.patch('natcap.invest.spec_utils.CSVInput.validate', delay):
             with warnings.catch_warnings(record=True) as ws:
                 # cause all warnings to always be triggered
                 warnings.simplefilter("always")

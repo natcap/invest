@@ -76,16 +76,16 @@ class TranslationTests(unittest.TestCase):
         self.locales_patcher.stop()
         shutil.rmtree(self.workspace_dir)
 
-    # def test_invest_list(self):
-    #     """Translation: test that CLI list output is translated."""
-    #     from natcap.invest import cli
-    #     with patch('sys.stdout', new=io.StringIO()) as out:
-    #         with self.assertRaises(SystemExit):
-    #             cli.main(['--language', TEST_LANG, 'list'])
-    #     result = out.getvalue()
-    #     self.assertIn(TEST_MESSAGES['Available models:'], result)
-    #     self.assertIn(
-    #         TEST_MESSAGES['Carbon Storage and Sequestration'], result)
+    def test_invest_list(self):
+        """Translation: test that CLI list output is translated."""
+        from natcap.invest import cli
+        with patch('sys.stdout', new=io.StringIO()) as out:
+            with self.assertRaises(SystemExit):
+                cli.main(['--language', TEST_LANG, 'list'])
+        result = out.getvalue()
+        self.assertIn(TEST_MESSAGES['Available models:'], result)
+        self.assertIn(
+            TEST_MESSAGES['Carbon Storage and Sequestration'], result)
 
     def test_invest_getspec(self):
         """Translation: test that CLI getspec output is translated."""
@@ -96,72 +96,72 @@ class TranslationTests(unittest.TestCase):
         result = out.getvalue()
         self.assertIn(TEST_MESSAGES['baseline LULC'], result)
 
-    # def test_invest_validate(self):
-    #     """Translation: test that CLI validate output is translated."""
-    #     datastack = {  # write datastack to a JSON file
-    #         'model_id': 'carbon',
-    #         'invest_version': '0.0',
-    #         'args': {}
-    #     }
-    #     datastack_path = os.path.join(self.workspace_dir, 'datastack.json')
-    #     with open(datastack_path, 'w') as file:
-    #         json.dump(datastack, file)
+    def test_invest_validate(self):
+        """Translation: test that CLI validate output is translated."""
+        datastack = {  # write datastack to a JSON file
+            'model_id': 'carbon',
+            'invest_version': '0.0',
+            'args': {}
+        }
+        datastack_path = os.path.join(self.workspace_dir, 'datastack.json')
+        with open(datastack_path, 'w') as file:
+            json.dump(datastack, file)
 
-    #     from natcap.invest import cli
-    #     with patch('sys.stdout', new=io.StringIO()) as out:
-    #         with self.assertRaises(SystemExit):
-    #             cli.main(
-    #                 ['--language', TEST_LANG, 'validate', datastack_path])
+        from natcap.invest import cli
+        with patch('sys.stdout', new=io.StringIO()) as out:
+            with self.assertRaises(SystemExit):
+                cli.main(
+                    ['--language', TEST_LANG, 'validate', datastack_path])
 
-    #     result = out.getvalue()
-    #     self.assertIn(TEST_MESSAGES[missing_key_msg], result)
+        result = out.getvalue()
+        self.assertIn(TEST_MESSAGES[missing_key_msg], result)
 
-    # def test_server_get_invest_models(self):
-    #     """Translation: test that /models endpoint is translated."""
-    #     from natcap.invest import ui_server
-    #     test_client = ui_server.app.test_client()
-    #     response = test_client.get(
-    #         'api/models', query_string={'language': TEST_LANG})
-    #     result = json.loads(response.get_data(as_text=True))
-    #     self.assertIn(
-    #         TEST_MESSAGES['Carbon Storage and Sequestration'],
-    #         [val['model_title'] for val in result.values()])
+    def test_server_get_invest_models(self):
+        """Translation: test that /models endpoint is translated."""
+        from natcap.invest import ui_server
+        test_client = ui_server.app.test_client()
+        response = test_client.get(
+            'api/models', query_string={'language': TEST_LANG})
+        result = json.loads(response.get_data(as_text=True))
+        self.assertIn(
+            TEST_MESSAGES['Carbon Storage and Sequestration'],
+            [val['model_title'] for val in result.values()])
 
-    # def test_server_get_invest_getspec(self):
-    #     """Translation: test that /getspec endpoint is translated."""
-    #     from natcap.invest import ui_server
-    #     test_client = ui_server.app.test_client()
-    #     response = test_client.post(
-    #         'api/getspec', json='carbon', query_string={'language': TEST_LANG})
-    #     spec = json.loads(response.get_data(as_text=True))
-    #     self.assertEqual(
-    #         spec['inputs']['lulc_bas_path']['name'],
-    #         TEST_MESSAGES['baseline LULC'])
+    def test_server_get_invest_getspec(self):
+        """Translation: test that /getspec endpoint is translated."""
+        from natcap.invest import ui_server
+        test_client = ui_server.app.test_client()
+        response = test_client.post(
+            'api/getspec', json='carbon', query_string={'language': TEST_LANG})
+        spec = json.loads(response.get_data(as_text=True))
+        self.assertEqual(
+            spec['args']['lulc_bas_path']['name'],
+            TEST_MESSAGES['baseline LULC'])
 
-    # def test_server_get_invest_validate(self):
-    #     """Translation: test that /validate endpoint is translated."""
-    #     from natcap.invest import ui_server
-    #     from natcap.invest import carbon
-    #     test_client = ui_server.app.test_client()
-    #     payload = {
-    #         'model_id': carbon.MODEL_SPEC.model_id,
-    #         'args': json.dumps({})
-    #     }
-    #     response = test_client.post(
-    #         'api/validate', json=payload,
-    #         query_string={'language': TEST_LANG})
-    #     results = json.loads(response.get_data(as_text=True))
-    #     messages = [item[1] for item in results]
-    #     self.assertIn(TEST_MESSAGES[missing_key_msg], messages)
+    def test_server_get_invest_validate(self):
+        """Translation: test that /validate endpoint is translated."""
+        from natcap.invest import ui_server
+        from natcap.invest import carbon
+        test_client = ui_server.app.test_client()
+        payload = {
+            'model_id': carbon.MODEL_SPEC.model_id,
+            'args': json.dumps({})
+        }
+        response = test_client.post(
+            'api/validate', json=payload,
+            query_string={'language': TEST_LANG})
+        results = json.loads(response.get_data(as_text=True))
+        messages = [item[1] for item in results]
+        self.assertIn(TEST_MESSAGES[missing_key_msg], messages)
 
-    # def test_translate_formatted_string(self):
-    #     """Translation: test that f-string can be translated."""
-    #     from natcap.invest import carbon, validation, set_locale
-    #     set_locale(TEST_LANG)
-    #     importlib.reload(validation)
-    #     importlib.reload(carbon)
-    #     args = {'n_workers': 'not a number'}
-    #     validation_messages = carbon.validate(args)
-    #     self.assertIn(
-    #         TEST_MESSAGES[not_a_number_msg].format(value=args['n_workers']),
-    #         str(validation_messages))
+    def test_translate_formatted_string(self):
+        """Translation: test that f-string can be translated."""
+        from natcap.invest import carbon, validation, set_locale
+        set_locale(TEST_LANG)
+        importlib.reload(validation)
+        importlib.reload(carbon)
+        args = {'n_workers': 'not a number'}
+        validation_messages = carbon.validate(args)
+        self.assertIn(
+            TEST_MESSAGES[not_a_number_msg].format(value=args['n_workers']),
+            str(validation_messages))

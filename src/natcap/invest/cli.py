@@ -438,7 +438,7 @@ def main(user_args=None):
                 importlib.import_module(name=target_model))
             spec = model_module.MODEL_SPEC
 
-            message = spec_utils.serialize_args_spec(spec)
+            message = spec.to_json()
             sys.stdout.write(message)
             parser.exit(0)
 

@@ -31,7 +31,7 @@ LOGGER = logging.getLogger(__name__)
 # accessing a file could take a long time if it's in a file streaming service
 # to prevent the UI from hanging due to slow validation,
 # set a timeout for these functions.
-def timeout(func, *args, timeout=5, **kwargs):
+def timeout(func, timeout=5):
     """Stop a function after a given amount of time.
 
     Args:
@@ -51,26 +51,28 @@ def timeout(func, *args, timeout=5, **kwargs):
     # the target function puts the return value from `func` into shared memory
     message_queue = queue.Queue()
 
-    def wrapper_func():
-        message_queue.put(func(*args, **kwargs))
+    def wrapper(*args, **kwargs):
+        def put_fn():
+            message_queue.put(func(*args, **kwargs))
+        thread = threading.Thread(target=put_fn)
+        LOGGER.debug(f'Starting file checking thread with timeout={timeout}')
+        thread.start()
+        thread.join(timeout=timeout)
+        if thread.is_alive():
+            # first arg to `check_csv`, `check_raster`, `check_vector` is the path
+            warnings.warn(
+                f'Validation of file {args[0]} timed out. If this file '
+                'is stored in a file streaming service, it may be taking a long '
+                'time to download. Try storing it locally instead.')
+            return None
 
-    thread = threading.Thread(target=wrapper_func)
-    LOGGER.debug(f'Starting file checking thread with timeout={timeout}')
-    thread.start()
-    thread.join(timeout=timeout)
-    if thread.is_alive():
-        # first arg to `check_csv`, `check_raster`, `check_vector` is the path
-        warnings.warn(
-            f'Validation of file {args[0]} timed out. If this file '
-            'is stored in a file streaming service, it may be taking a long '
-            'time to download. Try storing it locally instead.')
-        return None
+        else:
+            LOGGER.debug('File checking thread completed.')
+            # get any warning messages returned from the thread
+            a = message_queue.get()
+            return a
 
-    else:
-        LOGGER.debug('File checking thread completed.')
-        # get any warning messages returned from the thread
-        a = message_queue.get()
-        return a
+    return wrapper
 
 def check_headers(expected_headers, actual_headers, header_type='header'):
     """Validate that expected headers are in a list of actual headers.
@@ -879,7 +881,6 @@ class UISpec:
     hidden: list = None
     dropdown_functions: dict = dataclasses.field(default_factory=dict)
 
-
 @dataclasses.dataclass
 class ModelSpec:
     model_id: str
@@ -897,6 +898,49 @@ class ModelSpec:
 
     def get_input(self, key):
         return self.inputs_dict[key]
+
+    def to_json(self):
+        """Serialize an MODEL_SPEC dict to a JSON string.
+
+        Args:
+            spec (dict): An invest model's MODEL_SPEC.
+
+        Raises:
+            TypeError if any object type within the spec is not handled by
+            json.dumps or by the fallback serializer.
+
+        Returns:
+            JSON String
+        """
+
+        def fallback_serializer(obj):
+            """Serialize objects that are otherwise not JSON serializeable."""
+            if isinstance(obj, pint.Unit):
+                return format_unit(obj)
+            # Sets are present in 'geometries' attributes of some args
+            # We don't need to worry about deserializing back to a set/array
+            # so casting to string is okay.
+            elif isinstance(obj, set):
+                return str(obj)
+            elif isinstance(obj, types.FunctionType):
+                return str(obj)
+            elif dataclasses.is_dataclass(obj):
+                as_dict = dataclasses.asdict(obj)
+                if hasattr(obj, 'type'):
+                    as_dict['type'] = obj.type
+                return as_dict
+            elif isinstance(obj, IterableWithDotAccess):
+                return obj.to_json()
+            raise TypeError(f'fallback serializer is missing for {type(obj)}')
+
+        spec_dict = self.__dict__.copy()
+        # rename 'inputs' to 'args' to stay consistent with the old api
+        spec_dict.pop('inputs')
+        spec_dict.pop('inputs_dict')
+        spec_dict.pop('outputs_dict')
+        spec_dict['args'] = self.inputs_dict
+        spec_dict['outputs'] = self.outputs_dict
+        return json.dumps(spec_dict, default=fallback_serializer, ensure_ascii=False)
 
 
 def build_model_spec(model_spec):
@@ -1369,46 +1413,6 @@ def format_unit(unit):
     if 'currency' in formatted_unit:
         formatted_unit = formatted_unit.replace('currency', gettext('currency units'))
     return formatted_unit
-
-
-def serialize_args_spec(spec):
-    """Serialize an MODEL_SPEC dict to a JSON string.
-
-    Args:
-        spec (dict): An invest model's MODEL_SPEC.
-
-    Raises:
-        TypeError if any object type within the spec is not handled by
-        json.dumps or by the fallback serializer.
-
-    Returns:
-        JSON String
-    """
-
-    def fallback_serializer(obj):
-        """Serialize objects that are otherwise not JSON serializeable."""
-        if isinstance(obj, pint.Unit):
-            return format_unit(obj)
-        # Sets are present in 'geometries' attributes of some args
-        # We don't need to worry about deserializing back to a set/array
-        # so casting to string is okay.
-        elif isinstance(obj, set):
-            return str(obj)
-        elif isinstance(obj, types.FunctionType):
-            return str(obj)
-        elif dataclasses.is_dataclass(obj):
-            as_dict = dataclasses.asdict(obj)
-            if hasattr(obj, 'type'):
-                as_dict['type'] = obj.type
-            return as_dict
-        elif isinstance(obj, IterableWithDotAccess):
-            return obj.to_json()
-        raise TypeError(f'fallback serializer is missing for {type(obj)}')
-
-    spec_dict = json.loads(json.dumps(spec, default=fallback_serializer, ensure_ascii=False))
-    spec_dict['args'] = spec_dict.pop('inputs')
-    return json.dumps(spec_dict, ensure_ascii=False)
-
 
 # accepted geometries for a vector will be displayed in this order
 GEOMETRY_ORDER = [

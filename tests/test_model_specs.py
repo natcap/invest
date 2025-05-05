@@ -509,7 +509,7 @@ class ValidateModelSpecs(unittest.TestCase):
 
         for pyname in model_id_to_pyname.values():
             model = importlib.import_module(pyname)
-            spec_utils.serialize_args_spec(model.MODEL_SPEC)
+            model.MODEL_SPEC.to_json()
 
 
 class SpecUtilsTests(unittest.TestCase):
