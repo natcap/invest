@@ -148,7 +148,7 @@ def export_to_python(target_filepath, model_id, args_dict=None):
 
     if args_dict is None:
         cast_args = {
-            key: '' for key in models.model_id_to_spec[model_id].inputs_dict.keys()}
+            spec.id: '' for spec in models.model_id_to_spec[model_id].inputs}
     else:
         cast_args = dict((str(key), value) for (key, value)
                          in args_dict.items())

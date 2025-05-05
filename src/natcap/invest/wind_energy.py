@@ -28,8 +28,6 @@ from .unit_registry import u
 LOGGER = logging.getLogger(__name__)
 speedups.enable()
 
-
-
 INPUT_WIND_DATA_FIELDS = {
     "long": {
         "type": "number",
