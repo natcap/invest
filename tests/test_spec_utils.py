@@ -294,43 +294,37 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
 
-def _generate_files_from_spec(spec, workspace):
-    """A utility function to support the metadata tests."""
-    for filename, spec_data in spec.items():
+def _generate_files_from_spec(output_spec, workspace):
+    """A utility function to support the metadata test."""
+    for filename, spec_data in output_spec.items():
         if 'type' in spec_data and spec_data['type'] == 'directory':
             os.mkdir(os.path.join(workspace, filename))
             _generate_files_from_spec(
                 spec_data['contents'], os.path.join(workspace, filename))
         else:
             filepath = os.path.join(workspace, filename)
-            ext = ".tif" if os.path.splitext(filepath)[-1] == '' else ''
             if 'bands' in spec_data:
                 driver = gdal.GetDriverByName('GTIFF')
                 n_bands = len(spec_data['bands'])
                 raster = driver.Create(
-                    filepath+ext, 2, 2, n_bands, gdal.GDT_Byte)
+                    filepath, 2, 2, n_bands, gdal.GDT_Byte)
                 for i in range(n_bands):
                     band = raster.GetRasterBand(i + 1)
                     band.SetNoDataValue(2)
-            elif 'fields' in spec_data or 'columns' in spec_data:
+            elif 'fields' in spec_data:
                 if 'geometries' in spec_data:
-                    ext = ".gpkg" if os.path.splitext(filepath)[-1] == '' else ''
                     driver = gdal.GetDriverByName('GPKG')
-                    target_vector = driver.CreateDataSource(filepath+ext)
+                    target_vector = driver.CreateDataSource(filepath)
                     layer_name = os.path.basename(os.path.splitext(filepath)[0])
                     target_layer = target_vector.CreateLayer(
                         layer_name, geom_type=ogr.wkbPolygon)
                     for field_name, field_data in spec_data['fields'].items():
                         target_layer.CreateField(ogr.FieldDefn(field_name, ogr.OFTInteger))
                 else:
-                    ext = ".csv" if os.path.splitext(filepath)[-1] == '' else ''
-                    # Write a CSV if it has fields (or columns) but no geometry
-                    if 'fields' in spec_data:
-                        fields = spec_data['fields']
-                    else:
-                        fields = spec_data['columns']
-                    with open(filepath+ext, 'w') as file:
-                        file.write(f"{','.join([field for field in fields])}")
+                    # Write a CSV if it has fields but no geometry
+                    with open(filepath, 'w') as file:
+                        file.write(
+                            f"{','.join([field for field in spec_data['fields']])}")
             else:
                 # Such as taskgraph.db, just create the file.
                 with open(filepath, 'w') as file:
