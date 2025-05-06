@@ -2,7 +2,6 @@ import importlib
 import json
 import logging
 import os
-import pathlib
 import pprint
 
 import geometamaker
@@ -626,8 +625,6 @@ def write_metadata_file(datasource_path, spec, keywords_list,
     Note: We do not want to overwrite any existing metadata so if there is
     invalid metadata for the datasource (i.e., doesn't pass geometamaker
     validation in ``describe``), this function will NOT create new metadata.
-    Instead, if ``out_workspace`` specified, the existing metadata will be
-    copied here.
 
     Args:
         datasource_path (str) - filepath to the data to describe
@@ -638,7 +635,7 @@ def write_metadata_file(datasource_path, spec, keywords_list,
         out_workspace (str, optional) - where to write metadata if different
             from data location
     Returns:
-        None: if metadata could not be created due to validation or file errors.
+        None
 
     """
 

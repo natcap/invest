@@ -33,7 +33,6 @@ import tempfile
 import warnings
 
 from osgeo import gdal
-import geometamaker
 
 from . import spec_utils
 from . import utils
