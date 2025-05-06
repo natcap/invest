@@ -23,11 +23,7 @@ from natcap.invest.spec import (
     u,
     ModelSpec,
     UISpec,
-    Fields,
-    Contents,
     Input,
-    Rows,
-    Columns,
     FileInput,
     CSVInput,
     StringInput,
@@ -634,10 +630,10 @@ class VectorValidation(unittest.TestCase):
 
         error_msg = VectorInput(
             geometries={'POINT'},
-            fields=Fields(
+            fields=[
                 Input(id='col_a'),
                 Input(id='col_b'),
-                Input(id='col_c'))
+                Input(id='col_c')]
             ).validate(filepath)
         expected = validation.MESSAGES['MATCHED_NO_HEADERS'].format(
             header='field', header_name='col_c')
@@ -853,9 +849,9 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file)
 
         self.assertIsNone(
-            CSVInput(columns=Columns(
+            CSVInput(columns=[
                 IntegerInput(id='foo'),
-                IntegerInput(id='bar'))
+                IntegerInput(id='bar')]
             ).validate(target_file))
 
     def test_csv_bom_fieldnames(self):
@@ -871,9 +867,9 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file, encoding='utf-8-sig')
 
         self.assertIsNone(
-            CSVInput(columns=Columns(
+            CSVInput(columns=[
                 IntegerInput(id='foo'),
-                IntegerInput(id='bar'))
+                IntegerInput(id='bar')]
             ).validate(target_file))
 
     def test_csv_missing_fieldnames(self):
@@ -889,7 +885,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file)
 
         error_msg = CSVInput(
-            columns=Columns(Input(id='field_a'))).validate(target_file)
+            columns=[Input(id='field_a')]).validate(target_file)
         expected_msg = validation.MESSAGES['MATCHED_NO_HEADERS'].format(
             header='column', header_name='field_a')
         self.assertEqual(error_msg, expected_msg)
@@ -907,7 +903,7 @@ class CSVValidation(unittest.TestCase):
         df.to_pickle(target_file)
 
         error_msg = CSVInput(
-            columns=Columns(Input(id='field_a'))).validate(target_file)
+            columns=[Input(id='field_a')]).validate(target_file)
         self.assertIn('must be encoded as UTF-8', error_msg)
 
     def test_slow_to_open(self):
@@ -919,7 +915,7 @@ class CSVValidation(unittest.TestCase):
         with open(path, 'w') as file:
             file.write('1,2,3')
 
-        spec = model_spec_with_defaults(inputs=[CSVInput(id="mock_csv_path")])
+        csv_spec = model_spec_with_defaults(inputs=[CSVInput(id="mock_csv_path")])
 
         # validate a mocked CSV that will take 6 seconds to return a value
         args = {"mock_csv_path": path}
@@ -936,7 +932,7 @@ class CSVValidation(unittest.TestCase):
             with warnings.catch_warnings(record=True) as ws:
                 # cause all warnings to always be triggered
                 warnings.simplefilter("always")
-                validation.validate(args, spec)
+                validation.validate(args, csv_spec)
                 self.assertEqual(len(ws), 1)
                 self.assertTrue('timed out' in str(ws[0].message))
 
@@ -992,7 +988,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 b,c
                 """
             ))
-        spec = CSVInput(columns=Columns(StringInput(id='header')))
+        spec = CSVInput(columns=[StringInput(id='header')])
         df = spec.get_validated_dataframe(csv_file)
         # header and table values should be lowercased
         self.assertEqual(df.columns[0], 'header')
@@ -1013,12 +1009,12 @@ class TestGetValidatedDataframe(unittest.TestCase):
 
         spec = CSVInput(
             index_col='lucode',
-            columns=Columns(
+            columns=[
                 StringInput(id='desc'),
                 IntegerInput(id='lucode'),
                 NumberInput(id='val1'),
                 NumberInput(id='val2')
-        ))
+        ])
         df = spec.get_validated_dataframe(table_path)
 
         self.assertEqual(df.index.name, 'lucode')
@@ -1039,11 +1035,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
 
         spec = CSVInput(
             index_col='lucode',
-            columns=Columns(
+            columns=[
                 StringInput(id='desc'),
                 IntegerInput(id='lucode'),
                 NumberInput(id='val1'),
-                NumberInput(id='val2')))
+                NumberInput(id='val2')])
         with self.assertRaises(ValueError):
             spec.get_validated_dataframe(table_path)
 
@@ -1061,11 +1057,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
 
         spec = CSVInput(
             index_col='lucode',
-            columns=Columns(
+            columns=[
                 StringInput(id='desc'),
                 IntegerInput(id='lucode'),
                 NumberInput(id='val1'),
-                NumberInput(id='val2')))
+                NumberInput(id='val2')])
         with self.assertRaises(ValueError):
             spec.get_validated_dataframe(table_path)
 
@@ -1080,11 +1076,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 "2,bread,1,4\n"
                 "3,beans,0.5,4\n"
                 "4,butter,9,1")
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
             IntegerInput(id='lucode'),
             NumberInput(id='val1'),
             NumberInput(id='val2')
-        ))
+        ])
         df = spec.get_validated_dataframe(table_path)
         self.assertEqual(list(df.columns), ['lucode', 'val1', 'val2'])
 
@@ -1099,10 +1095,10 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 "2,1,4\n"
                 "3,0.5,4\n"
                 "4,9,1")
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
             IntegerInput(id='lucode'),
             NumberInput(id='[HABITAT]_value')
-        ))
+        ])
         df = spec.get_validated_dataframe(table_path)
         self.assertEqual(
             list(df.columns), ['lucode', 'grassland_value', 'forest_value'])
@@ -1119,11 +1115,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 "3,beans,0.5,4\n"
                 "4,butter,9,1")
         spec = CSVInput(
-            columns=Columns(
+            columns=[
                 StringInput(id='desc'),
                 IntegerInput(id='lucode'),
                 NumberInput(id='val1'),
-                NumberInput(id='val2')))
+                NumberInput(id='val2')])
         result = spec.get_validated_dataframe(table_path)
         self.assertEqual(result['val2'][0], 2)
         self.assertEqual(result['lucode'][1], 2)
@@ -1142,11 +1138,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
 
         spec = CSVInput(
             index_col='lucode',
-            columns=Columns(
+            columns=[
                 StringInput(id='desc'),
                 IntegerInput(id='lucode'),
                 NumberInput(id='val1'),
-                NumberInput(id='val2')))
+                NumberInput(id='val2')])
         result = spec.get_validated_dataframe(table_path).to_dict(orient='index')
 
         expected_result = {
@@ -1171,7 +1167,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 b
                 """
             ))
-        spec = CSVInput(columns=Columns(StringInput(id='header')))
+        spec = CSVInput(columns=[StringInput(id='header')])
         df = spec.get_validated_dataframe(csv_file)
         self.assertEqual(df['header'][0], 'a')
 
@@ -1189,7 +1185,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 b
                 """
             ))
-        spec = CSVInput(columns=Columns(StringInput(id='header')))
+        spec = CSVInput(columns=[StringInput(id='header')])
         df = spec.get_validated_dataframe(csv_file)
         self.assertEqual(df.columns[0], 'header')
 
@@ -1206,9 +1202,9 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 3,
                 """
             ))
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
                 IntegerInput(id='id'),
-                IntegerInput(id='header')))
+                IntegerInput(id='header')])
         df = spec.get_validated_dataframe(csv_file)
         self.assertIsInstance(df['header'][0], numpy.int64)
         self.assertIsInstance(df['header'][1], numpy.int64)
@@ -1227,11 +1223,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 -1,.3,
                 """
             ))
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
             NumberInput(id='h1'),
             RatioInput(id='h2'),
             PercentInput(id='h3')
-        ))
+        ])
         df = spec.get_validated_dataframe(csv_file)
         self.assertEqual(df['h1'].dtype, float)
         self.assertEqual(df['h2'].dtype, float)
@@ -1251,11 +1247,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 2,b,
                 """
             ))
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
             StringInput(id='h1'),
             OptionStringInput(id='h2', options=['a', 'b']),
             StringInput(id='h3')
-        ))
+        ])
         df = spec.get_validated_dataframe(csv_file)
         self.assertEqual(df['h1'][0], '1')
         self.assertEqual(df['h2'][1], 'b')
@@ -1275,9 +1271,9 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 c,
                 """
             ))
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
             StringInput(id='index'),
-            BooleanInput(id='h1')))
+            BooleanInput(id='h1')])
         df = spec.get_validated_dataframe(csv_file)
         self.assertEqual(df['h1'][0], True)
         self.assertEqual(df['h1'][1], False)
@@ -1302,10 +1298,10 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 4,
                 """
             ))
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
             IntegerInput(id='bar'),
             FileInput(id='path')
-        ))
+        ])
         df = spec.get_validated_dataframe(csv_file)
 
         self.assertEqual(
@@ -1336,10 +1332,10 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         # using sep=None with the default engine='python',
         # it should infer what the separator is
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
                 StringInput(id='h1'),
                 StringInput(id='h2'),
-                StringInput(id='h3')))
+                StringInput(id='h3')])
         df = spec.get_validated_dataframe(
             csv_file,
             read_csv_kwargs={'converters': {'h2': lambda val: f'foo_{val}'}})
@@ -1366,11 +1362,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 d,e,f
                 """
             ))
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
             StringInput(id='1'),
             StringInput(id='2'),
             StringInput(id='3')
-        ))
+        ])
         df = spec.get_validated_dataframe(csv_file)
 
         # expect headers to be strings
@@ -1387,11 +1383,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write(" Col1, Col2 ,Col3 \n")
             file_obj.write(" val1, val2 ,val3 \n")
             file_obj.write(" , 2 1 ,  ")
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
             StringInput(id='col1'),
             StringInput(id='col2'),
             StringInput(id='col3')
-        ))
+        ])
         df = spec.get_validated_dataframe(csv_file)
 
         # header should have no leading / trailing whitespace
@@ -1419,11 +1415,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
 
         spec = CSVInput(
             index_col='lucode',
-            columns=Columns(
+            columns=[
                 StringInput(id='desc'),
                 IntegerInput(id='lucode'),
                 NumberInput(id='val1'),
-                NumberInput(id='val2')))
+                NumberInput(id='val2')])
         result = spec.get_validated_dataframe(
             table_path).to_dict(orient='index')
         expected_result = {
@@ -1442,10 +1438,10 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with open(csv_file, 'w') as file_obj:
             file_obj.write("row1, a ,b\n")
             file_obj.write("row2,1,3\n")
-        spec = CSVInput(rows=Rows(
+        spec = CSVInput(rows=[
             StringInput(id='row1'),
-            NumberInput(id='row2'),
-        ))
+            NumberInput(id='row2')
+        ])
         df = spec.get_validated_dataframe(csv_file)
         # header should have no leading / trailing whitespace
         self.assertEqual(list(df.columns), ['row1', 'row2'])
@@ -1467,10 +1463,10 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write('col1,col2\n')
             file_obj.write(f'1,{raster_path}\n')
 
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
             NumberInput(id='col1'),
             SingleBandRasterInput(id='col2', band=NumberInput())
-        ))
+        ])
         with self.assertRaises(ValueError) as cm:
             spec.get_validated_dataframe(csv_path)
         self.assertIn('File not found', str(cm.exception))
@@ -1492,11 +1488,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write('col1,col2\n')
             file_obj.write(f'1,{raster_path}\n')
 
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
             NumberInput(id='col1'),
             SingleBandRasterInput(
                 id='col2', projected=True, band=NumberInput())
-        ))
+        ])
         with self.assertRaises(ValueError) as cm:
             spec.get_validated_dataframe(csv_path)
         self.assertIn('must be projected', str(cm.exception))
@@ -1521,17 +1517,17 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with open(csv_path, 'w') as file_obj:
             file_obj.write('col1,col2\n')
             file_obj.write(f'1,{vector_path}\n')
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
             NumberInput(id='col1'),
             VectorInput(
                 id='col2',
-                fields=Fields(
+                fields=[
                     IntegerInput(id='a'),
                     IntegerInput(id='b')
-                ),
+                ],
                 geometries=['POINT']
             )
-        ))
+        ])
 
         with self.assertRaises(ValueError) as cm:
             spec.get_validated_dataframe(csv_path)
@@ -1558,7 +1554,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write('col1,col2\n')
             file_obj.write(f'1,{vector_path}\n')
 
-        spec = CSVInput(columns=Columns(
+        spec = CSVInput(columns=[
             NumberInput(id='col1'),
             RasterOrVectorInput(
                 id='col2',
@@ -1566,7 +1562,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 fields={},
                 geometries=['POLYGON']
             )
-        ))
+        ])
         with self.assertRaises(ValueError) as cm:
             spec.get_validated_dataframe(csv_path)
 
@@ -1756,10 +1752,10 @@ class TestValidationFromSpec(unittest.TestCase):
             VectorInput(
                 id="vector",
                 geometries=spec.POINTS,
-                fields=Fields(
+                fields=[
                     RatioInput(id="field_a"),
                     RatioInput(id="field_b", required="some_number == 2")
-                )
+                ]
             )
         ])
 
@@ -1815,10 +1811,10 @@ class TestValidationFromSpec(unittest.TestCase):
             ),
             CSVInput(
                 id="csv",
-                columns=Columns(
+                columns=[
                     RatioInput(id="field_a"),
                     RatioInput(id="field_b", required="some_number == 2")
-                )
+                ]
             )
         ])
 
@@ -1872,7 +1868,7 @@ class TestValidationFromSpec(unittest.TestCase):
                 ),
                 CSVInput(
                     id="csv",
-                    rows=Rows(
+                    rows=[
                         RatioInput(
                             id="field_a",
                             required=True),
@@ -1880,7 +1876,7 @@ class TestValidationFromSpec(unittest.TestCase):
                             id="field_b",
                             required="some_number == 2"
                         )
-                    )
+                    ]
                 )
             ]
         )
@@ -1949,7 +1945,7 @@ class TestValidationFromSpec(unittest.TestCase):
             ),
             DirectoryInput(
                 id="directory",
-                contents=Contents(
+                contents=[
                     CSVInput(
                         id="file.1",
                         required=True,
@@ -1958,7 +1954,7 @@ class TestValidationFromSpec(unittest.TestCase):
                         id="file.2",
                         required="some_number == 2"
                     )
-                )
+                ]
             )
         ])
         path_1 = os.path.join(self.workspace_dir, 'file.1')
@@ -2152,7 +2148,7 @@ class TestValidationFromSpec(unittest.TestCase):
                 VectorInput(
                     id='vector_a',
                     required=False,
-                    fields=Fields(),
+                    fields=[],
                     geometries={'POINT'}
                 )
             ],
@@ -2278,19 +2274,6 @@ class TestValidationFromSpec(unittest.TestCase):
         self.assertEqual(len(actual_warnings), len(expected_warnings))
         for warning in actual_warnings:
             self.assertTrue(warning in expected_warnings)
-
-    def test_get_headers_to_validate(self):
-        """Validation: test getting header patterns from a spec."""
-        from natcap.invest import validation
-        spec = Columns(
-            Input(id='a'),
-            Input(id='foo_[BAR]'),
-            Input(id='c', required='conditional statement'),
-            Input(id='d', required=False)
-        )
-        patterns = spec.get_headers_to_validate(spec)
-        # should only get the patterns that are static and always required
-        self.assertEqual(sorted(patterns), ['a'])
 
 
 class TestArgsEnabled(unittest.TestCase):

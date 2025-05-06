@@ -163,15 +163,15 @@ class ValidateModelSpecs(unittest.TestCase):
                 # but they aren't required at nested levels
                 self.validate_args(arg_spec, f'{model_id}.inputs.{arg_spec.id}')
 
-            for spec in model.MODEL_SPEC.outputs:
-                self.validate_output(spec, f'{model_id}.outputs.{spec.id}')
+            for output_spec in model.MODEL_SPEC.outputs:
+                self.validate_output(output_spec, f'{model_id}.outputs.{output_spec.id}')
 
-    def validate_output(self, spec, key, parent_type=None):
+    def validate_output(self, output_spec, key, parent_type=None):
         """
         Recursively validate nested output specs against the output spec standard.
 
         Args:
-            spec (dict): any nested output spec component of a MODEL_SPEC
+            output_spec (dict): any nested output spec component of a MODEL_SPEC
             key (str): key to identify the spec by in error messages
             parent_type (str): the type of this output's parent output (or None if
                 no parent).
@@ -186,23 +186,23 @@ class ValidateModelSpecs(unittest.TestCase):
             # if parent_type is None:  # all top-level args must have these attrs
             #     for attr in ['about']:
             #         self.assertIn(attr, spec)
-            attrs = set(dir(spec)) - set(dir(object()))
+            attrs = set(dir(output_spec)) - set(dir(object()))
 
-            t = type(spec)
+            t = type(output_spec)
             self.assertIn(t, valid_nested_output_types[parent_type])
 
             if t is spec.NumberOutput:
                 # number type should have a units property
-                self.assertTrue(hasattr(spec, 'units'))
+                self.assertTrue(hasattr(output_spec, 'units'))
                 # Undefined units should use the custom u.none unit
-                self.assertIsInstance(spec.units, pint.Unit)
+                self.assertIsInstance(output_spec.units, pint.Unit)
 
             elif t is spec.SingleBandRasterOutput:
                 # raster type should have a bands property that maps each band
                 # index to a nested type dictionary describing the band's data
-                self.assertTrue(hasattr(spec, 'band'))
+                self.assertTrue(hasattr(output_spec, 'band'))
                 self.validate_output(
-                    spec.band,
+                    output_spec.band,
                     f'{key}.band',
                     parent_type=t)
 
@@ -211,16 +211,15 @@ class ValidateModelSpecs(unittest.TestCase):
                 # - a fields property that maps each field header to a nested
                 #   type dictionary describing the data in that field
                 # - a geometries property: the set of valid geometry types
-                self.assertTrue(hasattr(spec, 'fields'))
-                self.assertIsInstance(spec.fields, spec.Fields)
-                for field in spec.fields:
+                self.assertTrue(hasattr(output_spec, 'fields'))
+                for field in output_spec.fields:
                     self.validate_output(
                         field,
                         f'{key}.fields.{field}',
                         parent_type=t)
 
-                self.assertTrue(hasattr(spec, 'geometries'))
-                self.assertIsInstance(spec.geometries, set)
+                self.assertTrue(hasattr(output_spec, 'geometries'))
+                self.assertIsInstance(output_spec.geometries, set)
 
             elif t is spec.CSVOutput:
                 # csv type may have a columns property.
@@ -228,23 +227,21 @@ class ValidateModelSpecs(unittest.TestCase):
                 # name/pattern to a nested type dictionary describing the data
                 # in that column. may be absent if the table structure
                 # is too complex to describe this way.
-                self.assertTrue(hasattr(spec, 'columns'))
-                self.assertIsInstance(spec.columns, spec.Columns)
-                for column in spec.columns:
+                self.assertTrue(hasattr(output_spec, 'columns'))
+                for column in output_spec.columns:
                     self.validate_output(
                         column,
                         f'{key}.columns.{column}',
                         parent_type=t)
-                if spec.index_col:
-                    self.assertIn(spec.index_col, [s.id for s in spec.columns])
+                if output_spec.index_col:
+                    self.assertIn(output_spec.index_col, [s.id for s in output_spec.columns])
 
             elif t is spec.DirectoryOutput:
                 # directory type should have a contents property that maps each
                 # expected path name/pattern within the directory to a nested
                 # type dictionary describing the data at that filepath
-                self.assertTrue(hasattr(spec, 'contents'))
-                self.assertIsInstance(spec.contents, spec.Contents)
-                for path in spec.contents:
+                self.assertTrue(hasattr(output_spec, 'contents'))
+                for path in output_spec.contents:
                     self.validate_output(
                         path,
                         f'{key}.contents.{path}',
@@ -253,9 +250,9 @@ class ValidateModelSpecs(unittest.TestCase):
             elif t is spec.OptionStringOutput:
                     # option_string type should have an options property that
                     # describes the valid options
-                    self.assertTrue(hasattr(spec, 'options'))
-                    self.assertIsInstance(spec.options, dict)
-                    for option, description in spec.options.items():
+                    self.assertTrue(hasattr(output_spec, 'options'))
+                    self.assertIsInstance(output_spec.options, dict)
+                    for option, description in output_spec.options.items():
                         self.assertTrue(
                             isinstance(option, str) or
                             isinstance(option, int))
@@ -265,12 +262,12 @@ class ValidateModelSpecs(unittest.TestCase):
 
             # iterate over the remaining attributes
             # type-specific ones have been removed by this point
-            if spec.about:
-                self.assertIsInstance(spec.about, str)
-            if spec.created_if:
+            if output_spec.about:
+                self.assertIsInstance(output_spec.about, str)
+            if output_spec.created_if:
                 # should be an arg key indicating that the output is
                 # created if that arg is provided or checked
-                self.assertIsInstance(spec.created_if, str)
+                self.assertIsInstance(output_spec.created_if, str)
 
     def validate_args(self, arg, name, parent_type=None):
         """
@@ -383,7 +380,6 @@ class ValidateModelSpecs(unittest.TestCase):
                 #   type dictionary describing the data in that field
                 # - a geometries property: the set of valid geometry types
                 self.assertTrue(hasattr(arg, 'fields'))
-                self.assertIsInstance(arg.fields, spec.Fields)
                 for field in arg.fields:
                     self.validate_args(
                         field,
@@ -440,7 +436,6 @@ class ValidateModelSpecs(unittest.TestCase):
                 # expected path name/pattern within the directory to a nested
                 # type dictionary describing the data at that filepath
                 self.assertTrue(hasattr(arg, 'contents'))
-                self.assertIsInstance(arg.contents, spec.Contents)
                 for path in arg.contents:
                     self.validate_args(
                         path,

@@ -108,32 +108,6 @@ def check_headers(expected_headers, actual_headers, header_type='header'):
                 number=count)
     return None
 
-def get_headers_to_validate(specs):
-    """Get header names to validate from a row/column/field spec dictionary.
-
-    This module only validates row/column/field names that are static and
-    always required. If `'required'` is anything besides `True`, or if the name
-    contains brackets indicating it's user-defined, it is not returned.
-
-    Args:
-        specs (dict): a row/column/field spec dictionary that maps row/column/
-            field names to specs for them
-
-    Returns:
-        list of expected header names to validate against
-    """
-    headers = []
-    for spec in specs:
-        # if 'required' isn't a key, it defaults to True
-        if spec.required is True:
-            # brackets are a special character for our args spec syntax
-            # they surround the part of the key that's user-defined
-            # user-defined rows/columns/fields are not validated here, so skip
-            if '[' not in spec.id:
-                headers.append(spec.id)
-    return headers
-
-
 def _check_projection(srs, projected, projection_units):
     """Validate a GDAL projection.
 
@@ -180,9 +154,6 @@ class IterableWithDotAccess():
         self.inputs_dict = {i.id: i for i in args}
         self.iter_index = 0
 
-    # def __getattr__(self, key):
-    #     return self.inputs_dict.get(key)
-
     def __iter__(self):
         return iter(self.args)
 
@@ -191,27 +162,6 @@ class IterableWithDotAccess():
 
     def to_json(self):
         return self.inputs_dict
-
-    # def __next__(self):
-    #     print('next')
-    #     if self.iter_index < len(self.args):
-    #         result = self.args[self.iter_index]
-    #         self.iter_index += 1
-    #         return result
-    #     else:
-    #         raise StopIteration
-
-class Rows(IterableWithDotAccess):
-    pass
-
-class Columns(IterableWithDotAccess):
-    pass
-
-class Fields(IterableWithDotAccess):
-    pass
-
-class Contents(IterableWithDotAccess):
-    pass
 
 @dataclasses.dataclass
 class Input:
@@ -308,10 +258,14 @@ class SingleBandRasterInput(FileInput):
 @dataclasses.dataclass
 class VectorInput(FileInput):
     geometries: set = dataclasses.field(default_factory=dict)
-    fields: typing.Union[Fields, None] = None
+    fields: typing.Union[typing.Iterable[Input], None] = None
     projected: typing.Union[bool, None] = None
     projection_units: typing.Union[pint.Unit, None] = None
     type: typing.ClassVar[str] = 'vector'
+
+    def __post_init__(self):
+        if self.fields:
+            self.fields = IterableWithDotAccess(*self.fields)
 
     @timeout
     def validate(self, filepath):
@@ -377,7 +331,14 @@ class VectorInput(FileInput):
             return get_message('WRONG_GEOM_TYPE').format(allowed=self.geometries)
 
         if self.fields:
-            field_patterns = get_headers_to_validate(self.fields)
+            field_patterns = []
+            for spec in self.fields:
+                # brackets are a special character for our args spec syntax
+                # they surround the part of the key that's user-defined
+                # user-defined rows/columns/fields are not validated here, so skip
+                if spec.required is True and '[' not in spec.id:
+                    field_patterns.append(spec.id)
+
             fieldnames = [defn.GetName() for defn in layer.schema]
             required_field_warning = check_headers(
                 field_patterns, fieldnames, 'field')
@@ -394,7 +355,7 @@ class VectorInput(FileInput):
 class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
     band: typing.Union[Input, None] = None
     geometries: set = dataclasses.field(default_factory=dict)
-    fields: typing.Union[Fields, None] = None
+    fields: typing.Union[typing.Iterable[Input], None] = None
     projected: typing.Union[bool, None] = None
     projection_units: typing.Union[pint.Unit, None] = None
     type: typing.ClassVar[str] = 'raster_or_vector'
@@ -422,10 +383,16 @@ class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
 
 @dataclasses.dataclass
 class CSVInput(FileInput):
-    columns: typing.Union[Columns, None] = None
-    rows: typing.Union[Rows, None] = None
+    columns: typing.Union[typing.Iterable[Input], None] = None
+    rows: typing.Union[typing.Iterable[Input], None] = None
     index_col: typing.Union[str, None] = None
     type: typing.ClassVar[str] = 'csv'
+
+    def __post_init__(self):
+        if self.rows:
+            self.rows = IterableWithDotAccess(*self.rows)
+        if self.columns:
+            self.columns = IterableWithDotAccess(*self.columns)
 
     @timeout
     def validate(self, filepath):
@@ -543,10 +510,14 @@ class CSVInput(FileInput):
 
 @dataclasses.dataclass
 class DirectoryInput(Input):
-    contents: typing.Union[Contents, None] = None
+    contents: typing.Union[typing.Iterable[Input], None] = None
     permissions: str = ''
     must_exist: bool = True
     type: typing.ClassVar[str] = 'directory'
+
+    def __post_init__(self):
+        if self.contents:
+            self.contents = IterableWithDotAccess(*self.contents)
 
     @timeout
     def validate(self, dirpath):
@@ -830,19 +801,19 @@ class SingleBandRasterOutput(Output):
 @dataclasses.dataclass
 class VectorOutput(Output):
     geometries: set = dataclasses.field(default_factory=dict)
-    fields: typing.Union[Fields, None] = None
+    fields: typing.Union[typing.Iterable[Input], None] = None
     projected: typing.Union[bool, None] = None
     projection_units: typing.Union[pint.Unit, None] = None
 
 @dataclasses.dataclass
 class CSVOutput(Output):
-    columns: typing.Union[Columns, None] = None
-    rows: typing.Union[Rows, None] = None
+    columns: typing.Union[typing.Iterable[Output], None] = None
+    rows: typing.Union[typing.Iterable[Output], None] = None
     index_col: typing.Union[str, None] = None
 
 @dataclasses.dataclass
 class DirectoryOutput(Output):
-    contents: typing.Union[Contents, None] = None
+    contents: typing.Union[typing.Iterable[Input], None] = None
     permissions: str = ''
     must_exist: bool = True
 
@@ -1014,9 +985,8 @@ def build_input_spec(argkey, arg):
         return VectorInput(
             **base_attrs,
             geometries=arg['geometries'],
-            fields=Fields(
-                *[build_input_spec(key, field_spec) for key, field_spec in arg['fields'].items()]
-            ),
+            fields=[build_input_spec(key, field_spec)
+                    for key, field_spec in arg['fields'].items()],
             projected=arg.get('projected', None),
             projection_units=arg.get('projection_units', None))
 
@@ -1024,13 +994,11 @@ def build_input_spec(argkey, arg):
         columns = None
         rows = None
         if 'columns' in arg:
-            columns = Columns(*[
-                build_input_spec(col_name, col_spec)
-                for col_name, col_spec in arg['columns'].items()])
+            columns = [build_input_spec(col_name, col_spec)
+                for col_name, col_spec in arg['columns'].items()]
         elif 'rows' in arg:
-            rows = Rows(*[
-                build_input_spec(row_name, row_spec)
-                for row_name, row_spec in arg['rows'].items()])
+            rows = [build_input_spec(row_name, row_spec)
+                    for row_name, row_spec in arg['rows'].items()]
 
         return CSVInput(
             **base_attrs,
@@ -1040,8 +1008,8 @@ def build_input_spec(argkey, arg):
 
     elif t == 'directory':
         return DirectoryInput(
-            contents=Contents(*[
-                build_input_spec(k, v) for k, v in arg['contents'].items()]),
+            contents=[
+                build_input_spec(k, v) for k, v in arg['contents'].items()],
             permissions=arg.get('permissions', 'rx'),
             must_exist=arg.get('must_exist', None),
             **base_attrs)
@@ -1053,8 +1021,8 @@ def build_input_spec(argkey, arg):
         return RasterOrVectorInput(
             **base_attrs,
             geometries=arg['geometries'],
-            fields=Fields(*[
-                build_input_spec(key, field_spec) for key, field_spec in arg['fields'].items()]),
+            fields=[build_input_spec(key, field_spec)
+                    for key, field_spec in arg['fields'].items()],
             band=build_input_spec('1', arg['bands'][1]),
             projected=arg.get('projected', None),
             projection_units=arg.get('projection_units', None))
@@ -1114,23 +1082,23 @@ def build_output_spec(key, spec):
         return VectorOutput(
             **base_attrs,
             geometries=spec['geometries'],
-            fields=Fields(*[
-                build_output_spec(key, field_spec) for key, field_spec in spec['fields'].items()]),
+            fields=[build_output_spec(key, field_spec)
+                    for key, field_spec in spec['fields'].items()],
             projected=None,
             projection_units=None)
 
     elif t == 'csv':
         return CSVOutput(
             **base_attrs,
-            columns=Columns(*[
-                build_output_spec(key, col_spec) for key, col_spec in spec['columns'].items()]),
+            columns=[
+                build_output_spec(key, col_spec) for key, col_spec in spec['columns'].items()],
             rows=None,
             index_col=spec.get('index_col', None))
 
     elif t == 'directory':
         return DirectoryOutput(
-            contents=Contents(*[
-                build_output_spec(k, v) for k, v in spec['contents'].items()]),
+            contents=[
+                build_output_spec(k, v) for k, v in spec['contents'].items()],
             permissions=None,
             must_exist=None,
             **base_attrs)

@@ -4,7 +4,7 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     spec.FileInput(id='some_file'),
     spec.DirectoryInput(
         id='data_dir',
-        contents=spec.Contents())],
+        contents=[])],
     outputs={},
     model_id='',
     model_title='',

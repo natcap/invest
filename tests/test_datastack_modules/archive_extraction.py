@@ -13,7 +13,7 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     spec.CSVInput(id='simple_table'),
     spec.CSVInput(
         id='spatial_table',
-        columns=spec.Columns(
+        columns=[
             spec.IntegerInput(id='ID'),
             spec.RasterOrVectorInput(
                 id='path',
@@ -21,7 +21,7 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
                 geometries={'POINT', 'POLYGON'},
                 band=spec.NumberInput()
             )
-        )
+        ]
     )],
     outputs={},
     model_id='',

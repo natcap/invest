@@ -410,9 +410,9 @@ class DatastackArchiveTests(unittest.TestCase):
 
         spatial_csv_dict = spec.CSVInput(
             index_col='id',
-            columns=spec.Columns(
+            columns=[
                 spec.IntegerInput(id='id'),
-                spec.FileInput(id='path'))
+                spec.FileInput(id='path')]
         ).get_validated_dataframe(
             archive_params['spatial_table']
         ).to_dict(orient='index')

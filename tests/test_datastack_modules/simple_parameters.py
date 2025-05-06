@@ -7,7 +7,7 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     spec.StringInput(id='d'),
     spec.DirectoryInput(
         id='workspace_dir',
-        contents=spec.Contents()
+        contents=[]
     )],
     outputs={},
     model_id='',
