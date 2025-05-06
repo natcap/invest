@@ -10,7 +10,6 @@ from natcap.invest.unit_registry import u
 from osgeo import gdal
 from osgeo import ogr
 
-
 gdal.UseExceptions()
 
 

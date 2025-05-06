@@ -1,5 +1,5 @@
 MODEL_SPEC = {
-    'model_id': 'vec_model',
+    'model_id': 'vector_model',
     'args': {
         'vector': {'type': 'vector'},
     }

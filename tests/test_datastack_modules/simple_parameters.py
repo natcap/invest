@@ -1,5 +1,5 @@
 MODEL_SPEC = {
-    'model_id': 'mymodel',
+    'model_id': 'simple_model',
     'args': {
         'a': {'type': 'integer'},
         'b': {'type': 'freestyle_string'},

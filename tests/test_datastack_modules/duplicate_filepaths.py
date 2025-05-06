@@ -1,5 +1,5 @@
 MODEL_SPEC = {
-    'model_id': 'mymodel',
+    'model_id': 'duplicate_filepaths_model',
     'args': {
         'foo': {'type': 'file'},
         'bar': {'type': 'file'},

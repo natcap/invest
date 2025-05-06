@@ -1,5 +1,5 @@
 MODEL_SPEC = {
-    'model_id': 'mymodel',
+    'model_id': 'archive_extraction_model',
     'args': {
         'blank': {'type': 'freestyle_string'},
         'a': {'type': 'integer'},
