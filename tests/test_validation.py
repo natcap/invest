@@ -2179,7 +2179,6 @@ class TestValidationFromSpec(unittest.TestCase):
         # There should not be a spatial overlap check at all
         # when less than 2 of the spatial keys are sufficient.
         validation_warnings = validation.validate(args, spec)
-        print(validation_warnings)
         self.assertEqual(len(validation_warnings), 0)
 
         # And even though there are three spatial keys in the spec,
