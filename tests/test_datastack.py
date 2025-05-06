@@ -263,7 +263,7 @@ class DatastackArchiveTests(unittest.TestCase):
         resource = geometamaker.describe(raster_path)
         self.assertEqual(resource.get_description(), "foo")
         self.assertCountEqual(resource.get_keywords(),
-                              ["mymodel", "InVEST", "bar"])
+                              ["archive_extraction_model", "InVEST", "bar"])
 
     def test_nonspatial_files(self):
         """Datastack: test nonspatial files."""
