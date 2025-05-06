@@ -89,9 +89,6 @@ Workbench
   indicator (e.g., the "Model Complete" notice) is cleared to help prevent
   confusion about which parameters went into the most recent model run
   (`#1655 <https://github.com/natcap/invest/issues/1655>`_).
-* Metadata is now generated for files when creating a datastack with any
-  existing user-added metadata preserved
-  (`#1774 <https://github.com/natcap/invest/issues/1774>`_).
 
 Crop Production
 ===============
