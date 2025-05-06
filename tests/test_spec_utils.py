@@ -1,4 +1,3 @@
-import numpy
 import os
 import shutil
 import tempfile
@@ -8,11 +7,9 @@ import unittest
 import geometamaker
 from natcap.invest import spec_utils
 from natcap.invest.unit_registry import u
-import pygeoprocessing
 from osgeo import gdal
 from osgeo import ogr
-from osgeo import osr
-from shapely.geometry import Point
+
 
 gdal.UseExceptions()
 
