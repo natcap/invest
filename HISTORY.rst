@@ -76,8 +76,13 @@ Workbench
 * Fixed a bug that did not allow users to select a folder as the location
   to extract a datastack archive.
   (`#1879 <https://github.com/natcap/invest/issues/1879>`_).
-* Metadata is now copied (if it exists) and/or generated for files when creating
-  a datastack (`#1774 <https://github.com/natcap/invest/issues/1774>`_).
+* When a parameter from a previous model run is changed, the model status
+  indicator (e.g., the "Model Complete" notice) is cleared to help prevent
+  confusion about which parameters went into the most recent model run
+  (`#1655 <https://github.com/natcap/invest/issues/1655>`_).
+* Metadata is now generated for files when creating a datastack with any
+  existing user-added metadata preserved
+  (`#1774 <https://github.com/natcap/invest/issues/1774>`_).
 
 Crop Production
 ===============
@@ -94,6 +99,12 @@ Seasonal Water Yield
 * Fixed bug in quickflow calculation where `NoData` values in precipitation
   were being incorrectly converted to 0's
   (`#1592 <https://github.com/natcap/invest/issues/1592>`_).
+
+Wind Energy
+===========
+* Fixed a bug where the model would error if no AOI was provided when run from
+  the workbench or from a datastack file where the value for 'aoi_vector_path'
+  was an empty string. (`#1900 <https://github.com/natcap/invest/issues/1900>`_)
 
 
 3.15.0 (2025-04-03)
