@@ -638,7 +638,7 @@ def write_metadata_file(datasource_path, spec, keywords_list,
         out_workspace (str, optional) - where to write metadata if different
             from data location
     Returns:
-        None
+        None: if metadata could not be created due to validation or file errors.
 
     """
 
@@ -674,16 +674,20 @@ def write_metadata_file(datasource_path, spec, keywords_list,
         attr_spec = spec['fields']
     if attr_spec:
         for key, value in attr_spec.items():
-            about = value['about'] if 'about' in value else ''
-            units = format_unit(value['units']) if 'units' in value else ''
             try:
+                # field names in attr_spec are always lowercase, but the
+                # actual fieldname in the data could be any case because
+                # invest does not require case-sensitive fieldnames
                 yaml_key = _get_key(key, resource)
                 # Field description only gets set if its empty, i.e. ''
                 if len(resource.get_field_description(yaml_key)
                        .description.strip()) < 1:
+                    about = value['about'] if 'about' in value else ''
                     resource.set_field_description(yaml_key, description=about)
+                # units only get set if empty
                 if len(resource.get_field_description(yaml_key)
                        .units.strip()) < 1:
+                    units = format_unit(value['units']) if 'units' in value else ''
                     resource.set_field_description(yaml_key, units=units)
             except KeyError as error:
                 # fields that are in the spec but missing
@@ -691,7 +695,7 @@ def write_metadata_file(datasource_path, spec, keywords_list,
                 LOGGER.debug(error)
     if 'bands' in spec:
         for idx, value in spec['bands'].items():
-            if len(resource.get_band_description(idx).description) < 1:
+            if len(resource.get_band_description(idx).units) < 1:
                 try:
                     units = format_unit(spec['bands'][idx]['units'])
                 except KeyError:
@@ -741,31 +745,3 @@ def generate_metadata_for_outputs(model_module, args_dict):
                         LOGGER.debug(error)
 
     _walk_spec(model_module.MODEL_SPEC['outputs'], args_dict['workspace_dir'])
-
-
-def generate_metadata_for_datastack(model_module, args_dict, param_set,
-                                    temp_dir):
-    """Create metadata for all items in invest model args.
-
-    Args:
-        model_module (object) - the natcap.invest module containing
-            the MODEL_SPEC attribute
-        args_dict (dict) - the arguments dictionary passed to the
-            model's ``execute`` function.
-        param_set (dict) - parameter set which contains relative filepaths
-        temp_dir (str) - directory where datastack is temporarily stored
-            before compression
-
-    Returns:
-        None
-
-    """
-    keywords = [model_module.MODEL_SPEC['model_id'], 'InVEST']
-    for k, v in args_dict.items():
-        if isinstance(v, str) and os.path.isfile(v):
-            this_arg_spec = model_module.MODEL_SPEC['args'][k]
-            # write metadata file to target location (in temp dir)
-            subdir = os.path.dirname(param_set['args'][k])
-            target_location = os.path.join(temp_dir, subdir)
-            write_metadata_file(v, this_arg_spec, keywords,
-                                out_workspace=target_location)

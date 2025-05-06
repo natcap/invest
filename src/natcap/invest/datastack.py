@@ -98,7 +98,7 @@ def _tarfile_safe_extract(archive_path, dest_dir_path):
 
 
 def _copy_spatial_files(spatial_filepath, target_dir):
-    """Copy spatial files and their geometamaker metadata to a new directory.
+    """Copy spatial files to a new directory.
 
     Args:
         spatial_filepath (str): The filepath to a GDAL-supported file.
@@ -134,15 +134,6 @@ def _copy_spatial_files(spatial_filepath, target_dir):
         shutil.copyfile(member_file, target_filepath)
     spatial_file = None
 
-    # Copy any existing geometamaker metadata
-    spatial_metadata = spatial_filepath + ".yml"
-    if os.path.exists(spatial_metadata):
-        LOGGER.info(f"Metadata detected for {spatial_filepath}. "
-                    f"Copying to {target_dir}")
-        metadata_target = os.path.join(target_dir,
-                                       os.path.basename(spatial_metadata))
-        shutil.copyfile(spatial_metadata, metadata_target)
-
     # I can't conceive of a case where the basename of the source file does not
     # match any of the member file basenames, but just in case there's a
     # weird GDAL driver that does this, it seems reasonable to fall back to
@@ -151,28 +142,6 @@ def _copy_spatial_files(spatial_filepath, target_dir):
         return_filepath = target_filepath
 
     return return_filepath
-
-
-def _copy_flat_file(flat_filepath, target_dir):
-    """Copy flat file and its geometamaker metadata to a new directory.
-
-    Args:
-        flat_filepath (str): Filepath to a single-component file (e.g., .csv).
-        target_dir (str): The directory where file and .yml should be copied.
-            If this directory does not exist, it will be created.
-
-    Returns:
-        None
-
-    """
-    LOGGER.info(f'Copying {flat_filepath} --> {target_dir}')
-
-    shutil.copyfile(flat_filepath, target_dir)
-    try:
-        shutil.copyfile(flat_filepath+".yml", target_dir)
-    except FileNotFoundError:
-        # no metadata for file found
-        pass
 
 
 def format_args_dict(args_dict, model_name):
@@ -362,7 +331,7 @@ def build_datastack_archive(args, model_name, datastack_path):
             if not spatial_columns:
                 LOGGER.debug(
                     f'No spatial columns, copying to {target_csv_path}')
-                _copy_flat_file(source_path, target_csv_path)
+                shutil.copyfile(source_path, target_csv_path)
             else:
                 contained_files_dir = os.path.join(
                     data_dir, f'{key}_csv_data')
@@ -431,7 +400,7 @@ def build_datastack_archive(args, model_name, datastack_path):
         elif input_type == 'file':
             target_filepath = os.path.join(
                 data_dir, f'{key}_file')
-            _copy_flat_file(source_path, target_filepath)
+            shutil.copyfile(source_path, target_filepath)
             target_arg_value = target_filepath
             files_found[source_path] = target_arg_value
 
@@ -448,7 +417,7 @@ def build_datastack_archive(args, model_name, datastack_path):
                 if os.path.isdir(src_path):
                     shutil.copytree(src_path, dest_path)
                 else:
-                    _copy_flat_file(src_path, dest_path)
+                    shutil.copyfile(src_path, dest_path)
 
             LOGGER.debug(
                 f'Directory copied from {source_path} --> {target_directory}')
@@ -487,8 +456,16 @@ def build_datastack_archive(args, model_name, datastack_path):
     parameter_set = build_parameter_set(
         rewritten_args, model_name, param_file_uri, relative=True)
 
-    spec_utils.generate_metadata_for_datastack(
-        module, args, parameter_set, temp_workspace)
+    # write metadata for all files in args
+    keywords = [module.MODEL_SPEC['model_id'], 'InVEST']
+    for k, v in args.items():
+        if isinstance(v, str) and os.path.isfile(v):
+            this_arg_spec = module.MODEL_SPEC['args'][k]
+            # write metadata file to target location (in temp dir)
+            subdir = os.path.dirname(parameter_set['args'][k])
+            target_location = os.path.join(temp_workspace, subdir)
+            spec_utils.write_metadata_file(v, this_arg_spec, keywords,
+                                           out_workspace=target_location)
 
     # Remove the handler before archiving the working dir (and the logfile)
     archive_filehandler.close()
