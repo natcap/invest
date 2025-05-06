@@ -10,7 +10,7 @@ from osgeo import gdal
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -66,7 +66,7 @@ NUTRIENTS = [
     ("vitk", "vitamin K", u.microgram/u.hectogram)
 ]
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "crop_production_regression",
     "model_title": gettext("Crop Production: Regression"),
     "userguide": "crop_production.html",
@@ -83,11 +83,11 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "landcover_raster_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "projection_units": u.meter
         },
@@ -127,7 +127,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("fertilization rate table")
         },
         "aggregate_polygon_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "required": False
         },
         "model_data_path": {
@@ -276,7 +276,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "contents": {
                 "aggregate_vector.shp": {
                     "about": "Copy of input AOI vector",
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 },
                 "clipped_[CROP]_climate_bin_map.tif": {
@@ -329,7 +329,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

@@ -18,7 +18,7 @@ from osgeo import ogr
 import taskgraph
 import pygeoprocessing
 from . import utils
-from . import spec_utils
+from . import spec
 from .unit_registry import u
 from . import validation
 from . import gettext
@@ -130,7 +130,7 @@ CAPTURED_WEM_FIELDS = {
     }
 }
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "wave_energy",
     "model_title": gettext("Wave Energy Production"),
     "userguide": "wave_energy.html",
@@ -145,23 +145,23 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "hidden": ["n_workers"]
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "wave_base_data_path": {
             "type": "directory",
             "contents": {
                 "NAmerica_WestCoast_4m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "about": gettext(
                         "Point vector for the west coast of North America and "
                         "Hawaii.")},
                 "WCNA_extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": gettext(
                         "Extract vector for the west coast of North America "
                         "and Hawaii.")},
@@ -173,14 +173,14 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "NAmerica_EastCoast_4m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "about": gettext(
                         "Point vector for the East Coast of North America and "
                         "Puerto Rico.")},
                 "ECNA_extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": gettext(
                         "Extract vector for the East Coast of North America "
                         "and Puerto Rico.")},
@@ -192,13 +192,13 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "North_Sea_4m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "about": gettext(
                         "Point vector for the North Sea 4 meter resolution.")},
                 "North_Sea_4m_Extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": gettext(
                         "Extract vector for the North Sea 4 meter resolution.")},
                 "North_Sea_4m.bin": {
@@ -209,13 +209,13 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "North_Sea_10m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "about": gettext(
                         "Point vector for the North Sea 10 meter resolution.")},
                 "North_Sea_10m_Extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": gettext(
                         "Extract vector for the North Sea 10 meter resolution.")},
                 "North_Sea_10m.bin": {
@@ -226,12 +226,12 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "Australia_4m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "about": gettext("Point vector for Australia.")},
                 "Australia_Extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": gettext("Extract vector for Australia.")},
                 "Australia_4m.bin": {
                     "type": "file",
@@ -239,12 +239,12 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "Global.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "about": gettext("Global point vector.")},
                 "Global_extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": gettext("Global extract vector.")},
                 "Global_WW3.txt.bin": {
                     "type": "file",
@@ -274,7 +274,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("analysis area")
         },
         "aoi_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "projected": True,
             "projection_units": u.meter,
             "required": False
@@ -504,17 +504,17 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "contents": {
                 "aoi_clipped_to_extract_path.shp": {
                     "about": "AOI clipped to the analysis area",
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "fields": {}
                 },
                 "Captured_WEM_InputOutput_Pts.shp": {
                     "about": "Map of wave data points.",
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "fields": CAPTURED_WEM_FIELDS
                 },
                 "Final_WEM_InputOutput_Pts.shp": {
                     "about": "Map of wave data points.",
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "fields": {
                         **CAPTURED_WEM_FIELDS,
                         "W2L_MDIST": {
@@ -552,7 +552,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "Indexed_WEM_InputOutput_Pts.shp": {
                     "about": "Map of wave data points.",
                     "fields": INDEXED_WEM_FIELDS,
-                    "geometries": spec_utils.POINT
+                    "geometries": spec.POINT
                 },
                 "interpolated_capwe_mwh.tif": {
                     "about": "Interpolated wave energy",
@@ -576,7 +576,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 },
                 "WEM_InputOutput_Pts.shp": {
                     "about": "Map of wave data points.",
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "fields": WEM_FIELDS
                 },
                 "GridPt.txt": {
@@ -589,7 +589,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

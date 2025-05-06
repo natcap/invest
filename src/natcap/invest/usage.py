@@ -18,7 +18,7 @@ import pygeoprocessing
 import requests
 
 from . import utils
-from . import spec_utils
+from . import spec
 
 ENCODING = sys.getfilesystemencoding()
 LOGGER = logging.getLogger(__name__)
@@ -121,10 +121,10 @@ def _calculate_args_bounding_box(args, model_spec):
         # blank.
         spatial_info = None
         if (isinstance(model_spec.get_input(key),
-                spec_utils.SingleBandRasterInput) and value.strip() != ''):
+                spec.SingleBandRasterInput) and value.strip() != ''):
             spatial_info = pygeoprocessing.get_raster_info(value)
         elif (isinstance(model_spec.get_input(key),
-                spec_utils.VectorInput) and value.strip() != ''):
+                spec.VectorInput) and value.strip() != ''):
             spatial_info = pygeoprocessing.get_vector_info(value)
 
         if spatial_info:

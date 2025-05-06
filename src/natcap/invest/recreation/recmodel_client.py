@@ -30,7 +30,7 @@ from osgeo import osr
 # prefer to do intrapackage imports to avoid case where global package is
 # installed and we import the global version of it rather than the local
 from .. import gettext
-from .. import spec_utils
+from .. import spec
 from .. import utils
 from .. import validation
 from ..unit_registry import u
@@ -58,7 +58,7 @@ predictor_table_columns = {
         "about": gettext("A spatial file to use as a predictor."),
         "bands": {1: {"type": "number", "units": u.none}},
         "fields": {},
-        "geometries": spec_utils.ALL_GEOMS
+        "geometries": spec.ALL_GEOMS
     },
     "type": {
         "type": "option_string",
@@ -99,7 +99,7 @@ predictor_table_columns = {
 }
 
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "recreation",
     "model_title": gettext("Visitation: Recreation and Tourism"),
     "userguide": "recreation.html",
@@ -115,11 +115,11 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "hidden": ['n_workers', 'hostname', 'port']
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "aoi_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "about": gettext("Map of area(s) over which to run the model.")
         },
         "hostname": {
@@ -234,7 +234,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "PUD_results.gpkg": {
             "about": gettext(
                 "Results of photo-user-days aggregations in the AOI."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "PUD_YR_AVG": {
                     "about": gettext(
@@ -253,7 +253,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "TUD_results.gpkg": {
             "about": gettext(
                 "Results of twitter-user-days aggregations in the AOI."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "PUD_YR_AVG": {
                     "about": gettext(
@@ -308,7 +308,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "about": gettext(
                 "AOI polygons with all the variables needed to compute a regression, "
                 "including predictor attributes and the user-days response variable."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "[PREDICTOR]": {
                     "type": "number",
@@ -353,7 +353,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "about": gettext(
                 "Results of scenario, including the predictor data used in the "
                 "scenario and the predicted visitation patterns for the scenario."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "[PREDICTOR]": {
                     "type": "number",
@@ -378,7 +378,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": gettext(
                         "Copy of the input AOI, gridded if applicable."),
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS
+                    "geometries": spec.POLYGONS
                 },
                 "aoi.zip": {
                     "about": gettext("Compressed AOI")
@@ -411,7 +411,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

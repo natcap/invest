@@ -19,10 +19,10 @@ from osgeo import ogr
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
-from .spec_utils import u
+from .spec import u
 
 LOGGER = logging.getLogger(__name__)
 UINT32_NODATA = int(numpy.iinfo(numpy.uint32).max)
@@ -38,7 +38,7 @@ RADIUS_OPT_URBAN_NATURE = 'radius per urban nature class'
 RADIUS_OPT_POP_GROUP = 'radius per population group'
 POP_FIELD_REGEX = '^pop_'
 ID_FIELDNAME = 'adm_unit_id'
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     'model_id': 'urban_nature_access',
     'model_title': gettext('Urban Nature Access'),
     'userguide': 'urban_nature_access.html',
@@ -59,11 +59,11 @@ MODEL_SPEC = spec_utils.build_model_spec({
         'different_projections_ok': True,
     },
     'args': {
-        'workspace_dir': spec_utils.WORKSPACE,
-        'results_suffix': spec_utils.SUFFIX,
-        'n_workers': spec_utils.N_WORKERS,
+        'workspace_dir': spec.WORKSPACE,
+        'results_suffix': spec.SUFFIX,
+        'n_workers': spec.N_WORKERS,
         'lulc_raster_path': {
-            **spec_utils.LULC,
+            **spec.LULC,
             'projected': True,
             'projection_units': u.meter,
             'about': (
@@ -87,7 +87,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             ),
             'index_col': 'lucode',
             'columns': {
-                'lucode': spec_utils.LULC_TABLE_COLUMN,
+                'lucode': spec.LULC_TABLE_COLUMN,
                 'urban_nature': {
                     'type': 'ratio',
                     'about': (
@@ -130,7 +130,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
         'admin_boundaries_vector_path': {
             'type': 'vector',
             'name': 'administrative boundaries',
-            'geometries': spec_utils.POLYGONS,
+            'geometries': spec.POLYGONS,
             'fields': {
                 "pop_[POP_GROUP]": {
                     "type": "ratio",
@@ -351,7 +351,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": (
                         "A copy of the user's administrative boundaries "
                         "vector with a single layer."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {
                         "SUP_DEMadm_cap": {
                             "type": "number",
@@ -622,7 +622,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        'taskgraph_cache': spec_utils.TASKGRAPH_DIR,
+        'taskgraph_cache': spec.TASKGRAPH_DIR,
     }
 })
 

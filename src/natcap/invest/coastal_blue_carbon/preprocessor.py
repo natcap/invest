@@ -9,7 +9,7 @@ import taskgraph
 from osgeo import gdal
 
 from .. import gettext
-from .. import spec_utils
+from .. import spec
 from .. import utils
 from .. import validation
 from ..unit_registry import u
@@ -17,7 +17,7 @@ from . import coastal_blue_carbon
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "coastal_blue_carbon_preprocessor",
     "model_title": gettext("Coastal Blue Carbon Preprocessor"),
     "userguide": "coastal_blue_carbon.html",
@@ -30,9 +30,9 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "hidden": ["n_workers"]
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "lulc_lookup_table_path": {
             "name": gettext("LULC lookup table"),
             "type": "csv",
@@ -138,7 +138,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "to match all the other LULC maps."),
             "bands": {1: {"type": "integer"}}
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

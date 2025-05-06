@@ -1,12 +1,12 @@
-from natcap.invest import spec_utils
+from natcap.invest import spec
 
 MODEL_SPEC = SimpleNamespace(inputs=[
-    spec_utils.StringInput(id='foo'),
-    spec_utils.StringInput(id='bar')],
+    spec.StringInput(id='foo'),
+    spec.StringInput(id='bar')],
     outputs={},
     model_id='',
     model_title='',
     userguide='',
-    ui_spec=spec_utils.UISpec(),
+    ui_spec=spec.UISpec(),
     args_with_spatial_overlap={}
 )

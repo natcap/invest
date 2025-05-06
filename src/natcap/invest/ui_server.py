@@ -13,7 +13,7 @@ from natcap.invest import cli
 from natcap.invest import datastack
 from natcap.invest import set_locale
 from natcap.invest import models
-from natcap.invest import spec_utils
+from natcap.invest import spec
 from natcap.invest import usage
 from natcap.invest import validation
 

@@ -11,7 +11,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -104,7 +104,7 @@ WATERSHED_OUTPUT_FIELDS = {
     **VALUATION_OUTPUT_FIELDS
 }
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "annual_water_yield",
     "model_title": gettext("Annual Water Yield"),
     "userguide": "annual_water_yield.html",
@@ -130,13 +130,13 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "different_projections_ok": False,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "lulc_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
-            "about": spec_utils.LULC['about'] + " " + gettext(
+            "about": spec.LULC['about'] + " " + gettext(
                 "All values in this raster must have corresponding entries "
                 "in the Biophysical Table.")
         },
@@ -154,7 +154,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("root restricting layer depth")
         },
         "precipitation_path": {
-            **spec_utils.PRECIP,
+            **spec.PRECIP,
             "projected": True
         },
         "pawc_path": {
@@ -168,7 +168,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("plant available water content")
         },
         "eto_path": {
-            **spec_utils.ET0,
+            **spec.ET0,
             "projected": True
         },
         "watersheds_path": {
@@ -180,7 +180,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": gettext("Unique identifier for each watershed.")
                 }
             },
-            "geometries": spec_utils.POLYGON,
+            "geometries": spec.POLYGON,
             "about": gettext(
                 "Map of watershed boundaries, such that each watershed drains "
                 "to a point of interest where hydropower production will be "
@@ -196,7 +196,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": gettext("Unique identifier for each subwatershed.")
                 }
             },
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "required": False,
             "about": gettext(
                 "Map of subwatershed boundaries within each watershed in "
@@ -206,7 +206,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "lulc_veg": {
                     "type": "integer",
                     "about": gettext(
@@ -345,7 +345,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "contents": {
                 "watershed_results_wyield.shp": {
                     "fields": {**WATERSHED_OUTPUT_FIELDS},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": "Shapefile containing biophysical output values per watershed."
                 },
                 "watershed_results_wyield.csv": {
@@ -355,7 +355,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 },
                 "subwatershed_results_wyield.shp": {
                     "fields": {**SUBWATERSHED_OUTPUT_FIELDS},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": "Shapefile containing biophysical output values per subwatershed."
                 },
                 "subwatershed_results_wyield.csv": {
@@ -444,7 +444,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        "taskgraph_dir": spec_utils.TASKGRAPH_DIR
+        "taskgraph_dir": spec.TASKGRAPH_DIR
     }
 })
 

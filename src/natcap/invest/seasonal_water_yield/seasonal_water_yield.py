@@ -14,7 +14,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from .. import gettext
-from .. import spec_utils
+from .. import spec
 from .. import utils
 from .. import validation
 from ..unit_registry import u
@@ -28,7 +28,7 @@ MONTH_ID_TO_LABEL = [
     'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct',
     'nov', 'dec']
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "seasonal_water_yield",
     "model_title": gettext("Seasonal Water Yield"),
     "userguide": "seasonal_water_yield.html",
@@ -52,10 +52,10 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
-        "threshold_flow_accumulation": spec_utils.THRESHOLD_FLOW_ACCUMULATION,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
+        "threshold_flow_accumulation": spec.THRESHOLD_FLOW_ACCUMULATION,
         "et0_dir": {
             "type": "directory",
             "contents": {
@@ -116,31 +116,31 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("precipitation directory")
         },
         "dem_raster_path": {
-            **spec_utils.DEM,
+            **spec.DEM,
             "projected": True
         },
         "lulc_raster_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
-            "about": spec_utils.LULC['about'] + " " + gettext(
+            "about": spec.LULC['about'] + " " + gettext(
                 "All values in this raster MUST "
                 "have corresponding entries in the Biophysical Table.")
         },
         "soil_group_path": {
-            **spec_utils.SOIL_GROUP,
+            **spec.SOIL_GROUP,
             "projected": True,
             "required": "not user_defined_local_recharge",
             "allowed": "not user_defined_local_recharge"
         },
         "aoi_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "projected": True
         },
         "biophysical_table_path": {
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
@@ -314,7 +314,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "Required if Use Monthly Alpha Table is selected."),
             "name": gettext("monthly alpha table")
         },
-        **spec_utils.FLOW_DIR_ALGORITHM
+        **spec.FLOW_DIR_ALGORITHM
     },
     "outputs": {
         "B.tif": {
@@ -402,7 +402,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
         },
         "aggregated_results_swy.shp": {
             "about": gettext("Table of biophysical values for each watershed"),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "qb": {
                     "about": gettext(
@@ -475,7 +475,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                                      "clipped to match the other spatial inputs"),
                     "bands": {1: {"type": "integer"}}
                 },
-                'flow_accum.tif': spec_utils.FLOW_ACCUMULATION,
+                'flow_accum.tif': spec.FLOW_ACCUMULATION,
                 'prcp_a[MONTH].tif': {
                     "bands": {1: {"type": "number", "units": u.millimeter/u.year}},
                     "about": gettext("Monthly precipitation rasters, aligned and "
@@ -506,7 +506,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

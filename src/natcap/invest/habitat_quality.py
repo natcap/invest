@@ -11,7 +11,7 @@ import taskgraph
 from osgeo import gdal
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -32,7 +32,7 @@ MISSING_MAX_DIST_MSG = gettext(
     "Maximum distance value is missing for threats: {threat_list}.")
 MISSING_WEIGHT_MSG = gettext("Weight value is missing for threats: {threat_list}.")
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "habitat_quality",
     "model_title": gettext("Habitat Quality"),
     "userguide": "habitat_quality.html",
@@ -52,11 +52,11 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "lulc_cur_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "about": gettext(
                 "Map of LULC at present. All values in this raster must "
@@ -64,7 +64,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("current land cover")
         },
         "lulc_fut_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "required": False,
             "about": gettext(
@@ -75,7 +75,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("future land cover")
         },
         "lulc_bas_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "required": False,
             "about": gettext(
@@ -176,7 +176,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                         "represents completely accessible.")
                 }
             },
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "required": False,
             "about": gettext(
                 "Map of the relative protection that legal, institutional, "
@@ -188,7 +188,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "name": {
                     "type": "freestyle_string",
                     "required": False
@@ -384,7 +384,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 # All out rasters besides rarity should be gte to 0. Set nodata accordingly.

@@ -104,7 +104,7 @@ import taskgraph
 from osgeo import gdal
 
 from .. import utils
-from .. import spec_utils
+from .. import spec
 from ..unit_registry import u
 from .. import validation
 from .. import gettext
@@ -251,7 +251,7 @@ BIOPHYSICAL_TABLE_COLUMNS = {
             "Annual rate of CO2E accumulation in the litter pool.")}
 }
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "coastal_blue_carbon",
     "model_title": gettext("Coastal Blue Carbon"),
     "userguide": "coastal_blue_carbon.html",
@@ -265,9 +265,9 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "hidden": ["n_workers"]
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "landcover_snapshot_csv": {
             "type": "csv",
             "index_col": "snapshot_year",
@@ -538,7 +538,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

@@ -17,7 +17,7 @@ import taskgraph
 from osgeo import gdal
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -28,7 +28,7 @@ MISSING_CONVERT_OPTION_MSG = gettext(
     'One or more of "convert_nearest_to_edge" or "convert_farthest_from_edge" '
     'must be selected')
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "scenario_generator_proximity",
     "model_title": gettext("Scenario Generator: Proximity Based"),
     "userguide": "scenario_gen_proximity.html",
@@ -43,11 +43,11 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "hidden": ["n_workers"]
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "base_lulc_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "about": gettext("Base map from which to generate scenarios."),
             "name": gettext("base LULC map")
@@ -96,7 +96,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("number of conversion steps")
         },
         "aoi_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "required": False,
             "about": gettext(
                 "Area over which to run the conversion. Provide this input if "
@@ -198,7 +198,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

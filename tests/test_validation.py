@@ -18,8 +18,8 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from natcap.invest import spec_utils
-from natcap.invest.spec_utils import (
+from natcap.invest import spec
+from natcap.invest.spec import (
     u,
     ModelSpec,
     UISpec,
@@ -274,11 +274,11 @@ class ValidatorTest(unittest.TestCase):
 
     def test_n_workers(self):
         """Validation: validation error returned on invalid n_workers."""
-        from natcap.invest import spec_utils
+        from natcap.invest import spec
         from natcap.invest import validation
 
         args_spec = model_spec_with_defaults(inputs=[
-            spec_utils.build_input_spec('n_workers', spec_utils.N_WORKERS)])
+            spec.build_input_spec('n_workers', spec.N_WORKERS)])
 
         @validation.invest_validator
         def validate(args, limit_to=None):
@@ -295,7 +295,7 @@ class ValidatorTest(unittest.TestCase):
         from natcap.invest import validation
 
         # both args and the kwarg should be passed to the function
-        @spec_utils.timeout
+        @spec.timeout
         def func(arg1, arg2, kwarg=None):
             self.assertEqual(kwarg, 'kwarg')
             time.sleep(1)
@@ -308,7 +308,7 @@ class ValidatorTest(unittest.TestCase):
         from natcap.invest import validation
 
         # both args and the kwarg should be passed to the function
-        @spec_utils.timeout
+        @spec.timeout
         def func(arg):
             time.sleep(6)
 
@@ -556,7 +556,7 @@ class RasterValidation(unittest.TestCase):
 
     def test_raster_incorrect_units(self):
         """Validation: test when a raster projection has wrong units."""
-        from natcap.invest import spec_utils
+        from natcap.invest import spec
         from natcap.invest import validation
 
         # Use EPSG:32066  # NAD27 / BLM 16N (in US Survey Feet)
@@ -569,7 +569,7 @@ class RasterValidation(unittest.TestCase):
         raster = None
 
         error_msg = SingleBandRasterInput(
-            band=Input(), projected=True, projection_units=spec_utils.u.meter
+            band=Input(), projected=True, projection_units=spec.u.meter
         ).validate(filepath)
         expected_msg = validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
             unit_a='meter', unit_b='us_survey_foot')
@@ -645,7 +645,7 @@ class VectorValidation(unittest.TestCase):
 
     def test_vector_projected_in_m(self):
         """Validation: test that a vector's projection has expected units."""
-        from natcap.invest import spec_utils
+        from natcap.invest import spec
         from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GPKG')
@@ -659,14 +659,14 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = VectorInput(
-            fields={}, geometries={'POINT'}, projected=True, projection_units=spec_utils.u.foot
+            fields={}, geometries={'POINT'}, projected=True, projection_units=spec.u.foot
         ).validate(filepath)
         expected_msg = validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
             unit_a='foot', unit_b='metre')
         self.assertEqual(error_msg, expected_msg)
 
         self.assertIsNone(VectorInput(
-            fields={}, geometries={'POINT'}, projected=True, projection_units=spec_utils.u.meter
+            fields={}, geometries={'POINT'}, projected=True, projection_units=spec.u.meter
         ).validate(filepath))
 
     def test_wrong_geom_type(self):
@@ -703,7 +703,7 @@ class FreestyleStringValidation(unittest.TestCase):
     def test_regexp(self):
         """Validation: test that we can check regex patterns on strings."""
         from natcap.invest import validation
-        from natcap.invest.spec_utils import SUFFIX
+        from natcap.invest.spec import SUFFIX
 
         self.assertEqual(
             None, StringInput(regexp='^1.[0-9]+$').validate(1.234))
@@ -926,13 +926,13 @@ class CSVValidation(unittest.TestCase):
 
         # define a side effect for the mock that will sleep
         # for longer than the allowed timeout
-        @spec_utils.timeout
+        @spec.timeout
         def delay(*args, **kwargs):
             time.sleep(7)
             return []
 
         # replace the validation.check_csv with the mock function, and try to validate
-        with unittest.mock.patch('natcap.invest.spec_utils.CSVInput.validate', delay):
+        with unittest.mock.patch('natcap.invest.spec.CSVInput.validate', delay):
             with warnings.catch_warnings(record=True) as ws:
                 # cause all warnings to always be triggered
                 warnings.simplefilter("always")
@@ -945,26 +945,26 @@ class CSVValidation(unittest.TestCase):
         from natcap.invest import validation
         expected_headers = ['hello', '1']
         actual = ['hello', '1', '2']
-        result = spec_utils.check_headers(expected_headers, actual)
+        result = spec.check_headers(expected_headers, actual)
         self.assertEqual(result, None)
 
         # each pattern should match at least one header
         actual = ['1', '2']
-        result = spec_utils.check_headers(expected_headers, actual)
+        result = spec.check_headers(expected_headers, actual)
         expected_msg = validation.MESSAGES['MATCHED_NO_HEADERS'].format(
             header='header', header_name='hello')
         self.assertEqual(result, expected_msg)
 
         # duplicate headers that match a pattern are not allowed
         actual = ['hello', '1', '1']
-        result = spec_utils.check_headers(expected_headers, actual, 'column')
+        result = spec.check_headers(expected_headers, actual, 'column')
         expected_msg = validation.MESSAGES['DUPLICATE_HEADER'].format(
             header='column', header_name='1', number=2)
         self.assertEqual(result, expected_msg)
 
         # duplicate headers that don't match a pattern are allowed
         actual = ['hello', '1', 'x', 'x']
-        result = spec_utils.check_headers(expected_headers, actual)
+        result = spec.check_headers(expected_headers, actual)
         self.assertEqual(result, None)
 
 
@@ -1745,7 +1745,7 @@ class TestValidationFromSpec(unittest.TestCase):
 
     def test_conditionally_required_vector_fields(self):
         """Validation: conditionally required vector fields."""
-        from natcap.invest import spec_utils
+        from natcap.invest import spec
         from natcap.invest import validation
         spec = model_spec_with_defaults(inputs=[
             NumberInput(
@@ -1755,7 +1755,7 @@ class TestValidationFromSpec(unittest.TestCase):
             ),
             VectorInput(
                 id="vector",
-                geometries=spec_utils.POINTS,
+                geometries=spec.POINTS,
                 fields=Fields(
                     RatioInput(id="field_a"),
                     RatioInput(id="field_b", required="some_number == 2")
@@ -1930,7 +1930,7 @@ class TestValidationFromSpec(unittest.TestCase):
         args = {'number_a': 1}
 
         # Patch in a new function that raises an exception
-        with unittest.mock.patch('natcap.invest.spec_utils.NumberInput.validate',
+        with unittest.mock.patch('natcap.invest.spec.NumberInput.validate',
                                  Mock(side_effect=ValueError('foo'))):
           validation_warnings = validation.validate(args, spec)
 
@@ -2288,7 +2288,7 @@ class TestValidationFromSpec(unittest.TestCase):
             Input(id='c', required='conditional statement'),
             Input(id='d', required=False)
         )
-        patterns = spec_utils.get_headers_to_validate(spec)
+        patterns = spec.get_headers_to_validate(spec)
         # should only get the patterns that are static and always required
         self.assertEqual(sorted(patterns), ['a'])
 

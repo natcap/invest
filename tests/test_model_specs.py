@@ -6,7 +6,7 @@ import pytest
 
 import pint
 from natcap.invest.models import model_id_to_pyname
-from natcap.invest import spec_utils
+from natcap.invest import spec
 from osgeo import gdal
 
 PLUGIN_URL = 'git+https://github.com/emlys/demo-invest-plugin.git'
@@ -16,100 +16,100 @@ PLUGIN_NAME = 'foo-model'
 gdal.UseExceptions()
 valid_nested_input_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
-        spec_utils.IntegerInput,
-        spec_utils.NumberInput,
-        spec_utils.RatioInput,
-        spec_utils.PercentInput,
-        spec_utils.StringInput,
-        spec_utils.OptionStringInput,
-        spec_utils.BooleanInput,
-        spec_utils.SingleBandRasterInput,
-        spec_utils.VectorInput,
-        spec_utils.RasterOrVectorInput,
-        spec_utils.CSVInput,
-        spec_utils.DirectoryInput,
-        spec_utils.FileInput
+        spec.IntegerInput,
+        spec.NumberInput,
+        spec.RatioInput,
+        spec.PercentInput,
+        spec.StringInput,
+        spec.OptionStringInput,
+        spec.BooleanInput,
+        spec.SingleBandRasterInput,
+        spec.VectorInput,
+        spec.RasterOrVectorInput,
+        spec.CSVInput,
+        spec.DirectoryInput,
+        spec.FileInput
     },
-    spec_utils.SingleBandRasterInput: {
-        spec_utils.IntegerInput,
-        spec_utils.NumberInput,
-        spec_utils.RatioInput,
-        spec_utils.PercentInput
+    spec.SingleBandRasterInput: {
+        spec.IntegerInput,
+        spec.NumberInput,
+        spec.RatioInput,
+        spec.PercentInput
     },
-    spec_utils.VectorInput: {
-        spec_utils.IntegerInput,
-        spec_utils.NumberInput,
-        spec_utils.RatioInput,
-        spec_utils.PercentInput,
-        spec_utils.StringInput,
-        spec_utils.OptionStringInput
+    spec.VectorInput: {
+        spec.IntegerInput,
+        spec.NumberInput,
+        spec.RatioInput,
+        spec.PercentInput,
+        spec.StringInput,
+        spec.OptionStringInput
     },
-    spec_utils.CSVInput: {
-        spec_utils.IntegerInput,
-        spec_utils.NumberInput,
-        spec_utils.RatioInput,
-        spec_utils.PercentInput,
-        spec_utils.StringInput,
-        spec_utils.OptionStringInput,
-        spec_utils.BooleanInput,
-        spec_utils.SingleBandRasterInput,
-        spec_utils.VectorInput,
-        spec_utils.RasterOrVectorInput
+    spec.CSVInput: {
+        spec.IntegerInput,
+        spec.NumberInput,
+        spec.RatioInput,
+        spec.PercentInput,
+        spec.StringInput,
+        spec.OptionStringInput,
+        spec.BooleanInput,
+        spec.SingleBandRasterInput,
+        spec.VectorInput,
+        spec.RasterOrVectorInput
     },
-    spec_utils.DirectoryInput: {
-        spec_utils.CSVInput,
-        spec_utils.DirectoryInput,
-        spec_utils.FileInput,
-        spec_utils.SingleBandRasterInput,
-        spec_utils.VectorInput,
-        spec_utils.RasterOrVectorInput
+    spec.DirectoryInput: {
+        spec.CSVInput,
+        spec.DirectoryInput,
+        spec.FileInput,
+        spec.SingleBandRasterInput,
+        spec.VectorInput,
+        spec.RasterOrVectorInput
     }
 }
 
 valid_nested_output_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
-        spec_utils.IntegerOutput,
-        spec_utils.NumberOutput,
-        spec_utils.RatioOutput,
-        spec_utils.PercentOutput,
-        spec_utils.StringOutput,
-        spec_utils.OptionStringOutput,
-        spec_utils.SingleBandRasterOutput,
-        spec_utils.VectorOutput,
-        spec_utils.CSVOutput,
-        spec_utils.DirectoryOutput,
-        spec_utils.FileOutput
+        spec.IntegerOutput,
+        spec.NumberOutput,
+        spec.RatioOutput,
+        spec.PercentOutput,
+        spec.StringOutput,
+        spec.OptionStringOutput,
+        spec.SingleBandRasterOutput,
+        spec.VectorOutput,
+        spec.CSVOutput,
+        spec.DirectoryOutput,
+        spec.FileOutput
     },
-    spec_utils.SingleBandRasterOutput: {
-        spec_utils.IntegerOutput,
-        spec_utils.NumberOutput,
-        spec_utils.RatioOutput,
-        spec_utils.PercentOutput
+    spec.SingleBandRasterOutput: {
+        spec.IntegerOutput,
+        spec.NumberOutput,
+        spec.RatioOutput,
+        spec.PercentOutput
     },
-    spec_utils.VectorOutput: {
-        spec_utils.IntegerOutput,
-        spec_utils.NumberOutput,
-        spec_utils.RatioOutput,
-        spec_utils.PercentOutput,
-        spec_utils.StringOutput,
-        spec_utils.OptionStringOutput
+    spec.VectorOutput: {
+        spec.IntegerOutput,
+        spec.NumberOutput,
+        spec.RatioOutput,
+        spec.PercentOutput,
+        spec.StringOutput,
+        spec.OptionStringOutput
     },
-    spec_utils.CSVOutput: {
-        spec_utils.IntegerOutput,
-        spec_utils.NumberOutput,
-        spec_utils.RatioOutput,
-        spec_utils.PercentOutput,
-        spec_utils.StringOutput,
-        spec_utils.OptionStringOutput,
-        spec_utils.SingleBandRasterOutput,
-        spec_utils.VectorOutput
+    spec.CSVOutput: {
+        spec.IntegerOutput,
+        spec.NumberOutput,
+        spec.RatioOutput,
+        spec.PercentOutput,
+        spec.StringOutput,
+        spec.OptionStringOutput,
+        spec.SingleBandRasterOutput,
+        spec.VectorOutput
     },
-    spec_utils.DirectoryOutput: {
-        spec_utils.CSVOutput,
-        spec_utils.DirectoryOutput,
-        spec_utils.FileOutput,
-        spec_utils.SingleBandRasterOutput,
-        spec_utils.VectorOutput
+    spec.DirectoryOutput: {
+        spec.CSVOutput,
+        spec.DirectoryOutput,
+        spec.FileOutput,
+        spec.SingleBandRasterOutput,
+        spec.VectorOutput
     }
 }
 
@@ -137,7 +137,7 @@ class ValidateModelSpecs(unittest.TestCase):
                         set(model.MODEL_SPEC.args_with_spatial_overlap).issubset(
                             {'spatial_keys', 'different_projections_ok'}))
 
-                self.assertIsInstance(model.MODEL_SPEC.ui_spec, spec_utils.UISpec)
+                self.assertIsInstance(model.MODEL_SPEC.ui_spec, spec.UISpec)
                 if model.MODEL_SPEC.ui_spec.dropdown_functions:
                     self.assertIsInstance(
                         model.MODEL_SPEC.ui_spec.dropdown_functions, dict)
@@ -191,13 +191,13 @@ class ValidateModelSpecs(unittest.TestCase):
             t = type(spec)
             self.assertIn(t, valid_nested_output_types[parent_type])
 
-            if t is spec_utils.NumberOutput:
+            if t is spec.NumberOutput:
                 # number type should have a units property
                 self.assertTrue(hasattr(spec, 'units'))
                 # Undefined units should use the custom u.none unit
                 self.assertIsInstance(spec.units, pint.Unit)
 
-            elif t is spec_utils.SingleBandRasterOutput:
+            elif t is spec.SingleBandRasterOutput:
                 # raster type should have a bands property that maps each band
                 # index to a nested type dictionary describing the band's data
                 self.assertTrue(hasattr(spec, 'band'))
@@ -206,13 +206,13 @@ class ValidateModelSpecs(unittest.TestCase):
                     f'{key}.band',
                     parent_type=t)
 
-            elif t is spec_utils.VectorOutput:
+            elif t is spec.VectorOutput:
                 # vector type should have:
                 # - a fields property that maps each field header to a nested
                 #   type dictionary describing the data in that field
                 # - a geometries property: the set of valid geometry types
                 self.assertTrue(hasattr(spec, 'fields'))
-                self.assertIsInstance(spec.fields, spec_utils.Fields)
+                self.assertIsInstance(spec.fields, spec.Fields)
                 for field in spec.fields:
                     self.validate_output(
                         field,
@@ -222,14 +222,14 @@ class ValidateModelSpecs(unittest.TestCase):
                 self.assertTrue(hasattr(spec, 'geometries'))
                 self.assertIsInstance(spec.geometries, set)
 
-            elif t is spec_utils.CSVOutput:
+            elif t is spec.CSVOutput:
                 # csv type may have a columns property.
                 # the columns property maps each expected column header
                 # name/pattern to a nested type dictionary describing the data
                 # in that column. may be absent if the table structure
                 # is too complex to describe this way.
                 self.assertTrue(hasattr(spec, 'columns'))
-                self.assertIsInstance(spec.columns, spec_utils.Columns)
+                self.assertIsInstance(spec.columns, spec.Columns)
                 for column in spec.columns:
                     self.validate_output(
                         column,
@@ -238,19 +238,19 @@ class ValidateModelSpecs(unittest.TestCase):
                 if spec.index_col:
                     self.assertIn(spec.index_col, [s.id for s in spec.columns])
 
-            elif t is spec_utils.DirectoryOutput:
+            elif t is spec.DirectoryOutput:
                 # directory type should have a contents property that maps each
                 # expected path name/pattern within the directory to a nested
                 # type dictionary describing the data at that filepath
                 self.assertTrue(hasattr(spec, 'contents'))
-                self.assertIsInstance(spec.contents, spec_utils.Contents)
+                self.assertIsInstance(spec.contents, spec.Contents)
                 for path in spec.contents:
                     self.validate_output(
                         path,
                         f'{key}.contents.{path}',
                         parent_type=t)
 
-            elif t is spec_utils.OptionStringOutput:
+            elif t is spec.OptionStringOutput:
                     # option_string type should have an options property that
                     # describes the valid options
                     self.assertTrue(hasattr(spec, 'options'))
@@ -260,7 +260,7 @@ class ValidateModelSpecs(unittest.TestCase):
                             isinstance(option, str) or
                             isinstance(option, int))
 
-            elif t is spec_utils.FileOutput:
+            elif t is spec.FileOutput:
                 pass
 
             # iterate over the remaining attributes
@@ -298,7 +298,7 @@ class ValidateModelSpecs(unittest.TestCase):
             t = type(arg)
             self.assertIn(t, valid_nested_input_types[parent_type])
 
-            if t is spec_utils.OptionStringInput:
+            if t is spec.OptionStringInput:
                 # option_string type should have an options property that
                 # describes the valid options
                 self.assertTrue(hasattr(arg, 'options'))
@@ -330,7 +330,7 @@ class ValidateModelSpecs(unittest.TestCase):
 
                 attrs.remove('options')
 
-            elif t is spec_utils.StringInput:
+            elif t is spec.StringInput:
                 # freestyle_string may optionally have a regexp attribute
                 # this is a regular expression that the string must match
                 if arg.regexp:
@@ -338,7 +338,7 @@ class ValidateModelSpecs(unittest.TestCase):
                     re.compile(arg.regexp)  # should be regex compilable
                     attrs.remove('regexp')
 
-            elif t is spec_utils.NumberInput:
+            elif t is spec.NumberInput:
                 # number type should have a units property
                 self.assertTrue(hasattr(arg, 'units'))
                 # Undefined units should use the custom u.none unit
@@ -353,7 +353,7 @@ class ValidateModelSpecs(unittest.TestCase):
                 if arg.expression:
                     self.assertIsInstance(arg.expression, str)
 
-            elif t is spec_utils.SingleBandRasterInput:
+            elif t is spec.SingleBandRasterInput:
                 # raster type should have a bands property that maps each band
                 # index to a nested type dictionary describing the band's data
                 self.assertTrue(hasattr(arg, 'band'))
@@ -377,13 +377,13 @@ class ValidateModelSpecs(unittest.TestCase):
                         arg.projection_units, pint.Unit)
                     attrs.remove('projection_units')
 
-            elif t is spec_utils.VectorInput:
+            elif t is spec.VectorInput:
                 # vector type should have:
                 # - a fields property that maps each field header to a nested
                 #   type dictionary describing the data in that field
                 # - a geometries property: the set of valid geometry types
                 self.assertTrue(hasattr(arg, 'fields'))
-                self.assertIsInstance(arg.fields, spec_utils.Fields)
+                self.assertIsInstance(arg.fields, spec.Fields)
                 for field in arg.fields:
                     self.validate_args(
                         field,
@@ -411,7 +411,7 @@ class ValidateModelSpecs(unittest.TestCase):
                         arg.projection_units, pint.Unit)
                     attrs.remove('projection_units')
 
-            elif t is spec_utils.CSVInput:
+            elif t is spec.CSVInput:
                 # csv type should have a rows property, columns property, or
                 # neither. rows or columns properties map each expected header
                 # name/pattern to a nested type dictionary describing the data
@@ -435,12 +435,12 @@ class ValidateModelSpecs(unittest.TestCase):
                 if arg.index_col:
                     self.assertIn(arg.index_col, [s.id for s in arg.columns])
 
-            elif t is spec_utils.DirectoryInput:
+            elif t is spec.DirectoryInput:
                 # directory type should have a contents property that maps each
                 # expected path name/pattern within the directory to a nested
                 # type dictionary describing the data at that filepath
                 self.assertTrue(hasattr(arg, 'contents'))
-                self.assertIsInstance(arg.contents, spec_utils.Contents)
+                self.assertIsInstance(arg.contents, spec.Contents)
                 for path in arg.contents:
                     self.validate_args(
                         path,
@@ -460,7 +460,7 @@ class ValidateModelSpecs(unittest.TestCase):
                     self.assertIsInstance(arg.must_exist, bool)
                     attrs.remove('must_exist')
 
-            elif t is spec_utils.FileInput:
+            elif t is spec.FileInput:
                 # file type may optionally have a 'permissions' attribute
                 # this is a string listing the permissions e.g. 'rwx'
                 if arg.permissions:
@@ -505,7 +505,7 @@ class ValidateModelSpecs(unittest.TestCase):
 
     def test_model_specs_serialize(self):
         """MODEL_SPEC: test each arg spec can serialize to JSON."""
-        from natcap.invest import spec_utils
+        from natcap.invest import spec
 
         for pyname in model_id_to_pyname.values():
             model = importlib.import_module(pyname)
@@ -513,11 +513,11 @@ class ValidateModelSpecs(unittest.TestCase):
 
 
 class SpecUtilsTests(unittest.TestCase):
-    """Tests for natcap.invest.spec_utils."""
+    """Tests for natcap.invest.spec."""
 
     def test_format_unit(self):
-        """spec_utils: test converting units to strings with format_unit."""
-        from natcap.invest import spec_utils
+        """spec: test converting units to strings with format_unit."""
+        from natcap.invest import spec
         for unit_name, expected in [
                 ('meter', 'm'),
                 ('meter / second', 'm/s'),
@@ -525,15 +525,15 @@ class SpecUtilsTests(unittest.TestCase):
                 ('t * hr * ha / ha / MJ / mm', 't · h · ha / (ha · MJ · mm)'),
                 ('mm^3 / year', 'mm³/year')
         ]:
-            unit = spec_utils.u.Unit(unit_name)
-            actual = spec_utils.format_unit(unit)
+            unit = spec.u.Unit(unit_name)
+            actual = spec.format_unit(unit)
             self.assertEqual(expected, actual)
 
     def test_format_unit_raises_error(self):
-        """spec_utils: format_unit raises TypeError if not a pint.Unit."""
-        from natcap.invest import spec_utils
+        """spec: format_unit raises TypeError if not a pint.Unit."""
+        from natcap.invest import spec
         with self.assertRaises(TypeError):
-            spec_utils.format_unit({})
+            spec.format_unit({})
 
 @pytest.mark.skip(reason="Possible race condition of plugin not being uninstalled before other tests are run.")
 class PluginTests(unittest.TestCase):

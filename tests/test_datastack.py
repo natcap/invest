@@ -328,7 +328,7 @@ class DatastackArchiveTests(unittest.TestCase):
         """Datastack: test archive extraction."""
         from natcap.invest import datastack
         from natcap.invest import utils
-        from natcap.invest import spec_utils
+        from natcap.invest import spec
         from natcap.invest import validation
 
         params = {
@@ -408,11 +408,11 @@ class DatastackArchiveTests(unittest.TestCase):
             self.assertTrue(
                 filecmp.cmp(archive_params[key], params[key], shallow=False))
 
-        spatial_csv_dict = spec_utils.CSVInput(
+        spatial_csv_dict = spec.CSVInput(
             index_col='id',
-            columns=spec_utils.Columns(
-                spec_utils.IntegerInput(id='id'),
-                spec_utils.FileInput(id='path'))
+            columns=spec.Columns(
+                spec.IntegerInput(id='id'),
+                spec.FileInput(id='path'))
         ).get_validated_dataframe(
             archive_params['spatial_table']
         ).to_dict(orient='index')

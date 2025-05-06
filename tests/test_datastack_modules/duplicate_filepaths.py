@@ -1,14 +1,14 @@
-from natcap.invest import spec_utils
+from natcap.invest import spec
 
-MODEL_SPEC = spec_utils.ModelSpec(
+MODEL_SPEC = spec.ModelSpec(
     inputs=[
-        spec_utils.FileInput(id='foo'),
-        spec_utils.FileInput(id='bar')
+        spec.FileInput(id='foo'),
+        spec.FileInput(id='bar')
     ],
     outputs={},
     model_id='',
     model_title='',
     userguide='',
-    ui_spec=spec_utils.UISpec(),
+    ui_spec=spec.UISpec(),
     args_with_spatial_overlap={}
 )

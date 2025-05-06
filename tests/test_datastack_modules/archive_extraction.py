@@ -1,25 +1,25 @@
-from natcap.invest import spec_utils
+from natcap.invest import spec
 
-MODEL_SPEC = spec_utils.ModelSpec(inputs=[
-    spec_utils.StringInput(id='blank'),
-    spec_utils.IntegerInput(id='a'),
-    spec_utils.StringInput(id='b'),
-    spec_utils.StringInput(id='c'),
-    spec_utils.FileInput(id='foo'),
-    spec_utils.FileInput(id='bar'),
-    spec_utils.DirectoryInput(id='data_dir', contents={}),
-    spec_utils.SingleBandRasterInput(id='raster', band=spec_utils.Input()),
-    spec_utils.VectorInput(id='vector', fields={}, geometries={}),
-    spec_utils.CSVInput(id='simple_table'),
-    spec_utils.CSVInput(
+MODEL_SPEC = spec.ModelSpec(inputs=[
+    spec.StringInput(id='blank'),
+    spec.IntegerInput(id='a'),
+    spec.StringInput(id='b'),
+    spec.StringInput(id='c'),
+    spec.FileInput(id='foo'),
+    spec.FileInput(id='bar'),
+    spec.DirectoryInput(id='data_dir', contents={}),
+    spec.SingleBandRasterInput(id='raster', band=spec.Input()),
+    spec.VectorInput(id='vector', fields={}, geometries={}),
+    spec.CSVInput(id='simple_table'),
+    spec.CSVInput(
         id='spatial_table',
-        columns=spec_utils.Columns(
-            spec_utils.IntegerInput(id='ID'),
-            spec_utils.RasterOrVectorInput(
+        columns=spec.Columns(
+            spec.IntegerInput(id='ID'),
+            spec.RasterOrVectorInput(
                 id='path',
                 fields={},
                 geometries={'POINT', 'POLYGON'},
-                band=spec_utils.NumberInput()
+                band=spec.NumberInput()
             )
         )
     )],
@@ -27,6 +27,6 @@ MODEL_SPEC = spec_utils.ModelSpec(inputs=[
     model_id='',
     model_title='',
     userguide='',
-    ui_spec=spec_utils.UISpec(),
+    ui_spec=spec.UISpec(),
     args_with_spatial_overlap={}
 )

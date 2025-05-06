@@ -20,7 +20,7 @@ from scipy import integrate
 from shapely import speedups
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -90,7 +90,7 @@ OUTPUT_WIND_DATA_FIELDS = {
     }
 }
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "wind_energy",
     "model_title": gettext("Wind Energy Production"),
     "userguide": "wind_energy.html",
@@ -110,9 +110,9 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "wind_data_path": {
             "type": "csv",
             "columns": INPUT_WIND_DATA_FIELDS,
@@ -120,7 +120,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("wind data points")
         },
         "aoi_vector_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "projected": True,
             "projection_units": u.meter,
             "required": "valuation_container and grid_points_path",
@@ -489,7 +489,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 },
                 "wind_energy_points.shp": {
                     "about": gettext("Map of summarized data at each point."),
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "fields": OUTPUT_WIND_DATA_FIELDS
                 }
             }
@@ -540,12 +540,12 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "wind_data.pickle": {"about": "Pickled wind data dictionary"},
                 "wind_energy_points_from_data.shp": {
                     "about": "Wind data",
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "fields": OUTPUT_WIND_DATA_FIELDS
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

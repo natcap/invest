@@ -18,7 +18,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -31,7 +31,7 @@ DISTANCE_UPPER_BOUND = 500e3
 # helpful to have a global nodata defined for the whole model
 NODATA_VALUE = -1
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "forest_carbon_edge_effect",
     "model_title": gettext("Forest Carbon Edge Effect"),
     "userguide": "carbon_edge.html",
@@ -49,9 +49,9 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "n_nearest_model_points": {
             "expression": "value > 0 and value.is_integer()",
             "type": "number",
@@ -69,7 +69,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("number of points to average")
         },
         "aoi_vector_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "projected": True,
             "required": False
         },
@@ -77,7 +77,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "is_tropical_forest": {
                     "type": "boolean",
                     "about": gettext(
@@ -121,8 +121,8 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("biophysical table")
         },
         "lulc_raster_path": {
-            **spec_utils.LULC,
-            "about": spec_utils.LULC['about'] + " " + gettext(
+            **spec.LULC,
+            "about": spec.LULC['about'] + " " + gettext(
                 "All values in this raster must "
                 "have corresponding entries in the Biophysical Table."),
             "projected": True
@@ -176,7 +176,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                         "θ₃ parameter for the regression equation. "
                         "Used only for the asymptotic model.")}
             },
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "required": "compute_forest_edge_effects",
             "allowed": "compute_forest_edge_effects",
             "about": gettext(
@@ -210,7 +210,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
         },
         "aggregated_carbon_stocks.shp": {
             "about": "AOI map with aggregated carbon statistics.",
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "c_sum": {
                     "type": "number",
@@ -247,7 +247,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": (
                         "The regression parameters reprojected to match your "
                         "study area."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 },
                 "edge_distance.tif": {
@@ -266,7 +266,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

@@ -17,7 +17,7 @@ from osgeo import ogr
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -48,7 +48,7 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "habitat_risk_assessment",
     "model_title": gettext("Habitat Risk Assessment"),
     "userguide": "habitat_risk_assessment.html",
@@ -66,9 +66,9 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "hidden": ["n_workers"]
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "info_table_path": {
             "name": gettext("habitat stressor table"),
             "about": gettext("A table describing each habitat and stressor."),
@@ -92,7 +92,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                             "values besides 0 or 1 will be treated as 0.")
                     }},
                     "fields": {},
-                    "geometries": spec_utils.ALL_GEOMS,
+                    "geometries": spec.ALL_GEOMS,
                     "about": gettext(
                         "Map of where the habitat or stressor exists. For "
                         "rasters, a pixel value of 1 indicates presence of "
@@ -184,7 +184,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             }
         },
         "aoi_vector_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "projected": True,
             "projection_units": u.meter,
             "fields": {
@@ -297,7 +297,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": (
                         "Map of habitat-specific risk visualized in gradient "
                         "color from white to red on a map."),
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "fields": {
                         "Risk Score": {
                             "type": "integer",
@@ -312,7 +312,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": (
                         "Map of ecosystem risk visualized in gradient "
                         "color from white to red on a map."),
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "fields": {
                         "Risk Score": {
                             "type": "integer",
@@ -325,7 +325,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 },
                 "STRESSOR_[STRESSOR].geojson": {
                     "about": "Map of stressor extent visualized in orange color.",
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "fields": {}
                 },
                 "SUMMARY_STATISTICS.csv": {
@@ -395,7 +395,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "polygonized_[HABITAT/STRESSOR].gpkg": {
                     "about": "Polygonized habitat or stressor map",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON
+                    "geometries": spec.POLYGON
                 },
                 "reclass_[HABITAT]_[STRESSOR].tif": {
                     "about": (
@@ -419,7 +419,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                         "were provided in a spatial vector format, it will be "
                         "reprojected to the AOI projection."),
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS
+                    "geometries": spec.POLYGONS
                 },
                 "rewritten_[HABITAT/STRESSOR/CRITERIA].tif": {
                     "about": (
@@ -439,11 +439,11 @@ MODEL_SPEC = spec_utils.build_model_spec({
                         "provided are simplified to 1/2 the user-defined "
                         "raster resolution in order to speed up rasterization."),
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS
+                    "geometries": spec.POLYGONS
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

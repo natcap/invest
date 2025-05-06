@@ -12,7 +12,7 @@ from osgeo import gdal
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .crop_production_regression import NUTRIENTS
@@ -240,7 +240,7 @@ nutrient_units = {
     "vitk":        u.microgram/u.hectogram,  # vitamin K
 }
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "crop_production_percentile",
     "model_title": gettext("Crop Production: Percentile"),
     "userguide": "crop_production.html",
@@ -260,11 +260,11 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "landcover_raster_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "projection_units": u.meter
         },
@@ -285,7 +285,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("LULC to Crop Table")
         },
         "aggregate_polygon_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "projected": True,
             "required": False
         },
@@ -510,7 +510,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

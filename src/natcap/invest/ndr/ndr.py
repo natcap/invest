@@ -12,7 +12,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from .. import gettext
-from .. import spec_utils
+from .. import spec
 from .. import utils
 from .. import validation
 from ..sdr import sdr
@@ -23,7 +23,7 @@ LOGGER = logging.getLogger(__name__)
 
 MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "ndr",
     "model_title": gettext("Nutrient Delivery Ratio"),
     "userguide": "ndr.html",
@@ -44,17 +44,17 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "dem_path": {
-            **spec_utils.DEM,
+            **spec.DEM,
             "projected": True
         },
         "lulc_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
-            "about": spec_utils.LULC['about'] + " " + gettext(
+            "about": spec.LULC['about'] + " " + gettext(
                 "All values in this raster must "
                 "have corresponding entries in the Biophysical table.")
         },
@@ -74,7 +74,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "watersheds_path": {
             "type": "vector",
             "projected": True,
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {},
             "about": gettext(
                 "Map of the boundaries of the watershed(s) over which to "
@@ -85,7 +85,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "load_n": {
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
@@ -158,7 +158,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("calculate nitrogen")
         },
         "threshold_flow_accumulation": {
-            **spec_utils.THRESHOLD_FLOW_ACCUMULATION
+            **spec.THRESHOLD_FLOW_ACCUMULATION
         },
         "k_param": {
             "type": "number",
@@ -208,12 +208,12 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "retention due to biochemical degradation in soils. Required "
                 "if Calculate Nitrogen is selected.")
         },
-        **spec_utils.FLOW_DIR_ALGORITHM
+        **spec.FLOW_DIR_ALGORITHM
     },
     "outputs": {
         "watershed_results_ndr.gpkg": {
             "about": "Vector with aggregated nutrient model results per watershed.",
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "p_surface_load": {
                     "type": "number",
@@ -321,8 +321,8 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": "Effective phosphorus retention provided by the downslope flow path for each pixel",
                     "bands": {1: {"type": "ratio"}}
                 },
-                "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
-                "flow_direction.tif": spec_utils.FLOW_DIRECTION,
+                "flow_accumulation.tif": spec.FLOW_ACCUMULATION,
+                "flow_direction.tif": spec.FLOW_DIRECTION,
                 "ic_factor.tif": {
                     "about": "Index of connectivity",
                     "bands": {1: {"type": "ratio"}}
@@ -379,7 +379,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": "Inverse of slope",
                     "bands": {1: {"type": "number", "units": u.none}}
                 },
-                "stream.tif": spec_utils.STREAM,
+                "stream.tif": spec.STREAM,
                 "sub_load_n.tif": {
                     "about": "Nitrogen loads for subsurface transport",
                     "bands": {1: {
@@ -449,8 +449,8 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": "Runoff proxy input masked to exclude pixels outside the watershed",
                     "bands": {1: {"type": "number", "units": u.none}}
                 },
-                "filled_dem.tif": spec_utils.FILLED_DEM,
-                "slope.tif": spec_utils.SLOPE,
+                "filled_dem.tif": spec.FILLED_DEM,
+                "slope.tif": spec.SLOPE,
                 "subsurface_export_n.pickle": {
                     "about": "Pickled zonal statistics of nitrogen subsurface export"
                 },
@@ -474,7 +474,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

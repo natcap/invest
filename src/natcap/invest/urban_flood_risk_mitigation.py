@@ -14,14 +14,14 @@ from osgeo import ogr
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "urban_flood_risk_mitigation",
     "model_title": gettext("Urban Flood Risk Mitigation"),
     "userguide": "urban_flood_mitigation.html",
@@ -42,10 +42,10 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
-        "aoi_watersheds_path": spec_utils.AOI,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
+        "aoi_watersheds_path": spec.AOI,
         "rainfall_depth": {
             "expression": "value > 0",
             "type": "number",
@@ -54,14 +54,14 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("rainfall depth")
         },
         "lulc_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "about": gettext(
                 "Map of LULC. All values in this raster must have "
                 "corresponding entries in the Biophysical Table.")
         },
         "soils_hydrological_group_raster_path": {
-            **spec_utils.SOIL_GROUP,
+            **spec.SOIL_GROUP,
             "projected": True
         },
         "curve_number_table_path": {
@@ -94,7 +94,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                         "Code indicating the building type. These codes "
                         "must match those in the Damage Loss Table."
                     )}},
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "required": False,
             "about": gettext("Map of building footprints."),
             "name": gettext("built infrastructure")
@@ -144,7 +144,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
         },
         "flood_risk_service.shp": {
             "about": "Aggregated results for each area of interest.",
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "rnf_rt_idx": {
                     "about": "Average runoff retention index.",
@@ -186,14 +186,14 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": (
                         "Copy of AOI vector reprojected to the same spatial "
                         "reference as the LULC."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 },
                 "structures_reprojected.shp": {
                     "about": (
                         "Copy of built infrastructure vector reprojected to "
                         "the same spatial reference as the LULC."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 },
                 "aligned_lulc.tif": {
@@ -214,7 +214,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

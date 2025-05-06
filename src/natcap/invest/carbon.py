@@ -12,7 +12,7 @@ import taskgraph
 
 from . import validation
 from . import utils
-from . import spec_utils
+from . import spec
 from .unit_registry import u
 from . import gettext
 
@@ -38,7 +38,7 @@ CARBON_OUTPUTS = {
     ]
 }
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "carbon",
     "model_title": gettext("Carbon Storage and Sequestration"),
     "userguide": "carbonstorage.html",
@@ -57,11 +57,11 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "spatial_keys": ["lulc_bas_path", "lulc_alt_path"],
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "lulc_bas_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "projection_units": u.meter,
             "about": gettext(
@@ -80,7 +80,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("calculate sequestration")
         },
         "lulc_alt_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "projection_units": u.meter,
             "required": "calc_sequestration",
@@ -96,7 +96,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "carbon_pools_path": {
             "type": "csv",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
@@ -226,7 +226,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 **CARBON_OUTPUTS
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

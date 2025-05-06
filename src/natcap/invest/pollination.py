@@ -15,14 +15,14 @@ from osgeo import gdal
 from osgeo import ogr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "pollination",
     "model_title": gettext("Crop Pollination"),
     "userguide": "croppollination.html",
@@ -36,11 +36,11 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "hidden": ["n_workers"]
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "landcover_raster_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "about": gettext(
                 "Map of LULC codes. All values in this raster must have "
@@ -99,7 +99,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "nesting_[SUBSTRATE]_availability_index": {
                     "type": "ratio",
                     "about": gettext(
@@ -174,7 +174,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                         "The proportion of pollination required on the farm "
                         "that is provided by managed pollinators.")}
             },
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "required": False,
             "about": gettext(
                 "Map of farm sites to be analyzed, with pollination data "
@@ -187,7 +187,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "created_if": "farm_vector_path",
             "about": gettext(
                 "A copy of the input farm polygon vector file with additional fields"),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "p_abund": {
                     "about": (
@@ -319,11 +319,11 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "reprojected_farm_vector.shp": {
                     "about": "Farm vector reprojected to the LULC projection",
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS
+                    "geometries": spec.POLYGONS
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

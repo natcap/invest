@@ -12,7 +12,7 @@ from osgeo import ogr
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -25,7 +25,7 @@ UINT8_NODATA = 255
 UINT16_NODATA = 65535
 NONINTEGER_SOILS_RASTER_MESSAGE = 'Soil group raster data type must be integer'
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "stormwater",
     "model_title": gettext("Urban Stormwater Retention"),
     "userguide": "stormwater.html",
@@ -45,20 +45,20 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "different_projections_ok": True
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "lulc_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True
         },
-        "soil_group_path": spec_utils.SOIL_GROUP,
-        "precipitation_path": spec_utils.PRECIP,
+        "soil_group_path": spec.SOIL_GROUP,
+        "precipitation_path": spec.PRECIP,
         "biophysical_table": {
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "emc_[POLLUTANT]": {
                     "type": "number",
                     "units": u.milligram/u.liter,
@@ -142,7 +142,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "name": gettext("Road centerlines")
         },
         "aggregate_areas_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "required": False,
             "about": gettext(
                 "Areas over which to aggregate results (typically watersheds "
@@ -225,7 +225,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "Map of aggregate data. This is identical to the aggregate "
                 "areas input vector, but each polygon is given additional "
                 "fields with the aggregate data."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "mean_retention_ratio": {
                     "type": "ratio",
@@ -307,7 +307,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                         "Copy of the road centerlines vector input, "
                         "reprojected to the LULC raster projection."),
                     "fields": {},
-                    "geometries": spec_utils.LINES
+                    "geometries": spec.LINES
 
                 },
                 "rasterized_centerlines.tif": {
@@ -379,7 +379,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 

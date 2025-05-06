@@ -20,7 +20,7 @@ from osgeo import ogr
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -29,7 +29,7 @@ LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
 _LOGGING_PERIOD = 5
 
-MODEL_SPEC = spec_utils.build_model_spec({
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "urban_cooling_model",
     "model_title": gettext("Urban Cooling"),
     "userguide": "urban_cooling_model.html",
@@ -51,11 +51,11 @@ MODEL_SPEC = spec_utils.build_model_spec({
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "lulc_raster_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "projection_units": u.meter,
             "about": gettext(
@@ -63,14 +63,14 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 "raster must have corresponding entries in the Biophysical "
                 "Table.")
         },
-        "ref_eto_raster_path": spec_utils.ET0,
-        "aoi_vector_path": spec_utils.AOI,
+        "ref_eto_raster_path": spec.ET0,
+        "aoi_vector_path": spec.AOI,
         "biophysical_table_path": {
             "name": gettext("biophysical table"),
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "kc": {
                     "type": "number",
                     "units": u.none,
@@ -176,7 +176,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": gettext(
                         "Code indicating the building type. These codes must "
                         "match those in the Energy Consumption Table.")}},
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "required": "do_energy_valuation",
             "allowed": "do_energy_valuation",
             "about": gettext(
@@ -269,7 +269,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
             "about": (
                 "A copy of the input Area of Interest vector with "
                 "additional fields."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "avg_cc": {
                     "about": "Average CC value",
@@ -308,7 +308,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
         },
         "buildings_with_stats.shp": {
             "about": "A copy of the input vector “Building Footprints” with additional fields.",
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "energy_sav": {
                     "about": "Energy savings value (kWh or currency if optional energy cost input column was provided in the Energy Consumption Table). Savings are relative to a theoretical scenario where the city contains NO natural areas nor green spaces; where CC = 0 for all LULC classes.",
@@ -356,14 +356,14 @@ MODEL_SPEC = spec_utils.build_model_spec({
                     "about": (
                         "The Area of Interest vector reprojected to the "
                         "spatial reference of the LULC."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 },
                 "reprojected_buildings.shp": {
                     "about": (
                         "The buildings vector reprojected to the spatial "
                         "reference of the LULC."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 },
                 "albedo.tif": {
@@ -408,7 +408,7 @@ MODEL_SPEC = spec_utils.build_model_spec({
                 },
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
 })
 
