@@ -60,10 +60,8 @@
   6. InVEST model Z (model names should be sorted A-Z)
 
 
-
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
 
 General
 =======
