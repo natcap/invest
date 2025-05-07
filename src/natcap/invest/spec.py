@@ -848,8 +848,7 @@ class PercentInput(Input):
     """A percent input, or parameter, of an invest model.
 
     A percent is a proportion expressed as a value from 0 to 100 (in contrast to
-    a ratio, which ranges from 0 to 1). Values are not restricted to the
-    range [0, 100].
+    a ratio, which ranges from 0 to 1). Values are restricted to the range [0, 100].
     """
     type: typing.ClassVar[str] = 'percent'
 
@@ -1008,56 +1007,126 @@ class OptionStringInput(Input):
 
 @dataclasses.dataclass
 class SingleBandRasterOutput(Output):
-    band: typing.Union[Input, None] = None
-    projected: typing.Union[bool, None] = None
-    projection_units: typing.Union[pint.Unit, None] = None
+    """A single-band raster output, or result, of an invest model.
+
+    This represents a raster file output (all GDAL-supported raster file types
+    are allowed), where only the first band is used.
+
+    Attributes:
+        band: An `Output` representing the type of data produced in the
+            raster's first and only band
+    """
+    band: typing.Union[Output, None] = None
 
 @dataclasses.dataclass
 class VectorOutput(Output):
-    geometries: set = dataclasses.field(default_factory=dict)
-    fields: typing.Union[typing.Iterable[Input], None] = None
-    projected: typing.Union[bool, None] = None
-    projection_units: typing.Union[pint.Unit, None] = None
+    """A vector output, or result, of an invest model.
+
+    This represents a vector file output (all GDAL-supported vector file types
+    are allowed). It is assumed that only the first layer is used.
+
+    Attributes:
+        geometries: A set of geometry type(s) that are produced in this vector
+        fields: An iterable of `Output`s representing the fields created in
+            this vector. The `key` of each input must match the corresponding
+            field name.
+    """
+    geometries: set = dataclasses.field(default_factory=set)
+    fields: typing.Union[typing.Iterable[Output], None] = None
 
 @dataclasses.dataclass
 class CSVOutput(Output):
+    """A CSV table output, or result, of an invest model.
+
+    For CSVs with a simple layout, `columns` or `rows` (but not both) may be
+    specified. For more complex table structures that cannot be described by
+    `columns` or `rows`, you may omit both attributes. Note that more complex
+    table structures are often more difficult to use; consider dividing them
+    into multiple, simpler tabular outputs.
+
+    Attributes:
+        columns: An iterable of `Output`s representing the table's columns.
+            The `key` of each input must match the corresponding column header.
+        rows: An iterable of `Output`s representing the table's rows. The
+            `key` of each input must match the corresponding row header.
+    """
     columns: typing.Union[typing.Iterable[Output], None] = None
     rows: typing.Union[typing.Iterable[Output], None] = None
-    index_col: typing.Union[str, None] = None
 
 @dataclasses.dataclass
 class DirectoryOutput(Output):
+    """A directory output, or result, of an invest model.
+
+    Use this type when you need to specify a group of many file-based outputs,
+    or an unknown number of file-based outputs, by grouping them together in a
+    directory.
+
+    Attributes:
+        contents: An iterable of `Output`s representing the contents of this
+            directory. The `key` of each output must be the file name or pattern.
+    """
     contents: typing.Union[typing.Iterable[Input], None] = None
-    permissions: str = ''
-    must_exist: bool = True
 
 @dataclasses.dataclass
 class FileOutput(Output):
+    """A generic file output, or result, of an invest model.
+
+    This represents a not-otherwise-specified file output type. Use this only if
+    a more specific type, such as `CSVOutput` or `VectorOutput`, does not apply.
+    """
     pass
 
 @dataclasses.dataclass
 class NumberOutput(Output):
+    """A floating-point number output, or result, of an invest model.
+
+    Use a more specific type (such as `IntegerOutput`, `RatioOutput`, or
+    `PercentOutput`) where applicable.
+
+    Attributes:
+        units: The units of measurement for this numeric value
+    """
     units: typing.Union[pint.Unit, None] = None
-    expression: typing.Union[str, None] = None
 
 @dataclasses.dataclass
 class IntegerOutput(Output):
+    """An integer output, or result, of an invest model."""
     pass
 
 @dataclasses.dataclass
 class RatioOutput(Output):
+    """A ratio output, or result, of an invest model.
+
+    A ratio is a proportion expressed as a value from 0 to 1 (in contrast to a
+    percent, which ranges from 0 to 100).
+    """
     pass
 
 @dataclasses.dataclass
 class PercentOutput(Output):
+    """A percent output, or result, of an invest model.
+
+    A percent is a proportion expressed as a value from 0 to 100 (in contrast to
+    a ratio, which ranges from 0 to 1).
+    """
     pass
 
 @dataclasses.dataclass
 class StringOutput(Output):
-    regexp: typing.Union[str, None] = None
+    """A string output, or result, of an invest model.
+
+    This represents a textual output. Do not use this to represent numeric or
+    file-based inputs which can be better represented by another type.
+    """
+    pass
 
 @dataclasses.dataclass
 class OptionStringOutput(Output):
+    """A string output, or result, which is limited to a set of options.
+
+    Attributes:
+        options: A list of the values that this input may take
+    """
     options: typing.Union[list, None] = None
 
 @dataclasses.dataclass
