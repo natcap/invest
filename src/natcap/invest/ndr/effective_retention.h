@@ -177,6 +177,13 @@ void run_effective_retention(
               neighbor.y < 0 or neighbor.y >= n_rows) {
               continue;
             }
+            neighbor_effective_retention = (
+              effective_retention_raster.get(
+                neighbor.x, neighbor.y));
+            if (is_close(neighbor_effective_retention, effective_retention_nodata)) {
+              continue;
+            }
+
             if (neighbor.direction % 2 == 1) {
               step_size = cell_size * 1.41421356237;
             } else {
@@ -188,10 +195,6 @@ void run_effective_retention(
             } else {
               current_step_factor = 0;
             }
-
-            neighbor_effective_retention = (
-              effective_retention_raster.get(
-                neighbor.x, neighbor.y));
 
             // Case 1: downslope neighbor is a stream pixel
             if (neighbor_effective_retention == STREAM_EFFECTIVE_RETENTION) {
@@ -222,7 +225,6 @@ void run_effective_retention(
           }
         }
         // search upslope to see if we need to push a cell on the stack
-        // for i in range(8):
         up_neighbors = UpslopeNeighbors<T>(Pixel<T>(flow_dir_raster, global_col, global_row));
         for (auto neighbor: up_neighbors) {
           neighbor_outflow_dir = INFLOW_OFFSETS[neighbor.direction];
