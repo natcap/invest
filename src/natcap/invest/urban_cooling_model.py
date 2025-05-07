@@ -42,8 +42,7 @@ MODEL_SPEC = spec.build_model_spec({
             ['do_energy_valuation', 'building_vector_path', 'energy_consumption_table_path'],
             ['do_productivity_valuation', 'avg_rel_humidity'],
             ['cc_weight_shade', 'cc_weight_albedo', 'cc_weight_eti'],
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_raster_path", "ref_eto_raster_path",

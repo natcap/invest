@@ -67,7 +67,7 @@ class UsageLoggingTests(unittest.TestCase):
 
         model_spec = spec.ModelSpec(
             model_id='', model_title='', userguide=None,
-            aliases=None, ui_spec=spec.UISpec(order=[], hidden={}),
+            aliases=None, ui_spec=spec.UISpec(order=[]),
             inputs=[
                 spec.SingleBandRasterInput(id='raster', band=spec.Input()),
                 spec.VectorInput(id='vector', geometries={}, fields={}),

@@ -32,8 +32,7 @@ MODEL_SPEC = spec.build_model_spec({
             ['workspace_dir', 'results_suffix'],
             ['landcover_raster_path', 'landcover_biophysical_table_path'],
             ['guild_table_path', 'farm_vector_path']
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args": {
         "workspace_dir": spec.WORKSPACE,

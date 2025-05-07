@@ -35,8 +35,7 @@ MODEL_SPEC = spec.build_model_spec({
             ['calc_p'],
             ['calc_n', 'subsurface_critical_length_n', 'subsurface_eff_n'],
             ['flow_dir_algorithm', 'threshold_flow_accumulation', 'k_param', 'runoff_proxy_av'],
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",

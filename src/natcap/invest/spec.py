@@ -180,12 +180,17 @@ class Input:
             under a certain condition (such as when running the model in a mode
             where the input is not used), provide a string expression that
             evaluates to a boolean to describe this condition.
+        hidden: Whether to hide the input from the model input form in the
+            workbench. Use this if the value should not be configurable from
+            the input form, such as if it's pulled in from another source.
+            Defaults to False.
     """
     id: str = ''
     name: str = ''
     about: str = ''
     required: typing.Union[bool, str] = True
     allowed: typing.Union[bool, str] = True
+    hidden: bool = False
 
 @dataclasses.dataclass
 class Output:
@@ -1049,9 +1054,11 @@ class CSVOutput(Output):
             The `key` of each input must match the corresponding column header.
         rows: An iterable of `Output`s representing the table's rows. The
             `key` of each input must match the corresponding row header.
+        index_col: The header name of the column that is the index of the table.
     """
     columns: typing.Union[typing.Iterable[Output], None] = None
     rows: typing.Union[typing.Iterable[Output], None] = None
+    index_col: typing.Union[str, None] = None
 
 @dataclasses.dataclass
 class DirectoryOutput(Output):
@@ -1132,7 +1139,6 @@ class OptionStringOutput(Output):
 @dataclasses.dataclass
 class UISpec:
     order: typing.Union[list, None] = None
-    hidden: list = None
     dropdown_functions: dict = dataclasses.field(default_factory=dict)
 
 @dataclasses.dataclass
@@ -1205,7 +1211,6 @@ def build_model_spec(model_spec):
         build_output_spec(argkey, argspec) for argkey, argspec in model_spec['outputs'].items()]
     ui_spec = UISpec(
         order=model_spec['ui_spec']['order'],
-        hidden=model_spec['ui_spec'].get('hidden', None),
         dropdown_functions=model_spec['ui_spec'].get('dropdown_functions', None))
     return ModelSpec(
         model_id=model_spec['model_id'],
@@ -1224,7 +1229,8 @@ def build_input_spec(argkey, arg):
         'name': arg.get('name', None),
         'about': arg.get('about', None),
         'required': arg.get('required', True),
-        'allowed': arg.get('allowed', True)
+        'allowed': arg.get('allowed', True),
+        'hidden': arg.get('hidden', False)
     }
 
     t = arg['type']
@@ -1342,8 +1348,7 @@ def build_output_spec(key, spec):
     if t == 'number':
         return NumberOutput(
             **base_attrs,
-            units=spec['units'],
-            expression=None)
+            units=spec['units'])
 
     elif t == 'integer':
         return IntegerOutput(**base_attrs)
@@ -1357,44 +1362,33 @@ def build_output_spec(key, spec):
     elif t == 'raster':
         return SingleBandRasterOutput(
             **base_attrs,
-            band=build_output_spec(1, spec['bands'][1]),
-            projected=None,
-            projection_units=None)
+            band=build_output_spec(1, spec['bands'][1]))
 
     elif t == 'vector':
         return VectorOutput(
             **base_attrs,
             geometries=spec['geometries'],
             fields=[build_output_spec(key, field_spec)
-                    for key, field_spec in spec['fields'].items()],
-            projected=None,
-            projection_units=None)
+                    for key, field_spec in spec['fields'].items()])
 
     elif t == 'csv':
         return CSVOutput(
             **base_attrs,
             columns=[
                 build_output_spec(key, col_spec) for key, col_spec in spec['columns'].items()],
-            rows=None,
             index_col=spec.get('index_col', None))
 
     elif t == 'directory':
         return DirectoryOutput(
             contents=[
                 build_output_spec(k, v) for k, v in spec['contents'].items()],
-            permissions=None,
-            must_exist=None,
             **base_attrs)
 
     elif t == 'freestyle_string':
-        return StringOutput(
-            **base_attrs,
-            regexp=spec.get('regexp', None))
+        return StringOutput(**base_attrs)
 
     elif t == 'option_string':
-        return OptionStringOutput(
-            **base_attrs,
-            options=spec['options'])
+        return OptionStringOutput(options=spec['options'])
 
     elif t == 'file':
         return FileOutput(**base_attrs)
@@ -1437,7 +1431,8 @@ N_WORKERS = {
     "type": "number",
     "units": u.none,
     "required": False,
-    "expression": "value >= -1"
+    "expression": "value >= -1",
+    "hidden": True
 }
 
 METER_RASTER = {

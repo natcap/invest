@@ -42,8 +42,7 @@ MODEL_SPEC = spec.build_model_spec({
             ['lulc_raster_path', 'biophysical_table_path', 'pools_to_calculate'],
             ['compute_forest_edge_effects', 'tropical_forest_edge_carbon_model_vector_path', 'n_nearest_model_points', 'biomass_to_carbon_conversion_factor'],
             ['aoi_vector_path']
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],

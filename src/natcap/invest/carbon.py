@@ -50,7 +50,6 @@ MODEL_SPEC = spec.build_model_spec({
             ['calc_sequestration', 'lulc_alt_path'],
             ['do_valuation', 'lulc_bas_year', 'lulc_alt_year', 'price_per_metric_ton_of_c', 'discount_rate', 'rate_change'],
         ],
-        "hidden": ["n_workers"],
         "forum_tag": 'carbon'
     },
     "args_with_spatial_overlap": {

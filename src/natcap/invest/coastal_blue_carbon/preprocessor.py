@@ -26,8 +26,7 @@ MODEL_SPEC = spec.build_model_spec({
         "order": [
             ['workspace_dir', 'results_suffix'],
             ['lulc_lookup_table_path', 'landcover_snapshot_csv']
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args": {
         "workspace_dir": spec.WORKSPACE,

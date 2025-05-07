@@ -249,8 +249,7 @@ MODEL_SPEC = spec.build_model_spec({
         "order": [
             ['workspace_dir', 'results_suffix'],
             ['model_data_path', 'landcover_raster_path', 'landcover_to_crop_table_path', 'aggregate_polygon_path']
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": [

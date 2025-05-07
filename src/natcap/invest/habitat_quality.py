@@ -42,8 +42,7 @@ MODEL_SPEC = spec.build_model_spec({
             ['workspace_dir', 'results_suffix'],
             ['lulc_cur_path', 'lulc_fut_path', 'lulc_bas_path'],
             ['threats_table_path', 'access_vector_path', 'sensitivity_table_path', 'half_saturation_constant'],
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": [

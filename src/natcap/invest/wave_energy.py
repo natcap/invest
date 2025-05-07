@@ -141,8 +141,7 @@ MODEL_SPEC = spec.build_model_spec({
             ['wave_base_data_path', 'analysis_area', 'aoi_path', 'dem_path'],
             ['machine_perf_path', 'machine_param_path'],
             ['valuation_container', 'land_gridPts_path', 'machine_econ_path', 'number_of_machines'],
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args": {
         "workspace_dir": spec.WORKSPACE,

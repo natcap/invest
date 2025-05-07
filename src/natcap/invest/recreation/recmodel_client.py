@@ -111,8 +111,7 @@ MODEL_SPEC = spec.build_model_spec({
             ['start_year', 'end_year'],
             ['compute_regression', 'predictor_table_path', 'scenario_predictor_table_path'],
             ['grid_aoi', 'grid_type', 'cell_size'],
-        ],
-        "hidden": ['n_workers', 'hostname', 'port']
+        ]
     },
     "args": {
         "workspace_dir": spec.WORKSPACE,
@@ -128,7 +127,8 @@ MODEL_SPEC = spec.build_model_spec({
             "about": gettext(
                 "FQDN to a recreation server.  If not provided, a default is "
                 "assumed."),
-            "name": gettext("hostname")
+            "name": gettext("hostname"),
+            "hidden": True
         },
         "port": {
             "type": "number",
@@ -138,7 +138,8 @@ MODEL_SPEC = spec.build_model_spec({
             "about": gettext(
                 "the port on ``hostname`` to use for contacting the "
                 "recreation server."),
-            "name": gettext("port")
+            "name": gettext("port"),
+            "hidden": True
         },
         "start_year": {
             "type": "number",

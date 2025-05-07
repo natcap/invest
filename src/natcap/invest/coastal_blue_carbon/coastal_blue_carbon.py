@@ -261,8 +261,7 @@ MODEL_SPEC = spec.build_model_spec({
             ['workspace_dir', 'results_suffix'],
             ['landcover_snapshot_csv', 'biophysical_table_path', 'landcover_transitions_table', 'analysis_year'],
             ['do_economic_analysis', 'use_price_table', 'price', 'inflation_rate', 'price_table_path', 'discount_rate'],
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args": {
         "workspace_dir": spec.WORKSPACE,

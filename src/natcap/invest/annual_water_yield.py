@@ -116,8 +116,7 @@ MODEL_SPEC = spec.build_model_spec({
             ['lulc_path', 'biophysical_table_path', 'seasonality_constant'],
             ['watersheds_path', 'sub_watersheds_path'],
             ['demand_table_path', 'valuation_table_path']
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path",

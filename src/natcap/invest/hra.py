@@ -62,8 +62,7 @@ MODEL_SPEC = spec.build_model_spec({
             ['aoi_vector_path'],
             ['n_overlapping_stressors'],
             ['visualize_outputs']
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args": {
         "workspace_dir": spec.WORKSPACE,

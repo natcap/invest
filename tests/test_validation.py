@@ -36,13 +36,12 @@ from natcap.invest.spec import (
     NumberInput,
     IntegerInput,
     RatioInput,
-    PercentInput,
-    OtherInput)
+    PercentInput)
 
 gdal.UseExceptions()
 
-def ui_spec_with_defaults(order=[], hidden=[]):
-    return UISpec(order=order, hidden=hidden)
+def ui_spec_with_defaults(order=[]):
+    return UISpec(order=order)
 
 def model_spec_with_defaults(model_id='', model_title='', userguide='', aliases=None,
                  ui_spec=ui_spec_with_defaults(), inputs={}, outputs={},
@@ -1982,15 +1981,6 @@ class TestValidationFromSpec(unittest.TestCase):
             'directory': self.workspace_dir,
         }
         # TODO: directory contents are not actually validated right now
-        self.assertEqual([], validation.validate(args, spec))
-
-    def test_validation_other(self):
-        """Validation: verify no error when 'other' type."""
-        from natcap.invest import validation
-        spec = model_spec_with_defaults(inputs=[
-            OtherInput(id="number_a")
-        ])
-        args = {'number_a': 1}
         self.assertEqual([], validation.validate(args, spec))
 
     def test_conditional_validity_recursive(self):

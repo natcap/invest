@@ -142,7 +142,6 @@ class ValidateModelSpecs(unittest.TestCase):
                     self.assertIsInstance(
                         model.MODEL_SPEC.ui_spec.dropdown_functions, dict)
                 self.assertIsInstance(model.MODEL_SPEC.ui_spec.order, list)
-                self.assertIsInstance(model.MODEL_SPEC.ui_spec.hidden, list)
                 found_keys = set()
                 for group in model.MODEL_SPEC.ui_spec.order:
                     self.assertIsInstance(group, list)
@@ -150,10 +149,9 @@ class ValidateModelSpecs(unittest.TestCase):
                         self.assertIsInstance(key, str)
                         self.assertNotIn(key, found_keys)
                         found_keys.add(key)
-                for key in model.MODEL_SPEC.ui_spec.hidden:
-                    self.assertIsInstance(key, str)
-                    self.assertNotIn(key, found_keys)
-                    found_keys.add(key)
+                for arg_spec in model.MODEL_SPEC.inputs:
+                    if arg_spec.hidden is True:
+                        found_keys.add(arg_spec.id)
                 self.assertEqual(found_keys, set([s.id for s in model.MODEL_SPEC.inputs]))
 
             # validate that each arg meets the expected pattern
@@ -267,7 +265,9 @@ class ValidateModelSpecs(unittest.TestCase):
             if output_spec.created_if:
                 # should be an arg key indicating that the output is
                 # created if that arg is provided or checked
-                self.assertIsInstance(output_spec.created_if, str)
+                self.assertTrue(
+                    isinstance(output_spec.created_if, str) or
+                    isinstance(output_spec.created_if, bool))
 
     def validate_args(self, arg, name, parent_type=None):
         """
