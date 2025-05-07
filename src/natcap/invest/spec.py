@@ -64,7 +64,6 @@ def timeout(func, timeout=5):
                 f'Validation of file {args[0]} timed out. If this file '
                 'is stored in a file streaming service, it may be taking a long '
                 'time to download. Try storing it locally instead.')
-            return None
 
         else:
             LOGGER.debug('File checking thread completed.')
@@ -106,7 +105,6 @@ def check_headers(expected_headers, actual_headers, header_type='header'):
                 header=header_type,
                 header_name=expected,
                 number=count)
-    return None
 
 def _check_projection(srs, projected, projection_units):
     """Validate a GDAL projection.
@@ -145,8 +143,6 @@ def _check_projection(srs, projected, projection_units):
             return get_message('WRONG_PROJECTION_UNIT').format(
                 unit_a=projection_units, unit_b=layer_units_name)
 
-    return None
-
 
 class IterableWithDotAccess():
     def __init__(self, *args):
@@ -165,6 +161,26 @@ class IterableWithDotAccess():
 
 @dataclasses.dataclass
 class Input:
+    """A data input, or parameter, of an invest model.
+
+    This represents an abstract input or parameter, which is rendered as an
+    input field in the InVEST workbench. This does not store the value of the
+    parameter for a specific run of the model.
+
+    Attributes:
+        id: Input identifier that should be unique within a model
+        name: User-facing name for the input
+        about: User-facing description of the input
+        required: Whether the input is required to be provided. Defaults to
+            True. Set to False if the input is always optional. If the input
+            is conditionally required depending on the state of other inputs,
+            provide a string expression that evaluates to a boolean to describe
+            this condition.
+        allowed: Defaults to True. If the input is not allowed to be provided
+            under a certain condition (such as when running the model in a mode
+            where the input is not used), provide a string expression that
+            evaluates to a boolean to describe this condition.
+    """
     id: str = ''
     name: str = ''
     about: str = ''
@@ -173,28 +189,48 @@ class Input:
 
 @dataclasses.dataclass
 class Output:
+    """A data output, or result, of an invest model.
+
+    This represents an abstract output which is produced as a result of running
+    an invest model. This does not store the value of the output for a specific
+    run of the model.
+
+    Attributes:
+        id: Output identifier that should be unique within a model
+        about: User-facing description of the output
+        created_if: Defaults to True. If the input is only created under a
+            certain condition (such as when running the model in a specific
+            mode), provide a string expression that evaluates to a boolean to
+            describe this condition.
+    """
     id: str = ''
     about: str = ''
     created_if: typing.Union[bool, str] = True
 
 @dataclasses.dataclass
 class FileInput(Input):
+    """A generic file input, or parameter, of an invest model.
+
+    This represents a not-otherwise-specified file input type. Use this only if
+    a more specific type, such as `CSVInput` or `VectorInput`, does not apply.
+
+    Attributes:
+        permissions: A string that includes the lowercase
+            characters ``r``, ``w`` and/or ``x``, indicating read, write, and
+            execute permissions (respectively) required for this file.
+    """
     permissions: str = 'r'
     type: typing.ClassVar[str] = 'file'
 
     @timeout
-    def validate(self, filepath):
-        """Validate a single file.
+    def validate(self, filepath: str):
+        """Validate a file against the requirements for this input.
 
         Args:
             filepath (string): The filepath to validate.
-            permissions='r' (string): A string that includes the lowercase
-                characters ``r``, ``w`` and/or ``x``, indicating read, write, and
-                execute permissions (respectively) required for this file.
 
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
-
         """
         if not os.path.exists(filepath):
             return get_message('FILE_NOT_FOUND')
@@ -207,33 +243,55 @@ class FileInput(Input):
                 return get_message('NEED_PERMISSION_FILE').format(permission=descriptor)
 
     @staticmethod
-    def format_column(col, base_path):
+    def format_column(col: pandas.Series, base_path: str) -> pandas.Series:
+        """Format a column of a pandas dataframe that contains FileInput values.
+
+        File path values are cast to `pandas.StringDtype`. Relative paths are
+        expanded to absolute paths relative to `base_path`. NA values remain NA.
+
+        Args:
+            col: Column of a pandas dataframe to format
+            base_path: Base path of the source CSV. Relative file path values
+                will be expanded relative to this base path.
+
+        Returns:
+            Transformed dataframe column
+        """
         return col.apply(
             lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), base_path)
         ).astype(pandas.StringDtype())
 
 @dataclasses.dataclass
 class SingleBandRasterInput(FileInput):
+    """A single-band raster input, or parameter, of an invest model.
+
+    This represents a raster file input (all GDAL-supported raster file types
+    are allowed), where only the first band is needed.
+
+    Attributes:
+        band: An `Input` representing the type of data expected in the
+            raster's first and only band
+        projected: Defaults to None, indicating a projected (as opposed to
+            geographic) coordinate system is not required. Set to True if a
+            projected coordinate system is required.
+        projection_units: Defaults to None. If `projected` is `True`, and a
+            specific unit of projection (such as meters) is required, indicate
+            it here.
+    """
     band: typing.Union[Input, None] = None
     projected: typing.Union[bool, None] = None
     projection_units: typing.Union[pint.Unit, None] = None
     type: typing.ClassVar[str] = 'raster'
 
     @timeout
-    def validate(self, filepath):
-        """Validate a GDAL Raster on disk.
+    def validate(self, filepath: str):
+        """Validate a raster file against the requirements for this input.
 
         Args:
-            filepath (string): The path to the raster on disk.  The file must exist
-                and be readable.
-            projected=False (bool): Whether the spatial reference must be projected
-                in linear units.
-            projection_units=None (pint.Units): The required linear units of the
-                projection. If ``None``, the projection units will not be checked.
+            filepath (string): The filepath to validate.
 
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
-
         """
         file_warning = FileInput.validate(self, filepath)
         if file_warning:
@@ -253,10 +311,26 @@ class SingleBandRasterInput(FileInput):
         if projection_warning:
             return projection_warning
 
-        return None
 
 @dataclasses.dataclass
 class VectorInput(FileInput):
+    """A vector input, or parameter, of an invest model.
+
+    This represents a vector file input (all GDAL-supported vector file types
+    are allowed). It is assumed that only the first layer is used.
+
+    Attributes:
+        geometries: A set of geometry type(s) that are allowed for this vector
+        fields: An iterable of `Input`s representing the fields that this
+            vector is expected to have. The `key` of each input must match the
+            corresponding field name.
+        projected: Defaults to None, indicating a projected (as opposed to
+            geographic) coordinate system is not required. Set to True if a
+            projected coordinate system is required.
+        projection_units: Defaults to None. If `projected` is `True`, and a
+            specific unit of projection (such as meters) is required, indicate
+            it here.
+    """
     geometries: set = dataclasses.field(default_factory=dict)
     fields: typing.Union[typing.Iterable[Input], None] = None
     projected: typing.Union[bool, None] = None
@@ -268,26 +342,11 @@ class VectorInput(FileInput):
             self.fields = IterableWithDotAccess(*self.fields)
 
     @timeout
-    def validate(self, filepath):
-        """Validate a GDAL vector on disk.
-
-        Note:
-            If the provided vector has multiple layers, only the first layer will
-            be checked.
+    def validate(self, filepath: str):
+        """Validate a vector file against the requirements for this input.
 
         Args:
-            filepath (string): The path to the vector on disk.  The file must exist
-                and be readable.
-            geometries (set): Set of geometry type(s) that are allowed. Options are
-                'POINT', 'LINESTRING', 'POLYGON', 'MULTIPOINT', 'MULTILINESTRING',
-                and 'MULTIPOLYGON'.
-            fields=None (dict): A dictionary spec of field names that the vector is
-                expected to have. See the docstring of ``check_headers`` for
-                details on validation rules.
-            projected=False (bool): Whether the spatial reference must be projected
-                in linear units.  If None, the projection will not be checked.
-            projection_units=None (pint.Units): The required linear units of the
-                projection. If ``None``, the projection units will not be checked.
+            filepath (string): The filepath to validate.
 
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
@@ -350,9 +409,22 @@ class VectorInput(FileInput):
         return projection_warning
 
 
-
 @dataclasses.dataclass
 class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
+    """An invest model input that can be either a raster or a vector.
+
+    Attributes:
+        geometries: A set of geometry type(s) that are allowed for this vector
+        fields: An iterable of `Input`s representing the fields that this
+            vector is expected to have. The `key` of each input must match the
+            corresponding field name.
+        projected: Defaults to None, indicating a projected (as opposed to
+            geographic) coordinate system is not required. Set to True if a
+            projected coordinate system is required.
+        projection_units: Defaults to None. If `projected` is `True`, and a
+            specific unit of projection (such as meters) is required, indicate
+            it here.
+    """
     band: typing.Union[Input, None] = None
     geometries: set = dataclasses.field(default_factory=dict)
     fields: typing.Union[typing.Iterable[Input], None] = None
@@ -361,16 +433,14 @@ class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
     type: typing.ClassVar[str] = 'raster_or_vector'
 
     @timeout
-    def validate(self, filepath):
-        """Validate an input that may be a raster or vector.
+    def validate(self, filepath: str):
+        """Validate a raster or vector file against the requirements for this input.
 
         Args:
-            filepath (string):  The path to the raster or vector.
-            **kwargs: kwargs of the raster and vector spec. Will be
-                passed to ``check_raster`` or ``check_vector``.
+            filepath (string): The filepath to validate.
 
         Returns:
-            A string error message if an error was found. ``None`` otherwise.
+            A string error message if an error was found.  ``None`` otherwise.
         """
         try:
             gis_type = pygeoprocessing.get_gis_type(filepath)
@@ -381,8 +451,28 @@ class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
         else:
             return VectorInput.validate(self, filepath)
 
+
 @dataclasses.dataclass
 class CSVInput(FileInput):
+    """A CSV table input, or parameter, of an invest model.
+
+    For CSVs with a simple layout, `columns` or `rows` (but not both) may be
+    specified. For more complex table structures that cannot be described by
+    `columns` or `rows`, you may omit both attributes. Note that more complex
+    table structures are often more difficult to use; consider dividing them
+    into multiple, simpler tabular inputs.
+
+    Attributes:
+        columns: An iterable of `Input`s representing the columns that this
+            CSV is expected to have. The `key` of each input must match the
+            corresponding column header.
+        rows: An iterable of `Input`s representing the rows that this
+            CSV is expected to have. The `key` of each input must match the
+            corresponding row header.
+        index_col: The header name of the column to use as the index. When
+            processing a CSV file to a dataframe, the dataframe index will be
+            set to this column.
+    """
     columns: typing.Union[typing.Iterable[Input], None] = None
     rows: typing.Union[typing.Iterable[Input], None] = None
     index_col: typing.Union[str, None] = None
@@ -395,15 +485,14 @@ class CSVInput(FileInput):
             self.columns = IterableWithDotAccess(*self.columns)
 
     @timeout
-    def validate(self, filepath):
-        """Validate a table.
+    def validate(self, filepath: str):
+        """Validate a CSV file against the requirements for this input.
 
         Args:
-            filepath (string): The string filepath to the table.
+            filepath (string): The filepath to validate.
 
         Returns:
-            A string error message if an error was found. ``None`` otherwise.
-
+            A string error message if an error was found.  ``None`` otherwise.
         """
         file_warning = super().validate(filepath)
         if file_warning:
@@ -414,8 +503,27 @@ class CSVInput(FileInput):
             except Exception as e:
                 return str(e)
 
-    def get_validated_dataframe(self, csv_path, read_csv_kwargs={}):
-        """Read a CSV into a dataframe that is guaranteed to match the spec."""
+    def get_validated_dataframe(self, csv_path: str, read_csv_kwargs={}):
+        """Read a CSV into a dataframe that is guaranteed to match the spec.
+
+        This is only supported when `columns` or `rows` is provided. Each
+        column will be read in to a dataframe and values will be pre-processed
+        according to that column input type. Column/row headers are matched
+        case-insensitively. Values are cast to the appropriate
+        type and relative paths are expanded.
+
+        Args:
+            csv_path: Path to the CSV to process
+            read_csv_kwargs: Additional kwargs to pass to `pandas.read_csv`
+
+        Returns:
+            pandas dataframe
+
+        Raises:
+            ValueError if the CSV cannot be parsed to fulfill the requirements
+            for this input - if a required column or row is missing, or if the
+            values in a column cannot be interpreted as the expected type.
+        """
         if not (self.columns or self.rows):
             raise ValueError('One of columns or rows must be provided')
 
@@ -510,6 +618,23 @@ class CSVInput(FileInput):
 
 @dataclasses.dataclass
 class DirectoryInput(Input):
+    """A directory input, or parameter, of an invest model.
+
+    Use this type when you need to specify a group of many file-based inputs,
+    or an unknown number of file-based inputs, by grouping them together in a
+    directory. This may also be used to describe an empty directory where model
+    outputs will be written to.
+
+    Attributes:
+        contents: An iterable of `Input`s representing the contents of this
+            directory. The `key` of each input must be the file name or pattern.
+        permissions: A string that includes the lowercase characters ``r``,
+            ``w`` and/or ``x``, indicating read, write, and execute permissions
+            (respectively) required for this directory.
+        must_exist: Defaults to True, indicating the directory must already
+            exist before running the model. Set to False if the directory will
+            be created.
+    """
     contents: typing.Union[typing.Iterable[Input], None] = None
     permissions: str = ''
     must_exist: bool = True
@@ -520,16 +645,11 @@ class DirectoryInput(Input):
             self.contents = IterableWithDotAccess(*self.contents)
 
     @timeout
-    def validate(self, dirpath):
-        """Validate a directory.
+    def validate(self, dirpath: str):
+        """Validate a directory path against the requirements for this input.
 
         Args:
-            dirpath (string): The directory path to validate.
-            must_exist=True (bool): If ``True``, the directory at ``dirpath``
-                must already exist on the filesystem.
-            permissions='rx' (string): A string that includes the lowercase
-                characters ``r``, ``w`` and/or ``x``, indicating read, write, and
-                execute permissions (respectively) required for this directory.
+            filepath (string): The filepath to validate.
 
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
@@ -582,23 +702,30 @@ class DirectoryInput(Input):
                 return get_message(MESSAGE_KEY).format(permission='write')
 
 
-
 @dataclasses.dataclass
 class NumberInput(Input):
+    """A floating-point number input, or parameter, of an invest model.
+
+    Use a more specific type (such as `IntegerInput`, `RatioInput`, or
+    `PercentInput`) where applicable.
+
+    Attributes:
+        units: The units of measurement for this numeric value
+        expression: A string expression that can be evaluated to a boolean
+            indicating whether the value meets a required condition. The
+            expression must contain the string ``value``, which will represent
+            the user-provided value (after it has been cast to a float).
+            Example: ``"(value >= 0) & (value <= 1)"``.
+    """
     units: typing.Union[pint.Unit, None] = None
     expression: typing.Union[str, None] = None
     type: typing.ClassVar[str] = 'number'
 
     def validate(self, value):
-        """Validate numbers.
+        """Validate a numeric value against the requirements for this input.
 
         Args:
-            value: A python value. This should be able to be cast to a float.
-            expression=None (string): A string expression to be evaluated with the
-                intent of determining that the value is within a specific range.
-                The expression must contain the string ``value``, which will
-                represent the user-provided value (after it has been cast to a
-                float).  Example expression: ``"(value >= 0) & (value <= 1)"``.
+            value: The value to validate.
 
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
@@ -624,17 +751,28 @@ class NumberInput(Input):
 
     @staticmethod
     def format_column(col, *args):
+        """Format a column of a pandas dataframe that contains NumberInput values.
+
+        Values are cast to float.
+
+        Args:
+            col: Column of a pandas dataframe to format
+
+        Returns:
+            Transformed dataframe column
+        """
         return col.astype(float)
 
 @dataclasses.dataclass
 class IntegerInput(Input):
+    """An integer input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'integer'
 
     def validate(self, value):
-        """Validate an integer.
+        """Validate a value against the requirements for this input.
 
         Args:
-            value: A python value. This should be able to be cast to an int.
+            value: The value to validate.
 
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
@@ -646,26 +784,40 @@ class IntegerInput(Input):
                 return get_message('NOT_AN_INTEGER').format(value=value)
         except (TypeError, ValueError):
             return get_message('NOT_A_NUMBER').format(value=value)
-        return None
 
     @staticmethod
     def format_column(col, *args):
+        """Format a column of a pandas dataframe that contains IntegerInput values.
+
+        Values are cast to `pandas.Int64Dtype`.
+
+        Args:
+            col: Column of a pandas dataframe to format
+
+        Returns:
+            Transformed dataframe column
+        """
         return col.astype(pandas.Int64Dtype())
 
 
 @dataclasses.dataclass
 class RatioInput(Input):
+    """A ratio input, or parameter, of an invest model.
+
+    A ratio is a proportion expressed as a value from 0 to 1 (in contrast to a
+    percent, which ranges from 0 to 100). Values are restricted to the
+    range [0, 1].
+    """
     type: typing.ClassVar[str] = 'ratio'
 
     def validate(self, value):
-        """Validate a ratio (a proportion expressed as a value from 0 to 1).
+        """Validate a value against the requirements for this input.
 
         Args:
-            value: A python value. This should be able to be cast to a float.
+            value: The value to validate.
 
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
-
         """
         try:
             as_float = float(value)
@@ -679,17 +831,33 @@ class RatioInput(Input):
 
     @staticmethod
     def format_column(col, *args):
+        """Format a column of a pandas dataframe that contains RatioInput values.
+
+        Values are cast to float.
+
+        Args:
+            col: Column of a pandas dataframe to format
+
+        Returns:
+            Transformed dataframe column
+        """
         return col.astype(float)
 
 @dataclasses.dataclass
 class PercentInput(Input):
+    """A percent input, or parameter, of an invest model.
+
+    A percent is a proportion expressed as a value from 0 to 100 (in contrast to
+    a ratio, which ranges from 0 to 1). Values are not restricted to the
+    range [0, 100].
+    """
     type: typing.ClassVar[str] = 'percent'
 
     def validate(self, value):
-        """Validate a percent (a proportion expressed as a value from 0 to 100).
+        """Validate a value against the requirements for this input.
 
         Args:
-            value: A python value. This should be able to be cast to a float.
+            value: The value to validate.
 
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
@@ -706,20 +874,28 @@ class PercentInput(Input):
 
     @staticmethod
     def format_column(col, *args):
+        """Format a column of a pandas dataframe that contains PercentInput values.
+
+        Values are cast to float.
+
+        Args:
+            col: Column of a pandas dataframe to format
+
+        Returns:
+            Transformed dataframe column
+        """
         return col.astype(float)
 
 @dataclasses.dataclass
 class BooleanInput(Input):
+    """A boolean input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'boolean'
 
     def validate(self, value):
-        """Validate a boolean value.
-
-        If the value provided is not a python boolean, an error message is
-        returned.
+        """Validate a value against the requirements for this input.
 
         Args:
-            value: The value to evaluate.
+            value: The value to validate.
 
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
@@ -729,19 +905,36 @@ class BooleanInput(Input):
 
     @staticmethod
     def format_column(col, *args):
+        """Format a column of a pandas dataframe that contains BooleanInput values.
+
+        Values are cast to boolean.
+
+        Args:
+            col: Column of a pandas dataframe to format
+
+        Returns:
+            Transformed dataframe column
+        """
         return col.astype('boolean')
 
 @dataclasses.dataclass
 class StringInput(Input):
+    """A string input, or parameter, of an invest model.
+
+    This represents a textual input. Do not use this to represent numeric or
+    file-based inputs which can be better represented by another type.
+
+    Attributes:
+        regexp: An optional regex pattern which the text value must match
+    """
     regexp: typing.Union[str, None] = None
     type: typing.ClassVar[str] = 'string'
 
     def validate(self, value):
-        """Validate an arbitrary string.
+        """Validate a value against the requirements for this input.
 
         Args:
-            value: The value to check.  Must be able to be cast to a string.
-            regexp=None (string): a string interpreted as a regular expression.
+            value: The value to validate.
 
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
@@ -750,31 +943,46 @@ class StringInput(Input):
             matches = re.fullmatch(self.regexp, str(value))
             if not matches:
                 return get_message('REGEXP_MISMATCH').format(regexp=self.regexp)
-        return None
 
     @staticmethod
     def format_column(col, *args):
+        """Format a column of a pandas dataframe that contains StringInput values.
+
+        Values are cast to `pandas.StringDtype`, lowercased, and leading and
+        trailing whitespace is stripped. NA values remain NA.
+
+        Args:
+            col: Column of a pandas dataframe to format
+
+        Returns:
+            Transformed dataframe column
+        """
         return col.apply(
             lambda s: s if pandas.isna(s) else str(s).strip().lower()
         ).astype(pandas.StringDtype())
 
+
 @dataclasses.dataclass
 class OptionStringInput(Input):
+    """A string input, or parameter, which is limited to a set of options.
+
+    This corresponds to a dropdown menu in the workbench, where the user
+    is limited to a set of pre-defined options.
+
+    Attributes:
+        options: A list of the values that this input may take
+    """
     options: typing.Union[list, None] = None
     type: typing.ClassVar[str] = 'option_string'
 
     def validate(self, value):
-        """Validate that a string is in a set of options.
+        """Validate a value against the requirements for this input.
 
         Args:
-            value: The value to test. Will be cast to a string before comparing
-                against the allowed options.
-            options (dict): option spec to validate against.
+            value: The value to validate.
 
         Returns:
-            A string error message if ``value`` is not in ``options``.  ``None``
-            otherwise.
-
+            A string error message if an error was found.  ``None`` otherwise.
         """
         # if options is empty, that means it's dynamically populated
         # so validation should be left to the model's validate function.
@@ -783,14 +991,20 @@ class OptionStringInput(Input):
 
     @staticmethod
     def format_column(col, *args):
+        """Format a pandas dataframe column that contains OptionStringInput values.
+
+        Values are cast to `pandas.StringDtype`, lowercased, and leading and
+        trailing whitespace is stripped. NA values remain NA.
+
+        Args:
+            col: Column of a pandas dataframe to format
+
+        Returns:
+            Transformed dataframe column
+        """
         return col.apply(
             lambda s: s if pandas.isna(s) else str(s).strip().lower()
         ).astype(pandas.StringDtype())
-
-@dataclasses.dataclass
-class OtherInput(Input):
-    def validate(self, value):
-        pass
 
 @dataclasses.dataclass
 class SingleBandRasterOutput(Output):
