@@ -25,10 +25,6 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'delineateit')
 
-# Skipping all compiled model tests temporarily for feature/plugins
-pytestmark = pytest.mark.skip(
-        reason="Temporarily ignoring compiled models for feature/plugins")
-
 @contextlib.contextmanager
 def capture_logging(logger, level=logging.NOTSET):
     """Capture logging within a context manager.
