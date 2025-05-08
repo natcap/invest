@@ -11,7 +11,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -104,7 +104,7 @@ WATERSHED_OUTPUT_FIELDS = {
     **VALUATION_OUTPUT_FIELDS
 }
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "annual_water_yield",
     "model_title": gettext("Annual Water Yield"),
     "userguide": "annual_water_yield.html",
@@ -116,8 +116,7 @@ MODEL_SPEC = {
             ['lulc_path', 'biophysical_table_path', 'seasonality_constant'],
             ['watersheds_path', 'sub_watersheds_path'],
             ['demand_table_path', 'valuation_table_path']
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path",
@@ -130,13 +129,13 @@ MODEL_SPEC = {
         "different_projections_ok": False,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "lulc_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
-            "about": spec_utils.LULC['about'] + " " + gettext(
+            "about": spec.LULC['about'] + " " + gettext(
                 "All values in this raster must have corresponding entries "
                 "in the Biophysical Table.")
         },
@@ -154,7 +153,7 @@ MODEL_SPEC = {
             "name": gettext("root restricting layer depth")
         },
         "precipitation_path": {
-            **spec_utils.PRECIP,
+            **spec.PRECIP,
             "projected": True
         },
         "pawc_path": {
@@ -168,7 +167,7 @@ MODEL_SPEC = {
             "name": gettext("plant available water content")
         },
         "eto_path": {
-            **spec_utils.ET0,
+            **spec.ET0,
             "projected": True
         },
         "watersheds_path": {
@@ -180,7 +179,7 @@ MODEL_SPEC = {
                     "about": gettext("Unique identifier for each watershed.")
                 }
             },
-            "geometries": spec_utils.POLYGON,
+            "geometries": spec.POLYGON,
             "about": gettext(
                 "Map of watershed boundaries, such that each watershed drains "
                 "to a point of interest where hydropower production will be "
@@ -196,7 +195,7 @@ MODEL_SPEC = {
                     "about": gettext("Unique identifier for each subwatershed.")
                 }
             },
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "required": False,
             "about": gettext(
                 "Map of subwatershed boundaries within each watershed in "
@@ -206,7 +205,7 @@ MODEL_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "lulc_veg": {
                     "type": "integer",
                     "about": gettext(
@@ -345,7 +344,7 @@ MODEL_SPEC = {
             "contents": {
                 "watershed_results_wyield.shp": {
                     "fields": {**WATERSHED_OUTPUT_FIELDS},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": "Shapefile containing biophysical output values per watershed."
                 },
                 "watershed_results_wyield.csv": {
@@ -355,7 +354,7 @@ MODEL_SPEC = {
                 },
                 "subwatershed_results_wyield.shp": {
                     "fields": {**SUBWATERSHED_OUTPUT_FIELDS},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": "Shapefile containing biophysical output values per subwatershed."
                 },
                 "subwatershed_results_wyield.csv": {
@@ -444,9 +443,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        "taskgraph_dir": spec_utils.TASKGRAPH_DIR
+        "taskgraph_dir": spec.TASKGRAPH_DIR
     }
-}
+})
 
 
 def execute(args):
@@ -535,9 +534,8 @@ def execute(args):
             'Checking that watersheds have entries for every `ws_id` in the '
             'valuation table.')
         # Open/read in valuation parameters from CSV file
-        valuation_df = validation.get_validated_dataframe(
-            args['valuation_table_path'],
-            **MODEL_SPEC['args']['valuation_table_path'])
+        valuation_df = MODEL_SPEC.get_input(
+            'valuation_table_path').get_validated_dataframe(args['valuation_table_path'])
         watershed_vector = gdal.OpenEx(
             args['watersheds_path'], gdal.OF_VECTOR)
         watershed_layer = watershed_vector.GetLayer()
@@ -659,15 +657,16 @@ def execute(args):
         'lulc': pygeoprocessing.get_raster_info(clipped_lulc_path)['nodata'][0]}
 
     # Open/read in the csv file into a dictionary and add to arguments
-    bio_df = validation.get_validated_dataframe(args['biophysical_table_path'],
-                                         **MODEL_SPEC['args']['biophysical_table_path'])
+    bio_df = MODEL_SPEC.get_input('biophysical_table_path').get_validated_dataframe(
+        args['biophysical_table_path'])
+
     bio_lucodes = set(bio_df.index.values)
     bio_lucodes.add(nodata_dict['lulc'])
     LOGGER.debug(f'bio_lucodes: {bio_lucodes}')
 
     if 'demand_table_path' in args and args['demand_table_path'] != '':
-        demand_df = validation.get_validated_dataframe(
-            args['demand_table_path'], **MODEL_SPEC['args']['demand_table_path'])
+        demand_df = MODEL_SPEC.get_input('demand_table_path').get_validated_dataframe(
+            args['demand_table_path'])
         demand_reclassify_dict = dict(
             [(lucode, row['demand']) for lucode, row in demand_df.iterrows()])
         demand_lucodes = set(demand_df.index.values)
@@ -1323,5 +1322,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC)

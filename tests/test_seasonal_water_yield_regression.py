@@ -17,9 +17,9 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'seasonal_water_yield')
 
-# Skipping all compiled model tests temporarily for feature/plugins
-pytestmark = pytest.mark.skip(
-        reason="Temporarily ignoring compiled models for feature/plugins")
+# # Skipping all compiled model tests temporarily for feature/plugins
+# pytestmark = pytest.mark.skip(
+#         reason="Temporarily ignoring compiled models for feature/plugins")
 
 def make_simple_shp(base_shp_path, origin):
     """Make a 100x100 ogr rectangular geometry shapefile.
@@ -879,7 +879,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             seasonal_water_yield.execute(args)
         self.assertIn(
-            'could not be interpreted as numbers', str(context.exception))
+            'could not be interpreted as NumberInput', str(context.exception))
 
     def test_monthly_alpha_regression(self):
         """SWY monthly alpha values regression test on sample data.

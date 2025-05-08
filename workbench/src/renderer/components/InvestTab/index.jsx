@@ -37,7 +37,6 @@ class InvestTab extends React.Component {
       activeTab: 'setup',
       modelSpec: null, // MODEL_SPEC dict with all keys except MODEL_SPEC.args
       argsSpec: null, // MODEL_SPEC.args, the immutable args stuff
-      uiSpec: null,
       userTerminated: false,
       executeClicked: false,
       tabStatus: '',
@@ -74,13 +73,10 @@ class InvestTab extends React.Component {
       }
     }
     try {
-      const {
-        args, ui_spec, ...model_spec
-      } = await getSpec(job.modelID);
+      const { args, ...model_spec } = await getSpec(job.modelID);
       this.setState({
         modelSpec: model_spec,
         argsSpec: args,
-        uiSpec: ui_spec,
       }, () => { this.switchTabs('setup'); });
     } catch (error) {
       console.log(error);
@@ -211,7 +207,6 @@ class InvestTab extends React.Component {
       activeTab,
       modelSpec,
       argsSpec,
-      uiSpec,
       executeClicked,
       tabStatus,
       showErrorModal,
@@ -310,7 +305,7 @@ class InvestTab extends React.Component {
                     userguide={modelSpec.userguide}
                     modelID={modelID}
                     argsSpec={argsSpec}
-                    uiSpec={uiSpec}
+                    inputFieldOrder={modelSpec.input_field_order}
                     argsInitValues={argsValues}
                     investExecute={this.investExecute}
                     sidebarSetupElementId={sidebarSetupElementId}

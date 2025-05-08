@@ -1,9 +1,18 @@
-MODEL_SPEC = {
-    'args': {
-        'a': {'type': 'integer'},
-        'b': {'type': 'freestyle_string'},
-        'c': {'type': 'freestyle_string'},
-        'd': {'type': 'freestyle_string'},
-        'workspace_dir': {'type': 'directory'},
-    }
-}
+from natcap.invest import spec
+
+MODEL_SPEC = spec.ModelSpec(inputs=[
+    spec.IntegerInput(id='a'),
+    spec.StringInput(id='b'),
+    spec.StringInput(id='c'),
+    spec.StringInput(id='d'),
+    spec.DirectoryInput(
+        id='workspace_dir',
+        contents=[]
+    )],
+    outputs={},
+    model_id='',
+    model_title='',
+    userguide='',
+    input_field_order=[],
+    args_with_spatial_overlap={}
+)

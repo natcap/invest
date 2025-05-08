@@ -1,6 +1,14 @@
-MODEL_SPEC = {
-    'args': {
-        'foo': {'type': 'file'},
-        'bar': {'type': 'file'},
-    }
-}
+from natcap.invest import spec
+
+MODEL_SPEC = spec.ModelSpec(
+    inputs=[
+        spec.FileInput(id='foo'),
+        spec.FileInput(id='bar')
+    ],
+    outputs={},
+    model_id='',
+    model_title='',
+    userguide='',
+    input_field_order=[],
+    args_with_spatial_overlap={}
+)

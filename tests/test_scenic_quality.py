@@ -21,8 +21,8 @@ _SRS.ImportFromEPSG(32731)  # WGS84 / UTM zone 31s
 WKT = _SRS.ExportToWkt()
 
 # Skipping all compiled model tests temporarily for feature/plugins
-pytestmark = pytest.mark.skip(
-        reason="Temporarily ignoring compiled models for feature/plugins")
+# pytestmark = pytest.mark.skip(
+#         reason="Temporarily ignoring compiled models for feature/plugins")
 
 class ScenicQualityTests(unittest.TestCase):
     """Tests for the InVEST Scenic Quality model."""

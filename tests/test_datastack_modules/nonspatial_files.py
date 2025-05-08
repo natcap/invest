@@ -1,6 +1,14 @@
-MODEL_SPEC = {
-    'args': {
-        'some_file': {'type': 'file'},
-        'data_dir': {'type': 'directory'},
-    }
-}
+from natcap.invest import spec
+
+MODEL_SPEC = spec.ModelSpec(inputs=[
+    spec.FileInput(id='some_file'),
+    spec.DirectoryInput(
+        id='data_dir',
+        contents=[])],
+    outputs={},
+    model_id='',
+    model_title='',
+    userguide='',
+    input_field_order=[],
+    args_with_spatial_overlap={}
+)

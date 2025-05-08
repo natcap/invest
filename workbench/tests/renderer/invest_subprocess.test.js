@@ -24,7 +24,8 @@ import {
   getInvestModelIDs,
   getSpec,
   fetchValidation,
-  fetchArgsEnabled
+  fetchArgsEnabled,
+  getDynamicDropdowns
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 
@@ -47,9 +48,7 @@ describe('InVEST subprocess testing', () => {
         type: 'freestyle_string',
       },
     },
-    ui_spec: {
-      order: [['workspace_dir', 'results_suffix']],
-    },
+    input_field_order: [['workspace_dir', 'results_suffix']],
     model_name: 'EcoModel',
     pyname: 'natcap.invest.dot',
     userguide: 'foo.html',
@@ -111,6 +110,7 @@ describe('InVEST subprocess testing', () => {
     fetchArgsEnabled.mockResolvedValue({
       workspace_dir: true, results_suffix: true,
     });
+    getDynamicDropdowns.mockResolvedValue({});
     getInvestModelIDs.mockResolvedValue(
       { carbon: { model_title: modelTitle } }
     );
