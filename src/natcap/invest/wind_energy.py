@@ -151,11 +151,11 @@ MODEL_SPEC = {
             **spec_utils.AOI,
             "projected": True,
             "projection_units": u.meter,
-            "required": "valuation_container and grid_points_path",
+            "required": "valuation_container",
             "about": gettext(
                 "Map of the area(s) of interest over which to run the model "
                 "and aggregate valuation results. Required if Run Valuation "
-                "is selected and the Grid Connection Points table is provided."
+                "is selected."
             )
         },
         "bathymetry_path": {
@@ -574,23 +574,24 @@ _ALPHA = 0.11
 # Field name to be added to the land point shapefile
 _LAND_TO_GRID_FIELD = 'L2G'
 
-# The field names for the two output fields, Harvested Wind Energy and Wind
-# Density, to be added to the point shapefile
+# The names for the computed output fields to be added to the point shapefile:
 _DENSITY_FIELD_NAME = 'Dens_W/m2'
 _HARVESTED_FIELD_NAME = 'Harv_MWhr'
-
-_MASK_FIELD_NAME = 'Masked'
-
-_CARBON_FIELD_NAME = 'CO2_Tons'
-_LEVELIZED_COST_FIELD_NAME = 'Level_Cost'
-_NPV_FIELD_NAME = 'NPV'
-
 _DEPTH_FIELD_NAME = 'DepthVal'
 _DIST_FIELD_NAME = 'DistVal'
+_NPV_FIELD_NAME = 'NPV'
+_LEVELIZED_COST_FIELD_NAME = 'Level_Cost'
+_CARBON_FIELD_NAME = 'CO2_Tons'
+
+# The field name that will be added to the intermediate point shapefile,
+# indicating whether or not a point is masked out by depth / distance.
+_MASK_FIELD_NAME = 'Masked'
 
 # Resample method for target rasters
 _TARGET_RESAMPLE_METHOD = 'near'
-# Target pixel size, in meters
+# Target pixel size, in meters. Given the increased availability of
+# high-resolution wind data (e.g. 2km horizontal resolution), we want a fine
+# resolution for rasterizing wind point vector values.
 _TARGET_PIXEL_SIZE = (90, -90)
 
 
@@ -791,6 +792,11 @@ def execute(args):
         target_path_list=[wind_data_pickle_path],
         task_name='compute_density_harvested_fields')
 
+    # Instantiate lists needed for alignment later
+    align_dependent_task_list = []
+    rasters_to_align_list = []
+    aligned_rasters_list = []
+
     if 'aoi_vector_path' in args:
         LOGGER.info('AOI Provided')
         aoi_vector_path = args['aoi_vector_path']
@@ -815,9 +821,11 @@ def execute(args):
         # from ``get_suitable_projection_params`` task first
         task_graph.join()
         with open(proj_params_pickle_path, 'rb') as pickle_file:
-            target_sr_wkt, _, target_bounding_box = pickle.load(
+            target_sr_wkt, target_pixel_size, target_bounding_box = pickle.load(
                 pickle_file)
-        target_pixel_size = _TARGET_PIXEL_SIZE
+        # Use minimum of _TARGET_PIXEL_SIZE and bathymetry pixel size:
+        min_pixel_size = min(target_pixel_size[0], _TARGET_PIXEL_SIZE[0])
+        target_pixel_size = (min_pixel_size, -min_pixel_size)
         LOGGER.debug('target_sr_wkt: %s\ntarget_pixel_size: %s\n' +
                      'target_bounding_box: %s\n', target_sr_wkt,
                      target_pixel_size, target_bounding_box)
@@ -867,9 +875,10 @@ def execute(args):
         # Creating harvested raster depends on the clipped wind vector
         harvest_raster_dependent_task_list = [clip_wind_vector_task]
 
-        # Set the bathymetry and points path to use in the rest of the model.
+        # Set the bathymetry path to use for creating the depth mask and the
+        # wind point vector path to use for the rest of the model.
         # In this case these paths refer to the projected files. This may not
-        # be the case if an AOI is not provided
+        # be the case if an AOI is not provided.
         final_bathy_raster_path = bathymetry_proj_raster_path
         intermediate_wind_point_vector_path = clipped_wind_point_vector_path
 
@@ -902,8 +911,8 @@ def execute(args):
             aoi_raster_path = os.path.join(inter_dir,
                                            'aoi_raster%s.tif' % suffix)
 
-            # Make a raster from AOI using the reprojected bathymetry raster's
-            # pixel size
+            # Make a raster from AOI using either the reprojected bathymetry
+            # raster's pixel size or _TARGET_PIXEL_SIZE, whichever is smaller
             LOGGER.info('Create Raster From AOI')
             create_aoi_raster_task = task_graph.add_task(
                 func=_create_aoi_raster,
@@ -924,11 +933,29 @@ def execute(args):
                 dependent_task_list=[
                     create_aoi_raster_task, clip_reproject_land_poly_task])
 
+            # Create the distance mask:
+            LOGGER.info('Creating Distance Mask')
+            dist_mask_path = os.path.join(inter_dir,
+                                          'distance_mask%s.tif' % suffix)
+            create_dist_mask_task = task_graph.add_task(
+                func=_mask_by_distance,
+                args=(dist_trans_path, min_distance, max_distance,
+                      _TARGET_NODATA, dist_mask_path),
+                target_path_list=[dist_mask_path],
+                task_name='mask_raster_by_distance',
+                dependent_task_list=[create_distance_raster_task])
+
+            align_dependent_task_list.append(create_dist_mask_task)
+            rasters_to_align_list.append(dist_mask_path)
+            aligned_dist_mask_path = dist_mask_path.replace(
+                '%s.tif' % suffix, '_aligned%s.tif' % suffix)
+            aligned_rasters_list.append(aligned_dist_mask_path)
+
     else:
         LOGGER.info("AOI argument was not selected")
         mask_by_distance = False
 
-        # Wind point vector that will be supply the template for the final
+        # Wind point vector that will be the template for the final
         # shapefile; does not need to be clipped to AOI
         intermediate_wind_point_vector_path = os.path.join(
             inter_dir, 'intermediate_wind_energy_points%s.shp' % suffix)
@@ -943,26 +970,22 @@ def execute(args):
             task_name='wind_data_to_vector_without_aoi',
             dependent_task_list=[compute_density_harvested_task])
 
-        # Set the bathymetry and points path to use in the rest of the model.
-        # In this case these paths refer to the unprojected files. This may not
-        # be the case if an AOI is provided
+        # Set the bathymetry path to use for creating the depth mask.
+        # In this case, this path refers to the unprojected file. This may not
+        # be the case if an AOI is provided.
         final_bathy_raster_path = bathymetry_path
 
-        # Depth mask creation is not dependent on creating additional
-        # clipping bathymetry
+        # Depth mask creation is not dependent on clipping bathymetry
         depth_mask_dependent_task_list = []
 
-    # Now do the masking:
+    # Create a mask for values that are out of the range of the depth values:
     # Get the min and max depth values from the arguments and set to a negative
     # value indicating below sea level
     min_depth = abs(float(args['min_depth'])) * -1
     max_depth = abs(float(args['max_depth'])) * -1
 
-    # Create a mask for any values that are out of the range of the depth
-    # values
     LOGGER.info('Creating Depth Mask')
     depth_mask_path = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
-
     create_depth_mask_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(final_bathy_raster_path, 1), (min_depth, 'raw'),
@@ -972,37 +995,20 @@ def execute(args):
         task_name='mask_depth_on_bathymetry',
         dependent_task_list=depth_mask_dependent_task_list)
 
-    align_dependent_task_list = [create_depth_mask_task]
-    rasters_to_align_list = [depth_mask_path]
+    align_dependent_task_list.append(create_depth_mask_task)
+    rasters_to_align_list.append(depth_mask_path)
     aligned_depth_mask_path = depth_mask_path.replace(
         '%s.tif' % suffix, '_aligned%s.tif' % suffix)
-    aligned_rasters_list = [aligned_depth_mask_path]
+    aligned_rasters_list.append(aligned_depth_mask_path)
 
-    # If we will be masking by distance, align the distance raster as well
-    if mask_by_distance:
-        # Mask the distance raster by the min and max distances
-        LOGGER.info('Creating Distance Mask')
-        dist_mask_path = os.path.join(inter_dir,
-                                      'distance_mask%s.tif' % suffix)
-        create_dist_mask_task = task_graph.add_task(
-            func=_mask_by_distance,
-            args=(dist_trans_path, min_distance, max_distance,
-                  _TARGET_NODATA, dist_mask_path),
-            target_path_list=[dist_mask_path],
-            task_name='mask_raster_by_distance',
-            dependent_task_list=[create_distance_raster_task])
-
-        align_dependent_task_list.append(create_dist_mask_task)
-        rasters_to_align_list.append(dist_mask_path)
-        aligned_dist_mask_path = dist_mask_path.replace(
-            '%s.tif' % suffix, '_aligned%s.tif' % suffix)
-        aligned_rasters_list.append(aligned_dist_mask_path)
-    else:
-        # No mask_by_distance_task is added to taskgraph
-        LOGGER.info('NO Distance Mask to add to list')
-        # No need to align bathy
-
+    # If running valuation, raster alignment will happen after rasterization
+    # of the Harvested values (in the valuation half of the model)
     if not run_valuation:
+        raster_field_to_vector_list = []
+        mask_keys = [_DEPTH_FIELD_NAME]
+
+        # If a distance mask was created, align our distance and depth
+        # rasters before writing values to the shapefile
         if mask_by_distance:
             LOGGER.info('Aligning Depth and Distance Masks')
             align_and_resize_raster_task = task_graph.add_task(
@@ -1017,18 +1023,16 @@ def execute(args):
                 target_path_list=aligned_rasters_list,
                 dependent_task_list=align_dependent_task_list)
             write_vector_dependent_task_list = [align_and_resize_raster_task]
+            raster_field_to_vector_list.extend([
+                (aligned_depth_mask_path, _DEPTH_FIELD_NAME),
+                (aligned_dist_mask_path, _DIST_FIELD_NAME)])
+            mask_keys.append(_DIST_FIELD_NAME)
         else:
             aligned_depth_mask_path = depth_mask_path
+            raster_field_to_vector_list.append(
+                (depth_mask_path, _DEPTH_FIELD_NAME)
+            )
             write_vector_dependent_task_list = []
-
-        rasters_fields_to_vector_list = [
-            (aligned_depth_mask_path, _DEPTH_FIELD_NAME),
-        ]
-        mask_keys = [_DEPTH_FIELD_NAME]
-        if mask_by_distance:
-            rasters_fields_to_vector_list.append(
-                (aligned_dist_mask_path, _DIST_FIELD_NAME))
-            mask_keys.append(_DIST_FIELD_NAME)
 
         # Write Depth [and Distance] mask values to Wind Points Shapefile
         LOGGER.info("Adding mask values to shapefile")
@@ -1037,7 +1041,7 @@ def execute(args):
         task_graph.add_task(
             func=_index_raster_values_to_point_vector,
             args=(intermediate_wind_point_vector_path,
-                  rasters_fields_to_vector_list,
+                  raster_field_to_vector_list,
                   final_wind_point_vector_path),
             kwargs={'overwrite': True,
                     'mask_keys': mask_keys,
@@ -1334,7 +1338,7 @@ def execute(args):
 
     # Write Valuation values to Wind Points shapefile
     LOGGER.info("Adding valuation results to shapefile")
-    rasters_fields_to_vector_list = [
+    raster_field_to_vector_list = [
         (harvested_masked_path, _HARVESTED_FIELD_NAME),
         (carbon_raster_path, _CARBON_FIELD_NAME),
         (levelized_raster_path, _LEVELIZED_COST_FIELD_NAME),
@@ -1349,7 +1353,7 @@ def execute(args):
     task_graph.add_task(
         func=_index_raster_values_to_point_vector,
         args=(intermediate_wind_point_vector_path,
-              rasters_fields_to_vector_list,
+              raster_field_to_vector_list,
               final_wind_point_vector_path),
         kwargs={'overwrite': True,
                 'mask_keys': mask_keys,
@@ -1364,14 +1368,25 @@ def execute(args):
 
 
 def _index_raster_values_to_point_vector(
-        base_point_vector_path, rasters_fieldnames_tuples,
+        base_point_vector_path, raster_fieldname_list,
         target_point_vector_path, overwrite=False,
         mask_keys=[], mask_field=None):
     """Add raster values to vector point feature fields.
 
+    This function does two things:
+        - Creates a copy of the base point vector and updates the copy to include
+          the fields in raster_fieldname_list, the values of which are pixel-picked
+          from their corresponding raster. If `mask_keys` are provided, points that
+          would be NODATA based on the raster(s) corresponding to fields in this list
+          will be deleted from the copy.
+        - Optionally modifies the base vector to include an additional field,
+          `mask_field`, that indicates whether or not a point was removed from the
+          copy based on NODATA values in the rasters corresponding to the fieldnames
+          in `mask_keys`.
+
     Args:
         base_point_vector_path (str): a path to an OGR point vector file.
-        rasters_fieldnames_tuples (list): a list of (raster_path, field_name)
+        raster_fieldname_list (list): a list of (raster_path, field_name)
             tuples. The values of rasters in this list will be added to the
             vector's features under the associated field name. All rasters must
             already be aligned. An exception will be raised if a field already
@@ -1380,28 +1395,30 @@ def _index_raster_values_to_point_vector(
             target field name in addition to the existing fields in the base
             point vector.
         overwrite (boolean): defaults to False. If True, if a fieldname passed
-            in rasters_fieldnames_tuples already exists in the source shapefile,
+            in raster_fieldname_list already exists in the source shapefile,
             its value will be overwritten in the copy.
-        mask_keys (list): a list of string field names that appear in
-            rasters_fieldnames_tuples, indicating that the associated raster
+        mask_keys (list): (optional) a list of string field names that appear in
+            raster_fieldname_list, indicating that the associated raster
             will be used to mask out vector features. Wherever a value in a mask
             raster equals NODATA, the vector feature will be deleted from the
             target point vector.
-        mask_field (str): a field name to add to the base point vector, where the
-            value indicates whether or not the point was masked out in the
-            target point vector, based on the values of rasters associated
-            with the fields in mask_keys.
+        mask_field (str): (optional) a field name to add to the base point vector,
+            where the value indicates whether or not the point was masked out in
+            the target point vector, based on the values of rasters associated
+            with the fields in mask_keys. If `mask_field` is provided but
+            `mask_keys` is not, it will be ignored.
 
     Returns:
         None
 
     """
-    base_raster_path_list = [tup[0] for tup in rasters_fieldnames_tuples]
-    field_name_list = [tup[1] for tup in rasters_fieldnames_tuples]
+    base_raster_path_list = [tup[0] for tup in raster_fieldname_list]
+    field_name_list = [tup[1] for tup in raster_fieldname_list]
 
-    # If no fieldname provided, use the first fieldname in mask_keys
-    if mask_keys and not mask_field:
-        mask_field = mask_keys[0]
+    if not set(mask_keys).issubset(set(field_name_list)):
+        raise ValueError(
+            f"Field name(s) in `mask_keys`: {mask_keys} do not appear in "
+            f"`raster_fieldname_list`: {field_name_list}")
 
     # Check that raster inputs are all the same dimensions
     raster_info_list = [
@@ -1411,10 +1428,15 @@ def _index_raster_values_to_point_vector(
         raster_info['raster_size'] for raster_info in raster_info_list]
     if len(set(geospatial_info)) > 1:
         raise ValueError(
-            "Input Rasters are not the same dimensions. The "
-            "following raster are not identical: %s" % pprint.pformat(
+            "Input Rasters are not the same dimensions. The following rasters "
+            f"are not identical: {
                 [(raster_path, dimensions) for (raster_path, dimensions) in
-                zip(base_raster_path_list, geospatial_info)]))
+                zip(base_raster_path_list, geospatial_info)]}")
+    # When writing values to the vector, we replace nodata with None;
+    # map the fieldnames to the nodata values of their corresponding rasters
+    raster_nodata = [raster_info['nodata'][0] for raster_info in raster_info_list]
+    field_nodata_map = {fieldname: nodata for fieldname, nodata in
+                        zip(field_name_list, raster_nodata)}
 
     # Since rasters must all already be aligned, use first in list as ref
     raster_info = raster_info_list[0]
@@ -1424,10 +1446,16 @@ def _index_raster_values_to_point_vector(
     driver.CreateCopy(target_point_vector_path, base_vector)
 
     # Add the mask field to the base vector
-    if mask_keys:
+    if mask_field:
         base_vector = gdal.OpenEx(
             base_point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
         base_layer = base_vector.GetLayer()
+        # Since we're mutating the base vector, throw an error if the
+        # supplied fieldname already exists (don't overwrite)
+        if base_layer.FindFieldIndex(mask_field, True) != -1:
+            raise ValueError(
+                f"A field called '{mask_field}' already exists in the base "
+                "vector. Please supply a different name for `mask_field`.")
         field_defn = ogr.FieldDefn(mask_field, ogr.OFTReal)
         field_defn.SetWidth(24)
         field_defn.SetPrecision(11)
@@ -1450,9 +1478,9 @@ def _index_raster_values_to_point_vector(
         # If the field exists and overwrite = False, raise an exception
         if field_index != -1 and not overwrite:
             raise ValueError(
-                "'%s' field already exists in the input shapefile and "
+                f"'{field_name}' field already exists in the input shapefile and "
                 "overwrite is set to False. Please rename it or remove it "
-                "from the attribute table." % field_name)
+                "from the attribute table.")
         # If the field doesn't already exist, create it
         elif field_index == -1:
             target_layer.CreateField(field_defn)
@@ -1533,7 +1561,8 @@ def _index_raster_values_to_point_vector(
                     # catch this point instead.
                     continue
                 else:
-                    if block_value == _TARGET_NODATA:
+                    # Use the nodata value specific to that raster
+                    if block_value == field_nodata_map[fieldname]:
                         block_value = None
                     else:
                         block_value = float(block_value)
@@ -1541,7 +1570,7 @@ def _index_raster_values_to_point_vector(
 
             encountered_fids.add(vector_fid)
             invalid_feature = False # Always valid if no mask
-            if mask_keys:
+            if mask_field:
                 invalid_feature = None in [data.get(mask_key, None)
                                            for mask_key in mask_keys]
                 base_vector_feat = base_layer.GetFeature(vector_fid)
