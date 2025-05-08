@@ -70,6 +70,13 @@ Workbench
   existing user-added metadata preserved)
   (`#1774 <https://github.com/natcap/invest/issues/1774>`_).
 
+Urban Flood Risk
+================
+* The raster output ``Runoff_retention.tif`` has been renamed
+  ``Runoff_retention_index.tif`` to clarify the difference between it and
+  ``Runoff_retention_m3.tif``
+  (`#1837 <https://github.com/natcap/invest/issues/1837>`_).
+
 
 3.15.1 (2025-05-06)
 -------------------
