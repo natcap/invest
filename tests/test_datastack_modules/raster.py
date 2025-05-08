@@ -6,6 +6,6 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     model_id='',
     model_title='',
     userguide='',
-    ui_spec=spec.UISpec(),
+    input_field_order=[],
     args_with_spatial_overlap={}
 )

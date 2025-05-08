@@ -22,7 +22,6 @@ from natcap.invest import spec
 from natcap.invest.spec import (
     u,
     ModelSpec,
-    UISpec,
     Input,
     FileInput,
     CSVInput,
@@ -40,14 +39,12 @@ from natcap.invest.spec import (
 
 gdal.UseExceptions()
 
-def ui_spec_with_defaults(order=[]):
-    return UISpec(order=order)
-
 def model_spec_with_defaults(model_id='', model_title='', userguide='', aliases=None,
-                 ui_spec=ui_spec_with_defaults(), inputs={}, outputs={},
+                 inputs={}, outputs={}, input_field_order=[],
                  args_with_spatial_overlap=[]):
     return ModelSpec(model_id=model_id, model_title=model_title, userguide=userguide,
-            aliases=aliases, ui_spec=ui_spec, inputs=inputs, outputs=outputs,
+            aliases=aliases, inputs=inputs, outputs=outputs,
+            input_field_order=input_field_order,
             args_with_spatial_overlap=args_with_spatial_overlap)
 
 def number_input_spec_with_defaults(id='', units=u.none, expression='', **kwargs):

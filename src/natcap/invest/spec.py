@@ -1142,15 +1142,11 @@ class OptionStringOutput(Output):
     options: typing.Union[list, None] = None
 
 @dataclasses.dataclass
-class UISpec:
-    order: typing.Union[list, None] = None
-
-@dataclasses.dataclass
 class ModelSpec:
     model_id: str
     model_title: str
     userguide: str
-    ui_spec: UISpec
+    input_field_order: list[str]
     inputs: typing.Iterable[Input]
     outputs: typing.Iterable[Output]
     args_with_spatial_overlap: dict
@@ -1213,16 +1209,14 @@ def build_model_spec(model_spec):
         for argkey, argspec in model_spec['args'].items()]
     outputs = [
         build_output_spec(argkey, argspec) for argkey, argspec in model_spec['outputs'].items()]
-    ui_spec = UISpec(
-        order=model_spec['ui_spec']['order'])
     return ModelSpec(
         model_id=model_spec['model_id'],
         model_title=model_spec['model_title'],
         userguide=model_spec['userguide'],
         aliases=model_spec['aliases'],
-        ui_spec=ui_spec,
         inputs=inputs,
         outputs=outputs,
+        input_field_order=model_spec['ui_spec']['order'],
         args_with_spatial_overlap=model_spec.get('args_with_spatial_overlap', None))
 
 

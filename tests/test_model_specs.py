@@ -121,7 +121,7 @@ class ValidateModelSpecs(unittest.TestCase):
         """MODEL_SPEC: test each spec meets the expected pattern."""
 
         required_keys = {'model_id', 'model_title', 'userguide',
-                         'aliases', 'inputs', 'ui_spec', 'outputs'}
+                         'aliases', 'inputs', 'input_field_order', 'outputs'}
         for model_id, pyname in model_id_to_pyname.items():
             model = importlib.import_module(pyname)
 
@@ -137,10 +137,9 @@ class ValidateModelSpecs(unittest.TestCase):
                         set(model.MODEL_SPEC.args_with_spatial_overlap).issubset(
                             {'spatial_keys', 'different_projections_ok'}))
 
-                self.assertIsInstance(model.MODEL_SPEC.ui_spec, spec.UISpec)
-                self.assertIsInstance(model.MODEL_SPEC.ui_spec.order, list)
+                self.assertIsInstance(model.MODEL_SPEC.input_field_order, list)
                 found_keys = set()
-                for group in model.MODEL_SPEC.ui_spec.order:
+                for group in model.MODEL_SPEC.input_field_order:
                     self.assertIsInstance(group, list)
                     for key in group:
                         self.assertIsInstance(key, str)

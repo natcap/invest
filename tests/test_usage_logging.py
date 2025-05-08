@@ -66,8 +66,7 @@ class UsageLoggingTests(unittest.TestCase):
         }
 
         model_spec = spec.ModelSpec(
-            model_id='', model_title='', userguide=None,
-            aliases=None, ui_spec=spec.UISpec(order=[]),
+            model_id='', model_title='', userguide=None, aliases=None,
             inputs=[
                 spec.SingleBandRasterInput(id='raster', band=spec.Input()),
                 spec.VectorInput(id='vector', geometries={}, fields={}),
@@ -76,6 +75,7 @@ class UsageLoggingTests(unittest.TestCase):
                 spec.VectorInput(id='blank_vector_path', geometries={}, fields={})
             ],
             outputs={},
+            input_field_order=[],
             args_with_spatial_overlap=None)
 
         output_logfile = os.path.join(self.workspace_dir, 'logfile.txt')

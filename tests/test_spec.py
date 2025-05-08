@@ -361,7 +361,7 @@ class TestMetadataFromSpec(unittest.TestCase):
                 model_title='Urban Nature Access',
                 userguide='',
                 aliases=[],
-                ui_spec={},
+                input_field_order=[],
                 inputs={},
                 args_with_spatial_overlap={},
                 outputs=output_spec
