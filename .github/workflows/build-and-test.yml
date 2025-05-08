@@ -157,7 +157,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
-          path: dist
+          path: dist/*.whl
 
       - name: Upload conda env artifact
         uses: actions/upload-artifact@v4
