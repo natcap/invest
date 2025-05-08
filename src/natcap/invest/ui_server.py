@@ -87,8 +87,11 @@ def get_dynamic_dropdown_options():
     results = {}
     model_module = importlib.import_module(
         name=models.model_id_to_pyname[payload['model_id']])
-    for arg_key, fn in model_module.MODEL_SPEC['ui_spec']['dropdown_functions'].items():
-        results[arg_key] = fn(json.loads(payload['args']))
+    for arg_spec in model_module.MODEL_SPEC.inputs:
+        if (isinstance(arg_spec, spec.OptionStringInput) and
+                arg_spec.dropdown_function):
+            results[arg_spec.id] = arg_spec.dropdown_function(
+                json.loads(payload['args']))
     LOGGER.debug(results)
     return json.dumps(results)
 

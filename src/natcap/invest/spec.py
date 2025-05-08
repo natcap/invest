@@ -974,9 +974,14 @@ class OptionStringInput(Input):
     is limited to a set of pre-defined options.
 
     Attributes:
-        options: A list of the values that this input may take
+        options: A list of the values that this input may take. Use this if the
+            set of options is predetermined.
+        dropdown_function: A function that returns a list of the values that
+            this input may take. Use this if the set of options must be
+            dynamically generated.
     """
     options: typing.Union[list, None] = None
+    dropdown_function: typing.Union[typing.Callable, None] = None
     type: typing.ClassVar[str] = 'option_string'
 
     def validate(self, value):
@@ -1139,7 +1144,6 @@ class OptionStringOutput(Output):
 @dataclasses.dataclass
 class UISpec:
     order: typing.Union[list, None] = None
-    dropdown_functions: dict = dataclasses.field(default_factory=dict)
 
 @dataclasses.dataclass
 class ModelSpec:
@@ -1210,8 +1214,7 @@ def build_model_spec(model_spec):
     outputs = [
         build_output_spec(argkey, argspec) for argkey, argspec in model_spec['outputs'].items()]
     ui_spec = UISpec(
-        order=model_spec['ui_spec']['order'],
-        dropdown_functions=model_spec['ui_spec'].get('dropdown_functions', None))
+        order=model_spec['ui_spec']['order'])
     return ModelSpec(
         model_id=model_spec['model_id'],
         model_title=model_spec['model_title'],
@@ -1238,7 +1241,8 @@ def build_input_spec(argkey, arg):
     if t == 'option_string':
         return OptionStringInput(
             **base_attrs,
-            options=arg['options'])
+            options=arg['options'],
+            dropdown_function=arg.get('dropdown_function', None))
 
     elif t == 'freestyle_string':
         return StringInput(

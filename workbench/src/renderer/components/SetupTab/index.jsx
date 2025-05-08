@@ -363,9 +363,7 @@ class SetupTab extends React.Component {
     }, () => {
       this.debouncedValidate();
       this.debouncedArgsEnabled();
-      if (uiSpec.dropdown_functions) {
-        this.debouncedDropdownFunctions();
-      }
+      this.debouncedDropdownFunctions();
     });
   }
 
