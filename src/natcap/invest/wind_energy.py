@@ -64,13 +64,6 @@ INPUT_WIND_DATA_FIELDS = {
 
 OUTPUT_WIND_DATA_FIELDS = {
     **INPUT_WIND_DATA_FIELDS,
-    "lam": {
-        "type": "number",
-        "units": u.none,
-        "about": gettext(
-            "Weibull scale factor calculated for the "
-            "proposed hub height at this point.")
-    },
     "ref_lam": {
         "type": "number",
         "units": u.degree,
