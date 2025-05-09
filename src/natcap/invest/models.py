@@ -29,9 +29,6 @@ pyname_to_module = {}
 for _, _name, _ispkg in pkgutil.iter_modules(natcap.invest.__path__):
     if _name in {'__main__', 'cli', 'ui_server'}:
         continue  # avoid a circular import
-    if _name in {'delineateit', 'ndr', 'scenic_quality', 'sdr',
-                 'seasonal_water_yield', 'recreation'}:
-        continue # avoid compiled models for development of plugin feature branch
     _module = importlib.import_module(f'natcap.invest.{_name}')
     if _ispkg:
         for _, _sub_name, _ in pkgutil.iter_modules(_module.__path__):
