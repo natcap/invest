@@ -383,6 +383,7 @@ class SetupTab extends React.Component {
    * Updating means:
    * 1) setting the value
    * 2) toggling the enabled/disabled/hidden state of any dependent args
+   * 3) clearing job status in case args are being updated after the model has been run.
    *
    * @param {string} key - the invest argument key
    * @param {string} value - the invest argument value
@@ -394,6 +395,9 @@ class SetupTab extends React.Component {
     this.setState({
       argsValues: argsValues,
     }, () => {
+      this.props.updateJobProperties(this.props.tabID, {
+        status: undefined,  // Clear job status to hide model status indicator.
+      });
       this.debouncedValidate();
       this.callUISpecFunctions();
     });
@@ -646,4 +650,6 @@ SetupTab.propTypes = {
   sidebarFooterElementId: PropTypes.string.isRequired,
   executeClicked: PropTypes.bool.isRequired,
   switchTabs: PropTypes.func.isRequired,
+  tabID: PropTypes.string.isRequired,
+  updateJobProperties: PropTypes.func.isRequired,
 };

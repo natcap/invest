@@ -24,9 +24,11 @@ if platform.system() == 'Windows':
             'env variable NATCAP_INVEST_GDAL_LIB_PATH is not defined. '
             'This env variable is required when building on Windows. If '
             'using conda to manage your gdal installation, you may set '
-            'NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library".')
-    library_dirs = [f'{os.environ["NATCAP_INVEST_GDAL_LIB_PATH"]}/lib']
-    include_dirs.append(f'{os.environ["NATCAP_INVEST_GDAL_LIB_PATH"]}/include')
+            'NATCAP_INVEST_GDAL_LIB_PATH=%CONDA_PREFIX%/Library".')
+    library_dirs = [os.path.join(
+        os.environ["NATCAP_INVEST_GDAL_LIB_PATH"].rstrip(), "lib")]
+    include_dirs.append(os.path.join(
+        os.environ["NATCAP_INVEST_GDAL_LIB_PATH"].rstrip(), "include"))
 else:
     compiler_args = [subprocess.run(
         ['gdal-config', '--cflags'], capture_output=True, text=True

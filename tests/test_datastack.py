@@ -211,6 +211,60 @@ class DatastackArchiveTests(unittest.TestCase):
 
             self.assertEqual(len(archived_params), 1)  # sanity check
 
+    def test_datastack_metadata(self):
+        """Test correct metadata is created for datastack
+
+        Copy files into a temp directory, create metadata for 1 file 
+
+        """
+        from natcap.invest import datastack
+        import geometamaker
+
+        params = {
+            'raster': os.path.join(DATA_DIR, "landcover.tif"),
+            'simple_table': os.path.join(DATA_DIR, "carbon_pools_samp.csv"),
+        }
+
+        # Copy params into new dir
+        temp_dir = os.path.join(self.workspace, "temp_dir")
+        os.mkdir(temp_dir)
+
+        for name, f in params.items():
+            shutil.copyfile(f, os.path.join(temp_dir, os.path.basename(f)))
+
+        params = {k: os.path.join(temp_dir, os.path.basename(f))
+                  for k, f in params.items()}
+
+        # generate custom metadata for 1 file before building datastack
+        resource = geometamaker.describe(params['raster'])
+        resource.set_description("foo")
+        resource.set_keywords(["bar"])
+        resource.write()
+
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+
+        datastack.build_datastack_archive(
+            params, 'test_datastack_modules.archive_extraction', archive_path)
+
+        # extract the archive
+        out_directory = os.path.join(self.workspace, 'extracted_archive')
+        datastack._tarfile_safe_extract(archive_path, out_directory)
+
+        # validate metadata in directory to ensure 2 yamls exist
+        files, messages = geometamaker.validate_dir(out_directory,
+                                                    recursive=True)
+        self.assertEqual(len(files), 2)
+        self.assertFalse(any(messages))
+
+        # test that custom description and keyword are not overwritten and new
+        # keywords are added
+        raster_path = os.path.join(out_directory, "data",
+                                   "raster_raster", "landcover.tif")
+        resource = geometamaker.describe(raster_path)
+        self.assertEqual(resource.get_description(), "foo")
+        self.assertCountEqual(resource.get_keywords(),
+                              ["archive_extraction_model", "InVEST", "bar"])
+
     def test_nonspatial_files(self):
         """Datastack: test nonspatial files."""
         from natcap.invest import datastack

@@ -113,7 +113,7 @@ MODEL_SPEC = {
         }
     },
     "outputs": {
-        "Runoff_retention.tif": {
+        "Runoff_retention_index.tif": {
             "about": "Map of runoff retention index.",
             "bands": {1: {
                 "type": "number",
@@ -364,7 +364,7 @@ def execute(args):
     # Generate Runoff Retention
     runoff_retention_nodata = -9999
     runoff_retention_raster_path = os.path.join(
-        args['workspace_dir'], f'Runoff_retention{file_suffix}.tif')
+        args['workspace_dir'], f'Runoff_retention_index{file_suffix}.tif')
     runoff_retention_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([

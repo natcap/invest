@@ -797,7 +797,7 @@ def execute(args):
     rasters_to_align_list = []
     aligned_rasters_list = []
 
-    if 'aoi_vector_path' in args:
+    if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
         LOGGER.info('AOI Provided')
         aoi_vector_path = args['aoi_vector_path']
 

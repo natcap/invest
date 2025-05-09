@@ -61,15 +61,41 @@
 
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+
+Workbench
+=========
+* Metadata is now generated for files when creating a datastack (with any
+  existing user-added metadata preserved)
+  (`#1774 <https://github.com/natcap/invest/issues/1774>`_).
+
+Urban Flood Risk
+================
+* The raster output ``Runoff_retention.tif`` has been renamed
+  ``Runoff_retention_index.tif`` to clarify the difference between it and
+  ``Runoff_retention_m3.tif``
+  (`#1837 <https://github.com/natcap/invest/issues/1837>`_).
+
+
+3.15.1 (2025-05-06)
+-------------------
+
+General
+=======
+* Handle exceptions that can arise during ``validation.check_spatial_overlap``
+  when a layer's bounding box cannot be transformed to EPSG:4326.
+  (`#1849 <https://github.com/natcap/invest/issues/1849>`_).
 
 Workbench
 =========
 * Fixed a bug that did not allow users to select a folder as the location
   to extract a datastack archive.
   (`#1879 <https://github.com/natcap/invest/issues/1879>`_).
+* When a parameter from a previous model run is changed, the model status
+  indicator (e.g., the "Model Complete" notice) is cleared to help prevent
+  confusion about which parameters went into the most recent model run
+  (`#1655 <https://github.com/natcap/invest/issues/1655>`_).
 
 Crop Production
 ===============
@@ -80,6 +106,18 @@ Crop Production
 * The Regression model now correctly validates crop names against the existence
   of a corresponding regression yield table
   (`#1723 <https://github.com/natcap/invest/issues/1723>`_).
+
+Seasonal Water Yield
+====================
+* Fixed bug in quickflow calculation where `NoData` values in precipitation
+  were being incorrectly converted to 0's
+  (`#1592 <https://github.com/natcap/invest/issues/1592>`_).
+
+Wind Energy
+===========
+* Fixed a bug where the model would error if no AOI was provided when run from
+  the workbench or from a datastack file where the value for 'aoi_vector_path'
+  was an empty string. (`#1900 <https://github.com/natcap/invest/issues/1900>`_)
 
 
 3.15.0 (2025-04-03)

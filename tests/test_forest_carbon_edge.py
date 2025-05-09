@@ -1,17 +1,18 @@
 """Module for Regression Testing the InVEST Forest Carbon Edge model."""
-import unittest
-import tempfile
-import shutil
 import os
+import pickle
+import shutil
+import tempfile
+import unittest
 
 import numpy
 import pandas
-from osgeo import gdal, osr, ogr
+import pygeoprocessing
+import shapely
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 from shapely.geometry import Polygon
-import pygeoprocessing
-import pickle
-
-import pygeoprocessing
 
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
@@ -529,6 +530,146 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         self.assertAlmostEqual(actual_output[1, 2], 142.47273)
         self.assertAlmostEqual(actual_output[3, 5], 274.47815)
         self.assertAlmostEqual(actual_output[0, 1], -1)
+
+    def test_invalid_geometries(self):
+        """Forest Carbon: Check handling of invalid vector geometries."""
+        from natcap.invest import forest_carbon_edge_effect
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        projection_wkt = srs.ExportToWkt()
+
+        lulc_matrix = numpy.ones((5,5), dtype=numpy.int8)
+        lulc_raster_path = os.path.join(self.workspace_dir, 'lulc.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            lulc_matrix, 255, (1, -1), (461262, 4923269), projection_wkt,
+            lulc_raster_path)
+
+        fields_polys = {'geom_id': ogr.OFTInteger}
+        attrs_polys = [
+            {'geom_id': 1},
+            {'geom_id': 2},
+            {'geom_id': 3}
+        ]
+
+        # valid polygon
+        valid_poly = Polygon([
+            (461265, 4923269), (461267, 4923269), (461267, 4923267),
+            (461265, 4923267), (461265, 4923269)])
+        self.assertTrue(shapely.is_valid(valid_poly))
+
+        # invalid bowtie polygon
+        invalid_bowtie_poly = Polygon([
+            (461262, 4923267), (461264, 4923267), (461262, 4923265),
+            (461264, 4923265), (461262, 4923267)])
+        self.assertFalse(shapely.is_valid(invalid_bowtie_poly))
+
+        # invalid bowtie polygon with vertex in the middle
+        invalid_alt_bowtie_poly = Polygon([
+            (461262, 4923267), (461264, 4923267), (461263, 4923266),
+            (461264, 4923265), (461262, 4923265), (461263, 4923266),
+            (461262, 4923267)])
+        self.assertFalse(shapely.is_valid(invalid_alt_bowtie_poly))
+
+        test_vector_path = os.path.join(self.workspace_dir, 'vector.gpkg')
+        pygeoprocessing.shapely_geometry_to_vector(
+            [valid_poly, invalid_bowtie_poly,
+             invalid_alt_bowtie_poly],
+            test_vector_path, projection_wkt, 'GPKG',
+            fields=fields_polys,
+            attribute_list=attrs_polys)
+
+        test_vector = gdal.OpenEx(
+            test_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
+        test_layer = test_vector.GetLayer()
+        self.assertEqual(test_layer.GetFeatureCount(), 3)
+        test_layer = None
+        test_vector = None
+
+        target_vector_path = os.path.join(
+            self.workspace_dir, 'checked_geometries.gpkg')
+        forest_carbon_edge_effect._clip_global_regression_models_vector(
+            lulc_raster_path, test_vector_path, target_vector_path)
+
+        target_vector = gdal.OpenEx(target_vector_path, gdal.OF_VECTOR)
+        target_layer = target_vector.GetLayer()
+        self.assertEqual(
+            target_layer.GetFeatureCount(), 1)
+        # valid_polygon geom_id == 1
+        self.assertEqual(target_layer.GetFeature(0).GetField('geom_id'), 1)
+
+        target_layer = None
+        target_vector = None
+
+    def test_vector_clipping_buffer(self):
+        """Forest Carbon: Check DISTANCE_UPPER_BOUND buffer."""
+        from natcap.invest import forest_carbon_edge_effect
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        projection_wkt = srs.ExportToWkt()
+
+        lulc_matrix = numpy.ones((5,5), dtype=numpy.int8)
+        lulc_raster_path = os.path.join(self.workspace_dir, 'lulc.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            lulc_matrix, 255, (1000, -1000), (461261, 4923270), projection_wkt,
+            lulc_raster_path)
+
+        # get LULC bouding box; will be used to construct polygons
+        raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
+        bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = raster_info['bounding_box']
+
+        fields_polys = {'geom_id': ogr.OFTInteger}
+        attrs_polys = [
+            {'geom_id': 1},
+            {'geom_id': 2},
+            {'geom_id': 3},
+            {'geom_id': 4}
+        ]
+
+        # polygon that intersects with the lulc
+        in_bbox_poly = shapely.geometry.box(
+            bbox_maxx - 150, bbox_maxy - 150,
+            bbox_maxx - 50, bbox_maxy - 50)
+        self.assertTrue(shapely.is_valid(in_bbox_poly))
+
+        # polygon outside of lulc bb, but within buffer distance
+        in_buffer_poly = shapely.geometry.box(
+            bbox_maxx + 50, bbox_maxy + 50,
+            bbox_maxx + 150, bbox_maxy + 150)
+        self.assertTrue(shapely.is_valid(in_buffer_poly))
+
+        buffer = forest_carbon_edge_effect.DISTANCE_UPPER_BOUND
+        # polygon on the edge of the buffer
+        buffer_edge_poly = shapely.geometry.box(
+            bbox_maxx + buffer + 50, bbox_maxy + buffer + 50,
+            bbox_maxx + buffer - 50, bbox_maxy + buffer - 50)
+        self.assertTrue(shapely.is_valid(buffer_edge_poly))
+
+        # polygon outside of buffer distance
+        out_of_buffer_poly = shapely.geometry.box(
+            bbox_maxx + buffer + 50, bbox_maxy + buffer + 50,
+            bbox_maxx + buffer + 150, bbox_maxy + buffer + 150)
+        self.assertTrue(shapely.is_valid(out_of_buffer_poly))
+
+        test_vector_path = os.path.join(self.workspace_dir, 'vector.gpkg')
+        pygeoprocessing.shapely_geometry_to_vector(
+            [in_bbox_poly, in_buffer_poly,
+             buffer_edge_poly, out_of_buffer_poly],
+            test_vector_path, projection_wkt, 'GPKG',
+            fields=fields_polys,
+            attribute_list=attrs_polys)
+
+        target_vector_path = os.path.join(
+            self.workspace_dir, 'checked_geometries.gpkg')
+        forest_carbon_edge_effect._clip_global_regression_models_vector(
+            lulc_raster_path, test_vector_path, target_vector_path)
+
+        vector = gdal.OpenEx(
+            target_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
+        layer = vector.GetLayer()
+        self.assertEqual(layer.GetFeatureCount(), 3)
+
+        feat_ids = [feat.GetField('geom_id') for feat in layer]
+        self.assertEqual(feat_ids, [1, 2, 3])
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
