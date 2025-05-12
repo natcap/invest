@@ -299,7 +299,7 @@ class SingleBandRasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        file_warning = FileInput.validate(self, filepath)
+        file_warning = super().validate(self, filepath)
         if file_warning:
             return file_warning
 
@@ -807,7 +807,7 @@ class IntegerInput(Input):
 
 
 @dataclasses.dataclass
-class RatioInput(Input):
+class RatioInput(NumberInput):
     """A ratio input, or parameter, of an invest model.
 
     A ratio is a proportion expressed as a value from 0 to 1 (in contrast to a
@@ -825,32 +825,15 @@ class RatioInput(Input):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        try:
-            as_float = float(value)
-        except (TypeError, ValueError):
-            return get_message('NOT_A_NUMBER').format(value=value)
-
+        super().validate(value)
         if as_float < 0 or as_float > 1:
             return get_message('NOT_WITHIN_RANGE').format(
                 value=as_float,
                 range='[0, 1]')
 
-    @staticmethod
-    def format_column(col, *args):
-        """Format a column of a pandas dataframe that contains RatioInput values.
-
-        Values are cast to float.
-
-        Args:
-            col: Column of a pandas dataframe to format
-
-        Returns:
-            Transformed dataframe column
-        """
-        return col.astype(float)
 
 @dataclasses.dataclass
-class PercentInput(Input):
+class PercentInput(NumberInput):
     """A percent input, or parameter, of an invest model.
 
     A percent is a proportion expressed as a value from 0 to 100 (in contrast to
@@ -867,29 +850,12 @@ class PercentInput(Input):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        try:
-            as_float = float(value)
-        except (TypeError, ValueError):
-            return get_message('NOT_A_NUMBER').format(value=value)
-
+        super().validate(value)
         if as_float < 0 or as_float > 100:
             return get_message('NOT_WITHIN_RANGE').format(
                 value=as_float,
                 range='[0, 100]')
 
-    @staticmethod
-    def format_column(col, *args):
-        """Format a column of a pandas dataframe that contains PercentInput values.
-
-        Values are cast to float.
-
-        Args:
-            col: Column of a pandas dataframe to format
-
-        Returns:
-            Transformed dataframe column
-        """
-        return col.astype(float)
 
 @dataclasses.dataclass
 class BooleanInput(Input):
