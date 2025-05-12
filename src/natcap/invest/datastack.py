@@ -34,6 +34,7 @@ import warnings
 
 from osgeo import gdal
 
+from . import spec
 from . import utils
 from . import validation
 from . import models
@@ -346,8 +347,6 @@ def build_datastack_archive(args, model_id, datastack_path):
             target_filepath = os.path.join(
                 data_dir, f'{key}_file')
             shutil.copyfile(source_path, target_filepath)
-            LOGGER.debug(
-                f'File copied from {source_path} --> {target_filepath}')
             target_arg_value = target_filepath
             files_found[source_path] = target_arg_value
 
@@ -374,7 +373,7 @@ def build_datastack_archive(args, model_id, datastack_path):
         elif input_spec.__class__ in spatial_types:
             # Create a directory with a readable name, something like
             # "aoi_path_vector" or "lulc_cur_path_raster".
-            spatial_dir = os.path.join(data_dir, f'{key}_{input_spec.__class__.__name__}')
+            spatial_dir = os.path.join(data_dir, f'{key}_{input_spec.type}')
             target_arg_value = utils.copy_spatial_files(
                 source_path, spatial_dir)
             files_found[source_path] = target_arg_value
@@ -395,8 +394,19 @@ def build_datastack_archive(args, model_id, datastack_path):
     # write parameters to a new json file in the temp workspace
     param_file_uri = os.path.join(temp_workspace,
                                   'parameters' + PARAMETER_SET_EXTENSION)
-    build_parameter_set(
+    parameter_set = build_parameter_set(
         rewritten_args, model_id, param_file_uri, relative=True)
+
+    # write metadata for all files in args
+    keywords = [module.MODEL_SPEC.model_id, 'InVEST']
+    for k, v in args.items():
+        if isinstance(v, str) and os.path.isfile(v):
+            this_arg_spec = module.MODEL_SPEC.get_input(k)
+            # write metadata file to target location (in temp dir)
+            subdir = os.path.dirname(parameter_set['args'][k])
+            target_location = os.path.join(temp_workspace, subdir)
+            spec.write_metadata_file(v, this_arg_spec, keywords,
+                                           out_workspace=target_location)
 
     # Remove the handler before archiving the working dir (and the logfile)
     archive_filehandler.close()
@@ -476,7 +486,7 @@ def build_parameter_set(args, model_id, paramset_path, relative=False):
             directory of ``paramset_path``.
 
     Returns:
-        ``None``
+        parameter dictionary saved in ``paramset_path``
 
     Raises:
         ValueError if creating a relative path fails.
@@ -525,6 +535,8 @@ def build_parameter_set(args, model_id, paramset_path, relative=False):
             json.dumps(parameter_data,
                        indent=4,
                        sort_keys=True))
+
+    return parameter_data
 
 
 def extract_parameter_set(paramset_path):

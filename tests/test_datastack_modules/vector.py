@@ -4,7 +4,7 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     spec.VectorInput(
         id='vector', fields={}, geometries={})],
     outputs={},
-    model_id='',
+    model_id='vector_model',
     model_title='',
     userguide='',
     input_field_order=[],

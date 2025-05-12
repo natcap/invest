@@ -19,6 +19,7 @@ import natcap.invest
 import pandas
 import pint
 import pygeoprocessing
+from pydantic import ValidationError
 
 from natcap.invest import utils
 from natcap.invest.validation import get_message, _evaluate_expression
@@ -1658,6 +1659,37 @@ def format_unit(unit):
         formatted_unit = formatted_unit.replace('currency', gettext('currency units'))
     return formatted_unit
 
+
+def serialize_args_spec(spec):
+    """Serialize an MODEL_SPEC dict to a JSON string.
+
+    Args:
+        spec (dict): An invest model's MODEL_SPEC.
+
+    Raises:
+        TypeError if any object type within the spec is not handled by
+        json.dumps or by the fallback serializer.
+
+    Returns:
+        JSON String
+    """
+
+    def fallback_serializer(obj):
+        """Serialize objects that are otherwise not JSON serializeable."""
+        if isinstance(obj, pint.Unit):
+            return format_unit(obj)
+        # Sets are present in 'geometries' attributes of some args
+        # We don't need to worry about deserializing back to a set/array
+        # so casting to string is okay.
+        elif isinstance(obj, set):
+            return str(obj)
+        elif isinstance(obj, types.FunctionType):
+            return str(obj)
+        raise TypeError(f'fallback serializer is missing for {type(obj)}')
+
+    return json.dumps(spec, default=fallback_serializer)
+
+
 # accepted geometries for a vector will be displayed in this order
 GEOMETRY_ORDER = [
     'POINT',
@@ -1957,20 +1989,47 @@ def describe_arg_from_name(module_name, *arg_keys):
     return f'.. _{anchor_name}:\n\n{rst_description}'
 
 
-def write_metadata_file(datasource_path, spec, lineage_statement, keywords_list):
-    """Write a metadata sidecar file for an invest output dataset.
+def write_metadata_file(datasource_path, spec, keywords_list,
+                        lineage_statement='', out_workspace=None):
+    """Write a metadata sidecar file for an invest dataset.
+
+    Create metadata for invest model inputs or outputs, taking care to
+    preserve existing human-modified attributes.
+
+    Note: We do not want to overwrite any existing metadata so if there is
+    invalid metadata for the datasource (i.e., doesn't pass geometamaker
+    validation in ``describe``), this function will NOT create new metadata.
 
     Args:
-        datasource_path (str) - filepath to the invest output
-        spec (dict) -  the invest specification for ``datasource_path``
-        lineage_statement (str) - string to describe origin of the dataset.
+        datasource_path (str) - filepath to the data to describe
+        spec (dict) - the invest specification for ``datasource_path``
         keywords_list (list) - sequence of strings
-
+        lineage_statement (str, optional) - string to describe origin of
+            the dataset
+        out_workspace (str, optional) - where to write metadata if different
+            from data location
     Returns:
         None
 
     """
-    resource = geometamaker.describe(datasource_path)
+    def _get_key(key, resource):
+        """Map name of actual key in yml from model_spec key name."""
+        names = {field.name.lower(): field.name
+                 for field in resource.data_model.fields}
+        return names[key]
+
+    try:
+        resource = geometamaker.describe(datasource_path)
+    except ValidationError:
+        LOGGER.debug(
+            f"Skipping metadata creation for {datasource_path}, as invalid "
+            "metadata exists.")
+        return None
+    # Don't want function to fail bc can't create metadata due to invalid filetype
+    except ValueError as e:
+        LOGGER.debug(f"Skipping metadata creation for {datasource_path}: {e}")
+        return None
+
     resource.set_lineage(lineage_statement)
     # a pre-existing metadata doc could have keywords
     words = resource.get_keywords()
@@ -1985,22 +2044,38 @@ def write_metadata_file(datasource_path, spec, lineage_statement, keywords_list)
         attr_specs = spec.fields
     if attr_specs:
         for nested_spec in attr_specs:
-            units = format_unit(nested_spec.units) if hasattr(nested_spec, 'units') else ''
             try:
-                resource.set_field_description(
-                    nested_spec.id, description=nested_spec.about, units=units)
+                # field names in attr_spec are always lowercase, but the
+                # actual fieldname in the data could be any case because
+                # invest does not require case-sensitive fieldnames
+                yaml_key = _get_key(nested_spec.id, resource)
+                # Field description only gets set if its empty, i.e. ''
+                if len(resource.get_field_description(yaml_key)
+                       .description.strip()) < 1:
+                    about = nested_spec.about
+                    resource.set_field_description(yaml_key, description=about)
+                # units only get set if empty
+                if len(resource.get_field_description(yaml_key)
+                       .units.strip()) < 1:
+                    units = format_unit(nested_spec.units) if hasattr(nested_spec, 'units') else ''
+                    resource.set_field_description(yaml_key, units=units)
             except KeyError as error:
                 # fields that are in the spec but missing
                 # from model results because they are conditional.
                 LOGGER.debug(error)
+
     if hasattr(spec, 'band'):
-        units = format_unit(spec.band.units)
-        resource.set_band_description(1, units=units)
+        if len(resource.get_band_description(1).units) < 1:
+            try:
+                units = format_unit(spec.band.units)
+            except AttributeError:
+                units = ''
+            resource.set_band_description(1, units=units)
 
-    resource.write()
+    resource.write(workspace=out_workspace)
 
 
-def generate_metadata(model_module, args_dict):
+def generate_metadata_for_outputs(model_module, args_dict):
     """Create metadata for all items in an invest model output workspace.
 
     Args:
@@ -2034,7 +2109,7 @@ def generate_metadata(model_module, args_dict):
                 if os.path.exists(full_path):
                     try:
                         write_metadata_file(
-                            full_path, spec_data, lineage_statement, keywords)
+                            full_path, spec_data, keywords, lineage_statement)
                     except ValueError as error:
                         # Some unsupported file formats, e.g. html
                         LOGGER.debug(error)

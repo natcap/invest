@@ -4,7 +4,7 @@ MODEL_SPEC = SimpleNamespace(inputs=[
     spec.StringInput(id='foo'),
     spec.StringInput(id='bar')],
     outputs={},
-    model_id='',
+    model_id='ui_parameters_model',
     model_title='',
     userguide='',
     input_field_order=[],

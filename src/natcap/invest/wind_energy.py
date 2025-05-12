@@ -773,7 +773,7 @@ def execute(args):
         target_path_list=[wind_data_pickle_path],
         task_name='compute_density_harvested_fields')
 
-    if 'aoi_vector_path' in args:
+    if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
         LOGGER.info('AOI Provided')
         aoi_vector_path = args['aoi_vector_path']
 

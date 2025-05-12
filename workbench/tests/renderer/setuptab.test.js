@@ -81,6 +81,8 @@ function renderSetupFromSpec(baseSpec, inputFieldOrder, initValues = undefined) 
       sidebarFooterElementId="foo"
       executeClicked={false}
       switchTabs={() => {}}
+      tabID={'999'}
+      updateJobProperties={() => {}}
     />
   );
   return utils;

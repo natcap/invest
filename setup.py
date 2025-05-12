@@ -16,7 +16,29 @@ _REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
                      and len(req.strip()) > 0)]
 
 include_dirs = [numpy.get_include(), 'src/natcap/invest/managed_raster']
-# Commenting out for plugin development
+if platform.system() == 'Windows':
+    compiler_args = ['/std:c++20']
+    compiler_and_linker_args = []
+    if 'NATCAP_INVEST_GDAL_LIB_PATH' not in os.environ:
+        raise RuntimeError(
+            'env variable NATCAP_INVEST_GDAL_LIB_PATH is not defined. '
+            'This env variable is required when building on Windows. If '
+            'using conda to manage your gdal installation, you may set '
+            'NATCAP_INVEST_GDAL_LIB_PATH=%CONDA_PREFIX%/Library".')
+    library_dirs = [os.path.join(
+        os.environ["NATCAP_INVEST_GDAL_LIB_PATH"].rstrip(), "lib")]
+    include_dirs.append(os.path.join(
+        os.environ["NATCAP_INVEST_GDAL_LIB_PATH"].rstrip(), "include"))
+else:
+    compiler_args = [subprocess.run(
+        ['gdal-config', '--cflags'], capture_output=True, text=True
+    ).stdout.strip()]
+    compiler_and_linker_args = ['-std=c++20']
+    library_dirs = [subprocess.run(
+        ['gdal-config', '--libs'], capture_output=True, text=True
+    ).stdout.split()[0][2:]] # get the first argument which is the library path
+
+
 if platform.system() == 'Windows':
     compiler_args = ['/std:c++20']
     compiler_and_linker_args = []
@@ -36,7 +58,6 @@ else:
     library_dirs = [subprocess.run(
         ['gdal-config', '--libs'], capture_output=True, text=True
     ).stdout.split()[0][2:]] # get the first argument which is the library path
-
 
 class build_py(_build_py):
     """Command to compile translation message catalogs before building."""

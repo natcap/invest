@@ -275,7 +275,6 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 def _generate_files_from_spec(output_spec, workspace):
     """A utility function to support the metadata test."""
     for spec_data in output_spec:
-        print(spec_data.__class__)
         if spec_data.__class__ is spec.DirectoryOutput:
             os.mkdir(os.path.join(workspace, spec_data.id))
             _generate_files_from_spec(
@@ -312,7 +311,7 @@ class TestMetadataFromSpec(unittest.TestCase):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_write_metadata(self):
+    def test_write_metadata_for_outputs(self):
         """Test writing metadata for an invest output workspace."""
 
         # An example invest output spec
@@ -365,10 +364,9 @@ class TestMetadataFromSpec(unittest.TestCase):
                 outputs=output_spec
             )
         )
-
         args_dict = {'workspace_dir': self.workspace_dir}
+        spec.generate_metadata_for_outputs(model_module, args_dict)
 
-        spec.generate_metadata(model_module, args_dict)
         files, messages = geometamaker.validate_dir(
             self.workspace_dir, recursive=True)
         self.assertEqual(len(files), 2)

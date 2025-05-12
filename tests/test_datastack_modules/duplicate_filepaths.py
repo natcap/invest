@@ -6,7 +6,7 @@ MODEL_SPEC = spec.ModelSpec(
         spec.FileInput(id='bar')
     ],
     outputs={},
-    model_id='',
+    model_id='duplicate_filepaths_model',
     model_title='',
     userguide='',
     input_field_order=[],

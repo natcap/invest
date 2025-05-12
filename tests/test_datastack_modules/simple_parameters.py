@@ -10,7 +10,7 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
         contents=[]
     )],
     outputs={},
-    model_id='',
+    model_id='simple_model',
     model_title='',
     userguide='',
     input_field_order=[],

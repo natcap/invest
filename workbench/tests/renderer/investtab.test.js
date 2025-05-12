@@ -38,7 +38,6 @@ function renderInvestTab(job = DEFAULT_JOB) {
     <InvestTab
       job={job}
       tabID={tabID}
-      investSettings={{ nWorkers: '-1', loggingLevel: 'INFO', taskgraphLoggingLevel: 'ERROR' }}
       saveJob={() => {}}
       updateJobProperties={() => {}}
       investList={{ foo: { modelTitle: 'Foo Model' } }}
@@ -117,6 +116,9 @@ describe('Run status Alert renders with status from a recent run', () => {
 
 describe('Open Workspace button', () => {
   const spec = {
+    pyname: 'natcap.invest.foo',
+    model_name: 'Foo Model',
+    userguide: 'foo.html',
     args: {},
     input_field_order: [],
   };
@@ -476,6 +478,45 @@ describe('Sidebar Buttons', () => {
 
     const setupTab = await findByRole('tab', { name: 'Setup' });
     expect(setupTab.classList.contains('active')).toBeTruthy();
+
+    const input1 = await findByLabelText((content) => content.startsWith(spec.args.workspace.name));
+    expect(input1).toHaveValue(mockDatastack.args.workspace);
+    const input2 = await findByLabelText((content) => content.startsWith(spec.args.port.name));
+    expect(input2).toHaveValue(mockDatastack.args.port);
+  });
+
+  test('Load parameters from datastack: tgz asks for extract location', async () => {
+    const mockDatastack = {
+      model_id: 'carbon',
+      args: {
+        workspace: 'myworkspace',
+        port: '9999',
+      },
+    };
+    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+    const mockDialogData = {
+      canceled: false,
+      filePaths: ['foo.tgz'],
+    };
+    ipcRenderer.invoke.mockImplementation((channel, options) => {
+      if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+        return Promise.resolve(mockDialogData);
+      }
+      if (channel === ipcMainChannels.CHECK_FILE_PERMISSIONS) {
+        return Promise.resolve(true);
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const job = new InvestJob({
+      modelID: 'carbon',
+      modelTitle: 'Carbon Model',
+      argsValues: {},
+    });
+    const { findByText, findByLabelText } = renderInvestTab(job);
+
+    const loadButton = await findByText('Load parameters from file');
+    await userEvent.click(loadButton);
 
     const input1 = await findByLabelText((content) => content.startsWith(spec.args.workspace.name));
     expect(input1).toHaveValue(mockDatastack.args.workspace);
