@@ -43,10 +43,6 @@ SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
 
 LOGGER = logging.getLogger('test_recreation')
 
-# Skipping all compiled model tests temporarily for feature/plugins
-pytestmark = pytest.mark.skip(
-        reason="Temporarily ignoring compiled models for feature/plugins")
-
 def _timeout(max_timeout):
     """Timeout decorator, parameter in seconds."""
     def timeout_decorator(target):
