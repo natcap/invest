@@ -18,7 +18,6 @@ class SpecUtilsUnitTests(unittest.TestCase):
 
     def test_format_unit(self):
         """spec: test converting units to strings with format_unit."""
-        from natcap.invest import spec
         for unit_name, expected in [
                 ('meter', 'm'),
                 ('meter / second', 'm/s'),
@@ -32,7 +31,6 @@ class SpecUtilsUnitTests(unittest.TestCase):
 
     def test_format_unit_raises_error(self):
         """spec: format_unit raises TypeError if not a pint.Unit."""
-        from natcap.invest import spec
         with self.assertRaises(TypeError):
             spec.format_unit({})
 
