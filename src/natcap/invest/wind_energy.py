@@ -1563,12 +1563,13 @@ def _index_raster_values_to_point_vector(
 
             encountered_fids.add(vector_fid)
             invalid_feature = False # Always valid if no mask
-            if mask_field:
+            if mask_keys:
                 invalid_feature = None in [data.get(mask_key, None)
                                            for mask_key in mask_keys]
-                base_vector_feat = base_layer.GetFeature(vector_fid)
-                base_vector_feat.SetField(mask_field, invalid_feature)
-                base_layer.SetFeature(base_vector_feat)
+                if mask_field:
+                    base_vector_feat = base_layer.GetFeature(vector_fid)
+                    base_vector_feat.SetField(mask_field, invalid_feature)
+                    base_layer.SetFeature(base_vector_feat)
 
             if invalid_feature:
                 target_layer.DeleteFeature(vector_fid)
