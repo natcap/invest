@@ -1037,10 +1037,9 @@ def _schedule_predictor_data_processing(
                 dependent_task_list=dependent_task_list,
                 task_name=f'predictor {predictor_id}'))
 
-    # return predictor_task_list, predictor_json_list
     assemble_predictor_data_task = task_graph.add_task(
         func=_json_to_gpkg_table,
-        args=(response_vector_path, target_predictor_vector_path,
+        args=(target_predictor_vector_path,
               predictor_json_list),
         target_path_list=[target_predictor_vector_path],
         dependent_task_list=predictor_task_list,
