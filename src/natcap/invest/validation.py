@@ -77,7 +77,7 @@ def _evaluate_expression(expression, variable_map):
     Args:
         expression (string): A string expression that returns a value.
         variable_map (dict): A dict mapping string variable names to their
-            python object values.  This is the variable map that will be usedf
+            python object values.  This is the variable map that will be used
             when evaluating the expression.
 
     Returns:
