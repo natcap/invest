@@ -487,7 +487,7 @@ describe('Sidebar Buttons', () => {
 
   test('Load parameters from datastack: tgz asks for extract location', async () => {
     const mockDatastack = {
-      module_name: spec.pyname,
+      model_id: 'carbon',
       args: {
         workspace: 'myworkspace',
         port: '9999',
@@ -509,8 +509,8 @@ describe('Sidebar Buttons', () => {
     });
 
     const job = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Model',
+      modelID: 'carbon',
+      modelTitle: 'Carbon Model',
       argsValues: {},
     });
     const { findByText, findByLabelText } = renderInvestTab(job);
