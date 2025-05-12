@@ -23,9 +23,9 @@
   - Urban Flood Risk
   - Urban Nature Access
   - Urban Stormwater Retention
+  - Visitation: Recreation and Tourism
   - Wave Energy
   - Wind Energy
-  - Visitation: Recreation and Tourism
 
   Workbench fixes/enhancements:
   - Workbench
@@ -69,6 +69,13 @@ Workbench
 * Metadata is now generated for files when creating a datastack (with any
   existing user-added metadata preserved)
   (`#1774 <https://github.com/natcap/invest/issues/1774>`_).
+
+Visitation: Recreation and Tourism
+==================================
+* user-day variables ``pr_PUD``, ``pr_TUD``, and ``avg_pr_UD`` are calculated
+  and written to ``regression_data.gpkg`` even if the Compute Regression
+  option is not selected.
+  (`#1893 <https://github.com/natcap/invest/issues/1893>`_).
 
 
 3.15.1 (2025-05-06)
