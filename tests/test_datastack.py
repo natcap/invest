@@ -263,8 +263,10 @@ class DatastackArchiveTests(unittest.TestCase):
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
 
-        datastack.build_datastack_archive(
-            params, 'test_datastack_modules.archive_extraction', archive_path)
+        with patch('natcap.invest.datastack.models') as p:
+            p.model_id_to_pyname = MOCK_MODEL_ID_TO_PYNAME
+            datastack.build_datastack_archive(
+                params, 'archive_extraction', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
