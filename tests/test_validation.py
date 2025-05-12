@@ -615,7 +615,7 @@ class VectorValidation(unittest.TestCase):
 
         filepath = os.path.join(self.workspace_dir, 'file.txt')
         error_msg = VectorInput(
-            geometries={'POINT'}, fields={}).validate(filepath)
+            geometry_types={'POINT'}, fields={}).validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['FILE_NOT_FOUND'])
 
     def test_invalid_vector(self):
@@ -627,7 +627,7 @@ class VectorValidation(unittest.TestCase):
             bad_vector.write('not a vector')
 
         error_msg = VectorInput(
-            geometries={'POINT'}, fields={}).validate(filepath)
+            geometry_types={'POINT'}, fields={}).validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['NOT_GDAL_VECTOR'])
 
     def test_missing_fieldnames(self):
@@ -655,7 +655,7 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = VectorInput(
-            geometries={'POINT'},
+            geometry_types={'POINT'},
             fields=[
                 Input(id='col_a'),
                 Input(id='col_b'),
@@ -681,14 +681,14 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = VectorInput(
-            fields={}, geometries={'POINT'}, projected=True, projection_units=spec.u.foot
+            fields={}, geometry_types={'POINT'}, projected=True, projection_units=spec.u.foot
         ).validate(filepath)
         expected_msg = validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
             unit_a='foot', unit_b='metre')
         self.assertEqual(error_msg, expected_msg)
 
         self.assertIsNone(VectorInput(
-            fields={}, geometries={'POINT'}, projected=True, projection_units=spec.u.meter
+            fields={}, geometry_types={'POINT'}, projected=True, projection_units=spec.u.meter
         ).validate(filepath))
 
     def test_wrong_geom_type(self):
@@ -703,9 +703,9 @@ class VectorValidation(unittest.TestCase):
         layer = None
         vector = None
         self.assertIsNone(VectorInput(
-            geometries={'POLYGON', 'POINT'}, fields=None).validate(filepath))
+            geometry_types={'POLYGON', 'POINT'}, fields=None).validate(filepath))
         self.assertEqual(
-            VectorInput(fields=None, geometries={'MULTIPOINT'}).validate(filepath),
+            VectorInput(fields=None, geometry_types={'MULTIPOINT'}).validate(filepath),
             validation.MESSAGES['WRONG_GEOM_TYPE'].format(allowed={'MULTIPOINT'}))
 
 
@@ -1551,7 +1551,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                     IntegerInput(id='a'),
                     IntegerInput(id='b')
                 ],
-                geometries=['POINT']
+                geometry_types=['POINT']
             )
         ])
 
@@ -1586,7 +1586,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 id='col2',
                 band=NumberInput(),
                 fields={},
-                geometries=['POLYGON']
+                geometry_types=['POLYGON']
             )
         ])
         with self.assertRaises(ValueError) as cm:
@@ -1777,7 +1777,7 @@ class TestValidationFromSpec(unittest.TestCase):
             ),
             VectorInput(
                 id="vector",
-                geometries=spec.POINTS,
+                geometry_types=spec.POINTS,
                 fields=[
                     RatioInput(id="field_a"),
                     RatioInput(id="field_b", required="some_number == 2")
@@ -2050,7 +2050,7 @@ class TestValidationFromSpec(unittest.TestCase):
                 VectorInput(
                     id='vector_a',
                     fields={},
-                    geometries={'POINT'}
+                    geometry_types={'POINT'}
                 )
             ],
             args_with_spatial_overlap={
@@ -2166,7 +2166,7 @@ class TestValidationFromSpec(unittest.TestCase):
                     id='vector_a',
                     required=False,
                     fields=[],
-                    geometries={'POINT'}
+                    geometry_types={'POINT'}
                 )
             ],
             args_with_spatial_overlap={

@@ -69,10 +69,10 @@ class UsageLoggingTests(unittest.TestCase):
             model_id='', model_title='', userguide=None, aliases=None,
             inputs=[
                 spec.SingleBandRasterInput(id='raster', band=spec.Input()),
-                spec.VectorInput(id='vector', geometries={}, fields={}),
+                spec.VectorInput(id='vector', geometry_types={}, fields={}),
                 spec.StringInput(id='not_a_gis_input'),
                 spec.SingleBandRasterInput(id='blank_raster_path', band=spec.Input()),
-                spec.VectorInput(id='blank_vector_path', geometries={}, fields={})
+                spec.VectorInput(id='blank_vector_path', geometry_types={}, fields={})
             ],
             outputs={},
             input_field_order=[],

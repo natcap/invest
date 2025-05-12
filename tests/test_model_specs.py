@@ -204,7 +204,7 @@ class ValidateModelSpecs(unittest.TestCase):
                 # vector type should have:
                 # - a fields property that maps each field header to a nested
                 #   type dictionary describing the data in that field
-                # - a geometries property: the set of valid geometry types
+                # - a geometry_types property: the set of valid geometry types
                 self.assertTrue(hasattr(output_spec, 'fields'))
                 for field in output_spec.fields:
                     self.validate_output(
@@ -212,8 +212,8 @@ class ValidateModelSpecs(unittest.TestCase):
                         f'{key}.fields.{field}',
                         parent_type=t)
 
-                self.assertTrue(hasattr(output_spec, 'geometries'))
-                self.assertIsInstance(output_spec.geometries, set)
+                self.assertTrue(hasattr(output_spec, 'geometry_types'))
+                self.assertIsInstance(output_spec.geometry_types, set)
 
             elif t is spec.CSVOutput:
                 # csv type may have a columns property.
@@ -374,7 +374,7 @@ class ValidateModelSpecs(unittest.TestCase):
                 # vector type should have:
                 # - a fields property that maps each field header to a nested
                 #   type dictionary describing the data in that field
-                # - a geometries property: the set of valid geometry types
+                # - a geometry_types property: the set of valid geometry types
                 self.assertTrue(hasattr(arg, 'fields'))
                 for field in arg.fields:
                     self.validate_args(
@@ -382,11 +382,11 @@ class ValidateModelSpecs(unittest.TestCase):
                         f'{name}.fields.{field}',
                         parent_type=t)
 
-                self.assertTrue(hasattr(arg, 'geometries'))
-                self.assertIsInstance(arg.geometries, set)
+                self.assertTrue(hasattr(arg, 'geometry_types'))
+                self.assertIsInstance(arg.geometry_types, set)
 
                 attrs.remove('fields')
-                attrs.remove('geometries')
+                attrs.remove('geometry_types')
 
                 # may optionally have a 'projected' attribute that says
                 # whether the vector must be linearly projected

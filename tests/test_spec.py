@@ -171,7 +171,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
     def test_vector_spec(self):
         vector_spec = spec.VectorInput(
             fields={},
-            geometries={"LINESTRING"},
+            geometry_types={"LINESTRING"},
             about="Description",
             name="Bar"
         )
@@ -193,7 +193,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
                     about="Average annual precipitation over the area"
                 )
             ],
-            geometries={"POLYGON", "MULTIPOLYGON"},
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
             about="Description",
             name="Bar"
         )
@@ -251,7 +251,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             about="Description",
             name="Bar",
             band=spec.IntegerInput(),
-            geometries={"POLYGON"},
+            geometry_types={"POLYGON"},
             fields={}
         )
         out = spec.describe_arg_from_spec(multi_spec.name, multi_spec)
@@ -328,7 +328,7 @@ class TestMetadataFromSpec(unittest.TestCase):
                         id="admin_boundaries.gpkg",
                         about=("A copy of the user's administrative boundaries "
                                "vector with a single layer."),
-                        geometries=spec.POLYGONS,
+                        geometry_types=spec.POLYGONS,
                         fields=[
                             spec.NumberInput(
                                 id="SUP_DEMadm_cap",

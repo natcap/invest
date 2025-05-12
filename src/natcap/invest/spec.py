@@ -326,7 +326,7 @@ class VectorInput(FileInput):
     are allowed). It is assumed that only the first layer is used.
 
     Attributes:
-        geometries: A set of geometry type(s) that are allowed for this vector
+        geometry_types: A set of geometry type(s) that are allowed for this vector
         fields: An iterable of `Input`s representing the fields that this
             vector is expected to have. The `key` of each input must match the
             corresponding field name.
@@ -337,7 +337,7 @@ class VectorInput(FileInput):
             specific unit of projection (such as meters) is required, indicate
             it here.
     """
-    geometries: set = dataclasses.field(default_factory=dict)
+    geometry_types: set = dataclasses.field(default_factory=dict)
     fields: typing.Union[typing.Iterable[Input], None] = None
     projected: typing.Union[bool, None] = None
     projection_units: typing.Union[pint.Unit, None] = None
@@ -383,7 +383,7 @@ class VectorInput(FileInput):
         }
 
         allowed_geom_types = []
-        for geom in self.geometries:
+        for geom in self.geometry_types:
             allowed_geom_types += geom_map[geom]
 
         # NOTE: this only checks the layer geometry type, not the types of the
@@ -393,7 +393,7 @@ class VectorInput(FileInput):
         # Currently not supporting ogr.wkbUnknown which allows mixed types.
         layer = gdal_dataset.GetLayer()
         if layer.GetGeomType() not in allowed_geom_types:
-            return get_message('WRONG_GEOM_TYPE').format(allowed=self.geometries)
+            return get_message('WRONG_GEOM_TYPE').format(allowed=self.geometry_types)
 
         if self.fields:
             field_patterns = []
@@ -420,7 +420,7 @@ class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
     """An invest model input that can be either a raster or a vector.
 
     Attributes:
-        geometries: A set of geometry type(s) that are allowed for this vector
+        geometry_types: A set of geometry type(s) that are allowed for this vector
         fields: An iterable of `Input`s representing the fields that this
             vector is expected to have. The `key` of each input must match the
             corresponding field name.
@@ -432,7 +432,7 @@ class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
             it here.
     """
     band: typing.Union[Input, None] = None
-    geometries: set = dataclasses.field(default_factory=dict)
+    geometry_types: set = dataclasses.field(default_factory=dict)
     fields: typing.Union[typing.Iterable[Input], None] = None
     projected: typing.Union[bool, None] = None
     projection_units: typing.Union[pint.Unit, None] = None
@@ -1037,12 +1037,12 @@ class VectorOutput(Output):
     are allowed). It is assumed that only the first layer is used.
 
     Attributes:
-        geometries: A set of geometry type(s) that are produced in this vector
+        geometry_types: A set of geometry type(s) that are produced in this vector
         fields: An iterable of `Output`s representing the fields created in
             this vector. The `key` of each input must match the corresponding
             field name.
     """
-    geometries: set = dataclasses.field(default_factory=set)
+    geometry_types: set = dataclasses.field(default_factory=set)
     fields: typing.Union[typing.Iterable[Output], None] = None
 
 @dataclasses.dataclass
@@ -1178,7 +1178,7 @@ class ModelSpec:
             """Serialize objects that are otherwise not JSON serializeable."""
             if isinstance(obj, pint.Unit):
                 return format_unit(obj)
-            # Sets are present in 'geometries' attributes of some args
+            # Sets are present in 'geometry_types' attributes of some args
             # We don't need to worry about deserializing back to a set/array
             # so casting to string is okay.
             elif isinstance(obj, set):
@@ -1272,7 +1272,7 @@ def build_input_spec(argkey, arg):
     elif t == 'vector':
         return VectorInput(
             **base_attrs,
-            geometries=arg['geometries'],
+            geometry_types=arg['geometries'],
             fields=[build_input_spec(key, field_spec)
                     for key, field_spec in arg['fields'].items()],
             projected=arg.get('projected', None),
@@ -1308,7 +1308,7 @@ def build_input_spec(argkey, arg):
     elif t == {'raster', 'vector'}:
         return RasterOrVectorInput(
             **base_attrs,
-            geometries=arg['geometries'],
+            geometry_types=arg['geometries'],
             fields=[build_input_spec(key, field_spec)
                     for key, field_spec in arg['fields'].items()],
             band=build_input_spec('1', arg['bands'][1]),
@@ -1366,7 +1366,7 @@ def build_output_spec(key, spec):
     elif t == 'vector':
         return VectorOutput(
             **base_attrs,
-            geometries=spec['geometries'],
+            geometry_types=spec['geometries'],
             fields=[build_output_spec(key, field_spec)
                     for key, field_spec in spec['fields'].items()])
 
@@ -1678,7 +1678,7 @@ def serialize_args_spec(spec):
         """Serialize objects that are otherwise not JSON serializeable."""
         if isinstance(obj, pint.Unit):
             return format_unit(obj)
-        # Sets are present in 'geometries' attributes of some args
+        # Sets are present in 'geometry_types' attributes of some args
         # We don't need to worry about deserializing back to a set/array
         # so casting to string is okay.
         elif isinstance(obj, set):
@@ -1690,7 +1690,7 @@ def serialize_args_spec(spec):
     return json.dumps(spec, default=fallback_serializer)
 
 
-# accepted geometries for a vector will be displayed in this order
+# accepted geometry_types for a vector will be displayed in this order
 GEOMETRY_ORDER = [
     'POINT',
     'MULTIPOINT',
@@ -1721,18 +1721,18 @@ def format_required_string(required):
         return gettext('conditionally required')
 
 
-def format_geometries_string(geometries):
-    """Represent a set of allowed vector geometries as user-friendly text.
+def format_geometry_types_string(geometry_types):
+    """Represent a set of allowed vector geometry types as user-friendly text.
 
     Args:
-        geometries (set(str)): set of geometry names
+        geometry_types (set(str)): set of geometry names
 
     Returns:
         string
     """
-    # sort the geometries so they always display in a consistent order
+    # sort the geometry types so they always display in a consistent order
     sorted_geoms = sorted(
-        geometries,
+        geometry_types,
         key=lambda g: GEOMETRY_ORDER.index(g))
     return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
 
@@ -1886,7 +1886,7 @@ def describe_arg_from_spec(name, spec):
         The first line has the arg name, type, required state, description,
         and units if applicable. Depending on the type, there may be additional
         lines that are indented, that describe details of the arg such as
-        vector fields and geometries, option_string options, etc.
+        vector fields and geometry types, option_string options, etc.
     """
     type_string = format_type_string(spec.__class__)
     in_parentheses = [type_string]
@@ -1905,7 +1905,7 @@ def describe_arg_from_spec(name, spec):
             in_parentheses.append(f'{translated_units}: **{units_string}**')
 
     if spec.__class__ is VectorInput:
-        in_parentheses.append(format_geometries_string(spec.geometries))
+        in_parentheses.append(format_geometry_types_string(spec.geometry_types))
 
     # Represent the required state as a string, defaulting to required
     # It doesn't make sense to include this for boolean checkboxes
