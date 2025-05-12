@@ -1117,8 +1117,8 @@ def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
         valid_p_mask = ~pygeoprocessing.array_equals_nodata(p_im, p_nodata)
         valid_n_mask = ~pygeoprocessing.array_equals_nodata(n_m, n_nodata)
         # precip mask: both p_im and n_m are defined and greater than 0
-        precip_mask = valid_p_mask & valid_n_mask & (p_im > 0) & (n_m > 0)
-        stream_mask = stream == 1
+        precip_ok = valid_p_mask & valid_n_mask & (p_im > 0) & (n_m > 0)
+        on_stream = stream == 1
         # stream_nodata is the only input that carries over nodata values from
         # the aligned DEM.
         valid_mask = (
@@ -1129,7 +1129,7 @@ def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
 
         # QF is defined in terms of three cases:
         #
-        # 1. Where there is no precipitation, QF = 0
+        # 1. Where precipitation <=0, QF = 0
         #    (even if stream or s_i is undefined)
         #
         # 2. Where there is precipitation and we're on a stream, QF = P
@@ -1183,14 +1183,15 @@ def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
         # qf_im is the quickflow at pixel i on month m
         qf_im = numpy.full(p_im.shape, TARGET_NODATA, dtype=numpy.float32)
 
-        # case 1: where there is no precipitation
-        qf_im[~precip_mask] = 0
+        # case 1: where precip or n are <=0 but not nodata
+        case_1_mask = ~precip_ok & valid_p_mask & valid_n_mask
+        qf_im[case_1_mask] = 0
 
         # case 2: where there is precipitation and we're on a stream
-        qf_im[precip_mask & stream_mask] = p_im[precip_mask & stream_mask]
+        qf_im[precip_ok & on_stream] = p_im[precip_ok & on_stream]
 
         # case 3: where there is precipitation and we're not on a stream
-        case_3_mask = valid_mask & precip_mask & ~stream_mask
+        case_3_mask = valid_mask & precip_ok & ~on_stream
 
         # for consistent indexing, make a_im the same shape as the other
         # arrays even though we only use it in case 3

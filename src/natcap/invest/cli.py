@@ -495,7 +495,8 @@ def main(user_args=None):
                 try:
                     # If there's an exception from creating metadata
                     # I don't think we want to indicate a model failure
-                    spec_utils.generate_metadata(model_module, parsed_datastack.args)
+                    spec_utils.generate_metadata_for_outputs(
+                        model_module, parsed_datastack.args)
                 except Exception as exc:
                     LOGGER.warning(
                         'Something went wrong while generating metadata', exc_info=exc)

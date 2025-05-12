@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 import numpy
+import pandas
 import pygeoprocessing
 import shapely.geometry
 from osgeo import gdal
@@ -44,6 +45,27 @@ EXPECTED_FILE_LIST = [
     'intermediate_outputs/reprojected_farm_vector.prj',
     'intermediate_outputs/reprojected_farm_vector.shp',
     'intermediate_outputs/reprojected_farm_vector.shx']
+
+
+def make_simple_raster(base_raster_path, array):
+    """Create a raster on designated path with arbitrary values.
+    Args:
+        base_raster_path (str): the raster path for making the new raster.
+    Returns:
+        None.
+    """
+    # UTM Zone 10N
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)
+    projection_wkt = srs.ExportToWkt()
+
+    origin = (461251, 4923245)
+    pixel_size = (30, -30)
+    no_data = -1
+
+    pygeoprocessing.numpy_array_to_raster(
+        array, no_data, pixel_size, origin, projection_wkt,
+        base_raster_path)
 
 
 class PollinationTests(unittest.TestCase):
@@ -478,6 +500,143 @@ class PollinationTests(unittest.TestCase):
             raise AssertionError(
                 "The following files were expected but not found: " +
                 '\n'.join(missing_files))
+
+    def test_parse_scenario_variables(self):
+        """Test `_parse_scenario_variables`"""
+        from natcap.invest.pollination import _parse_scenario_variables
+
+        def _create_guild_table_csv(output_path):
+            data = {"species": ["Bee_A", "Bee_B", "Butterfly_C"]}
+            df = pandas.DataFrame(data).set_index("species")
+
+            df["nesting_suitability_soil_index"] = [0.8, 0.5, 0.2]
+            df["nesting_suitability_wood_index"] = [0.3, 0.2, 0.4]
+            df["foraging_activity_spring_index"] = [1.0, 0.8, 0.6]
+            df["foraging_activity_summer_index"] = [.9, 0.6, 0.3]
+            df["alpha"] = [150, 200, 120]
+            df["relative_abundance"] = [0.4, 0.3, 0.2]
+
+            df.to_csv(output_path)
+
+        def _create_biophysical_table(output_path):
+            data = {"lucode": [100, 200, 300]}
+            df = pandas.DataFrame(data).set_index("lucode")
+
+            df["nesting_soil_availability_index"] = [0.7, 0.4, 0.6]
+            df["nesting_wood_availability_index"] = [0.1, 0.2, 0.6]
+            df["floral_resources_spring_index"] = [0.3, 0.3, 0.8]
+            df["floral_resources_summer_index"] = [0.9, 0.6, 0.3]
+
+            df.to_csv(output_path)
+
+        def _create_farm_vector(output_path):
+            from shapely import Polygon
+
+            shapely_geometry_list = [
+                Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)]),
+                Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)])
+            ]
+
+            srs = osr.SpatialReference()
+            srs.ImportFromEPSG(26910)
+            projection_wkt = srs.ExportToWkt()
+
+            fields = {"crop_type": ogr.OFTString, "half_sat": ogr.OFTReal,
+                      "season": ogr.OFTString, "fr_spring": ogr.OFTReal,
+                      "fr_summer": ogr.OFTReal,
+                      "n_soil": ogr.OFTReal, "n_wood": ogr.OFTReal,
+                      "p_dep": ogr.OFTReal,
+                      "p_managed": ogr.OFTReal}
+
+            attribute_list = [{
+                "crop_type": "barley", "half_sat": 0.5, "season": "spring",
+                "fr_spring": 0.8, "fr_summer": 0.3, "n_soil": 0.7,
+                "n_wood": 0.5, "p_dep": 0.9, "p_managed": 0.4},
+               {"crop_type": "almonds", "half_sat": 0.7, "season": "summer",
+                "fr_spring": 0.4, "fr_summer": 0.9, "n_soil": 0.5,
+                "n_wood": 0.6, "p_dep": 0.8, "p_managed": 0.6}]
+
+            pygeoprocessing.shapely_geometry_to_vector(
+                shapely_geometry_list, output_path, projection_wkt,
+                "ESRI Shapefile", fields, attribute_list,
+                ogr_geom_type=ogr.wkbPolygon)
+
+        def _generate_output_dict():
+            return {'season_list': ['spring', 'summer'],
+                    'substrate_list': ['soil', 'wood'],
+                    'species_list': ['bee_a', 'bee_b', 'butterfly_c'],
+                    'alpha_value': {'bee_a': 150., 'bee_b': 200., 'butterfly_c': 120.},
+                    'species_abundance': {'bee_a': 0.44444444444444453,
+                                          'bee_b': 0.33333333333333337,
+                                          'butterfly_c': 0.22222222222222227},
+                    'species_foraging_activity': {
+                        ('bee_a', 'spring'): 0.5263157894736842,
+                        ('bee_a', 'summer'): 0.4736842105263158,
+                        ('bee_b', 'spring'): 0.5714285714285715,
+                        ('bee_b', 'summer'): 0.4285714285714286,
+                        ('butterfly_c', 'spring'): 0.6666666666666667,
+                        ('butterfly_c', 'summer'): 0.33333333333333337},
+                    'landcover_substrate_index': {
+                        'soil': {100: .7, 200: .4, 300: 0.6},
+                        'wood': {100: 0.1, 200: 0.2, 300: .6}},
+                    'landcover_floral_resources': {
+                        'spring': {100: 0.3, 200: 0.3, 300: 0.8},
+                        'summer': {100: 0.9, 200: 0.6, 300: 0.3}},
+                    'species_substrate_index': {
+                        'bee_a': {'soil': 0.8, 'wood': 0.3},
+                        'bee_b': {'soil': 0.5, 'wood': 0.2},
+                        'butterfly_c': {'soil': 0.2, 'wood': 0.4}},
+                    'foraging_activity_index': {
+                        ('bee_a', 'spring'): 1.0, ('bee_a', 'summer'): 0.9,
+                        ('bee_b', 'spring'): 0.8, ('bee_b', 'summer'): 0.6,
+                        ('butterfly_c', 'spring'): 0.6,
+                        ('butterfly_c', 'summer'): 0.3}}
+
+        args = {'guild_table_path':
+                os.path.join(self.workspace_dir, "guild_table.csv"),
+                'landcover_biophysical_table_path':
+                os.path.join(self.workspace_dir, "biophysical_table.csv"),
+                'farm_vector_path': os.path.join(self.workspace_dir, "farm.shp")}
+
+        _create_guild_table_csv(args['guild_table_path'])
+        _create_biophysical_table(args['landcover_biophysical_table_path'])
+        _create_farm_vector(args['farm_vector_path'])
+
+        actual_dict = _parse_scenario_variables(args)
+        expected_dict = _generate_output_dict()
+
+        self.assertDictEqual(actual_dict, expected_dict)
+
+    def test_calculate_habitat_nesting_index(self):
+        """Test `_calculate_habitat_nesting_index`"""
+        from natcap.invest.pollination import _calculate_habitat_nesting_index
+
+        substrate_path_map = {
+            "wood": os.path.join(self.workspace_dir, "wood.tif"),
+            "soil": os.path.join(self.workspace_dir, "soil.tif")
+        }
+
+        make_simple_raster(substrate_path_map["wood"],
+                           numpy.array([[5, 6], [3, 2]]))
+        make_simple_raster(substrate_path_map["soil"],
+                           numpy.array([[2, 12], [1, 0]]))
+
+        species_substrate_index_map = {"wood": 0.8, "soil": 0.5}
+
+        target_habitat_nesting_index_path = os.path.join(
+            self.workspace_dir, "habitat_nesting.tif")
+
+        _calculate_habitat_nesting_index(
+            substrate_path_map, species_substrate_index_map,
+            target_habitat_nesting_index_path)
+
+        # read habitat nesting tif
+        habitat_raster = gdal.Open(target_habitat_nesting_index_path)
+        band = habitat_raster.GetRasterBand(1)
+        actual_array = band.ReadAsArray()
+        expected_array = numpy.array([[4, 6], [2.4, 1.6]])
+
+        numpy.testing.assert_allclose(actual_array, expected_array)
 
 
 class PollinationValidationTests(unittest.TestCase):

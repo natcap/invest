@@ -318,6 +318,8 @@ class InvestTab extends React.Component {
                     executeClicked={executeClicked}
                     switchTabs={this.switchTabs}
                     investList={investList}
+                    tabID={tabID}
+                    updateJobProperties={this.props.updateJobProperties}
                   />
                 </TabPane>
                 <TabPane

@@ -107,6 +107,36 @@ class SpatialOverlapTest(unittest.TestCase):
         expected = validation.MESSAGES['NO_PROJECTION'].format(filepath=filepath_2)
         self.assertEqual(error_msg, expected)
 
+    def test_check_overlap_unable_to_transform(self):
+        """Validation: check overlap when layer cannot transform to EPSG:4326."""
+        from natcap.invest import validation
+
+        driver = gdal.GetDriverByName('GTiff')
+        filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
+        filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
+
+        raster_1 = driver.Create(filepath_1, 3, 3, 1, gdal.GDT_Int32)
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        raster_1.SetProjection(wgs84_srs.ExportToWkt())
+        raster_1.SetGeoTransform([1, 1, 0, 1, 0, 1])
+        raster_1 = None
+
+        # set up a raster with an outside-the-globe extent
+        raster_2 = driver.Create(filepath_2, 3, 3, 1, gdal.GDT_Int32)
+        eckert_srs = osr.SpatialReference()
+        proj4str = '+proj=eck4 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'
+        eckert_srs.ImportFromProj4(proj4str)
+        raster_2.SetProjection(eckert_srs.ExportToWkt())
+        raster_2.SetGeoTransform(
+            (-10000000.0, 19531.25, 0.0, 15000000.0, 0.0, -4882.8125))
+        raster_2 = None
+
+        # The improper raster should be skipped by validation, thus no errors
+        error_msg = validation.check_spatial_overlap(
+            [filepath_1, filepath_2], different_projections_ok=True)
+        self.assertEqual(None, error_msg)
+
     @unittest.skip("skipping due to unresolved projection comparison question")
     def test_different_projections_not_ok(self):
         """Validation: different projections not allowed by default.

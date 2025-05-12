@@ -18,7 +18,7 @@ gdal.UseExceptions()
 
 
 def make_simple_raster(base_raster_path, fill_val, nodata_val):
-    """Create a 10x10 raster on designated path with fill value.
+    """Create a 10x10 int32 raster on designated path with fill value.
 
     Args:
         base_raster_path (str): the raster path for making the new raster.
@@ -26,32 +26,25 @@ def make_simple_raster(base_raster_path, fill_val, nodata_val):
         nodata_val (int or None): for defining a band's nodata value.
 
     Returns:
-        lulc_path (str): the path of the raster file.
+        None.
 
     """
+
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(26910)  # UTM Zone 10N
     projection_wkt = srs.ExportToWkt()
     # origin hand-picked for this epsg:
-    geotransform = [461261, 1.0, 0.0, 4923265, 0.0, -1.0]
+    origin = (461261, 4923265)
 
     n = 10
-    gtiff_driver = gdal.GetDriverByName('GTiff')
-    new_raster = gtiff_driver.Create(
-        base_raster_path, n, n, 1, gdal.GDT_Int32, options=[
-            'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
-            'BLOCKXSIZE=16', 'BLOCKYSIZE=16'])
-    new_raster.SetProjection(projection_wkt)
-    new_raster.SetGeoTransform(geotransform)
-    new_band = new_raster.GetRasterBand(1)
-    array = numpy.empty((n, n))
+    array = numpy.empty((n, n), dtype=numpy.int32)
     array.fill(fill_val)
-    new_band.WriteArray(array)
-    if nodata_val is not None:
-        new_band.SetNoDataValue(nodata_val)
-    new_raster.FlushCache()
-    new_band = None
-    new_raster = None
+
+    pixel_size = (1, -1)
+
+    pygeoprocessing.numpy_array_to_raster(
+        array, nodata_val, pixel_size, origin, projection_wkt,
+        base_raster_path)
 
 
 def assert_raster_equal_value(base_raster_path, val_to_compare):
