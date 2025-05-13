@@ -16,92 +16,92 @@ PLUGIN_NAME = 'foo-model'
 gdal.UseExceptions()
 valid_nested_input_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
-        spec.IntegerInput,
-        spec.NumberInput,
-        spec.RatioInput,
-        spec.PercentInput,
-        spec.StringInput,
-        spec.OptionStringInput,
         spec.BooleanInput,
-        spec.SingleBandRasterInput,
-        spec.VectorInput,
-        spec.RasterOrVectorInput,
         spec.CSVInput,
         spec.DirectoryInput,
         spec.FileInput
+        spec.IntegerInput,
+        spec.NumberInput,
+        spec.OptionStringInput,
+        spec.PercentInput,
+        spec.RasterOrVectorInput,
+        spec.RatioInput,
+        spec.SingleBandRasterInput,
+        spec.StringInput,
+        spec.VectorInput,
     },
     spec.SingleBandRasterInput: {
         spec.IntegerInput,
         spec.NumberInput,
-        spec.RatioInput,
         spec.PercentInput
+        spec.RatioInput,
     },
     spec.VectorInput: {
         spec.IntegerInput,
         spec.NumberInput,
-        spec.RatioInput,
-        spec.PercentInput,
-        spec.StringInput,
         spec.OptionStringInput
+        spec.PercentInput,
+        spec.RatioInput,
+        spec.StringInput,
     },
     spec.CSVInput: {
+        spec.BooleanInput,
         spec.IntegerInput,
         spec.NumberInput,
-        spec.RatioInput,
-        spec.PercentInput,
-        spec.StringInput,
         spec.OptionStringInput,
-        spec.BooleanInput,
-        spec.SingleBandRasterInput,
-        spec.VectorInput,
+        spec.PercentInput,
         spec.RasterOrVectorInput
+        spec.RatioInput,
+        spec.SingleBandRasterInput,
+        spec.StringInput,
+        spec.VectorInput,
     },
     spec.DirectoryInput: {
         spec.CSVInput,
         spec.DirectoryInput,
         spec.FileInput,
+        spec.RasterOrVectorInput
         spec.SingleBandRasterInput,
         spec.VectorInput,
-        spec.RasterOrVectorInput
     }
 }
 
 valid_nested_output_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
-        spec.IntegerOutput,
-        spec.NumberOutput,
-        spec.RatioOutput,
-        spec.PercentOutput,
-        spec.StringOutput,
-        spec.OptionStringOutput,
-        spec.SingleBandRasterOutput,
-        spec.VectorOutput,
         spec.CSVOutput,
         spec.DirectoryOutput,
         spec.FileOutput
+        spec.IntegerOutput,
+        spec.NumberOutput,
+        spec.OptionStringOutput,
+        spec.PercentOutput,
+        spec.RatioOutput,
+        spec.SingleBandRasterOutput,
+        spec.StringOutput,
+        spec.VectorOutput,
     },
     spec.SingleBandRasterOutput: {
         spec.IntegerOutput,
         spec.NumberOutput,
-        spec.RatioOutput,
         spec.PercentOutput
+        spec.RatioOutput,
     },
     spec.VectorOutput: {
         spec.IntegerOutput,
         spec.NumberOutput,
-        spec.RatioOutput,
-        spec.PercentOutput,
-        spec.StringOutput,
         spec.OptionStringOutput
+        spec.PercentOutput,
+        spec.RatioOutput,
+        spec.StringOutput,
     },
     spec.CSVOutput: {
         spec.IntegerOutput,
         spec.NumberOutput,
-        spec.RatioOutput,
-        spec.PercentOutput,
-        spec.StringOutput,
         spec.OptionStringOutput,
+        spec.PercentOutput,
+        spec.RatioOutput,
         spec.SingleBandRasterOutput,
+        spec.StringOutput,
         spec.VectorOutput
     },
     spec.DirectoryOutput: {
