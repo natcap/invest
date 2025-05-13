@@ -678,7 +678,7 @@ class TestRecClientServer(unittest.TestCase):
         shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
     def test_execute_no_regression(self):
-        """Recreation test workspace fetcher on a local Pyro5 server."""
+        """Recreation test userday metrics exist if not computing regression."""
         from natcap.invest.recreation import recmodel_client
 
         args = {
