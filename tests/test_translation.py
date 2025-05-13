@@ -24,7 +24,7 @@ TEST_MESSAGES = {
     "InVEST Carbon Model": "ιиνєѕт ςαявσи мσ∂єℓ",
     "Available models:": "αναιℓαвℓє мσ∂єℓѕ:",
     "Carbon Storage and Sequestration": "ςαявσи ѕтσяαgє αи∂ ѕєףυєѕтяαтισи",
-    "current LULC": "ςυяяєит ℓυℓς",
+    "baseline LULC": "вαѕєℓιиє ℓυℓς",
     missing_key_msg: "кєу ιѕ мιѕѕιиg fяσм тнє αяgѕ ∂ιςт",
     not_a_number_msg: 'ναℓυє "{value}" ςσυℓ∂ иσт вє ιитєяρяєтє∂ αѕ α иυмвєя'
 }
@@ -94,7 +94,7 @@ class TranslationTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 cli.main(['--language', TEST_LANG, 'getspec', 'carbon'])
         result = out.getvalue()
-        self.assertIn(TEST_MESSAGES['current LULC'], result)
+        self.assertIn(TEST_MESSAGES['baseline LULC'], result)
 
     def test_invest_validate(self):
         """Translation: test that CLI validate output is translated."""
@@ -134,8 +134,8 @@ class TranslationTests(unittest.TestCase):
             'api/getspec', json='carbon', query_string={'language': TEST_LANG})
         spec = json.loads(response.get_data(as_text=True))
         self.assertEqual(
-            spec['args']['lulc_cur_path']['name'],
-            TEST_MESSAGES['current LULC'])
+            spec['args']['lulc_bas_path']['name'],
+            TEST_MESSAGES['baseline LULC'])
 
     def test_server_get_invest_validate(self):
         """Translation: test that /validate endpoint is translated."""

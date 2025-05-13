@@ -22,48 +22,187 @@ from .unit_registry import u
 LOGGER = logging.getLogger(__name__)
 
 CROP_OPTIONS = {
-    # TODO: use human-readable translatable crop names (#614)
-    crop: {"description": crop} for crop in [
-        "abaca", "agave", "alfalfa", "almond", "aniseetc",
-        "apple", "apricot", "areca", "artichoke", "asparagus",
-        "avocado", "bambara", "banana", "barley", "bean",
-        "beetfor", "berrynes", "blueberry", "brazil",
-        "canaryseed", "carob", "carrot", "carrotfor", "cashew",
-        "broadbean", "buckwheat", "cabbage", "cabbagefor",
-        "cashewapple", "cassava", "castor", "cauliflower",
-        "cerealnes", "cherry", "chestnut", "chickpea",
-        "chicory", "chilleetc", "cinnamon", "citrusnes",
-        "clove", "clover", "cocoa", "coconut", "coffee",
-        "cotton", "cowpea", "cranberry", "cucumberetc",
-        "currant", "date", "eggplant", "fibrenes", "fig",
-        "flax", "fonio", "fornes", "fruitnes", "garlic",
-        "ginger", "gooseberry", "grape", "grapefruitetc",
-        "grassnes", "greenbean", "greenbroadbean", "greencorn",
-        "greenonion", "greenpea", "groundnut", "hazelnut",
-        "hemp", "hempseed", "hop", "jute", "jutelikefiber",
-        "kapokfiber", "kapokseed", "karite", "kiwi", "kolanut",
-        "legumenes", "lemonlime", "lentil", "lettuce",
-        "linseed", "lupin", "maize", "maizefor", "mango",
-        "mate", "melonetc", "melonseed", "millet",
-        "mixedgrain", "mixedgrass", "mushroom", "mustard",
-        "nutmeg", "nutnes", "oats", "oilpalm", "oilseedfor",
-        "oilseednes", "okra", "olive", "onion", "orange",
-        "papaya", "pea", "peachetc", "pear", "pepper",
-        "peppermint", "persimmon", "pigeonpea", "pimento",
-        "pineapple", "pistachio", "plantain", "plum", "poppy",
-        "potato", "pulsenes", "pumpkinetc", "pyrethrum",
-        "quince", "quinoa", "ramie", "rapeseed", "rasberry",
-        "rice", "rootnes", "rubber", "rye", "ryefor",
-        "safflower", "sesame", "sisal", "sorghum",
-        "sorghumfor", "sourcherry, soybean", "spicenes",
-        "spinach", "stonefruitnes", "strawberry", "stringbean",
-        "sugarbeet", "sugarcane", "sugarnes", "sunflower",
-        "swedefor", "sweetpotato", "tangetc", "taro", "tea",
-        "tobacco", "tomato", "triticale", "tropicalnes",
-        "tung", "turnipfor", "vanilla", "vegetablenes",
-        "vegfor", "vetch", "walnut", "watermelon", "wheat",
-        "yam", "yautia"
-    ]
+    # Human-readable/translatable crop names come from three sources:
+    # (1) Monfreda et. al. Table 1
+    # (2) "EarthStat and FAO crop names and crop groups" table
+    # (3) FAO's _World Programme for the Census of Agriculture 2020_
+    # Where (1) and (2) differ, default to (1), except where (2) is
+    # more descriptive (i.e., include additional list items, alternate
+    # names, qualifiers, and other disambiguations).
+    # Where discrepancies remain, consult (3) for additional context.
+    # See #614 for more details and links to sources.
+    "abaca": {"description": gettext("Abaca (manila hemp)")},
+    "agave": {"description": gettext("Agave fibers, other")},
+    "alfalfa": {"description": gettext("Alfalfa")},
+    "almond": {"description": gettext("Almonds, with shell")},
+    "aniseetc": {"description": gettext("Anise, badian, fennel, coriander")},
+    "apple": {"description": gettext("Apples")},
+    "apricot": {"description": gettext("Apricots")},
+    "areca": {"description": gettext("Areca nuts (betel)")},
+    "artichoke": {"description": gettext("Artichokes")},
+    "asparagus": {"description": gettext("Asparagus")},
+    "avocado": {"description": gettext("Avocados")},
+    "bambara": {"description": gettext("Bambara beans")},
+    "banana": {"description": gettext("Bananas")},
+    "barley": {"description": gettext("Barley")},
+    "bean": {"description": gettext("Beans, dry")},
+    "beetfor": {"description": gettext("Beets for fodder")},
+    "berrynes": {"description": gettext("Berries, other")},
+    "blueberry": {"description": gettext("Blueberries")},
+    "brazil": {"description": gettext("Brazil nuts, with shell")},
+    "broadbean": {"description": gettext("Broad beans, horse beans, dry")},
+    "buckwheat": {"description": gettext("Buckwheat")},
+    "cabbage": {"description": gettext("Cabbages and other brassicas")},
+    "cabbagefor": {"description": gettext("Cabbage for fodder")},
+    "canaryseed": {"description": gettext("Canary seed")},
+    "carob": {"description": gettext("Carobs")},
+    "carrot": {"description": gettext("Carrots and turnips")},
+    "carrotfor": {"description": gettext("Carrots for fodder")},
+    "cashew": {"description": gettext("Cashew nuts, with shell")},
+    "cashewapple": {"description": gettext("Cashew apple")},
+    "cassava": {"description": gettext("Cassava")},
+    "castor": {"description": gettext("Castor beans")},
+    "cauliflower": {"description": gettext("Cauliflower and broccoli")},
+    "cerealnes": {"description": gettext("Cereals, other")},
+    "cherry": {"description": gettext("Cherries")},
+    "chestnut": {"description": gettext("Chestnuts")},
+    "chickpea": {"description": gettext("Chick peas")},
+    "chicory": {"description": gettext("Chicory roots")},
+    "chilleetc": {"description": gettext("Chilies and peppers, green")},
+    "cinnamon": {"description": gettext("Cinnamon (canella)")},
+    "citrusnes": {"description": gettext("Citrus fruit, other")},
+    "clove": {"description": gettext("Cloves")},
+    "clover": {"description": gettext("Clover")},
+    "cocoa": {"description": gettext("Cocoa beans")},
+    "coconut": {"description": gettext("Coconuts")},
+    "coffee": {"description": gettext("Coffee, green")},
+    "cotton": {"description": gettext("Cotton")},
+    "cowpea": {"description": gettext("Cow peas, dry")},
+    "cranberry": {"description": gettext("Cranberries")},
+    "cucumberetc": {"description": gettext("Cucumbers and gherkins")},
+    "currant": {"description": gettext("Currants")},
+    "date": {"description": gettext("Dates")},
+    "eggplant": {"description": gettext("Eggplants (aubergines)")},
+    "fibrenes": {"description": gettext("Fiber crops, other")},
+    "fig": {"description": gettext("Figs")},
+    "flax": {"description": gettext("Flax fiber and tow")},
+    "fonio": {"description": gettext("Fonio")},
+    "fornes": {"description": gettext("Forage products, other")},
+    "fruitnes": {"description": gettext("Fresh fruit, other")},
+    "garlic": {"description": gettext("Garlic")},
+    "ginger": {"description": gettext("Ginger")},
+    "gooseberry": {"description": gettext("Gooseberries")},
+    "grape": {"description": gettext("Grapes")},
+    "grapefruitetc": {"description": gettext("Grapefruit and pomelos")},
+    "grassnes": {"description": gettext("Grasses, other")},
+    "greenbean": {"description": gettext("Beans, green")},
+    "greenbroadbean": {"description": gettext("Broad beans, green")},
+    "greencorn": {"description": gettext("Green corn (maize)")},
+    "greenonion": {"description": gettext("Onions and shallots, green")},
+    "greenpea": {"description": gettext("Peas, green")},
+    "groundnut": {"description": gettext("Groundnuts, with shell")},
+    "hazelnut": {"description": gettext("Hazelnuts (filberts), with shell")},
+    "hemp": {"description": gettext("Hemp fiber and tow")},
+    "hempseed": {"description": gettext("Hempseed")},
+    "hop": {"description": gettext("Hops")},
+    "jute": {"description": gettext("Jute")},
+    "jutelikefiber": {"description": gettext("Jute-like fibers")},
+    "kapokfiber": {"description": gettext("Kapok fiber")},
+    "kapokseed": {"description": gettext("Kapok seed in shell")},
+    "karite": {"description": gettext("Karite nuts (shea nuts)")},
+    "kiwi": {"description": gettext("Kiwi fruit")},
+    "kolanut": {"description": gettext("Kola nuts")},
+    "legumenes": {"description": gettext("Legumes, other")},
+    "lemonlime": {"description": gettext("Lemons and limes")},
+    "lentil": {"description": gettext("Lentils")},
+    "lettuce": {"description": gettext("Lettuce and chicory")},
+    "linseed": {"description": gettext("Linseed")},
+    "lupin": {"description": gettext("Lupins")},
+    "maize": {"description": gettext("Maize")},
+    "maizefor": {"description": gettext("Maize for forage and silage")},
+    "mango": {"description": gettext("Mangoes, mangosteens, guavas")},
+    "mate": {"description": gettext("Mate")},
+    "melonetc": {"description": gettext("Cantaloupes and other melons")},
+    "melonseed": {"description": gettext("Melon seed")},
+    "millet": {"description": gettext("Millet")},
+    "mixedgrain": {"description": gettext("Mixed grain")},
+    "mixedgrass": {"description": gettext("Mixed grasses and legumes")},
+    "mushroom": {"description": gettext("Mushrooms and truffles")},
+    "mustard": {"description": gettext("Mustard seed")},
+    "nutmeg": {"description": gettext("Nutmeg, mace, and cardamoms")},
+    "nutnes": {"description": gettext("Nuts, other")},
+    "oats": {"description": gettext("Oats")},
+    "oilpalm": {"description": gettext("Oil palm fruit")},
+    "oilseedfor": {"description": gettext("Green oilseeds for fodder")},
+    "oilseednes": {"description": gettext("Oilseeds, other")},
+    "okra": {"description": gettext("Okra")},
+    "olive": {"description": gettext("Olives")},
+    "onion": {"description": gettext("Onions, dry")},
+    "orange": {"description": gettext("Oranges")},
+    "papaya": {"description": gettext("Papayas")},
+    "pea": {"description": gettext("Peas, dry")},
+    "peachetc": {"description": gettext("Peaches and nectarines")},
+    "pear": {"description": gettext("Pears")},
+    "pepper": {"description": gettext("Pepper (Piper spp.)")},
+    "peppermint": {"description": gettext("Peppermint")},
+    "persimmon": {"description": gettext("Persimmons")},
+    "pigeonpea": {"description": gettext("Pigeon peas")},
+    "pimento": {"description": gettext("Chilies and peppers, dry")},
+    "pineapple": {"description": gettext("Pineapples")},
+    "pistachio": {"description": gettext("Pistachios")},
+    "plantain": {"description": gettext("Plantains")},
+    "plum": {"description": gettext("Plums and sloes")},
+    "poppy": {"description": gettext("Poppy seed")},
+    "potato": {"description": gettext("Potatoes")},
+    "pulsenes": {"description": gettext("Pulses, other")},
+    "pumpkinetc": {"description": gettext("Pumpkins, squash, gourds")},
+    "pyrethrum": {"description": gettext("Pyrethrum, dried flowers")},
+    "quince": {"description": gettext("Quinces")},
+    "quinoa": {"description": gettext("Quinoa")},
+    "ramie": {"description": gettext("Ramie")},
+    "rapeseed": {"description": gettext("Rapeseed")},
+    "rasberry": {"description": gettext("Raspberries")},
+    "rice": {"description": gettext("Rice")},
+    "rootnes": {"description": gettext("Roots and tubers, other")},
+    "rubber": {"description": gettext("Natural rubber")},
+    "rye": {"description": gettext("Rye")},
+    "ryefor": {"description": gettext("Rye grass for forage and silage")},
+    "safflower": {"description": gettext("Safflower seed")},
+    "sesame": {"description": gettext("Sesame seed")},
+    "sisal": {"description": gettext("Sisal")},
+    "sorghum": {"description": gettext("Sorghum")},
+    "sorghumfor": {"description": gettext("Sorghum for forage and silage")},
+    "sourcherry": {"description": gettext("Sour cherries")},
+    "soybean": {"description": gettext("Soybeans")},
+    "spicenes": {"description": gettext("Spices, other")},
+    "spinach": {"description": gettext("Spinach")},
+    "stonefruitnes": {"description": gettext("Stone fruit, other")},
+    "strawberry": {"description": gettext("Strawberries")},
+    "stringbean": {"description": gettext("String beans")},
+    "sugarbeet": {"description": gettext("Sugar beets")},
+    "sugarcane": {"description": gettext("Sugar cane")},
+    "sugarnes": {"description": gettext("Sugar crops, other")},
+    "sunflower": {"description": gettext("Sunflower seed")},
+    "swedefor": {"description": gettext("Swedes for fodder")},
+    "sweetpotato": {"description": gettext("Sweet potatoes")},
+    "tangetc": {"description": gettext("Tangerines, mandarins, clementines")},
+    "taro": {"description": gettext("Taro")},
+    "tea": {"description": gettext("Tea")},
+    "tobacco": {"description": gettext("Tobacco leaves")},
+    "tomato": {"description": gettext("Tomatoes")},
+    "triticale": {"description": gettext("Triticale")},
+    "tropicalnes": {"description": gettext("Fresh tropical fruit, other")},
+    "tung": {"description": gettext("Tung nuts")},
+    "turnipfor": {"description": gettext("Turnips for fodder")},
+    "vanilla": {"description": gettext("Vanilla")},
+    "vegetablenes": {"description": gettext("Fresh vegetables, other")},
+    "vegfor": {"description": gettext("Vegetables and roots for fodder")},
+    "vetch": {"description": gettext("Vetches")},
+    "walnut": {"description": gettext("Walnuts, with shell")},
+    "watermelon": {"description": gettext("Watermelons")},
+    "wheat": {"description": gettext("Wheat")},
+    "yam": {"description": gettext("Yams")},
+    "yautia": {"description": gettext("Yautia")},
 }
 
 nutrient_units = {
@@ -103,6 +242,7 @@ nutrient_units = {
 }
 
 MODEL_SPEC = {
+    "model_id": "crop_production_percentile",
     "model_name": MODEL_METADATA["crop_production_percentile"].model_title,
     "pyname": MODEL_METADATA["crop_production_percentile"].pyname,
     "userguide": MODEL_METADATA["crop_production_percentile"].userguide,
@@ -471,6 +611,33 @@ def execute(args):
     crop_to_landcover_df = validation.get_validated_dataframe(
         args['landcover_to_crop_table_path'],
         **MODEL_SPEC['args']['landcover_to_crop_table_path'])
+
+    lucodes_in_table = set(list(
+        crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER]))
+
+    def update_unique_lucodes_in_raster(unique_codes, block):
+        unique_codes.update(numpy.unique(block))
+        return unique_codes
+
+    unique_lucodes_in_raster = pygeoprocessing.raster_reduce(
+        update_unique_lucodes_in_raster,
+        (args['landcover_raster_path'], 1),
+        set())
+
+    lucodes_missing_from_raster = lucodes_in_table.difference(
+        unique_lucodes_in_raster)
+    if lucodes_missing_from_raster:
+        LOGGER.warning(
+            "The following lucodes are in the landcover to crop table but "
+            f"aren't in the landcover raster: {lucodes_missing_from_raster}")
+
+    lucodes_missing_from_table = unique_lucodes_in_raster.difference(
+        lucodes_in_table)
+    if lucodes_missing_from_table:
+        LOGGER.warning(
+            "The following lucodes are in the landcover raster but aren't "
+            f"in the landcover to crop table: {lucodes_missing_from_table}")
+
     bad_crop_name_list = []
     for crop_name in crop_to_landcover_df.index:
         crop_climate_bin_raster_path = os.path.join(
@@ -622,7 +789,6 @@ def execute(args):
                     args['landcover_raster_path'],
                     interpolated_yield_percentile_raster_path,
                     crop_lucode,
-                    pixel_area_ha,
                     percentile_crop_production_raster_path),
                 target_path_list=[percentile_crop_production_raster_path],
                 dependent_task_list=[
@@ -697,7 +863,7 @@ def execute(args):
             args=([(args['landcover_raster_path'], 1),
                    (interpolated_observed_yield_raster_path, 1),
                    (observed_yield_nodata, 'raw'), (landcover_nodata, 'raw'),
-                   (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
+                   (crop_lucode, 'raw')],
                   _mask_observed_yield_op, observed_production_raster_path,
                   gdal.GDT_Float32, observed_yield_nodata),
             target_path_list=[observed_production_raster_path],
@@ -714,7 +880,7 @@ def execute(args):
         output_dir, 'result_table%s.csv' % file_suffix)
 
     crop_names = crop_to_landcover_df.index.to_list()
-    tabulate_results_task = task_graph.add_task(
+    _ = task_graph.add_task(
         func=tabulate_results,
         args=(nutrient_df, yield_percentile_headers,
               crop_names, pixel_area_ha,
@@ -731,14 +897,14 @@ def execute(args):
             output_dir, _AGGREGATE_VECTOR_FILE_PATTERN % (file_suffix))
         aggregate_results_table_path = os.path.join(
             output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
-        aggregate_results_task = task_graph.add_task(
+        _ = task_graph.add_task(
             func=aggregate_to_polygons,
             args=(args['aggregate_polygon_path'],
                   target_aggregate_vector_path,
                   landcover_raster_info['projection_wkt'],
                   crop_names, nutrient_df,
-                  yield_percentile_headers, output_dir, file_suffix,
-                  aggregate_results_table_path),
+                  yield_percentile_headers, pixel_area_ha, output_dir,
+                  file_suffix, aggregate_results_table_path),
             target_path_list=[target_aggregate_vector_path,
                               aggregate_results_table_path],
             dependent_task_list=dependent_task_list,
@@ -749,14 +915,14 @@ def execute(args):
 
 
 def calculate_crop_production(lulc_path, yield_path, crop_lucode,
-                              pixel_area_ha, target_path):
+                              target_path):
     """Calculate crop production for a particular crop.
 
     The resulting production value is:
 
     - nodata, where either the LULC or yield input has nodata
     - 0, where the LULC does not match the given LULC code
-    - yield * pixel area, where the given LULC code exists
+    - yield (in Mg/ha), where the given LULC code exists
 
     Args:
         lulc_path (str): path to a raster of LULC codes
@@ -764,7 +930,6 @@ def calculate_crop_production(lulc_path, yield_path, crop_lucode,
             by ``crop_lucode``, in units per hectare
         crop_lucode (int): LULC code that identifies the crop of interest in
             the ``lulc_path`` raster.
-        pixel_area_ha (number): Pixel area in hectares for both input rasters
         target_path (str): Path to write the output crop production raster
 
     Returns:
@@ -772,7 +937,7 @@ def calculate_crop_production(lulc_path, yield_path, crop_lucode,
     """
     pygeoprocessing.raster_map(
         op=lambda lulc, _yield: numpy.where(
-            lulc == crop_lucode, _yield * pixel_area_ha, 0),
+            lulc == crop_lucode, _yield, 0),
         rasters=[lulc_path, yield_path],
         target_path=target_path,
         target_nodata=_NODATA_YIELD)
@@ -802,7 +967,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
 
 def _mask_observed_yield_op(
         lulc_array, observed_yield_array, observed_yield_nodata,
-        landcover_nodata, crop_lucode, pixel_area_ha):
+        landcover_nodata, crop_lucode):
     """Mask total observed yield to crop lulc type.
 
     Args:
@@ -811,7 +976,6 @@ def _mask_observed_yield_op(
         observed_yield_nodata (float): yield raster nodata value
         landcover_nodata (float): landcover raster nodata value
         crop_lucode (int): code used to mask in the current crop
-        pixel_area_ha (float): area of lulc raster cells (hectares)
 
     Returns:
         numpy.ndarray with float values of yields masked to crop_lucode
@@ -820,13 +984,13 @@ def _mask_observed_yield_op(
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
-        valid_mask = ~pygeoprocessing.array_equals_nodata(lulc_array, landcover_nodata)
+        valid_mask = ~pygeoprocessing.array_equals_nodata(lulc_array,
+                                                          landcover_nodata)
         result[valid_mask] = 0
     else:
         result[:] = 0
     lulc_mask = lulc_array == crop_lucode
-    result[lulc_mask] = (
-        observed_yield_array[lulc_mask] * pixel_area_ha)
+    result[lulc_mask] = observed_yield_array[lulc_mask]
     return result
 
 
@@ -847,7 +1011,7 @@ def tabulate_results(
         landcover_raster_path (string): path to landcover raster
         landcover_nodata (float): landcover raster nodata value
         output_dir (string): the file path to the output workspace.
-        file_suffix (string): string to appened to any output filenames.
+        file_suffix (string): string to append to any output filenames.
         target_table_path (string): path to 'result_table.csv' in the output
             workspace
 
@@ -868,6 +1032,11 @@ def tabulate_results(
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
         for yield_percentile_id in sorted(yield_percentile_headers) + [
             'yield_observed']]
+
+    # Since pixel values in observed and percentile rasters are Mg/(ha•yr),
+    # raster sums are (Mg•px)/(ha•yr). Before recording sums in
+    # production_lookup dictionary, convert to Mg/yr by multiplying by ha/px.
+
     with open(target_table_path, 'w') as result_table:
         result_table.write(
             'crop,area (ha),' + 'production_observed,' +
@@ -899,6 +1068,7 @@ def tabulate_results(
                 production_pixel_count += numpy.count_nonzero(
                     valid_mask & (yield_block > 0))
                 yield_sum += numpy.sum(yield_block[valid_mask])
+            yield_sum *= pixel_area_ha
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
             result_table.write(',%f' % production_area)
@@ -916,6 +1086,7 @@ def tabulate_results(
                     yield_sum += numpy.sum(
                         yield_block[~pygeoprocessing.array_equals_nodata(
                             yield_block, _NODATA_YIELD)])
+                yield_sum *= pixel_area_ha
                 production_lookup[yield_percentile_id] = yield_sum
                 result_table.write(",%f" % yield_sum)
 
@@ -941,7 +1112,8 @@ def tabulate_results(
                 (landcover_raster_path, 1)):
             if landcover_nodata is not None:
                 total_area += numpy.count_nonzero(
-                    ~pygeoprocessing.array_equals_nodata(band_values, landcover_nodata))
+                    ~pygeoprocessing.array_equals_nodata(band_values,
+                                                         landcover_nodata))
             else:
                 total_area += band_values.size
         result_table.write(
@@ -951,8 +1123,8 @@ def tabulate_results(
 
 def aggregate_to_polygons(
         base_aggregate_vector_path, target_aggregate_vector_path,
-        landcover_raster_projection, crop_names,
-        nutrient_df, yield_percentile_headers, output_dir, file_suffix,
+        landcover_raster_projection, crop_names, nutrient_df,
+        yield_percentile_headers, pixel_area_ha, output_dir, file_suffix,
         target_aggregate_table_path):
     """Write table with aggregate results of yield and nutrient values.
 
@@ -969,8 +1141,9 @@ def aggregate_to_polygons(
         nutrient_df (pandas.DataFrame): a table of nutrient values by crop
         yield_percentile_headers (list): list of strings indicating percentiles
             at which yield was calculated.
+        pixel_area_ha (float): area of lulc raster cells (hectares)
         output_dir (string): the file path to the output workspace.
-        file_suffix (string): string to appened to any output filenames.
+        file_suffix (string): string to append to any output filenames.
         target_aggregate_table_path (string): path to 'aggregate_results.csv'
             in the output workspace
 
@@ -984,6 +1157,10 @@ def aggregate_to_polygons(
         landcover_raster_projection,
         target_aggregate_vector_path,
         driver_name='ESRI Shapefile')
+
+    # Since pixel values are Mg/(ha•yr), zonal stats sum is (Mg•px)/(ha•yr).
+    # Before writing sum to results tables or when using sum to calculate
+    # nutrient yields, convert to Mg/yr by multiplying by ha/px.
 
     # loop over every crop and query with pgp function
     total_yield_lookup = {}
@@ -1014,11 +1191,12 @@ def aggregate_to_polygons(
                         crop_name, yield_percentile_id)]:
                     total_nutrient_table[nutrient_id][
                         yield_percentile_id][id_index] += (
-                            nutrient_factor *
-                            total_yield_lookup['%s_%s' % (
-                                crop_name, yield_percentile_id)][
-                                    id_index]['sum'] *
-                            nutrient_df[nutrient_id][crop_name])
+                            nutrient_factor
+                            * total_yield_lookup[
+                                    '%s_%s' % (crop_name, yield_percentile_id)
+                                ][id_index]['sum']
+                            * pixel_area_ha
+                            * nutrient_df[nutrient_id][crop_name])
 
         # process observed
         observed_yield_path = os.path.join(
@@ -1032,10 +1210,11 @@ def aggregate_to_polygons(
             for id_index in total_yield_lookup[f'{crop_name}_observed']:
                 total_nutrient_table[
                     nutrient_id]['observed'][id_index] += (
-                        nutrient_factor *
-                        total_yield_lookup[
-                            f'{crop_name}_observed'][id_index]['sum'] *
-                        nutrient_df[nutrient_id][crop_name])
+                        nutrient_factor
+                        * total_yield_lookup[
+                            f'{crop_name}_observed'][id_index]['sum']
+                        * pixel_area_ha
+                        * nutrient_df[nutrient_id][crop_name])
 
     # report everything to a table
     with open(target_aggregate_table_path, 'w') as aggregate_table:
@@ -1054,7 +1233,8 @@ def aggregate_to_polygons(
         for id_index in list(total_yield_lookup.values())[0]:
             aggregate_table.write('%s,' % id_index)
             aggregate_table.write(','.join([
-                str(total_yield_lookup[yield_header][id_index]['sum'])
+                str(total_yield_lookup[yield_header][id_index]['sum']
+                    * pixel_area_ha)
                 for yield_header in sorted(total_yield_lookup)]))
 
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:

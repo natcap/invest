@@ -1,4 +1,4 @@
-name: "Set up python and conda environment"
+name: "Set up conda environment"
 description:
   "This action creates a conda environment containing a given python version
   and set of requirements. It caches the environment and restores it from
@@ -7,9 +7,11 @@ description:
   requirements, and the number of the week in the year, so that the cache
   refreshes weekly."
 inputs:
-  python-version:
-    description: "Python version to install"
-    required: true
+  python:
+    description:
+      "Path to python executable to use to run convert-requirements-to-conda-yml.py"
+    required: false
+    default: 'python'
   requirements-files:
     description:
       "List of requirements files to install from. May be separated by spaces
@@ -25,14 +27,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    # set up python that's used below to run convert-requirements-to-conda-yml.py
-    # after the environment is updated, 'python' will point to the
-    # conda-managed python and this python won't be used again
-    - name: Set up python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ inputs.python-version }}
-
     # save week number to use in next step
     # save CONDA_PREFIX to GITHUB_ENV so it's accessible outside of shell commands
     - name: Set environment variables
@@ -45,7 +39,6 @@ runs:
       shell: bash
       run: |
         # make sure each package is separated by a newline
-        echo "python=${{ inputs.python-version }}" > extra_requirements.txt
         echo "${{ inputs.requirements }}" | xargs | tr " " "\n" >> extra_requirements.txt
 
     - name: Combine all requirements into environment YML
@@ -53,14 +46,14 @@ runs:
       run: |
         # make sure each file is separated by a space
         REQUIREMENTS_FILES=$(echo "${{ inputs.requirements-files }}" | xargs | tr "\n" " ")
-        python ./scripts/convert-requirements-to-conda-yml.py \
+        ${{ inputs.python }} ./scripts/convert-requirements-to-conda-yml.py \
           extra_requirements.txt $REQUIREMENTS_FILES \
         > environment.yml
         echo "Will update environment using this environment.yml:"
         cat environment.yml
 
     - name: Setup conda environment
-      uses: mamba-org/setup-micromamba@v1
+      uses: mamba-org/setup-micromamba@v2
       with:
         environment-file: environment.yml
         environment-name: env

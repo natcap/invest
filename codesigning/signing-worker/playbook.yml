@@ -1,0 +1,139 @@
+---
+
+- name: Set up everything needed on NCP-Inkwell
+  hosts: all
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Install GCP SDK dependencies
+      ansible.builtin.apt:
+        update_cache: true
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - gnupg
+          - curl
+
+    - name: Download the Google Cloud SDK package repository signing key
+      ansible.builtin.shell:
+        cmd: curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
+        creates: /usr/share/keyrings/cloud.google.gpg
+
+    - name: Add Google Cloud SDK package repository source
+      ansible.builtin.apt_repository:
+        update_cache: true
+        filename: google-cloud-sdk.list
+        repo: "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main"
+
+    - name: Install packages
+      ansible.builtin.apt:
+        update_cache: true
+        pkg:
+          - python3
+          - python3-pexpect
+          - python3-requests
+          - python3-yaml
+          - wget
+          - vim-nox
+          - yubico-piv-tool
+          - libengine-pkcs11-openssl
+          - ykcs11
+          - libssl-dev
+          - g++
+          - google-cloud-sdk
+          - google-cloud-cli
+          - yubikey-manager
+
+    - name: Add bookworm-backports repository
+      ansible.builtin.apt_repository:
+        update_cache: true
+        repo: "deb http://deb.debian.org/debian {{ ansible_distribution_release }}-backports main"
+        filename: bookworm-backports.list
+
+    - name: Install osslsigncode from backports
+      ansible.builtin.apt:
+        update_cache: true
+        default_release: "{{ ansible_distribution_release }}-backports"
+        pkg:
+          # The normal debian:bookworm repos have osslsigncode 2.5, which has a
+          # bug in it that prevents it from signing our binaries.  This was
+          # fixed in osslsigncode 2.6.  The version available in
+          # bookworm-backports is 2.9.  The issue (and solution) was similar to
+          # https://stackoverflow.com/a/78308879
+          - osslsigncode
+
+    - name: Install rust
+      ansible.builtin.shell:
+        # From https://github.com/rust-lang/rustup/issues/1085
+        cmd: |
+            RUSTUP_HOME=/opt/rust
+            export RUSTUP_HOME
+            CARGO_HOME=/opt/rust
+            export CARGO_HOME
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        creates: /opt/rust/bin/cargo
+
+    - name: Compile/install rcodesign from cargo (this can take a while)
+      community.general.cargo:
+        executable: /opt/rust/bin/cargo
+        path: /opt/rust
+        name: apple-codesign
+
+    - name: Create the codesign directory
+      ansible.builtin.file:
+        state: directory
+        path: /opt/natcap-codesign
+
+    - name: Install the certificate
+      ansible.builtin.shell:
+        cmd: ykman piv certificates export 9c /opt/natcap-codesign/codesign-cert-chain.pem
+        creates: /opt/natcap-codesign/codesign-cert-chain.pem
+
+    - name: Create codesigning group
+      ansible.builtin.group:
+        name: natcap-codesign
+        state: present
+
+    - name: Create codesigning user
+      ansible.builtin.user:
+        name: natcap-codesign
+        group: natcap-codesign
+        shell: /bin/bash
+        createhome: true
+
+    - name: Install the service account key
+      ansible.builtin.copy:
+        src: natcap-servers-1732552f0202.json
+        dest: /opt/natcap-codesign/natcap-servers-1732552f0202.json
+        mode: 0600
+
+    - name: Install codesigning python script
+      ansible.builtin.copy:
+        src: natcap-codesign.py
+        dest: /opt/natcap-codesign/natcap-codesign.py
+        mode: 0755
+
+    - name: Update permissions on the natcap-codesign directory
+      ansible.builtin.file:
+        path: /opt/natcap-codesign
+        state: directory
+        recurse: true
+        owner: natcap-codesign
+        group: natcap-codesign
+
+    - name: Set up application credentials
+      ansible.builtin.shell:
+        cmd: su -c "gcloud auth activate-service-account --key-file=/opt/natcap-codesign/natcap-servers-1732552f0202.json" - natcap-codesign
+
+    - name: Install the codesign service
+      ansible.builtin.copy:
+        src: natcap-codesign.service
+        dest: /etc/systemd/system/natcap-codesign.service
+        mode: 0644
+
+    - name: Enable the natcap-codesign service
+      ansible.builtin.systemd_service:
+        name: natcap-codesign
+        daemon_reload: true  # reload in case there are any config changes
+        state: restarted
+        enabled: true

@@ -1,0 +1,33 @@
+# Systemd service for debian:bookworm for signing InVEST windows binaries.
+#
+# To install this service, copy this onto the host as /etc/systemd/system/natcap-codesign.service
+#
+# To use, run (for example):
+#   # On modifying the service file, run:
+#   $ sudo systemctl daemon-reload
+#
+#   # enable the service
+#   $ sudo systemctl enable natcap-codesign.service
+#
+#   # start the service
+#   $ sudo systemctl start natcap-codesign
+#
+#   # check the service status
+#   $ sudo systemctl status natcap-codesign
+#
+# This service is built to run in the foreground.
+#
+# See https://wiki.debian.org/systemd/Services for background info about systemd services.
+
+[Unit]
+Description=NatCap Code Signing for EXE and DMG Binaries
+
+
+[Service]
+# Run in the foreground
+Type=simple
+Restart=always
+ExecStart=python3 /opt/natcap-codesign/natcap-codesign.py /opt/natcap-codesign/codesign-cert-chain.pem
+User=natcap-codesign
+Group=natcap-codesign
+WorkingDirectory=/tmp

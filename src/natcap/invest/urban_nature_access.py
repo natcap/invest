@@ -40,6 +40,7 @@ RADIUS_OPT_POP_GROUP = 'radius per population group'
 POP_FIELD_REGEX = '^pop_'
 ID_FIELDNAME = 'adm_unit_id'
 MODEL_SPEC = {
+    'model_id': 'urban_nature_access',
     'model_name': MODEL_METADATA['urban_nature_access'].model_title,
     'pyname': MODEL_METADATA['urban_nature_access'].pyname,
     'userguide': MODEL_METADATA['urban_nature_access'].userguide,
@@ -59,7 +60,8 @@ MODEL_SPEC = {
             'projection_units': u.meter,
             'about': (
                 "A map of LULC codes. "
-                "All values in this raster must have corresponding entries "
+                "Each land use/land cover type must be assigned a unique integer "
+                "code. All values in this raster must have corresponding entries "
                 "in the LULC attribute table. For this model in particular, "
                 "the urban nature types are of importance.  Non-nature types "
                 "are not required to be uniquely identified. All outputs "

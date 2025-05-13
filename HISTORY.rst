@@ -1,5 +1,5 @@
 ..
-  Changes should be grouped for readability.
+  Changes should be grouped under headings for readability.
 
   InVEST model names:
   - Annual Water Yield
@@ -9,7 +9,7 @@
   - Crop Pollination
   - Crop Production
   - DelineateIt
-  - Forest Carbon Edge Effects
+  - Forest Carbon Edge Effect
   - Globio
   - Habitat Quality
   - HRA
@@ -33,10 +33,291 @@
   Everything else:
   - General
 
-.. :changelog:
+  Updates worth drawing extra attention to (minor/major releases only):
+  - Highlights
+
+  Each release section has a heading underlined with ``---``.
+  Within a release section, underline group headings with ``===``.
+
+  For example:
+
+  Unreleased Changes
+  ------------------
+  General
+  =======
+  * Updated something.
+
+  Wind Energy
+  ===========
+  * Fixed something.
+
+  The order of groups should be as follows:
+  1. Highlights
+  2. General
+  3. Workbench
+  4. InVEST model A
+  5. ...
+  6. InVEST model Z (model names should be sorted A-Z)
+
+
 
 Unreleased Changes
 ------------------
+
+Workbench
+=========
+* Metadata is now generated for files when creating a datastack (with any
+  existing user-added metadata preserved)
+  (`#1774 <https://github.com/natcap/invest/issues/1774>`_).
+
+NDR
+===
+* Added a feature that allows the nutrient load to be entered as an
+application rate or as an "extensive"/export measured value.
+Previously the models biophysical table expected the ``load_[nutrient]``
+column to be an "extensive"/export measured value. Now, a new
+column, ``nut_load_type``, is required with expected values of either
+``application_rate`` or ``measured_runoff``.
+(https://github.com/natcap/invest/issues/1044).
+
+
+3.15.1 (2025-05-06)
+-------------------
+
+General
+=======
+* Handle exceptions that can arise during ``validation.check_spatial_overlap``
+  when a layer's bounding box cannot be transformed to EPSG:4326.
+  (`#1849 <https://github.com/natcap/invest/issues/1849>`_).
+
+Workbench
+=========
+* Fixed a bug that did not allow users to select a folder as the location
+  to extract a datastack archive.
+  (`#1879 <https://github.com/natcap/invest/issues/1879>`_).
+* When a parameter from a previous model run is changed, the model status
+  indicator (e.g., the "Model Complete" notice) is cleared to help prevent
+  confusion about which parameters went into the most recent model run
+  (`#1655 <https://github.com/natcap/invest/issues/1655>`_).
+
+Crop Production
+===============
+* Both the Percentile and Regression models now issue a warning if any LULC
+  code in the LULC raster is not present in the landcover to crop table, or if
+  any LULC code in the landcover to crop table is not present in the LULC
+  raster (`#925 <https://github.com/natcap/invest/issues/925>`_).
+* The Regression model now correctly validates crop names against the existence
+  of a corresponding regression yield table
+  (`#1723 <https://github.com/natcap/invest/issues/1723>`_).
+
+Seasonal Water Yield
+====================
+* Fixed bug in quickflow calculation where `NoData` values in precipitation
+  were being incorrectly converted to 0's
+  (`#1592 <https://github.com/natcap/invest/issues/1592>`_).
+
+Wind Energy
+===========
+* Fixed a bug where the model would error if no AOI was provided when run from
+  the workbench or from a datastack file where the value for 'aoi_vector_path'
+  was an empty string. (`#1900 <https://github.com/natcap/invest/issues/1900>`_)
+
+
+3.15.0 (2025-04-03)
+-------------------
+Highlights
+==========
+* Multiple models now use **per-hectare** units in their raster outputs. Prior
+  to this update, these rasters reported **per-pixel** values. This change
+  affects the following models:
+
+  * Carbon
+  * Crop Production
+  * Forest Carbon Edge Effect
+  * NDR
+  * SDR
+* NDR, SDR, and Seasonal Water Yield now support the D8 routing algorithm
+  in addition to MFD.
+* Visitation: Recreation and Tourism model now includes Twitter data.
+* InVEST model outputs now include metadata. Open the '.yml' files
+  in a text editor to read and add to the metadata.
+
+General
+=======
+* Fixed an issue where a user's PROJ_DATA environment variable could
+  trigger a RuntimeError about a missing proj.db file.
+  https://github.com/natcap/invest/issues/1742
+* Now testing and building against Python 3.13.
+  No longer testing and building with Python 3.8, which reached EOL.
+  https://github.com/natcap/invest/issues/1755
+* All InVEST model output data now include metadata sidecar files.
+  These are '.yml' files with the same basename as the dataset they
+  describe. https://github.com/natcap/invest/issues/1662
+* InVEST's Windows binaries are now distributed once again with a valid
+  signature, signed by Stanford University.
+  https://github.com/natcap/invest/issues/1580
+* InVEST's macOS disk image is now distributed once again with a valid
+  signature, signed by Stanford University.
+  https://github.com/natcap/invest/issues/1784
+* The natcap.invest python package now officially supports linux.
+  manylinux wheels will be available on PyPI.
+  (`#1730 <https://github.com/natcap/invest/issues/1730>`_)
+* Removed the warning about ``gdal.UseExceptions()``.
+  Python API users should still call ``gdal.UseExceptions()``, but no
+  longer need to do so before importing ``natcap.invest``.
+  https://github.com/natcap/invest/issues/1702
+
+Workbench
+=========
+* Auto-scrolling of log output is halted on user-initiated scrolling,
+  enabling easier inspection of log output while a model is running
+  (`InVEST #1533 <https://github.com/natcap/invest/issues/1533>`_).
+* Fixed a bug where toggle inputs would fail to respond if multiple tabs
+  of the same model were open.
+  https://github.com/natcap/invest/issues/1842
+
+Annual Water Yield
+==================
+* Fixed an issue where the model would crash if the valuation table was
+  provided, but the demand table was not.  Validation will now warn about
+  this, and the ``MODEL_SPEC`` has been improved to reflect that this table
+  is now required when doing valuation.
+  https://github.com/natcap/invest/issues/1769
+
+Carbon
+======
+* Updated styling of the HTML report generated by the carbon model, for
+  visual consistency with the Workbench (`InVEST #1732
+  <https://github.com/natcap/invest/issues/1732>`_).
+* Raster outputs that previously contained per-pixel values (e.g., t/pixel)
+  now contain per-hectare values (e.g., t/ha). (`InVEST #1270
+  <https://github.com/natcap/invest/issues/1270>`_).
+* Removed the REDD scenario and updated the naming of the Current and
+  Future scenarios to Baseline and Alternate, respectively, to better
+  indicate that users are not limited to comparing present and future.
+  (`InVEST #1758 <https://github.com/natcap/invest/issues/1758>`_).
+* Changed output filename prefixes from ``tot_c`` to ``c_storage`` and
+  ``delta`` to ``c_change``. (`InVEST #1825
+  <https://github.com/natcap/invest/issues/1825>`_).
+* Fixed bug where discount rate and annual price change were incorrectly
+  treated as ratios instead of percentages. (`InVEST #1827
+  <https://github.com/natcap/invest/issues/1827>`_).
+
+Coastal Blue Carbon
+===================
+* The ``code`` column in the model's biophysical table input, as well as
+  the ``code`` column in the preprocessor's LULC lookup table input and
+  ``carbon_pool_transient_template`` output, have been renamed ``lucode``,
+  for consistency with other InVEST models (`InVEST #1249
+  <https://github.com/natcap/invest/issues/1249>`_).
+
+Crop Production
+===============
+* Raster outputs that previously contained per-pixel values (e.g., t/pixel)
+  now contain per-hectare values (e.g., t/ha). This change affects both
+  the Percentile and Regression models (`InVEST #1270
+  <https://github.com/natcap/invest/issues/1270>`_).
+
+Forest Carbon Edge Effect
+=========================
+* Raster outputs that previously contained per-pixel values (e.g., t/pixel)
+  now contain per-hectare values (e.g., t/ha). (`InVEST #1270
+  <https://github.com/natcap/invest/issues/1270>`_).
+
+Habitat Quality
+===============
+* The ``lulc`` column in the sensitivity table input, and the ``lulc_code``
+  column in the rarity table outputs, have been renamed ``lucode``, for
+  consistency with other InVEST models (`InVEST #1249
+  <https://github.com/natcap/invest/issues/1249>`_).
+* The model now expects the maximum threat distance (``max_dist`` in the
+  threats table) to be specified in ``m`` instead of ``km`` (`InVEST #1252
+  <https://github.com/natcap/invest/issues/1252>`_).
+* Adjusted total habitat degradation calculation to calculate degradation
+  for each threat and create intermediate degradation rasters. Total
+  degradation is now calculated using these individual threat degradation
+  rasters.
+  https://github.com/natcap/invest/issues/1100
+
+NDR
+===
+* Align rasters to the grid of the DEM raster
+  (`#1488 <https://github.com/natcap/invest/issues/1488>`_).
+* Raster outputs that previously contained per-pixel values (e.g., kg/pixel)
+  now contain per-hectare values (e.g., kg/ha). (`InVEST #1270
+  <https://github.com/natcap/invest/issues/1270>`_).
+* Made the runoff proxy index calculation more robust by allowing users to
+  specify the average runoff proxy, preventing normalization issues across
+  different climate scenarios and watershed selections.
+  https://github.com/natcap/invest/issues/1741
+* D8 routing is now supported in addition to MFD
+  (`#1440 <https://github.com/natcap/invest/issues/1440>`_).
+
+Scenario Generator
+==================
+* Updated the output CSV columns: Renamed `lucode` column `original lucode`
+  to clarify that it contains the original, to-be-converted, value(s). Added
+  `replacement lucode` column, containing the LULC code to which habitat was
+  converted during the model run.
+  https://github.com/natcap/invest/issues/1295
+
+Scenic Quality
+==============
+* Fixed a bug where the visibility raster could be incorrectly set to 1
+  ('visible') if the DEM value was within floating point imprecision of the
+  DEM nodata value (`#1859 <https://github.com/natcap/invest/issues/1859>`_).
+
+SDR
+===
+* Raster outputs that previously contained per-pixel values (e.g., t/pixel)
+  now contain per-hectare values (e.g., t/ha). (`InVEST #1270
+  <https://github.com/natcap/invest/issues/1270>`_).
+* D8 routing is now supported in addition to MFD
+  (`#1440 <https://github.com/natcap/invest/issues/1440>`_).
+
+Seasonal Water Yield
+====================
+* D8 routing is now supported in addition to MFD
+  (`#1440 <https://github.com/natcap/invest/issues/1440>`_).
+
+Urban Cooling
+=============
+* Align rasters to the grid of the LULC raster, rather than the ET0 raster
+  (`#1488 <https://github.com/natcap/invest/issues/1488>`_).
+* Updated the documentation for the ``mean_t_air`` attribute of the
+  ``buildings_with_stats.shp`` output to clarify how the value is
+  calculated.  https://github.com/natcap/invest/issues/1746
+* Fixed bug in the calculation of Cooling Capacity (CC) provided by parks,
+  where the CC Index was not being properly incorporated.
+  https://github.com/natcap/invest/issues/1726
+
+Urban Stormwater Retention
+==========================
+* Fixed a bug causing ``inf`` values in volume outputs because nodata
+  values were not being set correctly (`InVEST #1850
+  <https://github.com/natcap/invest/issues/1850>`_).
+
+Visitation: Recreation and Tourism
+==================================
+* Added a database of geotagged tweets to support calculating
+  twitter-user-days (TUD) as proxy for visitation rates. The model now calculates
+  photo-user-days (PUD) and TUD and uses their average as the response
+  variable in the regression model. Please refer to the User's Guide for
+  more details on the regression model.
+* Output data were updated to support the new TUD results, and vector outputs
+  are now in GeoPackage format instead of ESRI Shapefile.
+* Regression coefficients are still listed in a summary text file, and are now
+  also included in a tabular output: "regression_coefficients.csv".
+
+Wind Energy
+===========
+* Fixed a bug that could cause the Workbench to crash when running the Wind
+  Energy model with ``Taskgraph`` logging set to ``DEBUG`` (`InVEST #1497
+  <https://github.com/natcap/invest/issues/1497>`_).
+
+
+3.14.3 (2024-12-19)
+-------------------
 * General
     * InVEST has been updated to build against numpy 2.
       https://github.com/natcap/invest/issues/1641
@@ -51,6 +332,11 @@ Unreleased Changes
     * Updated translations for Spanish and Chinese
     * natcap.invest now works with (and requires) ``gdal.UseExceptions``. A
       ``FutureWarning`` is raised on import if GDAL exceptions are not enabled.
+    * Fixed an issue on Windows where GDAL fails to find its DLLs due to
+      an interfering GDAL installation on the PATH, such as from anaconda.
+      https://github.com/natcap/invest/issues/1643
+    * Improved error handling of NA values in raster reclassification to provide
+      a more descriptive message.
 * Workbench
     * Several small updates to the model input form UI to improve usability
       and visual consistency (https://github.com/natcap/invest/issues/912).
@@ -78,14 +364,8 @@ Unreleased Changes
       (https://github.com/natcap/invest/issues/1615).
     * Rarity values are now output in CSV format (as well as in raster format)
       (https://github.com/natcap/invest/issues/721).
-* NDR
-    * Added a feature that allows the nutrient load to be entered as an
-      application rate or as an "extensive"/export measured value.
-      Previously the models biophysical table expected the ``load_[nutrient]``
-      column to be an "extensive"/export measured value. Now, a new
-      column, ``nut_load_type``, is required and expected values of either
-      ``application_rate`` or ``measured_runoff``.
-      (https://github.com/natcap/invest/issues/1044).
+    * Improved error handling when there is a missing LULC value in the
+      sensitivity table (https://github.com/natcap/invest/issues/1671).
 * Pollination
     * Fixed an issue with nodata handling that was causing some outputs to be
       filled either with the float32 value for positive infinity, or else with
@@ -98,6 +378,9 @@ Unreleased Changes
     * Added support for zero padding in month numbers in ET and precipitation
       file names (i.e., users can now name their file Precip_01.tif).
       (https://github.com/natcap/invest/issues/1166)
+    * Fixed a bug where ``numpy.nan`` pixel values would not be correctly
+      detected as nodata in local recharge and baseflow routing functions.
+      (https://github.com/natcap/invest/issues/1705)
 * Urban Flood Risk
     * Fields present on the input AOI vector are now retained in the output.
       (https://github.com/natcap/invest/issues/1600)

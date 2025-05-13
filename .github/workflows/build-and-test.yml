@@ -20,8 +20,8 @@ env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
   # setuptools_scm: needed for versioning to work
-  CONDA_DEFAULT_DEPENDENCIES: python-build nomkl setuptools_scm
-  LATEST_SUPPORTED_PYTHON_VERSION: "3.12"
+  CONDA_DEFAULT_DEPENDENCIES: python-build nomkl setuptools_scm 'libsqlite<3.49.1' 'sqlite<3.49.1' # https://github.com/natcap/invest/issues/1797
+  LATEST_SUPPORTED_PYTHON_VERSION: "3.13"
 
 jobs:
   check-syntax-errors:
@@ -62,8 +62,8 @@ jobs:
 
       - name: Lint with doc8
         run: |
-            # Skip line-too-long errors (D001)
-            python -m doc8 --ignore D001 HISTORY.rst README_PYTHON.rst
+          # Skip line-too-long errors (D001)
+          python -m doc8 --ignore D001 HISTORY.rst README_PYTHON.rst
 
   run-model-tests:
     name: Run model tests
@@ -72,8 +72,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
-        os: [windows-latest, macos-13]
+        python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
+        os: [windows-latest, macos-13, ubuntu-latest]
+        include:
+          - os: ubuntu-latest
+            python-version: 3.9
+            platform-specific-dependencies: libxcrypt
+          - os: ubuntu-latest
+            python-version: "3.10"
+            platform-specific-dependencies: libxcrypt
     steps:
       - uses: actions/checkout@v4
         with:
@@ -92,15 +99,17 @@ jobs:
       - name: Set up python environment
         uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            ${{ matrix.platform-specific-dependencies }}
+            python=${{ matrix.python-version }}
 
       - name: Download previous conda environment.yml
         continue-on-error: true
         # Using 'dawidd6' since 'download-artifact' GH action doesn't
         # support downloading artifacts from prior workflow runs
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v6
         with:
           workflow: build-and-test.yml
           # Get frozen conda env artifact from last successful workflow
@@ -109,22 +118,40 @@ jobs:
           path: ./conda-env-artifact
 
       - name: Compare conda environments
+        if: matrix.os != 'ubuntu-latest'
         run: |
           micromamba list > conda-env.txt
           # make sure that the exit code is always 0
           # otherwise, an error appears in the action annotations
           diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
-      - name: Build and install wheel
+      - name: Build wheel
         run: |
           # uninstall InVEST if it was already in the restored cache
           python -m pip uninstall -y natcap.invest
-          python -m build --wheel
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -m build --wheel
           ls -la dist
-          pip install $(find dist -name "natcap.invest*.whl")
 
-      - name: Run model tests
-        run: make test
+      # This produces a wheel that should work on any distro with glibc>=2.39.
+      # This is a very recent version. If we want to support older versions, I
+      # suspect we would need to build GDAL from source on an appropriate
+      # system (such as a manylinux docker container) to ensure compatibility.
+      # Symbols used in libgdal are the cause of the high minimum version,
+      # possibly because of installing with conda.
+      - name: Audit and repair wheel for manylinux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          ldd --version
+          pip install auditwheel
+          WHEEL=$(find dist -name "natcap[._-]invest*.whl")
+          auditwheel show $WHEEL
+          auditwheel repair $WHEEL --plat manylinux_2_39_x86_64 -w dist
+          rm $WHEEL  # remove the original wheel
+
+      - name: Install wheel and run model tests
+        run: |
+          pip install $(find dist -name "natcap[._-]invest*.whl")
+          make test
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
@@ -158,9 +185,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: check-syntax-errors
     strategy:
+      fail-fast: false
       matrix:
-        python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
-        os: [windows-latest, macos-13]
+        python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
+        os: [windows-latest, macos-13, ubuntu-latest]
+        include:
+          - os: ubuntu-latest
+            python-version: 3.9
+            platform-specific-dependencies: libxcrypt
+          - os: ubuntu-latest
+            python-version: "3.10"
+            platform-specific-dependencies: libxcrypt
     steps:
       - uses: actions/checkout@v4
         with:
@@ -168,9 +203,11 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} twine
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ matrix.python-version }}
+            twine ${{ matrix.platform-specific-dependencies }}
 
       - name: Build source distribution
         run: |
@@ -180,12 +217,12 @@ jobs:
           # .cpp files in addition to the .pyx files.
           #
           # Elevating any python warnings to errors to catch build issues ASAP.
-          python -W error -m build --sdist
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" python -W error -m build --sdist
 
       - name: Install from source distribution
         run : |
           # Install natcap.invest from the sdist in dist/
-          pip install $(find dist -name "natcap[._-]invest*")
+          NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" pip install $(find dist -name "natcap[._-]invest*")
 
           # Model tests should cover model functionality, we just want
           # to be sure that we can import `natcap.invest` here.
@@ -198,6 +235,9 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          # NOTE: if you change this name, make sure the source distribution
+          # pattern defined in .github/workflows/release-part-2.yml will still
+          # grab it!
           name: Source distribution ${{ matrix.os }} ${{ matrix.python-version }}
           path: dist
 
@@ -230,12 +270,14 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
           requirements-files: requirements.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pytest
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+            pytest
 
       - name: Make install
-        run: make install
+        run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
 
       - name: Validate sample data
         run: make validate_sampledata
@@ -262,12 +304,13 @@ jobs:
       - name: Set up python environment
         uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
           requirements-files: requirements.txt requirements-dev.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
       - name: Make install
-        run: make install
+        run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
 
       - name: Set up node
         uses: actions/setup-node@v3
@@ -319,16 +362,18 @@ jobs:
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
           requirements-files: |
             requirements.txt
             requirements-dev.txt
             requirements-docs.txt
             constraints_tests.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pandoc
+          requirements: |
+            ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+            python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+            pandoc
 
       - name: Make install
-        run: make install
+        run: NATCAP_INVEST_GDAL_LIB_PATH="$CONDA_PREFIX/Library" make install
 
         # Not caching chocolatey packages because the cache may not be reliable
         # https://github.com/chocolatey/choco/issues/2134
@@ -377,8 +422,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Build Workbench (PRs)
-        if: github.event_name == 'pull_request'
+      - name: Build Workbench
         working-directory: workbench
         env:
           GH_TOKEN: env.GITHUB_TOKEN
@@ -388,59 +432,22 @@ jobs:
           yarn run build
           yarn run dist
 
-      - name: Build Workbench (macOS)
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-13' # secrets not available in PR
-        working-directory: workbench
-        env:
-          GH_TOKEN: env.GITHUB_TOKEN
-          DEBUG: electron-builder
-          CSC_LINK: 2025-01-16-Expiry-AppStore-App.p12
-          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
-        run: |
-          gsutil cp gs://stanford_cert/$CSC_LINK $CSC_LINK
-          yarn run build
-          yarn run dist
-
-      - name: Build Workbench (Windows)
-        if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
-        working-directory: workbench
-        env:
-          GH_TOKEN: env.GITHUB_TOKEN
-          DEBUG: electron-builder
-          #CSC_LINK: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-          #CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
-        run: |
-          #gsutil cp gs://stanford_cert/$CSC_LINK $CSC_LINK
-          yarn run build
-          yarn run dist
-
       - name: Test electron app with puppeteer
         working-directory: workbench
         run: npx cross-env CI=true yarn run test-electron-app
 
-      - name: Sign binaries (macOS)
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-13' # secrets not available in PR
-        env:
-          CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
-          CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
-        run: |
-          WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.dmg' | head -n 1)
-          make WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
-
-      #- name: Sign binaries (Windows)
-      #  if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
-      #  env:
-      #    CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-      #    CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
-      #  run: |
-      #    # figure out the path to signtool.exe (it keeps changing with SDK updates)
-      #    SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
-      #    WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.exe' | head -n 1)
-      #    make WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
-
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
         run: make deploy
+
+      # This relies on the file existing on GCP, so it must be run after `make
+      # deploy` is called.
+      - name: Queue binaries for signing
+        if: github.event_name != 'pull_request'
+        env:
+          ACCESS_TOKEN: ${{ secrets.CODESIGN_QUEUE_ACCESS_TOKEN }}
+        run: |
+          make codesign
 
       - name: Upload workbench binary artifact
         if: always()

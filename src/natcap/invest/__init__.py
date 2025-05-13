@@ -4,10 +4,8 @@ import logging
 import os
 import sys
 from gettext import translation
-import warnings
 
 import babel
-from osgeo import gdal
 
 LOGGER = logging.getLogger('natcap.invest')
 LOGGER.addHandler(logging.NullHandler())
@@ -16,8 +14,12 @@ __all__ = ['local_dir', ]
 try:
     __version__ = importlib.metadata.version('natcap.invest')
 except importlib.metadata.PackageNotFoundError:
-    # package is not installed.  Log the exception for debugging.
-    LOGGER.exception('Could not load natcap.invest version information')
+    try:
+        __version__ = importlib.metadata.version('natcap_invest')
+    except importlib.metadata.PackageNotFoundError:
+        # package is not installed.  Log the exception for debugging.
+        LOGGER.exception(
+            'Could not load natcap.invest (or natcap_invest) version information')
 
 # location of our translation message catalog directory
 LOCALE_DIR = os.path.join(
@@ -29,14 +31,6 @@ LOCALES = sorted(set(os.listdir(LOCALE_DIR) + ['en']))
 LOCALE_NAME_MAP = {
     locale: babel.Locale(locale).display_name for locale in LOCALES
 }
-
-if not gdal.GetUseExceptions():
-    warnings.warn(('''
-        natcap.invest requires GDAL exceptions to be enabled. You must
-        call gdal.UseExceptions() to avoid unexpected behavior from
-        natcap.invest. A future version will enable exceptions on import.
-        gdal.UseExceptions() affects global state, so this may affect the
-        behavior of other packages.'''), FutureWarning)
 
 
 def set_locale(locale_code):

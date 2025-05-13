@@ -22,6 +22,7 @@ BIOPHYSICAL_COLUMNS_SPEC = coastal_blue_carbon.MODEL_SPEC[
     'args']['biophysical_table_path']['columns']
 
 MODEL_SPEC = {
+    "model_id": "coastal_blue_carbon_preprocessor",
     "model_name": MODEL_METADATA["coastal_blue_carbon_preprocessor"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon_preprocessor"].pyname,
     "userguide": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,
@@ -36,9 +37,9 @@ MODEL_SPEC = {
                 "A table mapping LULC codes from the snapshot rasters to the "
                 "corresponding LULC class names, and whether or not the "
                 "class is a coastal blue carbon habitat."),
-            "index_col": "code",
+            "index_col": "lucode",
             "columns": {
-                "code": {
+                "lucode": {
                     "type": "integer",
                     "about": gettext(
                         "LULC code. Every value in the "
@@ -86,9 +87,9 @@ MODEL_SPEC = {
             "index_col": "lulc-class",
             "columns": {
                 "lulc-class": {
-                    "type": "integer",
+                    "type": "freestyle_string",
                     "about": gettext(
-                        "LULC codes matching the codes in the biophysical "
+                        "LULC class names matching those in the biophysical "
                         "table.")},
                 "[LULC]": {
                     "type": "option_string",
@@ -114,7 +115,7 @@ MODEL_SPEC = {
                 "Table mapping each LULC type to impact and accumulation "
                 "information. This is a template that you will fill out to "
                 "create the biophysical table input to the main model."),
-            "index_col": "code",
+            "index_col": "lucode",
             "columns": {
                 **BIOPHYSICAL_COLUMNS_SPEC,
                 # remove "expression" property which doesn't go in output spec
@@ -394,7 +395,7 @@ def _create_biophysical_table(landcover_df, target_biophysical_table_path):
             # have commas between fields.
             row = []
             for colname in target_column_names:
-                if colname == 'code':
+                if colname == 'lucode':
                     row.append(str(lulc_code))
                 else:
                     try:

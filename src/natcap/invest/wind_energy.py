@@ -92,6 +92,7 @@ OUTPUT_WIND_DATA_FIELDS = {
 }
 
 MODEL_SPEC = {
+    "model_id": "wind_energy",
     "model_name": MODEL_METADATA["wind_energy"].model_title,
     "pyname": MODEL_METADATA["wind_energy"].pyname,
     "userguide": MODEL_METADATA["wind_energy"].userguide,
@@ -694,14 +695,6 @@ def execute(args):
 
     number_of_turbines = int(args['number_of_turbines'])
 
-    # Create a list of the biophysical parameters we are looking for from the
-    # input csv files
-    biophysical_params = [
-        'cut_in_wspd', 'cut_out_wspd', 'rated_wspd', 'hub_height',
-        'turbine_rated_pwr', 'air_density', 'exponent_power_curve',
-        'air_density_coefficient', 'loss_parameter'
-    ]
-
     # Read the biophysical turbine parameters into a dictionary
     turbine_dict = validation.get_validated_dataframe(
         args['turbine_parameters_path'],
@@ -753,36 +746,18 @@ def execute(args):
             for time_step in range(int(time) + 1):
                 price_list.append(wind_price * (1 + change_rate)**(time_step))
 
-    # Hub Height to use for setting Weibull parameters
-    hub_height = parameters_dict['hub_height']
-
-    LOGGER.debug('hub_height : %s', hub_height)
-
-    # Read the wind energy data into a dictionary
-    LOGGER.info('Reading in Wind Data into a dictionary')
-    wind_point_df = validation.get_validated_dataframe(
-        args['wind_data_path'], **MODEL_SPEC['args']['wind_data_path'])
-    wind_point_df.columns = wind_point_df.columns.str.upper()
-    # Calculate scale value at new hub height given reference values.
-    # See equation 3 in users guide
-    wind_point_df.rename(columns={'LAM': 'REF_LAM'}, inplace=True)
-    wind_point_df['LAM'] = wind_point_df.apply(
-        lambda row: row.REF_LAM * (hub_height / row.REF)**_ALPHA, axis=1)
-    wind_point_df.drop(['REF'], axis=1)  # REF is not needed after calculation
-    wind_data = wind_point_df.to_dict('index')  # so keys will be 0, 1, 2, ...
-
-    # Compute Wind Density and Harvested Wind Energy, adding the values to the
-    # points to the dictionary, and pickle the dictionary
+    # Compute Wind Density and Harvested Wind Energy,
+    # and pickle the resulting dictionary
     wind_data_pickle_path = os.path.join(
         inter_dir, 'wind_data%s.pickle' % suffix)
     compute_density_harvested_task = task_graph.add_task(
         func=_compute_density_harvested_fields,
-        args=(wind_data, parameters_dict, number_of_turbines,
+        args=(args['wind_data_path'], parameters_dict, number_of_turbines,
               wind_data_pickle_path),
         target_path_list=[wind_data_pickle_path],
         task_name='compute_density_harvested_fields')
 
-    if 'aoi_vector_path' in args:
+    if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
         LOGGER.info('AOI Provided')
         aoi_vector_path = args['aoi_vector_path']
 
@@ -1911,14 +1886,12 @@ def _create_distance_raster(base_raster_path, base_vector_path,
 
 
 def _compute_density_harvested_fields(
-        wind_dict, parameters_dict, number_of_turbines,
+        wind_data_path, parameters_dict, number_of_turbines,
         target_pickle_path):
     """Compute the density and harvested energy based on scale and shape keys.
 
     Args:
-        wind_dict (dict): a dictionary whose values are a dictionary with
-            keys ``LAM``, ``LATI``, ``K``, ``LONG``, ``REF_LAM``, and ``REF``,
-            and numbers indicating their corresponding values.
+        wind_data_path (str): path to wind data input.
 
         parameters_dict (dict): a dictionary where the 'parameter_list'
             strings are the keys that have values pulled from bio-parameters
@@ -1928,13 +1901,30 @@ def _compute_density_harvested_fields(
             for the wind farm.
 
         target_pickle_path (str): a path to the pickle file that has
-            wind_dict_copy, a modified dictionary with new fields computed
-            from the existing fields and bio-parameters.
+            wind_dict_copy, a modified dictionary of wind data with additional
+            fields computed from the existing fields and bio-parameters.
 
     Returns:
         None
 
     """
+    # Hub Height to use for setting Weibull parameters
+    hub_height = parameters_dict['hub_height']
+    LOGGER.debug('hub_height : %s', hub_height)
+
+    # Read the wind energy data into a dictionary
+    LOGGER.info('Reading in Wind Data into a dictionary')
+    wind_point_df = validation.get_validated_dataframe(
+        wind_data_path, **MODEL_SPEC['args']['wind_data_path'])
+    wind_point_df.columns = wind_point_df.columns.str.upper()
+    # Calculate scale value at new hub height given reference values.
+    # See equation 3 in users guide
+    wind_point_df.rename(columns={'LAM': 'REF_LAM'}, inplace=True)
+    wind_point_df['LAM'] = wind_point_df.apply(
+        lambda row: row.REF_LAM * (hub_height / row.REF)**_ALPHA, axis=1)
+    wind_point_df.drop(['REF'], axis=1)  # REF is not needed after calculation
+    wind_dict = wind_point_df.to_dict('index')  # so keys will be 0, 1, 2, ...
+
     wind_dict_copy = wind_dict.copy()
 
     # The rated power is expressed in units of MW but the harvested energy
@@ -1951,9 +1941,6 @@ def _compute_density_harvested_fields(
     v_in = parameters_dict['cut_in_wspd']
     air_density_coef = parameters_dict['air_density_coefficient']
     losses = parameters_dict['loss_parameter']
-
-    # Hub Height to use for setting Weibull parameters
-    hub_height = parameters_dict['hub_height']
 
     # Compute the mean air density, given by CKs formulas
     mean_air_density = air_density_standard - air_density_coef * hub_height
