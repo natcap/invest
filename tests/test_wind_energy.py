@@ -400,6 +400,107 @@ class WindEnergyUnitTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             actual_levelized_array, desired_levelized_array)
 
+    def test_raster_values_to_point_vector(self):
+        """WindEnergy: testing 'index_raster_values_to_point_vector' function."""
+        from natcap.invest import wind_energy
+
+        base_vector_path = os.path.join(self.workspace_dir, 'base_vector.shp')
+        points = [
+            {'long': -69.49, 'lati': 43.89, 'pt_id': 0}, # valid
+            {'long': -69.48, 'lati': 43.89, 'pt_id': 1}, # masked out
+            {'long': -69.49, 'lati': 43.88, 'pt_id': 2}, # masked out
+            {'long': -69.48, 'lati': 43.88, 'pt_id': 3}, # valid
+        ]
+        driver = gdal.GetDriverByName('ESRI Shapefile')
+        target_vector = driver.Create(base_vector_path, 0, 0, 0, gdal.GDT_Unknown)
+
+        source_sr = osr.SpatialReference()
+        source_sr.SetWellKnownGeogCS("WGS84") # lati / long
+        output_layer = target_vector.CreateLayer('wind_points', source_sr, ogr.wkbPoint)
+
+        for field in points[0].keys():
+            field_defn = ogr.FieldDefn(field, ogr.OFTReal)
+            output_layer.CreateField(field_defn)
+
+        for point in points:
+            geom = ogr.Geometry(ogr.wkbPoint)
+            geom.AddPoint_2D(point['long'], point['lati'])
+
+            output_feature = ogr.Feature(output_layer.GetLayerDefn())
+
+            for field_name in point.keys():
+                field_index = output_feature.GetFieldIndex(field_name)
+                output_feature.SetField(field_index, point[field_name])
+
+            output_feature.SetGeometryDirectly(geom)
+            output_layer.CreateFeature(output_feature)
+            output_feature = None
+
+        output_layer.SyncToDisk()
+        output_layer = None
+        target_vector = None
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32619)
+        projection_wkt = srs.ExportToWkt()
+
+        # When rasterizing values, we'll always be working in projected space
+        base_proj_vector_path = os.path.join(
+            self.workspace_dir, 'base_proj_vector.shp')
+        pygeoprocessing.reproject_vector(
+            base_vector_path, projection_wkt, base_proj_vector_path)
+
+        initial_raster_path = os.path.join(
+            self.workspace_dir, 'empty_raster.tif')
+        # Harvested values are rasterized from the vector;
+        # create our base raster in the same way to mimic that behavior
+        pygeoprocessing.create_raster_from_vector_extents(
+            base_proj_vector_path, initial_raster_path,
+            (90, -90), wind_energy._TARGET_DATA_TYPE, wind_energy._TARGET_NODATA)
+        # We have points at the four corners; update two of those values
+        arr = pygeoprocessing.raster_to_numpy_array(initial_raster_path)
+        arr[0, 0] = 1
+        arr[-1, -1] = 1
+
+        raster_info = pygeoprocessing.get_raster_info(initial_raster_path)
+        origin = (raster_info['geotransform'][0], raster_info['geotransform'][3])
+
+        # Write modified raster values to use for pixel-picking
+        final_raster_path = os.path.join(
+            self.workspace_dir, 'modified_raster.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            arr, wind_energy._TARGET_NODATA, raster_info['pixel_size'], origin,
+            raster_info['projection_wkt'], final_raster_path
+        )
+
+        output_vector_path = os.path.join(
+            self.workspace_dir, 'output_vector.shp')
+        wind_energy._index_raster_values_to_point_vector(
+            base_proj_vector_path, [(final_raster_path, 'TestVal')],
+            output_vector_path, mask_keys=['TestVal'],
+            mask_field="Masked"
+        )
+
+        # Confirm that masked-out points still exist in the base vector,
+        # but have "Masked" values of 1
+        base_vector = gdal.OpenEx(base_proj_vector_path, gdal.OF_VECTOR)
+        base_layer = base_vector.GetLayer()
+        self.assertEqual(base_layer.GetFeatureCount(), 4)
+        id_masked = [(feat.GetField('pt_id'), feat.GetField('Masked'))
+                      for feat in base_layer]
+        self.assertEqual(id_masked, [(0, 0), (1, 1), (2, 1), (3, 0)])
+        base_layer = None
+        base_vector = None
+
+        # Confirm that the target vector has only valid points
+        target_vector = gdal.OpenEx(output_vector_path, gdal.OF_VECTOR)
+        target_layer = target_vector.GetLayer()
+        self.assertEqual(target_layer.GetFeatureCount(), 2)
+        feat_ids = [feat.GetField('pt_id') for feat in target_layer]
+        self.assertEqual(feat_ids, [0, 3])
+        target_layer = None
+        target_vector = None
+
 
 class WindEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wind Energy module."""
@@ -447,16 +548,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         wind_energy.execute(args)
 
-        raster_results = [
-            'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
-
-        for raster_path in raster_results:
-            model_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(args['workspace_dir'], 'output', raster_path))
-            reg_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(REGRESSION_DATA, 'noaoi', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
-
         vector_path = 'wind_energy_points.shp'
 
         _assert_vectors_equal(
@@ -473,16 +564,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
 
         wind_energy.execute(args)
-
-        raster_results = [
-            'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
-
-        for raster_path in raster_results:
-            model_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(args['workspace_dir'], 'output', raster_path))
-            reg_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(REGRESSION_DATA, 'nolandpoly', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
 
         vector_path = 'wind_energy_points.shp'
 
@@ -502,16 +583,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
             SAMPLE_DATA, 'simple_north_america_polygon.shp')
 
         wind_energy.execute(args)
-
-        raster_results = [
-            'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
-
-        for raster_path in raster_results:
-            model_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(args['workspace_dir'], 'output', raster_path))
-            reg_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(REGRESSION_DATA, 'nodistances', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
 
         vector_path = 'wind_energy_points.shp'
 
@@ -552,17 +623,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # that have already been made, but which need to be created again.
         wind_energy.execute(args)
 
-        raster_results = [
-            'carbon_emissions_tons.tif',
-            'levelized_cost_price_per_kWh.tif', 'npv.tif']
-
-        for raster_path in raster_results:
-            model_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(args['workspace_dir'], 'output', raster_path))
-            reg_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(REGRESSION_DATA, 'pricevalgrid', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
-
         vector_path = 'wind_energy_points.shp'
 
         _assert_vectors_equal(
@@ -596,19 +656,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         wind_energy.execute(args)
 
-        raster_results = [
-            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
-            'npv.tif']
-
-        for raster_path in raster_results:
-            model_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(args['workspace_dir'], 'output', raster_path))
-            reg_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(REGRESSION_DATA, 'pricevalgridland', raster_path))
-            # loosened tolerance to pass against GDAL 2.2.4 and 2.4.1
-            numpy.testing.assert_allclose(
-                model_array, reg_array, rtol=1e-04)
-
         vector_path = 'wind_energy_points.shp'
         _assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
@@ -639,17 +686,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['avg_grid_distance'] = 4
 
         wind_energy.execute(args)
-
-        raster_results = [
-            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
-            'npv.tif']
-
-        for raster_path in raster_results:
-            model_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(args['workspace_dir'], 'output', raster_path))
-            reg_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(REGRESSION_DATA, 'priceval', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array, rtol=1e-6)
 
         vector_path = 'wind_energy_points.shp'
         _assert_vectors_equal(
@@ -682,17 +718,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['n_workers'] = 1
 
         wind_energy.execute(args)
-
-        raster_results = [
-            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
-            'npv.tif']
-
-        for raster_path in raster_results:
-            model_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(args['workspace_dir'], 'output', raster_path))
-            reg_array = pygeoprocessing.raster_to_numpy_array(
-                os.path.join(REGRESSION_DATA, 'priceval', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array, rtol=1e-6)
 
         vector_path = 'wind_energy_points.shp'
         _assert_vectors_equal(
@@ -858,7 +883,8 @@ class WindEnergyValidationTests(unittest.TestCase):
         from natcap.invest import wind_energy
         from natcap.invest import validation
 
-        base_required_valuation = ['land_polygon_vector_path',
+        base_required_valuation = ['aoi_vector_path',
+                                   'land_polygon_vector_path',
                                    'min_distance',
                                    'max_distance',
                                    'foundation_cost',
