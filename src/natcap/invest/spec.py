@@ -305,7 +305,9 @@ class SingleBandRasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        file_warning = super().validate(self, filepath)
+        # use FileInput instead of super() because when this is called from
+        # RasterOrVectorInput.validate, super() refers to multiple parents.
+        file_warning = FileInput.validate(self, filepath)
         if file_warning:
             return file_warning
 
@@ -423,25 +425,7 @@ class VectorInput(FileInput):
 
 @dataclasses.dataclass
 class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
-    """An invest model input that can be either a raster or a vector.
-
-    Attributes:
-        geometry_types: A set of geometry type(s) that are allowed for this vector
-        fields: An iterable of `Input`s representing the fields that this
-            vector is expected to have. The `key` of each input must match the
-            corresponding field name.
-        projected: Defaults to None, indicating a projected (as opposed to
-            geographic) coordinate system is not required. Set to True if a
-            projected coordinate system is required.
-        projection_units: Defaults to None. If `projected` is `True`, and a
-            specific unit of projection (such as meters) is required, indicate
-            it here.
-    """
-    band: typing.Union[Input, None] = None
-    geometry_types: set = dataclasses.field(default_factory=dict)
-    fields: typing.Union[typing.Iterable[Input], None] = None
-    projected: typing.Union[bool, None] = None
-    projection_units: typing.Union[pint.Unit, None] = None
+    """An invest model input that can be either a raster or a vector."""
     type: typing.ClassVar[str] = 'raster_or_vector'
 
     @timeout
@@ -832,7 +816,10 @@ class RatioInput(NumberInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        super().validate(value)
+        message = super().validate(value)
+        if message:
+            return message
+        as_float = float(value)
         if as_float < 0 or as_float > 1:
             return get_message('NOT_WITHIN_RANGE').format(
                 value=as_float,
@@ -857,7 +844,10 @@ class PercentInput(NumberInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        super().validate(value)
+        message = super().validate(value)
+        if message:
+            return message
+        as_float = float(value)
         if as_float < 0 or as_float > 100:
             return get_message('NOT_WITHIN_RANGE').format(
                 value=as_float,
