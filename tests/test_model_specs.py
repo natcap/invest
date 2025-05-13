@@ -19,7 +19,7 @@ valid_nested_input_types = {
         spec.BooleanInput,
         spec.CSVInput,
         spec.DirectoryInput,
-        spec.FileInput
+        spec.FileInput,
         spec.IntegerInput,
         spec.NumberInput,
         spec.OptionStringInput,
@@ -28,21 +28,21 @@ valid_nested_input_types = {
         spec.RatioInput,
         spec.SingleBandRasterInput,
         spec.StringInput,
-        spec.VectorInput,
+        spec.VectorInput
     },
     spec.SingleBandRasterInput: {
         spec.IntegerInput,
         spec.NumberInput,
-        spec.PercentInput
-        spec.RatioInput,
+        spec.PercentInput,
+        spec.RatioInput
     },
     spec.VectorInput: {
         spec.IntegerInput,
         spec.NumberInput,
-        spec.OptionStringInput
+        spec.OptionStringInput,
         spec.PercentInput,
         spec.RatioInput,
-        spec.StringInput,
+        spec.StringInput
     },
     spec.CSVInput: {
         spec.BooleanInput,
@@ -50,19 +50,19 @@ valid_nested_input_types = {
         spec.NumberInput,
         spec.OptionStringInput,
         spec.PercentInput,
-        spec.RasterOrVectorInput
+        spec.RasterOrVectorInput,
         spec.RatioInput,
         spec.SingleBandRasterInput,
         spec.StringInput,
-        spec.VectorInput,
+        spec.VectorInput
     },
     spec.DirectoryInput: {
         spec.CSVInput,
         spec.DirectoryInput,
         spec.FileInput,
-        spec.RasterOrVectorInput
+        spec.RasterOrVectorInput,
         spec.SingleBandRasterInput,
-        spec.VectorInput,
+        spec.VectorInput
     }
 }
 
@@ -70,7 +70,7 @@ valid_nested_output_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
         spec.CSVOutput,
         spec.DirectoryOutput,
-        spec.FileOutput
+        spec.FileOutput,
         spec.IntegerOutput,
         spec.NumberOutput,
         spec.OptionStringOutput,
@@ -78,21 +78,21 @@ valid_nested_output_types = {
         spec.RatioOutput,
         spec.SingleBandRasterOutput,
         spec.StringOutput,
-        spec.VectorOutput,
+        spec.VectorOutput
     },
     spec.SingleBandRasterOutput: {
         spec.IntegerOutput,
         spec.NumberOutput,
-        spec.PercentOutput
-        spec.RatioOutput,
+        spec.PercentOutput,
+        spec.RatioOutput
     },
     spec.VectorOutput: {
         spec.IntegerOutput,
         spec.NumberOutput,
-        spec.OptionStringOutput
+        spec.OptionStringOutput,
         spec.PercentOutput,
         spec.RatioOutput,
-        spec.StringOutput,
+        spec.StringOutput
     },
     spec.CSVOutput: {
         spec.IntegerOutput,
