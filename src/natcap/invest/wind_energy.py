@@ -1340,11 +1340,12 @@ def _index_raster_values_to_point_vector(
     geospatial_info = [
         raster_info['raster_size'] for raster_info in raster_info_list]
     if len(set(geospatial_info)) > 1:
+        mismatched_rasters = [(raster_path, dimensions) for
+            (raster_path, dimensions) in
+            zip(base_raster_path_list, geospatial_info)]
         raise ValueError(
             "Input Rasters are not the same dimensions. The following rasters "
-            f"are not identical: {
-                [(raster_path, dimensions) for (raster_path, dimensions) in
-                zip(base_raster_path_list, geospatial_info)]}")
+            f"are not identical: {mismatched_rasters}")
     # When writing values to the vector, we replace nodata with None;
     # map the fieldnames to the nodata values of their corresponding rasters
     raster_nodata = [raster_info['nodata'][0] for raster_info in raster_info_list]
