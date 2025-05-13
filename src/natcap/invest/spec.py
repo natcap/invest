@@ -74,6 +74,7 @@ def timeout(func, timeout=5):
 
     return wrapper
 
+
 def check_headers(expected_headers, actual_headers, header_type='header'):
     """Validate that expected headers are in a list of actual headers.
 
@@ -106,6 +107,7 @@ def check_headers(expected_headers, actual_headers, header_type='header'):
                 header=header_type,
                 header_name=expected,
                 number=count)
+
 
 def _check_projection(srs, projected, projection_units):
     """Validate a GDAL projection.
@@ -160,6 +162,7 @@ class IterableWithDotAccess():
     def to_json(self):
         return self.inputs_dict
 
+
 @dataclasses.dataclass
 class Input:
     """A data input, or parameter, of an invest model.
@@ -193,6 +196,7 @@ class Input:
     allowed: typing.Union[bool, str] = True
     hidden: bool = False
 
+
 @dataclasses.dataclass
 class Output:
     """A data output, or result, of an invest model.
@@ -212,6 +216,7 @@ class Output:
     id: str = ''
     about: str = ''
     created_if: typing.Union[bool, str] = True
+
 
 @dataclasses.dataclass
 class FileInput(Input):
@@ -266,6 +271,7 @@ class FileInput(Input):
         return col.apply(
             lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), base_path)
         ).astype(pandas.StringDtype())
+
 
 @dataclasses.dataclass
 class SingleBandRasterInput(FileInput):
@@ -769,6 +775,7 @@ class NumberInput(Input):
         """
         return col.astype(float)
 
+
 @dataclasses.dataclass
 class IntegerInput(Input):
     """An integer input, or parameter, of an invest model."""
@@ -888,6 +895,7 @@ class BooleanInput(Input):
         """
         return col.astype('boolean')
 
+
 @dataclasses.dataclass
 class StringInput(Input):
     """A string input, or parameter, of an invest model.
@@ -982,6 +990,7 @@ class OptionStringInput(Input):
             lambda s: s if pandas.isna(s) else str(s).strip().lower()
         ).astype(pandas.StringDtype())
 
+
 @dataclasses.dataclass
 class SingleBandRasterOutput(Output):
     """A single-band raster output, or result, of an invest model.
@@ -994,6 +1003,7 @@ class SingleBandRasterOutput(Output):
             raster's first and only band
     """
     band: typing.Union[Output, None] = None
+
 
 @dataclasses.dataclass
 class VectorOutput(Output):
@@ -1010,6 +1020,7 @@ class VectorOutput(Output):
     """
     geometry_types: set = dataclasses.field(default_factory=set)
     fields: typing.Union[typing.Iterable[Output], None] = None
+
 
 @dataclasses.dataclass
 class CSVOutput(Output):
@@ -1032,6 +1043,7 @@ class CSVOutput(Output):
     rows: typing.Union[typing.Iterable[Output], None] = None
     index_col: typing.Union[str, None] = None
 
+
 @dataclasses.dataclass
 class DirectoryOutput(Output):
     """A directory output, or result, of an invest model.
@@ -1046,6 +1058,7 @@ class DirectoryOutput(Output):
     """
     contents: typing.Union[typing.Iterable[Input], None] = None
 
+
 @dataclasses.dataclass
 class FileOutput(Output):
     """A generic file output, or result, of an invest model.
@@ -1054,6 +1067,7 @@ class FileOutput(Output):
     a more specific type, such as `CSVOutput` or `VectorOutput`, does not apply.
     """
     pass
+
 
 @dataclasses.dataclass
 class NumberOutput(Output):
@@ -1067,10 +1081,12 @@ class NumberOutput(Output):
     """
     units: typing.Union[pint.Unit, None] = None
 
+
 @dataclasses.dataclass
 class IntegerOutput(Output):
     """An integer output, or result, of an invest model."""
     pass
+
 
 @dataclasses.dataclass
 class RatioOutput(Output):
@@ -1081,6 +1097,7 @@ class RatioOutput(Output):
     """
     pass
 
+
 @dataclasses.dataclass
 class PercentOutput(Output):
     """A percent output, or result, of an invest model.
@@ -1089,6 +1106,7 @@ class PercentOutput(Output):
     a ratio, which ranges from 0 to 1).
     """
     pass
+
 
 @dataclasses.dataclass
 class StringOutput(Output):
@@ -1099,6 +1117,7 @@ class StringOutput(Output):
     """
     pass
 
+
 @dataclasses.dataclass
 class OptionStringOutput(Output):
     """A string output, or result, which is limited to a set of options.
@@ -1107,6 +1126,7 @@ class OptionStringOutput(Output):
         options: A list of the values that this input may take
     """
     options: typing.Union[list, None] = None
+
 
 @dataclasses.dataclass
 class ModelSpec:
