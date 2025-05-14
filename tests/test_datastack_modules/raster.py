@@ -1,7 +1,7 @@
 from natcap.invest import spec
 
 MODEL_SPEC = spec.ModelSpec(inputs=[
-    spec.SingleBandRasterInput(id='raster', band=spec.Input())],
+    spec.SingleBandRasterInput(id='raster')],
     outputs={},
     model_id='raster_model',
     model_title='',

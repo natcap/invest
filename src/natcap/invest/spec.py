@@ -274,15 +274,32 @@ class FileInput(Input):
 
 
 @dataclasses.dataclass
-class SingleBandRasterInput(FileInput):
+class RasterBand(FileInput):
     """A single-band raster input, or parameter, of an invest model.
 
     This represents a raster file input (all GDAL-supported raster file types
     are allowed), where only the first band is needed.
 
     Attributes:
-        band: An `Input` representing the type of data expected in the
-            raster's first and only band
+        band_id: band index used to access the raster band
+        data_type: float or int
+        units: units of measurement of the raster band values
+    """
+    band_id: typing.Union[int, str] = 1
+    data_type: typing.Type = float
+    units: typing.Union[pint.Unit, None] = None
+
+
+@dataclasses.dataclass
+class RasterInput(FileInput):
+    """A raster input, or parameter, of an invest model.
+
+    This represents a raster file input (all GDAL-supported raster file types
+    are allowed), which may have multiple bands.
+
+    Attributes:
+        bands: An iterable of `RasterBand`s representing the bands expected
+            to be in the raster.
         projected: Defaults to None, indicating a projected (as opposed to
             geographic) coordinate system is not required. Set to True if a
             projected coordinate system is required.
@@ -290,7 +307,63 @@ class SingleBandRasterInput(FileInput):
             specific unit of projection (such as meters) is required, indicate
             it here.
     """
-    band: typing.Union[Input, None] = None
+    bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=[])
+    projected: typing.Union[bool, None] = None
+    projection_units: typing.Union[pint.Unit, None] = None
+    type: typing.ClassVar[str] = 'raster'
+
+    @timeout
+    def validate(self, filepath: str):
+        """Validate a raster file against the requirements for this input.
+
+        Args:
+            filepath (string): The filepath to validate.
+
+        Returns:
+            A string error message if an error was found.  ``None`` otherwise.
+        """
+        # use FileInput instead of super() because when this is called from
+        # RasterOrVectorInput.validate, super() refers to multiple parents.
+        file_warning = FileInput.validate(self, filepath)
+        if file_warning:
+            return file_warning
+
+        try:
+            gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
+        except RuntimeError:
+            return get_message('NOT_GDAL_RASTER')
+
+        # Check that an overview .ovr file wasn't opened.
+        if os.path.splitext(filepath)[1] == '.ovr':
+            return get_message('OVR_FILE')
+
+        srs = gdal_dataset.GetSpatialRef()
+        projection_warning = _check_projection(srs, self.projected, self.projection_units)
+        if projection_warning:
+            return projection_warning
+
+
+@dataclasses.dataclass
+class SingleBandRasterInput(FileInput):
+    """A single-band raster input, or parameter, of an invest model.
+
+    This represents a raster file input (all GDAL-supported raster file types
+    are allowed), where only the first band is needed. While he same thing can
+    be achieved using a `RasterInput`, this class exists to simplify access to
+    the band properties when there is only one band.
+
+    Attributes:
+        data_type: float or int
+        units: units of measurement of the raster values
+        projected: Defaults to None, indicating a projected (as opposed to
+            geographic) coordinate system is not required. Set to True if a
+            projected coordinate system is required.
+        projection_units: Defaults to None. If `projected` is `True`, and a
+            specific unit of projection (such as meters) is required, indicate
+            it here.
+    """
+    data_type: typing.Type = float
+    units: typing.Union[pint.Unit, None] = None
     projected: typing.Union[bool, None] = None
     projection_units: typing.Union[pint.Unit, None] = None
     type: typing.ClassVar[str] = 'raster'
@@ -989,10 +1062,11 @@ class SingleBandRasterOutput(Output):
     are allowed), where only the first band is used.
 
     Attributes:
-        band: An `Output` representing the type of data produced in the
-            raster's first and only band
+        data_type: float or int
+        units: units of measurement of the raster values
     """
-    band: typing.Union[Output, None] = None
+    data_type: typing.Type = float
+    units: typing.Union[pint.Unit, None] = None
 
 
 @dataclasses.dataclass
@@ -1168,6 +1242,10 @@ class ModelSpec:
                 return as_dict
             elif isinstance(obj, IterableWithDotAccess):
                 return obj.to_json()
+            elif obj is int:
+                return 'integer'
+            elif obj is float:
+                return 'number'
             raise TypeError(f'fallback serializer is missing for {type(obj)}')
 
         spec_dict = self.__dict__.copy()
@@ -1241,7 +1319,8 @@ def build_input_spec(argkey, arg):
     elif t == 'raster':
         return SingleBandRasterInput(
             **base_attrs,
-            band=build_input_spec('1', arg['bands'][1]),
+            data_type=int if arg['bands'][1]['type'] == 'integer' else float,
+            units=arg['bands'][1].get('units', None),
             projected=arg.get('projected', None),
             projection_units=arg.get('projection_units', None))
 
@@ -1287,7 +1366,8 @@ def build_input_spec(argkey, arg):
             geometry_types=arg['geometries'],
             fields=[build_input_spec(key, field_spec)
                     for key, field_spec in arg['fields'].items()],
-            band=build_input_spec('1', arg['bands'][1]),
+            data_type=int if arg['bands'][1]['type'] == 'integer' else float,
+            units=arg['bands'][1].get('units', None),
             projected=arg.get('projected', None),
             projection_units=arg.get('projection_units', None))
 
@@ -1337,7 +1417,8 @@ def build_output_spec(key, spec):
     elif t == 'raster':
         return SingleBandRasterOutput(
             **base_attrs,
-            band=build_output_spec(1, spec['bands'][1]))
+            data_type=int if spec['bands'][1]['type'] == 'integer' else float,
+            units=spec['bands'][1].get('units', None))
 
     elif t == 'vector':
         return VectorOutput(
@@ -1596,6 +1677,9 @@ def format_unit(unit):
     Returns:
         String describing the unit.
     """
+    if unit is None:
+        return ''
+
     if not isinstance(unit, pint.Unit):
         raise TypeError(
             f'{unit} is of type {type(unit)}. '
@@ -1634,36 +1718,6 @@ def format_unit(unit):
     if 'currency' in formatted_unit:
         formatted_unit = formatted_unit.replace('currency', gettext('currency units'))
     return formatted_unit
-
-
-def serialize_args_spec(spec):
-    """Serialize an MODEL_SPEC dict to a JSON string.
-
-    Args:
-        spec (dict): An invest model's MODEL_SPEC.
-
-    Raises:
-        TypeError if any object type within the spec is not handled by
-        json.dumps or by the fallback serializer.
-
-    Returns:
-        JSON String
-    """
-
-    def fallback_serializer(obj):
-        """Serialize objects that are otherwise not JSON serializeable."""
-        if isinstance(obj, pint.Unit):
-            return format_unit(obj)
-        # Sets are present in 'geometry_types' attributes of some args
-        # We don't need to worry about deserializing back to a set/array
-        # so casting to string is okay.
-        elif isinstance(obj, set):
-            return str(obj)
-        elif isinstance(obj, types.FunctionType):
-            return str(obj)
-        raise TypeError(f'fallback serializer is missing for {type(obj)}')
-
-    return json.dumps(spec, default=fallback_serializer)
 
 
 # accepted geometry_types for a vector will be displayed in this order
@@ -1868,11 +1922,7 @@ def describe_arg_from_spec(name, spec):
     in_parentheses = [type_string]
 
     # For numbers and rasters that have units, display the units
-    units = None
-    if spec.__class__ is NumberInput:
-        units = spec.units
-    elif spec.__class__ is SingleBandRasterInput and spec.band.__class__ is NumberInput:
-        units = spec.band.units
+    units = spec.units if hasattr(spec, 'units') else None
     if units:
         units_string = format_unit(units)
         if units_string:
@@ -2005,7 +2055,6 @@ def write_metadata_file(datasource_path, spec, keywords_list,
     except ValueError as e:
         LOGGER.debug(f"Skipping metadata creation for {datasource_path}: {e}")
         return None
-
     resource.set_lineage(lineage_statement)
     # a pre-existing metadata doc could have keywords
     words = resource.get_keywords()
@@ -2039,13 +2088,9 @@ def write_metadata_file(datasource_path, spec, keywords_list,
                 # fields that are in the spec but missing
                 # from model results because they are conditional.
                 LOGGER.debug(error)
-
-    if hasattr(spec, 'band'):
+    if isinstance(spec, SingleBandRasterInput) or isinstance(spec, SingleBandRasterOutput):
         if len(resource.get_band_description(1).units) < 1:
-            try:
-                units = format_unit(spec.band.units)
-            except AttributeError:
-                units = ''
+            units = format_unit(spec.units)
             resource.set_band_description(1, units=units)
 
     resource.write(workspace=out_workspace)

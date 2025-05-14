@@ -192,13 +192,8 @@ class ValidateModelSpecs(unittest.TestCase):
                 self.assertIsInstance(output_spec.units, pint.Unit)
 
             elif t is spec.SingleBandRasterOutput:
-                # raster type should have a bands property that maps each band
-                # index to a nested type dictionary describing the band's data
-                self.assertTrue(hasattr(output_spec, 'band'))
-                self.validate_output(
-                    output_spec.band,
-                    f'{key}.band',
-                    parent_type=t)
+                self.assertTrue(hasattr(output_spec, 'data_type'))
+                self.assertTrue(hasattr(output_spec, 'units'))
 
             elif t is spec.VectorOutput:
                 # vector type should have:
@@ -347,13 +342,8 @@ class ValidateModelSpecs(unittest.TestCase):
                     self.assertIsInstance(arg.expression, str)
 
             elif t is spec.SingleBandRasterInput:
-                # raster type should have a bands property that maps each band
-                # index to a nested type dictionary describing the band's data
-                self.assertTrue(hasattr(arg, 'band'))
-                self.validate_args(
-                    arg.band,
-                    f'{name}.band',
-                    parent_type=t)
+                self.assertTrue(hasattr(arg, 'data_type'))
+                self.assertTrue(hasattr(arg, 'units'))
 
                 # may optionally have a 'projected' attribute that says
                 # whether the raster must be linearly projected

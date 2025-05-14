@@ -8,7 +8,7 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     spec.FileInput(id='foo'),
     spec.FileInput(id='bar'),
     spec.DirectoryInput(id='data_dir', contents={}),
-    spec.SingleBandRasterInput(id='raster', band=spec.Input()),
+    spec.SingleBandRasterInput(id='raster'),
     spec.VectorInput(id='vector', fields={}, geometry_types={}),
     spec.CSVInput(id='simple_table'),
     spec.CSVInput(
@@ -18,8 +18,7 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
             spec.RasterOrVectorInput(
                 id='path',
                 fields={},
-                geometry_types={'POINT', 'POLYGON'},
-                band=spec.NumberInput()
+                geometry_types={'POINT', 'POLYGON'}
             )
         ]
     )],

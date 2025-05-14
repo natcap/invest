@@ -21,21 +21,21 @@ from osgeo import osr
 from natcap.invest import spec
 from natcap.invest.spec import (
     u,
-    ModelSpec,
-    Input,
-    FileInput,
-    CSVInput,
-    StringInput,
-    OptionStringInput,
-    SingleBandRasterInput,
-    RasterOrVectorInput,
-    DirectoryInput,
-    VectorInput,
     BooleanInput,
-    NumberInput,
+    CSVInput,
+    DirectoryInput,
+    FileInput,
+    Input,
     IntegerInput,
+    ModelSpec,
+    NumberInput,
+    OptionStringInput,
+    PercentInput,
+    RasterOrVectorInput,
     RatioInput,
-    PercentInput)
+    SingleBandRasterInput,
+    StringInput,
+    VectorInput)
 
 gdal.UseExceptions()
 
@@ -520,7 +520,7 @@ class RasterValidation(unittest.TestCase):
         from natcap.invest import validation
 
         filepath = os.path.join(self.workspace_dir, 'file.txt')
-        error_msg = SingleBandRasterInput(band=Input()).validate(filepath)
+        error_msg = SingleBandRasterInput().validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['FILE_NOT_FOUND'])
 
     def test_invalid_raster(self):
@@ -531,7 +531,7 @@ class RasterValidation(unittest.TestCase):
         with open(filepath, 'w') as bad_raster:
             bad_raster.write('not a raster')
 
-        error_msg = SingleBandRasterInput(band=Input()).validate(filepath)
+        error_msg = SingleBandRasterInput().validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['NOT_GDAL_RASTER'])
 
     def test_invalid_ovr_raster(self):
@@ -555,8 +555,7 @@ class RasterValidation(unittest.TestCase):
         raster = None
 
         filepath_ovr = os.path.join(self.workspace_dir, 'raster.tif.ovr')
-        error_msg = SingleBandRasterInput(
-            band=Input()).validate(filepath_ovr)
+        error_msg = SingleBandRasterInput().validate(filepath_ovr)
         self.assertEqual(error_msg, validation.MESSAGES['OVR_FILE'])
 
     def test_raster_not_projected(self):
@@ -572,8 +571,7 @@ class RasterValidation(unittest.TestCase):
         raster.SetProjection(wgs84_srs.ExportToWkt())
         raster = None
 
-        error_msg = SingleBandRasterInput(
-            band=Input(), projected=True).validate(filepath)
+        error_msg = SingleBandRasterInput(projected=True).validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['NOT_PROJECTED'])
 
     def test_raster_incorrect_units(self):
@@ -591,7 +589,7 @@ class RasterValidation(unittest.TestCase):
         raster = None
 
         error_msg = SingleBandRasterInput(
-            band=Input(), projected=True, projection_units=spec.u.meter
+            projected=True, projection_units=spec.u.meter
         ).validate(filepath)
         expected_msg = validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
             unit_a='meter', unit_b='us_survey_foot')
@@ -1491,7 +1489,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
 
         spec = CSVInput(columns=[
             NumberInput(id='col1'),
-            SingleBandRasterInput(id='col2', band=NumberInput())
+            SingleBandRasterInput(id='col2')
         ])
         with self.assertRaises(ValueError) as cm:
             spec.get_validated_dataframe(csv_path)
@@ -1516,8 +1514,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
 
         spec = CSVInput(columns=[
             NumberInput(id='col1'),
-            SingleBandRasterInput(
-                id='col2', projected=True, band=NumberInput())
+            SingleBandRasterInput(id='col2', projected=True)
         ])
         with self.assertRaises(ValueError) as cm:
             spec.get_validated_dataframe(csv_path)
@@ -1584,7 +1581,6 @@ class TestGetValidatedDataframe(unittest.TestCase):
             NumberInput(id='col1'),
             RasterOrVectorInput(
                 id='col2',
-                band=NumberInput(),
                 fields={},
                 geometry_types=['POLYGON']
             )
@@ -2041,11 +2037,13 @@ class TestValidationFromSpec(unittest.TestCase):
             inputs=[
                 SingleBandRasterInput(
                     id='raster_a',
-                    band=NumberInput(units=u.none)
+                    data_type=float,
+                    units=u.none
                 ),
                 SingleBandRasterInput(
                     id='raster_b',
-                    band=NumberInput(units=u.none)
+                    data_type=float,
+                    units=u.none
                 ),
                 VectorInput(
                     id='vector_a',
@@ -2111,11 +2109,13 @@ class TestValidationFromSpec(unittest.TestCase):
             inputs=[
                 SingleBandRasterInput(
                     id='raster_a',
-                    band=NumberInput(units=u.none)
+                    data_type=float,
+                    units=u.none
                 ),
                 SingleBandRasterInput(
                     id='raster_b',
-                    band=NumberInput(units=u.none)
+                    data_type=float,
+                    units=u.none
                 )
             ],
             args_with_spatial_overlap={
@@ -2155,11 +2155,13 @@ class TestValidationFromSpec(unittest.TestCase):
             inputs=[
                 SingleBandRasterInput(
                     id='raster_a',
-                    band=NumberInput(units=u.none)
+                    data_type=float,
+                    units=u.none
                 ),
                 SingleBandRasterInput(
                     id='raster_b',
-                    band=NumberInput(units=u.none),
+                    data_type=float,
+                    units=u.none,
                     required=False
                 ),
                 VectorInput(

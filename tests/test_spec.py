@@ -147,7 +147,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_raster_spec(self):
         raster_spec = spec.SingleBandRasterInput(
-            band=spec.IntegerInput(),
+            data_type=int,
             about="Description",
             name="Bar"
         )
@@ -158,7 +158,8 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
         raster_spec = spec.SingleBandRasterInput(
-            band=spec.NumberInput(units=u.millimeter/u.year),
+            data_type=float,
+            units=u.millimeter/u.year,
             about="Description",
             name="Bar"
         )
@@ -250,7 +251,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         multi_spec = spec.RasterOrVectorInput(
             about="Description",
             name="Bar",
-            band=spec.IntegerInput(),
+            data_type=int,
             geometry_types={"POLYGON"},
             fields={}
         )
@@ -281,12 +282,12 @@ def _generate_files_from_spec(output_spec, workspace):
                 spec_data.contents, os.path.join(workspace, spec_data.id))
         else:
             filepath = os.path.join(workspace, spec_data.id)
-            if hasattr(spec_data, 'band'):
+            if isinstance(spec_data, spec.SingleBandRasterOutput):
                 driver = gdal.GetDriverByName('GTIFF')
                 raster = driver.Create(filepath, 2, 2, 1, gdal.GDT_Byte)
                 band = raster.GetRasterBand(1)
                 band.SetNoDataValue(2)
-            elif hasattr(spec_data, 'fields'):
+            elif isinstance(spec_data, spec.VectorOutput):
                 driver = gdal.GetDriverByName('GPKG')
                 target_vector = driver.CreateDataSource(filepath)
                 layer_name = os.path.basename(os.path.splitext(filepath)[0])
@@ -322,7 +323,8 @@ class TestMetadataFromSpec(unittest.TestCase):
                     spec.SingleBandRasterOutput(
                         id="urban_nature_supply_percapita.tif",
                         about="The calculated supply per capita of urban nature.",
-                        band=spec.NumberInput(units=u.m**2)
+                        data_type=float,
+                        units=u.m**2
                     ),
                     spec.VectorOutput(
                         id="admin_boundaries.gpkg",
