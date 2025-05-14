@@ -70,6 +70,12 @@ Workbench
   existing user-added metadata preserved)
   (`#1774 <https://github.com/natcap/invest/issues/1774>`_).
 
+Coastal Blue Carbon
+===================
+* Updated the Coastal Blue Carbon documentation to clarify what happens when a
+  class transitions from a state of accumulation or decay to a No Carbon Change
+  ("NCC") state. (`#671 <https://github.com/natcap/invest/issues/671>`_).
+
 
 3.15.1 (2025-05-06)
 -------------------
