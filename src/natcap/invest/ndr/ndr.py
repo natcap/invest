@@ -1358,6 +1358,10 @@ def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
         None.
 
     """
+
+    # load values are expected to be in units of u.kilogram/u.hectare/u.year
+    # but for _map_surface_load we expect them to be in kg/pixel. 
+    # So, convert to per pixel output.
     cell_area_ha = abs(numpy.prod(pygeoprocessing.get_raster_info(
         lulc_raster_path)['pixel_size'])) * 0.0001
     # restructure the lookup dict to easier access load, eff, and type
