@@ -341,8 +341,11 @@ def validate(args, spec):
             validation_warnings.append(([key], get_message('UNEXPECTED_ERROR')))
 
     # Phase 3: Check spatial overlap if applicable
-    if spec.args_with_spatial_overlap:
-        spatial_keys = set(spec.args_with_spatial_overlap['spatial_keys'])
+    if spec.validate_spatial_overlap:
+        spatial_keys = set()
+        i in spec.inputs:
+            if isinstance(i, spec.SingleBandRasterInput) or isinstance(i, spec.VectorInput):
+                spatial_keys.add(i.id)
 
         # Only test for spatial overlap once all the sufficient spatial keys
         # are otherwise valid. And then only when there are at least 2.
@@ -357,14 +360,8 @@ def validate(args, spec):
                     spatial_files.append(args[key])
                     checked_keys.append(key)
 
-            try:
-                different_projections_ok = (
-                    spec.args_with_spatial_overlap['different_projections_ok'])
-            except KeyError:
-                different_projections_ok = False
-
             spatial_overlap_error = check_spatial_overlap(
-                spatial_files, different_projections_ok)
+                spatial_files, spec.different_projections_ok)
             if spatial_overlap_error:
                 validation_warnings.append(
                     (checked_keys, spatial_overlap_error))

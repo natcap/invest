@@ -1194,14 +1194,52 @@ class OptionStringOutput(Output):
 
 @dataclasses.dataclass
 class ModelSpec:
+    """Specification of an invest model describing metadata, inputs, and outputs."""
     model_id: str
     model_title: str
     userguide: str
-    input_field_order: list[str]
+    """Optional. For core invest models, this is the name of the models'
+    documentation file in the core invest user guide. For plugins, this field
+    is currently unused. It may be set to a URL pointing to the plugin
+    documentation. A future invest release will display it as a link.
+
+    Example: ``"https://github.com/natcap/invest-demo-plugin/blob/main/README.md"``
+    """
+
+    input_field_order: list[list[str]]
+    """A list that specifies the order and grouping of model inputs.
+    Inputs will displayed in the input form from top to bottom in the order
+    listed here. Sub-lists represent groups of inputs that will be visually
+    separated by a horizontal line. This improves UX by breaking up long lists
+    and visually grouping related inputs. If you do not wish to use groups,
+    all inputs may go in the same sub-list. It is a convention to begin with a
+    group of ``workspace_dir`` and ``results_suffix``. Each item in the
+    sub-lists must match the key of an ``Input`` in ``inputs``. The key of each
+    ``Input`` must be included exactly once, unless it is hidden.
+
+    Example: ``[['workspace_dir', 'results_suffix'], ['foo'], ['bar', baz']]``
+    """
+
     inputs: typing.Iterable[Input]
+    """An iterable of the data inputs, or parameters, to the model."""
+
     outputs: typing.Iterable[Output]
-    args_with_spatial_overlap: dict
+    """An iterable of the data outputs, or results, of the model."""
+
+    validate_spatial_overlap: bool = True
+    """If True, validation will check that the bounding boxes of all
+    top-level spatial inputs overlap (after reprojecting all to the same
+    coordinate reference system)."""
+
+    different_projections_ok: bool = True
+    """Whether spatial inputs are allowed to have different projections. If
+    False, validation will check that all top-level spatial inputs have the
+    same projection. This is only considered if ``validate_spatial_overlap``
+    is ``True``."""
+
     aliases: set = dataclasses.field(default_factory=set)
+    """Optional. A set of alternative names by which the model can be called
+    from the invest command line interface, in addition to the ``model_id``."""
 
     def __post_init__(self):
         self.inputs_dict = {_input.id: _input for _input in self.inputs}
@@ -1272,7 +1310,8 @@ def build_model_spec(model_spec):
         inputs=inputs,
         outputs=outputs,
         input_field_order=model_spec['ui_spec']['order'],
-        args_with_spatial_overlap=model_spec.get('args_with_spatial_overlap', None))
+        validate_spatial_overlap=True,
+        different_projections_ok=model_spec['args_with_spatial_overlap'].get('different_projections_ok', False))
 
 
 def build_input_spec(argkey, arg):
