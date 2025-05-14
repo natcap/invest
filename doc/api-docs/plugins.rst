@@ -56,16 +56,20 @@ How to develop a plugin
 -----------------------
 .. note:: This guide assumes the reader is familiar with python.
 
-The plugin template repo is a great place to start.
+The plugin template repo is a great place to start. Code snippets in this guide are
+pulled from there. The core InVEST models' source code is also a great place to look
+for examples of
 
 At its most basic, a plugin is a python package. Begin by creating a directory
-with a simple python package structure:
-``
-foo_model/
-|- pyproject.toml
-|- src/
-|  |- foo.py
-``
+with a simple python package structure: ::
+
+    invest_plugin/
+    |- pyproject.toml
+    |- src/
+       |- invest_plugin/
+          |- __init__.py
+          |- foo.py
+
 The model code is in ``src/foo.py``. ``pyproject.toml`` is a standard configuration
 file that defines the package. A full-fledged plugin will contain many other optional
 files as well, like a readme, license, test suite, and sample data, but these are not
@@ -73,34 +77,25 @@ required. (and demonstrated in the plugin template repo).
 
 Writing the ``pyproject.toml``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+See the python packaging guide for more general information on ``pyproject.toml``: https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
 The ``pyproject.toml`` contains standard information used to build your python package,
-as well as custom configuration for other software (like InVEST) that uses the package.
-Configuration specific to InVEST is defined in the ``[tool.natcap.invest]`` block.
+as well as custom configuration for other software that interacts with the package. InVEST looks for metadata
+about your package in the ``pyproject.toml``. Configuration specific to InVEST is defined in the ``[tool.natcap.invest]`` block.
 
-Supported keys within this block are:
- - ``api_version``: the plugin API version that this plugin conforms to
- - ``model_title``: the plugin's user-facing name
- - ``pyname``: the python importable package name of the plugin
- - ``model_id``: plugin identifier used internally. Using snake-case is recommended.
- - ``conda_dependencies``: list of the plugin's conda dependencies. These are usually
-   dependencies that are not pure python and not available through pip. When invest installs
-   the plugin, it creates a conda environment that the plugin will run in. At a minimum,
-   python is required.
+.. include: invest-demo-plugin/pyproject.toml
 
 
-Managing dependencies
-~~~~~~~~~~~~~~~~~~~~~
+.. note::
 
-When InVEST installs a plugin, it uses ``micromamba`` to create an isolated environment
-in which to run the plugin. This environment can contain specific versions of dependencies
-that the plugin needs.
+    When InVEST installs a plugin, it uses ``micromamba`` to create an isolated environment
+    in which to run the plugin. This environment can contain specific versions of dependencies
+    that the plugin needs.
 
-.. note:: If you are familiar with ``conda``, note that ``micromamba`` is very similar. It can install the same packages and has a similar API.
+    _If you are familiar with ``conda``, note that ``micromamba`` is very similar. It can install the same packages and has a similar API._
 
-A plugin will likely depend on some other python packages like ``numpy`` or ``pandas``.
-It may also depend on some other software that is not available as a pure python package,
-like GDAL. This is why we use ``micromamba`` instead of a python-specific package manager like ``pip`` - ``micromamba`` can manage both python and non-python dependencies (and ``python`` itself).
+    A plugin will likely depend on some other python packages like ``numpy`` or ``pandas``.
+    It may also depend on some other software that is not available as a pure python package,
+    like GDAL. This is why we use ``micromamba`` instead of a python-specific package manager like ``pip`` - ``micromamba`` can manage both python and non-python dependencies (and ``python`` itself).
 
 
 Writing the main module
@@ -114,7 +109,7 @@ Plugin API specification
 A plugin python pacakge must have the following attributes -
 
 ``MODEL_SPEC``
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 This is a dictionary that describes key information about the model, its inputs, and its outputs. The structure of this dictionary is fully specified below.
 
 ``model_id``
@@ -191,7 +186,7 @@ Bad: ``PRECIPITATION``, ``kc_factor``, ``table of valuation parameters``
 =================================
 Specifies the data type of the input. The supported data types reflect the types of data commonly used in our models.
 
-This controls how the input is rendered in the model input form. Path types (``'directory'``, ``'file'``, ``'raster'``, ``'vector'``, ``'csv'``) display as a text box with a file finder button, so users may type in the path or select one through the OS file navigation. Booleans display as a toggle button, where ``False`` is "off" and ``True`` is "on". ``'option_string'``s display as a dropdown menu. All other types display as a regular text box.
+This controls how the input is rendered in the model input form. Path types (``'directory'``, ``'file'``, ``'raster'``, ``'vector'``, ``'csv'``) display as a text box with a file finder button, so users may type in the path or select one through the OS file navigation. Booleans display as a toggle button, where ``False`` is "off" and ``True`` is "on". ``'option_string'`` displays as a dropdown menu. All other types display as a regular text box.
 
 type: ``string``, one of:
 
@@ -233,104 +228,99 @@ Example: ``"(value >= 0) & (value <= 1)"``
 ``args[arg]['columns']`` (``csv`` types only)
 =============================================
 A sub-dictionary specifying columns in the CSV table. Keys are column names. Values are nested arg specs.
-type: ``dict`` mapping ``string``s to ``dict``s. Required.
-Example:
-``
-'columns': {
-    'lucode': {
-        'type': 'integer',
-        'about': 'LULC codes matching those in the LULC raster.'
-    },
-    'root_depth': {
-        'type': 'number',
-        'units': u.millimeter,
-        'about': 'Maximum root depth for plants in this LULC class.'
-    },
-    'kc': {
-        'type': 'number',
-        'units': u.none,
-        'about': 'Crop coefficient for this LULC class.'
+type: ``dict`` mapping ``string``\ s to ``dict``\ s. Required.
+Example: ::
+
+    'columns': {
+        'lucode': {
+            'type': 'integer',
+            'about': 'LULC codes matching those in the LULC raster.'
+        },
+        'root_depth': {
+            'type': 'number',
+            'units': u.millimeter,
+            'about': 'Maximum root depth for plants in this LULC class.'
+        },
+        'kc': {
+            'type': 'number',
+            'units': u.none,
+            'about': 'Crop coefficient for this LULC class.'
+        }
     }
-}
-``
+
 
 ``args[arg]['bands']`` (``raster`` types only)
 ==============================================
-A sub-dictionary specifying bands in the raster. Keys are integer band IDs. Values are nested arg specs. For single-band rasters, the band ID is ``1``.
+A sub-dictionary specifying bands in the raster. Keys are integer band IDs. Values are nested arg specs. For single-band rasters, the band ID is ``1``\ .
 
-type: ``dict`` mapping ``int``s to ``dict``s. Required.
-Example:
-``
-'bands': {
-    1: {
-        'type': 'number',
-        'units': u.meter
+type: ``dict`` mapping ``int``\ s to ``dict``\ s. Required.
+Example: ::
+
+    'bands': {
+        1: {
+            'type': 'number',
+            'units': u.meter
+        }
     }
-}
-``
 
 ``args[arg]['fields']`` (``vector`` types only)
 ===============================================
 A sub-dictionary specifying fields in the vector. Keys are field names. Values are nested arg specs. If no fields are required, set this to an empty dictionary.
 
-type: ``dict`` mapping ``string``s to ``dict``s. Required.
+type: ``dict`` mapping ``string``\ s to ``dict``\ s. Required.
 
-Example:
-``
-'fields': {
-    'watershed_id': {
-        'type': 'string',
-        'about': 'Unique identifier for each watershed'
-    },
-    'weight': {
-        'type': 'ratio',
-        'about': 'Relative weight to give to the watershed in calculation'
+Example: ::
+
+    'fields': {
+        'watershed_id': {
+            'type': 'string',
+            'about': 'Unique identifier for each watershed'
+        },
+        'weight': {
+            'type': 'ratio',
+            'about': 'Relative weight to give to the watershed in calculation'
+        }
     }
-}
-``
 
 
 ``args[arg]['geometries']`` (``vector`` types only)
 ===================================================
 The set of allowed geometry types in the vector.
 types are defined in spec_utils.py and should be imported from there.
-type: ``set``. Required.
+type: ``set``\ . Required.
 Example: ``{'POLYGON', 'MULTIPOLYGON'}``
 
 ``args[arg]['projected']`` (``raster`` and ``vector`` types only)
 =================================================================
-If ``True``, the dataset must have a projected (as opposed to geographic) coordinate system.
-type: ``bool``. Required. Defaults to ``False``.
+If ``True``\ , the dataset must have a projected (as opposed to geographic) coordinate system.
+type: ``bool``\ . Required. Defaults to ``False``\ .
 
 ``args[arg]['projection_units']`` (``raster`` and ``vector`` types only)
 ========================================================================
-If the model has a requirement for the linear units of the coordinate system, this may be specified. May only be used if ``args[arg]['projected'] is True``.
+If the model has a requirement for the linear units of the coordinate system, this may be specified. May only be used if ``args[arg]['projected'] is True``\ .
 
-type: ``pint.Unit``. Optional.
+type: ``pint.Unit``\ . Optional.
 Example: ``pint.UnitRegistry().meter``
 
 ``args[arg]['options']`` (``option_string`` types only)
 =======================================================
 
 .. note::
-Required args: All models must include the args ``workspace_dir``, ``results_suffix`` and ``n_workers``. Standard specs for these args are provided in ``natcap.invest.spec_utils``.
+
+    Required args: All models must include the args ``workspace_dir``, ``results_suffix`` and ``n_workers``. Standard specs for these args are provided in ``natcap.invest.spec_utils``.
 
 ``outputs``
 
 ``execute``
-~~~~~~~~~~~
+^^^^^^^^^^^
 This function executes the model. When a user runs the model, this function is invoked with the inputs that the user provided. When this function returns, the model run is complete.
 
 Arguments: ``args`` (dictionary). Maps input keys (which match those in ``MODEL_SPEC['args']``) to their values to run the model on.
 Returns: ``None``. When ``execute`` returns, the model run is complete.
 
 ``validate``
-~~~~~~~~~~~~
+^^^^^^^^^^^^
 This function validates the model inputs. Its purpose is to identify problems with the user's data before running the model, and give helpful feedback so the problems can be fixed. When a user enters data into the workbench UI, ``validate`` is called and its output is used to provide instant feedback (for instance, highlighting problematic inputs in red). The "Run" button will be disabled until all inputs validate successfully and ``validate`` returns ``[]``.
-    Arguments: ``args`` (dictionary). Maps input keys (which match those in ``MODEL_SPEC['args']``) to their values to run the model on.
-    Returns: A list of tuples where the first element of the tuple is an iterable of
-        keys affected by the error in question and the second element of the
-        tuple is the string message of the error. If no validation errors were
-        found, an empty list is returned.
 
-
+Arguments: ``args`` (dictionary). Maps input keys (which match those in ``MODEL_SPEC['args']``) to their values to run the model on.
+Returns: A list of tuples where the first element of the tuple is an iterable of keys affected by the error in question and the second element of the tuple is the string message of the error. If no validation errors were found, an empty list is returned.
