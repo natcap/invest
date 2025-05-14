@@ -93,7 +93,7 @@ MODEL_SPEC = {
                         "Whether the nutrient load in column "
                         "load_[NUTRIENT] should be treated as an "
                         "application rate or measured runoff. "
-                        "'application_rate' | 'measured_runoff'")},
+                        "'application-rate' | 'measured-runoff'")},
                 "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
