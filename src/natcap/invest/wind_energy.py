@@ -870,10 +870,7 @@ def execute(args):
         # since min_distance and max_distance will both be ''
         except (KeyError, ValueError):
             LOGGER.info('Distance information not provided')
-            mask_by_distance = False
-
         else:
-            mask_by_distance = True
             # Clip and project the land polygon shapefile to AOI
             LOGGER.info('Clip and project land polygon to AOI')
             land_poly_proj_vector_path = os.path.join(
@@ -916,7 +913,11 @@ def execute(args):
 
     else:
         LOGGER.info("AOI argument was not selected")
-        mask_by_distance = False
+        if run_valuation:
+            # Guard against trying to run the Valuation model without an AOI
+            LOGGER.warning("Run Valuation was selected but no AOI was provided. "
+                           "Please provide an AOI in order to run Valuation.")
+            run_valuation = False
 
         # Wind point vector that will be the template for the final
         # shapefile; does not need to be clipped to AOI
@@ -966,8 +967,6 @@ def execute(args):
     mask_keys.append(_DEPTH_FIELD_NAME)
     write_vector_dependent_task_list.append(create_depth_mask_task)
 
-    # If running valuation, raster alignment will happen after rasterization
-    # of the Harvested values (in the valuation half of the model)
     if not run_valuation:
         # Write Depth [and Distance] mask values to Wind Points Shapefile
         LOGGER.info("Adding mask values to shapefile")
@@ -978,8 +977,7 @@ def execute(args):
             args=(intermediate_wind_point_vector_path,
                   raster_field_to_vector_list,
                   final_wind_point_vector_path),
-            kwargs={'overwrite': True,
-                    'mask_keys': mask_keys,
+            kwargs={'mask_keys': mask_keys,
                     'mask_field': _MASK_FIELD_NAME},
             target_path_list=[final_wind_point_vector_path],
             task_name='add_masked_vals_to_wind_vector',
@@ -1036,7 +1034,7 @@ def execute(args):
         task_name='mask_harvested_raster',
         target_path_list=[harvested_masked_path],
         dependent_task_list=[rasterize_harvested_task,
-            create_depth_mask_task, create_dist_mask_task])
+            create_dist_mask_task])
 
     # path for final distance transform used in valuation calculations
     final_dist_raster_path = os.path.join(
@@ -1268,8 +1266,7 @@ def execute(args):
         args=(intermediate_wind_point_vector_path,
               raster_field_to_vector_list,
               final_wind_point_vector_path),
-        kwargs={'overwrite': True,
-                'mask_keys': mask_keys,
+        kwargs={'mask_keys': mask_keys,
                 'mask_field': _MASK_FIELD_NAME},
         target_path_list=[final_wind_point_vector_path],
         task_name='add_harv_valuation_to_wind_vector',
@@ -1282,44 +1279,43 @@ def execute(args):
 
 def _index_raster_values_to_point_vector(
         base_point_vector_path, raster_fieldname_list,
-        target_point_vector_path, overwrite=False,
-        mask_keys=[], mask_field=None):
+        target_point_vector_path, mask_keys=[], mask_field=None):
     """Add raster values to vector point feature fields.
 
     This function does two things:
         - Creates a copy of the base point vector and updates the copy to include
-          the fields in raster_fieldname_list, the values of which are pixel-picked
-          from their corresponding raster. If `mask_keys` are provided, points that
-          would be NODATA based on the raster(s) corresponding to fields in this list
-          will be deleted from the copy.
+          the fields in ``raster_fieldname_list``, the values of which are
+          pixel-picked from their corresponding raster. If ``mask_keys`` are
+          provided, points that would be NODATA based on the raster(s)
+          corresponding to fields in this list will be deleted from the copy.
         - Optionally modifies the base vector to include an additional field,
-          `mask_field`, that indicates whether or not a point was removed from the
-          copy based on NODATA values in the rasters corresponding to the fieldnames
-          in `mask_keys`.
+          ``mask_field``, that indicates whether or not a point was removed from
+          the copy based on NODATA values in the rasters corresponding to the
+          fieldnames in ``mask_keys``.
+
+    If the base vector contains points that fall beyond the extent of the rasters,
+    those points will be removed from the output vector. If ``mask_field`` is
+    provided, the value will remain NULL for those points.
 
     Args:
         base_point_vector_path (str): a path to an OGR point vector file.
         raster_fieldname_list (list): a list of (raster_path, field_name)
             tuples. The values of rasters in this list will be added to the
             vector's features under the associated field name. All rasters must
-            already be aligned. An exception will be raised if a field already
-            exists in the base point vector and overwrite is False.
+            already be aligned.
         target_point_vector_path (str): a path to a shapefile that has the
             target field name in addition to the existing fields in the base
             point vector.
-        overwrite (boolean): defaults to False. If True, if a fieldname passed
-            in raster_fieldname_list already exists in the source shapefile,
-            its value will be overwritten in the copy.
         mask_keys (list): (optional) a list of string field names that appear in
-            raster_fieldname_list, indicating that the associated raster
+            ``raster_fieldname_list``, indicating that the associated raster
             will be used to mask out vector features. Wherever a value in a mask
             raster equals NODATA, the vector feature will be deleted from the
             target point vector.
         mask_field (str): (optional) a field name to add to the base point vector,
             where the value indicates whether or not the point was masked out in
             the target point vector, based on the values of rasters associated
-            with the fields in mask_keys. If `mask_field` is provided but
-            `mask_keys` is not, it will be ignored.
+            with the fields in ``mask_keys``. If ``mask_field`` is provided but
+            ``mask_keys`` is not, it will be ignored.
 
     Returns:
         None
@@ -1364,8 +1360,8 @@ def _index_raster_values_to_point_vector(
         base_vector = gdal.OpenEx(
             base_point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
         base_layer = base_vector.GetLayer()
-        # Since we're mutating the base vector, throw an error if the
-        # supplied fieldname already exists (don't overwrite)
+        # Since we're mutating the base vector, if the
+        # supplied fieldname already exists, don't overwrite it
         if base_layer.FindFieldIndex(mask_field, True) != -1:
             raise ValueError(
                 f"A field called '{mask_field}' already exists in the base "
@@ -1389,14 +1385,8 @@ def _index_raster_values_to_point_vector(
         field_defn.SetPrecision(11)
 
         field_index = target_layer.FindFieldIndex(field_name, True)
-        # If the field exists and overwrite = False, raise an exception
-        if field_index != -1 and not overwrite:
-            raise ValueError(
-                f"'{field_name}' field already exists in the input shapefile and "
-                "overwrite is set to False. Please rename it or remove it "
-                "from the attribute table.")
         # If the field doesn't already exist, create it
-        elif field_index == -1:
+        if field_index == -1:
             target_layer.CreateField(field_defn)
 
     # Create coordinate transformation from vector to raster, to make sure the
@@ -1409,6 +1399,10 @@ def _index_raster_values_to_point_vector(
             'projection_wkt'])
     vector_coord_trans = utils.create_coordinate_transformer(
         vector_sr, raster_sr)
+
+    # We'll check encountered features against this list at the end,
+    # for the purposes of removing any points that weren't encountered
+    all_fids = [feat.GetFID() for feat in target_layer]
 
     # Initialize an R-Tree indexing object with point geom from base_vector
     def generator_function():
@@ -1423,6 +1417,9 @@ def _index_raster_values_to_point_vector(
 
     vector_idx = index.Index(generator_function(), interleaved=False)
 
+    # For all the features (points) add the proper raster value
+    encountered_fids = set()
+
     iterables = [pygeoprocessing.iterblocks((base_raster_path_list[index], 1))
         for index in range(len(base_raster_path_list))]
     for block_data in zip(*iterables):
@@ -1430,9 +1427,6 @@ def _index_raster_values_to_point_vector(
         block_info = block_data[0][0]
         block_matrices = [block_data[index][1]
             for index in range(len(base_raster_path_list))]
-
-        # For all the features (points) add the proper raster value
-        encountered_fids = set()
 
         block_min_x = raster_min_x + block_info['xoff'] * pixel_size_x
         block_max_x = raster_min_x + (
@@ -1500,6 +1494,12 @@ def _index_raster_values_to_point_vector(
                     target_vector_feat.SetField(fieldname, value)
                 target_layer.SetFeature(target_vector_feat)
                 feat = None
+
+    # Finally, if any points fall outside of the raster extents, remove them
+    out_of_bounds_fids = set(all_fids).difference(encountered_fids)
+    if out_of_bounds_fids:
+        for vector_fid in out_of_bounds_fids:
+            target_layer.DeleteFeature(vector_fid)
 
     target_vector.ExecuteSQL('REPACK ' + target_layer.GetName())
     target_layer = None

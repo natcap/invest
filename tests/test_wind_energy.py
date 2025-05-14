@@ -404,100 +404,69 @@ class WindEnergyUnitTests(unittest.TestCase):
         """WindEnergy: testing 'index_raster_values_to_point_vector' function."""
         from natcap.invest import wind_energy
 
-        base_vector_path = os.path.join(self.workspace_dir, 'base_vector.shp')
-        points = [
-            {'long': -69.49, 'lati': 43.89, 'pt_id': 0}, # valid
-            {'long': -69.48, 'lati': 43.89, 'pt_id': 1}, # masked out
-            {'long': -69.49, 'lati': 43.88, 'pt_id': 2}, # masked out
-            {'long': -69.48, 'lati': 43.88, 'pt_id': 3}, # valid
-        ]
-        driver = gdal.GetDriverByName('ESRI Shapefile')
-        target_vector = driver.Create(base_vector_path, 0, 0, 0, gdal.GDT_Unknown)
-
-        source_sr = osr.SpatialReference()
-        source_sr.SetWellKnownGeogCS("WGS84") # lati / long
-        output_layer = target_vector.CreateLayer('wind_points', source_sr, ogr.wkbPoint)
-
-        for field in points[0].keys():
-            field_defn = ogr.FieldDefn(field, ogr.OFTReal)
-            output_layer.CreateField(field_defn)
-
-        for point in points:
-            geom = ogr.Geometry(ogr.wkbPoint)
-            geom.AddPoint_2D(point['long'], point['lati'])
-
-            output_feature = ogr.Feature(output_layer.GetLayerDefn())
-
-            for field_name in point.keys():
-                field_index = output_feature.GetFieldIndex(field_name)
-                output_feature.SetField(field_index, point[field_name])
-
-            output_feature.SetGeometryDirectly(geom)
-            output_layer.CreateFeature(output_feature)
-            output_feature = None
-
-        output_layer.SyncToDisk()
-        output_layer = None
-        target_vector = None
-
         srs = osr.SpatialReference()
-        srs.ImportFromEPSG(32619)
+        srs.ImportFromEPSG(3157)
         projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        pos_x = origin[0]
+        pos_y = origin[1]
 
-        # When rasterizing values, we'll always be working in projected space
-        base_proj_vector_path = os.path.join(
-            self.workspace_dir, 'base_proj_vector.shp')
-        pygeoprocessing.reproject_vector(
-            base_vector_path, projection_wkt, base_proj_vector_path)
+        # Setup parameters for creating point shapefile
+        fields = {'id': ogr.OFTReal}
+        attrs = [
+            {'id': 0}, {'id': 1}, {'id': 2},
+            {'id': 3}, {'id': 4}, {'id': 5}]
+        valid_ids = [1, 5]
 
-        initial_raster_path = os.path.join(
-            self.workspace_dir, 'empty_raster.tif')
-        # Harvested values are rasterized from the vector;
-        # create our base raster in the same way to mimic that behavior
-        pygeoprocessing.create_raster_from_vector_extents(
-            base_proj_vector_path, initial_raster_path,
-            (90, -90), wind_energy._TARGET_DATA_TYPE, wind_energy._TARGET_NODATA)
-        # We have points at the four corners; update two of those values
-        arr = pygeoprocessing.raster_to_numpy_array(initial_raster_path)
-        arr[0, 0] = 1
-        arr[-1, -1] = 1
+        geometries = [
+            Point(pos_x + 250, pos_y - 150),    # out of extent
+            Point(pos_x + 50, pos_y),           # valid
+            Point(pos_x + 150, pos_y),          # invalid: nodata
+            Point(pos_x + 250, pos_y),          # out of extent
+            Point(pos_x + 50, pos_y - 150),     # invalid: nodata
+            Point(pos_x + 150, pos_y - 150)]    # valid
 
-        raster_info = pygeoprocessing.get_raster_info(initial_raster_path)
-        origin = (raster_info['geotransform'][0], raster_info['geotransform'][3])
+        base_vector_path = os.path.join(self.workspace_dir, 'base_vector.shp')
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, base_vector_path, projection_wkt, 'ESRI Shapefile',
+            fields=fields, attribute_list=attrs, ogr_geom_type=ogr.wkbPoint)
 
-        # Write modified raster values to use for pixel-picking
-        final_raster_path = os.path.join(
-            self.workspace_dir, 'modified_raster.tif')
+        # Setup parameters for create raster
+        matrix = numpy.array([
+            [1, -1],
+            [-1, 1]], dtype=numpy.int32)
+        # Create raster to use for testing input
+        raster_path = os.path.join(
+            self.workspace_dir, 'raster.tif')
         pygeoprocessing.numpy_array_to_raster(
-            arr, wind_energy._TARGET_NODATA, raster_info['pixel_size'], origin,
-            raster_info['projection_wkt'], final_raster_path
-        )
+            matrix, -1, (100, -100), origin, projection_wkt,
+            raster_path)
 
-        output_vector_path = os.path.join(
-            self.workspace_dir, 'output_vector.shp')
+        target_vector_path = os.path.join(self.workspace_dir, 'target_vector.shp')
         wind_energy._index_raster_values_to_point_vector(
-            base_proj_vector_path, [(final_raster_path, 'TestVal')],
-            output_vector_path, mask_keys=['TestVal'],
-            mask_field="Masked"
-        )
+            base_vector_path, [(raster_path, 'TestVal')],
+            target_vector_path, mask_keys=['TestVal'],
+            mask_field="Masked")
 
         # Confirm that masked-out points still exist in the base vector,
-        # but have "Masked" values of 1
-        base_vector = gdal.OpenEx(base_proj_vector_path, gdal.OF_VECTOR)
+        # but have "Masked" values of 1. Out-of-extent points should
+        # have values of None
+        base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
         base_layer = base_vector.GetLayer()
-        self.assertEqual(base_layer.GetFeatureCount(), 4)
-        id_masked = [(feat.GetField('pt_id'), feat.GetField('Masked'))
+        self.assertEqual(base_layer.GetFeatureCount(), 6)
+        id_masked = [(feat.GetField('id'), feat.GetField('Masked'))
                       for feat in base_layer]
-        self.assertEqual(id_masked, [(0, 0), (1, 1), (2, 1), (3, 0)])
+        self.assertEqual(id_masked,
+            [(0, None), (1, 0), (2, 1), (3, None), (4, 1), (5, 0)])
         base_layer = None
         base_vector = None
 
         # Confirm that the target vector has only valid points
-        target_vector = gdal.OpenEx(output_vector_path, gdal.OF_VECTOR)
+        target_vector = gdal.OpenEx(target_vector_path, gdal.OF_VECTOR)
         target_layer = target_vector.GetLayer()
         self.assertEqual(target_layer.GetFeatureCount(), 2)
-        feat_ids = [feat.GetField('pt_id') for feat in target_layer]
-        self.assertEqual(feat_ids, [0, 3])
+        feat_ids = [feat.GetField('id') for feat in target_layer]
+        self.assertEqual(feat_ids, valid_ids)
         target_layer = None
         target_vector = None
 
