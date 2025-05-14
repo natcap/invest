@@ -1372,10 +1372,10 @@ def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
         result = numpy.empty(lucode_array.shape)
         for lucode in numpy.unique(lucode_array):
             try:
-                if lucode_to_values[type_index] == 'measured-runoff':
+                if lucode_to_values[lucode][type_index] == 'measured-runoff':
                     result[lucode_array == lucode] = (
                         lucode_to_values[lucode][load_index] * cell_area_ha)
-                elif lucode_to_values[type_index] == 'application-rate':
+                elif lucode_to_values[lucode][type_index] == 'application-rate':
                     result[lucode_array == lucode] = (
                         lucode_to_values[lucode][load_index] * (
                             1 - lucode_to_values[lucode][eff_index]) * cell_area_ha)
