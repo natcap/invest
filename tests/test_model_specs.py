@@ -56,7 +56,7 @@ class ValidateModelSpecs(unittest.TestCase):
     def test_model_specs_are_valid(self):
         """MODEL_SPEC: test each spec meets the expected pattern."""
 
-        required_keys = {'model_id', 'model_title', 'pyname', 'userguide',
+        required_keys = {'model_id', 'model_title', 'userguide',
                          'aliases', 'args', 'ui_spec', 'outputs'}
         optional_spatial_key = 'args_with_spatial_overlap'
         for model_id, pyname in model_id_to_pyname.items():
@@ -253,7 +253,6 @@ class ValidateModelSpecs(unittest.TestCase):
             if attrs:
                 raise AssertionError(f'{key} has key(s) {attrs} that are not '
                                      'expected for its type')
-
 
     def validate_args(self, arg, name, parent_type=None):
         """

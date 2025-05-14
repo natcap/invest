@@ -93,7 +93,6 @@ OUTPUT_WIND_DATA_FIELDS = {
 MODEL_SPEC = {
     "model_id": "wind_energy",
     "model_title": gettext("Wind Energy Production"),
-    "pyname": "natcap.invest.wind_energy",
     "userguide": "wind_energy.html",
     "aliases": (),
     "ui_spec": {
@@ -777,7 +776,7 @@ def execute(args):
         target_path_list=[wind_data_pickle_path],
         task_name='compute_density_harvested_fields')
 
-    if 'aoi_vector_path' in args:
+    if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
         LOGGER.info('AOI Provided')
         aoi_vector_path = args['aoi_vector_path']
 

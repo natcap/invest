@@ -7,12 +7,15 @@ import logging
 import os
 import pickle
 import time
-import uuid
 
 import numpy
 import pandas
 import pygeoprocessing
 import scipy.spatial
+import shapely.errors
+import shapely.geometry
+import shapely.prepared
+import shapely.wkb
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
@@ -34,7 +37,6 @@ NODATA_VALUE = -1
 MODEL_SPEC = {
     "model_id": "forest_carbon_edge_effect",
     "model_title": gettext("Forest Carbon Edge Effect"),
-    "pyname": "natcap.invest.forest_carbon_edge_effect",
     "userguide": "carbon_edge.html",
     "aliases": ("fc",),
     "ui_spec": {
@@ -126,7 +128,8 @@ MODEL_SPEC = {
             "about": spec_utils.LULC['about'] + " " + gettext(
                 "All values in this raster must "
                 "have corresponding entries in the Biophysical Table."),
-            "projected": True
+            "projected": True,
+            "projection_units": u.meter
         },
         "pools_to_calculate": {
             "type": "option_string",
@@ -178,6 +181,8 @@ MODEL_SPEC = {
                         "Used only for the asymptotic model.")}
             },
             "geometries": spec_utils.POLYGONS,
+            "projected": True,
+            "projection_units": u.meter,
             "required": "compute_forest_edge_effects",
             "allowed": "compute_forest_edge_effects",
             "about": gettext(
@@ -200,13 +205,13 @@ MODEL_SPEC = {
     "outputs": {
         "carbon_map.tif": {
             "about": (
-                "A map of carbon stock per pixel, with the amount in forest derived from the regression based on "
-                "distance to forest edge, and the amount in non-forest classes according to the biophysical table. "
-                "Note that because the map displays carbon per pixel, coarser resolution maps should have higher "
-                "values for carbon, because the pixel areas are larger."),
+                "A map of carbon stock per hectare, with the amount in forest "
+                "derived from the regression based on distance to forest "
+                "edge, and the amount in non-forest classes according to the "
+                "biophysical table. "),
             "bands": {1: {
                 "type": "number",
-                "units": u.metric_ton/u.pixel
+                "units": u.metric_ton/u.hectare
             }}
         },
         "aggregated_carbon_stocks.shp": {
@@ -218,7 +223,7 @@ MODEL_SPEC = {
                     "units": u.metric_ton,
                     "about": "Total carbon in the area."
                 },
-                "c_ha_mean":{
+                "c_ha_mean": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "about": "Mean carbon density in the area."
@@ -264,6 +269,13 @@ MODEL_SPEC = {
                     "bands": {1: {
                         "type": "number", "units": u.metric_ton/u.hectare
                     }}
+                },
+                "regression_model_params_clipped.shp": {
+                    "about": (
+                        "The Global Regression Models shapefile clipped "
+                        "to the study area."),
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
                 }
             }
         },
@@ -422,6 +434,9 @@ def execute(args):
             f'tropical_forest_edge_carbon_stocks{file_suffix}.tif')
         output_file_registry['non_forest_mask'] = os.path.join(
             intermediate_dir, f'non_forest_mask{file_suffix}.tif')
+        output_file_registry['tropical_forest_edge_clipped'] = os.path.join(
+            intermediate_dir,
+            f'regression_model_params_clipped{file_suffix}.shp')
 
     # Map non-forest landcover codes to carbon biomasses
     LOGGER.info('Calculating direct mapped carbon stocks')
@@ -458,15 +473,26 @@ def execute(args):
                               output_file_registry['non_forest_mask']],
             task_name='map_distance_from_forest_edge')
 
+        # Clip global regression model vector to LULC raster bounding box
+        LOGGER.info('Clipping global forest carbon edge regression models vector')
+        clip_forest_edge_carbon_vector_task = task_graph.add_task(
+            func=_clip_global_regression_models_vector,
+            args=(args['lulc_raster_path'],
+                  args['tropical_forest_edge_carbon_model_vector_path'],
+                  output_file_registry['tropical_forest_edge_clipped']),
+            target_path_list=[output_file_registry['tropical_forest_edge_clipped']],
+            task_name='clip_forest_edge_carbon_vector')
+
         # Build spatial index for gridded global model for closest 3 points
         LOGGER.info('Building spatial index for forest edge models.')
         build_spatial_index_task = task_graph.add_task(
             func=_build_spatial_index,
             args=(args['lulc_raster_path'], intermediate_dir,
-                  args['tropical_forest_edge_carbon_model_vector_path'],
+                  output_file_registry['tropical_forest_edge_clipped'],
                   output_file_registry['spatial_index_pickle']),
             target_path_list=[output_file_registry['spatial_index_pickle']],
-            task_name='build_spatial_index')
+            task_name='build_spatial_index',
+            dependent_task_list=[clip_forest_edge_carbon_vector_task])
 
         # calculate the carbon edge effect on forests
         LOGGER.info('Calculating forest edge carbon')
@@ -593,17 +619,24 @@ def _aggregate_carbon_map(
     target_aggregate_layer.ResetReading()
     target_aggregate_layer.StartTransaction()
 
+    # Since pixel values are Mg/ha, raster sum is (Mg•px)/ha.
+    # To convert to Mg, multiply by ha/px.
+    raster_info = pygeoprocessing.get_raster_info(carbon_map_path)
+    pixel_area = abs(numpy.prod(raster_info['pixel_size']))
+    ha_per_px = pixel_area / 10000
+
     for poly_feat in target_aggregate_layer:
         poly_fid = poly_feat.GetFID()
         poly_feat.SetField(
-            'c_sum', float(serviceshed_stats[poly_fid]['sum']))
+            'c_sum', float(serviceshed_stats[poly_fid]['sum'] * ha_per_px))
         # calculates mean pixel value per ha in for each feature in AOI
         poly_geom = poly_feat.GetGeometryRef()
         poly_area_ha = poly_geom.GetArea() / 1e4  # converts m^2 to hectare
         poly_geom = None
         poly_feat.SetField(
             'c_ha_mean',
-            float(serviceshed_stats[poly_fid]['sum'] / poly_area_ha))
+            float(serviceshed_stats[poly_fid]['sum'] / poly_area_ha
+                  * ha_per_px))
 
         target_aggregate_layer.SetFeature(poly_feat)
     target_aggregate_layer.CommitTransaction()
@@ -642,9 +675,6 @@ def _calculate_lulc_carbon_map(
         biophysical_table_path, **MODEL_SPEC['args']['biophysical_table_path'])
 
     lucode_to_per_cell_carbon = {}
-    cell_size = pygeoprocessing.get_raster_info(
-        lulc_raster_path)['pixel_size']  # in meters
-    cell_area_ha = abs(cell_size[0]) * abs(cell_size[1]) / 10000
 
     # Build a lookup table
     for lucode, row in biophysical_df.iterrows():
@@ -661,8 +691,7 @@ def _calculate_lulc_carbon_map(
                     "Could not interpret carbon pool value as a number. "
                     f"lucode: {lucode}, pool_type: {carbon_pool_type}, "
                     f"value: {row[carbon_pool_type]}")
-            lucode_to_per_cell_carbon[lucode] = row[carbon_pool_type] * cell_area_ha
-
+            lucode_to_per_cell_carbon[lucode] = row[carbon_pool_type]
 
     # map aboveground carbon from table to lulc that is not forest
     reclass_error_details = {
@@ -731,7 +760,8 @@ def _map_distance_from_tropical_forest_edge(
     edge_distance_raster = gdal.OpenEx(edge_distance_path, gdal.GA_Update)
     edge_distance_band = edge_distance_raster.GetRasterBand(1)
 
-    for offset_dict in pygeoprocessing.iterblocks((base_lulc_raster_path, 1), offset_only=True):
+    for offset_dict in pygeoprocessing.iterblocks((base_lulc_raster_path, 1),
+            offset_only=True):
         # where LULC has nodata, overwrite edge distance with nodata value
         lulc_block = lulc_band.ReadAsArray(**offset_dict)
         distance_block = edge_distance_band.ReadAsArray(**offset_dict)
@@ -741,6 +771,93 @@ def _map_distance_from_tropical_forest_edge(
             distance_block,
             xoff=offset_dict['xoff'],
             yoff=offset_dict['yoff'])
+
+
+def _clip_global_regression_models_vector(
+        lulc_raster_path, source_vector_path, target_vector_path):
+    """Clip the global carbon edge model shapefile
+
+    Clip the shapefile containing the global carbon edge model parameters
+    to the bounding box of the LULC raster (representing the target study area)
+    plus a buffer to account for the kd-tree lookup DISTANCE_UPPER_BOUND
+
+    Args:
+        lulc_raster_path (string): path to a raster that is used to define the
+            bounding box to use for clipping.
+        source_vector_path (string): a path to an OGR shapefile to be clipped.
+        target_vector_path (string): a path to an OGR shapefile to store the
+            clipped vector.
+
+    Returns:
+        None
+
+    """
+    raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
+    vector_info = pygeoprocessing.get_vector_info(source_vector_path)
+
+    bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = raster_info['bounding_box']
+    buffered_bb = [
+        bbox_minx - DISTANCE_UPPER_BOUND,
+        bbox_miny - DISTANCE_UPPER_BOUND,
+        bbox_maxx + DISTANCE_UPPER_BOUND,
+        bbox_maxy + DISTANCE_UPPER_BOUND,
+    ]
+
+    # Reproject the LULC bounding box to the vector's projection for clipping
+    mask_bb = pygeoprocessing.transform_bounding_box(buffered_bb,
+        raster_info['projection_wkt'], vector_info['projection_wkt'])
+    shapely_mask = shapely.prepared.prep(shapely.geometry.box(*mask_bb))
+
+    base_vector = gdal.OpenEx(source_vector_path, gdal.OF_VECTOR)
+    base_layer = base_vector.GetLayer()
+    base_layer_defn = base_layer.GetLayerDefn()
+    base_geom_type = base_layer.GetGeomType()
+
+    target_driver = gdal.GetDriverByName('ESRI Shapefile')
+    target_vector = target_driver.Create(
+        target_vector_path, 0, 0, 0, gdal.GDT_Unknown)
+    target_layer = target_vector.CreateLayer(
+        base_layer_defn.GetName(), base_layer.GetSpatialRef(), base_geom_type)
+    target_layer.CreateFields(base_layer.schema)
+
+    target_layer.StartTransaction()
+    invalid_feature_count = 0
+    for feature in base_layer:
+        invalid = False
+        geometry = feature.GetGeometryRef()
+        try:
+            shapely_geom = shapely.wkb.loads(bytes(geometry.ExportToWkb()))
+        # Catch invalid geometries that cannot be loaded by Shapely;
+        # e.g. polygons with too few points for their type
+        except shapely.errors.ShapelyError:
+            invalid = True
+        else:
+            if shapely_geom.is_valid:
+                # Check for intersection rather than use gdal.Layer.Clip()
+                # to preserve the shape of the polygons (we use the centroid
+                # when constructing the kd-tree)
+                if shapely_mask.intersects(shapely_geom):
+                    new_feature = ogr.Feature(target_layer.GetLayerDefn())
+                    new_feature.SetGeometry(ogr.CreateGeometryFromWkb(
+                        shapely_geom.wkb))
+                    for field_name, field_value in feature.items().items():
+                        new_feature.SetField(field_name, field_value)
+                    target_layer.CreateFeature(new_feature)
+            else:
+                invalid = True
+        finally:
+            if invalid:
+                invalid_feature_count += 1
+                LOGGER.warning(
+                    f"The geometry at feature {feature.GetFID()} is invalid "
+                    "and will be skipped.")
+
+    target_layer.CommitTransaction()
+
+    if invalid_feature_count:
+        LOGGER.warning(
+            f"{invalid_feature_count} features in {source_vector_path} "
+            "were found to be invalid during clipping and were skipped.")
 
 
 def _build_spatial_index(
@@ -780,10 +897,9 @@ def _build_spatial_index(
     lulc_projection_wkt = pygeoprocessing.get_raster_info(
         base_raster_path)['projection_wkt']
 
-    with utils._set_gdal_configuration('OGR_ENABLE_PARTIAL_REPROJECTION', 'TRUE'):
-        pygeoprocessing.reproject_vector(
-            tropical_forest_edge_carbon_model_vector_path, lulc_projection_wkt,
-            carbon_model_reproject_path)
+    pygeoprocessing.reproject_vector(
+        tropical_forest_edge_carbon_model_vector_path, lulc_projection_wkt,
+        carbon_model_reproject_path)
 
     model_vector = gdal.OpenEx(carbon_model_reproject_path)
     model_layer = model_vector.GetLayer()
@@ -795,17 +911,14 @@ def _build_spatial_index(
     # put all the polygons in the kd_tree because it's fast and simple
     for poly_feature in model_layer:
         poly_geom = poly_feature.GetGeometryRef()
-        if poly_geom.IsValid():
-            poly_centroid = poly_geom.Centroid()
-            # put in row/col order since rasters are row/col indexed
-            kd_points.append([poly_centroid.GetY(), poly_centroid.GetX()])
+        poly_centroid = poly_geom.Centroid()
+        # put in row/col order since rasters are row/col indexed
+        kd_points.append([poly_centroid.GetY(), poly_centroid.GetX()])
 
-            theta_model_parameters.append([
-                poly_feature.GetField(feature_id) for feature_id in
-                ['theta1', 'theta2', 'theta3']])
-            method_model_parameter.append(poly_feature.GetField('method'))
-        else:
-            LOGGER.warning(f'skipping invalid geometry {poly_geom}')
+        theta_model_parameters.append([
+            poly_feature.GetField(feature_id) for feature_id in
+            ['theta1', 'theta2', 'theta3']])
+        method_model_parameter.append(poly_feature.GetField('method'))
 
     method_model_parameter = numpy.array(
         method_model_parameter, dtype=numpy.int32)
@@ -886,7 +999,6 @@ def _calculate_tropical_forest_edge_carbon_map(
     cell_xsize, cell_ysize = pygeoprocessing.get_raster_info(
         edge_distance_path)['pixel_size']
     cell_size_km = (abs(cell_xsize) + abs(cell_ysize))/2 / 1000
-    cell_area_ha = (abs(cell_xsize) * abs(cell_ysize)) / 10000
 
     # Loop memory block by memory block, calculating the forest edge carbon
     # for every forest pixel.
@@ -970,19 +1082,19 @@ def _calculate_tropical_forest_edge_carbon_map(
         biomass[mask_1] = (
             thetas[mask_1][:, 0] - thetas[mask_1][:, 1] * numpy.exp(
                 -thetas[mask_1][:, 2] * valid_edge_distances_km[mask_1])
-        ) * cell_area_ha
+        )
 
         # logarithmic model
         # biomass_2 = t1 + t2 * numpy.log(edge_dist_km)
         biomass[mask_2] = (
             thetas[mask_2][:, 0] + thetas[mask_2][:, 1] * numpy.log(
-                valid_edge_distances_km[mask_2])) * cell_area_ha
+                valid_edge_distances_km[mask_2]))
 
         # linear regression
         # biomass_3 = t1 + t2 * edge_dist_km
         biomass[mask_3] = (
             thetas[mask_3][:, 0] + thetas[mask_3][:, 1] *
-            valid_edge_distances_km[mask_3]) * cell_area_ha
+            valid_edge_distances_km[mask_3])
 
         # reshape the array so that each set of points is in a separate
         # dimension, here distances are distances to each valid model

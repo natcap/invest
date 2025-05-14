@@ -24,6 +24,7 @@ export default function PluginModal(props) {
   const [installLoading, setInstallLoading] = useState(false);
   const [uninstallLoading, setUninstallLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [needsMSVC, setNeedsMSVC] = useState(false);
   const [plugins, setPlugins] = useState({});
   const [installFrom, setInstallFrom] = useState('url');
 
@@ -34,7 +35,14 @@ export default function PluginModal(props) {
     setUninstallErr('');
     setShowPluginModal(false);
   };
-  const handleModalOpen = () => setShowPluginModal(true);
+  const handleModalOpen = () => {
+    if (window.Workbench.OS === 'win32') {
+      ipcRenderer.invoke(ipcMainChannels.HAS_MSVC).then((hasMSVC) => {
+        setNeedsMSVC(!hasMSVC);
+      });
+    }
+    setShowPluginModal(true);
+  };
 
   const addPlugin = () => {
     setInstallLoading(true);
@@ -74,6 +82,13 @@ export default function PluginModal(props) {
       }
     });
   };
+
+  const downloadMSVC = () => {
+    setShowPluginModal(false);
+    ipcRenderer.invoke(ipcMainChannels.DOWNLOAD_MSVC).then(
+      () => { handleModalOpen(); }
+    );
+  }
 
   useEffect(() => {
     ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins').then(
@@ -243,6 +258,28 @@ export default function PluginModal(props) {
           )}
         >
           {t('Find workbench logs')}
+        </Button>
+      </Modal.Body>
+    );
+  }
+  if (needsMSVC) {
+    modalBody = (
+      <Modal.Body>
+        <h5>
+          {t('Microsoft Visual C++ Redistributable must be installed!')}
+        </h5>
+
+        {t('Plugin features require the ')}
+        <a href="https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist">
+          {t('Microsoft Visual C++ Redistributable')}
+        </a>
+        {t('. You must download and install the redistributable before continuing.')}
+
+        <Button
+          className="mt-3"
+          onClick={downloadMSVC}
+        >
+          {t('Continue to download and install')}
         </Button>
       </Modal.Body>
     );

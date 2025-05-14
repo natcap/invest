@@ -6,27 +6,37 @@ import tempfile
 import unittest
 
 import numpy
+import pandas
 import pygeoprocessing
-from osgeo import gdal
+from osgeo import gdal, gdal_array
 from osgeo import ogr
 from osgeo import osr
 from shapely.geometry import Polygon
 
 gdal.UseExceptions()
 
+
 def make_raster_from_array(
-        base_array, base_raster_path, nodata_val=-1, gdal_type=gdal.GDT_Int32):
+        base_array, base_raster_path, nodata_val=-1, gdal_type=None,
+        pixel_size=1):
     """Make a raster from an array on a designated path.
 
     Args:
         base_array (numpy.ndarray): the 2D array for making the raster.
+        base_raster_path (str): the path for the raster to be created.
         nodata_val (int; float): nodata value for the raster.
         gdal_type (gdal datatype; int): gdal datatype for the raster.
-        base_raster_path (str): the path for the raster to be created.
+        pixel_size (int): pixel size for the raster.
 
     Returns:
         None.
     """
+    if gdal_type is None:
+        numpy_dtype = base_array.dtype
+    else:
+        numpy_dtype = gdal_array.GDALTypeCodeToNumericTypeCode(gdal_type)
+    base_array = base_array.astype(numpy_dtype)
+
     # Projection to user for generated sample data UTM Zone 10N
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(26910)
@@ -34,7 +44,8 @@ def make_raster_from_array(
     origin = (1180000, 690000)
 
     pygeoprocessing.numpy_array_to_raster(
-        base_array, nodata_val, (1, -1), origin, project_wkt, base_raster_path)
+        base_array, nodata_val, (pixel_size, -pixel_size),
+        origin, project_wkt, base_raster_path)
 
 
 def make_access_shp(access_shp_path):
@@ -133,14 +144,14 @@ def make_sensitivity_samp_csv(
     """
     if include_threat:
         with open(csv_path, 'w') as open_table:
-            open_table.write('LULC,NAME,HABITAT,threat_1,threat_2\n')
+            open_table.write('lucode,name,habitat,threat_1,threat_2\n')
             open_table.write('1,"lulc 1",1,1,1\n')
             if not missing_lines:
                 open_table.write('2,"lulc 2",0.5,0.5,1\n')
                 open_table.write('3,"lulc 3",0,0.3,1\n')
     else:
         with open(csv_path, 'w') as open_table:
-            open_table.write('LULC,NAME,HABITAT\n')
+            open_table.write('lucode,name,habitat\n')
             open_table.write('1,"lulc 1",1\n')
             if not missing_lines:
                 open_table.write('2,"lulc 2",0.5\n')
@@ -225,9 +236,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -266,11 +277,11 @@ class HabitatQualityTests(unittest.TestCase):
             with open(csv_path, newline='') as csvfile:
                 reader = csv.DictReader(csvfile, delimiter=',')
                 self.assertEqual(reader.fieldnames,
-                                 ['lulc_code', 'rarity_value'])
+                                 ['lucode', 'rarity_value'])
                 for (exp_lulc, exp_rarity,
                      places_to_round) in expected_csv_values[csv_filename]:
                     row = next(reader)
-                    self.assertEqual(int(row['lulc_code']), exp_lulc)
+                    self.assertEqual(int(row['lucode']), exp_lulc)
                     self.assertAlmostEqual(float(row['rarity_value']),
                                            exp_rarity, places_to_round)
 
@@ -333,9 +344,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_reprojected_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_reprojected_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -394,9 +405,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -456,9 +467,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -516,9 +527,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -570,9 +581,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,%s,linear,,1111_c.tif,1111_f.tif\n' % threatnames[0])
+                '40,0.7,%s,linear,,1111_c.tif,1111_f.tif\n' % threatnames[0])
             open_table.write(
-                '0.07,1.0,%s,exponential,,2222_c.tif,2222_f.tif\n'
+                '70,1.0,%s,exponential,,2222_c.tif,2222_f.tif\n'
                 % threatnames[1])
 
         args = {
@@ -599,7 +610,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         with open(args['sensitivity_table_path'], 'w') as open_table:
             open_table.write(
-                'LULC,NAME,HABITAT,%s,%s\n' % tuple(threatnames))
+                'lucode,name,habitat,%s,%s\n' % tuple(threatnames))
             open_table.write('1,"lulc 1",1,1,1\n')
             open_table.write('2,"lulc 2",0.5,0.5,1\n')
             open_table.write('3,"lulc 3",0,0.3,1\n')
@@ -654,9 +665,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(KeyError):
@@ -698,7 +709,7 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.07,0.8,missing_threat,linear,,missing_threat_c.tif,'
+                '70,0.8,missing_threat,linear,,missing_threat_c.tif,'
                 'missing_threat_f.tif\n')
 
         with self.assertRaises(ValueError):
@@ -744,9 +755,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError):
@@ -792,7 +803,7 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 '0.0,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -837,7 +848,7 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,invalid,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,invalid,,threat_1_c.tif,threat_1_f.tif\n')
 
         with self.assertRaises(ValueError):
             habitat_quality.execute(args)
@@ -881,9 +892,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         try:
@@ -932,9 +943,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif\n')
+                '70,1.0,threat_2,exponential,,threat_2_c.tif\n')
 
         try:
             habitat_quality.execute(args)
@@ -976,9 +987,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1020,9 +1031,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -1046,7 +1057,7 @@ class HabitatQualityTests(unittest.TestCase):
             args['workspace_dir'], 'sensitivity_samp.csv')
 
         with open(args['sensitivity_table_path'], 'w') as open_table:
-            open_table.write('Lulc,Name,habitat,Threat_1,THREAT_2\n')
+            open_table.write('LuCode,Name,habitat,Threat_1,THREAT_2\n')
             open_table.write('1,"lulc 1",1,1,1\n')
             open_table.write('2,"lulc 2",0.5,0.5,1\n')
             open_table.write('3,"lulc 3",0,0.3,1\n')
@@ -1068,9 +1079,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'Max_Dist,Weight,threat,Decay,BASE_PATH,cur_PATH,fut_path\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -1113,9 +1124,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         habitat_quality.execute(args)
@@ -1179,9 +1190,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1251,9 +1262,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1301,9 +1312,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         args['lulc_cur_path'], args['access_vector_path'] = (
@@ -1359,9 +1370,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_3,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_3,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         # At least one threat header is expected, so there should be a message
@@ -1371,6 +1382,159 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertTrue(utils.matches_format_string(
             validate_result[0][1],
             habitat_quality.MISSING_SENSITIVITY_TABLE_THREATS_MSG))
+
+    def test_habitat_quality_validation_invalid_max_dist(self):
+        """Habitat Quality: test validation for max_dist <= 0."""
+        from natcap.invest import habitat_quality
+        from natcap.invest import utils
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'])
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        # create the threat CSV table
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                'threat_2_f.tif\n')
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.assertEqual(len(validate_result), 1)
+        self.assertEqual(validate_result[0][0], ['threats_table_path'])
+        self.assertTrue(utils.matches_format_string(
+            validate_result[0][1],
+            habitat_quality.INVALID_MAX_DIST_MSG))
+
+    def test_habitat_quality_validation_missing_max_dist(self):
+        """Habitat Quality: test validation for missing max_dist."""
+        from natcap.invest import habitat_quality
+        from natcap.invest import utils
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'])
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        # create the threat CSV table
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                ',0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                'threat_2_f.tif\n')
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.assertEqual(len(validate_result), 1)
+        self.assertEqual(validate_result[0][0], ['threats_table_path'])
+        self.assertTrue(utils.matches_format_string(
+            validate_result[0][1],
+            habitat_quality.MISSING_MAX_DIST_MSG))
+
+    def test_habitat_quality_validation_missing_weight(self):
+        """Habitat Quality: test validation for missing weight."""
+        from natcap.invest import habitat_quality
+        from natcap.invest import utils
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        args['access_vector_path'] = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(args['workspace_dir'])
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        # create the threat CSV table
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.04,,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                'threat_2_f.tif\n')
+
+        validate_result = habitat_quality.validate(args, limit_to=None)
+        self.assertEqual(len(validate_result), 1)
+        self.assertEqual(validate_result[0][0], ['threats_table_path'])
+        self.assertTrue(utils.matches_format_string(
+            validate_result[0][1],
+            habitat_quality.MISSING_WEIGHT_MSG))
 
     def test_habitat_quality_validation_bad_threat_path(self):
         """Habitat Quality: test validation for bad threat paths."""
@@ -1410,9 +1574,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1460,9 +1624,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1513,9 +1677,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1566,9 +1730,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_cur.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1616,9 +1780,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1669,9 +1833,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1735,9 +1899,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_c.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -1800,9 +1964,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_c.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(ValueError) as cm:
@@ -1890,9 +2054,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args)
@@ -1969,9 +2133,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args)
@@ -2018,9 +2182,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,threat_1_cur.tif,threat_1_c.tif\n')
+                '40,0.7,threat_1,threat_1_cur.tif,threat_1_c.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,threat_2_c.tif,threat_2_f.tif\n')
+                '70,1.0,threat_2,threat_2_c.tif,threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
@@ -2069,9 +2233,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
@@ -2122,9 +2286,9 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif')
+                '70,1.0,threat_2,exponential,,threat_2_c.tif')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
@@ -2135,7 +2299,7 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_missing_lulc_val_in_sens_table(self):
-        """Habitat Quality: test for empty value in LULC column of
+        """Habitat Quality: test for empty value in lucode column of
         sensitivity table. Expects TypeError"""
         from natcap.invest import habitat_quality
 
@@ -2154,9 +2318,9 @@ class HabitatQualityTests(unittest.TestCase):
         args['sensitivity_table_path'] = os.path.join(
             args['workspace_dir'], 'sensitivity_samp.csv')
         with open(args['sensitivity_table_path'], 'w') as open_table:
-            open_table.write('LULC,NAME,HABITAT,threat_1,threat_2\n')
+            open_table.write('lucode,name,habitat,threat_1,threat_2\n')
             open_table.write('1,"lulc 1",1,1,1\n')
-            open_table.write(',"lulc 2",0.5,0.5,1\n')  # missing LULC value
+            open_table.write(',"lulc 2",0.5,0.5,1\n')  # missing lucode value
             open_table.write('3,"lulc 3",0,0.3,1\n')
 
         make_threats_raster(
@@ -2171,10 +2335,70 @@ class HabitatQualityTests(unittest.TestCase):
             open_table.write(
                 'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
             open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
+                '40,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
             open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
         with self.assertRaises(TypeError):
             habitat_quality.execute(args)
+
+    def test_compute_rarity_operation(self):
+        """Test `_compute_rarity_operation`"""
+        from natcap.invest.habitat_quality import _compute_rarity_operation
+
+        base_lulc_path_band = (os.path.join(self.workspace_dir, "base_lulc.tif"), 1)
+        lulc_path_band = (os.path.join(self.workspace_dir, "fut_lulc.tif"), 1)
+        new_cover_path = (os.path.join(self.workspace_dir, "new_cover.tif"), 1)
+        rarity_raster_path = os.path.join(self.workspace_dir, "out_rarity.tif")
+        rarity_csv_path = os.path.join(self.workspace_dir, "out_rarity.csv")
+
+        lulc_array = numpy.array([[1, 3, 1, 4], [1, 3, 3, 3]])
+        fut_array = numpy.array([[2, 1, 3, 3], [1, 3, 4, 4]])
+        make_raster_from_array(lulc_array, base_lulc_path_band[0])
+        make_raster_from_array(fut_array, lulc_path_band[0], pixel_size=2)
+
+        _compute_rarity_operation(
+            base_lulc_path_band, lulc_path_band, new_cover_path,
+            rarity_raster_path, rarity_csv_path)
+
+        actual_rarity = pandas.read_csv(rarity_csv_path)['rarity_value']
+        expected_rarity = [0.27272727, 0, 0.25, 0.1111111111]
+        numpy.testing.assert_allclose(actual_rarity, expected_rarity)
+
+    def test_raster_values_in_bounds(self):
+        """Test `_raster_values_in_bounds`"""
+        from natcap.invest.habitat_quality import _raster_values_in_bounds
+
+        raster_path_band = (os.path.join(self.workspace_dir, "ras.tif"), 1)
+        lower_bound = 1
+        upper_bound = 50
+
+        # create array with a value (0) outside of range(lower, upper)
+        array = numpy.array([[1, 0], [50, 4]])
+
+        make_raster_from_array(array, raster_path_band[0])
+
+        values_valid = _raster_values_in_bounds(
+            raster_path_band, lower_bound, upper_bound)
+
+        self.assertFalse(values_valid)
+
+    def test_decay_distance(self):
+        """Test `_decay_distance`"""
+        from natcap.invest.habitat_quality import _decay_distance
+
+        dist_raster_path = os.path.join(self.workspace_dir, "dist.tif")
+        max_dist = 20
+        decay_type = 'linear'
+        target_path = os.path.join(self.workspace_dir, "output.tif")
+
+        dist_array = numpy.array([[0, 21, 1], [2, 50, 600]], dtype=float)
+        make_raster_from_array(dist_array, dist_raster_path)
+
+        _decay_distance(dist_raster_path, max_dist, decay_type, target_path)
+
+        actual_output = pygeoprocessing.raster_to_numpy_array(target_path)
+        expected_output = numpy.array([[1.0, 0.0, 0.95],
+                                       [0.9, 0.0, 0.0]])
+        numpy.testing.assert_allclose(actual_output, expected_output)

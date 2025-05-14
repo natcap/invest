@@ -805,14 +805,23 @@ def check_spatial_overlap(spatial_filepaths_list,
             return MESSAGES['NO_PROJECTION'].format(filepath=filepath)
 
         if different_projections_ok:
-            bounding_box = pygeoprocessing.transform_bounding_box(
-                info['bounding_box'], info['projection_wkt'], wgs84_wkt)
+            try:
+                bounding_box = pygeoprocessing.transform_bounding_box(
+                    info['bounding_box'], info['projection_wkt'], wgs84_wkt)
+            except (ValueError, RuntimeError) as err:
+                LOGGER.debug(err)
+                LOGGER.warning(
+                    f'Skipping spatial overlap check for {filepath}. '
+                    'Bounding box cannot be transformed to EPSG:4326')
+                continue
+
         else:
             bounding_box = info['bounding_box']
 
         if all([numpy.isinf(coord) for coord in bounding_box]):
             LOGGER.warning(
-                'Skipping infinite bounding box for file %s', filepath)
+                f'Skipping spatial overlap check for {filepath} '
+                f'because of infinite bounding box {bounding_box}')
             continue
 
         bounding_boxes.append(bounding_box)

@@ -274,18 +274,28 @@ class SetupTab extends React.Component {
     try {
       if (filepath.endsWith('gz')) { // .tar.gz, .tgz
         const extractLocation = await ipcRenderer.invoke(
-          ipcMainChannels.SHOW_SAVE_DIALOG,
-          { title: t('Choose location to extract archive') }
+          ipcMainChannels.SHOW_OPEN_DIALOG,
+          {
+            title: t('Choose location to extract archive'),
+            properties: ['openDirectory'],
+          }
         );
-        if (extractLocation.filePath) {
-          datastack = await fetchDatastackFromFile({
-            model_id: modelID,
-            filepath: filepath,
-            extractPath: extractLocation.filePath,
-          });
-        } else {
-          return;
-        }
+        if (extractLocation.filePaths.length) {
+          const directoryPath = extractLocation.filePaths[0];
+          const writable = await ipcRenderer.invoke(
+            ipcMainChannels.CHECK_FILE_PERMISSIONS, directoryPath);
+          if (writable) {
+            datastack = await fetchDatastackFromFile({
+              model_id: modelID,
+              filepath: filepath,
+              extractPath: directoryPath,
+            });
+          } else {
+            alert( // eslint-disable-line no-alert
+              `${t('Permission denied extracting files to:')}\n${directoryPath}`
+            );
+          }
+        } else { return; } // dialog closed without selection
       } else {
         datastack = await fetchDatastackFromFile(
           { model_id: modelID, filepath: filepath }
@@ -349,6 +359,7 @@ class SetupTab extends React.Component {
    * Updating means:
    * 1) setting the value
    * 2) toggling the enabled/disabled/hidden state of any dependent args
+   * 3) clearing job status in case args are being updated after the model has been run.
    *
    * @param {string} key - the invest argument key
    * @param {string} value - the invest argument value
@@ -361,6 +372,9 @@ class SetupTab extends React.Component {
     this.setState({
       argsValues: argsValues,
     }, () => {
+      this.props.updateJobProperties(this.props.tabID, {
+        status: undefined,  // Clear job status to hide model status indicator.
+      });
       this.debouncedValidate();
       this.debouncedArgsEnabled();
       if (uiSpec.dropdown_functions) {
@@ -677,4 +691,6 @@ SetupTab.propTypes = {
     type: PropTypes.string,
   }).isRequired,
   t: PropTypes.func.isRequired,
+  tabID: PropTypes.string.isRequired,
+  updateJobProperties: PropTypes.func.isRequired,
 };
