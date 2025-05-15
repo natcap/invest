@@ -379,14 +379,14 @@ MODEL_SPEC = {
                     "about": "Above ground nitrogen loads",
                     "bands": {1: {
                         "type": "number",
-                        "units": u.kilogram/u.year
+                        "units": u.kilogram/u.hectare/u.year,
                     }}
                 },
                 "surface_load_p.tif": {
                     "about": "Above ground phosphorus loads",
                     "bands": {1: {
                         "type": "number",
-                        "units": u.kilogram/u.year
+                        "units": u.kilogram/u.hectare/u.year,
                     }}
                 },
                 "thresholded_slope.tif": {
@@ -1359,30 +1359,36 @@ def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
 
     """
 
-    # load values are expected to be in units of u.kilogram/u.hectare/u.year
-    # but for _map_surface_load we expect them to be in kg/pixel. 
-    # So, convert to per pixel output.
-    cell_area_ha = abs(numpy.prod(pygeoprocessing.get_raster_info(
-        lulc_raster_path)['pixel_size'])) * 0.0001
     # restructure the lookup dict to easier access load, eff, and type
     # {lucode: [load, eff, type], ... }
-    lucode_to_values = {key: list(value.values()) for key, value in lucode_to_load.items()}
+    load_types = ['measured-runoff', 'application-rate']
     load_index = 0
     eff_index = 1
     type_index = 2
+    lucode_to_values = {}
+
+    for key, value in lucode_to_load.items():
+        value_list = list(value.values())
+        if not value_list[type_index] in load_types:
+            # unknown load type, raise ValueError
+            raise ValueError(
+                f'nutrient load type must be of "{load_types}". Instead,'
+                f' found value of: "{value_list[type_index]}".')
+        else:
+            lucode_to_values[key] = value_list
 
     def _map_load_op(lucode_array):
         """Convert unit load to total load & handle nodata."""
         result = numpy.empty(lucode_array.shape)
         for lucode in numpy.unique(lucode_array):
             try:
-                if lucode_to_values[lucode][type_index] == 'measured-runoff':
+                if lucode_to_values[lucode][type_index] == load_types[0]:
                     result[lucode_array == lucode] = (
-                        lucode_to_values[lucode][load_index] * cell_area_ha)
-                elif lucode_to_values[lucode][type_index] == 'application-rate':
+                        lucode_to_values[lucode][load_index])
+                elif lucode_to_values[lucode][type_index] == load_types[1]:
                     result[lucode_array == lucode] = (
                         lucode_to_values[lucode][load_index] * (
-                            1 - lucode_to_values[lucode][eff_index]) * cell_area_ha)
+                            1 - lucode_to_values[lucode][eff_index]))
             except KeyError:
                 raise KeyError(
                     'lucode: %d is present in the landuse raster but '
@@ -1403,8 +1409,7 @@ def _map_surface_load(
     """Calculate surface load from landcover raster.
 
     Args:
-        modified_load_path (string): path to modified load raster with units
-            of kg/pixel.
+        modified_load_path (string): path to modified load raster.
         lulc_raster_path (string): path to landcover raster.
         lucode_to_subsurface_proportion (dict): maps landcover codes to
             subsurface proportion values. Or if None, no subsurface transfer
