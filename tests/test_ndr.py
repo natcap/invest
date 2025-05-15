@@ -537,3 +537,56 @@ class NDRTests(unittest.TestCase):
         expected_rpi = runoff_proxy_array/numpy.mean(runoff_proxy_array)
 
         numpy.testing.assert_allclose(actual_rpi, expected_rpi)
+    
+    def test_calculate_load_type(self):
+        """Test _calculate_load for both nut_load_types."""
+        from natcap.invest.ndr import ndr
+
+        # make simple lulc raster
+        lulc_path = os.path.join(self.workspace_dir, "lulc-load-type.tif")
+        lulc_array = numpy.array(
+            [[1, 2, 3, 4], [4, 3, 2, 1]], dtype=numpy.int16)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        projection_wkt = srs.ExportToWkt()
+        origin = (461251, 4923445)
+        pixel_size = (30, -30)
+        no_data = -1
+        pygeoprocessing.numpy_array_to_raster(
+            lulc_array, no_data, pixel_size, origin, projection_wkt,
+            lulc_path)
+
+        target_load_path = os.path.join(self.workspace_dir, "load_raster.tif")
+
+        # Calculate load
+        lucode_to_params = {
+            1: {'load_n': 10.0, 'eff_n': 0.5, 'nut_load_type': 'measured-runoff'},
+            2: {'load_n': 20.0, 'eff_n': 0.5, 'nut_load_type': 'measured-runoff'},
+            3: {'load_n': 10.0, 'eff_n': 0.5, 'nut_load_type': 'application-rate'},
+            4: {'load_n': 20.0, 'eff_n': 0.5, 'nut_load_type': 'application-rate'}}
+        ndr._calculate_load(lulc_path, lucode_to_params, target_load_path)
+
+        expected_results = numpy.array(
+            [[10.0, 20.0, 5.0, 10.0], [10.0, 5.0, 20.0, 10.0]])
+        actual_results = pygeoprocessing.raster_to_numpy_array(target_load_path)
+
+        numpy.testing.assert_allclose(actual_results, expected_results)
+    
+    def test_calculate_load_type_raises_error(self):
+        """Test _calculate_load raises ValueError on bad nut_load_types."""
+        from natcap.invest.ndr import ndr
+
+        lulc_path = os.path.join(self.workspace_dir, "lulc-load-type.tif")
+        target_load_path = os.path.join(self.workspace_dir, "load_raster.tif")
+
+        # Calculate load
+        lucode_to_params = {
+            1: {'load_n': 10.0, 'eff_n': 0.5, 'nut_load_type': 'measured-runoff'},
+            2: {'load_n': 20.0, 'eff_n': 0.5, 'nut_load_type': 'cheese'},
+            3: {'load_n': 10.0, 'eff_n': 0.5, 'nut_load_type': 'application-rate'},
+            4: {'load_n': 20.0, 'eff_n': 0.5, 'nut_load_type': 'application-rate'}}
+
+        with self.assertRaises(ValueError) as cm:
+            ndr._calculate_load(lulc_path, lucode_to_params, target_load_path)
+        actual_message = str(cm.exception)
+        self.assertTrue('found value of: "cheese"' in actual_message)
