@@ -11,9 +11,9 @@ import Modal from 'react-bootstrap/Modal';
 import {
   getGeoMetaMakerProfile,
   setGeoMetaMakerProfile,
-} from '../../../server_requests';
+} from '../../server_requests';
 
-import { openLinkInBrowser } from '../../../utils';
+import { openLinkInBrowser } from '../../utils';
 
 function AboutMetadataDiv() {
   const { t } = useTranslation();
@@ -68,9 +68,9 @@ function FormRow(label, value, handler) {
 }
 
 /**
- * A form for submitting GeoMetaMaker profile data.
+ * A Modal with form for submitting GeoMetaMaker profile data.
  */
-export default function MetadataForm(props) {
+export default function MetadataModal(props) {
   const { t } = useTranslation();
 
   const [contactName, setContactName] = useState('');
@@ -81,7 +81,6 @@ export default function MetadataForm(props) {
   const [licenseURL, setLicenseURL] = useState('');
   const [alertMsg, setAlertMsg] = useState('');
   const [alertError, setAlertError] = useState(false);
-  const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {

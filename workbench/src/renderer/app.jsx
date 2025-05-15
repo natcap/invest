@@ -24,7 +24,7 @@ import SettingsModal from './components/SettingsModal';
 import DataDownloadModal from './components/DataDownloadModal';
 import DownloadProgressBar from './components/DownloadProgressBar';
 import PluginModal from './components/PluginModal';
-import MetadataModal from './components/SettingsModal/MetadataForm';
+import MetadataModal from './components/MetadataModal';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 import { ipcMainChannels } from '../main/ipcMainChannels';
