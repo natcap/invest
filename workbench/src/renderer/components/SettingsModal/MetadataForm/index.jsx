@@ -6,6 +6,7 @@ import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+import Modal from 'react-bootstrap/Modal';
 
 import {
   getGeoMetaMakerProfile,
@@ -69,7 +70,7 @@ function FormRow(label, value, handler) {
 /**
  * A form for submitting GeoMetaMaker profile data.
  */
-export default function MetadataForm() {
+export default function MetadataForm(props) {
   const { t } = useTranslation();
 
   const [contactName, setContactName] = useState('');
@@ -127,65 +128,66 @@ export default function MetadataForm() {
   };
 
   return (
-    <div id="metadata-form">
-      {
-        (showInfo)
-          ? <AboutMetadataDiv />
-          : (
-            <Form onSubmit={handleSubmit} onChange={handleChange}>
-              <fieldset>
-                <legend>{t('Contact Information')}</legend>
-                <Form.Group controlId="name">
-                  {FormRow(t('Full name'), contactName, setContactName)}
-                </Form.Group>
-                <Form.Group controlId="email">
-                  {FormRow(t('Email address'), contactEmail, setContactEmail)}
-                </Form.Group>
-                <Form.Group controlId="job-title">
-                  {FormRow(t('Job title'), contactPosition, setContactPosition)}
-                </Form.Group>
-                <Form.Group controlId="organization">
-                  {FormRow(t('Organization name'), contactOrg, setContactOrg)}
-                </Form.Group>
-              </fieldset>
-              <fieldset>
-                <legend>{t('Data License Information')}</legend>
-                <Form.Group controlId="license-title">
-                  {FormRow(t('Title'), licenseTitle, setLicenseTitle)}
-                </Form.Group>
-                <Form.Group controlId="license-url">
-                  {FormRow('URL', licenseURL, setLicenseURL)}
-                </Form.Group>
-              </fieldset>
-              <Form.Row>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="my-1 py2 mx-2"
+    <Modal
+      show={props.show}
+      onHide={props.close}
+      size="lg"
+      aria-labelledby="metadata-modal-title"
+    >
+      <Modal.Header>
+        <Modal.Title id="metadata-modal-title">
+          {t('Configure Metadata')}
+        </Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <AboutMetadataDiv />
+        <hr />
+        <Form onSubmit={handleSubmit} onChange={handleChange}>
+          <fieldset>
+            <legend>{t('Contact Information')}</legend>
+            <Form.Group controlId="name">
+              {FormRow(t('Full name'), contactName, setContactName)}
+            </Form.Group>
+            <Form.Group controlId="email">
+              {FormRow(t('Email address'), contactEmail, setContactEmail)}
+            </Form.Group>
+            <Form.Group controlId="job-title">
+              {FormRow(t('Job title'), contactPosition, setContactPosition)}
+            </Form.Group>
+            <Form.Group controlId="organization">
+              {FormRow(t('Organization name'), contactOrg, setContactOrg)}
+            </Form.Group>
+          </fieldset>
+          <fieldset>
+            <legend>{t('Data License Information')}</legend>
+            <Form.Group controlId="license-title">
+              {FormRow(t('Title'), licenseTitle, setLicenseTitle)}
+            </Form.Group>
+            <Form.Group controlId="license-url">
+              {FormRow('URL', licenseURL, setLicenseURL)}
+            </Form.Group>
+          </fieldset>
+          <Form.Row>
+            <Button
+              type="submit"
+              variant="primary"
+              className="my-1 py2 mx-2"
+            >
+              {t('Save Metadata')}
+            </Button>
+            {
+              (alertMsg) && (
+                <Alert
+                  className="my-1 py-2"
+                  variant={alertError ? 'danger' : 'success'}
                 >
-                  {t('Save Metadata')}
-                </Button>
-                {
-                  (alertMsg) && (
-                    <Alert
-                      className="my-1 py-2"
-                      variant={alertError ? 'danger' : 'success'}
-                    >
-                      {alertMsg}
-                    </Alert>
-                  )
-                }
-              </Form.Row>
-            </Form>
-          )
-      }
-      <Button
-        variant="outline-secondary"
-        className="my-1 py-2 mx-2 info-toggle"
-        onClick={() => setShowInfo((prevState) => !prevState)}
-      >
-        {showInfo ? t('Hide Info') : t('More Info')}
-      </Button>
-    </div>
+                  {alertMsg}
+                </Alert>
+              )
+            }
+          </Form.Row>
+        </Form>
+      </Modal.Body>
+    </Modal>
   );
 }

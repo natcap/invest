@@ -8,7 +8,6 @@ import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import {
-  MdSettings,
   MdClose,
   MdTranslate,
 } from 'react-icons/md';
@@ -17,7 +16,6 @@ import { withTranslation } from 'react-i18next';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import { getSupportedLanguages } from '../../server_requests';
-import MetadataForm from './MetadataForm';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -26,7 +24,6 @@ class SettingsModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      show: false,
       languageOptions: null,
       loggingLevel: null,
       taskgraphLoggingLevel: null,
@@ -34,13 +31,10 @@ class SettingsModal extends React.Component {
       language: window.Workbench.LANGUAGE,
       showConfirmLanguageChange: false,
     };
-    this.handleShow = this.handleShow.bind(this);
-    this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.handleChangeNumber = this.handleChangeNumber.bind(this);
     this.loadSettings = this.loadSettings.bind(this);
     this.handleChangeLanguage = this.handleChangeLanguage.bind(this);
-    this.switchToDownloadModal = this.switchToDownloadModal.bind(this);
   }
 
   async componentDidMount() {
@@ -49,16 +43,6 @@ class SettingsModal extends React.Component {
       languageOptions: languageOptions,
     });
     this.loadSettings();
-  }
-
-  handleClose() {
-    this.setState({
-      show: false,
-    });
-  }
-
-  handleShow() {
-    this.setState({ show: true });
   }
 
   handleChange(event) {
@@ -97,14 +81,8 @@ class SettingsModal extends React.Component {
     }
   }
 
-  switchToDownloadModal() {
-    this.props.showDownloadModal();
-    this.handleClose();
-  }
-
   render() {
     const {
-      show,
       languageOptions,
       language,
       loggingLevel,
@@ -112,7 +90,7 @@ class SettingsModal extends React.Component {
       nWorkers,
       showConfirmLanguageChange,
     } = this.state;
-    const { clearJobsStorage, nCPU, t } = this.props;
+    const { show, close, nCPU, t } = this.props;
 
     const nWorkersOptions = [
       [-1, `${t('Synchronous')} (-1)`],
@@ -129,26 +107,16 @@ class SettingsModal extends React.Component {
     };
     return (
       <React.Fragment>
-        <Button
-          aria-label="settings"
-          className="settings-icon-btn"
-          onClick={this.handleShow}
-        >
-          <MdSettings
-            className="settings-icon"
-          />
-        </Button>
-
         <Modal
           className="settings-modal"
           show={show}
-          onHide={this.handleClose}
+          onHide={close}
         >
           <Modal.Header>
             <Modal.Title>{t('InVEST Settings')}</Modal.Title>
             <Button
               variant="secondary-outline"
-              onClick={this.handleClose}
+              onClick={close}
               className="float-right"
               aria-label="close settings"
             >
@@ -273,37 +241,7 @@ class SettingsModal extends React.Component {
                 : <div />
             }
             <hr />
-            <Button
-              variant="primary"
-              onClick={this.switchToDownloadModal}
-              className="w-100"
-            >
-              {t('Download Sample Data')}
-            </Button>
-            <hr />
-            <Button
-              variant="secondary"
-              onClick={clearJobsStorage}
-              className="mr-2 w-100"
-            >
-              {t('Clear Recent Jobs')}
-            </Button>
-            <span><em>{t('*no invest workspaces will be deleted')}</em></span>
-            <hr />
-            <Accordion>
-              <Accordion.Toggle
-                as={Button}
-                variant="outline-secondary"
-                eventKey="0"
-                className="mr-2 w-100"
-              >
-                {t('Configure Metadata')}
-                <BsChevronDown className="mx-1" />
-              </Accordion.Toggle>
-              <Accordion.Collapse eventKey="0">
-                <MetadataForm />
-              </Accordion.Collapse>
-            </Accordion>
+
           </Modal.Body>
         </Modal>
         {

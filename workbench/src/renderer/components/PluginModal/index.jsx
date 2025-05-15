@@ -13,8 +13,15 @@ import { ipcMainChannels } from '../../../main/ipcMainChannels';
 const { ipcRenderer } = window.Workbench.electron;
 
 export default function PluginModal(props) {
-  const { updateInvestList, closeInvestModel, openJobs } = props;
-  const [showPluginModal, setShowPluginModal] = useState(false);
+  const {
+    updateInvestList,
+    closeInvestModel,
+    openJobs,
+    show,
+    closeModal,
+    openModal,
+  } = props;
+  // const [showPluginModal, setShowPluginModal] = useState(false);
   const [url, setURL] = useState('');
   const [revision, setRevision] = useState('');
   const [path, setPath] = useState('');
@@ -33,16 +40,16 @@ export default function PluginModal(props) {
     setRevision('');
     setInstallErr('');
     setUninstallErr('');
-    setShowPluginModal(false);
+    closeModal();
   };
-  const handleModalOpen = () => {
-    if (window.Workbench.OS === 'win32') {
-      ipcRenderer.invoke(ipcMainChannels.HAS_MSVC).then((hasMSVC) => {
-        setNeedsMSVC(!hasMSVC);
-      });
-    }
-    setShowPluginModal(true);
-  };
+  // const handleModalOpen = () => {
+  //   if (window.Workbench.OS === 'win32') {
+  //     ipcRenderer.invoke(ipcMainChannels.HAS_MSVC).then((hasMSVC) => {
+  //       setNeedsMSVC(!hasMSVC);
+  //     });
+  //   }
+  //   setShowPluginModal(true);
+  // };
 
   const addPlugin = () => {
     setInstallLoading(true);
@@ -84,11 +91,22 @@ export default function PluginModal(props) {
   };
 
   const downloadMSVC = () => {
-    setShowPluginModal(false);
+    closeModal();
+    // setShowPluginModal(false);
     ipcRenderer.invoke(ipcMainChannels.DOWNLOAD_MSVC).then(
-      () => { handleModalOpen(); }
+      openModal()
     );
-  }
+  };
+
+  useEffect(() => {
+    if (show) {
+      if (window.Workbench.OS === 'win32') {
+        ipcRenderer.invoke(ipcMainChannels.HAS_MSVC).then((hasMSVC) => {
+          setNeedsMSVC(!hasMSVC);
+        });
+      }
+    }
+  }, [show]);
 
   useEffect(() => {
     ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins').then(
@@ -286,18 +304,17 @@ export default function PluginModal(props) {
   }
 
   return (
-    <React.Fragment>
-      <Button onClick={handleModalOpen} variant="outline-dark">
-        {t('Manage plugins')}
-      </Button>
-
-      <Modal show={showPluginModal} onHide={handleModalClose} contentClassName="plugin-modal">
-        <Modal.Header>
-          <Modal.Title>{t('Manage plugins')}</Modal.Title>
-        </Modal.Header>
-        {modalBody}
-      </Modal>
-    </React.Fragment>
+    // <React.Fragment>
+    //   <Button onClick={handleModalOpen} variant="outline-dark">
+    //     {t('Manage plugins')}
+    //   </Button>
+    <Modal show={show} onHide={handleModalClose} contentClassName="plugin-modal">
+      <Modal.Header>
+        <Modal.Title>{t('Manage plugins')}</Modal.Title>
+      </Modal.Header>
+      {modalBody}
+    </Modal>
+    // </React.Fragment>
   );
 }
 

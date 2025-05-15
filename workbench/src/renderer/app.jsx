@@ -19,10 +19,12 @@ import { AiOutlineTrademarkCircle } from 'react-icons/ai';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
+import AppMenu from './components/AppMenu';
 import SettingsModal from './components/SettingsModal';
 import DataDownloadModal from './components/DataDownloadModal';
 import DownloadProgressBar from './components/DownloadProgressBar';
 import PluginModal from './components/PluginModal';
+import MetadataModal from './components/SettingsModal/MetadataForm';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 import { ipcMainChannels } from '../main/ipcMainChannels';
@@ -45,8 +47,11 @@ export default class App extends React.Component {
       investList: null,
       recentJobs: [],
       showDownloadModal: false,
+      showPluginsModal: false,
       downloadedNofN: null,
       showChangelog: false,
+      showSettingsModal: false,
+      showMetadataModal: false,
       changelogDismissed: false,
     };
     this.switchTabs = this.switchTabs.bind(this);
@@ -55,7 +60,9 @@ export default class App extends React.Component {
     this.updateJobProperties = this.updateJobProperties.bind(this);
     this.saveJob = this.saveJob.bind(this);
     this.clearRecentJobs = this.clearRecentJobs.bind(this);
-    this.showDownloadModal = this.showDownloadModal.bind(this);
+    this.toggleDownloadModal = this.toggleDownloadModal.bind(this);
+    this.toggleSettingsModal = this.toggleSettingsModal.bind(this);
+    this.toggleMetadataModal = this.toggleMetadataModal.bind(this);
     this.updateInvestList = this.updateInvestList.bind(this);
   }
 
@@ -96,7 +103,7 @@ export default class App extends React.Component {
     );
   }
 
-  showDownloadModal(shouldShow) {
+  toggleDownloadModal(shouldShow) {
     this.setState({
       showDownloadModal: shouldShow,
     });
@@ -113,6 +120,24 @@ export default class App extends React.Component {
     this.setState({
       showChangelog: false,
       changelogDismissed: true,
+    });
+  }
+
+  togglePluginModal(show) {
+    this.setState({
+      showPluginModal: show
+    });
+  }
+
+  toggleMetadataModal(show) {
+    this.setState({
+      showMetadataModal: show
+    });
+  }
+
+  toggleSettingsModal(show) {
+    this.setState({
+      showSettingsModal: show
     });
   }
 
@@ -221,7 +246,10 @@ export default class App extends React.Component {
       openTabIDs,
       activeTab,
       showDownloadModal,
+      showPluginModal,
       showChangelog,
+      showSettingsModal,
+      showMetadataModal,
       downloadedNofN,
     } = this.state;
 
@@ -325,17 +353,38 @@ export default class App extends React.Component {
         {showDownloadModal && (
           <DataDownloadModal
             show={showDownloadModal}
-            closeModal={() => this.showDownloadModal(false)}
+            closeModal={() => this.toggleDownloadModal(false)}
           />
         )}
-        {
-          showChangelog && (
-            <Changelog
-              show={showChangelog}
-              close={() => this.closeChangelogModal()}
-            />
-          )
-        }
+        {showPluginModal && (
+          <PluginModal
+            show={showPluginModal}
+            closeModal={() => this.togglePluginModal(false)}
+            openModal={() => this.togglePluginModal(true)}
+            updateInvestList={this.updateInvestList}
+            closeInvestModel={this.closeInvestModel}
+            openJobs={openJobs}
+          />
+        )}
+        {showChangelog && (
+          <Changelog
+            show={showChangelog}
+            close={() => this.closeChangelogModal()}
+          />
+        )}
+        {showMetadataModal && (
+          <MetadataModal
+            show={showMetadataModal}
+            close={() => this.toggleMetadataModal(false)}
+          />
+        )}
+        {showSettingsModal && (
+          <SettingsModal
+            show={showSettingsModal}
+            close={() => this.toggleSettingsModal(false)}
+            nCPU={this.props.nCPU}
+          />
+        )}
         <TabContainer activeKey={activeTab}>
           <Navbar
             onDragOver={dragOverHandlerNone}
@@ -377,7 +426,7 @@ export default class App extends React.Component {
                     )
                     : <div />
                 }
-                <PluginModal
+                {/*<PluginModal
                   updateInvestList={this.updateInvestList}
                   closeInvestModel={this.closeInvestModel}
                   openJobs={openJobs}
@@ -385,8 +434,15 @@ export default class App extends React.Component {
                 <SettingsModal
                   className="mx-3"
                   clearJobsStorage={this.clearRecentJobs}
-                  showDownloadModal={() => this.showDownloadModal(true)}
+                  showDownloadModal={() => this.toggleDownloadModal(true)}
                   nCPU={this.props.nCPU}
+                />*/}
+                <AppMenu
+                  openDownloadModal={() => this.toggleDownloadModal(true)}
+                  openPluginModal={() => this.togglePluginModal(true)}
+                  openChangelogModal={() => this.setState({ showChangelog: true })}
+                  openSettingsModal={() => this.toggleSettingsModal(true)}
+                  openMetadataModal={() => this.toggleMetadataModal(true)}
                 />
               </Col>
             </Row>

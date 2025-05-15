@@ -1,0 +1,64 @@
+import React from 'react';
+import PropTypes from 'prop-types';
+
+import Button from 'react-bootstrap/Button';
+import Dropdown from 'react-bootstrap/Dropdown';
+import { useTranslation } from 'react-i18next';
+import { GiHamburgerMenu } from 'react-icons/gi';
+
+const menuButton = (
+  <Button
+    aria-label="menu" // TODO: check aria practices
+    className="settings-icon-btn"
+  >
+    <GiHamburgerMenu
+      className="settings-icon"
+    />
+  </Button>
+);
+
+export default function AppMenu(props) {
+  const { t } = useTranslation();
+
+  return (
+    <Dropdown>
+      <Dropdown.Toggle>
+        {menuButton}
+      </Dropdown.Toggle>
+      <Dropdown.Menu
+        align="right"
+      >
+        <Dropdown.Item
+          as="button"
+          onClick={props.openPluginModal}
+        >
+          Manage Plugins
+        </Dropdown.Item>
+        <Dropdown.Item
+          as="button"
+          onClick={props.openDownloadModal}
+        >
+          Download Sample Data
+        </Dropdown.Item>
+        <Dropdown.Item
+          as="button"
+          onClick={props.openMetadataModal}
+        >
+          Configure Metadata
+        </Dropdown.Item>
+        <Dropdown.Item
+          as="button"
+          onClick={props.openChangelogModal}
+        >
+          View Changelog
+        </Dropdown.Item>
+        <Dropdown.Item
+          as="button"
+          onClick={props.openSettingsModal}
+        >
+          Settings
+        </Dropdown.Item>
+      </Dropdown.Menu>
+    </Dropdown>
+  );
+}
