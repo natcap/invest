@@ -7,6 +7,7 @@ import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import Spinner from 'react-bootstrap/Spinner';
 import { useTranslation } from 'react-i18next';
+import { MdClose } from 'react-icons/md';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
@@ -304,17 +305,20 @@ export default function PluginModal(props) {
   }
 
   return (
-    // <React.Fragment>
-    //   <Button onClick={handleModalOpen} variant="outline-dark">
-    //     {t('Manage plugins')}
-    //   </Button>
     <Modal show={show} onHide={handleModalClose} contentClassName="plugin-modal">
       <Modal.Header>
         <Modal.Title>{t('Manage plugins')}</Modal.Title>
+        <Button
+          variant="secondary-outline"
+          onClick={handleModalClose}
+          className="float-right"
+          aria-label="Close modal"
+        >
+          <MdClose />
+        </Button>
       </Modal.Header>
       {modalBody}
     </Modal>
-    // </React.Fragment>
   );
 }
 

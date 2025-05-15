@@ -8,6 +8,7 @@ import Alert from 'react-bootstrap/Alert';
 import Table from 'react-bootstrap/Table';
 import {
   MdErrorOutline,
+  MdClose,
 } from 'react-icons/md';
 import { withTranslation } from 'react-i18next';
 
@@ -267,6 +268,14 @@ class DataDownloadModal extends React.Component {
                     {t("Download InVEST sample data")}
                   </Modal.Title>
             }
+            <Button
+              variant="secondary-outline"
+              onClick={this.closeDialog}
+              className="float-right"
+              aria-label="Close modal"
+            >
+              <MdClose />
+            </Button>
           </Modal.Header>
           <Modal.Body>
             <Table
@@ -294,12 +303,6 @@ class DataDownloadModal extends React.Component {
             </Table>
           </Modal.Body>
           <Modal.Footer>
-            <Button
-              variant="secondary"
-              onClick={this.closeDialog}
-            >
-              {t("Cancel")}
-            </Button>
             <Button
               variant="primary"
               onClick={this.handleSubmit}

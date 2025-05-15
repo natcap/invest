@@ -13,7 +13,7 @@ export default function AppMenu(props) {
   return (
     <Dropdown>
       <Dropdown.Toggle
-        aria-label="application-menu"
+        aria-label="menu"
       >
         <GiHamburgerMenu />
       </Dropdown.Toggle>

@@ -7,6 +7,7 @@ import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
+import { MdClose } from 'react-icons/md';
 
 import {
   getGeoMetaMakerProfile,
@@ -137,6 +138,14 @@ export default function MetadataModal(props) {
         <Modal.Title id="metadata-modal-title">
           {t('Configure Metadata')}
         </Modal.Title>
+        <Button
+          variant="secondary-outline"
+          onClick={props.close}
+          className="float-right"
+          aria-label="Close modal"
+        >
+          <MdClose />
+        </Button>
       </Modal.Header>
       <Modal.Body>
         <AboutMetadataDiv />

@@ -25,9 +25,9 @@ class SettingsModal extends React.Component {
     super(props);
     this.state = {
       languageOptions: null,
-      loggingLevel: null,
-      taskgraphLoggingLevel: null,
-      nWorkers: null,
+      loggingLevel: '',
+      taskgraphLoggingLevel: '',
+      nWorkers: -1,
       language: window.Workbench.LANGUAGE,
       showConfirmLanguageChange: false,
     };
@@ -118,7 +118,7 @@ class SettingsModal extends React.Component {
               variant="secondary-outline"
               onClick={close}
               className="float-right"
-              aria-label="close settings"
+              aria-label="close modal"
             >
               <MdClose />
             </Button>
@@ -274,8 +274,6 @@ class SettingsModal extends React.Component {
 }
 
 SettingsModal.propTypes = {
-  clearJobsStorage: PropTypes.func.isRequired,
-  showDownloadModal: PropTypes.func.isRequired,
   nCPU: PropTypes.number.isRequired,
 };
 

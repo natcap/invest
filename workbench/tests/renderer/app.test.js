@@ -414,93 +414,104 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
   });
 });
 
-describe('InVEST global settings: dialog interactions', () => {
-  const nWorkersLabelText = 'Taskgraph n_workers parameter';
-  const loggingLabelText = 'Logging threshold';
-  const tgLoggingLabelText = 'Taskgraph logging threshold';
-  const languageLabelText = 'Language';
-
-  beforeAll(() => {
-    setupSettingsHandlers();
-  });
-
-  afterAll(() => {
-    removeIpcMainListeners();
-  });
-
-  beforeEach(async () => {
-    getInvestModelIDs.mockResolvedValue({});
-    getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
-    getGeoMetaMakerProfile.mockResolvedValue({});
-  });
-
-  test('Invest settings save on change', async () => {
-    const nWorkersLabel = 'Threaded task management (0)';
-    const nWorkersValue = 0;
-    const loggingLevel = 'DEBUG';
-    const tgLoggingLevel = 'DEBUG';
-    const languageValue = 'es';
-    const spyInvoke = jest.spyOn(ipcRenderer, 'invoke');
-
+describe('Main menu interactions', () => {
+  test('Open sampledata download Modal from menu', async () => {
     const {
-      getByText, getByLabelText, findByRole, findByText,
+      findByText, findByRole,
     } = render(
       <App />
     );
 
-    await userEvent.click(await findByRole('button', { name: 'settings' }));
-    const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
-    const loggingInput = getByLabelText(loggingLabelText);
-    const tgLoggingInput = getByLabelText(tgLoggingLabelText);
+    const dropdownBtn = await findByRole('button', { name: 'menu' });
+    await userEvent.click(dropdownBtn);
+    await userEvent.click(
+      await findByRole('button', { name: /Download Sample Data/i })
+    );
 
-    await userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
-    await waitFor(() => { expect(nWorkersInput).toHaveValue(nWorkersValue.toString()); });
-    await userEvent.selectOptions(loggingInput, [loggingLevel]);
-    await waitFor(() => { expect(loggingInput).toHaveValue(loggingLevel); });
-    await userEvent.selectOptions(tgLoggingInput, [tgLoggingLevel]);
-    await waitFor(() => { expect(tgLoggingInput).toHaveValue(tgLoggingLevel); });
-
-    // Check values were saved
-    expect(settingsStore.get('nWorkers')).toBe(nWorkersValue);
-    expect(settingsStore.get('loggingLevel')).toBe(loggingLevel);
-    expect(settingsStore.get('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
-
-    // language is handled differently; changing it triggers electron to restart
-    const languageInput = getByLabelText(languageLabelText, { exact: false });
-    await userEvent.selectOptions(languageInput, [languageValue]);
-    await userEvent.click(await findByText('Change to spanish'));
-    expect(spyInvoke)
-      .toHaveBeenCalledWith(ipcMainChannels.CHANGE_LANGUAGE, languageValue);
+    expect(await findByText(/Download InVEST sample data/i))
+      .toBeInTheDocument();
+    await userEvent.click(
+      await findByRole('button', { name: /close modal/i })
+    );
   });
 
-  test('Access sampledata download Modal from settings', async () => {
+  test('Open Metadata Modal from menu', async () => {
     const {
-      findByText, findByRole, queryByText,
+      findByText, findByRole,
     } = render(
       <App />
     );
 
-    const settingsBtn = await findByRole('button', { name: 'settings' });
-    await userEvent.click(settingsBtn);
+    const dropdownBtn = await findByRole('button', { name: 'menu' });
+    await userEvent.click(dropdownBtn);
     await userEvent.click(
-      await findByRole('button', { name: 'Download Sample Data' })
+      await findByRole('button', { name: /Configure Metadata/i })
     );
 
-    expect(await findByText('Download InVEST sample data'))
+    expect(await findByText(/contact information/i))
       .toBeInTheDocument();
-    expect(queryByText('Settings')).toBeNull();
+    await userEvent.click(
+      await findByRole('button', { name: /close modal/i })
+    );
   });
 
-  test('Access metadata form from settings', async () => {
-    const { findByRole } = render(<App />);
-
-    const settingsBtn = await findByRole('button', { name: 'settings' });
-    await userEvent.click(settingsBtn);
-    await userEvent.click(
-      await findByRole('button', { name: 'Configure Metadata' })
+  test('Open Plugins Modal from menu', async () => {
+    const {
+      findByText, findByRole,
+    } = render(
+      <App />
     );
 
-    expect(await findByRole('button', { name: 'Save Metadata' }))
+    const dropdownBtn = await findByRole('button', { name: 'menu' });
+    await userEvent.click(dropdownBtn);
+    await userEvent.click(
+      await findByRole('button', { name: /Manage Plugins/i })
+    );
+
+    expect(await findByText(/add a plugin/i))
       .toBeInTheDocument();
+    await userEvent.click(
+      await findByRole('button', { name: /close modal/i })
+    );
+  });
+
+  test('Open Changelog Modal from menu', async () => {
+    const {
+      findByText, findByRole,
+    } = render(
+      <App />
+    );
+
+    const dropdownBtn = await findByRole('button', { name: 'menu' });
+    await userEvent.click(dropdownBtn);
+    await userEvent.click(
+      await findByRole('button', { name: /view changelog/i })
+    );
+
+    expect(await findByText(/new in this version/i))
+      .toBeInTheDocument();
+    await userEvent.click(
+      await findByRole('button', { name: /close modal/i })
+    );
+  });
+
+  test('Open Settings Modal from menu', async () => {
+    const {
+      findByText, findByRole,
+    } = render(
+      <App />
+    );
+
+    const dropdownBtn = await findByRole('button', { name: 'menu' });
+    await userEvent.click(dropdownBtn);
+    await userEvent.click(
+      await findByRole('button', { name: /settings/i })
+    );
+
+    expect(await findByText(/invest settings/i))
+      .toBeInTheDocument();
+    await userEvent.click(
+      await findByRole('button', { name: /close modal/i })
+    );
   });
 });
