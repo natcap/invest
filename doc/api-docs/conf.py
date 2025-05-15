@@ -18,9 +18,11 @@ import os
 import pkgutil
 import sys
 from unittest.mock import MagicMock
+from urllib.request import urlretrieve
 
 import natcap.invest
 from sphinx.ext import apidoc
+
 
 DOCS_SOURCE_DIR = os.path.dirname(__file__)
 # get the directory that the natcap package lives in
@@ -151,6 +153,20 @@ apidoc.main([
 ])
 
 
+urlretrieve (
+    "https://raw.githubusercontent.com/natcap/invest-demo-plugin/main/pyproject.toml",
+    "pyproject.toml"
+)
+# urlretrieve (
+#     "https://raw.githubusercontent.com/natcap/invest-demo-plugin/main/pyproject.toml",
+#     "invest-demo-plugin/pyproject.toml"
+# )
+# urlretrieve (
+#     "https://raw.githubusercontent.com/natcap/invest-demo-plugin/main/pyproject.toml",
+#     "invest-demo-plugin/pyproject.toml"
+# )
+
+
 # -- Generate model entrypoints file --------------------------------------
 
 MODEL_RST_TEMPLATE = """
@@ -204,7 +220,7 @@ for _, name, _ in pkgutil.walk_packages(path=[INVEST_LIB_DIR],
     module = importlib.import_module(name)
     # any module with a MODEL_SPEC is an invest model
     if hasattr(module, 'MODEL_SPEC'):
-        model_title = module.MODEL_SPEC['model_name']
+        model_title = module.MODEL_SPEC['model_title']
         invest_model_modules[model_title] = name
 
 # Write sphinx autodoc function for each entrypoint
