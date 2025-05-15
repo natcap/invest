@@ -67,7 +67,8 @@ describe('Add plugin modal', () => {
       findByText, findByLabelText, findByRole, queryByRole,
     } = render(<App />);
 
-    const managePluginsButton = await findByText('Manage plugins');
+    await userEvent.click(await findByRole('button', { name: 'application-menu' }));
+    const managePluginsButton = await findByText(/Manage plugins/i);
     userEvent.click(managePluginsButton);
 
     const urlField = await findByLabelText('Git URL');
@@ -153,7 +154,8 @@ describe('Add plugin modal', () => {
     const pluginButton = await findByRole('button', { name: /Foo/ });
     await userEvent.click(pluginButton);
 
-    const managePluginsButton = await findByText('Manage plugins');
+    await userEvent.click(await findByRole('button', { name: 'application-menu' }));
+    const managePluginsButton = await findByText(/Manage plugins/i);
     await userEvent.click(managePluginsButton);
 
     const pluginDropdown = await findByLabelText('Plugin name');

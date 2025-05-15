@@ -47,7 +47,7 @@ export default class App extends React.Component {
       investList: null,
       recentJobs: [],
       showDownloadModal: false,
-      showPluginsModal: false,
+      showPluginModal: false,
       downloadedNofN: null,
       showChangelog: false,
       showSettingsModal: false,
@@ -63,6 +63,7 @@ export default class App extends React.Component {
     this.toggleDownloadModal = this.toggleDownloadModal.bind(this);
     this.toggleSettingsModal = this.toggleSettingsModal.bind(this);
     this.toggleMetadataModal = this.toggleMetadataModal.bind(this);
+    this.togglePluginModal = this.togglePluginModal.bind(this);
     this.updateInvestList = this.updateInvestList.bind(this);
   }
 

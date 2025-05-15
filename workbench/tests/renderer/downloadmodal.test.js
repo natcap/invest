@@ -34,7 +34,7 @@ describe('Sample Data Download Form', () => {
 
     const modalTitle = await findByText('Download InVEST sample data');
     expect(modalTitle).toBeInTheDocument();
-    userEvent.click(getByText('Cancel'));
+    await userEvent.click(getByText('Cancel'));
     await waitFor(() => {
       expect(modalTitle).not.toBeInTheDocument();
     });

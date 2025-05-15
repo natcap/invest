@@ -6,24 +6,16 @@ import Dropdown from 'react-bootstrap/Dropdown';
 import { useTranslation } from 'react-i18next';
 import { GiHamburgerMenu } from 'react-icons/gi';
 
-const menuButton = (
-  <Button
-    aria-label="menu" // TODO: check aria practices
-    className="settings-icon-btn"
-  >
-    <GiHamburgerMenu
-      className="settings-icon"
-    />
-  </Button>
-);
 
 export default function AppMenu(props) {
   const { t } = useTranslation();
 
   return (
     <Dropdown>
-      <Dropdown.Toggle>
-        {menuButton}
+      <Dropdown.Toggle
+        aria-label="application-menu"
+      >
+        <GiHamburgerMenu />
       </Dropdown.Toggle>
       <Dropdown.Menu
         align="right"
