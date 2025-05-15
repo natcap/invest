@@ -1195,8 +1195,27 @@ class OptionStringOutput(Output):
 @dataclasses.dataclass
 class ModelSpec:
     """Specification of an invest model describing metadata, inputs, and outputs."""
+
     model_id: str
+    """The unique identifier for the plugin model, used internally by invest.
+    This identifier should be concise, meaningful, and unique - a good choice
+    is often a short version of the ``model_title``, or the name of the github
+    repo. Using snake-case is recommended for consistancy. Including the word
+    "model" is redundant and not recommended.
+
+    Good example: ``'carbon_storage'``
+    Bad examples: ``'Carbon storage'``, ``carbon_storage_model``
+    """
+
     model_title: str
+    """The user-facing title for the plugin. This is displayed in the workbench.
+    Title-case is recommended. Including the word "model" is redundant and not
+    recommended.
+
+    Good example: ``'Carbon Storage'``
+    Bad examples: ``'Carbon storage'``, ``The Carbon Storage Model``, ``carbon_storage``
+    """
+
     userguide: str
     """Optional. For core invest models, this is the name of the models'
     documentation file in the core invest user guide. For plugins, this field

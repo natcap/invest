@@ -2,7 +2,7 @@ import upath from 'upath';
 import fs from 'fs';
 import { tmpdir } from 'os';
 import toml from 'toml';
-import { execFile, spawn } from 'child_process';
+import { execFile, execSync, spawn } from 'child_process';
 import { promisify } from 'util';
 import { app, ipcMain } from 'electron';
 import { Downloader } from 'nodejs-file-downloader';
@@ -118,15 +118,16 @@ export function setupAddPlugin(i18n) {
             upath.join(path, 'pyproject.toml')
           ).toString());
         }
-
+        console.log(pyprojectTOML);
         // Access plugin metadata from the pyproject.toml
-        const pluginID = pyprojectTOML.tool.natcap.invest.model_id;
-        const pluginTitle = pyprojectTOML.tool.natcap.invest.model_title;
         const condaDeps = pyprojectTOML.tool.natcap.invest.conda_dependencies;
+        const packageName = pyprojectTOML.tool.natcap.invest.package_name;
+        const version = pyprojectTOML.project.version;
+
+        console.log(version);
 
         // Create a conda env containing the plugin and its dependencies
-        const envName = `invest_plugin_${pluginID}`;
-        const pluginEnvPrefix = upath.join(rootPrefix, envName);
+        const pluginEnvPrefix = upath.join(rootPrefix, 'invest_plugin_tmp');
         const createCommand = [
           'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
           '-c', 'conda-forge', 'python', 'git'];
@@ -142,7 +143,31 @@ export function setupAddPlugin(i18n) {
           ['run', '--prefix', `"${pluginEnvPrefix}"`,
            'python', '-m', 'pip', 'install', installString]
         );
+        await spawnWithLogging(
+          micromamba,
+          ['run', '--prefix', `"${pluginEnvPrefix}"`,
+           'python', '-m', 'pip', 'install', '/Users/emily/Downloads/natcap_invest-3.13.0a2.post2532+g0f70606b1-cp313-cp313-macosx_10_13_x86_64.whl']
+        );
         logger.info('installed plugin into its env');
+
+        // Access plugin metadata from the MODEL_SPEC
+        const pluginID = execSync(`
+          micromamba run --prefix "${pluginEnvPrefix}" \
+          python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
+        ).toString();
+        const pluginTitle= execSync(`
+          micromamba run --prefix "${pluginEnvPrefix}" \
+          python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
+        ).toString();
+        console.log(pluginID);
+        console.log(pluginTitle);
+
+        // Rename plugin environment using its model_id
+        const newPluginEnvPrefix = upath.join(rootPrefix, pluginID);
+        await spawnWithLogging(
+          'mv', ['-r', `"${pluginEnvPrefix}"`, `"${newPluginEnvPrefix}"`]
+        );
+
         // Write plugin metadata to the workbench's config.json
         logger.info('writing plugin info to settings store');
         settingsStore.set(
@@ -151,11 +176,13 @@ export function setupAddPlugin(i18n) {
             modelTitle: pluginTitle,
             type: 'plugin',
             source: installString,
-            env: pluginEnvPrefix,
+            env: newPluginEnvPrefix,
+            version: version,
           }
         );
         logger.info('successfully added plugin');
       } catch (error) {
+        console.log(error);
         return error;
       }
     }
