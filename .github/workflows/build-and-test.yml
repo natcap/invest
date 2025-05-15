@@ -441,9 +441,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+        id: python-312-task
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
+        env:
+          CLOUDSDK_GSUTIL_PYTHON: ${{ steps.python-312-task.outputs.python-path }}
         run: make deploy
 
       # This relies on the file existing on GCP, so it must be run after `make
