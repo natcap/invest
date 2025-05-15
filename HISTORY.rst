@@ -69,6 +69,12 @@ Workbench
 * Metadata is now generated for files when creating a datastack (with any
   existing user-added metadata preserved)
   (`#1774 <https://github.com/natcap/invest/issues/1774>`_).
+  
+HRA
+===
+* The intermediate simplified vectors will now inherit their geometry type from
+  the input vectors, rather than using ``ogr.wkbUnknown``
+  (`#1881 <https://github.com/natcap/invest/issues/1881>`_).
 
 
 3.15.1 (2025-05-06)
