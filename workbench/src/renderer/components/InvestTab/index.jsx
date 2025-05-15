@@ -299,6 +299,8 @@ class InvestTab extends React.Component {
                     sidebarFooterElementId={sidebarFooterElementId}
                     executeClicked={executeClicked}
                     switchTabs={this.switchTabs}
+                    tabID={tabID}
+                    updateJobProperties={this.props.updateJobProperties}
                   />
                 </TabPane>
                 <TabPane

@@ -261,7 +261,7 @@ export default function ArgInput(props) {
         name={argkey}
         value={value}
         onChange={handleChange}
-        onFocus={handleChange}
+        onFocus={handleFocus}
         disabled={!enabled}
         isValid={enabled && isValid}
         custom

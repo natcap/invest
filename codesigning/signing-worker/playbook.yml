@@ -43,6 +43,14 @@
           - google-cloud-sdk
           - google-cloud-cli
           - yubikey-manager
+          - logwatch
+          - fwlogwatch
+          - sendmail
+
+    - name: Configure logwatch
+      ansible.builtin.copy:
+        src: logwatch.conf
+        dest: /etc/logwatch/conf/logwatch.conf
 
     - name: Add bookworm-backports repository
       ansible.builtin.apt_repository:
@@ -137,3 +145,4 @@
         daemon_reload: true  # reload in case there are any config changes
         state: restarted
         enabled: true
+
