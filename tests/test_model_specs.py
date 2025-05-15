@@ -132,11 +132,6 @@ class ValidateModelSpecs(unittest.TestCase):
                     ("Required key(s) missing from MODEL_SPEC: "
                      f"{set(required_keys).difference(set(dir(model.MODEL_SPEC)))}"))
 
-                if model.MODEL_SPEC.args_with_spatial_overlap:
-                    self.assertTrue(
-                        set(model.MODEL_SPEC.args_with_spatial_overlap).issubset(
-                            {'spatial_keys', 'different_projections_ok'}))
-
                 self.assertIsInstance(model.MODEL_SPEC.input_field_order, list)
                 found_keys = set()
                 for group in model.MODEL_SPEC.input_field_order:

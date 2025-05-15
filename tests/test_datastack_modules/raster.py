@@ -6,6 +6,5 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     model_id='raster_model',
     model_title='',
     userguide='',
-    input_field_order=[],
-    args_with_spatial_overlap={}
+    input_field_order=[]
 )

@@ -9,6 +9,5 @@ MODEL_SPEC = spec.ModelSpec(
     model_id='duplicate_filepaths_model',
     model_title='',
     userguide='',
-    input_field_order=[],
-    args_with_spatial_overlap={}
+    input_field_order=[]
 )

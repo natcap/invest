@@ -1321,6 +1321,9 @@ def build_model_spec(model_spec):
         for argkey, argspec in model_spec['args'].items()]
     outputs = [
         build_output_spec(argkey, argspec) for argkey, argspec in model_spec['outputs'].items()]
+    different_projections_ok = False
+    if 'args_with_spatial_overlap' in model_spec:
+        different_projections_ok = model_spec['args_with_spatial_overlap'].get('different_projections_ok', False)
     return ModelSpec(
         model_id=model_spec['model_id'],
         model_title=model_spec['model_title'],
@@ -1330,7 +1333,7 @@ def build_model_spec(model_spec):
         outputs=outputs,
         input_field_order=model_spec['ui_spec']['order'],
         validate_spatial_overlap=True,
-        different_projections_ok=model_spec['args_with_spatial_overlap'].get('different_projections_ok', False))
+        different_projections_ok=different_projections_ok)
 
 
 def build_input_spec(argkey, arg):

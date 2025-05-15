@@ -40,12 +40,10 @@ from natcap.invest.spec import (
 gdal.UseExceptions()
 
 def model_spec_with_defaults(model_id='', model_title='', userguide='', aliases=None,
-                 inputs={}, outputs={}, input_field_order=[],
-                 args_with_spatial_overlap=[]):
+                 inputs={}, outputs={}, input_field_order=[]):
     return ModelSpec(model_id=model_id, model_title=model_title, userguide=userguide,
             aliases=aliases, inputs=inputs, outputs=outputs,
-            input_field_order=input_field_order,
-            args_with_spatial_overlap=args_with_spatial_overlap)
+            input_field_order=input_field_order)
 
 def number_input_spec_with_defaults(id='', units=u.none, expression='', **kwargs):
     return NumberInput(id=id, units=units, expression=expression, **kwargs)
@@ -2050,11 +2048,7 @@ class TestValidationFromSpec(unittest.TestCase):
                     fields={},
                     geometry_types={'POINT'}
                 )
-            ],
-            args_with_spatial_overlap={
-                'spatial_keys': ['raster_a', 'raster_b', 'vector_a'],
-                'different_projections_ok': True
-            }
+            ]
         )
 
         driver = gdal.GetDriverByName('GTiff')
@@ -2117,11 +2111,7 @@ class TestValidationFromSpec(unittest.TestCase):
                     data_type=float,
                     units=u.none
                 )
-            ],
-            args_with_spatial_overlap={
-                'spatial_keys': ['raster_a', 'raster_b'],
-                'different_projections_ok': True
-            }
+            ]
         )
 
         driver = gdal.GetDriverByName('GTiff')
@@ -2170,11 +2160,7 @@ class TestValidationFromSpec(unittest.TestCase):
                     fields=[],
                     geometry_types={'POINT'}
                 )
-            ],
-            args_with_spatial_overlap={
-                'spatial_keys': ['raster_a', 'raster_b', 'vector_a'],
-                'different_projections_ok': True
-            }
+            ]
         )
 
         driver = gdal.GetDriverByName('GTiff')

@@ -249,7 +249,7 @@ def _format_bbox_list(file_list, bbox_list):
                 file_list, bbox_list)])
 
 
-def validate(args, spec):
+def validate(args, model_spec):
     """Validate an args dict against a model spec.
 
     Validates an arguments dictionary according to the rules laid out in
@@ -257,7 +257,7 @@ def validate(args, spec):
 
     Args:
         args (dict): The InVEST model args dict to validate.
-        spec (dict): The InVEST model spec dict to validate against.
+        model_spec (dict): The InVEST model spec dict to validate against.
 
     Returns:
         A list of tuples where the first element of the tuple is an iterable of
@@ -272,9 +272,9 @@ def validate(args, spec):
     missing_keys = set()
     required_keys_with_no_value = set()
     expression_values = {
-        input_spec.id: args.get(input_spec.id, False) for input_spec in spec.inputs}
+        input_spec.id: args.get(input_spec.id, False) for input_spec in model_spec.inputs}
     keys_with_falsey_values = set()
-    for parameter_spec in spec.inputs:
+    for parameter_spec in model_spec.inputs:
         key = parameter_spec.id
         required = parameter_spec.required
 
@@ -312,7 +312,7 @@ def validate(args, spec):
         # we don't need to try to validate them
         try:
             # Using deepcopy to make sure we don't modify the original spec
-            parameter_spec = copy.deepcopy(spec.get_input(key))
+            parameter_spec = copy.deepcopy(model_spec.get_input(key))
         except KeyError:
             LOGGER.debug(f'Provided key {key} does not exist in MODEL_SPEC')
             continue
@@ -341,10 +341,10 @@ def validate(args, spec):
             validation_warnings.append(([key], get_message('UNEXPECTED_ERROR')))
 
     # Phase 3: Check spatial overlap if applicable
-    if spec.validate_spatial_overlap:
+    if model_spec.validate_spatial_overlap:
         spatial_keys = set()
-        i in spec.inputs:
-            if isinstance(i, spec.SingleBandRasterInput) or isinstance(i, spec.VectorInput):
+        for i in model_spec.inputs:
+            if i.type in['raster', 'vector']:
                 spatial_keys.add(i.id)
 
         # Only test for spatial overlap once all the sufficient spatial keys
@@ -361,7 +361,7 @@ def validate(args, spec):
                     checked_keys.append(key)
 
             spatial_overlap_error = check_spatial_overlap(
-                spatial_files, spec.different_projections_ok)
+                spatial_files, model_spec.different_projections_ok)
             if spatial_overlap_error:
                 validation_warnings.append(
                     (checked_keys, spatial_overlap_error))
@@ -459,12 +459,12 @@ def invest_validator(validate_func):
     return _wrapped_validate_func
 
 
-def args_enabled(args, spec):
+def args_enabled(args, model_spec):
     """Get enabled/disabled status of arg fields given their values and spec.
 
     Args:
         args (dict): Dict mapping arg keys to user-provided values
-        spec (dict): MODEL_SPEC dictionary
+        model_spec (dict): MODEL_SPEC dictionary
 
     Returns:
         Dictionary mapping each arg key to a boolean value - True if the
@@ -472,8 +472,8 @@ def args_enabled(args, spec):
     """
     enabled = {}
     expression_values = {
-        arg_spec.id: args.get(arg_spec.id, False) for arg_spec in spec.inputs}
-    for arg_spec in spec.inputs:
+        arg_spec.id: args.get(arg_spec.id, False) for arg_spec in model_spec.inputs}
+    for arg_spec in model_spec.inputs:
         if isinstance(arg_spec.allowed, str):
             enabled[arg_spec.id] = bool(_evaluate_expression(
                 arg_spec.allowed, expression_values))

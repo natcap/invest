@@ -362,7 +362,6 @@ class TestMetadataFromSpec(unittest.TestCase):
                 aliases=[],
                 input_field_order=[],
                 inputs={},
-                args_with_spatial_overlap={},
                 outputs=output_spec
             )
         )

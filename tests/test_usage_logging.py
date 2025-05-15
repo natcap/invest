@@ -75,8 +75,7 @@ class UsageLoggingTests(unittest.TestCase):
                 spec.VectorInput(id='blank_vector_path', geometry_types={}, fields={})
             ],
             outputs={},
-            input_field_order=[],
-            args_with_spatial_overlap=None)
+            input_field_order=[])
 
         output_logfile = os.path.join(self.workspace_dir, 'logfile.txt')
         with utils.log_to_file(output_logfile):

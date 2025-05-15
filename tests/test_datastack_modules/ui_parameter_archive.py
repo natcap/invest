@@ -7,6 +7,5 @@ MODEL_SPEC = SimpleNamespace(inputs=[
     model_id='ui_parameters_model',
     model_title='',
     userguide='',
-    input_field_order=[],
-    args_with_spatial_overlap={}
+    input_field_order=[]
 )
