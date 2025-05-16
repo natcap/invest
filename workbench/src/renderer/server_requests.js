@@ -75,7 +75,7 @@ export async function getSpec(modelID) {
  * @returns {Promise} resolves object
  */
 export async function getDynamicDropdowns(payload) {
-  const port = await getCorePort();
+  const port = await getPort(payload.model_id);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/dynamic_dropdowns`, {
       method: 'post',
