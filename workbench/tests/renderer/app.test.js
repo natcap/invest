@@ -13,16 +13,11 @@ import {
   fetchValidation,
   fetchDatastackFromFile,
   fetchArgsEnabled,
-  getSupportedLanguages,
   getGeoMetaMakerProfile,
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
-import {
-  settingsStore,
-  setupSettingsHandlers
-} from '../../src/main/settingsStore';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
-import { removeIpcMainListeners } from '../../src/main/main';
+import pkg from '../../package.json';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -415,6 +410,10 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
 });
 
 describe('Main menu interactions', () => {
+  beforeEach(() => {
+    getInvestModelIDs.mockResolvedValue(MOCK_INVEST_LIST);
+  });
+
   test('Open sampledata download Modal from menu', async () => {
     const {
       findByText, findByRole,
@@ -468,7 +467,7 @@ describe('Main menu interactions', () => {
       await findByRole('button', { name: /Manage Plugins/i })
     );
 
-    expect(await findByText(/add a plugin/i))
+    expect(await findByText(/Redistributable must be installed!/i))
       .toBeInTheDocument();
     await userEvent.click(
       await findByRole('button', { name: /close modal/i })
@@ -476,6 +475,26 @@ describe('Main menu interactions', () => {
   });
 
   test('Open Changelog Modal from menu', async () => {
+    const currentVersion = pkg.version;
+    const nonexistentVersion = '1.0.0';
+    jest.spyOn(window, 'fetch')
+      .mockResolvedValueOnce({
+        ok: true,
+        text: () => `
+            <html>
+              <head></head>
+              <body>
+                <section>
+                  <h1>${currentVersion}</h1>
+                </section>
+                <section>
+                  <h1>${nonexistentVersion}</h1>
+                </section>
+              </body>
+            </html>
+        `
+      });
+
     const {
       findByText, findByRole,
     } = render(
