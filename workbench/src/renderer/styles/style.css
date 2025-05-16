@@ -206,6 +206,13 @@ exceed 100% of window.*/
   text-overflow: ellipsis;
 }
 
+/*.invest-list-group .list-group-item:hover {
+  color: white;
+  background-color: var(--invest-green);
+  opacity: 75%;
+  font-weight: 600;
+}*/
+
 .invest-list-group .list-group-item:last-child {
   border-radius: 0;
 }

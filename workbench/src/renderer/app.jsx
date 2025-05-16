@@ -464,6 +464,7 @@ export default class App extends React.Component {
                     openInvestModel={this.openInvestModel}
                     recentJobs={recentJobs}
                     batchUpdateArgs={this.batchUpdateArgs}
+                    clearRecentJobs={this.clearRecentJobs}
                   />
                 ) : <div />}
             </TabPane>

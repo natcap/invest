@@ -59,9 +59,9 @@ class OpenButton extends React.Component {
         <Button
           className={className}
           onClick={this.browseFile}
-          variant="outline-dark"
+          variant="outline-primary"
         >
-          {t('Open')}
+          {t('Browse to a datastack (.json) or InVEST logfile (.txt)')}
         </Button>
       </OverlayTrigger>
     );

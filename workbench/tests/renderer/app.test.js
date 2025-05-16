@@ -366,7 +366,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
     const { findByText, queryByText } = render(<App />);
 
     expect(queryByText(job1.modelTitle)).toBeNull();
-    expect(await findByText(/Set up a model from a sample datastack file/))
+    expect(await findByText('Welcome!'))
       .toBeInTheDocument();
   });
 
@@ -375,7 +375,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
       <App />
     );
 
-    const node = await findByText(/Set up a model from a sample datastack file/);
+    const node = await findByText('Welcome!');
     expect(node).toBeInTheDocument();
   });
 
@@ -402,9 +402,9 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
           .toBeTruthy();
       });
     });
-    await userEvent.click(getByRole('button', { name: 'settings' }));
+    // await userEvent.click(getByRole('button', { name: 'settings' }));
     await userEvent.click(getByText('Clear Recent Jobs'));
-    const node = await findByText(/Set up a model from a sample datastack file/);
+    const node = await findByText('Welcome!');
     expect(node).toBeInTheDocument();
   });
 });

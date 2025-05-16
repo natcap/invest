@@ -7,6 +7,7 @@ import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
+import Button from 'react-bootstrap/Button';
 import { useTranslation } from 'react-i18next';
 
 import OpenButton from '../OpenButton';
@@ -35,7 +36,7 @@ export default class HomeTab extends React.Component {
   }
 
   render() {
-    const { recentJobs, investList, openInvestModel } = this.props;
+    const { recentJobs, investList, openInvestModel, clearRecentJobs } = this.props;
     let sortedModelIds = {};
     if (investList) {
       // sort the model list alphabetically, by the model title,
@@ -74,9 +75,10 @@ export default class HomeTab extends React.Component {
           name={modelTitle}
           action
           onClick={() => this.handleClick(modelID)}
+          className="invest-button"
         >
           { badge }
-          <span className="invest-button">{modelTitle}</span>
+          <span className>{modelTitle}</span>
         </ListGroup.Item>
       );
     });
@@ -87,12 +89,18 @@ export default class HomeTab extends React.Component {
           <ListGroup className="invest-list-group">
             {investButtons}
           </ListGroup>
+          <OpenButton
+            className="w-100"
+            openInvestModel={openInvestModel}
+            investList={investList}
+          />
         </Col>
         <Col className="recent-job-card-col">
           <RecentInvestJobs
             openInvestModel={openInvestModel}
             recentJobs={recentJobs}
             investList={investList}
+            clearRecentJobs={clearRecentJobs}
           />
         </Col>
       </Row>
@@ -123,7 +131,7 @@ HomeTab.propTypes = {
  * Renders a button for each recent invest job.
  */
 function RecentInvestJobs(props) {
-  const { recentJobs, openInvestModel, investList } = props;
+  const { recentJobs, openInvestModel, investList, clearRecentJobs } = props;
   const { t } = useTranslation();
 
   const handleClick = (jobMetadata) => {
@@ -143,7 +151,7 @@ function RecentInvestJobs(props) {
       }
       recentButtons.push(
         <Card
-          className="text-left recent-job-card"
+          className="text-left recent-job-card mr-2 w-100"
           as="button"
           key={job.hash}
           onClick={() => handleClick(job)}
@@ -177,37 +185,43 @@ function RecentInvestJobs(props) {
   });
 
   return (
-    <>
-      <Container>
-        <Row>
-          <Col className="recent-header-col">
-            {recentButtons.length
-              ? (
-                <h4>
-                  {t('Recent runs:')}
-                </h4>
-              )
-              : (
-                <div className="default-text">
-                  {t("Set up a model from a sample datastack file (.json) " +
-                     "or from an InVEST model's logfile (.txt): ")}
-                </div>
-              )}
-          </Col>
-          <Col className="open-button-col">
-            {investList
-              ? (
-                <OpenButton
-                  className="mr-2"
-                  openInvestModel={openInvestModel}
-                  investList={investList}
-                />
-              ) : ''}
-          </Col>
-        </Row>
-      </Container>
-      {recentButtons}
-    </>
+    <Container>
+      <Row>
+        {recentButtons.length
+          ? <div />
+          : (
+            <Card
+              className="text-left recent-job-card mr-2 w-100"
+              key="placeholder"
+            >
+              <Card.Body>
+                <Card.Header>
+                  <span className="header-title">Welcome!</span>
+                </Card.Header>
+                <Card.Title>
+                  <span className="text-heading">
+                    After running a model, find your recent model runs here.
+                  </span>
+                </Card.Title>
+              </Card.Body>
+            </Card>
+          )}
+        {recentButtons}
+      </Row>
+      {recentButtons.length
+        ? (
+          <Row>
+            <Button
+              variant="secondary"
+              onClick={clearRecentJobs}
+              className="mr-2 w-100"
+            >
+              {t('Clear Recent Jobs')}
+            </Button>
+          </Row>
+        )
+        : <div />}
+    </Container>
   );
 }
 
