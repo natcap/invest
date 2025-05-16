@@ -1,7 +1,7 @@
 import { ipcRenderer } from 'electron';
 import React from 'react';
 import {
-  act, within, render, waitFor
+  within, render, waitFor
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
@@ -64,10 +64,10 @@ describe('Add plugin modal', () => {
       return Promise.resolve();
     });
     const {
-      findByText, findByLabelText, findByRole, queryByRole,
+      findByText, findByLabelText, findByRole,
     } = render(<App />);
 
-    await userEvent.click(await findByRole('button', { name: 'application-menu' }));
+    await userEvent.click(await findByRole('button', { name: 'menu' }));
     const managePluginsButton = await findByText(/Manage plugins/i);
     userEvent.click(managePluginsButton);
 
@@ -108,9 +108,7 @@ describe('Add plugin modal', () => {
     const spy = jest.spyOn(ipcRenderer, 'send');
     const { findByRole } = render(<App />);
     const pluginButton = await findByRole('button', { name: /Foo/ });
-    await act(async () => {
-      userEvent.click(pluginButton);
-    });
+    await userEvent.click(pluginButton);
     const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeEnabled();
     // Nothing is really different about plugin tabs on the renderer side, so
@@ -154,7 +152,7 @@ describe('Add plugin modal', () => {
     const pluginButton = await findByRole('button', { name: /Foo/ });
     await userEvent.click(pluginButton);
 
-    await userEvent.click(await findByRole('button', { name: 'application-menu' }));
+    await userEvent.click(await findByRole('button', { name: 'menu' }));
     const managePluginsButton = await findByText(/Manage plugins/i);
     await userEvent.click(managePluginsButton);
 
