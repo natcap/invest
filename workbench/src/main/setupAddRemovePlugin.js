@@ -127,7 +127,12 @@ export function setupAddPlugin(i18n) {
         console.log(version);
 
         // Create a conda env containing the plugin and its dependencies
-        const pluginEnvPrefix = upath.join(rootPrefix, 'invest_plugin_tmp');
+        // use timestamp to ensure a unique path
+        // I wanted the env path to match the plugin model_id, but we can't
+        // know the model_id until after creating the environment to be able to
+        // import metadata from the MODEL_SPEC. And mamba does not support
+        // renaming or moving environments after they're created.
+        const pluginEnvPrefix = upath.join(rootPrefix, `plugin_${Date.now()}`);
         const createCommand = [
           'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
           '-c', 'conda-forge', 'python', 'git'];
@@ -143,30 +148,20 @@ export function setupAddPlugin(i18n) {
           ['run', '--prefix', `"${pluginEnvPrefix}"`,
            'python', '-m', 'pip', 'install', installString]
         );
-        await spawnWithLogging(
-          micromamba,
-          ['run', '--prefix', `"${pluginEnvPrefix}"`,
-           'python', '-m', 'pip', 'install', '/Users/emily/Downloads/natcap_invest-3.13.0a2.post2532+g0f70606b1-cp313-cp313-macosx_10_13_x86_64.whl']
-        );
         logger.info('installed plugin into its env');
 
+        event.sender.send('plugin-install-status', i18n.t('Importing plugin...'));
         // Access plugin metadata from the MODEL_SPEC
-        const pluginID = execSync(`
-          micromamba run --prefix "${pluginEnvPrefix}" \
-          python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
-        ).toString();
-        const pluginTitle= execSync(`
-          micromamba run --prefix "${pluginEnvPrefix}" \
-          python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
-        ).toString();
+        const pluginID = execSync(
+          `micromamba run --prefix "${pluginEnvPrefix}" ` +
+          `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
+        ).toString().trim();
+        const pluginTitle= execSync(
+          `micromamba run --prefix "${pluginEnvPrefix}" ` +
+          `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
+        ).toString().trim();
         console.log(pluginID);
         console.log(pluginTitle);
-
-        // Rename plugin environment using its model_id
-        const newPluginEnvPrefix = upath.join(rootPrefix, pluginID);
-        await spawnWithLogging(
-          'mv', ['-r', `"${pluginEnvPrefix}"`, `"${newPluginEnvPrefix}"`]
-        );
 
         // Write plugin metadata to the workbench's config.json
         logger.info('writing plugin info to settings store');
@@ -176,7 +171,7 @@ export function setupAddPlugin(i18n) {
             modelTitle: pluginTitle,
             type: 'plugin',
             source: installString,
-            env: newPluginEnvPrefix,
+            env: pluginEnvPrefix,
             version: version,
           }
         );
