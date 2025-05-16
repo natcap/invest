@@ -14,10 +14,6 @@ import textwrap
 import warnings
 
 import natcap.invest
-from natcap.invest import datastack
-from natcap.invest import spec
-from natcap.invest import ui_server
-from natcap.invest import utils
 from pygeoprocessing.geoprocessing_core import GDALUseExceptions
 with GDALUseExceptions():
     import natcap.invest
@@ -58,7 +54,7 @@ def build_model_list_table(locale_code):
 
     # Adding 3 to max alias name length for the parentheses plus some padding.
     max_alias_name_length = max(len(', '.join(
-        spec.aliases)) for spec in models.model_id_to_spec.values()) + 3
+        model_spec.aliases)) for model_spec in models.model_id_to_spec.values()) + 3
     template_string = '    {model_id} {aliases} {model_title}'
     strings = [translation.gettext('Available models:')]
     for model_id, model_spec in models.model_id_to_spec.items():
@@ -148,7 +144,7 @@ def export_to_python(target_filepath, model_id, args_dict=None):
 
     if args_dict is None:
         cast_args = {
-            spec.id: '' for spec in models.model_id_to_spec[model_id].inputs}
+            arg_spec.id: '' for arg_spec in models.model_id_to_spec[model_id].inputs}
     else:
         cast_args = dict((str(key), value) for (key, value)
                          in args_dict.items())
@@ -436,9 +432,9 @@ def main(user_args=None):
             target_model = models.model_id_to_pyname[args.model]
             model_module = importlib.reload(
                 importlib.import_module(name=target_model))
-            spec = model_module.MODEL_SPEC
+            model_spec = model_module.MODEL_SPEC
 
-            message = spec.to_json()
+            message = model_spec.to_json()
             sys.stdout.write(message)
             parser.exit(0)
 
