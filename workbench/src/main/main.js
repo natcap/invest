@@ -89,9 +89,9 @@ export const createWindow = async () => {
   // In case any were left behind, remove them
   const plugins = settingsStore.get('plugins');
   if (plugins) {
-    Object.keys(plugins).forEach((model) => {
-      settingsStore.set(`plugins.${model}.pid`, '');
-      settingsStore.set(`plugins.${model}.port`, '');
+    Object.keys(plugins).forEach((modelID) => {
+      settingsStore.set(`plugins.${modelID.replace(/\./g, '\\.')}.pid`, '');
+      settingsStore.set(`plugins.${modelID.replace(/\./g, '\\.')}.port`, '');
     });
   }
 
@@ -222,7 +222,7 @@ export function main() {
     const pluginServerPIDs = [];
     const plugins = settingsStore.get('plugins') || {};
     Object.keys(plugins).forEach((plugin) => {
-      const pid = settingsStore.get(`plugins.${plugin}.pid`);
+      const pid = settingsStore.get(`plugins.${plugin.replace(/\./g, '\\.')}.pid`);
       if (pid) {
         pluginServerPIDs.push(pid);
       }

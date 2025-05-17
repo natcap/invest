@@ -124,15 +124,15 @@ export async function createPluginServerProcess(modelID, _port = undefined) {
 
   logger.debug('creating invest plugin server process');
   const micromamba = settingsStore.get('micromamba');
-  const modelEnvPath = settingsStore.get(`plugins.${modelID}.env`);
+  const modelEnvPath = settingsStore.get(`plugins.${modelID.replace(/\./g, '\\.')}.env`);
   const args = [
     'run', '--prefix', `"${modelEnvPath}"`,
     'invest', '--debug', 'serve', '--port', port];
   logger.debug('spawning command:', micromamba, args);
   // shell mode is necessary in dev mode & relying on a conda env
   const pythonServerProcess = spawn(micromamba, args, { shell: true });
-  settingsStore.set(`plugins.${modelID}.port`, port);
-  settingsStore.set(`plugins.${modelID}.pid`, pythonServerProcess.pid);
+  settingsStore.set(`plugins.${modelID.replace(/\./g, '\\.')}.port`, port);
+  settingsStore.set(`plugins.${modelID.replace(/\./g, '\\.')}.pid`, pythonServerProcess.pid);
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
 

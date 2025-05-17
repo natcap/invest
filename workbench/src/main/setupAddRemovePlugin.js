@@ -118,13 +118,10 @@ export function setupAddPlugin(i18n) {
             upath.join(path, 'pyproject.toml')
           ).toString());
         }
-        console.log(pyprojectTOML);
         // Access plugin metadata from the pyproject.toml
         const condaDeps = pyprojectTOML.tool.natcap.invest.conda_dependencies;
         const packageName = pyprojectTOML.tool.natcap.invest.package_name;
         const version = pyprojectTOML.project.version;
-
-        console.log(version);
 
         // Create a conda env containing the plugin and its dependencies
         // use timestamp to ensure a unique path
@@ -152,23 +149,26 @@ export function setupAddPlugin(i18n) {
 
         event.sender.send('plugin-install-status', i18n.t('Importing plugin...'));
         // Access plugin metadata from the MODEL_SPEC
-        const pluginID = execSync(
+        const modelID = execSync(
           `micromamba run --prefix "${pluginEnvPrefix}" ` +
           `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
         ).toString().trim();
-        const pluginTitle= execSync(
+        const modelTitle= execSync(
           `micromamba run --prefix "${pluginEnvPrefix}" ` +
           `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
         ).toString().trim();
-        console.log(pluginID);
-        console.log(pluginTitle);
+        console.log(modelID);
+        console.log(modelTitle);
 
         // Write plugin metadata to the workbench's config.json
         logger.info('writing plugin info to settings store');
+        const pluginID = `${modelID}@${version}`;
         settingsStore.set(
-          `plugins.${pluginID}`,
+          // Escape dots so that electron-store doesn't expand them into separate keys
+          `plugins.${pluginID.replace(/\./g, '\\.')}`,
           {
-            modelTitle: pluginTitle,
+            modelID: modelID,
+            modelTitle: modelTitle,
             type: 'plugin',
             source: installString,
             env: pluginEnvPrefix,
@@ -191,7 +191,7 @@ export function setupRemovePlugin() {
       logger.info('removing plugin', pluginID);
       try {
         // Delete the plugin's conda env
-        const env = settingsStore.get(`plugins.${pluginID}.env`);
+        const env = settingsStore.get(`plugins.${pluginID.replace(/\./g, '\\.')}.env`);
         const micromamba = settingsStore.get('micromamba');
         await spawnWithLogging(micromamba, ['env', 'remove', '--yes', '--prefix', `"${env}"`]);
         // Delete the plugin's data from storage
