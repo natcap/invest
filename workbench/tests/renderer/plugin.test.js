@@ -34,9 +34,7 @@ describe('Add plugin modal', () => {
           type: 'raster',
         },
       },
-      ui_spec: {
-        order: [['workspace_dir', 'input_path']],
-      },
+      input_field_order: [['workspace_dir', 'input_path']],
     });
 
     fetchArgsEnabled.mockResolvedValue({

@@ -35,7 +35,7 @@ const { logger } = window.Workbench;
  * Values initialize with either a complete args dict, or with empty/default values.
  *
  * @param {object} argsSpec - an InVEST model's MODEL_SPEC.args
- * @param {object} uiSpec - the model's UI Spec.
+ * @param {object} inputFieldOrder - the order in which to display the input fields.
  * @param {object} argsDict - key: value pairs of InVEST model arguments, or {}.
  *
  * @returns {object} to destructure into two args,
@@ -45,11 +45,11 @@ const { logger } = window.Workbench;
  *     {object} argsDropdownOptions - stores lists of dropdown options for
  *       args of type 'option_string'.
  */
-function initializeArgValues(argsSpec, uiSpec, argsDict) {
+function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
   const argsValues = {};
   const argsDropdownOptions = {};
-  uiSpec.order.flat().forEach((argkey) => {
+  inputFieldOrder.flat().forEach((argkey) => {
     // When initializing with undefined values, assign defaults so that,
     // a) values are handled well by the html inputs and
     // b) the object exported to JSON on "Save" or "Execute" includes defaults.
@@ -129,12 +129,12 @@ class SetupTab extends React.Component {
     * not on every re-render.
     */
     this._isMounted = true;
-    const { argsInitValues, argsSpec, uiSpec } = this.props;
+    const { argsInitValues, argsSpec, inputFieldOrder } = this.props;
 
     const {
       argsValues,
       argsDropdownOptions,
-    } = initializeArgValues(argsSpec, uiSpec, argsInitValues || {});
+    } = initializeArgValues(argsSpec, inputFieldOrder, argsInitValues || {});
 
     // map each arg to an empty object, to fill in later
     // here we use the argsSpec because it includes all args, even ones like
@@ -143,10 +143,10 @@ class SetupTab extends React.Component {
       acc[argkey] = {};
       return acc;
     }, {});
-    // here we only use the keys in uiSpec.order because args that
+    // here we only use the keys in inputFieldOrder because args that
     // aren't displayed in the form don't need an enabled/disabled state.
     // all args default to being enabled
-    const argsEnabled = uiSpec.order.flat().reduce((acc, argkey) => {
+    const argsEnabled = inputFieldOrder.flat().reduce((acc, argkey) => {
       acc[argkey] = true;
       return acc;
     }, {});
@@ -366,7 +366,6 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgValues(key, value) {
-    const { uiSpec } = this.props;
     const { argsValues } = this.state;
     argsValues[key].value = value;
     this.setState({
@@ -377,9 +376,7 @@ class SetupTab extends React.Component {
       });
       this.debouncedValidate();
       this.debouncedArgsEnabled();
-      if (uiSpec.dropdown_functions) {
-        this.debouncedDropdownFunctions();
-      }
+      this.debouncedDropdownFunctions();
     });
   }
 
@@ -388,11 +385,11 @@ class SetupTab extends React.Component {
    * @param {object} argsDict - key: value pairs of InVEST arguments.
    */
   batchUpdateArgs(argsDict) {
-    const { argsSpec, uiSpec } = this.props;
+    const { argsSpec, inputFieldOrder } = this.props;
     const {
       argsValues,
       argsDropdownOptions,
-    } = initializeArgValues(argsSpec, uiSpec, argsDict);
+    } = initializeArgValues(argsSpec, inputFieldOrder, argsDict);
 
     this.setState({
       argsValues: argsValues,
@@ -555,10 +552,10 @@ class SetupTab extends React.Component {
       const {
         argsSpec,
         userguide,
+        inputFieldOrder,
         sidebarSetupElementId,
         sidebarFooterElementId,
         executeClicked,
-        uiSpec,
         modelID,
       } = this.props;
 
@@ -610,7 +607,7 @@ class SetupTab extends React.Component {
               argsValidation={argsValidation}
               argsEnabled={argsEnabled}
               argsDropdownOptions={argsDropdownOptions}
-              argsOrder={uiSpec.order}
+              argsOrder={inputFieldOrder}
               userguide={userguide}
               updateArgValues={this.updateArgValues}
               updateArgTouched={this.updateArgTouched}
@@ -676,9 +673,7 @@ SetupTab.propTypes = {
       type: PropTypes.string,
     })
   ).isRequired,
-  uiSpec: PropTypes.shape({
-    order: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.string)).isRequired,
-  }).isRequired,
+  inputFieldOrder: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.string)).isRequired,
   argsInitValues: PropTypes.objectOf(PropTypes.oneOfType(
     [PropTypes.string, PropTypes.bool, PropTypes.number])),
   investExecute: PropTypes.func.isRequired,

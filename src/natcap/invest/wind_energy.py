@@ -20,7 +20,7 @@ from scipy import integrate
 from shapely import speedups
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -90,7 +90,7 @@ OUTPUT_WIND_DATA_FIELDS = {
     }
 }
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "wind_energy",
     "model_title": gettext("Wind Energy Production"),
     "userguide": "wind_energy.html",
@@ -101,8 +101,7 @@ MODEL_SPEC = {
             ['wind_data_path', 'aoi_vector_path', 'bathymetry_path', 'land_polygon_vector_path', 'global_wind_parameters_path'],
             ['turbine_parameters_path', 'number_of_turbines', 'min_depth', 'max_depth', 'min_distance', 'max_distance'],
             ['valuation_container', 'foundation_cost', 'discount_rate', 'grid_points_path', 'avg_grid_distance', 'price_table', 'wind_schedule', 'wind_price', 'rate_change'],
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "bathymetry_path",
@@ -110,9 +109,9 @@ MODEL_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "wind_data_path": {
             "type": "csv",
             "columns": INPUT_WIND_DATA_FIELDS,
@@ -120,7 +119,7 @@ MODEL_SPEC = {
             "name": gettext("wind data points")
         },
         "aoi_vector_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "projected": True,
             "projection_units": u.meter,
             "required": "valuation_container and grid_points_path",
@@ -489,7 +488,7 @@ MODEL_SPEC = {
                 },
                 "wind_energy_points.shp": {
                     "about": gettext("Map of summarized data at each point."),
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "fields": OUTPUT_WIND_DATA_FIELDS
                 }
             }
@@ -540,14 +539,14 @@ MODEL_SPEC = {
                 "wind_data.pickle": {"about": "Pickled wind data dictionary"},
                 "wind_energy_points_from_data.shp": {
                     "about": "Wind data",
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "fields": OUTPUT_WIND_DATA_FIELDS
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 
 # The _SCALE_KEY is used in getting the right wind energy arguments that are
@@ -715,15 +714,13 @@ def execute(args):
     number_of_turbines = int(args['number_of_turbines'])
 
     # Read the biophysical turbine parameters into a dictionary
-    turbine_dict = validation.get_validated_dataframe(
-        args['turbine_parameters_path'],
-        **MODEL_SPEC['args']['turbine_parameters_path']
-    ).iloc[0].to_dict()
+    turbine_dict = MODEL_SPEC.get_input(
+        'turbine_parameters_path').get_validated_dataframe(
+        args['turbine_parameters_path']).iloc[0].to_dict()
     # Read the biophysical global parameters into a dictionary
-    global_params_dict = validation.get_validated_dataframe(
-        args['global_wind_parameters_path'],
-        **MODEL_SPEC['args']['global_wind_parameters_path']
-    ).iloc[0].to_dict()
+    global_params_dict = MODEL_SPEC.get_input(
+        'global_wind_parameters_path').get_validated_dataframe(
+        args['global_wind_parameters_path']).iloc[0].to_dict()
 
     # Combine the turbine and global parameters into one dictionary
     parameters_dict = global_params_dict.copy()
@@ -741,9 +738,9 @@ def execute(args):
         # If Price Table provided use that for price of energy, validate inputs
         time = parameters_dict['time_period']
         if args['price_table']:
-            wind_price_df = validation.get_validated_dataframe(
-                args['wind_schedule'], **MODEL_SPEC['args']['wind_schedule']
-            ).sort_index()  # sort by year
+            wind_price_df = MODEL_SPEC.get_input(
+                'wind_schedule').get_validated_dataframe(
+                args['wind_schedule']).sort_index()  # sort by year
 
             year_count = len(wind_price_df)
             if year_count != time + 1:
@@ -1112,8 +1109,8 @@ def execute(args):
         LOGGER.info('Grid Points Provided. Reading in the grid points')
 
         # Read the grid points csv, and convert it to land and grid dictionary
-        grid_land_df = validation.get_validated_dataframe(
-            args['grid_points_path'], **MODEL_SPEC['args']['grid_points_path'])
+        grid_land_df = MODEL_SPEC.get_input(
+            'grid_points_path').get_validated_dataframe(args['grid_points_path'])
 
         # Convert the dataframes to dictionaries, using 'ID' (the index) as key
         grid_dict = grid_land_df[grid_land_df['type'] == 'grid'].to_dict('index')
@@ -1933,8 +1930,8 @@ def _compute_density_harvested_fields(
 
     # Read the wind energy data into a dictionary
     LOGGER.info('Reading in Wind Data into a dictionary')
-    wind_point_df = validation.get_validated_dataframe(
-        wind_data_path, **MODEL_SPEC['args']['wind_data_path'])
+    wind_point_df = MODEL_SPEC.get_input(
+        'wind_data_path').get_validated_dataframe(wind_data_path)
     wind_point_df.columns = wind_point_df.columns.str.upper()
     # Calculate scale value at new hub height given reference values.
     # See equation 3 in users guide
@@ -2663,8 +2660,7 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the str validation warning.
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC['args'],
-                               MODEL_SPEC['args_with_spatial_overlap'])
+    validation_warnings = validation.validate(args, MODEL_SPEC)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     sufficient_keys = validation.get_sufficient_keys(args)
     valid_sufficient_keys = sufficient_keys - invalid_keys
@@ -2673,15 +2669,9 @@ def validate(args, limit_to=None):
             'global_wind_parameters_path' in valid_sufficient_keys):
         year_count = utils.read_csv_to_dataframe(
             args['wind_schedule']).shape[0]
-        time = validation.get_validated_dataframe(
-            args['global_wind_parameters_path'],
-            index_col='0',
-            columns={
-                '0': {'type': 'freestyle_string'},
-                '1': {'type': 'number'}
-            },
-            read_csv_kwargs={'header': None}
-        )['1']['time_period']
+        time = MODEL_SPEC.get_input(
+            'global_wind_parameters_path').get_validated_dataframe(
+            args['global_wind_parameters_path']).iloc[0]['time_period']
         if year_count != time + 1:
             validation_warnings.append((
                 ['wind_schedule'],

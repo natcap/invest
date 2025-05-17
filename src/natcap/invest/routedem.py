@@ -7,7 +7,7 @@ import pygeoprocessing.routing
 import taskgraph
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -16,7 +16,7 @@ LOGGER = logging.getLogger(__name__)
 
 INVALID_BAND_INDEX_MSG = gettext('Must be between 1 and {maximum}')
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "routedem",
     "model_title": gettext("RouteDEM"),
     "userguide": "routedem.html",
@@ -30,14 +30,13 @@ MODEL_SPEC = {
             ['calculate_flow_direction'],
             ['calculate_flow_accumulation'],
             ['calculate_stream_threshold', 'threshold_flow_accumulation', 'calculate_downslope_distance', 'calculate_stream_order', 'calculate_subwatersheds']
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
-        "dem_path": spec_utils.DEM,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
+        "dem_path": spec.DEM,
         "dem_band_index": {
             "type": "number",
             "expression": "value >= 1",
@@ -87,11 +86,11 @@ MODEL_SPEC = {
             "name": gettext("calculate streams")
         },
         "threshold_flow_accumulation": {
-            **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
+            **spec.THRESHOLD_FLOW_ACCUMULATION,
             "required": "calculate_stream_threshold",
             "allowed": "calculate_stream_threshold",
             "about": (
-                spec_utils.THRESHOLD_FLOW_ACCUMULATION['about'] + " " +
+                spec.THRESHOLD_FLOW_ACCUMULATION['about'] + " " +
                 gettext("Required if Calculate Streams is selected."))
         },
         "calculate_downslope_distance": {
@@ -125,17 +124,17 @@ MODEL_SPEC = {
         },
     },
     "outputs": {
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR,
-        "filled.tif": spec_utils.FILLED_DEM,
-        "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
-        "flow_direction.tif": spec_utils.FLOW_DIRECTION,
-        "slope.tif": spec_utils.SLOPE,
-        "stream_mask.tif": spec_utils.STREAM,
+        "taskgraph_cache": spec.TASKGRAPH_DIR,
+        "filled.tif": spec.FILLED_DEM,
+        "flow_accumulation.tif": spec.FLOW_ACCUMULATION,
+        "flow_direction.tif": spec.FLOW_DIRECTION,
+        "slope.tif": spec.SLOPE,
+        "stream_mask.tif": spec.STREAM,
         "strahler_stream_order.gpkg": {
             "about": (
                 "A vector of line segments indicating the Strahler stream "
                 "order and other properties of each stream segment."),
-            "geometries": spec_utils.LINESTRING,
+            "geometries": spec.LINESTRING,
             "fields": {
                 "order": {
                     "about": "The Strahler stream order.",
@@ -238,7 +237,7 @@ MODEL_SPEC = {
                 "subwatersheds.  A new subwatershed is created for each "
                 "tributary of a stream and is influenced greatly by "
                 "your choice of Threshold Flow Accumulation value."),
-            "geometries": spec_utils.POLYGON,
+            "geometries": spec.POLYGON,
             "fields": {
                 "stream_id": {
                     "about": (
@@ -277,7 +276,7 @@ MODEL_SPEC = {
             },
         },
     }
-}
+})
 
 
 # replace %s with file suffix
@@ -539,7 +538,7 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC['args'])
+    validation_warnings = validation.validate(args, MODEL_SPEC)
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     sufficient_keys = validation.get_sufficient_keys(args)

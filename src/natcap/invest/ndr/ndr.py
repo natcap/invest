@@ -12,7 +12,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from .. import gettext
-from .. import spec_utils
+from .. import spec
 from .. import utils
 from .. import validation
 from ..sdr import sdr
@@ -23,7 +23,7 @@ LOGGER = logging.getLogger(__name__)
 
 MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "ndr",
     "model_title": gettext("Nutrient Delivery Ratio"),
     "userguide": "ndr.html",
@@ -35,8 +35,7 @@ MODEL_SPEC = {
             ['calc_p'],
             ['calc_n', 'subsurface_critical_length_n', 'subsurface_eff_n'],
             ['flow_dir_algorithm', 'threshold_flow_accumulation', 'k_param', 'runoff_proxy_av'],
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",
@@ -44,17 +43,17 @@ MODEL_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "dem_path": {
-            **spec_utils.DEM,
+            **spec.DEM,
             "projected": True
         },
         "lulc_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
-            "about": spec_utils.LULC['about'] + " " + gettext(
+            "about": spec.LULC['about'] + " " + gettext(
                 "All values in this raster must "
                 "have corresponding entries in the Biophysical table.")
         },
@@ -74,7 +73,7 @@ MODEL_SPEC = {
         "watersheds_path": {
             "type": "vector",
             "projected": True,
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {},
             "about": gettext(
                 "Map of the boundaries of the watershed(s) over which to "
@@ -85,24 +84,48 @@ MODEL_SPEC = {
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
-                "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
+                "lucode": spec.LULC_TABLE_COLUMN,
+                "load_n": {
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
+                    "required": "calc_n",
                     "about": gettext(
-                        "The nutrient loading for this land use class.")},
-                "eff_[NUTRIENT]": {  # nutrient retention capacities
+                        "The nitrogen loading for this land use class.")},
+                "load_p": {
+                    "type": "number",
+                    "units": u.kilogram/u.hectare/u.year,
+                    "required": "calc_p",
+                    "about": gettext(
+                        "The phosphorus loading for this land use class.")},
+                "eff_n": {
                     "type": "ratio",
+                    "required": "calc_n",
                     "about": gettext(
-                        "Maximum nutrient retention efficiency. This is the "
-                        "maximum proportion of the nutrient that is retained "
+                        "Maximum nitrogen retention efficiency. This is the "
+                        "maximum proportion of the nitrogen that is retained "
                         "on this LULC class.")},
-                "crit_len_[NUTRIENT]": {  # nutrient critical lengths
+                "eff_p": {
+                    "type": "ratio",
+                    "required": "calc_p",
+                    "about": gettext(
+                        "Maximum phosphorus retention efficiency. This is the "
+                        "maximum proportion of the phosphorus that is retained "
+                        "on this LULC class.")},
+                "crit_len_n": {
                     "type": "number",
                     "units": u.meter,
+                    "required": "calc_n",
                     "about": gettext(
                         "The distance after which it is assumed that this "
-                        "LULC type retains the nutrient at its maximum "
+                        "LULC type retains nitrogen at its maximum "
+                        "capacity.")},
+                "crit_len_p": {
+                    "type": "number",
+                    "units": u.meter,
+                    "required": "calc_p",
+                    "about": gettext(
+                        "The distance after which it is assumed that this "
+                        "LULC type retains phosphorus at its maximum "
                         "capacity.")},
                 "proportion_subsurface_n": {
                     "type": "ratio",
@@ -116,13 +139,11 @@ MODEL_SPEC = {
             },
             "about": gettext(
                 "A table mapping each LULC class to its biophysical "
-                "properties related to nutrient load and retention. Replace "
-                "'[NUTRIENT]' in the column names with 'n' or 'p' for "
-                "nitrogen or phosphorus respectively. Nitrogen data must be "
-                "provided if Calculate Nitrogen is selected. Phosphorus data "
-                "must be provided if Calculate Phosphorus is selected. All "
-                "LULC codes in the LULC raster must have corresponding "
-                "entries in this table."),
+                "properties related to nutrient load and retention. Nitrogen "
+                "data must be provided if Calculate Nitrogen is selected. "
+                "Phosphorus data must be provided if Calculate Phosphorus is "
+                "selected. All LULC codes in the LULC raster must have "
+                "corresponding entries in this table."),
             "name": gettext("biophysical table")
         },
         "calc_p": {
@@ -136,7 +157,7 @@ MODEL_SPEC = {
             "name": gettext("calculate nitrogen")
         },
         "threshold_flow_accumulation": {
-            **spec_utils.THRESHOLD_FLOW_ACCUMULATION
+            **spec.THRESHOLD_FLOW_ACCUMULATION
         },
         "k_param": {
             "type": "number",
@@ -186,12 +207,12 @@ MODEL_SPEC = {
                 "retention due to biochemical degradation in soils. Required "
                 "if Calculate Nitrogen is selected.")
         },
-        **spec_utils.FLOW_DIR_ALGORITHM
+        **spec.FLOW_DIR_ALGORITHM
     },
     "outputs": {
         "watershed_results_ndr.gpkg": {
             "about": "Vector with aggregated nutrient model results per watershed.",
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "p_surface_load": {
                     "type": "number",
@@ -299,8 +320,8 @@ MODEL_SPEC = {
                     "about": "Effective phosphorus retention provided by the downslope flow path for each pixel",
                     "bands": {1: {"type": "ratio"}}
                 },
-                "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
-                "flow_direction.tif": spec_utils.FLOW_DIRECTION,
+                "flow_accumulation.tif": spec.FLOW_ACCUMULATION,
+                "flow_direction.tif": spec.FLOW_DIRECTION,
                 "ic_factor.tif": {
                     "about": "Index of connectivity",
                     "bands": {1: {"type": "ratio"}}
@@ -357,7 +378,7 @@ MODEL_SPEC = {
                     "about": "Inverse of slope",
                     "bands": {1: {"type": "number", "units": u.none}}
                 },
-                "stream.tif": spec_utils.STREAM,
+                "stream.tif": spec.STREAM,
                 "sub_load_n.tif": {
                     "about": "Nitrogen loads for subsurface transport",
                     "bands": {1: {
@@ -427,8 +448,8 @@ MODEL_SPEC = {
                     "about": "Runoff proxy input masked to exclude pixels outside the watershed",
                     "bands": {1: {"type": "number", "units": u.none}}
                 },
-                "filled_dem.tif": spec_utils.FILLED_DEM,
-                "slope.tif": spec_utils.SLOPE,
+                "filled_dem.tif": spec.FILLED_DEM,
+                "slope.tif": spec.SLOPE,
                 "subsurface_export_n.pickle": {
                     "about": "Pickled zonal statistics of nitrogen subsurface export"
                 },
@@ -452,9 +473,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 _OUTPUT_BASE_FILES = {
     'n_surface_export_path': 'n_surface_export.tif',
@@ -602,9 +623,9 @@ def execute(args):
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
 
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table_path'],
-        **MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = MODEL_SPEC.get_input(
+        'biophysical_table_path').get_validated_dataframe(
+        args['biophysical_table_path'])
 
     # Ensure that if user doesn't explicitly assign a value,
     # runoff_proxy_av = None
@@ -1267,7 +1288,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    spec_copy = copy.deepcopy(MODEL_SPEC['args'])
+    spec_copy = copy.deepcopy(MODEL_SPEC)
     # Check required fields given the state of ``calc_n`` and ``calc_p``
     nutrients_selected = []
     for nutrient_letter in ('n', 'p'):
@@ -1276,17 +1297,14 @@ def validate(args, limit_to=None):
 
     for param in ['load', 'eff', 'crit_len']:
         for nutrient in nutrients_selected:
-            spec_copy['biophysical_table_path']['columns'][f'{param}_{nutrient}'] = (
-                spec_copy['biophysical_table_path']['columns'][f'{param}_[NUTRIENT]'])
-            spec_copy['biophysical_table_path']['columns'][f'{param}_{nutrient}']['required'] = True
-        spec_copy['biophysical_table_path']['columns'].pop(f'{param}_[NUTRIENT]')
+            spec_copy.get_input('biophysical_table_path').columns.get(
+                f'{param}_{nutrient}').required = True
 
     if 'n' in nutrients_selected:
-        spec_copy['biophysical_table_path']['columns']['proportion_subsurface_n'][
-            'required'] = True
+        spec_copy.get_input('biophysical_table_path').columns.get(
+            'proportion_subsurface_n').required = True
 
-    validation_warnings = validation.validate(
-        args, spec_copy, MODEL_SPEC['args_with_spatial_overlap'])
+    validation_warnings = validation.validate(args, spec_copy)
 
     if not nutrients_selected:
         validation_warnings.append(

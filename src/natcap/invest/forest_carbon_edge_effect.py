@@ -3,6 +3,7 @@
 An implementation of the model described in 'Degradation in carbon stocks
 near tropical forest edges', by Chaplin-Kramer et. al (2015).
 """
+import copy
 import logging
 import os
 import pickle
@@ -21,7 +22,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -34,7 +35,7 @@ DISTANCE_UPPER_BOUND = 500e3
 # helpful to have a global nodata defined for the whole model
 NODATA_VALUE = -1
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "forest_carbon_edge_effect",
     "model_title": gettext("Forest Carbon Edge Effect"),
     "userguide": "carbon_edge.html",
@@ -45,16 +46,15 @@ MODEL_SPEC = {
             ['lulc_raster_path', 'biophysical_table_path', 'pools_to_calculate'],
             ['compute_forest_edge_effects', 'tropical_forest_edge_carbon_model_vector_path', 'n_nearest_model_points', 'biomass_to_carbon_conversion_factor'],
             ['aoi_vector_path']
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "n_nearest_model_points": {
             "expression": "value > 0 and value.is_integer()",
             "type": "number",
@@ -72,7 +72,7 @@ MODEL_SPEC = {
             "name": gettext("number of points to average")
         },
         "aoi_vector_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "projected": True,
             "required": False
         },
@@ -80,7 +80,7 @@ MODEL_SPEC = {
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "is_tropical_forest": {
                     "type": "boolean",
                     "about": gettext(
@@ -124,8 +124,8 @@ MODEL_SPEC = {
             "name": gettext("biophysical table")
         },
         "lulc_raster_path": {
-            **spec_utils.LULC,
-            "about": spec_utils.LULC['about'] + " " + gettext(
+            **spec.LULC,
+            "about": spec.LULC['about'] + " " + gettext(
                 "All values in this raster must "
                 "have corresponding entries in the Biophysical Table."),
             "projected": True,
@@ -180,7 +180,7 @@ MODEL_SPEC = {
                         "θ₃ parameter for the regression equation. "
                         "Used only for the asymptotic model.")}
             },
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "projected": True,
             "projection_units": u.meter,
             "required": "compute_forest_edge_effects",
@@ -216,7 +216,7 @@ MODEL_SPEC = {
         },
         "aggregated_carbon_stocks.shp": {
             "about": "AOI map with aggregated carbon statistics.",
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "c_sum": {
                     "type": "number",
@@ -253,7 +253,7 @@ MODEL_SPEC = {
                     "about": (
                         "The regression parameters reprojected to match your "
                         "study area."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 },
                 "edge_distance.tif": {
@@ -274,14 +274,14 @@ MODEL_SPEC = {
                     "about": (
                         "The Global Regression Models shapefile clipped "
                         "to the study area."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 
 def execute(args):
@@ -441,9 +441,9 @@ def execute(args):
     # Map non-forest landcover codes to carbon biomasses
     LOGGER.info('Calculating direct mapped carbon stocks')
     carbon_maps = []
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table_path'],
-        **MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = MODEL_SPEC.get_input(
+        'biophysical_table_path').get_validated_dataframe(
+        args['biophysical_table_path'])
     pool_list = [('c_above', True)]
     if args['pools_to_calculate'] == 'all':
         pool_list.extend([
@@ -671,8 +671,8 @@ def _calculate_lulc_carbon_map(
 
     """
     # classify forest pixels from lulc
-    biophysical_df = validation.get_validated_dataframe(
-        biophysical_table_path, **MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = MODEL_SPEC.get_input(
+        'biophysical_table_path').get_validated_dataframe(biophysical_table_path)
 
     lucode_to_per_cell_carbon = {}
 
@@ -731,8 +731,9 @@ def _map_distance_from_tropical_forest_edge(
 
     """
     # Build a list of forest lucodes
-    biophysical_df = validation.get_validated_dataframe(
-        biophysical_table_path, **MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = MODEL_SPEC.get_input(
+        'biophysical_table_path').get_validated_dataframe(
+        biophysical_table_path)
     forest_codes = biophysical_df[biophysical_df['is_tropical_forest']].index.values
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
@@ -1144,25 +1145,9 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
-
-    invalid_keys = set([])
-    for affected_keys, error_msg in validation_warnings:
-        for key in affected_keys:
-            invalid_keys.add(key)
-
-    if ('pools_to_calculate' not in invalid_keys and
-            'biophysical_table_path' not in invalid_keys):
-        if args['pools_to_calculate'] == 'all':
-            # other fields have already been checked by validate
-            required_fields = ['c_above', 'c_below', 'c_soil', 'c_dead']
-            error_msg = validation.check_csv(
-                args['biophysical_table_path'],
-                header_patterns=required_fields,
-                axis=1)
-            if error_msg:
-                validation_warnings.append(
-                    (['biophysical_table_path'], error_msg))
-
-    return validation_warnings
+    model_spec = copy.deepcopy(MODEL_SPEC)
+    if 'pools_to_calculate' in args and args['pools_to_calculate'] == 'all':
+        model_spec.get_input('biophysical_table_path').columns.get('c_below').required = True
+        model_spec.get_input('biophysical_table_path').columns.get('c_soil').required = True
+        model_spec.get_input('biophysical_table_path').columns.get('c_dead').required = True
+    return validation.validate(args, model_spec)

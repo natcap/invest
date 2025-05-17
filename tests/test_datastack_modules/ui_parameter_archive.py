@@ -1,7 +1,11 @@
-MODEL_SPEC = {
-    'model_id': 'ui_parameters_model',
-    'args': {
-        'foo': {'type': 'freestyle_string'},
-        'bar': {'type': 'freestyle_string'},
-    }
-}
+from natcap.invest import spec
+
+MODEL_SPEC = SimpleNamespace(inputs=[
+    spec.StringInput(id='foo'),
+    spec.StringInput(id='bar')],
+    outputs={},
+    model_id='ui_parameters_model',
+    model_title='',
+    userguide='',
+    input_field_order=[]
+)

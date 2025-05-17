@@ -99,7 +99,7 @@ export function setupInvestRunHandlers() {
         TGLOGLEVELMAP[taskgraphLoggingLevel],
         `--language "${language}"`,
         'run',
-        modelID,
+        settingsStore.get(`plugins.${modelID}.modelID`),
         `-d "${datastackPath}"`,
       ];
       port = settingsStore.get(`plugins.${modelID}.port`);

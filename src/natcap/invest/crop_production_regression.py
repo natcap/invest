@@ -10,7 +10,7 @@ from osgeo import gdal
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -66,7 +66,7 @@ NUTRIENTS = [
     ("vitk", "vitamin K", u.microgram/u.hectogram)
 ]
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "crop_production_regression",
     "model_title": gettext("Crop Production: Regression"),
     "userguide": "crop_production.html",
@@ -75,19 +75,18 @@ MODEL_SPEC = {
         "order": [
             ['workspace_dir', 'results_suffix'],
             ['model_data_path', 'landcover_raster_path', 'landcover_to_crop_table_path', 'fertilization_rate_table_path', 'aggregate_polygon_path'],
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["landcover_raster_path", "aggregate_polygon_path"],
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "landcover_raster_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "projection_units": u.meter
         },
@@ -127,7 +126,7 @@ MODEL_SPEC = {
             "name": gettext("fertilization rate table")
         },
         "aggregate_polygon_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "required": False
         },
         "model_data_path": {
@@ -276,7 +275,7 @@ MODEL_SPEC = {
             "contents": {
                 "aggregate_vector.shp": {
                     "about": "Copy of input AOI vector",
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 },
                 "clipped_[CROP]_climate_bin_map.tif": {
@@ -329,9 +328,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 _INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
 
@@ -503,13 +502,13 @@ def execute(args):
 
     LOGGER.info(
         "Checking if the landcover raster is missing lucodes")
-    crop_to_landcover_df = validation.get_validated_dataframe(
-        args['landcover_to_crop_table_path'],
-        **MODEL_SPEC['args']['landcover_to_crop_table_path'])
+    crop_to_landcover_df = MODEL_SPEC.get_input(
+        'landcover_to_crop_table_path').get_validated_dataframe(
+        args['landcover_to_crop_table_path'])
 
-    crop_to_fertilization_rate_df = validation.get_validated_dataframe(
-        args['fertilization_rate_table_path'],
-        **MODEL_SPEC['args']['fertilization_rate_table_path'])
+    crop_to_fertilization_rate_df = MODEL_SPEC.get_input(
+        'fertilization_rate_table_path').get_validated_dataframe(
+        args['fertilization_rate_table_path'])
 
     lucodes_in_table = set(list(
         crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER]))
@@ -594,12 +593,11 @@ def execute(args):
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
-        crop_regression_df = validation.get_validated_dataframe(
-            os.path.join(args['model_data_path'],
-                         _REGRESSION_TABLE_PATTERN % crop_name),
-            **MODEL_SPEC['args']['model_data_path']['contents'][
-                'climate_regression_yield_tables']['contents'][
-                '[CROP]_regression_yield_table.csv'])
+        crop_regression_df = MODEL_SPEC.get_input('model_data_path').contents.get(
+                'climate_regression_yield_tables').contents.get(
+                '[CROP]_regression_yield_table.csv').get_validated_dataframe(
+                    os.path.join(args['model_data_path'],
+                         _REGRESSION_TABLE_PATTERN % crop_name))
         for _, row in crop_regression_df.iterrows():
             for header in _EXPECTED_REGRESSION_TABLE_HEADERS:
                 if numpy.isnan(row[header]):
@@ -818,9 +816,9 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_df = validation.get_validated_dataframe(
-        os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
-        **MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv'])
+    nutrient_df = MODEL_SPEC.get_input('model_data_path').contents.get(
+        'crop_nutrient.csv').get_validated_dataframe(
+            os.path.join(args['model_data_path'], 'crop_nutrient.csv'))
 
     LOGGER.info("Generating report table")
     crop_names = list(crop_to_landcover_df.index)
@@ -1183,5 +1181,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC)
