@@ -6,6 +6,7 @@ import { execFile, execSync, spawn } from 'child_process';
 import { promisify } from 'util';
 import { app, ipcMain } from 'electron';
 import { Downloader } from 'nodejs-file-downloader';
+import crypto from 'crypto';
 
 import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
@@ -162,10 +163,12 @@ export function setupAddPlugin(i18n) {
 
         // Write plugin metadata to the workbench's config.json
         logger.info('writing plugin info to settings store');
-        const pluginID = `${modelID}@${version}`;
+        // Uniquely identify plugin by a hash of its ID and version
+        // Hashing because the version may contain dots,
+        // which doesn't work well as a key for electron-store's set and get methods
+        const pluginID = crypto.createHash('sha1').update(`${modelID}@${version}`).digest('hex');
         settingsStore.set(
-          // Escape dots so that electron-store doesn't expand them into separate keys
-          `plugins.${pluginID.replace(/\./g, '\\.')}`,
+          `plugins.${pluginID}`,
           {
             modelID: modelID,
             modelTitle: modelTitle,
@@ -191,7 +194,7 @@ export function setupRemovePlugin() {
       logger.info('removing plugin', pluginID);
       try {
         // Delete the plugin's conda env
-        const env = settingsStore.get(`plugins.${pluginID.replace(/\./g, '\\.')}.env`);
+        const env = settingsStore.get(`plugins.${pluginID}.env`);
         const micromamba = settingsStore.get('micromamba');
         await spawnWithLogging(micromamba, ['env', 'remove', '--yes', '--prefix', `"${env}"`]);
         // Delete the plugin's data from storage
