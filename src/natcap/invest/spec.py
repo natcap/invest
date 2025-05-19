@@ -1323,8 +1323,21 @@ def build_model_spec(model_spec):
     outputs = [
         build_output_spec(argkey, argspec) for argkey, argspec in model_spec['outputs'].items()]
     different_projections_ok = False
+
+    spatial_keys = set()
+    for i in inputs:
+        if i.type in['raster', 'vector']:
+            spatial_keys.add(i.id)
+
+    # validate_spatial_overlap is True if all top-level spatial inputs should overlap,
+    # or a list of keys, if only a subset of the inputs must overlap
+    validate_spatial_overlap = True
     if 'args_with_spatial_overlap' in model_spec:
         different_projections_ok = model_spec['args_with_spatial_overlap'].get('different_projections_ok', False)
+        if set(spatial_keys) != set(model_spec['args_with_spatial_overlap']['spatial_keys']):
+            print('mismatch', model_spec['model_id'])
+            validate_spatial_overlap = model_spec['args_with_spatial_overlap']['spatial_keys']
+
     return ModelSpec(
         model_id=model_spec['model_id'],
         model_title=model_spec['model_title'],
@@ -1333,7 +1346,7 @@ def build_model_spec(model_spec):
         inputs=inputs,
         outputs=outputs,
         input_field_order=model_spec['ui_spec']['order'],
-        validate_spatial_overlap=True,
+        validate_spatial_overlap=validate_spatial_overlap,
         different_projections_ok=different_projections_ok)
 
 

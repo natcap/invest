@@ -342,10 +342,16 @@ def validate(args, model_spec):
 
     # Phase 3: Check spatial overlap if applicable
     if model_spec.validate_spatial_overlap:
-        spatial_keys = set()
-        for i in model_spec.inputs:
-            if i.type in['raster', 'vector']:
-                spatial_keys.add(i.id)
+
+        # validate_spatial_overlap can be True, meaning validate all spatial keys,
+        # or a list, representing a subset of keys to validate
+        if isinstance(model_spec.validate_spatial_overlap, list):
+            spatial_keys = set(model_spec.validate_spatial_overlap)
+        else:
+            spatial_keys = set()
+            for i in model_spec.inputs:
+                if i.type in['raster', 'vector']:
+                    spatial_keys.add(i.id)
 
         # Only test for spatial overlap once all the sufficient spatial keys
         # are otherwise valid. And then only when there are at least 2.
