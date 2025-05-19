@@ -1993,7 +1993,7 @@ def describe_arg_from_spec(name, spec):
         lines that are indented, that describe details of the arg such as
         vector fields and geometry types, option_string options, etc.
     """
-    type_string = format_type_string(spec.__class__)
+    type_string = format_type_string(type(spec))
     in_parentheses = [type_string]
 
     # For numbers and rasters that have units, display the units
@@ -2005,12 +2005,12 @@ def describe_arg_from_spec(name, spec):
             translated_units = gettext("units")
             in_parentheses.append(f'{translated_units}: **{units_string}**')
 
-    if spec.__class__ is VectorInput:
+    if type(spec) is VectorInput:
         in_parentheses.append(format_geometry_types_string(spec.geometry_types))
 
     # Represent the required state as a string, defaulting to required
     # It doesn't make sense to include this for boolean checkboxes
-    if spec.__class__ is not BooleanInput:
+    if type(spec) is not BooleanInput:
         required_string = format_required_string(spec.required)
         in_parentheses.append(f'*{required_string}*')
 
@@ -2025,7 +2025,7 @@ def describe_arg_from_spec(name, spec):
 
     # Add details for the types that have them
     indented_block = []
-    if spec.__class__ is OptionStringInput:
+    if type(spec) is OptionStringInput:
         # may be either a dict or set. if it's empty, the options are
         # dynamically generated. don't try to document them.
         if spec.options:
@@ -2036,7 +2036,7 @@ def describe_arg_from_spec(name, spec):
                 formatted_options = format_options_string_from_list(spec.options)
                 indented_block.append(gettext('Options:') + f' {formatted_options}')
 
-    elif spec.__class__ is CSVInput:
+    elif type(spec) is CSVInput:
         if not spec.columns and not spec.rows:
             first_line += gettext(
                 ' Please see the sample data table for details on the format.')
@@ -2193,7 +2193,7 @@ def generate_metadata_for_outputs(model_module, args_dict):
 
     def _walk_spec(output_spec, workspace):
         for spec_data in output_spec:
-            if spec_data.__class__ is DirectoryOutput:
+            if type(spec_data) is DirectoryOutput:
                 if 'taskgraph.db' in [s.id for s in spec_data.contents]:
                     continue
                 _walk_spec(

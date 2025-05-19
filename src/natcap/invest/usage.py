@@ -158,7 +158,7 @@ def _calculate_args_bounding_box(args, model_spec):
                 LOGGER.exception(
                     f'Error when transforming coordinates: {transform_error}')
         else:
-            LOGGER.debug(f'Arg {key} of type {model_spec.get_input(key).__class__} '
+            LOGGER.debug(f'Arg {key} of type {type(model_spec.get_input(key))} '
                           'excluded from bounding box calculation')
 
     return bb_intersection, bb_union

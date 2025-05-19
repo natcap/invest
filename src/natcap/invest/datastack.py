@@ -240,7 +240,7 @@ def build_datastack_archive(args, model_id, datastack_path):
             LOGGER.info(f'Skipping arg {key}; not in model MODEL_SPEC')
 
         input_spec = module.MODEL_SPEC.get_input(key)
-        if input_spec.__class__ in file_based_types:
+        if type(input_spec) in file_based_types:
             if args[key] in {None, ''}:
                 LOGGER.info(
                     f'Skipping key {key}, value is empty and cannot point to '
@@ -260,14 +260,14 @@ def build_datastack_archive(args, model_id, datastack_path):
                 rewritten_args[key] = files_found[source_path]
                 continue
 
-        if input_spec.__class__ is spec.CSVInput:
+        if type(input_spec) is spec.CSVInput:
             # check the CSV for columns that may be spatial.
             # But also, the columns specification might not be listed, so don't
             # require that 'columns' exists in the MODEL_SPEC.
             spatial_columns = []
             if input_spec.columns:
                 for col_spec in input_spec.columns:
-                    if col_spec.__class__ in spatial_types:
+                    if type(col_spec) in spatial_types:
                         spatial_columns.append(col_spec.id)
 
             LOGGER.debug(f'Detected spatial columns: {spatial_columns}')
@@ -342,14 +342,14 @@ def build_datastack_archive(args, model_id, datastack_path):
             target_arg_value = target_csv_path
             files_found[source_path] = target_arg_value
 
-        elif input_spec.__class__ is spec.FileInput:
+        elif type(input_spec) is spec.FileInput:
             target_filepath = os.path.join(
                 data_dir, f'{key}_file')
             shutil.copyfile(source_path, target_filepath)
             target_arg_value = target_filepath
             files_found[source_path] = target_arg_value
 
-        elif input_spec.__class__ is spec.DirectoryInput:
+        elif type(input_spec)is spec.DirectoryInput:
             # copy the whole folder
             target_directory = os.path.join(data_dir, f'{key}_directory')
             os.makedirs(target_directory)
@@ -369,7 +369,7 @@ def build_datastack_archive(args, model_id, datastack_path):
             target_arg_value = target_directory
             files_found[source_path] = target_arg_value
 
-        elif input_spec.__class__ in spatial_types:
+        elif type(input_spec) in spatial_types:
             # Create a directory with a readable name, something like
             # "aoi_path_vector" or "lulc_cur_path_raster".
             spatial_dir = os.path.join(data_dir, f'{key}_{input_spec.type}')
@@ -379,7 +379,7 @@ def build_datastack_archive(args, model_id, datastack_path):
 
         else:
             LOGGER.debug(
-                f"Type {input_spec.__class__} is not filesystem-based; "
+                f"Type {type(input_spec)} is not filesystem-based; "
                 "recording value directly")
             # not a filesystem-based type
             # Record the value directly
