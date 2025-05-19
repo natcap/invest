@@ -82,6 +82,13 @@ HRA
   the input vectors, rather than using ``ogr.wkbUnknown``
   (`#1881 <https://github.com/natcap/invest/issues/1881>`_).
 
+NDR
+===
+* Fixed a bug in the effective retention calculation where nodata pour point
+  pixels were mistakenly used as real data. The effect of this change is most
+  pronounced along stream edges and should not affect the overall pattern of
+  results. (`#1845 <https://github.com/natcap/invest/issues/1845>`_)
+
 
 3.15.1 (2025-05-06)
 -------------------
@@ -111,13 +118,6 @@ Crop Production
 * The Regression model now correctly validates crop names against the existence
   of a corresponding regression yield table
   (`#1723 <https://github.com/natcap/invest/issues/1723>`_).
-
-NDR
-===
-* Fixed a bug in the effective retention calculation where nodata pour point
-  pixels were mistakenly used as real data. The effect of this change is most
-  pronounced along stream edges and should not affect the overall pattern of
-  results. (`#1845 <https://github.com/natcap/invest/issues/1845>`_)
 
 Seasonal Water Yield
 ====================
