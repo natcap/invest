@@ -1,6 +1,9 @@
-"""InVEST Sediment Delivery Ratio (SDR) module.
+"""Sediment Delivery Ratio (SDR) with USLE C raster.
 
-The SDR method in this model is based on:
+This is an InVEST plugin based on the core InVEST SDR model. This alternative
+version expects USLE C values in a raster instead of in the biophysical table.
+
+As with the InVEST core SDR model, the SDR method in this model is based on:
     Winchell, M. F., et al. "Extension and validation of a geographic
     information system-based method for calculating the Revised Universal
     Soil Loss Equation length-slope factor for erosion risk assessments in
@@ -17,26 +20,35 @@ import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 
-from .. import gettext
-from .. import spec_utils
-from .. import urban_nature_access
-from .. import utils
-from .. import validation
-from ..model_metadata import MODEL_METADATA
-from ..unit_registry import u
-from . import sdr_core
+from natcap.invest import gettext
+from natcap.invest import spec_utils
+from natcap.invest import urban_nature_access
+from natcap.invest import utils
+from natcap.invest import validation
+from natcap.invest.unit_registry import u
+from natcap.invest.sdr import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
-    "model_id": "sdr",
-    "model_name": MODEL_METADATA["sdr"].model_title,
-    "pyname": MODEL_METADATA["sdr"].pyname,
-    "userguide": MODEL_METADATA["sdr"].userguide,
+    "model_id": "invest_sdr_usle_c_raster",
+    "model_name": "SDR with USLE C raster",
+    "userguide": "",
+    "aliases": set(),
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
                          "lulc_path", "drainage_path", "watersheds_path", ],
         "different_projections_ok": False,
+    },
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['dem_path', 'erosivity_path', 'erodibility_path'],
+            ['lulc_path', 'usle_c_path', 'biophysical_table_path'],
+            ['watersheds_path', 'drainage_path'],
+            ['flow_dir_algorithm', 'threshold_flow_accumulation', 'k_param', 'sdr_max', 'ic_0_param', 'l_max']
+        ],
+        "hidden": ["n_workers"]
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
@@ -76,6 +88,15 @@ MODEL_SPEC = {
                 "All values in this raster must "
                 "have corresponding entries in the Biophysical Table.")
         },
+        "usle_c_path": {
+            "type": "raster",
+            "bands": {1: {
+                "type": "number",
+                "units": u.none}},
+            "projected": True,
+            "about": gettext("Cover-management factor for the USLE"),
+            "name": gettext("USLE C")
+        },
         "watersheds_path": {
             "type": "vector",
             "geometries": spec_utils.POLYGONS,
@@ -92,9 +113,6 @@ MODEL_SPEC = {
             "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
-                "usle_c": {
-                    "type": "ratio",
-                    "about": gettext("Cover-management factor for the USLE")},
                 "usle_p": {
                     "type": "ratio",
                     "about": gettext("Support practice factor for the USLE")}
@@ -229,8 +247,8 @@ MODEL_SPEC = {
             "contents": {
                 "cp.tif": {
                     "about": gettext(
-                        "CP factor derived by mapping usle_c and usle_p from "
-                        "the biophysical table to the LULC raster."),
+                        "CP factor derived by mapping usle_p from "
+                        "the biophysical table to the USLE C raster."),
                     "bands": {1: {"type": "ratio"}}
                 },
                 "d_dn.tif": {
@@ -277,6 +295,12 @@ MODEL_SPEC = {
                         "units": u.none
                     }}
                 },
+                "p.tif": {
+                    "about": gettext(
+                        "Support practice factor derived by mapping usle_p "
+                        "from the biophysical table to the LULC raster."),
+                    "bands": {1: {"type": "ratio"}}
+                },
                 "pit_filled_dem.tif": spec_utils.FILLED_DEM,
                 "s_accumulation.tif": {
                     "about": gettext(
@@ -321,12 +345,6 @@ MODEL_SPEC = {
                     "about": gettext(
                         "Mean thresholded cover-management factor for upslope "
                         "contributing area (in eq. (73))"),
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "w.tif": {
-                    "about": gettext(
-                        "Cover-management factor derived by mapping usle_c "
-                        "from the biophysical table to the LULC raster."),
                     "bands": {1: {"type": "ratio"}}
                 },
                 "w_threshold.tif": {
@@ -474,12 +492,14 @@ _INTERMEDIATE_BASE_FILES = {
     'aligned_erodibility_path': 'aligned_erodibility.tif',
     'aligned_erosivity_path': 'aligned_erosivity.tif',
     'aligned_lulc_path': 'aligned_lulc.tif',
+    'aligned_usle_c_path': 'aligned_usle_c.tif',
     'mask_path': 'mask.tif',
     'masked_dem_path': 'masked_dem.tif',
     'masked_drainage_path': 'masked_drainage.tif',
     'masked_erodibility_path': 'masked_erodibility.tif',
     'masked_erosivity_path': 'masked_erosivity.tif',
     'masked_lulc_path': 'masked_lulc.tif',
+    'masked_usle_c_path': 'masked_usle_c.tif',
     'cp_factor_path': 'cp.tif',
     'd_dn_path': 'd_dn.tif',
     'd_up_path': 'd_up.tif',
@@ -488,6 +508,7 @@ _INTERMEDIATE_BASE_FILES = {
     'flow_direction_path': 'flow_direction.tif',
     'ic_path': 'ic.tif',
     'ls_path': 'ls.tif',
+    'p_factor_path': 'p.tif',
     'pit_filled_dem_path': 'pit_filled_dem.tif',
     's_accumulation_path': 's_accumulation.tif',
     's_bar_path': 's_bar.tif',
@@ -497,7 +518,6 @@ _INTERMEDIATE_BASE_FILES = {
     'thresholded_w_path': 'w_threshold.tif',
     'w_accumulation_path': 'w_accumulation.tif',
     'w_bar_path': 'w_bar.tif',
-    'w_path': 'w.tif',
     'ws_inverse_path': 'ws_inverse.tif',
     'e_prime_path': 'e_prime.tif',
     'drainage_mask': 'what_drains_to_stream.tif',
@@ -528,10 +548,10 @@ def execute(args):
             raster
         args['erodibility_path'] (string): a path to soil erodibility raster
         args['lulc_path'] (string): path to land use/land cover raster
+        args['usle_c_path'] (string): path to USLE C raster
         args['watersheds_path'] (string): path to vector of the watersheds
         args['biophysical_table_path'] (string): path to CSV file with
-            biophysical information of each land use classes.  contain the
-            fields 'usle_c' and 'usle_p'
+            lucode, description, and USLE P value for each land use class
         args['threshold_flow_accumulation'] (number): number of upslope pixels
             on the dem to threshold to a stream.
         args['k_param'] (number): k calibration parameter
@@ -557,15 +577,31 @@ def execute(args):
         args['biophysical_table_path'],
         **MODEL_SPEC['args']['biophysical_table_path'])
 
-    # Test to see if c or p values are outside of 0..1
-    for key in ['usle_c', 'usle_p']:
-        for lulc_code, row in biophysical_df.iterrows():
-            if row[key] < 0 or row[key] > 1:
-                raise ValueError(
-                    f'A value in the biophysical table is not a number '
-                    f'within range 0..1. The offending value is in '
-                    f'column "{key}", lucode row "{lulc_code}", '
-                    f'and has value "{row[key]}"')
+    # Test to see if C values are outside of 0..1
+    def update_out_of_range(any_out_of_range, block):
+        if numpy.any(block[numpy.any([block < 0, block > 1])]):
+            any_out_of_range = True
+        return any_out_of_range
+
+    any_out_of_range = pygeoprocessing.raster_reduce(
+        function=update_out_of_range,
+        raster_path_band=(args['usle_c_path'], 1),
+        initializer=False)
+
+    if any_out_of_range:
+        raise ValueError(
+            'One or more values in the USLE C raster is/are outside the '
+            'range 0..1.')
+
+    # Test to see if P values are outside of 0..1
+    for lulc_code, row in biophysical_df.iterrows():
+        p_val = row['usle_p']
+        if p_val < 0 or p_val > 1:
+            raise ValueError(
+                f'A value in the biophysical table is not a number '
+                f'within range 0..1. The offending value is in '
+                f'column usle_p, lucode row "{lulc_code}", '
+                f'and has value "{p_val}"')
 
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)
@@ -590,13 +626,13 @@ def execute(args):
     base_list = []
     aligned_list = []
     masked_list = []
-    input_raster_key_list = ['dem', 'lulc', 'erosivity', 'erodibility']
+    input_raster_key_list = ['dem', 'lulc', 'usle_c', 'erosivity', 'erodibility']
     for file_key in input_raster_key_list:
         base_list.append(args[f"{file_key}_path"])
         aligned_list.append(f_reg[f"aligned_{file_key}_path"])
         masked_list.append(f_reg[f"masked_{file_key}_path"])
     # all continuous rasters can use bilinear, but lulc should be mode
-    interpolation_list = ['bilinear', 'mode', 'bilinear', 'bilinear']
+    interpolation_list = ['bilinear', 'mode', 'mode', 'bilinear', 'bilinear']
 
     drainage_present = False
     if 'drainage_path' in args and args['drainage_path'] != '':
@@ -775,24 +811,22 @@ def execute(args):
         drainage_raster_path_task = (
             f_reg['stream_path'], stream_task)
 
-    lulc_to_c = biophysical_df['usle_c'].to_dict()
     threshold_w_task = task_graph.add_task(
         func=_calculate_w,
-        args=(
-            lulc_to_c, f_reg['masked_lulc_path'], f_reg['w_path'],
-            f_reg['thresholded_w_path']),
-        target_path_list=[f_reg['w_path'], f_reg['thresholded_w_path']],
-        dependent_task_list=[mask_tasks['masked_lulc']],
+        args=(f_reg['masked_usle_c_path'], f_reg['thresholded_w_path']),
+        target_path_list=[f_reg['thresholded_w_path']],
+        dependent_task_list=[mask_tasks['masked_usle_c']],
         task_name='calculate W')
 
-    lulc_to_cp = (biophysical_df['usle_c'] * biophysical_df['usle_p']).to_dict()
+    lulc_to_p = biophysical_df['usle_p'].to_dict()
     cp_task = task_graph.add_task(
         func=_calculate_cp,
         args=(
-            lulc_to_cp, f_reg['masked_lulc_path'],
-            f_reg['cp_factor_path']),
+            lulc_to_p, f_reg['masked_lulc_path'], f_reg['masked_usle_c_path'],
+            f_reg['p_factor_path'], f_reg['cp_factor_path']),
         target_path_list=[f_reg['cp_factor_path']],
-        dependent_task_list=[mask_tasks['masked_lulc']],
+        dependent_task_list=[
+            mask_tasks['masked_lulc'], mask_tasks['masked_usle_c']],
         task_name='calculate CP')
 
     rkls_task = task_graph.add_task(
@@ -1307,50 +1341,37 @@ def threshold_slope_op(slope):
 
 
 def _calculate_w(
-        lulc_to_c, lulc_path, w_factor_path,
+        usle_c_path,
         out_thresholded_w_factor_path):
-    """W factor: map C values from LULC and lower threshold to 0.001.
+    """W factor: threshold C values to 0.001.
 
     W is a factor in calculating d_up accumulation for SDR.
 
     Args:
-        lulc_to_c (dict): mapping of LULC codes to C values
-        lulc_path (string): path to LULC raster
-        w_factor_path (string): path to outputed raw W factor
-        out_thresholded_w_factor_path (string): W factor from `w_factor_path`
+        usle_c_path (string): path to raster of C values
+        out_thresholded_w_factor_path (string): W factor from `usle_c_path`
             thresholded to be no less than 0.001.
 
     Returns:
         None
 
     """
-    if pygeoprocessing.get_raster_info(lulc_path)['nodata'][0] is None:
-        # will get a case where the raster might be masked but nothing to
-        # replace so 0 is used by default. Ensure this exists in lookup.
-        if 0 not in lulc_to_c:
-            lulc_to_c = lulc_to_c.copy()
-            lulc_to_c[0] = 0.0
-
-    reclass_error_details = {
-        'raster_name': 'LULC', 'column_name': 'lucode',
-        'table_name': 'Biophysical'}
-
-    utils.reclassify_raster(
-        (lulc_path, 1), lulc_to_c, w_factor_path, gdal.GDT_Float32,
-        _TARGET_NODATA, reclass_error_details)
-
     pygeoprocessing.raster_map(
         op=lambda w_val: numpy.where(w_val < 0.001, 0.001, w_val),
-        rasters=[w_factor_path],
+        rasters=[usle_c_path],
         target_path=out_thresholded_w_factor_path)
 
 
-def _calculate_cp(lulc_to_cp, lulc_path, cp_factor_path):
+def _calculate_cp(lulc_to_p, lulc_path, usle_c_path, p_factor_path,
+                  cp_factor_path):
     """Map LULC to C*P value.
 
     Args:
-        lulc_to_cp (dict): mapping of lulc codes to CP values
+        lulc_to_p (dict): mapping of LULC codes to P values
         lulc_path (string): path to LULC raster
+        usle_c_path (string): path to raster of C values
+        p_factor_path (string): path to output raster of LULC mapped to P
+            values
         cp_factor_path (string): path to output raster of LULC mapped to C*P
             values
 
@@ -1361,16 +1382,23 @@ def _calculate_cp(lulc_to_cp, lulc_path, cp_factor_path):
     if pygeoprocessing.get_raster_info(lulc_path)['nodata'][0] is None:
         # will get a case where the raster might be masked but nothing to
         # replace so 0 is used by default. Ensure this exists in lookup.
-        if 0 not in lulc_to_cp:
-            lulc_to_cp[0] = 0.0
+        if 0 not in lulc_to_p:
+            lulc_to_p[0] = 0.0
 
     reclass_error_details = {
         'raster_name': 'LULC', 'column_name': 'lucode',
         'table_name': 'Biophysical'}
 
+    # Map LULC to P values
     utils.reclassify_raster(
-        (lulc_path, 1), lulc_to_cp, cp_factor_path, gdal.GDT_Float32,
+        (lulc_path, 1), lulc_to_p, p_factor_path, gdal.GDT_Float32,
         _TARGET_NODATA, reclass_error_details)
+
+    # Calculate C*P via pixelwise multiplication
+    pygeoprocessing.raster_map(
+        op=lambda c, p: c * p,
+        rasters=[usle_c_path, p_factor_path],
+        target_path=cp_factor_path)
 
 
 def _calculate_bar_factor(

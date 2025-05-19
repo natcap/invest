@@ -1,4 +1,4 @@
-"""InVEST SDR model tests."""
+"""Tests for InVEST Plugin: SDR with USLE C Raster Input."""
 import os
 import shutil
 import tempfile
@@ -11,8 +11,32 @@ from osgeo import osr
 
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr')
-SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
+    os.path.dirname(__file__), '..', 'test-data')
+INPUT_DATA = os.path.join(REGRESSION_DATA, 'input')
+
+
+def generate_base_args(workspace_dir):
+    """Generate a base args dict for SDR with USLE C Raster Input."""
+    args = {
+        'biophysical_table_path': os.path.join(
+            INPUT_DATA, 'biophysical_table.csv'),
+        'dem_path': os.path.join(INPUT_DATA, 'dem.tif'),
+        'erodibility_path': os.path.join(
+            INPUT_DATA, 'erodibility_SI_clip.tif'),
+        'erosivity_path': os.path.join(INPUT_DATA, 'erosivity.tif'),
+        'flow_dir_algorithm': 'MFD',
+        'ic_0_param': '0.5',
+        'k_param': '2',
+        'l_max': '122',
+        'lulc_path': os.path.join(INPUT_DATA, 'landuse_90.tif'),
+        'n_workers': -1,
+        'sdr_max': '0.8',
+        'threshold_flow_accumulation': '1000',
+        'usle_c_path': os.path.join(INPUT_DATA, 'c.tif'),
+        'watersheds_path': os.path.join(INPUT_DATA, 'watersheds.shp'),
+        'workspace_dir': workspace_dir,
+    }
+    return args
 
 
 def assert_expected_results_in_vector(expected_results, vector_path):
@@ -33,7 +57,7 @@ def assert_expected_results_in_vector(expected_results, vector_path):
         try:
             numpy.testing.assert_allclose(
                 actual_results[key], expected_results[key],
-                rtol=0.00001, atol=0)
+                rtol=0.0001, atol=0)
         except AssertionError:
             incorrect_vals[key] = (actual_results[key], expected_results[key])
     if incorrect_vals:
@@ -41,46 +65,23 @@ def assert_expected_results_in_vector(expected_results, vector_path):
             f'these key (actual/expected) errors occured: {incorrect_vals}')
 
 
-class SDRTests(unittest.TestCase):
-    """Regression tests for InVEST SDR model."""
+class SDRUSLECRasterTests(unittest.TestCase):
+    """Regression tests for SDR with USLE C Raster Input."""
 
     def setUp(self):
-        """Initialize SDRRegression tests."""
+        """Initialize regression tests."""
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
         """Clean up remaining files."""
         shutil.rmtree(self.workspace_dir)
 
-    @staticmethod
-    def generate_base_args(workspace_dir):
-        """Generate a base sample args dict for SDR."""
-        args = {
-            'biophysical_table_path': os.path.join(
-                SAMPLE_DATA, 'biophysical_table.csv'),
-            'dem_path': os.path.join(SAMPLE_DATA, 'dem.tif'),
-            'erodibility_path': os.path.join(
-                SAMPLE_DATA, 'erodibility_SI_clip.tif'),
-            'erosivity_path': os.path.join(SAMPLE_DATA, 'erosivity.tif'),
-            'ic_0_param': '0.5',
-            'k_param': '2',
-            'lulc_path': os.path.join(SAMPLE_DATA, 'landuse_90.tif'),
-            'sdr_max': '0.8',
-            'l_max': '122',
-            'threshold_flow_accumulation': '1000',
-            'watersheds_path': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
-            'workspace_dir': workspace_dir,
-            'n_workers': -1,
-            'flow_dir_algorithm': 'MFD'
-        }
-        return args
-
     def test_sdr_validation(self):
         """SDR test regular validation."""
-        from natcap.invest.sdr import sdr
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(self.workspace_dir)
+        args = generate_base_args(self.workspace_dir)
         args['drainage_path'] = os.path.join(
             REGRESSION_DATA, 'sample_drainage.tif')
         validate_result = sdr.validate(args, limit_to=None)
@@ -91,10 +92,10 @@ class SDRTests(unittest.TestCase):
 
     def test_sdr_validation_wrong_types(self):
         """SDR test validation for wrong GIS types."""
-        from natcap.invest.sdr import sdr
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(self.workspace_dir)
+        args = generate_base_args(self.workspace_dir)
         # swap watershed and dem for different types
         args['dem_path'], args['watersheds_path'] = (
             args['watersheds_path'], args['dem_path'])
@@ -108,10 +109,10 @@ class SDRTests(unittest.TestCase):
 
     def test_sdr_validation_key_no_value(self):
         """SDR test validation that's missing a value on a key."""
-        from natcap.invest.sdr import sdr
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(
+        args = generate_base_args(
             self.workspace_dir)
         args['dem_path'] = ''
         validate_result = sdr.validate(args, limit_to=None)
@@ -128,10 +129,10 @@ class SDRTests(unittest.TestCase):
         in sed_deposition raster, and accuracy of raster outputs (as
         measured by the sum of their non-nodata pixel values).
         """
-        from natcap.invest.sdr import sdr
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(self.workspace_dir)
+        args = generate_base_args(self.workspace_dir)
 
         sdr.execute(args)
         expected_watershed_totals = {
@@ -168,7 +169,7 @@ class SDRTests(unittest.TestCase):
             (sed_dep_array < 0))
         self.assertEqual(
             numpy.count_nonzero(sed_dep_array[negative_non_nodata_mask]), 0)
-        
+
         # Check raster outputs to make sure values are in Mg/ha/yr.
         raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
         pixel_area = abs(numpy.prod(raster_info['pixel_size']))
@@ -190,19 +191,19 @@ class SDRTests(unittest.TestCase):
                 raster_sum += numpy.sum(
                     block[~pygeoprocessing.array_equals_nodata(
                             block, nodata)], dtype=numpy.float64)
-            numpy.testing.assert_allclose(raster_sum, expected_sum)
+            numpy.testing.assert_allclose(raster_sum, expected_sum, rtol=1e-6)
 
     def test_base_regression_d8(self):
-        """SDR base regression test on sample data in D8 mode.
+        """SDR base regression test on test data in D8 mode.
 
-        Execute SDR with sample data and checks that the output files are
+        Execute SDR with test data and checks that the output files are
         generated and that the aggregate shapefile fields are the same as the
         regression case.
         """
-        from natcap.invest.sdr import sdr
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(self.workspace_dir)
+        args = generate_base_args(self.workspace_dir)
         args['flow_dir_algorithm'] = 'D8'
         args['threshold_flow_accumulation'] = 100
         # make args explicit that this is a base run of SWY
@@ -245,13 +246,13 @@ class SDRTests(unittest.TestCase):
     def test_regression_with_undefined_nodata(self):
         """SDR base regression test with undefined nodata values.
 
-        Execute SDR with sample data with all rasters having undefined nodata
+        Execute SDR with test data with all rasters having undefined nodata
         values.
         """
-        from natcap.invest.sdr import sdr
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(self.workspace_dir)
+        args = generate_base_args(self.workspace_dir)
 
         # set all input rasters to have undefined nodata values
         tmp_dir = os.path.join(args['workspace_dir'], 'nodata_raster_dir')
@@ -297,11 +298,11 @@ class SDRTests(unittest.TestCase):
 
         Execute SDR with a non-square DEM and get a good result back.
         """
-        from natcap.invest.sdr import sdr
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(self.workspace_dir)
-        args['dem_path'] = os.path.join(SAMPLE_DATA, 'dem_non_square.tif')
+        args = generate_base_args(self.workspace_dir)
+        args['dem_path'] = os.path.join(INPUT_DATA, 'dem_non_square.tif')
         # make args explicit that this is a base run of SWY
         sdr.execute(args)
 
@@ -317,16 +318,16 @@ class SDRTests(unittest.TestCase):
         assert_expected_results_in_vector(expected_results, vector_path)
 
     def test_drainage_regression(self):
-        """SDR drainage layer regression test on sample data.
+        """SDR drainage layer regression test on test data.
 
-        Execute SDR with sample data and a drainage layer and checks that the
+        Execute SDR with test data and a drainage layer and checks that the
         output files are generated and that the aggregate shapefile fields
         are the same as the regression case.
         """
-        from natcap.invest.sdr import sdr
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(self.workspace_dir)
+        args = generate_base_args(self.workspace_dir)
         args['drainage_path'] = os.path.join(
             REGRESSION_DATA, 'sample_drainage.tif')
         sdr.execute(args)
@@ -343,30 +344,80 @@ class SDRTests(unittest.TestCase):
         assert_expected_results_in_vector(expected_results, vector_path)
 
     def test_base_usle_c_too_large(self):
-        """SDR test exepected exception for USLE_C > 1.0."""
-        from natcap.invest.sdr import sdr
+        """SDR test expected exception for USLE_C > 1.0."""
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(
+        args = generate_base_args(
             self.workspace_dir)
-        args['biophysical_table_path'] = os.path.join(
-            REGRESSION_DATA, 'biophysical_table_too_large.csv')
+
+        # Create small USLE C raster with a value > 1.
+        usle_c_path = os.path.join(self.workspace_dir, 'c.tif')
+        usle_c_array = numpy.array(
+            [[0.2, 1.3, 0.05, 0.42], [0.1, 0.01, 0.5, 0.8]],
+            dtype=numpy.float32)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        projection_wkt = srs.ExportToWkt()
+        origin = (461251, 4923445)
+        pixel_size = (30, -30)
+        no_data = -1
+        pygeoprocessing.numpy_array_to_raster(
+            usle_c_array, no_data, pixel_size, origin, projection_wkt,
+            usle_c_path)
+        args['usle_c_path'] = usle_c_path
 
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            'A value in the biophysical table is not a number '
-            'within range 0..1.', str(context.exception))
+            'One or more values in the USLE C raster is/are outside the '
+            'range 0..1.', str(context.exception))
 
-    def test_base_usle_p_nan(self):
-        """SDR test expected exception for USLE_P not a number."""
-        from natcap.invest.sdr import sdr
+    def test_base_usle_c_too_small(self):
+        """SDR test expected exception for USLE_C < 0.0."""
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(
+        args = generate_base_args(
+            self.workspace_dir)
+
+        # Create small USLE C raster with a value < 0.
+        usle_c_path = os.path.join(self.workspace_dir, 'c.tif')
+        usle_c_array = numpy.array(
+            [[0.2, 0.3, 0.05, 0.42], [0.1, -0.01, 0.5, 0.8]],
+            dtype=numpy.float32)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        projection_wkt = srs.ExportToWkt()
+        origin = (461251, 4923445)
+        pixel_size = (30, -30)
+        no_data = -1
+        pygeoprocessing.numpy_array_to_raster(
+            usle_c_array, no_data, pixel_size, origin, projection_wkt,
+            usle_c_path)
+        args['usle_c_path'] = usle_c_path
+
+        with self.assertRaises(ValueError) as context:
+            sdr.execute(args)
+        self.assertIn(
+            'One or more values in the USLE C raster is/are outside the '
+            'range 0..1.', str(context.exception))
+
+    def test_base_usle_p_not_a_number(self):
+        """SDR test expected exception for USLE_P not a number."""
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = generate_base_args(
             self.workspace_dir)
         args['biophysical_table_path'] = os.path.join(
-            REGRESSION_DATA, 'biophysical_table_invalid_value.csv')
+            self.workspace_dir, 'biophysical_table_invalid_value.csv')
+
+        invalid_value = '!'
+        with open(args['biophysical_table_path'], 'w') as file:
+            file.write(
+                f'description,lucode,usle_p\n'
+                f'forest,1,{invalid_value}\n')
 
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
@@ -375,19 +426,19 @@ class SDRTests(unittest.TestCase):
 
     def test_lucode_not_a_number(self):
         """SDR test expected exception for invalid data in lucode column."""
-        from natcap.invest.sdr import sdr
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(
+        args = generate_base_args(
             self.workspace_dir)
         args['biophysical_table_path'] = os.path.join(
             self.workspace_dir, 'biophysical_table_invalid_lucode.csv')
 
-        invalid_value = 'forest'
+        invalid_value = '!'
         with open(args['biophysical_table_path'], 'w') as file:
             file.write(
-                f'desc,lucode,usle_p,usle_c\n'
-                f'0,{invalid_value},0.5,0.5\n')
+                f'description,lucode,usle_p\n'
+                f'forest,{invalid_value},0.5\n')
 
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
@@ -397,10 +448,10 @@ class SDRTests(unittest.TestCase):
     def test_missing_lulc_value(self):
         """SDR test for ValueError when LULC value not found in table."""
         import pandas
-        from natcap.invest.sdr import sdr
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(self.workspace_dir)
+        args = generate_base_args(self.workspace_dir)
 
         # remove a row from the biophysical table so that lulc value is missing
         bad_biophysical_path = os.path.join(
@@ -420,7 +471,7 @@ class SDRTests(unittest.TestCase):
 
     def test_what_drains_to_stream(self):
         """SDR test for what pixels drain to a stream."""
-        from natcap.invest.sdr import sdr
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(26910)  # NAD83 / UTM zone 11N
@@ -462,7 +513,7 @@ class SDRTests(unittest.TestCase):
 
     def test_ls_factor(self):
         """SDR test for our LS Factor function."""
-        from natcap.invest.sdr import sdr
+        from invest_sdr_usle_c_raster import invest_sdr_usle_c_raster as sdr
 
         nodata = -1
 
