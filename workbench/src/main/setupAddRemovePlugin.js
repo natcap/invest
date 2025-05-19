@@ -158,8 +158,6 @@ export function setupAddPlugin(i18n) {
           `micromamba run --prefix "${pluginEnvPrefix}" ` +
           `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
         ).toString().trim();
-        console.log(modelID);
-        console.log(modelTitle);
 
         // Write plugin metadata to the workbench's config.json
         logger.info('writing plugin info to settings store');

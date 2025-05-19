@@ -294,7 +294,6 @@ class ValidatorTest(unittest.TestCase):
 
     def test_n_workers(self):
         """Validation: validation error returned on invalid n_workers."""
-        from natcap.invest import spec
         from natcap.invest import validation
 
         args_spec = model_spec_with_defaults(inputs=[
@@ -574,7 +573,6 @@ class RasterValidation(unittest.TestCase):
 
     def test_raster_incorrect_units(self):
         """Validation: test when a raster projection has wrong units."""
-        from natcap.invest import spec
         from natcap.invest import validation
 
         # Use EPSG:32066  # NAD27 / BLM 16N (in US Survey Feet)
@@ -663,7 +661,6 @@ class VectorValidation(unittest.TestCase):
 
     def test_vector_projected_in_m(self):
         """Validation: test that a vector's projection has expected units."""
-        from natcap.invest import spec
         from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GPKG')
@@ -1761,7 +1758,6 @@ class TestValidationFromSpec(unittest.TestCase):
 
     def test_conditionally_required_vector_fields(self):
         """Validation: conditionally required vector fields."""
-        from natcap.invest import spec
         from natcap.invest import validation
         spec = model_spec_with_defaults(inputs=[
             NumberInput(
