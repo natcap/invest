@@ -26,7 +26,7 @@ body {
 .navbar {
   border-bottom: 3px solid var(--invest-green);
   padding: 0;
-  height: var(--header-height)
+  height: var(--header-height);
 }
 
 .navbar .row {
@@ -156,15 +156,22 @@ body {
   white-space: nowrap;
 }
 
-.settings-icon-btn, .settings-icon-btn:hover {
+.app-menu-button {
+  color: gray;
   background-color: transparent;
-  border-color: transparent;
-}
-
-.settings-icon {
-  color: black;
+  border: none;
   font-size: 2rem;
   vertical-align: text-bottom;
+  margin-right: 2px;
+}
+
+.app-menu-button:hover{
+  color: white;
+  background-color: gray;
+}
+
+.app-menu-button:after {
+  display: none;
 }
 
 .language-icon {

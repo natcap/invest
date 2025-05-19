@@ -13,7 +13,9 @@ export default function AppMenu(props) {
   return (
     <Dropdown>
       <Dropdown.Toggle
+        className="app-menu-button"
         aria-label="menu"
+        childBsPrefix="outline-secondary"
       >
         <GiHamburgerMenu />
       </Dropdown.Toggle>
