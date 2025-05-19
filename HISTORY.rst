@@ -73,12 +73,12 @@ Workbench
 NDR
 ===
 * Added a feature that allows the nutrient load to be entered as an
-application rate or as an "extensive"/export measured value.
-Previously the models biophysical table expected the ``load_[nutrient]``
-column to be an "extensive"/export measured value. Now, a new
-column, ``nut_load_type``, is required with expected values of either
-``application_rate`` or ``measured_runoff``.
-(https://github.com/natcap/invest/issues/1044).
+  application rate or as an "extensive"/export measured value.
+  Previously the models biophysical table expected the ``load_[nutrient]``
+  column to be an "extensive"/export measured value. Now, a new
+  column, ``nut_load_type``, is required with expected values of either
+  ``application_rate`` or ``measured_runoff``.
+  (https://github.com/natcap/invest/issues/1044).
 
 Urban Flood Risk
 ================
