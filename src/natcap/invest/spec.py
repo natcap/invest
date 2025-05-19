@@ -1227,7 +1227,7 @@ class ModelSpec:
 
     input_field_order: list[list[str]]
     """A list that specifies the order and grouping of model inputs.
-    Inputs will displayed in the input form from top to bottom in the order
+    Inputs will be displayed in the input form from top to bottom in the order
     listed here. Sub-lists represent groups of inputs that will be visually
     separated by a horizontal line. This improves UX by breaking up long lists
     and visually grouping related inputs. If you do not wish to use groups,
