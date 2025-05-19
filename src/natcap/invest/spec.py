@@ -1265,6 +1265,7 @@ class ModelSpec:
         self.outputs_dict = {_output.id: _output for _output in self.outputs}
 
     def get_input(self, key):
+        """Get an Input of this model by its key."""
         return self.inputs_dict[key]
 
     def to_json(self):
