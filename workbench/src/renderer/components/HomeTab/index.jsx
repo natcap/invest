@@ -88,12 +88,17 @@ export default class HomeTab extends React.Component {
         <Col md={6} className="invest-list-container">
           <ListGroup className="invest-list-group">
             {investButtons}
+            <ListGroup.Item
+              key="browse"
+              className="py-2 border-0"
+            >
+              <OpenButton
+                className="w-100 border-1 py-2 pl-3 text-left text-truncate"
+                openInvestModel={openInvestModel}
+                investList={investList}
+              />
+            </ListGroup.Item>
           </ListGroup>
-          <OpenButton
-            className="w-100"
-            openInvestModel={openInvestModel}
-            investList={investList}
-          />
         </Col>
         <Col className="recent-job-card-col">
           <RecentInvestJobs
