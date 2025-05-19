@@ -38,7 +38,6 @@ from . import spec
 from . import utils
 from . import validation
 from . import models
-from . import spec
 
 try:
     from . import __version__
