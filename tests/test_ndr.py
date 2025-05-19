@@ -124,18 +124,12 @@ class NDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
         new_table_path = os.path.join(self.workspace_dir, 'table_c_len_0.csv')
-        with open(new_table_path, 'w') as target_file:
-            with open(args['biophysical_table_path'], 'r') as table_file:
-                target_file.write(table_file.readline())
-                while True:
-                    line = table_file.readline()
-                    if not line:
-                        break
-                    line_list = line.split(',')
-                    # replace the crit_len_p with 0 in this column
-                    line = (
-                        ','.join(line_list[0:12] + ['0.0'] + line_list[13::]))
-                    target_file.write(line)
+
+        bio_df = pandas.read_csv(args['biophysical_table_path'])
+        # replace the crit_len_p with 0 in this column
+        bio_df['crit_len_p'] = 0
+        bio_df.to_csv(new_table_path)
+        bio_df = None
 
         args['biophysical_table_path'] = new_table_path
         ndr.execute(args)
@@ -150,7 +144,7 @@ class NDRTests(unittest.TestCase):
             raise AssertionError("No features were output.")
         for field, value in [
                 ('p_surface_load', 41.826904),
-                ('p_surface_export', 5.870544),
+                ('p_surface_export', 5.566120),
                 ('n_surface_load', 2977.551270),
                 ('n_surface_export', 274.020844),
                 ('n_subsurface_load', 28.558048),
