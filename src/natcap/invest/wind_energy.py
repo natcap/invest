@@ -585,7 +585,7 @@ _TARGET_RESAMPLE_METHOD = 'near'
 # Target pixel size, in meters. Given the increased availability of
 # high-resolution wind data (e.g. 2km horizontal resolution), we want a fine
 # resolution for rasterizing wind point vector values.
-_TARGET_PIXEL_SIZE = (90, -90)
+_TARGET_PIXEL_SIZE = (1500, -1500)
 
 
 def execute(args):
@@ -1403,6 +1403,7 @@ def _index_raster_values_to_point_vector(
     # We'll check encountered features against this list at the end,
     # for the purposes of removing any points that weren't encountered
     all_fids = [feat.GetFID() for feat in target_layer]
+    encountered_fids = set()
 
     # Initialize an R-Tree indexing object with point geom from base_vector
     def generator_function():
@@ -1416,9 +1417,6 @@ def _index_raster_values_to_point_vector(
                 geom_trans_x, geom_trans_x, geom_trans_y, geom_trans_y), None)
 
     vector_idx = index.Index(generator_function(), interleaved=False)
-
-    # For all the features (points) add the proper raster value
-    encountered_fids = set()
 
     iterables = [pygeoprocessing.iterblocks((base_raster_path_list[index], 1))
         for index in range(len(base_raster_path_list))]
