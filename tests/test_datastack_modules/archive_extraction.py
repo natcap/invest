@@ -1,4 +1,5 @@
 MODEL_SPEC = {
+    'model_id': 'archive_extraction_model',
     'args': {
         'blank': {'type': 'freestyle_string'},
         'a': {'type': 'integer'},
@@ -6,7 +7,7 @@ MODEL_SPEC = {
         'c': {'type': 'freestyle_string'},
         'foo': {'type': 'file'},
         'bar': {'type': 'file'},
-        'data_dir': {'type': 'directory'},
+        'data_dir': {'type': 'directory', 'contents': {}},
         'raster': {'type': 'raster'},
         'vector': {'type': 'vector'},
         'simple_table': {'type': 'csv'},

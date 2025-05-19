@@ -12,6 +12,8 @@ from natcap.invest import utils
 from . import gettext
 from .unit_registry import u
 
+from pydantic import ValidationError
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -613,26 +615,54 @@ def describe_arg_from_name(module_name, *arg_keys):
     return f'.. _{anchor_name}:\n\n{rst_description}'
 
 
-def write_metadata_file(datasource_path, spec, lineage_statement, keywords_list):
-    """Write a metadata sidecar file for an invest output dataset.
+def write_metadata_file(datasource_path, spec, keywords_list,
+                        lineage_statement='', out_workspace=None):
+    """Write a metadata sidecar file for an invest dataset.
+
+    Create metadata for invest model inputs or outputs, taking care to
+    preserve existing human-modified attributes.
+
+    Note: We do not want to overwrite any existing metadata so if there is
+    invalid metadata for the datasource (i.e., doesn't pass geometamaker
+    validation in ``describe``), this function will NOT create new metadata.
 
     Args:
-        datasource_path (str) - filepath to the invest output
-        spec (dict) -  the invest specification for ``datasource_path``
-        lineage_statement (str) - string to describe origin of the dataset.
+        datasource_path (str) - filepath to the data to describe
+        spec (dict) - the invest specification for ``datasource_path``
         keywords_list (list) - sequence of strings
-
+        lineage_statement (str, optional) - string to describe origin of
+            the dataset
+        out_workspace (str, optional) - where to write metadata if different
+            from data location
     Returns:
         None
 
     """
-    resource = geometamaker.describe(datasource_path)
+
+    def _get_key(key, resource):
+        """Map name of actual key in yml from model_spec key name."""
+        names = {field.name.lower(): field.name
+                 for field in resource.data_model.fields}
+        return names[key]
+
+    try:
+        resource = geometamaker.describe(datasource_path)
+    except ValidationError:
+        LOGGER.debug(
+            f"Skipping metadata creation for {datasource_path}, as invalid "
+            "metadata exists.")
+        return None
+    # Don't want function to fail bc can't create metadata due to invalid filetype
+    except ValueError as e:
+        LOGGER.debug(f"Skipping metadata creation for {datasource_path}: {e}")
+        return None
+
     resource.set_lineage(lineage_statement)
     # a pre-existing metadata doc could have keywords
     words = resource.get_keywords()
     resource.set_keywords(set(words + keywords_list))
 
-    if 'about' in spec:
+    if 'about' in spec and len(resource.get_description()) < 1:
         resource.set_description(spec['about'])
     attr_spec = None
     if 'columns' in spec:
@@ -641,27 +671,38 @@ def write_metadata_file(datasource_path, spec, lineage_statement, keywords_list)
         attr_spec = spec['fields']
     if attr_spec:
         for key, value in attr_spec.items():
-            about = value['about'] if 'about' in value else ''
-            units = format_unit(value['units']) if 'units' in value else ''
             try:
-                resource.set_field_description(
-                    key, description=about, units=units)
+                # field names in attr_spec are always lowercase, but the
+                # actual fieldname in the data could be any case because
+                # invest does not require case-sensitive fieldnames
+                yaml_key = _get_key(key, resource)
+                # Field description only gets set if its empty, i.e. ''
+                if len(resource.get_field_description(yaml_key)
+                       .description.strip()) < 1:
+                    about = value['about'] if 'about' in value else ''
+                    resource.set_field_description(yaml_key, description=about)
+                # units only get set if empty
+                if len(resource.get_field_description(yaml_key)
+                       .units.strip()) < 1:
+                    units = format_unit(value['units']) if 'units' in value else ''
+                    resource.set_field_description(yaml_key, units=units)
             except KeyError as error:
                 # fields that are in the spec but missing
                 # from model results because they are conditional.
                 LOGGER.debug(error)
     if 'bands' in spec:
         for idx, value in spec['bands'].items():
-            try:
-                units = format_unit(spec['bands'][idx]['units'])
-            except KeyError:
-                units = ''
-            resource.set_band_description(idx, units=units)
+            if len(resource.get_band_description(idx).units) < 1:
+                try:
+                    units = format_unit(spec['bands'][idx]['units'])
+                except KeyError:
+                    units = ''
+                resource.set_band_description(idx, units=units)
 
-    resource.write()
+    resource.write(workspace=out_workspace)
 
 
-def generate_metadata(model_module, args_dict):
+def generate_metadata_for_outputs(model_module, args_dict):
     """Create metadata for all items in an invest model output workspace.
 
     Args:
@@ -695,7 +736,7 @@ def generate_metadata(model_module, args_dict):
                 if os.path.exists(full_path):
                     try:
                         write_metadata_file(
-                            full_path, spec_data, lineage_statement, keywords)
+                            full_path, spec_data, keywords, lineage_statement)
                     except ValueError as error:
                         # Some unsupported file formats, e.g. html
                         LOGGER.debug(error)
