@@ -23,9 +23,9 @@
   - Urban Flood Risk
   - Urban Nature Access
   - Urban Stormwater Retention
+  - Visitation: Recreation and Tourism
   - Wave Energy
   - Wind Energy
-  - Visitation: Recreation and Tourism
 
   Workbench fixes/enhancements:
   - Workbench
@@ -79,6 +79,20 @@ column to be an "extensive"/export measured value. Now, a new
 column, ``nut_load_type``, is required with expected values of either
 ``application_rate`` or ``measured_runoff``.
 (https://github.com/natcap/invest/issues/1044).
+
+Urban Flood Risk
+================
+* The raster output ``Runoff_retention.tif`` has been renamed
+  ``Runoff_retention_index.tif`` to clarify the difference between it and
+  ``Runoff_retention_m3.tif``
+  (`#1837 <https://github.com/natcap/invest/issues/1837>`_).
+
+Visitation: Recreation and Tourism
+==================================
+* user-day variables ``pr_PUD``, ``pr_TUD``, and ``avg_pr_UD`` are calculated
+  and written to ``regression_data.gpkg`` even if the Compute Regression
+  option is not selected.
+  (`#1893 <https://github.com/natcap/invest/issues/1893>`_).
 
 
 3.15.1 (2025-05-06)
