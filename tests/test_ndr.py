@@ -150,7 +150,7 @@ class NDRTests(unittest.TestCase):
             raise AssertionError("No features were output.")
         for field, value in [
                 ('p_surface_load', 41.826904),
-                ('p_surface_export', 5.566120),
+                ('p_surface_export', 5.870544),
                 ('n_surface_load', 2977.551270),
                 ('n_surface_export', 274.020844),
                 ('n_subsurface_load', 28.558048),

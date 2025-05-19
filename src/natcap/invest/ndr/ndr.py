@@ -1358,7 +1358,6 @@ def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
         None.
 
     """
-
     # restructure the lookup dict to easier access load, eff, and type
     # {lucode: [load, eff, type], ... }
     load_types = ['measured-runoff', 'application-rate']
