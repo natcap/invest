@@ -539,7 +539,7 @@ class NDRTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_rpi, expected_rpi)
     
     def test_calculate_load_type(self):
-        """Test _calculate_load for both nut_load_types."""
+        """Test ``_calculate_load`` for both nut_load_types."""
         from natcap.invest.ndr import ndr
 
         # make simple lulc raster
@@ -573,7 +573,7 @@ class NDRTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_results, expected_results)
     
     def test_calculate_load_type_raises_error(self):
-        """Test _calculate_load raises ValueError on bad nut_load_types."""
+        """Test ``_calculate_load`` raises ValueError on bad nut_load_types."""
         from natcap.invest.ndr import ndr
 
         lulc_path = os.path.join(self.workspace_dir, "lulc-load-type.tif")
