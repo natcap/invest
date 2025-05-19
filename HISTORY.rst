@@ -76,6 +76,12 @@ Coastal Blue Carbon
   class transitions from a state of accumulation or decay to a No Carbon Change
   ("NCC") state. (`#671 <https://github.com/natcap/invest/issues/671>`_).
 
+HRA
+===
+* The intermediate simplified vectors will now inherit their geometry type from
+  the input vectors, rather than using ``ogr.wkbUnknown``
+  (`#1881 <https://github.com/natcap/invest/issues/1881>`_).
+
 
 3.15.1 (2025-05-06)
 -------------------
