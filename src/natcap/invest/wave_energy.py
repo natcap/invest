@@ -143,6 +143,10 @@ MODEL_SPEC = spec.build_model_spec({
             ['valuation_container', 'land_gridPts_path', 'machine_econ_path', 'number_of_machines'],
         ]
     },
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["aoi_path", "dem_path"],
+        "different_projections_ok": True
+    },
     "args": {
         "workspace_dir": spec.WORKSPACE,
         "results_suffix": spec.SUFFIX,
