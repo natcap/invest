@@ -41,4 +41,4 @@ Once released, the model will no longer provide the rasterized outputs that it p
 GitHub:
   * [Pull Request](https://github.com/natcap/invest/pull/1898)
   * [Discussion: Raster result values returned outside of wind data](https://github.com/natcap/invest/issues/1698)
-  * User's Guide PR (to be added)
+  * [User's Guide PR](https://github.com/natcap/invest.users-guide/pull/178)
