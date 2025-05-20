@@ -23,9 +23,9 @@
   - Urban Flood Risk
   - Urban Nature Access
   - Urban Stormwater Retention
+  - Visitation: Recreation and Tourism
   - Wave Energy
   - Wind Energy
-  - Visitation: Recreation and Tourism
 
   Workbench fixes/enhancements:
   - Workbench
@@ -76,6 +76,13 @@ Urban Flood Risk
   ``Runoff_retention_index.tif`` to clarify the difference between it and
   ``Runoff_retention_m3.tif``
   (`#1837 <https://github.com/natcap/invest/issues/1837>`_).
+
+Visitation: Recreation and Tourism
+==================================
+* user-day variables ``pr_PUD``, ``pr_TUD``, and ``avg_pr_UD`` are calculated
+  and written to ``regression_data.gpkg`` even if the Compute Regression
+  option is not selected.
+  (`#1893 <https://github.com/natcap/invest/issues/1893>`_).
 
 Wind Energy
 ===========

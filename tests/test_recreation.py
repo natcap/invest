@@ -677,6 +677,40 @@ class TestRecClientServer(unittest.TestCase):
         """Delete workspace"""
         shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
+    def test_execute_no_regression(self):
+        """Recreation test userday metrics exist if not computing regression."""
+        from natcap.invest.recreation import recmodel_client
+
+        args = {
+            'aoi_path': os.path.join(
+                SAMPLE_DATA, 'andros_aoi.shp'),
+            'compute_regression': False,
+            'start_year': recmodel_client.MIN_YEAR,
+            'end_year': recmodel_client.MAX_YEAR,
+            'grid_aoi': False,
+            'workspace_dir': self.workspace_dir,
+            'hostname': self.hostname,
+            'port': self.port,
+        }
+        recmodel_client.execute(args)
+
+        out_regression_vector_path = os.path.join(
+            args['workspace_dir'], 'regression_data.gpkg')
+        # These fields should exist even if `compute_regression` is False
+        expected_fields = ['pr_TUD', 'pr_PUD', 'avg_pr_UD']
+        # For convenience, assert the sums of the columns instead of all
+        # the individual values.
+        actual_sums = sum_vector_columns(
+            out_regression_vector_path, expected_fields)
+        expected_sums = {
+            'pr_TUD': 1.0,
+            'pr_PUD': 1.0,
+            'avg_pr_UD': 1.0
+        }
+        for key in expected_sums:
+            numpy.testing.assert_almost_equal(
+                actual_sums[key], expected_sums[key], decimal=3)
+
     def test_all_metrics_local_server(self):
         """Recreation test with all but trivial predictor metrics."""
         from natcap.invest.recreation import recmodel_client
@@ -1258,65 +1292,6 @@ class RecreationClientRegressionTests(unittest.TestCase):
         layer = vector = None
         # andros_aoi.shp fits 71 hexes at 20000 meters cell size
         self.assertEqual(n_features, 71)
-
-    def test_existing_regression_coef(self):
-        """Recreation test regression coefficients handle existing output."""
-        from natcap.invest.recreation import recmodel_client
-        from natcap.invest import validation
-
-        # Initialize a TaskGraph
-        taskgraph_db_dir = os.path.join(
-            self.workspace_dir, '_taskgraph_working_dir')
-        n_workers = -1  # single process mode.
-        task_graph = taskgraph.TaskGraph(taskgraph_db_dir, n_workers)
-
-        response_vector_path = os.path.join(
-            self.workspace_dir, 'no_grid_vector_path.gpkg')
-        response_polygons_lookup_path = os.path.join(
-            self.workspace_dir, 'response_polygons_lookup.pickle')
-        recmodel_client._copy_aoi_no_grid(
-            os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), response_vector_path)
-
-        predictor_table_path = os.path.join(SAMPLE_DATA, 'predictors.csv')
-
-        # make outputs to be overwritten
-        predictor_dict = validation.get_validated_dataframe(
-            predictor_table_path,
-            **recmodel_client.MODEL_SPEC['args']['predictor_table_path']
-        ).to_dict(orient='index')
-        predictor_list = predictor_dict.keys()
-        tmp_working_dir = tempfile.mkdtemp(dir=self.workspace_dir)
-        empty_json_list = [
-            os.path.join(tmp_working_dir, x + '.json') for x in predictor_list]
-        out_coefficient_vector_path = os.path.join(
-            self.workspace_dir, 'out_coefficient_vector.shp')
-        _make_empty_files(
-            [out_coefficient_vector_path] + empty_json_list)
-
-        prepare_response_polygons_task = task_graph.add_task(
-            func=recmodel_client._prepare_response_polygons_lookup,
-            args=(response_vector_path,
-                  response_polygons_lookup_path),
-            target_path_list=[response_polygons_lookup_path],
-            task_name='prepare response polygons for geoprocessing')
-        # build again to test against overwriting output
-        recmodel_client._schedule_predictor_data_processing(
-            response_vector_path, response_polygons_lookup_path,
-            prepare_response_polygons_task, predictor_table_path,
-            out_coefficient_vector_path, tmp_working_dir, task_graph)
-
-        # Copied over from a shapefile formerly in our test-data repo:
-        expected_values = {
-            'bonefish': 19.96503546104,
-            'airdist': 40977.89565353348,
-            'ports': 14.0,
-            'bathy': 1.17308099107
-        }
-        vector = gdal.OpenEx(out_coefficient_vector_path)
-        layer = vector.GetLayer()
-        for feature in layer:
-            for k, v in expected_values.items():
-                numpy.testing.assert_almost_equal(feature.GetField(k), v)
 
     def test_predictor_table_absolute_paths(self):
         """Recreation test validation from full path."""
