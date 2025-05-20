@@ -559,6 +559,7 @@ class SetupTab extends React.Component {
         sidebarFooterElementId,
         executeClicked,
         uiSpec,
+        investList,
         modelID,
       } = this.props;
 
@@ -601,6 +602,9 @@ class SetupTab extends React.Component {
           )
           : <span>{t('Run')}</span>
       );
+
+      const isCoreModel = investList[modelID].type === 'core';
+
       return (
         <Container fluid>
           <Row>
@@ -612,6 +616,7 @@ class SetupTab extends React.Component {
               argsDropdownOptions={argsDropdownOptions}
               argsOrder={uiSpec.order}
               userguide={userguide}
+              isCoreModel={isCoreModel}
               updateArgValues={this.updateArgValues}
               updateArgTouched={this.updateArgTouched}
               loadParametersFromFile={this.loadParametersFromFile}

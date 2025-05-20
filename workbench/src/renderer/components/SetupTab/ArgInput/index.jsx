@@ -164,6 +164,7 @@ export default function ArgInput(props) {
     argkey,
     argSpec,
     userguide,
+    isCoreModel,
     enabled,
     updateArgValues,
     handleFocus,
@@ -322,7 +323,12 @@ export default function ArgInput(props) {
       <Col>
         <InputGroup>
           <div className="d-flex flex-nowrap w-100">
-            <AboutModal arg={argSpec} userguide={userguide} argkey={argkey} />
+            <AboutModal
+              arg={argSpec}
+              userguide={userguide}
+              isCoreModel={isCoreModel}
+              argkey={argkey}
+            />
             {form}
           </div>
           {feedback}
@@ -341,6 +347,7 @@ ArgInput.propTypes = {
     units: PropTypes.string, // for numbers only
   }).isRequired,
   userguide: PropTypes.string.isRequired,
+  isCoreModel: PropTypes.bool.isRequired,
   value: PropTypes.oneOfType(
     [PropTypes.string, PropTypes.bool, PropTypes.number]),
   touched: PropTypes.bool,
@@ -380,13 +387,16 @@ function AboutModal(props) {
   const handleAboutClose = () => setAboutShow(false);
   const handleAboutOpen = () => setAboutShow(true);
 
-  const { userguide, arg, argkey } = props;
+  const { userguide, arg, argkey, isCoreModel } = props;
   const { t, i18n } = useTranslation();
 
-  // create link to users guide entry for this arg
+  // create link to users guide entry for this arg IFF this is a core model
   // anchor name is the arg name, with underscores replaced with hyphens
-  const userguideURL = `
-    ${window.Workbench.USERGUIDE_PATH}/${window.Workbench.LANGUAGE}/${userguide}#${argkey.replace(/_/g, '-')}`;
+  const userguideURL = (
+    isCoreModel
+    ? `${window.Workbench.USERGUIDE_PATH}/${window.Workbench.LANGUAGE}/${userguide}#${argkey.replace(/_/g, '-')}`
+    : null
+  );
   return (
     <React.Fragment>
       <Button
@@ -404,15 +414,19 @@ function AboutModal(props) {
         <Modal.Body>
           {arg.about}
           <br />
-          <a
-            href={userguideURL}
-            title={userguideURL}
-            aria-label="open user guide section for this input in web browser"
-            onClick={handleClickUsersGuideLink}
-          >
-            {t("User's guide entry")}
-            <MdOpenInNew className="mr-1" />
-          </a>
+          {
+            isCoreModel
+            &&
+            <a
+              href={userguideURL}
+              title={userguideURL}
+              aria-label={t("User's guide entry (opens in web browser)")}
+              onClick={handleClickUsersGuideLink}
+            >
+              {t("User's guide entry")}
+              <MdOpenInNew className="mr-1" />
+            </a>
+          }
         </Modal.Body>
       </Modal>
     </React.Fragment>
@@ -425,5 +439,6 @@ AboutModal.propTypes = {
     about: PropTypes.string,
   }).isRequired,
   userguide: PropTypes.string.isRequired,
+  isCoreModel: PropTypes.bool.isRequired,
   argkey: PropTypes.string.isRequired,
 };
