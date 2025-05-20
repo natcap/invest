@@ -39,7 +39,13 @@ export default class HomeTab extends React.Component {
   }
 
   render() {
-    const { recentJobs, investList, openInvestModel, deleteJob, clearRecentJobs } = this.props;
+    const {
+      recentJobs,
+      investList,
+      openInvestModel,
+      deleteJob,
+      clearRecentJobs
+    } = this.props;
     let sortedModelIds = {};
     if (investList) {
       // sort the model list alphabetically, by the model title,
@@ -134,13 +140,20 @@ HomeTab.propTypes = {
       status: PropTypes.string,
     })
   ).isRequired,
+  deleteJob: PropTypes.func.isRequired,
+  clearRecentJobs: PropTypes.func.isRequired,
 };
 
 /**
  * Renders a button for each recent invest job.
  */
 function RecentInvestJobs(props) {
-  const { recentJobs, openInvestModel, deleteJob, clearRecentJobs } = props;
+  const {
+    recentJobs,
+    openInvestModel,
+    deleteJob,
+    clearRecentJobs
+  } = props;
   const { t } = useTranslation();
 
   const handleClick = (jobMetadata) => {
@@ -214,12 +227,12 @@ function RecentInvestJobs(props) {
               key="placeholder"
             >
               <Card.Header>
-                <span className="header-title">Welcome!</span>
+                <span className="header-title">{t('Welcome!')}</span>
               </Card.Header>
               <Card.Body>
                 <Card.Title>
                   <span className="text-heading">
-                    After running a model, find your recent model runs here.
+                    {t('After running a model, find your recent model runs here.')}
                   </span>
                 </Card.Title>
               </Card.Body>
@@ -255,4 +268,6 @@ RecentInvestJobs.propTypes = {
     })
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,
+  deleteJob: PropTypes.func.isRequired,
+  clearRecentJobs: PropTypes.func.isRequired,
 };

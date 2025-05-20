@@ -22,7 +22,6 @@ export default function PluginModal(props) {
     closeModal,
     openModal,
   } = props;
-  // const [showPluginModal, setShowPluginModal] = useState(false);
   const [url, setURL] = useState('');
   const [revision, setRevision] = useState('');
   const [path, setPath] = useState('');
@@ -43,14 +42,6 @@ export default function PluginModal(props) {
     setUninstallErr('');
     closeModal();
   };
-  // const handleModalOpen = () => {
-  //   if (window.Workbench.OS === 'win32') {
-  //     ipcRenderer.invoke(ipcMainChannels.HAS_MSVC).then((hasMSVC) => {
-  //       setNeedsMSVC(!hasMSVC);
-  //     });
-  //   }
-  //   setShowPluginModal(true);
-  // };
 
   const addPlugin = () => {
     setInstallLoading(true);
@@ -93,7 +84,6 @@ export default function PluginModal(props) {
 
   const downloadMSVC = () => {
     closeModal();
-    // setShowPluginModal(false);
     ipcRenderer.invoke(ipcMainChannels.DOWNLOAD_MSVC).then(
       openModal()
     );
@@ -323,6 +313,9 @@ export default function PluginModal(props) {
 }
 
 PluginModal.propTypes = {
+  show: PropTypes.bool.isRequired,
+  closeModal: PropTypes.func.isRequired,
+  openModal: PropTypes.func.isRequired,
   updateInvestList: PropTypes.func.isRequired,
   closeInvestModel: PropTypes.func.isRequired,
   openJobs: PropTypes.shape({

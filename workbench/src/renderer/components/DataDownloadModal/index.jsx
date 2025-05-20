@@ -20,7 +20,7 @@ const { logger } = window.Workbench;
 
 // A URL for sampledata to use in devMode, when the token containing the URL
 // associated with a production build of the Workbench does not exist.
-const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.13.0/data';
+const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.15.1/data';
 const DEFAULT_FILESIZE = 0;
 
 /** Render a dialog with a form for configuring global invest settings */
@@ -264,9 +264,11 @@ class DataDownloadModal extends React.Component {
                     <p className="mb-0"><em>{this.state.alertPath}</em></p>
                   </Alert>
                 )
-                : <Modal.Title id="download-modal-title">
+                : (
+                  <Modal.Title id="download-modal-title">
                     {t("Download InVEST sample data")}
                   </Modal.Title>
+                )
             }
             <Button
               variant="secondary-outline"

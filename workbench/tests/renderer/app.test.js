@@ -480,6 +480,13 @@ describe('Main menu interactions', () => {
   });
 
   test('Open Plugins Modal from menu', async () => {
+    ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
+      }
+      return Promise.resolve();
+    });
+
     const {
       findByText, findByRole,
     } = render(
@@ -492,7 +499,7 @@ describe('Main menu interactions', () => {
       await findByRole('button', { name: /Manage Plugins/i })
     );
 
-    expect(await findByText(/Redistributable must be installed!/i))
+    expect(await findByText(/add a plugin/i))
       .toBeInTheDocument();
     await userEvent.click(
       await findByRole('button', { name: /close modal/i })

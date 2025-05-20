@@ -246,9 +246,9 @@ class SettingsModal extends React.Component {
         </Modal>
         {
           (languageOptions) ? (
-            <Modal show={showConfirmLanguageChange} className="confirm-modal" >
+            <Modal show={showConfirmLanguageChange} className="confirm-modal">
               <Modal.Header>
-                <Modal.Title as="h5" >{t('Warning')}</Modal.Title>
+                <Modal.Title as="h5">{t('Warning')}</Modal.Title>
               </Modal.Header>
               <Modal.Body>
                 <p>
@@ -274,6 +274,8 @@ class SettingsModal extends React.Component {
 }
 
 SettingsModal.propTypes = {
+  show: PropTypes.bool.isRequired,
+  close: PropTypes.func.isRequired,
   nCPU: PropTypes.number.isRequired,
 };
 

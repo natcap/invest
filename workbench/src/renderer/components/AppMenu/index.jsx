@@ -1,11 +1,8 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 
-import Button from 'react-bootstrap/Button';
 import Dropdown from 'react-bootstrap/Dropdown';
 import { useTranslation } from 'react-i18next';
 import { GiHamburgerMenu } from 'react-icons/gi';
-
 
 export default function AppMenu(props) {
   const { t } = useTranslation();
