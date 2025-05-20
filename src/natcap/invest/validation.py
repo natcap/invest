@@ -72,6 +72,8 @@ MESSAGES = {
     'WRONG_GEOM_TYPE': gettext('Geometry type must be one of {allowed}')
 }
 
+def get_message(key):
+    return gettext(MESSAGES[key])
 
 def _evaluate_expression(expression, variable_map):
     """Evaluate a python expression.
