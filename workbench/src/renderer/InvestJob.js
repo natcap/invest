@@ -40,6 +40,11 @@ export default class InvestJob {
     return InvestJob.getJobStore();
   }
 
+  static async deleteJob(hash) {
+    await investJobStore.removeItem(hash);
+    return InvestJob.getJobStore();
+  }
+
   static async saveJob(job) {
     job.hash = window.crypto.getRandomValues(
       new Uint32Array(1)

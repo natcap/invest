@@ -9,6 +9,9 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
 import { useTranslation } from 'react-i18next';
+import {
+  MdClose,
+} from 'react-icons/md';
 
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
@@ -36,7 +39,7 @@ export default class HomeTab extends React.Component {
   }
 
   render() {
-    const { recentJobs, investList, openInvestModel, clearRecentJobs } = this.props;
+    const { recentJobs, investList, openInvestModel, deleteJob, clearRecentJobs } = this.props;
     let sortedModelIds = {};
     if (investList) {
       // sort the model list alphabetically, by the model title,
@@ -105,6 +108,7 @@ export default class HomeTab extends React.Component {
             openInvestModel={openInvestModel}
             recentJobs={recentJobs}
             investList={investList}
+            deleteJob={deleteJob}
             clearRecentJobs={clearRecentJobs}
           />
         </Col>
@@ -136,7 +140,7 @@ HomeTab.propTypes = {
  * Renders a button for each recent invest job.
  */
 function RecentInvestJobs(props) {
-  const { recentJobs, openInvestModel, investList, clearRecentJobs } = props;
+  const { recentJobs, openInvestModel, deleteJob, clearRecentJobs } = props;
   const { t } = useTranslation();
 
   const handleClick = (jobMetadata) => {
@@ -157,15 +161,25 @@ function RecentInvestJobs(props) {
       recentButtons.push(
         <Card
           className="text-left recent-job-card mr-2 w-100"
-          as="button"
           key={job.hash}
-          onClick={() => handleClick(job)}
         >
-          <Card.Body>
-            <Card.Header>
-              {badge}
-              <span className="header-title">{job.modelTitle}</span>
-            </Card.Header>
+          <Card.Header>
+            {badge}
+            <span className="header-title">{job.modelTitle}</span>
+            <Button
+              variant="secondary-outline"
+              onClick={() => deleteJob(job.hash)}
+              className="float-right p-1 mr-1"
+              aria-label="delete"
+            >
+              <MdClose />
+            </Button>
+          </Card.Header>
+          <Card.Body
+            className="text-left border-0"
+            as="button"
+            onClick={() => handleClick(job)}
+          >
             <Card.Title>
               <span className="text-heading">{'Workspace: '}</span>
               <span className="text-mono">{job.argsValues.workspace_dir}</span>
@@ -199,10 +213,10 @@ function RecentInvestJobs(props) {
               className="text-left recent-job-card mr-2 w-100"
               key="placeholder"
             >
+              <Card.Header>
+                <span className="header-title">Welcome!</span>
+              </Card.Header>
               <Card.Body>
-                <Card.Header>
-                  <span className="header-title">Welcome!</span>
-                </Card.Header>
                 <Card.Title>
                   <span className="text-heading">
                     After running a model, find your recent model runs here.
@@ -221,7 +235,7 @@ function RecentInvestJobs(props) {
               onClick={clearRecentJobs}
               className="mr-2 w-100"
             >
-              {t('Clear Recent Jobs')}
+              {t('Clear all model runs')}
             </Button>
           </Row>
         )

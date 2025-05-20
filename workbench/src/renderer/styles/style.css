@@ -257,23 +257,27 @@ exceed 100% of window.*/
 
 .recent-job-card {
   width: inherit;
-  margin-bottom: 1rem;
   padding: 0;
   height: fit-content;
   filter: drop-shadow(2px 2px 2px grey);
+  margin-top: 0.5rem;
 }
 
 .card-body {
-  padding: 0;
+  padding-top: 1rem;
+  padding-left: 0rem;
+  padding-right: 0rem;
+  padding-bottom: 0rem;
   width: inherit;
+  background-color: transparent;
 }
 
 .card-header {
   background-color: var(--invest-green);
   filter: opacity(0.75);
-  margin-bottom: 1rem;
   margin-left: -0.1rem;
   margin-right: -0.05rem;
+  padding-right: 0;
 }
 
 .card-header .header-title {
@@ -283,8 +287,14 @@ exceed 100% of window.*/
   letter-spacing: 0.5px;
 }
 
+.card-header .btn:hover {
+  background-color: white;
+  color: var(--invest-green);
+}
+
 .card-title {
   padding-left: 1.25rem;
+  font-size: 1.1rem;
 }
 
 .card-title .text-heading {
@@ -293,7 +303,7 @@ exceed 100% of window.*/
 
 .card-title .text-mono {
   font-family: monospace;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
 
 .card-footer {
