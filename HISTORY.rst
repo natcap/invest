@@ -70,6 +70,17 @@ Workbench
   existing user-added metadata preserved)
   (`#1774 <https://github.com/natcap/invest/issues/1774>`_).
 
+
+NDR
+====
+* ``stream.tif`` is now saved in the main output folder rather than the
+  intermediate folder (`#1864 <https://github.com/natcap/invest/issues/1864>`_).
+
+Seasonal Water Yield
+====================
+* ``stream.tif`` is now saved in the main output folder rather than the
+  intermediate folder (`#1864 <https://github.com/natcap/invest/issues/1864>`_).
+
 Urban Flood Risk
 ================
 * The raster output ``Runoff_retention.tif`` has been renamed
