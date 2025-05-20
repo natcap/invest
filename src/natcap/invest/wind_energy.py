@@ -1363,9 +1363,14 @@ def _index_raster_values_to_point_vector(
         # Since we're mutating the base vector, if the
         # supplied fieldname already exists, don't overwrite it
         if base_layer.FindFieldIndex(mask_field, True) != -1:
-            raise ValueError(
-                f"A field called '{mask_field}' already exists in the base "
-                "vector. Please supply a different name for `mask_field`.")
+            i = 1
+            mask_field = f'Masked_{i}'
+            while base_layer.FindFieldIndex(mask_field, True) != -1:
+                i += 1
+            LOGGER.warning(
+                "A field with the same name as the supplied `mask_field` "
+                "already exists in the base vector. To avoid overwriting, "
+                f"the field name `{mask_field}` is being used instead.")
         field_defn = ogr.FieldDefn(mask_field, ogr.OFTReal)
         field_defn.SetWidth(24)
         field_defn.SetPrecision(11)
