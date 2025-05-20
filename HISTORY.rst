@@ -77,7 +77,8 @@ NDR
   Previously the models biophysical table expected the ``load_[nutrient]``
   column to be an "extensive"/export measured value. Now, a new
   column, ``nut_load_type``, is required with expected values of either
-  ``application_rate`` or ``measured_runoff``. (#1044).
+  ``application_rate`` or ``measured_runoff``.
+  (`#1044 <https://github.com/natcap/invest/issues/1044>`_).
 
 Urban Flood Risk
 ================
