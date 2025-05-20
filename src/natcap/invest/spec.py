@@ -322,9 +322,7 @@ class RasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        # use FileInput instead of super() because when this is called from
-        # RasterOrVectorInput.validate, super() refers to multiple parents.
-        file_warning = FileInput.validate(self, filepath)
+        file_warning = super().validate(filepath)
         if file_warning:
             return file_warning
 
@@ -378,9 +376,7 @@ class SingleBandRasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        # use FileInput instead of super() because when this is called from
-        # RasterOrVectorInput.validate, super() refers to multiple parents.
-        file_warning = FileInput.validate(self, filepath)
+        file_warning = super().validate(filepath)
         if file_warning:
             return file_warning
 
@@ -497,9 +493,28 @@ class VectorInput(FileInput):
 
 
 @dataclasses.dataclass
-class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
-    """An invest model input that can be either a raster or a vector."""
+class RasterOrVectorInput(FileInput):
+    """An invest model input that can be either a single-band raster or a vector."""
     type: typing.ClassVar[str] = 'raster_or_vector'
+
+    data_type: typing.Type = float
+    units: typing.Union[pint.Unit, None] = None
+    geometry_types: set = dataclasses.field(default_factory=dict)
+    fields: typing.Union[typing.Iterable[Input], None] = None
+    projected: typing.Union[bool, None] = None
+    projection_units: typing.Union[pint.Unit, None] = None
+
+    def __post_init__(self):
+        self.single_band_raster_input = SingleBandRasterInput(
+            data_type=self.data_type,
+            units=self.units,
+            projected=self.projected,
+            projection_units=self.projection_units)
+        self.vector_input = VectorInput(
+            geometry_types=self.geometry_types,
+            fields=self.fields,
+            projected=self.projected,
+            projection_units=self.projection_units)
 
     @timeout
     def validate(self, filepath: str):
@@ -516,9 +531,9 @@ class RasterOrVectorInput(SingleBandRasterInput, VectorInput):
         except ValueError as err:
             return str(err)
         if gis_type == pygeoprocessing.RASTER_TYPE:
-            return SingleBandRasterInput.validate(self, filepath)
+            return self.single_band_raster_input.validate(filepath)
         else:
-            return VectorInput.validate(self, filepath)
+            return self.vector_input.validate(filepath)
 
 
 @dataclasses.dataclass
@@ -1335,7 +1350,6 @@ def build_model_spec(model_spec):
     if 'args_with_spatial_overlap' in model_spec:
         different_projections_ok = model_spec['args_with_spatial_overlap'].get('different_projections_ok', False)
         if set(spatial_keys) != set(model_spec['args_with_spatial_overlap']['spatial_keys']):
-            print('mismatch', model_spec['model_id'])
             validate_spatial_overlap = model_spec['args_with_spatial_overlap']['spatial_keys']
 
     return ModelSpec(
