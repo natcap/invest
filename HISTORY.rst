@@ -70,7 +70,6 @@ Workbench
   existing user-added metadata preserved)
   (`#1774 <https://github.com/natcap/invest/issues/1774>`_).
 
-
 NDR
 ====
 * ``stream.tif`` is now saved in the main output folder rather than the
