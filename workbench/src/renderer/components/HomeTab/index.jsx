@@ -81,7 +81,7 @@ export default class HomeTab extends React.Component {
           className="invest-button"
         >
           { badge }
-          <span className>{modelTitle}</span>
+          <span>{modelTitle}</span>
         </ListGroup.Item>
       );
     });

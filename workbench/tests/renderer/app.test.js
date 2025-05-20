@@ -142,7 +142,8 @@ describe('Various ways to open and close InVEST models', () => {
       <App />
     );
 
-    const openButton = await findByRole('button', { name: 'Open' });
+    const openButton = await findByRole(
+      'button', { name: /browse to a datastack or invest logfile/i });
     expect(openButton).not.toBeDisabled();
     await userEvent.click(openButton);
     const executeButton = await findByRole('button', { name: /Run/ });
@@ -172,7 +173,8 @@ describe('Various ways to open and close InVEST models', () => {
       <App />
     );
 
-    const openButton = await findByRole('button', { name: 'Open' });
+    const openButton = await findByRole(
+      'button', { name: /browse to a datastack or invest logfile/i });
     await userEvent.click(openButton);
     const homeTab = await findByRole('tabpanel', { name: 'home tab' });
     // expect we're on the same tab we started on instead of switching to Setup
@@ -302,7 +304,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
     await waitFor(() => {
       initialJobs.forEach((job, idx) => {
         const recent = recentJobs[idx];
-        const card = getByText(job.modelTitle)
+        const card = getByText(job.argsValues.workspace_dir)
           .closest('button');
         expect(within(card).getByText(job.argsValues.workspace_dir))
           .toBeInTheDocument();
@@ -379,9 +381,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
     expect(node).toBeInTheDocument();
   });
 
-  test('Recent Jobs: cleared by button', async () => {
-    // we need this mock because the settings dialog is opened
-    getGeoMetaMakerProfile.mockResolvedValue({});
+  test('Recent Jobs: cleared by clear all button', async () => {
     const job1 = new InvestJob({
       modelID: MOCK_MODEL_ID,
       modelTitle: 'Carbon Sequestration',
@@ -402,8 +402,33 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
           .toBeTruthy();
       });
     });
-    // await userEvent.click(getByRole('button', { name: 'settings' }));
-    await userEvent.click(getByText('Clear Recent Jobs'));
+    await userEvent.click(getByText(/clear all model runs/i));
+    const node = await findByText('Welcome!');
+    expect(node).toBeInTheDocument();
+  });
+
+  test('Recent Jobs: delete single job', async () => {
+    const job1 = new InvestJob({
+      modelID: MOCK_MODEL_ID,
+      modelTitle: 'Carbon Sequestration',
+      argsValues: {
+        workspace_dir: 'work1',
+      },
+      status: 'success',
+      // leave out the 'type' attribute to make sure it defaults to core
+      // for backwards compatibility
+    });
+    const recentJobs = await InvestJob.saveJob(job1);
+
+    const { getByText, findByText, getByRole } = render(<App />);
+
+    await waitFor(() => {
+      recentJobs.forEach((job) => {
+        expect(getByText(job.argsValues.workspace_dir))
+          .toBeTruthy();
+      });
+    });
+    await userEvent.click(getByRole('button', { name: 'delete' }));
     const node = await findByText('Welcome!');
     expect(node).toBeInTheDocument();
   });
