@@ -494,7 +494,7 @@ class VectorInput(FileInput):
 
 @dataclasses.dataclass
 class RasterOrVectorInput(FileInput):
-    """An invest model input that can be either a single-band raster or a vector."""
+    """An invest model input of either a single-band raster or a vector."""
     type: typing.ClassVar[str] = 'raster_or_vector'
 
     data_type: typing.Type = float
