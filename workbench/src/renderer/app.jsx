@@ -62,7 +62,7 @@ export default class App extends React.Component {
   /** Initialize the list of invest models, recent invest jobs, etc. */
   async componentDidMount() {
     const investList = await this.updateInvestList();
-    let recentJobs = await InvestJob.getJobStore();
+    const recentJobs = await InvestJob.getJobStore();
     this.setState({
       // filter out models that do not exist in current version of invest
       recentJobs: recentJobs.filter((job) => (
