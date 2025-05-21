@@ -420,7 +420,7 @@ function AboutModal(props) {
             <a
               href={userguideURL}
               title={userguideURL}
-              aria-label={t("User's guide entry (opens in web browser)")}
+              aria-label={t("User's guide entry (opens in new window)")}
               onClick={handleClickUsersGuideLink}
             >
               {t("User's guide entry")}
