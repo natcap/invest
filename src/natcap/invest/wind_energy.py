@@ -794,27 +794,14 @@ def execute(args):
         LOGGER.info('AOI Provided')
         aoi_vector_path = args['aoi_vector_path']
 
-        aoi_info = pygeoprocessing.get_vector_info(aoi_vector_path)
-        target_sr_wkt = aoi_info['projection_wkt']
-        target_bounding_box = aoi_info['bounding_box']
-        target_pixel_size = _TARGET_PIXEL_SIZE
-        LOGGER.debug(f'target_sr_wkt: {target_sr_wkt}\n'
-                     f'target_pixel_size: {target_pixel_size}\n'
-                     f'target_bounding_box: {target_bounding_box}')
-
-        LOGGER.info('Clip and project bathymetry to AOI')
         bathymetry_proj_raster_path = os.path.join(
             inter_dir, 'bathymetry_projected%s.tif' % suffix)
-
         reproject_bathy_task = task_graph.add_task(
-            func=pygeoprocessing.warp_raster,
-            args=(bathymetry_path, target_pixel_size,
-                  bathymetry_proj_raster_path, _TARGET_RESAMPLE_METHOD),
-            kwargs={'target_bb': target_bounding_box,
-                    'target_projection_wkt': target_sr_wkt},
-            task_name='reproject_bathy',
+            func=_reproject_bathymetry,
+            args=(bathymetry_path, aoi_vector_path, _TARGET_PIXEL_SIZE,
+                  bathymetry_proj_raster_path),
             target_path_list=[bathymetry_proj_raster_path],
-            dependent_task_list=bathy_dependent_task_list)
+            task_name='reproject_bathymetry')
 
         # Depth mask will be dependent on the final bathymetry
         depth_mask_dependent_task_list = [reproject_bathy_task]
@@ -830,6 +817,9 @@ def execute(args):
         LOGGER.info('Create point shapefile from wind data')
         # Use the projection from the projected bathymetry as reference to
         # create wind point vector from wind data dictionary
+        target_sr_wkt = pygeoprocessing.get_vector_info(
+            aoi_vector_path)['projection_wkt']
+
         wind_data_to_vector_task = task_graph.add_task(
             func=_wind_data_to_point_vector,
             args=(wind_data_pickle_path, 'wind_data', wind_point_vector_path),
@@ -1510,6 +1500,68 @@ def _index_raster_values_to_point_vector(
 
     base_layer = None
     base_vector = None
+
+
+def _reproject_bathymetry(base_raster_path, aoi_vector_path,
+        comparison_pixel_size, target_raster_path):
+    """Reproject and clip bathymetry raster to AOI bounding box and SRS
+
+    The minimum of the ``comparison_pixel_size`` and the base raster's pixel
+    size will be used as the target pixel size in the ``warp_raster`` call.
+
+    Args:
+        base_raster_path (str): path to the bathymetry raster, which may not
+            be projected.
+        aoi_vector_path (str): path to the AOI vector, which will be used to
+            clip the bathymetry raster.
+        comparison_pixel_size (tuple): pixel size, in meters, to compare with
+            the base raster's pixel size.
+        target_raster_path (str): path to the target reprojected bathymetry
+            raster.
+
+    Returns:
+        None
+
+    """
+    LOGGER.info('Clipping and projecting bathymetry to AOI')
+
+    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
+    aoi_vector_info = pygeoprocessing.get_vector_info(aoi_vector_path)
+
+    base_raster_srs = osr.SpatialReference()
+    base_raster_srs.ImportFromWkt(base_raster_info['projection_wkt'])
+
+    target_sr_wkt = aoi_vector_info['projection_wkt']
+    target_bounding_box = aoi_vector_info['bounding_box']
+
+    if base_raster_srs.IsGeographic():
+        wgs84_sr = osr.SpatialReference()
+        wgs84_sr.ImportFromEPSG(4326)
+        aoi_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
+            target_bounding_box, target_sr_wkt, wgs84_sr.ExportToWkt())
+
+        centroid_y = (
+            aoi_wgs84_bounding_box[3] + aoi_wgs84_bounding_box[1]) / 2
+
+        # Get pixel size in square meters used for resizing the base
+        # raster later on
+        base_pixel_size = math.sqrt(
+            pygeoprocessing.geoprocessing._m2_area_of_wg84_pixel(
+            base_raster_info['pixel_size'][0], centroid_y))
+    else:
+        base_pixel_size = base_raster_info['pixel_size'][0]
+
+    min_pixel_size = min(base_pixel_size, comparison_pixel_size[0])
+    target_pixel_size = (min_pixel_size, -min_pixel_size)
+
+    LOGGER.debug(f'target_sr_wkt: {target_sr_wkt}\n'
+                 f'target_pixel_size: {target_pixel_size}\n'
+                 f'target_bounding_box: {target_bounding_box}')
+
+    pygeoprocessing.warp_raster(base_raster_path, target_pixel_size,
+        target_raster_path, _TARGET_RESAMPLE_METHOD,
+        target_bb=target_bounding_box,
+        target_projection_wkt=target_sr_wkt)
 
 
 def _calculate_npv_levelized_rasters(
