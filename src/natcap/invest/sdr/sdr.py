@@ -33,7 +33,7 @@ LOGGER = logging.getLogger(__name__)
 MODEL_SPEC = {
     "model_id": "invest_sdr_usle_c_raster",
     "model_name": "SDR with USLE C raster",
-    "userguide": "",
+    "userguide": "https://github.com/natcap/invest-sdr-usle-c-raster/blob/main/README.md",
     "aliases": set(),
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
