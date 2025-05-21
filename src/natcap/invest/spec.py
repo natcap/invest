@@ -148,6 +148,8 @@ def _check_projection(srs, projected, projection_units):
 
 
 class IterableWithDotAccess():
+    """Iterable that supports dot notation access by id attribute."""
+
     def __init__(self, *args):
         self.args = args
         self.inputs_dict = {i.id: i for i in args}
@@ -157,9 +159,22 @@ class IterableWithDotAccess():
         return iter(self.args)
 
     def get(self, key):
+        """Get an item by its id.
+
+        Args:
+            key: the item id
+
+        Returns:
+            the corresponding item
+        """
         return self.inputs_dict[key]
 
     def to_json(self):
+        """Return a JSON serializable representation of self.
+
+        Returns:
+            dict mapping item IDs to items
+        """
         return self.inputs_dict
 
 
@@ -1332,6 +1347,7 @@ class ModelSpec:
 
 
 def build_model_spec(model_spec):
+    """Convert an old-style MODEL_SPEC dictionary to the new class-based style."""
     inputs = [
         build_input_spec(argkey, argspec)
         for argkey, argspec in model_spec['args'].items()]
@@ -1365,6 +1381,7 @@ def build_model_spec(model_spec):
 
 
 def build_input_spec(argkey, arg):
+    """Convert an old-style input spec dictionary to the new class-based style."""
     base_attrs = {
         'id': argkey,
         'name': arg.get('name', None),
@@ -1465,6 +1482,7 @@ def build_input_spec(argkey, arg):
 
 
 def build_output_spec(key, spec):
+    """Convert an old-style output spec dictionary to the new class-based style."""
     base_attrs = {
         'id': key,
         'about': spec.get('about', None),
