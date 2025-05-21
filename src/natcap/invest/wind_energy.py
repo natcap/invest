@@ -1504,7 +1504,7 @@ def _index_raster_values_to_point_vector(
 
 def _reproject_bathymetry(base_raster_path, aoi_vector_path,
         comparison_pixel_size, target_raster_path):
-    """Reproject and clip bathymetry raster to AOI bounding box and SRS
+    """Reproject and clip bathymetry raster to AOI bounding box and SRS.
 
     The minimum of the ``comparison_pixel_size`` and the base raster's pixel
     size will be used as the target pixel size in the ``warp_raster`` call.
