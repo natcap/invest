@@ -310,6 +310,7 @@ class InvestTab extends React.Component {
                 >
                   <SetupTab
                     userguide={modelSpec.userguide}
+                    isCoreModel={isCoreModel}
                     modelID={modelID}
                     argsSpec={argsSpec}
                     uiSpec={uiSpec}

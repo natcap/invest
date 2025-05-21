@@ -555,11 +555,11 @@ class SetupTab extends React.Component {
       const {
         argsSpec,
         userguide,
+        isCoreModel,
         sidebarSetupElementId,
         sidebarFooterElementId,
         executeClicked,
         uiSpec,
-        investList,
         modelID,
       } = this.props;
 
@@ -602,8 +602,6 @@ class SetupTab extends React.Component {
           )
           : <span>{t('Run')}</span>
       );
-
-      const isCoreModel = investList[modelID].type === 'core';
 
       return (
         <Container fluid>
@@ -674,6 +672,7 @@ export default withTranslation()(SetupTab);
 
 SetupTab.propTypes = {
   userguide: PropTypes.string.isRequired,
+  isCoreModel: PropTypes.bool.isRequired,
   modelID: PropTypes.string.isRequired,
   argsSpec: PropTypes.objectOf(
     PropTypes.shape({
