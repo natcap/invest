@@ -63,7 +63,7 @@ const UI_SPEC = { order: [Object.keys(BASE_MODEL_SPEC.args)] };
  * @param {object} baseSpec - an invest model spec
  * @returns {object} - containing the test utility functions returned by render
  */
-function renderSetupFromSpec(baseSpec, uiSpec, initValues = undefined) {
+function renderSetupFromSpec(baseSpec, uiSpec, initValues = undefined, isCoreModel = true) {
   // some MODEL_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
   const spec = { ...baseSpec };
@@ -73,6 +73,7 @@ function renderSetupFromSpec(baseSpec, uiSpec, initValues = undefined) {
   const { ...utils } = render(
     <SetupTab
       userguide={spec.userguide}
+      isCoreModel={isCoreModel}
       modelID={spec.model_id}
       argsSpec={spec.args}
       uiSpec={uiSpec}
@@ -357,12 +358,24 @@ describe('Arguments form interactions', () => {
     const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
     await userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
-    const link = await findByRole('link', { name: /user guide/ });
+    const link = await findByRole('link', { name: /User's guide entry/ });
+    expect(link).toBeInTheDocument();
     await userEvent.click(link);
     await waitFor(() => {
       const calledChannels = spy.mock.calls.map(call => call[0]);
       expect(calledChannels).toContain(ipcMainChannels.OPEN_LOCAL_HTML);
     });
+  });
+
+  test('Open info dialog, expect text but no link if model is a plugin', async () => {
+    const spy = jest.spyOn(ipcRenderer, 'send')
+      .mockImplementation(() => Promise.resolve());
+    const spec = baseArgsSpec('directory');
+    const { findByText, findByRole, queryByRole } = renderSetupFromSpec(spec, UI_SPEC, undefined, false);
+    await userEvent.click(await findByRole('button', { name: /info about/ }));
+    expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
+    const link = await queryByRole('link', { name: /User's guide entry/ });
+    expect(link).toBeNull();
   });
 });
 

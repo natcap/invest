@@ -187,18 +187,18 @@ describe('Test building model UIs and forum links', () => {
     'coastal_vulnerability',
     'crop_production_percentile',
     'crop_production_regression',
-    //'delineateit',
+    'delineateit',
     'forest_carbon_edge_effect',
     'habitat_quality',
     'habitat_risk_assessment',
-    //'ndr',
+    'ndr',
     'pollination',
-    //'recreation',
+    'recreation',
     'routedem',
     'scenario_generator_proximity',
-    //'scenic_quality',
-    //'sdr',
-    //'seasonal_water_yield',
+    'scenic_quality',
+    'sdr',
+    'seasonal_water_yield',
     'stormwater',
     'urban_cooling_model',
     'urban_flood_risk_mitigation',
@@ -214,6 +214,7 @@ describe('Test building model UIs and forum links', () => {
         modelID={modelID}
         argsSpec={argsSpec.args}
         userguide={argsSpec.userguide}
+        isCoreModel={true}
         uiSpec={argsSpec.ui_spec}
         argsInitValues={undefined}
         investExecute={() => {}}
@@ -233,6 +234,7 @@ describe('Test building model UIs and forum links', () => {
     const { findByRole } = render(
       <ResourcesLinks
         modelID={modelID}
+        isCoreModel={true}
         docs={argsSpec.userguide}
       />
     );
