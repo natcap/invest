@@ -346,7 +346,7 @@ class SingleBandRasterInput(FileInput):
     """A single-band raster input, or parameter, of an invest model.
 
     This represents a raster file input (all GDAL-supported raster file types
-    are allowed), where only the first band is needed. While he same thing can
+    are allowed), where only the first band is needed. While the same thing can
     be achieved using a `RasterInput`, this class exists to simplify access to
     the band properties when there is only one band.
 
