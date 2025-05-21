@@ -149,6 +149,31 @@ describe('requests to flask endpoints', () => {
       break;
     }
   });
+
+  test('get geometamaker profile', async () => {
+    const profile = await serverRequests.getGeoMetaMakerProfile();
+    expect(profile).toHaveProperty('contact');
+    expect(profile).toHaveProperty('license');
+  });
+
+  test('set geometamaker profile', async () => {
+    const result = {
+      message: 'Metadata profile saved',
+      error: false,
+    };
+    jest.spyOn(window, 'fetch')
+      .mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(result),
+      });
+
+    const payload = {
+      contact: {},
+      license: {},
+    };
+    const response = await serverRequests.setGeoMetaMakerProfile(payload);
+    expect(response).toStrictEqual(result);
+  });
 });
 
 /** Some tests make http requests to check that links are status 200.
