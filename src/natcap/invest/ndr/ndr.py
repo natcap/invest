@@ -83,17 +83,22 @@ MODEL_SPEC = {
                     "options": {
                         "application-rate": {
                             "description": gettext(
-                                "Treat the load values as an application rate."
-                                "applied_nutrient * (1-retention_efficiency)")},
+                                "Treat the load values as nutrient "
+                                "application rates (e.g. fertilizer, livestock "
+                                "waste, ...)."
+                                "The model will adjust the load using the "
+                                "application rate and retention efficiency: "
+                                "load_[NUTRIENT] * (1 - eff_[NUTRIENT]).")},
                         "measured-runoff": {
                             "description": gettext(
-                                "Treat the load values as measured runoff.")},
+                                "Treat the load values as measured contaminant "
+                                "runoff.")},
                     },
                     "about": gettext(
                         "Whether the nutrient load in column "
-                        "load_[NUTRIENT] should be treated as an "
-                        "application rate or measured runoff. "
-                        "'application-rate' | 'measured-runoff'")},
+                        "load_[NUTRIENT] should be treated as "
+                        "nutrient application rate or measured contaminant "
+                        "runoff. 'application-rate' | 'measured-runoff'")},
                 "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
