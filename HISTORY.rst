@@ -83,7 +83,11 @@ HRA
   (`#1881 <https://github.com/natcap/invest/issues/1881>`_).
 
 NDR
-====
+===
+* Fixed a bug in the effective retention calculation where nodata pour point
+  pixels were mistakenly used as real data. The effect of this change is most
+  pronounced along stream edges and should not affect the overall pattern of
+  results. (`#1845 <https://github.com/natcap/invest/issues/1845>`_)
 * ``stream.tif`` is now saved in the main output folder rather than the
   intermediate folder (`#1864 <https://github.com/natcap/invest/issues/1864>`_).
 
