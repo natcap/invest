@@ -18,6 +18,7 @@ export default function AppMenu(props) {
       </Dropdown.Toggle>
       <Dropdown.Menu
         align="right"
+        className="shadow"
       >
         <Dropdown.Item
           as="button"

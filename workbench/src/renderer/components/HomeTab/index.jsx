@@ -180,9 +180,9 @@ function RecentInvestJobs(props) {
             {badge}
             <span className="header-title">{job.modelTitle}</span>
             <Button
-              variant="secondary-outline"
+              variant="outline-light"
               onClick={() => deleteJob(job.hash)}
-              className="float-right p-1 mr-1"
+              className="float-right p-1 mr-1 border-0"
               aria-label="delete"
             >
               <MdClose />
