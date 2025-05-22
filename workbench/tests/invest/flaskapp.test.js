@@ -215,7 +215,6 @@ describe('Test building model UIs and forum links', () => {
         argsSpec={argsSpec.args}
         userguide={argsSpec.userguide}
         isCoreModel={true}
-        uiSpec={argsSpec.ui_spec}
         inputFieldOrder={argsSpec.input_field_order}
         argsInitValues={undefined}
         investExecute={() => {}}

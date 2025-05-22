@@ -367,8 +367,6 @@ describe('Arguments form interactions', () => {
   });
 
   test('Open info dialog, expect text but no link if model is a plugin', async () => {
-    const spy = jest.spyOn(ipcRenderer, 'send')
-      .mockImplementation(() => Promise.resolve());
     const spec = baseArgsSpec('directory');
     const { findByText, findByRole, queryByRole } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER, undefined, false);
     await userEvent.click(await findByRole('button', { name: /info about/ }));
