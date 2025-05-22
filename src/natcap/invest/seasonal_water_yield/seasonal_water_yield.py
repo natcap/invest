@@ -14,7 +14,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from .. import gettext
-from .. import spec_utils
+from .. import spec
 from .. import utils
 from .. import validation
 from ..unit_registry import u
@@ -28,7 +28,7 @@ MONTH_ID_TO_LABEL = [
     'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct',
     'nov', 'dec']
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "seasonal_water_yield",
     "model_title": gettext("Seasonal Water Yield"),
     "userguide": "seasonal_water_yield.html",
@@ -42,8 +42,7 @@ MODEL_SPEC = {
             ['user_defined_local_recharge', 'l_path', 'et0_dir', 'precip_dir', 'soil_group_path'],
             ['monthly_alpha', 'alpha_m', 'monthly_alpha_path'],
             ['user_defined_climate_zones', 'rain_events_table_path', 'climate_zone_table_path', 'climate_zone_raster_path'],
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_raster_path", "lulc_raster_path",
@@ -52,10 +51,10 @@ MODEL_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
-        "threshold_flow_accumulation": spec_utils.THRESHOLD_FLOW_ACCUMULATION,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
+        "threshold_flow_accumulation": spec.THRESHOLD_FLOW_ACCUMULATION,
         "et0_dir": {
             "type": "directory",
             "contents": {
@@ -116,31 +115,31 @@ MODEL_SPEC = {
             "name": gettext("precipitation directory")
         },
         "dem_raster_path": {
-            **spec_utils.DEM,
+            **spec.DEM,
             "projected": True
         },
         "lulc_raster_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
-            "about": spec_utils.LULC['about'] + " " + gettext(
+            "about": spec.LULC['about'] + " " + gettext(
                 "All values in this raster MUST "
                 "have corresponding entries in the Biophysical Table.")
         },
         "soil_group_path": {
-            **spec_utils.SOIL_GROUP,
+            **spec.SOIL_GROUP,
             "projected": True,
             "required": "not user_defined_local_recharge",
             "allowed": "not user_defined_local_recharge"
         },
         "aoi_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "projected": True
         },
         "biophysical_table_path": {
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
@@ -314,7 +313,7 @@ MODEL_SPEC = {
                 "Required if Use Monthly Alpha Table is selected."),
             "name": gettext("monthly alpha table")
         },
-        **spec_utils.FLOW_DIR_ALGORITHM
+        **spec.FLOW_DIR_ALGORITHM
     },
     "outputs": {
         "B.tif": {
@@ -402,7 +401,7 @@ MODEL_SPEC = {
         },
         "aggregated_results_swy.shp": {
             "about": gettext("Table of biophysical values for each watershed"),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "qb": {
                     "about": gettext(
@@ -475,7 +474,7 @@ MODEL_SPEC = {
                                      "clipped to match the other spatial inputs"),
                     "bands": {1: {"type": "integer"}}
                 },
-                'flow_accum.tif': spec_utils.FLOW_ACCUMULATION,
+                'flow_accum.tif': spec.FLOW_ACCUMULATION,
                 'prcp_a[MONTH].tif': {
                     "bands": {1: {"type": "number", "units": u.millimeter/u.year}},
                     "about": gettext("Monthly precipitation rasters, aligned and "
@@ -506,9 +505,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 
 _OUTPUT_BASE_FILES = {
@@ -625,20 +624,19 @@ def execute(args):
     # fail early on a missing required rain events table
     if (not args['user_defined_local_recharge'] and
             not args['user_defined_climate_zones']):
-        rain_events_df = validation.get_validated_dataframe(
-            args['rain_events_table_path'],
-            **MODEL_SPEC['args']['rain_events_table_path'])
+        rain_events_df = MODEL_SPEC.get_input(
+            'rain_events_table_path').get_validated_dataframe(
+            args['rain_events_table_path'])
 
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table_path'],
-        **MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = MODEL_SPEC.get_input(
+        'biophysical_table_path').get_validated_dataframe(
+        args['biophysical_table_path'])
 
     if args['monthly_alpha']:
         # parse out the alpha lookup table of the form (month_id: alpha_val)
-        alpha_month_map = validation.get_validated_dataframe(
-            args['monthly_alpha_path'],
-            **MODEL_SPEC['args']['monthly_alpha_path']
-        )['alpha'].to_dict()
+        alpha_month_map = MODEL_SPEC.get_input(
+            'monthly_alpha_path').get_validated_dataframe(
+            args['monthly_alpha_path'])['alpha'].to_dict()
     else:
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
@@ -815,9 +813,9 @@ def execute(args):
             'table_name': 'Climate Zone'}
         for month_id in range(N_MONTHS):
             if args['user_defined_climate_zones']:
-                cz_rain_events_df = validation.get_validated_dataframe(
-                    args['climate_zone_table_path'],
-                    **MODEL_SPEC['args']['climate_zone_table_path'])
+                cz_rain_events_df = MODEL_SPEC.get_input(
+                    'climate_zone_table_path').get_validated_dataframe(
+                    args['climate_zone_table_path'])
                 climate_zone_rain_events_month = (
                     cz_rain_events_df[MONTH_ID_TO_LABEL[month_id]].to_dict())
                 n_events_task = task_graph.add_task(
@@ -1486,5 +1484,4 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(args, MODEL_SPEC['args'],
-                               MODEL_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC)

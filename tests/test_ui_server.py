@@ -45,7 +45,8 @@ class EndpointFunctionTests(unittest.TestCase):
         self.assertEqual(
             set(spec),
             {'model_id', 'model_title', 'userguide', 'aliases',
-             'ui_spec', 'args_with_spatial_overlap', 'args', 'outputs'})
+             'input_field_order', 'different_projections_ok',
+             'validate_spatial_overlap', 'args', 'outputs'})
 
     def test_get_invest_validate(self):
         """UI server: get_invest_validate endpoint."""
@@ -55,7 +56,7 @@ class EndpointFunctionTests(unittest.TestCase):
             'workspace_dir': 'foo'
         }
         payload = {
-            'model_id': carbon.MODEL_SPEC['model_id'],
+            'model_id': carbon.MODEL_SPEC.model_id,
             'args': json.dumps(args)
         }
         response = test_client.post(f'{ROUTE_PREFIX}/validate', json=payload)
@@ -203,7 +204,7 @@ class EndpointFunctionTests(unittest.TestCase):
             self.assertEqual(
                 response.json,
                 {'message': error_message, 'error': True})
-
+    
     @patch('natcap.invest.ui_server.usage.requests.post')
     @patch('natcap.invest.ui_server.usage.requests.get')
     def test_log_model_start(self, mock_get, mock_post):

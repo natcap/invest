@@ -6,6 +6,7 @@ import pytest
 
 import pint
 from natcap.invest.models import model_id_to_pyname
+from natcap.invest import spec
 from osgeo import gdal
 
 PLUGIN_URL = 'git+https://github.com/emlys/demo-invest-plugin.git'
@@ -13,40 +14,103 @@ PLUGIN_NAME = 'foo-model'
 
 
 gdal.UseExceptions()
-valid_nested_types = {
+valid_nested_input_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
-        'boolean',
-        'integer',
-        'csv',
-        'directory',
-        'file',
-        'freestyle_string',
-        'number',
-        'option_string',
-        'percent',
-        'raster',
-        'ratio',
-        'vector',
+        spec.BooleanInput,
+        spec.CSVInput,
+        spec.DirectoryInput,
+        spec.FileInput,
+        spec.IntegerInput,
+        spec.NumberInput,
+        spec.OptionStringInput,
+        spec.PercentInput,
+        spec.RasterOrVectorInput,
+        spec.RatioInput,
+        spec.SingleBandRasterInput,
+        spec.StringInput,
+        spec.VectorInput
     },
-    'raster': {'integer', 'number', 'ratio', 'percent'},
-    'vector': {
-        'integer',
-        'freestyle_string',
-        'number',
-        'option_string',
-        'percent',
-        'ratio'},
-    'csv': {
-        'boolean',
-        'integer',
-        'freestyle_string',
-        'number',
-        'option_string',
-        'percent',
-        'raster',
-        'ratio',
-        'vector'},
-    'directory': {'csv', 'directory', 'file', 'raster', 'vector'}
+    spec.SingleBandRasterInput: {
+        spec.IntegerInput,
+        spec.NumberInput,
+        spec.PercentInput,
+        spec.RatioInput
+    },
+    spec.VectorInput: {
+        spec.IntegerInput,
+        spec.NumberInput,
+        spec.OptionStringInput,
+        spec.PercentInput,
+        spec.RatioInput,
+        spec.StringInput
+    },
+    spec.CSVInput: {
+        spec.BooleanInput,
+        spec.IntegerInput,
+        spec.NumberInput,
+        spec.OptionStringInput,
+        spec.PercentInput,
+        spec.RasterOrVectorInput,
+        spec.RatioInput,
+        spec.SingleBandRasterInput,
+        spec.StringInput,
+        spec.VectorInput
+    },
+    spec.DirectoryInput: {
+        spec.CSVInput,
+        spec.DirectoryInput,
+        spec.FileInput,
+        spec.RasterOrVectorInput,
+        spec.SingleBandRasterInput,
+        spec.VectorInput
+    }
+}
+
+valid_nested_output_types = {
+    None: {  # if no parent type (arg is top-level), then all types are valid
+        spec.CSVOutput,
+        spec.DirectoryOutput,
+        spec.FileOutput,
+        spec.IntegerOutput,
+        spec.NumberOutput,
+        spec.OptionStringOutput,
+        spec.PercentOutput,
+        spec.RatioOutput,
+        spec.SingleBandRasterOutput,
+        spec.StringOutput,
+        spec.VectorOutput
+    },
+    spec.SingleBandRasterOutput: {
+        spec.IntegerOutput,
+        spec.NumberOutput,
+        spec.PercentOutput,
+        spec.RatioOutput
+    },
+    spec.VectorOutput: {
+        spec.IntegerOutput,
+        spec.NumberOutput,
+        spec.OptionStringOutput,
+        spec.PercentOutput,
+        spec.RatioOutput,
+        spec.StringOutput
+    },
+    spec.CSVOutput: {
+        spec.IntegerOutput,
+        spec.NumberOutput,
+        spec.OptionStringOutput,
+        spec.PercentOutput,
+        spec.RatioOutput,
+        spec.SingleBandRasterOutput,
+        spec.StringOutput,
+        spec.VectorOutput
+    },
+    spec.DirectoryOutput: {
+        spec.CSVOutput,
+        spec.DirectoryOutput,
+        spec.FileOutput,
+        spec.SingleBandRasterOutput,
+        spec.VectorOutput
+    }
 }
 
 
@@ -57,59 +121,46 @@ class ValidateModelSpecs(unittest.TestCase):
         """MODEL_SPEC: test each spec meets the expected pattern."""
 
         required_keys = {'model_id', 'model_title', 'userguide',
-                         'aliases', 'args', 'ui_spec', 'outputs'}
-        optional_spatial_key = 'args_with_spatial_overlap'
+                         'aliases', 'inputs', 'input_field_order', 'outputs'}
         for model_id, pyname in model_id_to_pyname.items():
             model = importlib.import_module(pyname)
 
             # Validate top-level keys are correct
             with self.subTest(pyname):
                 self.assertTrue(
-                    required_keys.issubset(model.MODEL_SPEC),
+                    required_keys.issubset(set(dir(model.MODEL_SPEC))),
                     ("Required key(s) missing from MODEL_SPEC: "
-                     f"{set(required_keys).difference(model.MODEL_SPEC)}"))
-                extra_keys = set(model.MODEL_SPEC).difference(required_keys)
-                if (extra_keys):
-                    self.assertEqual(extra_keys, set([optional_spatial_key]))
-                    self.assertTrue(
-                        set(model.MODEL_SPEC[optional_spatial_key]).issubset(
-                            {'spatial_keys', 'different_projections_ok'}))
+                     f"{set(required_keys).difference(set(dir(model.MODEL_SPEC)))}"))
 
-                self.assertIsInstance(model.MODEL_SPEC['ui_spec'], dict)
-                if 'dropdown_functions' in model.MODEL_SPEC['ui_spec']:
-                    self.assertIsInstance(
-                        model.MODEL_SPEC['ui_spec']['dropdown_functions'], dict)
-                self.assertIsInstance(model.MODEL_SPEC['ui_spec']['order'], list)
-                self.assertIsInstance(model.MODEL_SPEC['ui_spec']['hidden'], list)
+                self.assertIsInstance(model.MODEL_SPEC.input_field_order, list)
                 found_keys = set()
-                for group in model.MODEL_SPEC['ui_spec']['order']:
+                for group in model.MODEL_SPEC.input_field_order:
                     self.assertIsInstance(group, list)
                     for key in group:
                         self.assertIsInstance(key, str)
                         self.assertNotIn(key, found_keys)
                         found_keys.add(key)
-                for key in model.MODEL_SPEC['ui_spec']['hidden']:
-                    self.assertIsInstance(key, str)
-                    self.assertNotIn(key, found_keys)
-                    found_keys.add(key)
-                self.assertEqual(found_keys, set(model.MODEL_SPEC['args'].keys()))
+                for arg_spec in model.MODEL_SPEC.inputs:
+                    if arg_spec.hidden is True:
+                        found_keys.add(arg_spec.id)
+                self.assertEqual(found_keys, set([s.id for s in model.MODEL_SPEC.inputs]))
 
             # validate that each arg meets the expected pattern
             # save up errors to report at the end
-            for key, arg in model.MODEL_SPEC['args'].items():
+            for arg_spec in model.MODEL_SPEC.inputs:
                 # the top level should have 'name' and 'about' attrs
                 # but they aren't required at nested levels
-                self.validate_args(arg, f'{model_id}.args.{key}')
+                self.validate_args(arg_spec, f'{model_id}.inputs.{arg_spec.id}')
 
-            for key, spec in model.MODEL_SPEC['outputs'].items():
-                self.validate_output(spec, f'{model_id}.outputs.{key}')
+            for output_spec in model.MODEL_SPEC.outputs:
+                self.validate_output(output_spec, f'{model_id}.outputs.{output_spec.id}')
 
-    def validate_output(self, spec, key, parent_type=None):
+    def validate_output(self, output_spec, key, parent_type=None):
         """
         Recursively validate nested output specs against the output spec standard.
 
         Args:
-            spec (dict): any nested output spec component of a MODEL_SPEC
+            output_spec (dict): any nested output spec component of a MODEL_SPEC
             key (str): key to identify the spec by in error messages
             parent_type (str): the type of this output's parent output (or None if
                 no parent).
@@ -124,135 +175,85 @@ class ValidateModelSpecs(unittest.TestCase):
             # if parent_type is None:  # all top-level args must have these attrs
             #     for attr in ['about']:
             #         self.assertIn(attr, spec)
-            attrs = set(spec.keys())
+            attrs = set(dir(output_spec)) - set(dir(object()))
 
-            if 'type' in spec:
-                t = spec['type']
-            else:
-                file_extension = key.split('.')[-1]
-                if file_extension == 'tif':
-                    t = 'raster'
-                elif file_extension in {'shp', 'gpkg', 'geojson'}:
-                    t = 'vector'
-                elif file_extension == 'csv':
-                    t = 'csv'
-                elif file_extension in {'json', 'txt', 'pickle', 'db', 'zip',
-                                        'dat', 'idx', 'html'}:
-                    t = 'file'
-                else:
-                    raise Warning(
-                        f'output {key} has no recognized file extension and '
-                        'no "type" property')
+            t = type(output_spec)
+            self.assertIn(t, valid_nested_output_types[parent_type])
 
-            self.assertIn(t, valid_nested_types[parent_type])
-
-            if t == 'number':
+            if t is spec.NumberOutput:
                 # number type should have a units property
-                self.assertIn('units', spec)
+                self.assertTrue(hasattr(output_spec, 'units'))
                 # Undefined units should use the custom u.none unit
-                self.assertIsInstance(spec['units'], pint.Unit)
-                attrs.remove('units')
+                self.assertIsInstance(output_spec.units, pint.Unit)
 
-            elif t == 'raster':
-                # raster type should have a bands property that maps each band
-                # index to a nested type dictionary describing the band's data
-                self.assertIn('bands', spec)
-                self.assertIsInstance(spec['bands'], dict)
-                for band in spec['bands']:
-                    self.assertIsInstance(band, int)
-                    self.validate_output(
-                        spec['bands'][band],
-                        f'{key}.bands.{band}',
-                        parent_type=t)
-                attrs.remove('bands')
+            elif t is spec.SingleBandRasterOutput:
+                self.assertTrue(hasattr(output_spec, 'data_type'))
+                self.assertTrue(hasattr(output_spec, 'units'))
 
-            elif t == 'vector':
+            elif t is spec.VectorOutput:
                 # vector type should have:
                 # - a fields property that maps each field header to a nested
                 #   type dictionary describing the data in that field
-                # - a geometries property: the set of valid geometry types
-                self.assertIn('fields', spec)
-                self.assertIsInstance(spec['fields'], dict)
-                for field in spec['fields']:
-                    self.assertIsInstance(field, str)
+                # - a geometry_types property: the set of valid geometry types
+                self.assertTrue(hasattr(output_spec, 'fields'))
+                for field in output_spec.fields:
                     self.validate_output(
-                        spec['fields'][field],
+                        field,
                         f'{key}.fields.{field}',
                         parent_type=t)
 
-                self.assertIn('geometries', spec)
-                self.assertIsInstance(spec['geometries'], set)
+                self.assertTrue(hasattr(output_spec, 'geometry_types'))
+                self.assertIsInstance(output_spec.geometry_types, set)
 
-                attrs.remove('fields')
-                attrs.remove('geometries')
-
-            elif t == 'csv':
+            elif t is spec.CSVOutput:
                 # csv type may have a columns property.
                 # the columns property maps each expected column header
                 # name/pattern to a nested type dictionary describing the data
                 # in that column. may be absent if the table structure
                 # is too complex to describe this way.
-                self.assertIn('columns', spec)
-                self.assertIsInstance(spec['columns'], dict)
-                for column in spec['columns']:
-                    self.assertIsInstance(column, str)
+                self.assertTrue(hasattr(output_spec, 'columns'))
+                for column in output_spec.columns:
                     self.validate_output(
-                        spec['columns'][column],
+                        column,
                         f'{key}.columns.{column}',
                         parent_type=t)
-                if 'index_col' in spec:
-                    self.assertIn(spec['index_col'], spec['columns'])
+                if output_spec.index_col:
+                    self.assertIn(output_spec.index_col, [s.id for s in output_spec.columns])
 
-                attrs.discard('columns')
-                attrs.discard('index_col')
-
-            elif t == 'directory':
+            elif t is spec.DirectoryOutput:
                 # directory type should have a contents property that maps each
                 # expected path name/pattern within the directory to a nested
                 # type dictionary describing the data at that filepath
-                self.assertIn('contents', spec)
-                self.assertIsInstance(spec['contents'], dict)
-                for path in spec['contents']:
-                    self.assertIsInstance(path, str)
+                self.assertTrue(hasattr(output_spec, 'contents'))
+                for path in output_spec.contents:
                     self.validate_output(
-                        spec['contents'][path],
+                        path,
                         f'{key}.contents.{path}',
                         parent_type=t)
-                attrs.remove('contents')
 
-            elif t == 'option_string':
+            elif t is spec.OptionStringOutput:
                     # option_string type should have an options property that
                     # describes the valid options
-                    self.assertIn('options', spec)
-                    self.assertIsInstance(spec['options'], dict)
-                    for option, description in spec['options'].items():
+                    self.assertTrue(hasattr(output_spec, 'options'))
+                    self.assertIsInstance(output_spec.options, dict)
+                    for option, description in output_spec.options.items():
                         self.assertTrue(
                             isinstance(option, str) or
                             isinstance(option, int))
-                    attrs.remove('options')
 
-            elif t == 'file':
+            elif t is spec.FileOutput:
                 pass
 
             # iterate over the remaining attributes
             # type-specific ones have been removed by this point
-            if 'about' in attrs:
-                self.assertIsInstance(spec['about'], str)
-                attrs.remove('about')
-            if 'created_if' in attrs:
+            if output_spec.about:
+                self.assertIsInstance(output_spec.about, str)
+            if output_spec.created_if:
                 # should be an arg key indicating that the output is
                 # created if that arg is provided or checked
-                self.assertIsInstance(spec['created_if'], str)
-                attrs.remove('created_if')
-            if 'type' in attrs:
-                self.assertIsInstance(spec['type'], str)
-                attrs.remove('type')
-
-            # args should not have any unexpected properties
-            # all attrs should have been removed by now
-            if attrs:
-                raise AssertionError(f'{key} has key(s) {attrs} that are not '
-                                     'expected for its type')
+                self.assertTrue(
+                    isinstance(output_spec.created_if, str) or
+                    isinstance(output_spec.created_if, bool))
 
     def validate_args(self, arg, name, parent_type=None):
         """
@@ -273,225 +274,186 @@ class ValidateModelSpecs(unittest.TestCase):
         with self.subTest(nested_arg_name=name):
             if parent_type is None:  # all top-level args must have these attrs
                 for attr in ['name', 'about']:
-                    self.assertIn(attr, arg)
+                    self.assertTrue(hasattr(arg, attr))
 
-            # arg['type'] can be either a string or a set of strings
-            types = arg['type'] if isinstance(
-                arg['type'], set) else [arg['type']]
-            attrs = set(arg.keys())
+            attrs = set(dir(arg))
 
-            for t in types:
-                self.assertIn(t, valid_nested_types[parent_type])
+            t = type(arg)
+            self.assertIn(t, valid_nested_input_types[parent_type])
 
-                if t == 'option_string':
-                    # option_string type should have an options property that
-                    # describes the valid options
-                    self.assertIn('options', arg)
-                    # May be a list or dict because some option sets are self
-                    # explanatory and others need a description
-                    self.assertIsInstance(arg['options'], dict)
-                    for key, val in arg['options'].items():
+            if t is spec.OptionStringInput:
+                # option_string type should have an options property that
+                # describes the valid options
+                self.assertTrue(hasattr(arg, 'options'))
+                # May be a list or dict because some option sets are self
+                # explanatory and others need a description
+                self.assertIsInstance(arg.options, dict)
+                for key, val in arg.options.items():
+                    self.assertTrue(
+                        isinstance(key, str) or
+                        isinstance(key, int))
+                    self.assertIsInstance(val, dict)
+                    # top-level option_string args are shown as dropdowns
+                    # so each option needs a display name
+                    # an additional description is optional
+                    if parent_type is None:
                         self.assertTrue(
-                            isinstance(key, str) or
-                            isinstance(key, int))
-                        self.assertIsInstance(val, dict)
-                        # top-level option_string args are shown as dropdowns
-                        # so each option needs a display name
-                        # an additional description is optional
-                        if parent_type is None:
-                            self.assertTrue(
-                                set(val.keys()) == {'display_name'} or
-                                set(val.keys()) == {
-                                    'display_name', 'description'})
-                        # option_strings within a CSV or vector don't get a
-                        # display name. the user has to enter the key.
-                        else:
-                            self.assertEqual(set(val.keys()), {'description'})
+                            set(val.keys()) == {'display_name'} or
+                            set(val.keys()) == {
+                                'display_name', 'description'})
+                    # option_strings within a CSV or vector don't get a
+                    # display name. the user has to enter the key.
+                    else:
+                        self.assertEqual(set(val.keys()), {'description'})
 
-                        if 'display_name' in val:
-                            self.assertIsInstance(val['display_name'], str)
-                        if 'description' in val:
-                            self.assertIsInstance(val['description'], str)
+                    if 'display_name' in val:
+                        self.assertIsInstance(val['display_name'], str)
+                    if 'description' in val:
+                        self.assertIsInstance(val['description'], str)
 
-                    attrs.remove('options')
+                attrs.remove('options')
 
-                elif t == 'freestyle_string':
-                    # freestyle_string may optionally have a regexp attribute
-                    # this is a regular expression that the string must match
-                    if 'regexp' in arg:
-                        self.assertIsInstance(arg['regexp'], str)
-                        re.compile(arg['regexp'])  # should be regex compilable
-                        attrs.remove('regexp')
+            elif t is spec.StringInput:
+                # freestyle_string may optionally have a regexp attribute
+                # this is a regular expression that the string must match
+                if arg.regexp:
+                    self.assertIsInstance(arg.regexp, str)
+                    re.compile(arg.regexp)  # should be regex compilable
+                    attrs.remove('regexp')
 
-                elif t == 'number':
-                    # number type should have a units property
-                    self.assertIn('units', arg)
-                    # Undefined units should use the custom u.none unit
-                    self.assertIsInstance(arg['units'], pint.Unit)
-                    attrs.remove('units')
+            elif t is spec.NumberInput:
+                # number type should have a units property
+                self.assertTrue(hasattr(arg, 'units'))
+                # Undefined units should use the custom u.none unit
+                self.assertIsInstance(arg.units, pint.Unit)
 
-                    # number type may optionally have an 'expression' attribute
-                    # this is a string expression to be evaluated with the
-                    # intent of determining that the value is within a range.
-                    # The expression must contain the string ``value``, which
-                    # will represent the user-provided value (after it has been
-                    # cast to a float).  Example: "(value >= 0) & (value <= 1)"
-                    if 'expression' in arg:
-                        self.assertIsInstance(arg['expression'], str)
-                        attrs.remove('expression')
+                # number type may optionally have an 'expression' attribute
+                # this is a string expression to be evaluated with the
+                # intent of determining that the value is within a range.
+                # The expression must contain the string ``value``, which
+                # will represent the user-provided value (after it has been
+                # cast to a float).  Example: "(value >= 0) & (value <= 1)"
+                if arg.expression:
+                    self.assertIsInstance(arg.expression, str)
 
-                elif t == 'raster':
-                    # raster type should have a bands property that maps each band
-                    # index to a nested type dictionary describing the band's data
-                    self.assertIn('bands', arg)
-                    self.assertIsInstance(arg['bands'], dict)
-                    for band in arg['bands']:
-                        self.assertIsInstance(band, int)
+            elif t is spec.SingleBandRasterInput:
+                self.assertTrue(hasattr(arg, 'data_type'))
+                self.assertTrue(hasattr(arg, 'units'))
+
+                # may optionally have a 'projected' attribute that says
+                # whether the raster must be linearly projected
+                if arg.projected is not None:
+                    self.assertIsInstance(arg.projected, bool)
+                    attrs.remove('projected')
+                # if 'projected' is True, may also have a 'projection_units'
+                # attribute saying the expected linear projection unit
+                if arg.projection_units:
+                    # doesn't make sense to have projection units unless
+                    # projected is True
+                    self.assertTrue(arg.projected)
+                    self.assertIsInstance(
+                        arg.projection_units, pint.Unit)
+                    attrs.remove('projection_units')
+
+            elif t is spec.VectorInput:
+                # vector type should have:
+                # - a fields property that maps each field header to a nested
+                #   type dictionary describing the data in that field
+                # - a geometry_types property: the set of valid geometry types
+                self.assertTrue(hasattr(arg, 'fields'))
+                for field in arg.fields:
+                    self.validate_args(
+                        field,
+                        f'{name}.fields.{field}',
+                        parent_type=t)
+
+                self.assertTrue(hasattr(arg, 'geometry_types'))
+                self.assertIsInstance(arg.geometry_types, set)
+
+                attrs.remove('fields')
+                attrs.remove('geometry_types')
+
+                # may optionally have a 'projected' attribute that says
+                # whether the vector must be linearly projected
+                if arg.projected is not None:
+                    self.assertIsInstance(arg.projected, bool)
+                    attrs.remove('projected')
+                # if 'projected' is True, may also have a 'projection_units'
+                # attribute saying the expected linear projection unit
+                if arg.projection_units:
+                    # doesn't make sense to have projection units unless
+                    # projected is True
+                    self.assertTrue(arg.projected)
+                    self.assertIsInstance(
+                        arg.projection_units, pint.Unit)
+                    attrs.remove('projection_units')
+
+            elif t is spec.CSVInput:
+                # csv type should have a rows property, columns property, or
+                # neither. rows or columns properties map each expected header
+                # name/pattern to a nested type dictionary describing the data
+                # in that row/column. may have neither if the table structure
+                # is too complex to describe this way.
+                has_rows = bool(arg.rows)
+                has_cols = bool(arg.columns)
+                # should not have both
+                self.assertFalse(has_rows and has_cols)
+
+                if has_cols or has_rows:
+                    direction = 'rows' if has_rows else 'columns'
+                    headers = arg.rows if has_rows else arg.columns
+
+                    for header in headers:
                         self.validate_args(
-                            arg['bands'][band],
-                            f'{name}.bands.{band}',
-                            parent_type=t)
-                    attrs.remove('bands')
-
-                    # may optionally have a 'projected' attribute that says
-                    # whether the raster must be linearly projected
-                    if 'projected' in arg:
-                        self.assertIsInstance(arg['projected'], bool)
-                        attrs.remove('projected')
-                    # if 'projected' is True, may also have a 'projection_units'
-                    # attribute saying the expected linear projection unit
-                    if 'projection_units' in arg:
-                        # doesn't make sense to have projection units unless
-                        # projected is True
-                        self.assertTrue(arg['projected'])
-                        self.assertIsInstance(
-                            arg['projection_units'], pint.Unit)
-                        attrs.remove('projection_units')
-
-                elif t == 'vector':
-                    # vector type should have:
-                    # - a fields property that maps each field header to a nested
-                    #   type dictionary describing the data in that field
-                    # - a geometries property: the set of valid geometry types
-                    self.assertIn('fields', arg)
-                    self.assertIsInstance(arg['fields'], dict)
-                    for field in arg['fields']:
-                        self.assertIsInstance(field, str)
-                        self.validate_args(
-                            arg['fields'][field],
-                            f'{name}.fields.{field}',
+                            header,
+                            f'{name}.{direction}.{header}',
                             parent_type=t)
 
-                    self.assertIn('geometries', arg)
-                    self.assertIsInstance(arg['geometries'], set)
+                if arg.index_col:
+                    self.assertIn(arg.index_col, [s.id for s in arg.columns])
 
-                    attrs.remove('fields')
-                    attrs.remove('geometries')
+            elif t is spec.DirectoryInput:
+                # directory type should have a contents property that maps each
+                # expected path name/pattern within the directory to a nested
+                # type dictionary describing the data at that filepath
+                self.assertTrue(hasattr(arg, 'contents'))
+                for path in arg.contents:
+                    self.validate_args(
+                        path,
+                        f'{name}.contents.{path}',
+                        parent_type=t)
+                attrs.remove('contents')
 
-                    # may optionally have a 'projected' attribute that says
-                    # whether the vector must be linearly projected
-                    if 'projected' in arg:
-                        self.assertIsInstance(arg['projected'], bool)
-                        attrs.remove('projected')
-                    # if 'projected' is True, may also have a 'projection_units'
-                    # attribute saying the expected linear projection unit
-                    if 'projection_units' in arg:
-                        # doesn't make sense to have projection units unless
-                        # projected is True
-                        self.assertTrue(arg['projected'])
-                        self.assertIsInstance(
-                            arg['projection_units'], pint.Unit)
-                        attrs.remove('projection_units')
+                # may optionally have a 'permissions' attribute, which is a
+                # string of the unix-style directory permissions e.g. 'rwx'
+                if arg.permissions:
+                    self.validate_permissions_value(arg.permissions)
+                    attrs.remove('permissions')
+                # may optionally have an 'must_exist' attribute, which says
+                # whether the directory must already exist
+                # this defaults to True
+                if arg.must_exist is not None:
+                    self.assertIsInstance(arg.must_exist, bool)
+                    attrs.remove('must_exist')
 
-                elif t == 'csv':
-                    # csv type should have a rows property, columns property, or
-                    # neither. rows or columns properties map each expected header
-                    # name/pattern to a nested type dictionary describing the data
-                    # in that row/column. may have neither if the table structure
-                    # is too complex to describe this way.
-                    has_rows = 'rows' in arg
-                    has_cols = 'columns' in arg
-                    # should not have both
-                    self.assertFalse(has_rows and has_cols)
-
-                    if has_cols or has_rows:
-                        direction = 'rows' if has_rows else 'columns'
-                        headers = arg[direction]
-                        self.assertIsInstance(headers, dict)
-
-                        for header in headers:
-                            self.assertIsInstance(header, str)
-                            self.validate_args(
-                                headers[header],
-                                f'{name}.{direction}.{header}',
-                                parent_type=t)
-
-                    if 'index_col' in arg:
-                        self.assertIn(arg['index_col'], arg['columns'])
-                        attrs.discard('index_col')
-
-                    attrs.discard('rows')
-                    attrs.discard('columns')
-
-                elif t == 'directory':
-                    # directory type should have a contents property that maps each
-                    # expected path name/pattern within the directory to a nested
-                    # type dictionary describing the data at that filepath
-                    self.assertIn('contents', arg)
-                    self.assertIsInstance(arg['contents'], dict)
-                    for path in arg['contents']:
-                        self.assertIsInstance(path, str)
-                        self.validate_args(
-                            arg['contents'][path],
-                            f'{name}.contents.{path}',
-                            parent_type=t)
-                    attrs.remove('contents')
-
-                    # may optionally have a 'permissions' attribute, which is a
-                    # string of the unix-style directory permissions e.g. 'rwx'
-                    if 'permissions' in arg:
-                        self.validate_permissions_value(arg['permissions'])
-                        attrs.remove('permissions')
-                    # may optionally have an 'must_exist' attribute, which says
-                    # whether the directory must already exist
-                    # this defaults to True
-                    if 'must_exist' in arg:
-                        self.assertIsInstance(arg['must_exist'], bool)
-                        attrs.remove('must_exist')
-
-                elif t == 'file':
-                    # file type may optionally have a 'permissions' attribute
-                    # this is a string listing the permissions e.g. 'rwx'
-                    if 'permissions' in arg:
-                        self.validate_permissions_value(arg['permissions'])
+            elif t is spec.FileInput:
+                # file type may optionally have a 'permissions' attribute
+                # this is a string listing the permissions e.g. 'rwx'
+                if arg.permissions:
+                    self.validate_permissions_value(arg.permissions)
 
             # iterate over the remaining attributes
             # type-specific ones have been removed by this point
-            if 'name' in attrs:
-                self.assertIsInstance(arg['name'], str)
-                attrs.remove('name')
-            if 'about' in attrs:
-                self.assertIsInstance(arg['about'], str)
-                attrs.remove('about')
-            if 'required' in attrs:
-                # required value may be True, False, or a string that can be
-                # parsed as a python statement that evaluates to True or False
-                self.assertTrue(isinstance(arg['required'], bool) or
-                                isinstance(arg['required'], str))
-                attrs.remove('required')
-            if 'allowed' in attrs:
-                self.assertIsInstance(arg['allowed'], str)
-                attrs.remove('allowed')
-            if 'type' in attrs:
-                self.assertTrue(isinstance(arg['type'], str) or
-                                isinstance(arg['type'], set))
-                attrs.remove('type')
-
-            # args should not have any unexpected properties
-            # all attrs should have been removed by now
-            if attrs:
-                raise AssertionError(f'{name} has key(s) {attrs} that are not '
-                                     'expected for its type')
+            if arg.name:
+                self.assertIsInstance(arg.name, str)
+            if arg.about:
+                self.assertIsInstance(arg.about, str)
+            # required value may be True, False, or a string that can be
+            # parsed as a python statement that evaluates to True or False
+            self.assertTrue(isinstance(arg.required, bool) or
+                            isinstance(arg.required, str))
+            if arg.allowed:
+                self.assertIn(type(arg.allowed), {str, bool})
 
     def validate_permissions_value(self, permissions):
         """
@@ -519,25 +481,19 @@ class ValidateModelSpecs(unittest.TestCase):
 
     def test_model_specs_serialize(self):
         """MODEL_SPEC: test each arg spec can serialize to JSON."""
-        from natcap.invest import spec_utils
+        from natcap.invest import spec
 
         for pyname in model_id_to_pyname.values():
             model = importlib.import_module(pyname)
-            try:
-                _ = spec_utils.serialize_args_spec(model.MODEL_SPEC)
-            except TypeError as error:
-                self.fail(
-                    f'Failed to avoid TypeError when serializing '
-                    f'{pyname}.MODEL_SPEC: \n'
-                    f'{error}')
+            model.MODEL_SPEC.to_json()
 
 
 class SpecUtilsTests(unittest.TestCase):
-    """Tests for natcap.invest.spec_utils."""
+    """Tests for natcap.invest.spec."""
 
     def test_format_unit(self):
-        """spec_utils: test converting units to strings with format_unit."""
-        from natcap.invest import spec_utils
+        """spec: test converting units to strings with format_unit."""
+        from natcap.invest import spec
         for unit_name, expected in [
                 ('meter', 'm'),
                 ('meter / second', 'm/s'),
@@ -545,15 +501,15 @@ class SpecUtilsTests(unittest.TestCase):
                 ('t * hr * ha / ha / MJ / mm', 't · h · ha / (ha · MJ · mm)'),
                 ('mm^3 / year', 'mm³/year')
         ]:
-            unit = spec_utils.u.Unit(unit_name)
-            actual = spec_utils.format_unit(unit)
+            unit = spec.u.Unit(unit_name)
+            actual = spec.format_unit(unit)
             self.assertEqual(expected, actual)
 
     def test_format_unit_raises_error(self):
-        """spec_utils: format_unit raises TypeError if not a pint.Unit."""
-        from natcap.invest import spec_utils
+        """spec: format_unit raises TypeError if not a pint.Unit."""
+        from natcap.invest import spec
         with self.assertRaises(TypeError):
-            spec_utils.format_unit({})
+            spec.format_unit({})
 
 @pytest.mark.skip(reason="Possible race condition of plugin not being uninstalled before other tests are run.")
 class PluginTests(unittest.TestCase):

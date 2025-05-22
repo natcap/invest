@@ -46,9 +46,7 @@ const SAMPLE_SPEC = {
       type: 'csv',
     },
   },
-  ui_spec: {
-    order: [['workspace_dir', 'carbon_pools_path']],
-  },
+  input_field_order: [['workspace_dir', 'carbon_pools_path']],
 };
 
 describe('Various ways to open and close InVEST models', () => {
