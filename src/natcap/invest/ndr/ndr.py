@@ -925,6 +925,7 @@ def execute(args):
                 biophysical_df[
                     [f'load_{nutrient}', f'eff_{nutrient}',
                      'nut_load_type']].to_dict('index'),
+                nutrient,
                 load_path),
             dependent_task_list=[align_raster_task, mask_lulc_task],
             target_path_list=[load_path],
@@ -1346,7 +1347,8 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path,
         target_dtype=numpy.float32)
 
 
-def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
+def _calculate_load(
+        lulc_raster_path, lucode_to_load, nutrient_type, target_load_raster):
     """Calculate load raster by mapping landcover.
 
     If load type is 'application-rate' adjust by ``1 - efficiency``.
@@ -1356,6 +1358,7 @@ def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
         lucode_to_load (dict): a mapping of landcover IDs to nutrient load,
             efficiency, and type. The type value can be one of:
             [ 'measured-runoff' | 'appliation-rate' ].
+        nutrient_type (str): the nutrient type key ('p' | 'n').
         target_load_raster (string): path to target raster that will have
             load values (kg/ha) mapped to pixels based on LULC.
 
@@ -1363,36 +1366,33 @@ def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
         None.
 
     """
-    # restructure the lookup dict to easier access load, eff, and type
-    # {lucode: [load, eff, type], ... }
-    load_types = ['measured-runoff', 'application-rate']
-    load_index = 0
-    eff_index = 1
-    type_index = 2
-    lucode_to_values = {}
-
+    app_rate = 'application-rate'
+    measured_runoff = 'measured-runoff'
+    load_key = f'load_{nutrient_type}'
+    eff_key = f'eff_{nutrient_type}'
+    
+    # Raise ValueError if unknown 'nut_load_type'
     for key, value in lucode_to_load.items():
-        value_list = list(value.values())
-        if not value_list[type_index] in load_types:
+        nut_load_type = value['nut_load_type']
+        if not nut_load_type in [app_rate, measured_runoff]:
             # unknown load type, raise ValueError
             raise ValueError(
-                f'nutrient load type must be of "{load_types}". Instead,'
-                f' found value of: "{value_list[type_index]}".')
-        else:
-            lucode_to_values[key] = value_list
+                'nutrient load type must be: '
+                f'"{app_rate}" | "{measured_runoff}". Instead '
+                f'found value of: "{nut_load_type}".')
 
     def _map_load_op(lucode_array):
-        """Convert unit load to total load & handle nodata."""
+        """Convert unit load to total load."""
         result = numpy.empty(lucode_array.shape)
         for lucode in numpy.unique(lucode_array):
             try:
-                if lucode_to_values[lucode][type_index] == load_types[0]:
+                if lucode_to_load[lucode]['nut_load_type'] == measured_runoff:
                     result[lucode_array == lucode] = (
-                        lucode_to_values[lucode][load_index])
-                elif lucode_to_values[lucode][type_index] == load_types[1]:
+                        lucode_to_load[lucode][load_key])
+                elif lucode_to_load[lucode]['nut_load_type'] == app_rate:
                     result[lucode_array == lucode] = (
-                        lucode_to_values[lucode][load_index] * (
-                            1 - lucode_to_values[lucode][eff_index]))
+                        lucode_to_load[lucode][load_key] * (
+                            1 - lucode_to_load[lucode][eff_key]))
             except KeyError:
                 raise KeyError(
                     'lucode: %d is present in the landuse raster but '

@@ -558,7 +558,7 @@ class NDRTests(unittest.TestCase):
             2: {'load_n': 20.0, 'eff_n': 0.5, 'nut_load_type': 'measured-runoff'},
             3: {'load_n': 10.0, 'eff_n': 0.5, 'nut_load_type': 'application-rate'},
             4: {'load_n': 20.0, 'eff_n': 0.5, 'nut_load_type': 'application-rate'}}
-        ndr._calculate_load(lulc_path, lucode_to_params, target_load_path)
+        ndr._calculate_load(lulc_path, lucode_to_params, 'n', target_load_path)
 
         expected_results = numpy.array(
             [[10.0, 20.0, 5.0, 10.0], [10.0, 5.0, 20.0, 10.0]])
@@ -581,6 +581,6 @@ class NDRTests(unittest.TestCase):
             4: {'load_n': 20.0, 'eff_n': 0.5, 'nut_load_type': 'application-rate'}}
 
         with self.assertRaises(ValueError) as cm:
-            ndr._calculate_load(lulc_path, lucode_to_params, target_load_path)
+            ndr._calculate_load(lulc_path, lucode_to_params, 'n', target_load_path)
         actual_message = str(cm.exception)
         self.assertTrue('found value of: "cheese"' in actual_message)
