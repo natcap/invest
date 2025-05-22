@@ -273,6 +273,7 @@ MODEL_SPEC = {
                 "units": u.kilogram/u.hectare
             }}
         },
+        "stream.tif": spec_utils.STREAM,
         "intermediate_outputs": {
             "type": "directory",
             "contents": {
@@ -372,7 +373,6 @@ MODEL_SPEC = {
                     "about": "Inverse of slope",
                     "bands": {1: {"type": "number", "units": u.none}}
                 },
-                "stream.tif": spec_utils.STREAM,
                 "sub_load_n.tif": {
                     "about": "Nitrogen loads for subsurface transport",
                     "bands": {1: {
@@ -477,6 +477,7 @@ _OUTPUT_BASE_FILES = {
     'n_total_export_path': 'n_total_export.tif',
     'p_surface_export_path': 'p_surface_export.tif',
     'watershed_results_ndr_path': 'watershed_results_ndr.gpkg',
+    'stream_path': 'stream.tif'
 }
 
 INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
@@ -494,7 +495,6 @@ _INTERMEDIATE_BASE_FILES = {
     's_accumulation_path': 's_accumulation.tif',
     's_bar_path': 's_bar.tif',
     's_factor_inverse_path': 's_factor_inverse.tif',
-    'stream_path': 'stream.tif',
     'sub_load_n_path': 'sub_load_n.tif',
     'surface_load_n_path': 'surface_load_n.tif',
     'surface_load_p_path': 'surface_load_p.tif',

@@ -70,8 +70,22 @@ Workbench
   existing user-added metadata preserved)
   (`#1774 <https://github.com/natcap/invest/issues/1774>`_).
 
-NDR
+Coastal Blue Carbon
+===================
+* Updated the Coastal Blue Carbon documentation to clarify what happens when a
+  class transitions from a state of accumulation or decay to a No Carbon Change
+  ("NCC") state. (`#671 <https://github.com/natcap/invest/issues/671>`_).
+
+HRA
 ===
+* The intermediate simplified vectors will now inherit their geometry type from
+  the input vectors, rather than using ``ogr.wkbUnknown``
+  (`#1881 <https://github.com/natcap/invest/issues/1881>`_).
+
+NDR
+====
+* ``stream.tif`` is now saved in the main output folder rather than the
+  intermediate folder (`#1864 <https://github.com/natcap/invest/issues/1864>`_).
 * Added a feature that allows the nutrient load to be entered as an
   application rate or as an "extensive"/export measured value.
   Previously, the model's biophysical table expected the ``load_[nutrient]``
@@ -80,6 +94,11 @@ NDR
   ``application-rate`` or ``measured-runoff``. See the Data Needs
   section of the NDR User Guide for more details.
   (`#1044 <https://github.com/natcap/invest/issues/1044>`_).
+
+Seasonal Water Yield
+====================
+* ``stream.tif`` is now saved in the main output folder rather than the
+  intermediate folder (`#1864 <https://github.com/natcap/invest/issues/1864>`_).
 
 Urban Flood Risk
 ================
