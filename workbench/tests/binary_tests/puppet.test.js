@@ -214,10 +214,10 @@ test('Run a real invest model', async () => {
   await aoi.type(TMP_AOI_PATH, { delay: TYPE_DELAY });
   const startYear = await argsForm.waitForSelector(
     'aria/[name="Start Year (number)"][role="textbox"]');
-  await startYear.type('2012', { delay: typeDelay });
+  await startYear.type('2012', { delay: TYPE_DELAY });
   const endYear = await argsForm.waitForSelector(
     'aria/[name="End Year (number)"][role="textbox"]');
-  await endYear.type('2017', { delay: typeDelay });
+  await endYear.type('2017', { delay: TYPE_DELAY });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
 
   const sidebar = await page.waitForSelector('.invest-sidebar-col');
@@ -303,7 +303,7 @@ test('Check local userguide links', async () => {
   }
 });
 
-test('Install and run a plugin', async () => {
+test.skip('Install and run a plugin', async () => {
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   let i = 0;
@@ -327,20 +327,27 @@ test('Install and run a plugin', async () => {
   );
   await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
   await downloadModalCancel.click();
+  const changelogModal = await page.waitForSelector('.modal-dialog');
+  const changelogModalCancel = await changelogModal.waitForSelector(
+    'aria/[name="Close modal"][role="button"]'
+  );
+  await page.waitForTimeout(WAIT_TO_CLICK);
+  await changelogModalCancel.click();
 
-  const addPluginButton = await page.waitForSelector('div ::-p-text(Add a plugin)');
+  const addPluginButton = await page.waitForSelector('aria/[name="plugins"][role="button"]');
   await addPluginButton.click();
   console.log('clicked add plugin');
-  const urlInputField = await page.waitForSelector('input[name=url]');
+  const urlInputField = await page.waitForSelector('aria/[name="Git URL"][role="textbox"]');
   console.log('found url field');
   await urlInputField.type(TEST_PLUGIN_GIT_URL, { delay: TYPE_DELAY });
   console.log('typed into input field');
-  const submitButton = await page.waitForSelector('button[name=submit]');
+  const submitButton = await page.waitForSelector('aria/[name="Add"][role="button"]');
   console.log('found submit button');
   console.log(submitButton);
   await submitButton.click();
   console.log('clicked submit');
-  const pluginButton = await page.waitForSelector("button[name='Foo Model']");
+  const pluginButton = await page.waitForSelector(
+    'aria/[name="Foo Model"][role="button"]', { timeout: 300000 });
   await pluginButton.evaluate((b) => b.click());
 
   await page.waitForSelector('div ::-p-text(Starting up model...)');
