@@ -110,6 +110,17 @@ Visitation: Recreation and Tourism
   option is not selected.
   (`#1893 <https://github.com/natcap/invest/issues/1893>`_).
 
+Wind Energy
+===========
+* The model no longer returns results as rasters; instead, values are
+  written to the output ``wind_energy_points`` shapefile for each point
+  (`#1698 <https://github.com/natcap/invest/issues/1698>`_).
+  Any Decision Record (ADR): `ADR-0004: Remove Wind Energy Raster Outputs <https://github.com/natcap/invest/blob/main/doc/decision-records/ADR-0004-Remove-Wind-Energy-Raster-Outputs.md>`_
+* The output ``wind_energy_points.shp`` no longer returns Harvested or
+  Valuation-related values for points that are invalid wind farm locations
+  due to depth or distance constraints
+  (`#1699 <https://github.com/natcap/invest/issues/1699>`_).
+
 
 3.15.1 (2025-05-06)
 -------------------
