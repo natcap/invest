@@ -15,7 +15,6 @@ import string
 import tempfile
 import threading
 import time
-import pytest
 import unittest
 from unittest.mock import patch
 import zipfile
@@ -42,6 +41,7 @@ REGRESSION_DATA = os.path.join(
 SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
 
 LOGGER = logging.getLogger('test_recreation')
+
 
 def _timeout(max_timeout):
     """Timeout decorator, parameter in seconds."""

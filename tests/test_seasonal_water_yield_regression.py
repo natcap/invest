@@ -3,7 +3,6 @@ import os
 import shutil
 import tempfile
 import unittest
-import pytest
 
 import numpy
 import pandas
@@ -16,6 +15,7 @@ gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'seasonal_water_yield')
+
 
 def make_simple_shp(base_shp_path, origin):
     """Make a 100x100 ogr rectangular geometry shapefile.

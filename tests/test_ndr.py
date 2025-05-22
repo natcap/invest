@@ -3,7 +3,6 @@ import os
 import shutil
 import tempfile
 import unittest
-import pytest
 
 import numpy
 import pandas
@@ -16,6 +15,7 @@ from osgeo import osr
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ndr')
+
 
 class NDRTests(unittest.TestCase):
     """Regression tests for InVEST SDR model."""
