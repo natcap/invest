@@ -93,8 +93,8 @@ here for several reasons:
 """
 import logging
 import os
-import time
 import shutil
+import time
 
 import numpy
 import pandas
@@ -103,12 +103,12 @@ import scipy.sparse
 import taskgraph
 from osgeo import gdal
 
-from .. import utils
-from .. import spec
-from ..unit_registry import u
-from .. import validation
 from .. import gettext
-
+from .. import spec
+from .. import utils
+from .. import validation
+from ..model_metadata import MODEL_METADATA
+from ..unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -336,7 +336,14 @@ MODEL_SPEC = spec.build_model_spec({
                             "description": gettext("low carbon disturbance rate")
                         },
                         "NCC": {
-                            "description": gettext("no change in carbon")
+                            "description": gettext(
+                                "no change in carbon. Defining 'NCC' for a "
+                                "transition will halt any in-progress carbon "
+                                "accumulation or emissions at the year of "
+                                "transition, until the class transitions "
+                                "again to a state of accumulation or "
+                                "disturbance."
+                            )
                         }
                     },
                     "about": gettext(
