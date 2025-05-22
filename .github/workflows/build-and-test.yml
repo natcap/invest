@@ -157,7 +157,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
-          path: dist/*.whl
+          path: dist
 
       - name: Upload conda env artifact
         uses: actions/upload-artifact@v4
@@ -387,9 +387,8 @@ jobs:
           Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv  # Choco-provided command to reload environment variables
 
-        # Ignoring compiled modules for plugin development
-        #- name: Build userguide
-        #run: make userguide
+      - name: Build userguide
+        run: make userguide
 
       - name: Build binaries
         run: make CONDA="$MAMBA_EXE" binaries
@@ -473,12 +472,12 @@ jobs:
           name: Workbench-${{ runner.os }}-binary
           path: workbench/dist/*.${{ matrix.binary-extension }}
 
-#      - name: Upload user's guide artifact (Windows)
-#        if: matrix.os == 'windows-latest'
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: InVEST-user-guide
-#          path: dist/InVEST_*_userguide.zip
+      - name: Upload user's guide artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: InVEST-user-guide
+          path: dist/InVEST_*_userguide.zip
 
       - name: Upload workbench logging from puppeteer
         uses: actions/upload-artifact@v4

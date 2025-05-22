@@ -283,8 +283,9 @@ export async function getSupportedLanguages() {
  * @returns {Promise} resolves object
  */
 export async function getGeoMetaMakerProfile() {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/get_geometamaker_profile`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/get_geometamaker_profile`, {
       method: 'get',
     })
       .then((response) => response.json())
@@ -310,8 +311,9 @@ export async function getGeoMetaMakerProfile() {
  * @returns {Promise} resolves object
  */
 export async function setGeoMetaMakerProfile(payload) {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/set_geometamaker_profile`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/set_geometamaker_profile`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },

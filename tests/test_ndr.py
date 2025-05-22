@@ -3,7 +3,6 @@ import os
 import shutil
 import tempfile
 import unittest
-import pytest
 
 import numpy
 import pandas
@@ -16,6 +15,7 @@ from osgeo import osr
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ndr')
+
 
 class NDRTests(unittest.TestCase):
     """Regression tests for InVEST SDR model."""
@@ -152,10 +152,10 @@ class NDRTests(unittest.TestCase):
                 ('p_surface_load', 41.826904),
                 ('p_surface_export', 5.566120),
                 ('n_surface_load', 2977.551270),
-                ('n_surface_export', 274.020844),
+                ('n_surface_export', 274.062129),
                 ('n_subsurface_load', 28.558048),
                 ('n_subsurface_export', 15.578484),
-                ('n_total_export', 289.599314)]:
+                ('n_total_export', 289.640609)]:
             if not numpy.isclose(feature.GetField(field), value, atol=1e-2):
                 error_results[field] = (
                     'field', feature.GetField(field), value)
@@ -226,12 +226,12 @@ class NDRTests(unittest.TestCase):
         # results
         expected_watershed_totals = {
             'p_surface_load': 41.826904,
-            'p_surface_export': 5.870544,
+            'p_surface_export': 5.866880,
             'n_surface_load': 2977.551270,
-            'n_surface_export': 274.020844,
+            'n_surface_export': 274.062129,
             'n_subsurface_load': 28.558048,
             'n_subsurface_export': 15.578484,
-            'n_total_export': 289.599314
+            'n_total_export': 289.640609
         }
 
         for field in expected_watershed_totals:
@@ -306,12 +306,12 @@ class NDRTests(unittest.TestCase):
         # results
         for field, expected_value in [
                 ('p_surface_load', 41.826904),
-                ('p_surface_export', 4.915544),
+                ('p_surface_export', 5.100640),
                 ('n_surface_load', 2977.551914),
-                ('n_surface_export', 320.082319),
+                ('n_surface_export', 350.592891),
                 ('n_subsurface_load', 28.558048),
                 ('n_subsurface_export', 12.609187),
-                ('n_total_export', 330.293407)]:
+                ('n_total_export', 360.803969)]:
             val = result_feature.GetField(field)
             if not numpy.isclose(val, expected_value):
                 mismatch_list.append(
@@ -361,12 +361,12 @@ class NDRTests(unittest.TestCase):
         # results
         for field, expected_value in [
                 ('p_surface_load', 41.826904),
-                ('p_surface_export', 5.870544),
+                ('p_surface_export', 5.866880),
                 ('n_surface_load', 2977.551270),
-                ('n_surface_export', 274.020844),
+                ('n_surface_export', 274.062129),
                 ('n_subsurface_load', 28.558048),
                 ('n_subsurface_export', 15.578484),
-                ('n_total_export', 289.599314)]:
+                ('n_total_export', 289.640609)]:
             val = result_feature.GetField(field)
             if not numpy.isclose(val, expected_value):
                 mismatch_list.append(
