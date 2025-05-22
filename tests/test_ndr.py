@@ -533,7 +533,7 @@ class NDRTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_rpi, expected_rpi)
     
     def test_calculate_load_type(self):
-        """Test ``_calculate_load`` for both nut_load_types."""
+        """Test ``_calculate_load`` for both load_types."""
         from natcap.invest.ndr import ndr
 
         # make simple lulc raster
@@ -554,10 +554,10 @@ class NDRTests(unittest.TestCase):
 
         # Calculate load
         lucode_to_params = {
-            1: {'load_n': 10.0, 'eff_n': 0.5, 'nut_load_type': 'measured-runoff'},
-            2: {'load_n': 20.0, 'eff_n': 0.5, 'nut_load_type': 'measured-runoff'},
-            3: {'load_n': 10.0, 'eff_n': 0.5, 'nut_load_type': 'application-rate'},
-            4: {'load_n': 20.0, 'eff_n': 0.5, 'nut_load_type': 'application-rate'}}
+            1: {'load_n': 10.0, 'eff_n': 0.5, 'load_type_n': 'measured-runoff'},
+            2: {'load_n': 20.0, 'eff_n': 0.5, 'load_type_n': 'measured-runoff'},
+            3: {'load_n': 10.0, 'eff_n': 0.5, 'load_type_n': 'application-rate'},
+            4: {'load_n': 20.0, 'eff_n': 0.5, 'load_type_n': 'application-rate'}}
         ndr._calculate_load(lulc_path, lucode_to_params, 'n', target_load_path)
 
         expected_results = numpy.array(
@@ -567,7 +567,7 @@ class NDRTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_results, expected_results)
     
     def test_calculate_load_type_raises_error(self):
-        """Test ``_calculate_load`` raises ValueError on bad nut_load_types."""
+        """Test ``_calculate_load`` raises ValueError on bad load_type's."""
         from natcap.invest.ndr import ndr
 
         lulc_path = os.path.join(self.workspace_dir, "lulc-load-type.tif")
@@ -575,10 +575,10 @@ class NDRTests(unittest.TestCase):
 
         # Calculate load
         lucode_to_params = {
-            1: {'load_n': 10.0, 'eff_n': 0.5, 'nut_load_type': 'measured-runoff'},
-            2: {'load_n': 20.0, 'eff_n': 0.5, 'nut_load_type': 'cheese'},
-            3: {'load_n': 10.0, 'eff_n': 0.5, 'nut_load_type': 'application-rate'},
-            4: {'load_n': 20.0, 'eff_n': 0.5, 'nut_load_type': 'application-rate'}}
+            1: {'load_n': 10.0, 'eff_n': 0.5, 'load_type_n': 'measured-runoff'},
+            2: {'load_n': 20.0, 'eff_n': 0.5, 'load_type_n': 'cheese'},
+            3: {'load_n': 10.0, 'eff_n': 0.5, 'load_type_n': 'application-rate'},
+            4: {'load_n': 20.0, 'eff_n': 0.5, 'load_type_n': 'application-rate'}}
 
         with self.assertRaises(ValueError) as cm:
             ndr._calculate_load(lulc_path, lucode_to_params, 'n', target_load_path)

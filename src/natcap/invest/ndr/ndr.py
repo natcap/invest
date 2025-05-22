@@ -24,6 +24,30 @@ LOGGER = logging.getLogger(__name__)
 
 MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
 
+LOAD_TYPE_OPTIONS = {
+    "type": "option_string",
+    "required": True,
+    "options": {
+        "application-rate": {
+            "description": gettext(
+                "Treat the load values as nutrient "
+                "application rates (e.g. fertilizer, livestock "
+                "waste, ...)."
+                "The model will adjust the load using the "
+                "application rate and retention efficiency: "
+                "load_[NUTRIENT] * (1 - eff_[NUTRIENT]).")},
+        "measured-runoff": {
+            "description": gettext(
+                "Treat the load values as measured contaminant "
+                "runoff.")},
+    },
+    "about": gettext(
+        "Whether the nutrient load in column "
+        "load_[NUTRIENT] should be treated as "
+        "nutrient application rate or measured contaminant "
+        "runoff. 'application-rate' | 'measured-runoff'")
+}
+
 MODEL_SPEC = {
     "model_id": "ndr",
     "model_name": MODEL_METADATA["ndr"].model_title,
@@ -77,28 +101,8 @@ MODEL_SPEC = {
             "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
-                "nut_load_type": {
-                    "type": "option_string",
-                    "required": True,
-                    "options": {
-                        "application-rate": {
-                            "description": gettext(
-                                "Treat the load values as nutrient "
-                                "application rates (e.g. fertilizer, livestock "
-                                "waste, ...)."
-                                "The model will adjust the load using the "
-                                "application rate and retention efficiency: "
-                                "load_[NUTRIENT] * (1 - eff_[NUTRIENT]).")},
-                        "measured-runoff": {
-                            "description": gettext(
-                                "Treat the load values as measured contaminant "
-                                "runoff.")},
-                    },
-                    "about": gettext(
-                        "Whether the nutrient load in column "
-                        "load_[NUTRIENT] should be treated as "
-                        "nutrient application rate or measured contaminant "
-                        "runoff. 'application-rate' | 'measured-runoff'")},
+                "load_type_p": LOAD_TYPE_OPTIONS,
+                "load_type_n": LOAD_TYPE_OPTIONS,
                 "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
@@ -924,7 +928,7 @@ def execute(args):
                 f_reg['masked_lulc_path'],
                 biophysical_df[
                     [f'load_{nutrient}', f'eff_{nutrient}',
-                     'nut_load_type']].to_dict('index'),
+                     f'load_type_{nutrient}']].to_dict('index'),
                 nutrient,
                 load_path),
             dependent_task_list=[align_raster_task, mask_lulc_task],
@@ -1356,7 +1360,7 @@ def _calculate_load(
     Args:
         lulc_raster_path (string): path to integer landcover raster.
         lucode_to_load (dict): a mapping of landcover IDs to nutrient load,
-            efficiency, and type. The type value can be one of:
+            efficiency, and load type. The load type value can be one of:
             [ 'measured-runoff' | 'appliation-rate' ].
         nutrient_type (str): the nutrient type key ('p' | 'n').
         target_load_raster (string): path to target raster that will have
@@ -1370,26 +1374,27 @@ def _calculate_load(
     measured_runoff = 'measured-runoff'
     load_key = f'load_{nutrient_type}'
     eff_key = f'eff_{nutrient_type}'
+    load_type_key = f'load_type_{nutrient_type}'
     
-    # Raise ValueError if unknown 'nut_load_type'
+    # Raise ValueError if unknown load_type
     for key, value in lucode_to_load.items():
-        nut_load_type = value['nut_load_type']
-        if not nut_load_type in [app_rate, measured_runoff]:
+        load_type = value[load_type_key]
+        if not load_type in [app_rate, measured_runoff]:
             # unknown load type, raise ValueError
             raise ValueError(
                 'nutrient load type must be: '
                 f'"{app_rate}" | "{measured_runoff}". Instead '
-                f'found value of: "{nut_load_type}".')
+                f'found value of: "{load_type}".')
 
     def _map_load_op(lucode_array):
         """Convert unit load to total load."""
         result = numpy.empty(lucode_array.shape)
         for lucode in numpy.unique(lucode_array):
             try:
-                if lucode_to_load[lucode]['nut_load_type'] == measured_runoff:
+                if lucode_to_load[lucode][load_type_key] == measured_runoff:
                     result[lucode_array == lucode] = (
                         lucode_to_load[lucode][load_key])
-                elif lucode_to_load[lucode]['nut_load_type'] == app_rate:
+                elif lucode_to_load[lucode][load_type_key] == app_rate:
                     result[lucode_array == lucode] = (
                         lucode_to_load[lucode][load_key] * (
                             1 - lucode_to_load[lucode][eff_key]))
