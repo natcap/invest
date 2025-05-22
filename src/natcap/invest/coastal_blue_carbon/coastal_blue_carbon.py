@@ -107,7 +107,6 @@ from .. import gettext
 from .. import spec
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 
 LOGGER = logging.getLogger(__name__)

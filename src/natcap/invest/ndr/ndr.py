@@ -279,7 +279,7 @@ MODEL_SPEC = spec.build_model_spec({
                 "units": u.kilogram/u.hectare
             }}
         },
-        "stream.tif": spec_utils.STREAM,
+        "stream.tif": spec.STREAM,
         "intermediate_outputs": {
             "type": "directory",
             "contents": {

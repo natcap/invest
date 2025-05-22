@@ -383,7 +383,7 @@ MODEL_SPEC = spec.build_model_spec({
                 "units": u.millimeter/u.year
             }}
         },
-        "stream.tif": spec_utils.STREAM,
+        "stream.tif": spec.STREAM,
         "P.tif": {
             "about": gettext("The total precipitation across all months on this pixel."),
             "bands": {1: {
