@@ -239,7 +239,7 @@ describe('Test building model UIs and forum links', () => {
         modelID={modelID}
         argsSpec={argsSpec.args}
         userguide={argsSpec.userguide}
-        uiSpec={argsSpec.ui_spec}
+        inputFieldOrder={argsSpec.input_field_order}
         argsInitValues={undefined}
         investExecute={() => {}}
         nWorkers="-1"

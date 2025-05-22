@@ -12,7 +12,7 @@ import taskgraph
 
 from . import validation
 from . import utils
-from . import spec_utils
+from . import spec
 from .unit_registry import u
 from . import gettext
 
@@ -38,7 +38,7 @@ CARBON_OUTPUTS = {
     ]
 }
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "carbon",
     "model_title": gettext("Carbon Storage and Sequestration"),
     "userguide": "carbonstorage.html",
@@ -50,18 +50,17 @@ MODEL_SPEC = {
             ['calc_sequestration', 'lulc_alt_path'],
             ['do_valuation', 'lulc_bas_year', 'lulc_alt_year', 'price_per_metric_ton_of_c', 'discount_rate', 'rate_change'],
         ],
-        "hidden": ["n_workers"],
         "forum_tag": 'carbon'
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_bas_path", "lulc_alt_path"],
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "lulc_bas_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "projection_units": u.meter,
             "about": gettext(
@@ -80,7 +79,7 @@ MODEL_SPEC = {
             "name": gettext("calculate sequestration")
         },
         "lulc_alt_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "projection_units": u.meter,
             "required": "calc_sequestration",
@@ -96,7 +95,7 @@ MODEL_SPEC = {
         "carbon_pools_path": {
             "type": "csv",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
@@ -226,9 +225,9 @@ MODEL_SPEC = {
                 **CARBON_OUTPUTS
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 _OUTPUT_BASE_FILES = {
     'c_storage_bas': 'c_storage_bas.tif',
@@ -321,8 +320,8 @@ def execute(args):
             "Baseline LULC Year is earlier than the Alternate LULC Year."
         )
 
-    carbon_pool_df = validation.get_validated_dataframe(
-        args['carbon_pools_path'], **MODEL_SPEC['args']['carbon_pools_path'])
+    carbon_pool_df = MODEL_SPEC.get_input(
+        'carbon_pools_path').get_validated_dataframe(args['carbon_pools_path'])
 
     try:
         n_workers = int(args['n_workers'])
@@ -693,5 +692,4 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC)

@@ -17,7 +17,7 @@ from osgeo import ogr
 from osgeo import osr
 
 from .. import gettext
-from .. import spec_utils
+from .. import spec
 from .. import utils
 from .. import validation
 from ..unit_registry import u
@@ -46,7 +46,7 @@ _INTERMEDIATE_BASE_FILES = {
     'value_pattern': 'value_{id}.tif',
 }
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "scenic_quality",
     "model_title": gettext("Scenic Quality"),
     "userguide": "scenic_quality.html",
@@ -56,24 +56,23 @@ MODEL_SPEC = {
             ['workspace_dir', 'results_suffix'],
             ['aoi_path', 'structure_path', 'dem_path', 'refraction'],
             ['do_valuation', 'valuation_function', 'a_coef', 'b_coef', 'max_valuation_radius'],
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_path", "structure_path", "dem_path"],
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "aoi_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
         },
         "structure_path": {
             "name": gettext("features impacting scenic quality"),
             "type": "vector",
-            "geometries": spec_utils.POINT,
+            "geometries": spec.POINT,
             "fields": {
                 "radius": {
                     "type": "number",
@@ -111,7 +110,7 @@ MODEL_SPEC = {
                 "quality. This must have the same projection as the DEM.")
         },
         "dem_path": {
-            **spec_utils.DEM,
+            **spec.DEM,
             "projected": True,
             "projection_units": u.meter
         },
@@ -196,7 +195,7 @@ MODEL_SPEC = {
             "contents": {
                 "aoi_reprojected.shp": {
                     "about": gettext("This vector is the AOI, reprojected to the DEM’s spatial reference and projection."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 },
                 "dem_clipped.tif": {
@@ -206,12 +205,12 @@ MODEL_SPEC = {
                 "structures_clipped.shp": {
                     "about": gettext(
                         "Copy of the structures vector, clipped to the AOI extent."),
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "fields": {}
                 },
                 "structures_reprojected.shp": {
                     "about": gettext("Copy of the structures vector, reprojected to the DEM’s spatial reference and projection."),
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "fields": {}
                 },
                 "value_[FEATURE_ID].tif": {
@@ -224,9 +223,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 
 def execute(args):
@@ -283,7 +282,7 @@ def execute(args):
             'b': float(args['b_coef']),
         }
         if (args['valuation_function'] not in
-                MODEL_SPEC['args']['valuation_function']['options']):
+                MODEL_SPEC.get_input('valuation_function').options):
             raise ValueError('Valuation function type %s not recognized' %
                              args['valuation_function'])
         max_valuation_radius = float(args['max_valuation_radius'])
@@ -1120,5 +1119,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC)

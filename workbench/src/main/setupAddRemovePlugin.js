@@ -2,10 +2,11 @@ import upath from 'upath';
 import fs from 'fs';
 import { tmpdir } from 'os';
 import toml from 'toml';
-import { execFile, spawn } from 'child_process';
+import { execFile, execSync, spawn } from 'child_process';
 import { promisify } from 'util';
 import { app, ipcMain } from 'electron';
 import { Downloader } from 'nodejs-file-downloader';
+import crypto from 'crypto';
 
 import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
@@ -118,15 +119,18 @@ export function setupAddPlugin(i18n) {
             upath.join(path, 'pyproject.toml')
           ).toString());
         }
-
         // Access plugin metadata from the pyproject.toml
-        const pluginID = pyprojectTOML.tool.natcap.invest.model_id;
-        const pluginTitle = pyprojectTOML.tool.natcap.invest.model_title;
         const condaDeps = pyprojectTOML.tool.natcap.invest.conda_dependencies;
+        const packageName = pyprojectTOML.tool.natcap.invest.package_name;
+        const version = pyprojectTOML.project.version;
 
         // Create a conda env containing the plugin and its dependencies
-        const envName = `invest_plugin_${pluginID}`;
-        const pluginEnvPrefix = upath.join(rootPrefix, envName);
+        // use timestamp to ensure a unique path
+        // I wanted the env path to match the plugin model_id, but we can't
+        // know the model_id until after creating the environment to be able to
+        // import metadata from the MODEL_SPEC. And mamba does not support
+        // renaming or moving environments after they're created.
+        const pluginEnvPrefix = upath.join(rootPrefix, `plugin_${Date.now()}`);
         const createCommand = [
           'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
           '-c', 'conda-forge', 'python', 'git'];
@@ -143,19 +147,38 @@ export function setupAddPlugin(i18n) {
            'python', '-m', 'pip', 'install', installString]
         );
         logger.info('installed plugin into its env');
+
+        event.sender.send('plugin-install-status', i18n.t('Importing plugin...'));
+        // Access plugin metadata from the MODEL_SPEC
+        const modelID = execSync(
+          `micromamba run --prefix "${pluginEnvPrefix}" ` +
+          `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
+        ).toString().trim();
+        const modelTitle= execSync(
+          `micromamba run --prefix "${pluginEnvPrefix}" ` +
+          `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
+        ).toString().trim();
+
         // Write plugin metadata to the workbench's config.json
         logger.info('writing plugin info to settings store');
+        // Uniquely identify plugin by a hash of its ID and version
+        // Hashing because the version may contain dots,
+        // which doesn't work well as a key for electron-store's set and get methods
+        const pluginID = crypto.createHash('sha1').update(`${modelID}@${version}`).digest('hex');
         settingsStore.set(
           `plugins.${pluginID}`,
           {
-            modelTitle: pluginTitle,
+            modelID: modelID,
+            modelTitle: modelTitle,
             type: 'plugin',
             source: installString,
             env: pluginEnvPrefix,
+            version: version,
           }
         );
         logger.info('successfully added plugin');
       } catch (error) {
+        console.log(error);
         return error;
       }
     }
