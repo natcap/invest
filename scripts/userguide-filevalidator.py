@@ -24,7 +24,7 @@ def main(userguide_dir):
     for module in models.pyname_to_module.values():
         # html referenced won't exist unless we actually built the UG,
         # so check for the rst with the same basename.
-        model_rst = f'{os.path.splitext(module.MODEL_SPEC["userguide"])[0]}.rst'
+        model_rst = f'{os.path.splitext(module.MODEL_SPEC.userguide)[0]}.rst'
         if not os.path.exists(os.path.join(
                 userguide_dir_source, model_rst)):
             missing_files.append(data.userguide)

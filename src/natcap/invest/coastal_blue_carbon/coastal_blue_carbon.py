@@ -104,7 +104,7 @@ import taskgraph
 from osgeo import gdal
 
 from .. import utils
-from .. import spec_utils
+from .. import spec
 from ..unit_registry import u
 from .. import validation
 from .. import gettext
@@ -159,7 +159,99 @@ CARBON_STOCK_AT_YEAR_RASTER_PATTERN = 'carbon-stock-at-{year}{suffix}.tif'
 INTERMEDIATE_DIR_NAME = 'intermediate'
 OUTPUT_DIR_NAME = 'output'
 
-MODEL_SPEC = {
+BIOPHYSICAL_TABLE_COLUMNS = {
+    "lucode": {
+        "type": "integer",
+        "about": gettext(
+            "The LULC code that represents this LULC "
+            "class in the LULC snapshot rasters.")},
+    "lulc-class": {
+        "type": "freestyle_string",
+        "about": gettext(
+            "Name of the LULC class. This label must be "
+            "unique among the all the LULC classes.")},
+    "biomass-initial": {
+        "type": "number",
+        "units": u.megatonne/u.hectare,
+        "about": gettext(
+            "The initial carbon stocks in the biomass pool for "
+            "this LULC class.")},
+    "soil-initial": {
+        "type": "number",
+        "units": u.megatonne/u.hectare,
+        "about": gettext(
+            "The initial carbon stocks in the soil pool for this "
+            "LULC class.")},
+    "litter-initial": {
+        "type": "number",
+        "units": u.megatonne/u.hectare,
+        "about": gettext(
+            "The initial carbon stocks in the litter pool for "
+            "this LULC class.")},
+    "biomass-half-life": {
+        "type": "number",
+        "units": u.year,
+        "expression": "value > 0",
+        "about": gettext("The half-life of carbon in the biomass pool.")},
+    "biomass-low-impact-disturb": {
+        "type": "ratio",
+        "about": gettext(
+            "Proportion of carbon stock in the biomass pool that "
+            "is disturbed when a cell transitions away from this "
+            " LULC class in a low-impact disturbance.")},
+    "biomass-med-impact-disturb": {
+        "type": "ratio",
+        "about": gettext(
+            "Proportion of carbon stock in the biomass pool that "
+            "is disturbed when a cell transitions away from this "
+            "LULC class in a medium-impact disturbance.")},
+    "biomass-high-impact-disturb": {
+        "type": "ratio",
+        "about": gettext(
+            "Proportion of carbon stock in the biomass pool that "
+            "is disturbed when a cell transitions away from this "
+            "LULC class in a high-impact disturbance.")},
+    "biomass-yearly-accumulation": {
+        "type": "number",
+        "units": u.megatonne/u.hectare/u.year,
+        "about": gettext(
+            "Annual rate of CO2E accumulation in the biomass pool.")},
+    "soil-half-life": {
+        "type": "number",
+        "units": u.year,
+        "expression": "value > 0",
+        "about": gettext("The half-life of carbon in the soil pool.")},
+    "soil-low-impact-disturb": {
+        "type": "ratio",
+        "about": gettext(
+            "Proportion of carbon stock in the soil pool that "
+            "is disturbed when a cell transitions away from this "
+            "LULC class in a low-impact disturbance.")},
+    "soil-med-impact-disturb": {
+        "type": "ratio",
+        "about": gettext(
+            "Proportion of carbon stock in the soil pool that "
+            "is disturbed when a cell transitions away from this "
+            "LULC class in a medium-impact disturbance.")},
+    "soil-high-impact-disturb": {
+        "type": "ratio",
+        "about": gettext(
+            "Proportion of carbon stock in the soil pool that "
+            "is disturbed when a cell transitions away from this "
+            "LULC class in a high-impact disturbance.")},
+    "soil-yearly-accumulation": {
+        "type": "number",
+        "units": u.megatonne/u.hectare/u.year,
+        "about": gettext(
+            "Annual rate of CO2E accumulation in the soil pool.")},
+    "litter-yearly-accumulation": {
+        "type": "number",
+        "units": u.megatonne/u.hectare/u.year,
+        "about": gettext(
+            "Annual rate of CO2E accumulation in the litter pool.")}
+}
+
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "coastal_blue_carbon",
     "model_title": gettext("Coastal Blue Carbon"),
     "userguide": "coastal_blue_carbon.html",
@@ -169,13 +261,12 @@ MODEL_SPEC = {
             ['workspace_dir', 'results_suffix'],
             ['landcover_snapshot_csv', 'biophysical_table_path', 'landcover_transitions_table', 'analysis_year'],
             ['do_economic_analysis', 'use_price_table', 'price', 'inflation_rate', 'price_table_path', 'discount_rate'],
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "landcover_snapshot_csv": {
             "type": "csv",
             "index_col": "snapshot_year",
@@ -216,97 +307,7 @@ MODEL_SPEC = {
             "name": gettext("biophysical table"),
             "type": "csv",
             "index_col": "lucode",
-            "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "The LULC code that represents this LULC "
-                        "class in the LULC snapshot rasters.")},
-                "lulc-class": {
-                    "type": "freestyle_string",
-                    "about": gettext(
-                        "Name of the LULC class. This label must be "
-                        "unique among the all the LULC classes.")},
-                "biomass-initial": {
-                    "type": "number",
-                    "units": u.megatonne/u.hectare,
-                    "about": gettext(
-                        "The initial carbon stocks in the biomass pool for "
-                        "this LULC class.")},
-                "soil-initial": {
-                    "type": "number",
-                    "units": u.megatonne/u.hectare,
-                    "about": gettext(
-                        "The initial carbon stocks in the soil pool for this "
-                        "LULC class.")},
-                "litter-initial": {
-                    "type": "number",
-                    "units": u.megatonne/u.hectare,
-                    "about": gettext(
-                        "The initial carbon stocks in the litter pool for "
-                        "this LULC class.")},
-                "biomass-half-life": {
-                    "type": "number",
-                    "units": u.year,
-                    "expression": "value > 0",
-                    "about": gettext("The half-life of carbon in the biomass pool.")},
-                "biomass-low-impact-disturb": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "Proportion of carbon stock in the biomass pool that "
-                        "is disturbed when a cell transitions away from this "
-                        " LULC class in a low-impact disturbance.")},
-                "biomass-med-impact-disturb": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "Proportion of carbon stock in the biomass pool that "
-                        "is disturbed when a cell transitions away from this "
-                        "LULC class in a medium-impact disturbance.")},
-                "biomass-high-impact-disturb": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "Proportion of carbon stock in the biomass pool that "
-                        "is disturbed when a cell transitions away from this "
-                        "LULC class in a high-impact disturbance.")},
-                "biomass-yearly-accumulation": {
-                    "type": "number",
-                    "units": u.megatonne/u.hectare/u.year,
-                    "about": gettext(
-                        "Annual rate of CO2E accumulation in the biomass pool.")},
-                "soil-half-life": {
-                    "type": "number",
-                    "units": u.year,
-                    "expression": "value > 0",
-                    "about": gettext("The half-life of carbon in the soil pool.")},
-                "soil-low-impact-disturb": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "Proportion of carbon stock in the soil pool that "
-                        "is disturbed when a cell transitions away from this "
-                        "LULC class in a low-impact disturbance.")},
-                "soil-med-impact-disturb": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "Proportion of carbon stock in the soil pool that "
-                        "is disturbed when a cell transitions away from this "
-                        "LULC class in a medium-impact disturbance.")},
-                "soil-high-impact-disturb": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "Proportion of carbon stock in the soil pool that "
-                        "is disturbed when a cell transitions away from this "
-                        "LULC class in a high-impact disturbance.")},
-                "soil-yearly-accumulation": {
-                    "type": "number",
-                    "units": u.megatonne/u.hectare/u.year,
-                    "about": gettext(
-                        "Annual rate of CO2E accumulation in the soil pool.")},
-                "litter-yearly-accumulation": {
-                    "type": "number",
-                    "units": u.megatonne/u.hectare/u.year,
-                    "about": gettext(
-                        "Annual rate of CO2E accumulation in the litter pool.")}
-            },
+            "columns": BIOPHYSICAL_TABLE_COLUMNS,
             "about": gettext("Table of biophysical properties for each LULC class.")
         },
         "landcover_transitions_table": {
@@ -536,9 +537,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 
 def execute(args):
@@ -583,10 +584,9 @@ def execute(args):
     task_graph, n_workers, intermediate_dir, output_dir, suffix = (
         _set_up_workspace(args))
 
-    snapshots = validation.get_validated_dataframe(
-        args['landcover_snapshot_csv'],
-        **MODEL_SPEC['args']['landcover_snapshot_csv']
-    )['raster_path'].to_dict()
+    snapshots = MODEL_SPEC.get_input(
+        'landcover_snapshot_csv').get_validated_dataframe(
+            args['landcover_snapshot_csv'])['raster_path'].to_dict()
 
     # Phase 1: alignment and preparation of inputs
     baseline_lulc_year = min(snapshots.keys())
@@ -606,9 +606,9 @@ def execute(args):
 
     # We're assuming that the LULC initial variables and the carbon pool
     # transient table are combined into a single lookup table.
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table_path'],
-        **MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = MODEL_SPEC.get_input(
+        'biophysical_table_path').get_validated_dataframe(
+            args['biophysical_table_path'])
 
     # LULC Classnames are critical to the transition mapping, so they must be
     # unique.  This check is here in ``execute`` because it's possible that
@@ -976,10 +976,9 @@ def execute(args):
     prices = None
     if args.get('do_economic_analysis', False):  # Do if truthy
         if args.get('use_price_table', False):
-            prices = validation.get_validated_dataframe(
-                args['price_table_path'],
-                **MODEL_SPEC['args']['price_table_path']
-            )['price'].to_dict()
+            prices = MODEL_SPEC.get_input(
+                'price_table_path').get_validated_dataframe(
+                    args['price_table_path'])['price'].to_dict()
         else:
             inflation_rate = float(args['inflation_rate']) * 0.01
             annual_price = float(args['price'])
@@ -1961,9 +1960,9 @@ def _read_transition_matrix(transition_csv_path, biophysical_df):
         landcover transition, and the second contains accumulation rates for
         the pool for the landcover transition.
     """
-    table = validation.get_validated_dataframe(
-        transition_csv_path, **MODEL_SPEC['args']['landcover_transitions_table']
-    ).reset_index()
+    table = MODEL_SPEC.get_input(
+        'landcover_transitions_table').get_validated_dataframe(
+            transition_csv_path).reset_index()
 
     lulc_class_to_lucode = {}
     max_lucode = biophysical_df.index.max()
@@ -2177,16 +2176,15 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    validation_warnings = validation.validate(
-        args, MODEL_SPEC['args'])
+    validation_warnings = validation.validate(args, MODEL_SPEC)
     sufficient_keys = validation.get_sufficient_keys(args)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 
     if ("landcover_snapshot_csv" not in invalid_keys and
             "landcover_snapshot_csv" in sufficient_keys):
-        snapshots = validation.get_validated_dataframe(
-            args['landcover_snapshot_csv'],
-            **MODEL_SPEC['args']['landcover_snapshot_csv']
+        snapshots = MODEL_SPEC.get_input(
+            'landcover_snapshot_csv').get_validated_dataframe(
+                args['landcover_snapshot_csv']
         )['raster_path'].to_dict()
 
         snapshot_years = set(snapshots.keys())
@@ -2206,13 +2204,13 @@ def validate(args, limit_to=None):
     # check for invalid options in the translation table
     if ("landcover_transitions_table" not in invalid_keys and
             "landcover_transitions_table" in sufficient_keys):
-        transitions_spec = MODEL_SPEC['args']['landcover_transitions_table']
+        transitions_spec = MODEL_SPEC.get_input('landcover_transitions_table')
         transition_options = list(
-            transitions_spec['columns']['[LULC CODE]']['options'].keys())
+            transitions_spec.columns.get('[LULC CODE]').options.keys())
         # lowercase options since utils call will lowercase table values
         transition_options = [x.lower() for x in transition_options]
-        transitions_df = validation.get_validated_dataframe(
-            args['landcover_transitions_table'], **transitions_spec)
+        transitions_df = transitions_spec.get_validated_dataframe(
+            args['landcover_transitions_table'])
         transitions_mask = ~transitions_df.isin(transition_options) & ~transitions_df.isna()
         if transitions_mask.any(axis=None):
             transition_numpy_mask = transitions_mask.values

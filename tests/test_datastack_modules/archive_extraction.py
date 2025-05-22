@@ -1,26 +1,30 @@
-MODEL_SPEC = {
-    'model_id': 'archive_extraction_model',
-    'args': {
-        'blank': {'type': 'freestyle_string'},
-        'a': {'type': 'integer'},
-        'b': {'type': 'freestyle_string'},
-        'c': {'type': 'freestyle_string'},
-        'foo': {'type': 'file'},
-        'bar': {'type': 'file'},
-        'data_dir': {'type': 'directory', 'contents': {}},
-        'raster': {'type': 'raster'},
-        'vector': {'type': 'vector'},
-        'simple_table': {'type': 'csv'},
-        'spatial_table': {
-            'type': 'csv',
-            'columns': {
-                'ID': {'type': 'integer'},
-                'path': {
-                    'type': {'raster', 'vector'},
-                    'geometries': {'POINT', 'POLYGON'},
-                    'bands': {1: {'type': 'number'}}
-                }
-            }
-        }
-    }
-}
+from natcap.invest import spec
+
+MODEL_SPEC = spec.ModelSpec(inputs=[
+    spec.StringInput(id='blank'),
+    spec.IntegerInput(id='a'),
+    spec.StringInput(id='b'),
+    spec.StringInput(id='c'),
+    spec.FileInput(id='foo'),
+    spec.FileInput(id='bar'),
+    spec.DirectoryInput(id='data_dir', contents={}),
+    spec.SingleBandRasterInput(id='raster'),
+    spec.VectorInput(id='vector', fields={}, geometry_types={}),
+    spec.CSVInput(id='simple_table'),
+    spec.CSVInput(
+        id='spatial_table',
+        columns=[
+            spec.IntegerInput(id='ID'),
+            spec.RasterOrVectorInput(
+                id='path',
+                fields={},
+                geometry_types={'POINT', 'POLYGON'}
+            )
+        ]
+    )],
+    outputs={},
+    model_id='archive_extraction_model',
+    model_title='',
+    userguide='',
+    input_field_order=[]
+)
