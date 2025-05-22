@@ -15,7 +15,8 @@ import {
   writeParametersToFile,
   fetchValidation,
   fetchDatastackFromFile,
-  fetchArgsEnabled
+  fetchArgsEnabled,
+  getDynamicDropdowns
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import setupDialogs from '../../src/main/setupDialogs';
@@ -53,9 +54,7 @@ describe('Run status Alert renders with status from a recent run', () => {
     pyname: 'natcap.invest.foo',
     model_title: 'Foo Model',
     userguide: 'foo.html',
-    ui_spec: {
-      order: [['workspace']],
-    },
+    input_field_order: [['workspace']],
     args: {
       workspace: {
         name: 'Workspace',
@@ -69,6 +68,7 @@ describe('Run status Alert renders with status from a recent run', () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     fetchArgsEnabled.mockResolvedValue({ workspace: true });
+    getDynamicDropdowns.mockResolvedValue({});
     setupDialogs();
   });
 
@@ -124,7 +124,7 @@ describe('Open Workspace button', () => {
     model_name: 'Foo Model',
     userguide: 'foo.html',
     args: {},
-    ui_spec: { order: [] },
+    input_field_order: [],
   };
 
   const baseJob = {
@@ -135,6 +135,7 @@ describe('Open Workspace button', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
+    getDynamicDropdowns.mockResolvedValue({});
     setupDialogs();
   });
 
@@ -190,9 +191,7 @@ describe('Sidebar Buttons', () => {
     pyname: 'natcap.invest.foo',
     model_title: 'Foo Model',
     userguide: 'foo.html',
-    ui_spec: {
-      order: [['workspace', 'port']],
-    },
+    input_field_order: [['workspace', 'port']],
     args: {
       workspace: {
         name: 'Workspace',
@@ -210,6 +209,7 @@ describe('Sidebar Buttons', () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     fetchArgsEnabled.mockResolvedValue({ workspace: true, port: true });
+    getDynamicDropdowns.mockResolvedValue({});
     setupOpenExternalUrl();
     setupOpenLocalHtml();
     ipcRenderer.invoke.mockImplementation((channel) => {
@@ -611,9 +611,7 @@ describe('InVEST Run Button', () => {
     pyname: 'natcap.invest.bar',
     model_title: 'Bar Model',
     userguide: 'bar.html',
-    ui_spec: {
-      order: [['a', 'b', 'c']],
-    },
+    input_field_order: [['a', 'b', 'c']],
     args: {
       a: {
         name: 'abar',
