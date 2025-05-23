@@ -17,6 +17,8 @@ build:
   os: ubuntu-22.04
   tools:
     python: "mambaforge-4.10"
+  apt_packages:
+    - g++-14
   jobs:
     post_create_environment:
       - pip install --upgrade-strategy=only-if-needed -r requirements.txt
