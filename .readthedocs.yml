@@ -17,18 +17,11 @@ build:
   os: ubuntu-24.04
   tools:
     python: "mambaforge-4.10"
-  apt_packages:
-    - g++-13
   jobs:
     post_create_environment:
       - pip install --upgrade-strategy=only-if-needed -r requirements.txt
       - pip install --upgrade-strategy=only-if-needed -r requirements-dev.txt
       - pip install --upgrade-strategy=only-if-needed -r requirements-docs.txt
       - g++ --version
-      - g++-13 --version
-      - alias g++="g++-13"
-      - g++ --version
-      # - update-alternatives --query g++
-      # - update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 50
     post_install:
       - make install
