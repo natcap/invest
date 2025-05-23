@@ -9,6 +9,7 @@ import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
 from osgeo import gdal
+from osgeo import gdal_array
 from osgeo import ogr
 
 from .. import gettext
@@ -650,7 +651,7 @@ def execute(args):
             'mask_raster_path': f_reg['mask_path'],
             'target_masked_raster_path': f_reg['masked_runoff_proxy_path'],
             'target_dtype': gdal.GDT_Float32,
-            'default_nodata': _TARGET_NODATA,
+            'target_nodata': _TARGET_NODATA,
         },
         dependent_task_list=[mask_task, align_raster_task],
         target_path_list=[f_reg['masked_runoff_proxy_path']],
@@ -663,7 +664,7 @@ def execute(args):
             'mask_raster_path': f_reg['mask_path'],
             'target_masked_raster_path': f_reg['masked_dem_path'],
             'target_dtype': gdal.GDT_Float32,
-            'default_nodata': float(numpy.finfo(numpy.float32).min),
+            'target_nodata': float(numpy.finfo(numpy.float32).min),
         },
         dependent_task_list=[mask_task, align_raster_task],
         target_path_list=[f_reg['masked_dem_path']],
@@ -676,7 +677,7 @@ def execute(args):
             'mask_raster_path': f_reg['mask_path'],
             'target_masked_raster_path': f_reg['masked_lulc_path'],
             'target_dtype': gdal.GDT_Int32,
-            'default_nodata': numpy.iinfo(numpy.int32).min,
+            'target_nodata': numpy.iinfo(numpy.int32).min,
         },
         dependent_task_list=[mask_task, align_raster_task],
         target_path_list=[f_reg['masked_lulc_path']],
@@ -1158,7 +1159,7 @@ def _create_mask_raster(source_raster_path, source_vector_path,
 
 
 def _mask_raster(source_raster_path, mask_raster_path,
-                 target_masked_raster_path, default_nodata, target_dtype):
+                 target_masked_raster_path, target_nodata, target_dtype):
     """Using a raster of 1s and 0s, determine which pixels remain in output.
 
     Args:
@@ -1170,8 +1171,8 @@ def _mask_raster(source_raster_path, mask_raster_path,
             target raster.
         target_masked_raster_path (str): The path to where the target raster
             should be written.
-        default_nodata (int, float, None): The nodata value that should be used
-            if ``source_raster_path`` does not have a defined nodata value.
+        target_nodata (int, float): The target nodata value that should match
+            ``target_dtype``.
         target_dtype (int): The ``gdal.GDT_*`` datatype of the target raster.
 
     Returns:
@@ -1179,22 +1180,20 @@ def _mask_raster(source_raster_path, mask_raster_path,
     """
     source_raster_info = pygeoprocessing.get_raster_info(source_raster_path)
     source_nodata = source_raster_info['nodata'][0]
-    nodata = source_nodata
-    if nodata is None:
-        nodata = default_nodata
+    target_numpy_dtype = gdal_array.GDALTypeCodeToNumericTypeCode(target_dtype)
 
     def _mask_op(mask, raster):
-        result = numpy.full(mask.shape, nodata,
-                            dtype=source_raster_info['numpy_type'])
+        result = numpy.full(mask.shape, target_nodata,
+                            dtype=target_numpy_dtype)
         valid_pixels = (
-            ~pygeoprocessing.array_equals_nodata(raster, nodata) &
+            ~pygeoprocessing.array_equals_nodata(raster, source_nodata) &
             (mask == 1))
         result[valid_pixels] = raster[valid_pixels]
         return result
 
     pygeoprocessing.raster_calculator(
         [(mask_raster_path, 1), (source_raster_path, 1)], _mask_op,
-        target_masked_raster_path, target_dtype, nodata)
+        target_masked_raster_path, target_dtype, target_nodata)
 
 
 def _add_fields_to_shapefile(field_pickle_map, target_vector_path):

@@ -90,6 +90,8 @@ NDR
   results. (`#1845 <https://github.com/natcap/invest/issues/1845>`_)
 * ``stream.tif`` is now saved in the main output folder rather than the
   intermediate folder (`#1864 <https://github.com/natcap/invest/issues/1864>`_).
+* Fixed a bug where input rasters (e.g. LULC) without a defined nodata value could
+  cause an OverflowError. (`#1904 <https://github.com/natcap/invest/issues/1904>`_).
 
 Seasonal Water Yield
 ====================
