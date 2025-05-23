@@ -14,15 +14,13 @@ import textwrap
 import warnings
 
 import natcap.invest
+from natcap.invest import datastack
+from natcap.invest import set_locale
+from natcap.invest import spec
+from natcap.invest import ui_server
+from natcap.invest import utils
+from natcap.invest import models
 from pygeoprocessing.geoprocessing_core import GDALUseExceptions
-with GDALUseExceptions():
-    import natcap.invest
-    from natcap.invest import datastack
-    from natcap.invest import set_locale
-    from natcap.invest import spec
-    from natcap.invest import ui_server
-    from natcap.invest import utils
-    from natcap.invest import models
 
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)

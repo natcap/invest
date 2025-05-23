@@ -383,6 +383,7 @@ MODEL_SPEC = spec.build_model_spec({
                 "units": u.millimeter/u.year
             }}
         },
+        "stream.tif": spec.STREAM,
         "P.tif": {
             "about": gettext("The total precipitation across all months on this pixel."),
             "bands": {1: {
@@ -440,15 +441,6 @@ MODEL_SPEC = spec.build_model_spec({
                     "bands": {1: {
                         "type": "number",
                         "units": u.millimeter
-                    }}
-                },
-                "stream.tif": {
-                    "about": gettext(
-                        "Stream network map generated from the input DEM and "
-                        "Threshold Flow Accumulation. Values of 1 represent "
-                        "streams, values of 0 are non-stream pixels."),
-                    "bands": {1: {
-                        "type": "integer"
                     }}
                 },
                 'Si.tif': {
@@ -519,6 +511,7 @@ _OUTPUT_BASE_FILES = {
     'l_sum_path': 'L_sum.tif',
     'l_sum_avail_path': 'L_sum_avail.tif',
     'qf_path': 'QF.tif',
+    'stream_path': 'stream.tif',
     'b_sum_path': 'B_sum.tif',
     'b_path': 'B.tif',
     'vri_path': 'Vri.tif',
@@ -529,7 +522,6 @@ _INTERMEDIATE_BASE_FILES = {
     'aetm_path_list': ['aetm_%d.tif' % (x+1) for x in range(N_MONTHS)],
     'flow_dir_path': 'flow_dir.tif',
     'qfm_path_list': ['qf_%d.tif' % (x+1) for x in range(N_MONTHS)],
-    'stream_path': 'stream.tif',
     'si_path': 'Si.tif',
     'lulc_aligned_path': 'lulc_aligned.tif',
     'dem_aligned_path': 'dem_aligned.tif',

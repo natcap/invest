@@ -48,12 +48,6 @@ def model_spec_with_defaults(model_id='', model_title='', userguide='', aliases=
 def number_input_spec_with_defaults(id='', units=u.none, expression='', **kwargs):
     return NumberInput(id=id, units=units, expression=expression, **kwargs)
 
-def ratio_input_spec_with_defaults(id='', units=u.none, expression='', **kwargs):
-    return RatioInput(id=id, units=units, expression=expression, **kwargs)
-
-def percent_input_spec_with_defaults(id='', units=u.none, expression='', **kwargs):
-    return PercentInput(id=id, units=units, expression=expression, **kwargs)
-
 
 class SpatialOverlapTest(unittest.TestCase):
     """Test Spatial Overlap."""

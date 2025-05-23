@@ -488,29 +488,6 @@ class ValidateModelSpecs(unittest.TestCase):
             model.MODEL_SPEC.to_json()
 
 
-class SpecUtilsTests(unittest.TestCase):
-    """Tests for natcap.invest.spec."""
-
-    def test_format_unit(self):
-        """spec: test converting units to strings with format_unit."""
-        from natcap.invest import spec
-        for unit_name, expected in [
-                ('meter', 'm'),
-                ('meter / second', 'm/s'),
-                ('foot * mm', 'ft · mm'),
-                ('t * hr * ha / ha / MJ / mm', 't · h · ha / (ha · MJ · mm)'),
-                ('mm^3 / year', 'mm³/year')
-        ]:
-            unit = spec.u.Unit(unit_name)
-            actual = spec.format_unit(unit)
-            self.assertEqual(expected, actual)
-
-    def test_format_unit_raises_error(self):
-        """spec: format_unit raises TypeError if not a pint.Unit."""
-        from natcap.invest import spec
-        with self.assertRaises(TypeError):
-            spec.format_unit({})
-
 @pytest.mark.skip(reason="Possible race condition of plugin not being uninstalled before other tests are run.")
 class PluginTests(unittest.TestCase):
     """Tests for natcap.invest plugins."""

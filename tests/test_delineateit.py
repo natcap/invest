@@ -7,7 +7,6 @@ import shutil
 import tempfile
 import unittest
 from unittest import mock
-import pytest
 
 import numpy
 import pygeoprocessing
@@ -24,6 +23,7 @@ gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'delineateit')
+
 
 @contextlib.contextmanager
 def capture_logging(logger, level=logging.NOTSET):
