@@ -370,6 +370,39 @@ class NDRTests(unittest.TestCase):
         if mismatch_list:
             raise RuntimeError("results not expected: %s" % mismatch_list)
 
+    def test_mask_raster_nodata_overflow(self):
+        """NDR test when target nodata value overflows source dtype."""
+        from natcap.invest.ndr import ndr
+
+        source_raster_path = os.path.join(self.workspace_dir, 'source.tif')
+        target_raster_path = os.path.join(
+            self.workspace_dir, 'target.tif')
+        source_dtype = numpy.int8
+        target_dtype = gdal.GDT_Int32
+        target_nodata = numpy.iinfo(numpy.int32).min
+
+        pygeoprocessing.numpy_array_to_raster(
+            base_array=numpy.full((4, 4), 1, dtype=source_dtype),
+            target_nodata=None,
+            pixel_size=(1, -1),
+            origin=(0, 0),
+            projection_wkt=None,
+            target_path=source_raster_path)
+
+        ndr._mask_raster(
+            source_raster_path=source_raster_path,
+            mask_raster_path=source_raster_path,  # mask=source for convenience
+            target_masked_raster_path=target_raster_path,
+            target_nodata=target_nodata,
+            target_dtype=target_dtype)
+
+        # Mostly we're testing that _mask_raster did not raise an OverflowError,
+        # but we can assert the results anyway.
+        array = pygeoprocessing.raster_to_numpy_array(target_raster_path)
+        numpy.testing.assert_array_equal(
+            array,
+            numpy.full((4, 4), 1, dtype=numpy.int32))  # matches target_dtype
+
     def test_validation(self):
         """NDR test argument validation."""
         from natcap.invest import validation
