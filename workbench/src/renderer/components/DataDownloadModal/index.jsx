@@ -8,6 +8,7 @@ import Alert from 'react-bootstrap/Alert';
 import Table from 'react-bootstrap/Table';
 import {
   MdErrorOutline,
+  MdClose,
 } from 'react-icons/md';
 import { withTranslation } from 'react-i18next';
 
@@ -19,7 +20,7 @@ const { logger } = window.Workbench;
 
 // A URL for sampledata to use in devMode, when the token containing the URL
 // associated with a production build of the Workbench does not exist.
-const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.13.0/data';
+const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.15.1/data';
 const DEFAULT_FILESIZE = 0;
 
 /** Render a dialog with a form for configuring global invest settings */
@@ -263,10 +264,20 @@ class DataDownloadModal extends React.Component {
                     <p className="mb-0"><em>{this.state.alertPath}</em></p>
                   </Alert>
                 )
-                : <Modal.Title id="download-modal-title">
+                : (
+                  <Modal.Title id="download-modal-title">
                     {t("Download InVEST sample data")}
                   </Modal.Title>
+                )
             }
+            <Button
+              variant="secondary-outline"
+              onClick={this.closeDialog}
+              className="float-right"
+              aria-label="Close modal"
+            >
+              <MdClose />
+            </Button>
           </Modal.Header>
           <Modal.Body>
             <Table
@@ -294,12 +305,6 @@ class DataDownloadModal extends React.Component {
             </Table>
           </Modal.Body>
           <Modal.Footer>
-            <Button
-              variant="secondary"
-              onClick={this.closeDialog}
-            >
-              {t("Cancel")}
-            </Button>
             <Button
               variant="primary"
               onClick={this.handleSubmit}

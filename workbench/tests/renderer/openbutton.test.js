@@ -19,9 +19,10 @@ test('Open File: displays a tooltip on hover', async () => {
     />
   );
 
-  const openButton = await findByRole('button', { name: 'Open' });
+  const openButton = await findByRole(
+    'button', { name: /Browse to a datastack or InVEST logfile/i });
   await userEvent.hover(openButton);
-  const hoverText = 'Browse to a datastack (.json) or InVEST logfile (.txt)';
+  const hoverText = /Open an InVEST model by loading/i;
   expect(await findByText(hoverText)).toBeInTheDocument();
   await userEvent.unhover(openButton);
   await waitFor(() => {
@@ -53,7 +54,8 @@ test('Open File: sends correct payload', async () => {
     />
   );
 
-  const openButton = await findByRole('button', { name: 'Open' });
+  const openButton = await findByRole(
+    'button', { name: /Browse to a datastack or InVEST logfile/i });
   await userEvent.click(openButton);
 
   await waitFor(() => {

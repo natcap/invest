@@ -7,7 +7,11 @@ import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
+import Button from 'react-bootstrap/Button';
 import { useTranslation } from 'react-i18next';
+import {
+  MdClose,
+} from 'react-icons/md';
 
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
@@ -35,7 +39,13 @@ export default class HomeTab extends React.Component {
   }
 
   render() {
-    const { recentJobs, investList, openInvestModel } = this.props;
+    const {
+      recentJobs,
+      investList,
+      openInvestModel,
+      deleteJob,
+      clearRecentJobs
+    } = this.props;
     let sortedModelIds = {};
     if (investList) {
       // sort the model list alphabetically, by the model title,
@@ -74,9 +84,10 @@ export default class HomeTab extends React.Component {
           name={modelTitle}
           action
           onClick={() => this.handleClick(modelID)}
+          className="invest-button"
         >
           { badge }
-          <span className="invest-button">{modelTitle}</span>
+          <span>{modelTitle}</span>
         </ListGroup.Item>
       );
     });
@@ -86,6 +97,16 @@ export default class HomeTab extends React.Component {
         <Col md={6} className="invest-list-container">
           <ListGroup className="invest-list-group">
             {investButtons}
+            <ListGroup.Item
+              key="browse"
+              className="py-2 border-0"
+            >
+              <OpenButton
+                className="w-100 border-1 py-2 pl-3 text-left text-truncate"
+                openInvestModel={openInvestModel}
+                investList={investList}
+              />
+            </ListGroup.Item>
           </ListGroup>
         </Col>
         <Col className="recent-job-card-col">
@@ -93,6 +114,8 @@ export default class HomeTab extends React.Component {
             openInvestModel={openInvestModel}
             recentJobs={recentJobs}
             investList={investList}
+            deleteJob={deleteJob}
+            clearRecentJobs={clearRecentJobs}
           />
         </Col>
       </Row>
@@ -117,13 +140,20 @@ HomeTab.propTypes = {
       status: PropTypes.string,
     })
   ).isRequired,
+  deleteJob: PropTypes.func.isRequired,
+  clearRecentJobs: PropTypes.func.isRequired,
 };
 
 /**
  * Renders a button for each recent invest job.
  */
 function RecentInvestJobs(props) {
-  const { recentJobs, openInvestModel, investList } = props;
+  const {
+    recentJobs,
+    openInvestModel,
+    deleteJob,
+    clearRecentJobs
+  } = props;
   const { t } = useTranslation();
 
   const handleClick = (jobMetadata) => {
@@ -143,16 +173,26 @@ function RecentInvestJobs(props) {
       }
       recentButtons.push(
         <Card
-          className="text-left recent-job-card"
-          as="button"
+          className="text-left recent-job-card mr-2 w-100"
           key={job.hash}
-          onClick={() => handleClick(job)}
         >
-          <Card.Body>
-            <Card.Header>
-              {badge}
-              <span className="header-title">{job.modelTitle}</span>
-            </Card.Header>
+          <Card.Header>
+            {badge}
+            <span className="header-title">{job.modelTitle}</span>
+            <Button
+              variant="outline-light"
+              onClick={() => deleteJob(job.hash)}
+              className="float-right p-1 mr-1 border-0"
+              aria-label="delete"
+            >
+              <MdClose />
+            </Button>
+          </Card.Header>
+          <Card.Body
+            className="text-left border-0"
+            as="button"
+            onClick={() => handleClick(job)}
+          >
             <Card.Title>
               <span className="text-heading">{'Workspace: '}</span>
               <span className="text-mono">{job.argsValues.workspace_dir}</span>
@@ -177,37 +217,43 @@ function RecentInvestJobs(props) {
   });
 
   return (
-    <>
-      <Container>
-        <Row>
-          <Col className="recent-header-col">
-            {recentButtons.length
-              ? (
-                <h4>
-                  {t('Recent runs:')}
-                </h4>
-              )
-              : (
-                <div className="default-text">
-                  {t("Set up a model from a sample datastack file (.json) " +
-                     "or from an InVEST model's logfile (.txt): ")}
-                </div>
-              )}
-          </Col>
-          <Col className="open-button-col">
-            {investList
-              ? (
-                <OpenButton
-                  className="mr-2"
-                  openInvestModel={openInvestModel}
-                  investList={investList}
-                />
-              ) : ''}
-          </Col>
-        </Row>
-      </Container>
-      {recentButtons}
-    </>
+    <Container>
+      <Row>
+        {recentButtons.length
+          ? <div />
+          : (
+            <Card
+              className="text-left recent-job-card mr-2 w-100"
+              key="placeholder"
+            >
+              <Card.Header>
+                <span className="header-title">{t('Welcome!')}</span>
+              </Card.Header>
+              <Card.Body>
+                <Card.Title>
+                  <span className="text-heading">
+                    {t('After running a model, find your recent model runs here.')}
+                  </span>
+                </Card.Title>
+              </Card.Body>
+            </Card>
+          )}
+        {recentButtons}
+      </Row>
+      {recentButtons.length
+        ? (
+          <Row>
+            <Button
+              variant="secondary"
+              onClick={clearRecentJobs}
+              className="mr-2 w-100"
+            >
+              {t('Clear all model runs')}
+            </Button>
+          </Row>
+        )
+        : <div />}
+    </Container>
   );
 }
 
@@ -222,4 +268,6 @@ RecentInvestJobs.propTypes = {
     })
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,
+  deleteJob: PropTypes.func.isRequired,
+  clearRecentJobs: PropTypes.func.isRequired,
 };

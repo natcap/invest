@@ -26,7 +26,7 @@ body {
 .navbar {
   border-bottom: 3px solid var(--invest-green);
   padding: 0;
-  height: var(--header-height)
+  height: var(--header-height);
 }
 
 .navbar .row {
@@ -156,15 +156,22 @@ body {
   white-space: nowrap;
 }
 
-.settings-icon-btn, .settings-icon-btn:hover {
+.app-menu-button {
+  color: gray;
   background-color: transparent;
-  border-color: transparent;
-}
-
-.settings-icon {
-  color: black;
+  border: none;
   font-size: 2rem;
   vertical-align: text-bottom;
+  margin-right: 2px;
+}
+
+.app-menu-button:hover{
+  color: white;
+  background-color: gray;
+}
+
+.app-menu-button:after {
+  display: none;
 }
 
 .language-icon {
@@ -204,10 +211,6 @@ exceed 100% of window.*/
   margin-bottom: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.invest-list-group .list-group-item:last-child {
-  border-radius: 0;
 }
 
 .invest-button {
@@ -254,23 +257,30 @@ exceed 100% of window.*/
 
 .recent-job-card {
   width: inherit;
-  margin-bottom: 1rem;
   padding: 0;
   height: fit-content;
   filter: drop-shadow(2px 2px 2px grey);
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .card-body {
-  padding: 0;
+  padding-top: 1rem;
+  padding-left: 0rem;
+  padding-right: 0rem;
+  padding-bottom: 0rem;
   width: inherit;
+  background-color: transparent;
 }
 
 .card-header {
   background-color: var(--invest-green);
   filter: opacity(0.75);
-  margin-bottom: 1rem;
   margin-left: -0.1rem;
   margin-right: -0.05rem;
+  padding-right: 0;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
 }
 
 .card-header .header-title {
@@ -280,8 +290,14 @@ exceed 100% of window.*/
   letter-spacing: 0.5px;
 }
 
+.card-header .btn:hover {
+  background-color: white;
+  color: var(--invest-green);
+}
+
 .card-title {
   padding-left: 1.25rem;
+  font-size: 1.1rem;
 }
 
 .card-title .text-heading {
@@ -290,7 +306,7 @@ exceed 100% of window.*/
 
 .card-title .text-mono {
   font-family: monospace;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
 
 .card-footer {

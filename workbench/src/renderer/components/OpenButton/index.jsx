@@ -49,19 +49,21 @@ class OpenButton extends React.Component {
 
   render() {
     const { t, className } = this.props;
-    const tipText = t('Browse to a datastack (.json) or InVEST logfile (.txt)');
+    const tipText = t(
+      `Open an InVEST model by loading input parameters from
+      a .json, .tgz, or InVEST logfile (.txt)`);
     return (
       <OverlayTrigger
-        placement="left"
+        placement="right"
         delay={{ show: 250, hide: 400 }}
         overlay={<Tooltip>{tipText}</Tooltip>}
       >
         <Button
           className={className}
           onClick={this.browseFile}
-          variant="outline-dark"
+          variant="outline-primary"
         >
-          {t('Open')}
+          {t('Browse to a datastack or InVEST logfile')}
         </Button>
       </OverlayTrigger>
     );
