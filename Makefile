@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := d8a7397ba5992de7a80260e40956e4c29176383d
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 51a746b8eeb87061bb0600d9ce1fb451b4dee7fe
+GIT_UG_REPO_REV             := 33427e65bc77f603f24cfee4f9ccfa10935b2e1e
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
