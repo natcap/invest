@@ -25,5 +25,7 @@ build:
       - pip install --upgrade-strategy=only-if-needed -r requirements-dev.txt
       - pip install --upgrade-strategy=only-if-needed -r requirements-docs.txt
       - g++ --version
+      - update-alternatives --query g++
+      - update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 50
     post_install:
       - make install
