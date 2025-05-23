@@ -199,6 +199,7 @@ ArgsForm.propTypes = {
   argsOrder: PropTypes.arrayOf(
     PropTypes.arrayOf(PropTypes.string)
   ).isRequired,
+  argsEnabled: PropTypes.objectOf(PropTypes.bool),
   userguide: PropTypes.string.isRequired,
   updateArgValues: PropTypes.func.isRequired,
   loadParametersFromFile: PropTypes.func.isRequired,

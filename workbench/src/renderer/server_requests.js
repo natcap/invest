@@ -1,6 +1,37 @@
+import { ipcMainChannels } from '../main/ipcMainChannels';
+
+const { logger, LANGUAGE } = window.Workbench;
+const { ipcRenderer } = window.Workbench.electron;
+
 const HOSTNAME = 'http://127.0.0.1';
-const { logger, PORT, LANGUAGE } = window.Workbench;
 const PREFIX = 'api';
+
+/**
+ * Get the port number running the server and model ID to use for the given model.
+ *
+ * Server must already be started. If the model is a core invest model, the core
+ * port is returned. If a plugin, the port for that plugin's server is returned.
+ * Model ID is returned unchanged for core models. For plugins, the version is
+ * removed from the id string.
+ * @param {string} modelID - model name as given by `invest list`
+ * @returns {Promise} resolves object
+ */
+async function getPortAndID(modelID) {
+  let port, id;
+  const plugins = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins');
+  if (plugins && Object.keys(plugins).includes(modelID)) {
+    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `plugins.${modelID}.port`);
+    id = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `plugins.${modelID}.modelID`);
+  } else {
+    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
+    id = modelID
+  }
+  return { port, id };
+}
+
+async function getCorePort() {
+  return ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
+}
 
 // The Flask server sends UTF-8 encoded responses by default
 // response.text() always decodes the response using UTF-8
@@ -8,14 +39,10 @@ const PREFIX = 'api';
 // response.json() doesn't say but is presumably also UTF-8
 // https://developer.mozilla.org/en-US/docs/Web/API/Body/json
 
-/**
- * Get the list of invest model names that can be passed to getSpec.
- *
- * @returns {Promise} resolves object
- */
-export async function getInvestModelNames() {
+export async function getInvestModelIDs() {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/models?language=${LANGUAGE}`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/models?language=${LANGUAGE}`, {
       method: 'get',
     })
       .then((response) => response.json())
@@ -26,12 +53,36 @@ export async function getInvestModelNames() {
 /**
  * Get the MODEL_SPEC dict from an invest model as a JSON.
  *
- * @param {string} payload - model name as given by `invest list`
+ * @param {string} modelID - model name as given by `invest list`
  * @returns {Promise} resolves object
  */
-export async function getSpec(payload) {
+export async function getSpec(modelID) {
+  const { port, id } = await getPortAndID(modelID);
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/getspec?language=${LANGUAGE}`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/getspec?language=${LANGUAGE}`, {
+      method: 'post',
+      body: JSON.stringify(id),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
+}
+
+/**
+ * Get the dynamically determined dropdown options for a given model.
+ *
+ * @param {object} payload {
+ *   model_id: string (e.g. carbon)
+ *   args: JSON string of InVEST model args keys and values
+ * }
+ * @returns {Promise} resolves object
+ */
+export async function getDynamicDropdowns(payload) {
+  const { port, id } = await getPortAndID(payload.model_id);
+  payload.model_id = id;
+  return (
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/dynamic_dropdowns`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -42,17 +93,48 @@ export async function getSpec(payload) {
 }
 
 /**
+ * Get the enabled/disabled status of arg inputs.
+ *
+ * @param {object} payload {
+ *   model_id: string (e.g. carbon)
+ *   args: JSON string of InVEST model args keys and values
+ * }
+ * @returns {Promise} resolves object
+ */
+export async function fetchArgsEnabled(payload) {
+  const { port, id } = await getPortAndID(payload.model_id);
+  payload.model_id = id;
+  return (
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/args_enabled`, {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.json())
+      .catch((error) => {
+        logger.error(error.stack);
+        // In practice this function is debounced, so there's a case (tests)
+        // where it is not called until after the flask app was killed.
+        // So instead of letting it return undefined, return the expected type.
+        return [];
+      })
+  );
+}
+
+/**
  * Send invest arguments to a model's validate function.
  *
  * @param {object} payload {
- *   model_module: string (e.g. natcap.invest.carbon)
+ *   model_id: string (e.g. carbon)
  *   args: JSON string of InVEST model args keys and values
  * }
  * @returns {Promise} resolves array
  */
 export async function fetchValidation(payload) {
+  const { port, id } = await getPortAndID(payload.model_id);
+  payload.model_id = id;
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/validate?language=${LANGUAGE}`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/validate?language=${LANGUAGE}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -74,32 +156,15 @@ export async function fetchValidation(payload) {
  * @param {string} payload - path to file
  * @returns {Promise} resolves undefined
  */
-export function fetchDatastackFromFile(payload) {
+export async function fetchDatastackFromFile(payload) {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/post_datastack_file`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/post_datastack_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
-  );
-}
-
-/**
- * Get a list of the column names of a vector file.
- *
- * @param {string} payload - path to file
- * @returns {Promise} resolves array
- */
-export function getVectorColumnNames(payload) {
-  return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/colnames`, {
-      method: 'post',
-      body: JSON.stringify({ vector_path: payload }),
-      headers: { 'Content-Type': 'application/json' },
-    })
-      .then((response) => response.json())
-      .catch((error) => logger.error(error.stack))
   );
 }
 
@@ -113,9 +178,11 @@ export function getVectorColumnNames(payload) {
  * }
  * @returns {Promise} resolves undefined
  */
-export function saveToPython(payload) {
+export async function saveToPython(payload) {
+  const { port, id } = await getPortAndID(payload.model_id);
+  payload.model_id = id;
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/save_to_python`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/save_to_python`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -134,26 +201,28 @@ export function saveToPython(payload) {
  *
  * @param  {object} payload {
  *   filepath: string
- *   moduleName: string (e.g. natcap.invest.carbon)
+ *   model_id: string (e.g. carbon)
  *   args_dict: JSON string of InVEST model args keys and values
  * }
  * @returns {Promise} resolves undefined
  */
-export function archiveDatastack(payload) {
+export async function archiveDatastack(payload) {
+  const { port, id } = await getPortAndID(payload.model_id);
+  payload.model_id = id;
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/build_datastack_archive`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/build_datastack_archive`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
-      .then(({message, error}) => {
+      .then(({ message, error }) => {
         if (error) {
           logger.error(message);
         } else {
           logger.debug(message);
         }
-        return {message, error};
+        return { message, error };
       })
       .catch((error) => logger.error(error.stack))
   );
@@ -164,27 +233,29 @@ export function archiveDatastack(payload) {
  *
  * @param  {object} payload {
  *   filepath: string
- *   moduleName: string (e.g. natcap.invest.carbon)
+ *   model_id: string (e.g. carbon)
  *   args: JSON string of InVEST model args keys and values
  *   relativePaths: boolean
  * }
  * @returns {Promise} resolves undefined
  */
-export function writeParametersToFile(payload) {
+export async function writeParametersToFile(payload) {
+  const { port, id } = await getPortAndID(payload.model_id);
+  payload.model_id = id;
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/write_parameter_set_file`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/write_parameter_set_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
-      .then(({message, error}) => {
+      .then(({ message, error }) => {
         if (error) {
           logger.error(message);
         } else {
           logger.debug(message);
         }
-        return {message, error};
+        return { message, error };
       })
       .catch((error) => logger.error(error.stack))
   );
@@ -196,8 +267,9 @@ export function writeParametersToFile(payload) {
  * @returns {Promise} resolves object
  */
 export async function getSupportedLanguages() {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/languages`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/languages`, {
       method: 'get',
     })
       .then((response) => response.json())
@@ -211,8 +283,9 @@ export async function getSupportedLanguages() {
  * @returns {Promise} resolves object
  */
 export async function getGeoMetaMakerProfile() {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/get_geometamaker_profile`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/get_geometamaker_profile`, {
       method: 'get',
     })
       .then((response) => response.json())
@@ -238,8 +311,9 @@ export async function getGeoMetaMakerProfile() {
  * @returns {Promise} resolves object
  */
 export async function setGeoMetaMakerProfile(payload) {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/set_geometamaker_profile`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/set_geometamaker_profile`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },

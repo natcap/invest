@@ -1161,8 +1161,8 @@ class HRAModelTests(unittest.TestCase):
 
     def test_model(self):
         """HRA: end-to-end test of the model, including datastack."""
-        from natcap.invest import datastack
         from natcap.invest import hra
+        from natcap.invest import datastack
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -1263,7 +1263,7 @@ class HRAModelTests(unittest.TestCase):
 
         archive_path = os.path.join(self.workspace_dir, 'datstack.tar.gz')
         datastack.build_datastack_archive(
-            args, 'natcap.invest.hra', archive_path)
+            args, 'habitat_risk_assessment', archive_path)
 
         unarchived_path = os.path.join(self.workspace_dir, 'unarchived_data')
         unarchived_args = datastack.extract_datastack_archive(

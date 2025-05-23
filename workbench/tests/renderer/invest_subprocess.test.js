@@ -14,28 +14,21 @@ import fetch from 'node-fetch';
 
 import {
   setupInvestRunHandlers,
-  setupInvestLogReaderHandler,
+  setupInvestLogReaderHandler
 } from '../../src/main/setupInvestHandlers';
 import writeInvestParameters from '../../src/main/writeInvestParameters';
 import { removeIpcMainListeners } from '../../src/main/main';
 
 import App from '../../src/renderer/app';
 import {
-  getInvestModelNames,
+  getInvestModelIDs,
   getSpec,
   fetchValidation,
+  fetchArgsEnabled,
+  getDynamicDropdowns
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 
-import { mockUISpec } from './utils';
-
-// It's quite a pain to dynamically mock a const from a module,
-// here we do it by importing as another object, then
-// we can overwrite the object we want to mock later
-// https://stackoverflow.com/questions/42977961/how-to-mock-an-exported-const-in-jest
-import * as uiConfig from '../../src/renderer/ui_config';
-
-const { UI_SPEC } = uiConfig; // save the original for unmocking in afterEach
 const MOCK_MODEL_TITLE = 'Carbon';
 
 jest.mock('node-fetch');
@@ -55,11 +48,12 @@ describe('InVEST subprocess testing', () => {
         type: 'freestyle_string',
       },
     },
+    input_field_order: [['workspace_dir', 'results_suffix']],
     model_name: 'EcoModel',
     pyname: 'natcap.invest.dot',
     userguide: 'foo.html',
   };
-  const modelName = 'carbon';
+  const modelTitle = 'Carbon';
   // nothing is written to the fake workspace in these tests,
   // and we mock validation, so this dir need not exist.
   const fakeWorkspace = 'foo_dir';
@@ -113,10 +107,13 @@ describe('InVEST subprocess testing', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    getInvestModelNames.mockResolvedValue(
-      { Carbon: { model_name: modelName } }
+    fetchArgsEnabled.mockResolvedValue({
+      workspace_dir: true, results_suffix: true,
+    });
+    getDynamicDropdowns.mockResolvedValue({});
+    getInvestModelIDs.mockResolvedValue(
+      { carbon: { model_title: modelTitle } }
     );
-    uiConfig.UI_SPEC = mockUISpec(spec, modelName);
     // mock the request to write the datastack file. Actually write it
     // because the app will clean it up when invest exits.
     writeInvestParameters.mockImplementation((payload) => {
@@ -127,7 +124,6 @@ describe('InVEST subprocess testing', () => {
 
   afterEach(async () => {
     await InvestJob.clearStore();
-    uiConfig.UI_SPEC = UI_SPEC;
   });
 
   test('exit without error - expect log display', async () => {
@@ -356,8 +352,8 @@ describe('InVEST subprocess testing', () => {
       workspace_dir: fakeWorkspace,
     };
     const mockJob = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Sequestration',
+      modelID: 'carbon',
+      modelTitle: 'Carbon Sequestration',
       argsValues: argsValues,
       status: 'success',
       logfile: logfilePath,

@@ -14,19 +14,26 @@ from osgeo import ogr
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "urban_flood_risk_mitigation",
-    "model_name": MODEL_METADATA["urban_flood_risk_mitigation"].model_title,
-    "pyname": MODEL_METADATA["urban_flood_risk_mitigation"].pyname,
-    "userguide": MODEL_METADATA["urban_flood_risk_mitigation"].userguide,
+    "model_title": gettext("Urban Flood Risk Mitigation"),
+    "userguide": "urban_flood_mitigation.html",
+    "aliases": ("ufrm",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['aoi_watersheds_path', 'rainfall_depth'],
+            ['lulc_path', 'curve_number_table_path', 'soils_hydrological_group_raster_path'],
+            ['built_infrastructure_vector_path', 'infrastructure_damage_loss_table_path']
+        ]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_watersheds_path", "lulc_path",
                          "built_infrastructure_vector_path",
@@ -34,10 +41,10 @@ MODEL_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
-        "aoi_watersheds_path": spec_utils.AOI,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
+        "aoi_watersheds_path": spec.AOI,
         "rainfall_depth": {
             "expression": "value > 0",
             "type": "number",
@@ -46,14 +53,14 @@ MODEL_SPEC = {
             "name": gettext("rainfall depth")
         },
         "lulc_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "about": gettext(
                 "Map of LULC. All values in this raster must have "
                 "corresponding entries in the Biophysical Table.")
         },
         "soils_hydrological_group_raster_path": {
-            **spec_utils.SOIL_GROUP,
+            **spec.SOIL_GROUP,
             "projected": True
         },
         "curve_number_table_path": {
@@ -86,7 +93,7 @@ MODEL_SPEC = {
                         "Code indicating the building type. These codes "
                         "must match those in the Damage Loss Table."
                     )}},
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "required": False,
             "about": gettext("Map of building footprints."),
             "name": gettext("built infrastructure")
@@ -136,7 +143,7 @@ MODEL_SPEC = {
         },
         "flood_risk_service.shp": {
             "about": "Aggregated results for each area of interest.",
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "rnf_rt_idx": {
                     "about": "Average runoff retention index.",
@@ -178,14 +185,14 @@ MODEL_SPEC = {
                     "about": (
                         "Copy of AOI vector reprojected to the same spatial "
                         "reference as the LULC."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 },
                 "structures_reprojected.shp": {
                     "about": (
                         "Copy of built infrastructure vector reprojected to "
                         "the same spatial reference as the LULC."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 },
                 "aligned_lulc.tif": {
@@ -206,9 +213,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 
 def execute(args):
@@ -299,9 +306,9 @@ def execute(args):
         task_name='align raster stack')
 
     # Load CN table
-    cn_df = validation.get_validated_dataframe(
-        args['curve_number_table_path'],
-        **MODEL_SPEC['args']['curve_number_table_path'])
+    cn_df = MODEL_SPEC.get_input(
+        'curve_number_table_path').get_validated_dataframe(
+        args['curve_number_table_path'])
 
     # make cn_table into a 2d array where first dim is lucode, second is
     # 0..3 to correspond to CN_A..CN_D
@@ -628,10 +635,9 @@ def _calculate_damage_to_infrastructure_in_aoi(
     infrastructure_vector = gdal.OpenEx(structures_vector_path, gdal.OF_VECTOR)
     infrastructure_layer = infrastructure_vector.GetLayer()
 
-    damage_type_map = validation.get_validated_dataframe(
-        structures_damage_table,
-        **MODEL_SPEC['args']['infrastructure_damage_loss_table_path']
-    )['damage'].to_dict()
+    damage_type_map = MODEL_SPEC.get_input(
+        'infrastructure_damage_loss_table_path').get_validated_dataframe(
+        structures_damage_table)['damage'].to_dict()
 
     infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()
     type_index = -1
@@ -921,8 +927,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+    validation_warnings = validation.validate(args, MODEL_SPEC)
 
     sufficient_keys = validation.get_sufficient_keys(args)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
@@ -930,9 +935,9 @@ def validate(args, limit_to=None):
     if ("curve_number_table_path" not in invalid_keys and
             "curve_number_table_path" in sufficient_keys):
         # Load CN table. Resulting DF has index and CN_X columns only.
-        cn_df = validation.get_validated_dataframe(
-            args['curve_number_table_path'],
-            **MODEL_SPEC['args']['curve_number_table_path'])
+        cn_df = MODEL_SPEC.get_input(
+            'curve_number_table_path').get_validated_dataframe(
+            args['curve_number_table_path'])
         # Check for NaN values.
         nan_mask = cn_df.isna()
         if nan_mask.any(axis=None):

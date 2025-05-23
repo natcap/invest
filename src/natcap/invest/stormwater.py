@@ -12,10 +12,9 @@ from osgeo import ogr
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -26,31 +25,39 @@ UINT8_NODATA = 255
 UINT16_NODATA = 65535
 NONINTEGER_SOILS_RASTER_MESSAGE = 'Soil group raster data type must be integer'
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "stormwater",
-    "model_name": MODEL_METADATA["stormwater"].model_title,
-    "pyname": MODEL_METADATA["stormwater"].pyname,
-    "userguide": MODEL_METADATA["stormwater"].userguide,
+    "model_title": gettext("Urban Stormwater Retention"),
+    "userguide": "stormwater.html",
+    "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['lulc_path', 'soil_group_path', 'precipitation_path', 'biophysical_table'],
+            ['adjust_retention_ratios', 'retention_radius', 'road_centerlines_path'],
+            ['aggregate_areas_path', 'replacement_cost'],
+        ]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path", "soil_group_path", "precipitation_path",
                          "road_centerlines_path", "aggregate_areas_path"],
         "different_projections_ok": True
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "lulc_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True
         },
-        "soil_group_path": spec_utils.SOIL_GROUP,
-        "precipitation_path": spec_utils.PRECIP,
+        "soil_group_path": spec.SOIL_GROUP,
+        "precipitation_path": spec.PRECIP,
         "biophysical_table": {
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "emc_[POLLUTANT]": {
                     "type": "number",
                     "units": u.milligram/u.liter,
@@ -115,6 +122,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.other,
             "required": "adjust_retention_ratios",
+            "allowed": "adjust_retention_ratios",
             "about": gettext(
                 "Radius around each pixel to adjust retention ratios. "
                 "Measured in raster coordinate system units. For the "
@@ -128,11 +136,12 @@ MODEL_SPEC = {
             "geometries": {"LINESTRING", "MULTILINESTRING"},
             "fields": {},
             "required": "adjust_retention_ratios",
+            "allowed": "adjust_retention_ratios",
             "about": gettext("Map of road centerlines"),
             "name": gettext("Road centerlines")
         },
         "aggregate_areas_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "required": False,
             "about": gettext(
                 "Areas over which to aggregate results (typically watersheds "
@@ -215,7 +224,7 @@ MODEL_SPEC = {
                 "Map of aggregate data. This is identical to the aggregate "
                 "areas input vector, but each polygon is given additional "
                 "fields with the aggregate data."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "mean_retention_ratio": {
                     "type": "ratio",
@@ -297,7 +306,7 @@ MODEL_SPEC = {
                         "Copy of the road centerlines vector input, "
                         "reprojected to the LULC raster projection."),
                     "fields": {},
-                    "geometries": spec_utils.LINES
+                    "geometries": spec.LINES
 
                 },
                 "rasterized_centerlines.tif": {
@@ -369,9 +378,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 INTERMEDIATE_OUTPUTS = {
     'lulc_aligned_path': 'lulc_aligned.tif',
@@ -487,9 +496,9 @@ def execute(args):
     # Build a lookup dictionary mapping each LULC code to its row
     # sort by the LULC codes upfront because we use the sorted list in multiple
     # places. it's more efficient to do this once.
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table'], **MODEL_SPEC['args']['biophysical_table']
-    ).sort_index()
+    biophysical_df = MODEL_SPEC.get_input(
+        'biophysical_table').get_validated_dataframe(
+        args['biophysical_table']).sort_index()
     sorted_lucodes = biophysical_df.index.to_list()
 
     # convert the nested dictionary in to a 2D array where rows are LULC codes
@@ -1160,7 +1169,7 @@ def raster_average(raster_path, radius, kernel_path, out_path):
         target_nodata=FLOAT_NODATA)
 
 
-@ validation.invest_validator
+@validation.invest_validator
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
 
@@ -1178,8 +1187,7 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC['args'],
-                               MODEL_SPEC['args_with_spatial_overlap'])
+    validation_warnings = validation.validate(args, MODEL_SPEC)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     if 'soil_group_path' not in invalid_keys:
         # check that soil group raster has integer type

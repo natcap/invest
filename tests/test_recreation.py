@@ -156,7 +156,7 @@ class TestBufferedNumpyDiskMap(unittest.TestCase):
     def test_buffered_multiprocess_operation(self):
         """Recreation test buffered file manager parallel flushes."""
         from natcap.invest.recreation import buffered_numpy_disk_map
-        
+
         array1 = numpy.array([1, 2, 3, 4])
         array2 = numpy.array([-4, -1, -2, 4])
         arraysize = array1.size * buffered_numpy_disk_map.BufferedNumpyDiskMap._ARRAY_TUPLE_TYPE.itemsize
@@ -740,9 +740,9 @@ class TestRecClientServer(unittest.TestCase):
         out_regression_vector_path = os.path.join(
             args['workspace_dir'], f'regression_data_{suffix}.gpkg')
 
-        predictor_df = validation.get_validated_dataframe(
-            os.path.join(SAMPLE_DATA, 'predictors_all.csv'),
-            **recmodel_client.MODEL_SPEC['args']['predictor_table_path'])
+        predictor_df = recmodel_client.MODEL_SPEC.get_input(
+            'predictor_table_path').get_validated_dataframe(
+            os.path.join(SAMPLE_DATA, 'predictors_all.csv'))
         field_list = list(predictor_df.index) + ['pr_TUD', 'pr_PUD', 'avg_pr_UD']
 
         # For convenience, assert the sums of the columns instead of all

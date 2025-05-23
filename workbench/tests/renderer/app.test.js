@@ -8,10 +8,11 @@ import '@testing-library/jest-dom';
 
 import App from '../../src/renderer/app';
 import {
-  getInvestModelNames,
+  getInvestModelIDs,
   getSpec,
   fetchValidation,
   fetchDatastackFromFile,
+  fetchArgsEnabled,
   getSupportedLanguages,
   getGeoMetaMakerProfile,
 } from '../../src/renderer/server_requests';
@@ -22,20 +23,14 @@ import {
 } from '../../src/main/settingsStore';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import { removeIpcMainListeners } from '../../src/main/main';
-import { mockUISpec } from './utils';
-// It's quite a pain to dynamically mock a const from a module,
-// here we do it by importing as another object, then
-// we can overwrite the object we want to mock later
-// https://stackoverflow.com/questions/42977961/how-to-mock-an-exported-const-in-jest
-import * as uiConfig from '../../src/renderer/ui_config';
 
 jest.mock('../../src/renderer/server_requests');
 
 const MOCK_MODEL_TITLE = 'Carbon';
-const MOCK_MODEL_RUN_NAME = 'carbon';
+const MOCK_MODEL_ID = 'carbon';
 const MOCK_INVEST_LIST = {
-  [MOCK_MODEL_TITLE]: {
-    model_name: MOCK_MODEL_RUN_NAME,
+  [MOCK_MODEL_ID]: {
+    model_title: MOCK_MODEL_TITLE,
   },
 };
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
@@ -56,21 +51,17 @@ const SAMPLE_SPEC = {
       type: 'csv',
     },
   },
+  input_field_order: [['workspace_dir', 'carbon_pools_path']],
 };
-
-// Because we mock UI_SPEC without using jest's API
-// we also need to reset it without jest's API.
-const { UI_SPEC } = uiConfig;
-afterEach(() => {
-  uiConfig.UI_SPEC = UI_SPEC;
-});
 
 describe('Various ways to open and close InVEST models', () => {
   beforeEach(async () => {
-    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
+    getInvestModelIDs.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
-    uiConfig.UI_SPEC = mockUISpec(SAMPLE_SPEC, MOCK_MODEL_RUN_NAME);
+    fetchArgsEnabled.mockResolvedValue({
+      workspace_dir: true, carbon_pools_path: true
+    });
   });
 
   afterEach(async () => {
@@ -102,10 +93,11 @@ describe('Various ways to open and close InVEST models', () => {
       workspace_dir: workspacePath,
     };
     const mockJob = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Sequestration',
+      modelID: 'carbon',
+      modelTitle: 'Carbon Sequestration',
       argsValues: argsValues,
       status: 'success',
+      type: 'core',
     });
     await InvestJob.saveJob(mockJob);
 
@@ -138,11 +130,15 @@ describe('Various ways to open and close InVEST models', () => {
       args: {
         carbon_pools_path: 'Carbon/carbon_pools_willamette.csv',
       },
-      module_name: 'natcap.invest.carbon',
-      model_run_name: 'carbon',
-      model_human_name: 'Carbon',
+      model_id: 'carbon',
+      model_title: 'Carbon',
     };
-    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        return Promise.resolve();
+      }
+      return mockDialogData;
+    });
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
     const { findByText, findByLabelText, findByRole } = render(
@@ -168,7 +164,12 @@ describe('Various ways to open and close InVEST models', () => {
       canceled: true,
       filePaths: [],
     };
-    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === ipcMainChannels.GET_SETTING) {
+        return Promise.resolve();
+      }
+      return mockDialogData;
+    });
 
     const { findByRole } = render(
       <App />
@@ -269,7 +270,7 @@ describe('Various ways to open and close InVEST models', () => {
 
 describe('Display recently executed InVEST jobs on Home tab', () => {
   beforeEach(() => {
-    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
+    getInvestModelIDs.mockResolvedValue(MOCK_INVEST_LIST);
   });
 
   afterEach(async () => {
@@ -278,8 +279,8 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
 
   test('Recent Jobs: each has a button', async () => {
     const job1 = new InvestJob({
-      modelRunName: MOCK_MODEL_RUN_NAME,
-      modelHumanName: 'Carbon Sequestration',
+      modelID: MOCK_MODEL_ID,
+      modelTitle: 'Carbon Sequestration',
       argsValues: {
         workspace_dir: 'work1',
       },
@@ -287,13 +288,14 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
     });
     await InvestJob.saveJob(job1);
     const job2 = new InvestJob({
-      modelRunName: MOCK_MODEL_RUN_NAME,
-      modelHumanName: 'Sediment Ratio Delivery',
+      modelID: MOCK_MODEL_ID,
+      modelTitle: 'Sediment Ratio Delivery',
       argsValues: {
         workspace_dir: 'work2',
         results_suffix: 'suffix',
       },
       status: 'error',
+      type: 'core',
     });
     const recentJobs = await InvestJob.saveJob(job2);
     const initialJobs = [job1, job2];
@@ -303,7 +305,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
     await waitFor(() => {
       initialJobs.forEach((job, idx) => {
         const recent = recentJobs[idx];
-        const card = getByText(job.modelHumanName)
+        const card = getByText(job.modelTitle)
           .closest('button');
         expect(within(card).getByText(job.argsValues.workspace_dir))
           .toBeInTheDocument();
@@ -329,41 +331,44 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
 
   test('Recent Jobs: a job with incomplete data is skipped', async () => {
     const job1 = new InvestJob({
-      modelRunName: MOCK_MODEL_RUN_NAME,
-      modelHumanName: 'invest A',
+      modelID: MOCK_MODEL_ID,
+      modelTitle: 'invest A',
       argsValues: {
         workspace_dir: 'dir',
       },
       status: 'success',
+      type: 'core',
     });
     const job2 = new InvestJob({
       // argsValues is missing
-      modelRunName: MOCK_MODEL_RUN_NAME,
-      modelHumanName: 'invest B',
+      modelID: MOCK_MODEL_ID,
+      modelTitle: 'invest B',
       status: 'success',
+      type: 'core',
     });
     await InvestJob.saveJob(job1);
     await InvestJob.saveJob(job2);
 
     const { findByText, queryByText } = render(<App />);
 
-    expect(await findByText(job1.modelHumanName)).toBeInTheDocument();
-    expect(queryByText(job2.modelHumanName)).toBeNull();
+    expect(await findByText(job1.modelTitle)).toBeInTheDocument();
+    expect(queryByText(job2.modelTitle)).toBeNull();
   });
 
   test('Recent Jobs: a job from a deprecated model is not displayed', async () => {
     const job1 = new InvestJob({
-      modelRunName: 'does not exist',
-      modelHumanName: 'invest A',
+      modelID: 'does not exist',
+      modelTitle: 'invest A',
       argsValues: {
         workspace_dir: 'dir',
       },
       status: 'success',
+      type: 'core',
     });
     await InvestJob.saveJob(job1);
     const { findByText, queryByText } = render(<App />);
 
-    expect(queryByText(job1.modelHumanName)).toBeNull();
+    expect(queryByText(job1.modelTitle)).toBeNull();
     expect(await findByText(/Set up a model from a sample datastack file/))
       .toBeInTheDocument();
   });
@@ -381,12 +386,14 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
     // we need this mock because the settings dialog is opened
     getGeoMetaMakerProfile.mockResolvedValue({});
     const job1 = new InvestJob({
-      modelRunName: MOCK_MODEL_RUN_NAME,
-      modelHumanName: 'Carbon Sequestration',
+      modelID: MOCK_MODEL_ID,
+      modelTitle: 'Carbon Sequestration',
       argsValues: {
         workspace_dir: 'work1',
       },
       status: 'success',
+      // leave out the 'type' attribute to make sure it defaults to core
+      // for backwards compatibility
     });
     const recentJobs = await InvestJob.saveJob(job1);
 
@@ -420,7 +427,7 @@ describe('InVEST global settings: dialog interactions', () => {
   });
 
   beforeEach(async () => {
-    getInvestModelNames.mockResolvedValue({});
+    getInvestModelIDs.mockResolvedValue({});
     getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
     getGeoMetaMakerProfile.mockResolvedValue({});
   });

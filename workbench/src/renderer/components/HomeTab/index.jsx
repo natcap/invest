@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import Badge from 'react-bootstrap/Badge';
 import ListGroup from 'react-bootstrap/ListGroup';
 import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
@@ -20,53 +21,62 @@ const { logger } = window.Workbench;
 export default class HomeTab extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {
-      sortedModels: []
-    };
     this.handleClick = this.handleClick.bind(this);
-  }
-
-  componentDidMount() {
-    // sort the model list alphabetically, by the model title,
-    // and with special placement of CBC Preprocessor before CBC model.
-    const sortedModels = Object.keys(this.props.investList).sort();
-    const cbcpElement = 'Coastal Blue Carbon Preprocessor';
-    const cbcIdx = sortedModels.indexOf('Coastal Blue Carbon');
-    const cbcpIdx = sortedModels.indexOf(cbcpElement);
-    if (cbcIdx > -1 && cbcpIdx > -1) {
-      sortedModels.splice(cbcpIdx, 1); // remove it
-      sortedModels.splice(cbcIdx, 0, cbcpElement); // insert it
-    }
-    this.setState({
-      sortedModels: sortedModels
-    });
   }
 
   handleClick(value) {
     const { investList, openInvestModel } = this.props;
-    const modelRunName = investList[value].model_name;
     const job = new InvestJob({
-      modelRunName: modelRunName,
-      modelHumanName: value
+      modelID: value,
+      modelTitle: investList[value].modelTitle,
+      type: investList[value].type,
     });
     openInvestModel(job);
   }
 
   render() {
-    const { recentJobs } = this.props;
-    const { sortedModels } = this.state;
+    const { recentJobs, investList, openInvestModel } = this.props;
+    let sortedModelIds = {};
+    if (investList) {
+      // sort the model list alphabetically, by the model title,
+      // and with special placement of CBC Preprocessor before CBC model.
+      sortedModelIds = Object.keys(investList).sort(
+        (a, b) => {
+          if (investList[a].modelTitle > investList[b].modelTitle) {
+            return 1;
+          }
+          if (investList[b].modelTitle > investList[a].modelTitle) {
+            return -1;
+          }
+          return 0;
+        }
+      );
+      const cbcpElement = 'coastal_blue_carbon_preprocessor';
+      const cbcIdx = sortedModelIds.indexOf('coastal_blue_carbon');
+      const cbcpIdx = sortedModelIds.indexOf(cbcpElement);
+      if (cbcIdx > -1 && cbcpIdx > -1) {
+        sortedModelIds.splice(cbcpIdx, 1); // remove it
+        sortedModelIds.splice(cbcIdx, 0, cbcpElement); // insert it
+      }
+    }
+
     // A button in a table row for each model
     const investButtons = [];
-    sortedModels.forEach((model) => {
+    sortedModelIds.forEach((modelID) => {
+      const modelTitle = investList[modelID].modelTitle;
+      let badge;
+      if (investList[modelID].type === 'plugin') {
+        badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
+      }
       investButtons.push(
         <ListGroup.Item
-          key={model}
-          className="invest-button"
-          title={model}
+          key={modelTitle}
+          name={modelTitle}
           action
-          onClick={() => this.handleClick(model)}
+          onClick={() => this.handleClick(modelID)}
         >
-          {model}
+          { badge }
+          <span className="invest-button">{modelTitle}</span>
         </ListGroup.Item>
       );
     });
@@ -80,8 +90,9 @@ export default class HomeTab extends React.Component {
         </Col>
         <Col className="recent-job-card-col">
           <RecentInvestJobs
-            openInvestModel={this.props.openInvestModel}
+            openInvestModel={openInvestModel}
             recentJobs={recentJobs}
+            investList={investList}
           />
         </Col>
       </Row>
@@ -92,14 +103,15 @@ export default class HomeTab extends React.Component {
 HomeTab.propTypes = {
   investList: PropTypes.objectOf(
     PropTypes.shape({
-      model_name: PropTypes.string,
-    }),
+      modelTitle: PropTypes.string,
+      type: PropTypes.string,
+    })
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,
   recentJobs: PropTypes.arrayOf(
     PropTypes.shape({
-      modelRunName: PropTypes.string.isRequired,
-      modelHumanName: PropTypes.string.isRequired,
+      modelID: PropTypes.string.isRequired,
+      modelTitle: PropTypes.string.isRequired,
       argsValues: PropTypes.object,
       logfile: PropTypes.string,
       status: PropTypes.string,
@@ -111,8 +123,8 @@ HomeTab.propTypes = {
  * Renders a button for each recent invest job.
  */
 function RecentInvestJobs(props) {
-  const { recentJobs, openInvestModel } = props;
-  const { t, i18n } = useTranslation();
+  const { recentJobs, openInvestModel, investList } = props;
+  const { t } = useTranslation();
 
   const handleClick = (jobMetadata) => {
     try {
@@ -124,7 +136,11 @@ function RecentInvestJobs(props) {
 
   const recentButtons = [];
   recentJobs.forEach((job) => {
-    if (job && job.argsValues && job.modelHumanName) {
+    if (job && job.argsValues && job.modelTitle) {
+      let badge;
+      if (job.type === 'plugin') {
+        badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
+      }
       recentButtons.push(
         <Card
           className="text-left recent-job-card"
@@ -134,7 +150,8 @@ function RecentInvestJobs(props) {
         >
           <Card.Body>
             <Card.Header>
-              <span className="header-title">{job.modelHumanName}</span>
+              {badge}
+              <span className="header-title">{job.modelTitle}</span>
             </Card.Header>
             <Card.Title>
               <span className="text-heading">{'Workspace: '}</span>
@@ -178,16 +195,18 @@ function RecentInvestJobs(props) {
               )}
           </Col>
           <Col className="open-button-col">
-            <OpenButton
-              className="mr-2"
-              openInvestModel={openInvestModel}
-            />
+            {investList
+              ? (
+                <OpenButton
+                  className="mr-2"
+                  openInvestModel={openInvestModel}
+                  investList={investList}
+                />
+              ) : ''}
           </Col>
         </Row>
       </Container>
-      <React.Fragment>
-        {recentButtons}
-      </React.Fragment>
+      {recentButtons}
     </>
   );
 }
@@ -195,8 +214,8 @@ function RecentInvestJobs(props) {
 RecentInvestJobs.propTypes = {
   recentJobs: PropTypes.arrayOf(
     PropTypes.shape({
-      modelRunName: PropTypes.string.isRequired,
-      modelHumanName: PropTypes.string.isRequired,
+      modelID: PropTypes.string.isRequired,
+      modelTitle: PropTypes.string.isRequired,
       argsValues: PropTypes.object,
       logfile: PropTypes.string,
       status: PropTypes.string,

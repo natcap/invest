@@ -371,7 +371,7 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            'could not be interpreted as ratios', str(context.exception))
+            'could not be interpreted as RatioInput', str(context.exception))
 
     def test_lucode_not_a_number(self):
         """SDR test expected exception for invalid data in lucode column."""
@@ -392,7 +392,7 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            'could not be interpreted as integers', str(context.exception))
+            'could not be interpreted as IntegerInput', str(context.exception))
 
     def test_missing_lulc_value(self):
         """SDR test for ValueError when LULC value not found in table."""

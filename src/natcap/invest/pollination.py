@@ -15,25 +15,31 @@ from osgeo import gdal
 from osgeo import ogr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "pollination",
-    "model_name": MODEL_METADATA["pollination"].model_title,
-    "pyname": MODEL_METADATA["pollination"].pyname,
-    "userguide": MODEL_METADATA["pollination"].userguide,
+    "model_title": gettext("Crop Pollination"),
+    "userguide": "croppollination.html",
+    "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['landcover_raster_path', 'landcover_biophysical_table_path'],
+            ['guild_table_path', 'farm_vector_path']
+        ]
+    },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "landcover_raster_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "about": gettext(
                 "Map of LULC codes. All values in this raster must have "
@@ -92,7 +98,7 @@ MODEL_SPEC = {
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "nesting_[SUBSTRATE]_availability_index": {
                     "type": "ratio",
                     "about": gettext(
@@ -167,7 +173,7 @@ MODEL_SPEC = {
                         "The proportion of pollination required on the farm "
                         "that is provided by managed pollinators.")}
             },
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "required": False,
             "about": gettext(
                 "Map of farm sites to be analyzed, with pollination data "
@@ -180,7 +186,7 @@ MODEL_SPEC = {
             "created_if": "farm_vector_path",
             "about": gettext(
                 "A copy of the input farm polygon vector file with additional fields"),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "p_abund": {
                     "about": (
@@ -312,13 +318,13 @@ MODEL_SPEC = {
                 "reprojected_farm_vector.shp": {
                     "about": "Farm vector reprojected to the LULC projection",
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS
+                    "geometries": spec.POLYGONS
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 _INDEX_NODATA = -1
 
@@ -1214,8 +1220,8 @@ def _parse_scenario_variables(args):
     else:
         farm_vector_path = None
 
-    guild_df = validation.get_validated_dataframe(
-        guild_table_path, **MODEL_SPEC['args']['guild_table_path'])
+    guild_df = MODEL_SPEC.get_input(
+        'guild_table_path').get_validated_dataframe(guild_table_path)
 
     LOGGER.info('Checking to make sure guild table has all expected headers')
     for header in _EXPECTED_GUILD_HEADERS:
@@ -1226,9 +1232,9 @@ def _parse_scenario_variables(args):
                 f"'{header}' but was unable to find one. Here are all the "
                 f"headers from {guild_table_path}: {', '.join(guild_df.columns)}")
 
-    landcover_biophysical_df = validation.get_validated_dataframe(
-        landcover_biophysical_table_path,
-        **MODEL_SPEC['args']['landcover_biophysical_table_path'])
+    landcover_biophysical_df = MODEL_SPEC.get_input(
+        'landcover_biophysical_table_path').get_validated_dataframe(
+        landcover_biophysical_table_path)
     biophysical_table_headers = landcover_biophysical_df.columns
     for header in _EXPECTED_BIOPHYSICAL_HEADERS:
         matches = re.findall(header, " ".join(biophysical_table_headers))
@@ -1492,4 +1498,4 @@ def validate(args, limit_to=None):
     # Deliberately not validating the interrelationship of the columns between
     # the biophysical table and the guilds table as the model itself already
     # does extensive checking for this.
-    return validation.validate(args, MODEL_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC)

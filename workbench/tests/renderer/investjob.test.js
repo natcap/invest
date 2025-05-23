@@ -11,21 +11,21 @@ describe('InvestJob', () => {
   });
 
   test('constructor errors on missing required properties', async () => {
-    const errorMessage = 'Cannot create instance of InvestJob without modelRunName and modelHumanName properties'
+    const errorMessage = 'Cannot create instance of InvestJob without modelID and modelTitle properties';
     // Arrow func allows error to be caught and asserted on
     // https://jestjs.io/docs/expect#tothrowerror
     expect(() => new InvestJob({}))
       .toThrow(errorMessage);
-    expect(() => new InvestJob({ modelRunName: 'carbon' }))
+    expect(() => new InvestJob({ modelID: 'carbon' }))
       .toThrow(errorMessage);
-    expect(() => new InvestJob({ modelHumanName: 'Carbon' }))
+    expect(() => new InvestJob({ modelTitle: 'Carbon' }))
       .toThrow(errorMessage);
   });
 
   test('save method works with no pre-existing database', async () => {
     const job = new InvestJob({
-      modelRunName: 'foo',
-      modelHumanName: 'Foo',
+      modelID: 'foo',
+      modelTitle: 'Foo',
       argsValues: baseArgsValues,
     });
     const recentJobs = await InvestJob.saveJob(job);
@@ -34,16 +34,16 @@ describe('InvestJob', () => {
 
   test('save method returns job store in sorted order', async () => {
     const job1 = new InvestJob({
-      modelRunName: 'foo',
-      modelHumanName: 'Foo',
+      modelID: 'foo',
+      modelTitle: 'Foo',
       argsValues: baseArgsValues,
     });
     let recentJobs = await InvestJob.saveJob(job1);
     expect(recentJobs[0]).toBe(job1);
 
     const job2 = new InvestJob({
-      modelRunName: 'foo2',
-      modelHumanName: 'Foo2',
+      modelID: 'foo2',
+      modelTitle: 'Foo2',
       argsValues: baseArgsValues,
     });
     recentJobs = await InvestJob.saveJob(job2);
@@ -57,9 +57,9 @@ describe('InvestJob', () => {
 
   test('save on the same job adds new entry', async () => {
     const job1 = new InvestJob({
-      modelRunName: 'foo',
-      modelHumanName: 'Foo',
-      argsValues: baseArgsValues
+      modelID: 'foo',
+      modelTitle: 'Foo',
+      argsValues: baseArgsValues,
     });
     let recentJobs = await InvestJob.saveJob(job1);
     expect(recentJobs).toHaveLength(1);
@@ -74,9 +74,9 @@ describe('InvestJob', () => {
       i += 1;
       saves.push(
         InvestJob.saveJob(new InvestJob({
-          modelRunName: `model${i}`,
-          modelHumanName: 'Foo',
-          argsValues: { workspace_dir: 'foo' }
+          modelID: `model${i}`,
+          modelTitle: 'Foo',
+          argsValues: { workspace_dir: 'foo' },
         }))
       );
     }
@@ -84,8 +84,8 @@ describe('InvestJob', () => {
     let jobsArray = await InvestJob.getJobStore();
     expect(jobsArray).toHaveLength(InvestJob.max_cached_jobs);
     jobsArray = await InvestJob.saveJob(new InvestJob({
-      modelRunName: 'a new model',
-      modelHumanName: 'Foo',
+      modelID: 'a new model',
+      modelTitle: 'Foo',
       argsValues: { workspace_dir: 'foo' },
     }));
     expect(jobsArray).toHaveLength(InvestJob.max_cached_jobs);
@@ -95,8 +95,8 @@ describe('InvestJob', () => {
     let recentJobs = await InvestJob.getJobStore();
     expect(recentJobs).toHaveLength(0);
     const job1 = new InvestJob({
-      modelRunName: 'foo',
-      modelHumanName: 'Foo',
+      modelID: 'foo',
+      modelTitle: 'Foo',
       argsValues: baseArgsValues,
     });
     await InvestJob.saveJob(job1);
@@ -106,8 +106,8 @@ describe('InvestJob', () => {
 
   test('clearStore clears the store', async () => {
     const job1 = new InvestJob({
-      modelRunName: 'foo',
-      modelHumanName: 'Foo',
+      modelID: 'foo',
+      modelTitle: 'Foo',
       argsValues: baseArgsValues,
     });
     let recentJobs = await InvestJob.saveJob(job1);

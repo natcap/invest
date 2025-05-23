@@ -11,11 +11,10 @@ const ipcRendererChannels = [
   /invest-stdout-*/,
   /invest-exit-*/,
   /download-status/,
+  /plugin-install-status/,
 ];
 
 // args sent via `additionalArguments` to `webPreferences` for `BroswerWindow`
-const portArg = process.argv.filter((arg) => arg.startsWith('--port'))[0];
-const PORT = portArg ? portArg.split('=')[1] : '';
 const userPaths = ipcRenderer.sendSync(ipcMainChannels.GET_ELECTRON_PATHS);
 const isDevMode = process.argv.includes('--devmode');
 
@@ -31,10 +30,10 @@ const electronLogPath = (userPaths)
   : '';
 
 export default {
-  PORT: PORT, // where the flask app is running
   ELECTRON_LOG_PATH: electronLogPath,
   USERGUIDE_PATH: userguidePath,
   LANGUAGE: ipcRenderer.sendSync(ipcMainChannels.GET_LANGUAGE),
+  OS: process.platform,
   logger: {
     debug: (message) => ipcRenderer.send(ipcMainChannels.LOGGER, 'debug', message),
     info: (message) => ipcRenderer.send(ipcMainChannels.LOGGER, 'info', message),
@@ -56,7 +55,7 @@ export default {
       },
       sendSync: (channel, ...args) => {
         if (Object.values(ipcMainChannels).includes(channel)) {
-          ipcRenderer.sendSync(channel, ...args);
+          return ipcRenderer.sendSync(channel, ...args);
         }
       },
       on: (channel, func) => {

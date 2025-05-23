@@ -323,6 +323,11 @@ exceed 100% of window.*/
 }
 
 /* InVEST Model Tab */
+.invest-tab-loading {
+  font-size: 2rem;
+  text-align: center;
+  margin-top: 2rem;
+}
 
 .invest-main-col {
    /* main col can grow & shrink, sidebar cannot. */
@@ -669,6 +674,24 @@ input[type=text]::placeholder {
     background-position: left 0.125rem top 0.125rem;
     background-size: 1rem 1rem;
   }
+}
+
+/* Manage Plugins modal */
+.plugin-modal {
+  width: 34rem;
+}
+
+.plugin-spinner {
+  margin-right: 0.5rem;
+  margin-bottom: 0.1rem;
+}
+
+.plugin-error {
+  font-family: monospace;
+  margin: 1rem;
+  overflow-wrap: break-word;
+  color: #f13232;
+  font-weight: bold;
 }
 
 code {

@@ -12,9 +12,8 @@ import taskgraph
 
 from . import validation
 from . import utils
-from . import spec_utils
+from . import spec
 from .unit_registry import u
-from .model_metadata import MODEL_METADATA
 from . import gettext
 
 LOGGER = logging.getLogger(__name__)
@@ -39,20 +38,29 @@ CARBON_OUTPUTS = {
     ]
 }
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "carbon",
-    "model_name": MODEL_METADATA["carbon"].model_title,
-    "pyname": MODEL_METADATA["carbon"].pyname,
-    "userguide": MODEL_METADATA["carbon"].userguide,
+    "model_title": gettext("Carbon Storage and Sequestration"),
+    "userguide": "carbonstorage.html",
+    "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['lulc_bas_path', 'carbon_pools_path'],
+            ['calc_sequestration', 'lulc_alt_path'],
+            ['do_valuation', 'lulc_bas_year', 'lulc_alt_year', 'price_per_metric_ton_of_c', 'discount_rate', 'rate_change'],
+        ],
+        "forum_tag": 'carbon'
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_bas_path", "lulc_alt_path"],
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "lulc_bas_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "projection_units": u.meter,
             "about": gettext(
@@ -71,10 +79,11 @@ MODEL_SPEC = {
             "name": gettext("calculate sequestration")
         },
         "lulc_alt_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "projection_units": u.meter,
             "required": "calc_sequestration",
+            "allowed": "calc_sequestration",
             "about": gettext(
                 "A map of LULC for the alternate scenario, which must occur "
                 "after the baseline scenario. All values in this raster must "
@@ -86,7 +95,7 @@ MODEL_SPEC = {
         "carbon_pools_path": {
             "type": "csv",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
@@ -115,6 +124,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.year_AD,
             "required": "do_valuation",
+            "allowed": "do_valuation",
             "about": gettext(
                 "The calendar year of the baseline scenario depicted in the "
                 "baseline LULC map. Must be < alternate LULC year. Required "
@@ -126,6 +136,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.year_AD,
             "required": "do_valuation",
+            "allowed": "do_valuation",
             "about": gettext(
                 "The calendar year of the alternate scenario depicted in the "
                 "alternate LULC map. Must be > baseline LULC year. Required "
@@ -135,6 +146,7 @@ MODEL_SPEC = {
         "do_valuation": {
             "type": "boolean",
             "required": False,
+            "allowed": "calc_sequestration",
             "about": gettext(
                 "Calculate net present value for the alternate scenario "
                 "and report it in the final HTML document."),
@@ -144,6 +156,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.currency/u.metric_ton,
             "required": "do_valuation",
+            "allowed": "do_valuation",
             "about": gettext(
                 "The present value of carbon. "
                 "Required if Run Valuation model is selected."),
@@ -152,6 +165,7 @@ MODEL_SPEC = {
         "discount_rate": {
             "type": "percent",
             "required": "do_valuation",
+            "allowed": "do_valuation",
             "about": gettext(
                 "The annual market discount rate in the price of carbon, "
                 "which reflects society's preference for immediate benefits "
@@ -163,6 +177,7 @@ MODEL_SPEC = {
         "rate_change": {
             "type": "percent",
             "required": "do_valuation",
+            "allowed": "do_valuation",
             "about": gettext(
                 "The relative annual change of the price of carbon. "
                 "Required if Run Valuation model is selected."),
@@ -210,9 +225,9 @@ MODEL_SPEC = {
                 **CARBON_OUTPUTS
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 _OUTPUT_BASE_FILES = {
     'c_storage_bas': 'c_storage_bas.tif',
@@ -305,8 +320,8 @@ def execute(args):
             "Baseline LULC Year is earlier than the Alternate LULC Year."
         )
 
-    carbon_pool_df = validation.get_validated_dataframe(
-        args['carbon_pools_path'], **MODEL_SPEC['args']['carbon_pools_path'])
+    carbon_pool_df = MODEL_SPEC.get_input(
+        'carbon_pools_path').get_validated_dataframe(args['carbon_pools_path'])
 
     try:
         n_workers = int(args['n_workers'])
@@ -677,5 +692,4 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC)
