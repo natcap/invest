@@ -22,5 +22,6 @@ build:
       - pip install --upgrade-strategy=only-if-needed -r requirements.txt
       - pip install --upgrade-strategy=only-if-needed -r requirements-dev.txt
       - pip install --upgrade-strategy=only-if-needed -r requirements-docs.txt
+      - g++ --version
     post_install:
       - make install
