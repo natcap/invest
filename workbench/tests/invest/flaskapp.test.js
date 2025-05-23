@@ -239,6 +239,7 @@ describe('Test building model UIs and forum links', () => {
         modelID={modelID}
         argsSpec={argsSpec.args}
         userguide={argsSpec.userguide}
+        isCoreModel={true}
         inputFieldOrder={argsSpec.input_field_order}
         argsInitValues={undefined}
         investExecute={() => {}}
@@ -258,6 +259,7 @@ describe('Test building model UIs and forum links', () => {
     const { findByRole } = render(
       <ResourcesLinks
         modelID={modelID}
+        isCoreModel={true}
         docs={argsSpec.userguide}
       />
     );

@@ -40,7 +40,10 @@ function renderInvestTab(job = DEFAULT_JOB) {
       tabID={tabID}
       saveJob={() => {}}
       updateJobProperties={() => {}}
-      investList={{ foo: { modelTitle: 'Foo Model' } }}
+      investList={{
+        carbon: { modelTitle: 'Carbon Model', type: 'core' },
+        foo: { modelTitle: 'Foo Model', type: 'plugin' },
+      }}
     />
   );
   return utils;
@@ -88,6 +91,7 @@ describe('Run status Alert renders with status from a recent run', () => {
       status: status,
       argsValues: {},
       logfile: 'foo.txt',
+      type: 'core',
     });
 
     const { findByRole } = renderInvestTab(job);
@@ -570,6 +574,25 @@ describe('Sidebar Buttons', () => {
     await waitFor(() => {
       const calledChannels = spy.mock.calls.map(call => call[0]);
       expect(calledChannels).toContain(ipcMainChannels.OPEN_LOCAL_HTML);
+    });
+  });
+
+  test('Plugin Documentation link points to userguide URL from plugin model spec and invokes OPEN_EXTERNAL_URL', async () => {
+    const spy = jest.spyOn(ipcRenderer, 'send')
+      .mockImplementation(() => Promise.resolve());
+
+    const { findByRole, queryByRole } = renderInvestTab(new InvestJob({
+      modelID: 'foo',
+      modelTitle: 'Foo Model',
+    }));
+    const ugLink = await queryByRole('link', { name: /user's guide/i });
+    expect(ugLink).toBeNull();
+    const docsLink = await findByRole('link', { name: /plugin documentation/i });
+    expect(docsLink.getAttribute('href')).toEqual(spec.userguide);
+    await userEvent.click(docsLink);
+    await waitFor(() => {
+      const calledChannels = spy.mock.calls.map(call => call[0]);
+      expect(calledChannels).toContain(ipcMainChannels.OPEN_EXTERNAL_URL);
     });
   });
 
