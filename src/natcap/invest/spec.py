@@ -312,7 +312,7 @@ class RasterInput(FileInput):
     are allowed), which may have multiple bands.
     """
     bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=[])
-    """An iterable of `RasterBand`s representing the bands expected to be in
+    """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
     projected: typing.Union[bool, None] = None
