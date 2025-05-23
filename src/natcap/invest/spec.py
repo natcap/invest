@@ -185,31 +185,32 @@ class Input:
     This represents an abstract input or parameter, which is rendered as an
     input field in the InVEST workbench. This does not store the value of the
     parameter for a specific run of the model.
-
-    Attributes:
-        id: Input identifier that should be unique within a model
-        name: User-facing name for the input
-        about: User-facing description of the input
-        required: Whether the input is required to be provided. Defaults to
-            True. Set to False if the input is always optional. If the input
-            is conditionally required depending on the state of other inputs,
-            provide a string expression that evaluates to a boolean to describe
-            this condition.
-        allowed: Defaults to True. If the input is not allowed to be provided
-            under a certain condition (such as when running the model in a mode
-            where the input is not used), provide a string expression that
-            evaluates to a boolean to describe this condition.
-        hidden: Whether to hide the input from the model input form in the
-            workbench. Use this if the value should not be configurable from
-            the input form, such as if it's pulled in from another source.
-            Defaults to False.
     """
     id: str = ''
+    """Input identifier that should be unique within a model"""
+
     name: str = ''
+    """User-facing name for the input"""
+
     about: str = ''
+    """User-facing description of the input"""
+
     required: typing.Union[bool, str] = True
+    """Whether the input is required to be provided. Defaults to True. Set to
+    False if the input is always optional. If the input is conditionally
+    required depending on the state of other inputs, provide a string
+    expression that evaluates to a boolean to describe this condition."""
+
     allowed: typing.Union[bool, str] = True
+    """Defaults to True. If the input is not allowed to be provided under a
+    certain condition (such as when running the model in a mode where the
+    input is not used), provide a string expression that evaluates to a
+    boolean to describe this condition."""
+
     hidden: bool = False
+    """Whether to hide the input from the model input form in the workbench.
+    Use this if the value should not be configurable from the input form, such
+    as if it's pulled in from another source. Defaults to False."""
 
 
 @dataclasses.dataclass
@@ -219,18 +220,17 @@ class Output:
     This represents an abstract output which is produced as a result of running
     an invest model. This does not store the value of the output for a specific
     run of the model.
-
-    Attributes:
-        id: Output identifier that should be unique within a model
-        about: User-facing description of the output
-        created_if: Defaults to True. If the input is only created under a
-            certain condition (such as when running the model in a specific
-            mode), provide a string expression that evaluates to a boolean to
-            describe this condition.
     """
     id: str = ''
+    """Output identifier that should be unique within a model"""
+
     about: str = ''
+    """User-facing description of the output"""
+
     created_if: typing.Union[bool, str] = True
+    """Defaults to True. If the input is only created under a certain condition
+    (such as when running the model in a specific mode), provide a string
+    expression that evaluates to a boolean to describe this condition."""
 
 
 @dataclasses.dataclass
@@ -239,13 +239,12 @@ class FileInput(Input):
 
     This represents a not-otherwise-specified file input type. Use this only if
     a more specific type, such as `CSVInput` or `VectorInput`, does not apply.
-
-    Attributes:
-        permissions: A string that includes the lowercase
-            characters ``r``, ``w`` and/or ``x``, indicating read, write, and
-            execute permissions (respectively) required for this file.
     """
     permissions: str = 'r'
+    """A string that includes the lowercase characters ``r``, ``w`` and/or
+    ``x``, indicating read, write, and execute permissions (respectively)
+    required for this file."""
+
     type: typing.ClassVar[str] = 'file'
 
     @timeout
@@ -294,15 +293,15 @@ class RasterBand(FileInput):
 
     This represents a raster file input (all GDAL-supported raster file types
     are allowed), where only the first band is needed.
-
-    Attributes:
-        band_id: band index used to access the raster band
-        data_type: float or int
-        units: units of measurement of the raster band values
     """
     band_id: typing.Union[int, str] = 1
+    """band index used to access the raster band"""
+
     data_type: typing.Type = float
+    """float or int"""
+
     units: typing.Union[pint.Unit, None] = None
+    """units of measurement of the raster band values"""
 
 
 @dataclasses.dataclass
@@ -311,20 +310,20 @@ class RasterInput(FileInput):
 
     This represents a raster file input (all GDAL-supported raster file types
     are allowed), which may have multiple bands.
-
-    Attributes:
-        bands: An iterable of `RasterBand`s representing the bands expected
-            to be in the raster.
-        projected: Defaults to None, indicating a projected (as opposed to
-            geographic) coordinate system is not required. Set to True if a
-            projected coordinate system is required.
-        projection_units: Defaults to None. If `projected` is `True`, and a
-            specific unit of projection (such as meters) is required, indicate
-            it here.
     """
     bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=[])
+    """An iterable of `RasterBand`s representing the bands expected to be in
+    the raster."""
+
     projected: typing.Union[bool, None] = None
+    """Defaults to None, indicating a projected (as opposed to geographic)
+    coordinate system is not required. Set to True if a projected coordinate
+    system is required."""
+
     projection_units: typing.Union[pint.Unit, None] = None
+    """Defaults to None. If `projected` is `True`, and a specific unit of
+    projection (such as meters) is required, indicate it here."""
+
     type: typing.ClassVar[str] = 'raster'
 
     @timeout
@@ -364,21 +363,22 @@ class SingleBandRasterInput(FileInput):
     are allowed), where only the first band is needed. While the same thing can
     be achieved using a `RasterInput`, this class exists to simplify access to
     the band properties when there is only one band.
-
-    Attributes:
-        data_type: float or int
-        units: units of measurement of the raster values
-        projected: Defaults to None, indicating a projected (as opposed to
-            geographic) coordinate system is not required. Set to True if a
-            projected coordinate system is required.
-        projection_units: Defaults to None. If `projected` is `True`, and a
-            specific unit of projection (such as meters) is required, indicate
-            it here.
     """
     data_type: typing.Type = float
+    """float or int"""
+
     units: typing.Union[pint.Unit, None] = None
+    """units of measurement of the raster values"""
+
     projected: typing.Union[bool, None] = None
+    """Defaults to None, indicating a projected (as opposed to geographic)
+    coordinate system is not required. Set to True if a projected coordinate
+    system is required."""
+
     projection_units: typing.Union[pint.Unit, None] = None
+    """Defaults to None. If `projected` is `True`, and a specific unit of
+    projection (such as meters) is required, indicate it here."""
+
     type: typing.ClassVar[str] = 'raster'
 
     @timeout
@@ -416,23 +416,24 @@ class VectorInput(FileInput):
 
     This represents a vector file input (all GDAL-supported vector file types
     are allowed). It is assumed that only the first layer is used.
-
-    Attributes:
-        geometry_types: A set of geometry type(s) that are allowed for this vector
-        fields: An iterable of `Input`s representing the fields that this
-            vector is expected to have. The `key` of each input must match the
-            corresponding field name.
-        projected: Defaults to None, indicating a projected (as opposed to
-            geographic) coordinate system is not required. Set to True if a
-            projected coordinate system is required.
-        projection_units: Defaults to None. If `projected` is `True`, and a
-            specific unit of projection (such as meters) is required, indicate
-            it here.
     """
     geometry_types: set = dataclasses.field(default_factory=dict)
+    """A set of geometry type(s) that are allowed for this vector"""
+
     fields: typing.Union[typing.Iterable[Input], None] = None
+    """An iterable of `Input`s representing the fields that this vector is
+    expected to have. The `key` of each input must match the corresponding
+    field name."""
+
     projected: typing.Union[bool, None] = None
+    """Defaults to None, indicating a projected (as opposed to geographic)
+    coordinate system is not required. Set to True if a projected coordinate
+    system is required."""
+
     projection_units: typing.Union[pint.Unit, None] = None
+    """Defaults to None. If `projected` is `True`, and a specific unit of
+    projection (such as meters) is required, indicate it here."""
+
     type: typing.ClassVar[str] = 'vector'
 
     def __post_init__(self):
@@ -560,21 +561,21 @@ class CSVInput(FileInput):
     `columns` or `rows`, you may omit both attributes. Note that more complex
     table structures are often more difficult to use; consider dividing them
     into multiple, simpler tabular inputs.
-
-    Attributes:
-        columns: An iterable of `Input`s representing the columns that this
-            CSV is expected to have. The `key` of each input must match the
-            corresponding column header.
-        rows: An iterable of `Input`s representing the rows that this
-            CSV is expected to have. The `key` of each input must match the
-            corresponding row header.
-        index_col: The header name of the column to use as the index. When
-            processing a CSV file to a dataframe, the dataframe index will be
-            set to this column.
     """
     columns: typing.Union[typing.Iterable[Input], None] = None
+    """An iterable of `Input`s representing the columns that this CSV is
+    expected to have. The `key` of each input must match the corresponding
+    column header."""
+
     rows: typing.Union[typing.Iterable[Input], None] = None
+    """An iterable of `Input`s representing the rows that this CSV is
+    expected to have. The `key` of each input must match the corresponding
+    row header."""
+
     index_col: typing.Union[str, None] = None
+    """The header name of the column to use as the index. When processing a
+    CSV file to a dataframe, the dataframe index will be set to this column."""
+
     type: typing.ClassVar[str] = 'csv'
 
     def __post_init__(self):
@@ -723,20 +724,20 @@ class DirectoryInput(Input):
     or an unknown number of file-based inputs, by grouping them together in a
     directory. This may also be used to describe an empty directory where model
     outputs will be written to.
-
-    Attributes:
-        contents: An iterable of `Input`s representing the contents of this
-            directory. The `key` of each input must be the file name or pattern.
-        permissions: A string that includes the lowercase characters ``r``,
-            ``w`` and/or ``x``, indicating read, write, and execute permissions
-            (respectively) required for this directory.
-        must_exist: Defaults to True, indicating the directory must already
-            exist before running the model. Set to False if the directory will
-            be created.
     """
     contents: typing.Union[typing.Iterable[Input], None] = None
+    """An iterable of `Input`s representing the contents of this directory. The
+    `key` of each input must be the file name or pattern."""
+
     permissions: str = ''
+    """A string that includes the lowercase characters ``r``, ``w`` and/or ``x``,
+    indicating read, write, and execute permissions (respectively) required for
+    this directory."""
+
     must_exist: bool = True
+    """Defaults to True, indicating the directory must already exist before
+    running the model. Set to False if the directory will be created."""
+
     type: typing.ClassVar[str] = 'directory'
 
     def __post_init__(self):
@@ -807,17 +808,16 @@ class NumberInput(Input):
 
     Use a more specific type (such as `IntegerInput`, `RatioInput`, or
     `PercentInput`) where applicable.
-
-    Attributes:
-        units: The units of measurement for this numeric value
-        expression: A string expression that can be evaluated to a boolean
-            indicating whether the value meets a required condition. The
-            expression must contain the string ``value``, which will represent
-            the user-provided value (after it has been cast to a float).
-            Example: ``"(value >= 0) & (value <= 1)"``.
     """
     units: typing.Union[pint.Unit, None] = None
+    """The units of measurement for this numeric value"""
+
     expression: typing.Union[str, None] = None
+    """A string expression that can be evaluated to a boolean indicating whether
+    the value meets a required condition. The expression must contain the string
+    ``value``, which will represent the user-provided value (after it has been
+    cast to a float). Example: ``"(value >= 0) & (value <= 1)"``."""
+
     type: typing.ClassVar[str] = 'number'
 
     def validate(self, value):
@@ -995,11 +995,10 @@ class StringInput(Input):
 
     This represents a textual input. Do not use this to represent numeric or
     file-based inputs which can be better represented by another type.
-
-    Attributes:
-        regexp: An optional regex pattern which the text value must match
     """
     regexp: typing.Union[str, None] = None
+    """An optional regex pattern which the text value must match"""
+
     type: typing.ClassVar[str] = 'string'
 
     def validate(self, value):
@@ -1040,16 +1039,15 @@ class OptionStringInput(Input):
 
     This corresponds to a dropdown menu in the workbench, where the user
     is limited to a set of pre-defined options.
-
-    Attributes:
-        options: A list of the values that this input may take. Use this if the
-            set of options is predetermined.
-        dropdown_function: A function that returns a list of the values that
-            this input may take. Use this if the set of options must be
-            dynamically generated.
     """
     options: typing.Union[list, None] = None
+    """A list of the values that this input may take. Use this if the set of
+    options is predetermined."""
+
     dropdown_function: typing.Union[typing.Callable, None] = None
+    """A function that returns a list of the values that this input may take.
+    Use this if the set of options must be dynamically generated."""
+
     type: typing.ClassVar[str] = 'option_string'
 
     def validate(self, value):
@@ -1090,13 +1088,12 @@ class SingleBandRasterOutput(Output):
 
     This represents a raster file output (all GDAL-supported raster file types
     are allowed), where only the first band is used.
-
-    Attributes:
-        data_type: float or int
-        units: units of measurement of the raster values
     """
     data_type: typing.Type = float
+    """float or int"""
+
     units: typing.Union[pint.Unit, None] = None
+    """units of measurement of the raster values"""
 
 
 @dataclasses.dataclass
@@ -1105,15 +1102,13 @@ class VectorOutput(Output):
 
     This represents a vector file output (all GDAL-supported vector file types
     are allowed). It is assumed that only the first layer is used.
-
-    Attributes:
-        geometry_types: A set of geometry type(s) that are produced in this vector
-        fields: An iterable of `Output`s representing the fields created in
-            this vector. The `key` of each input must match the corresponding
-            field name.
     """
     geometry_types: set = dataclasses.field(default_factory=set)
+    """A set of geometry type(s) that are produced in this vector"""
+
     fields: typing.Union[typing.Iterable[Output], None] = None
+    """An iterable of `Output`s representing the fields created in this vector.
+    The `key` of each input must match the corresponding field name."""
 
 
 @dataclasses.dataclass
@@ -1125,17 +1120,17 @@ class CSVOutput(Output):
     `columns` or `rows`, you may omit both attributes. Note that more complex
     table structures are often more difficult to use; consider dividing them
     into multiple, simpler tabular outputs.
-
-    Attributes:
-        columns: An iterable of `Output`s representing the table's columns.
-            The `key` of each input must match the corresponding column header.
-        rows: An iterable of `Output`s representing the table's rows. The
-            `key` of each input must match the corresponding row header.
-        index_col: The header name of the column that is the index of the table.
     """
     columns: typing.Union[typing.Iterable[Output], None] = None
+    """An iterable of `Output`s representing the table's columns. The `key` of
+    each input must match the corresponding column header."""
+
     rows: typing.Union[typing.Iterable[Output], None] = None
+    """An iterable of `Output`s representing the table's rows. The `key` of
+    each input must match the corresponding row header."""
+
     index_col: typing.Union[str, None] = None
+    """The header name of the column that is the index of the table."""
 
 
 @dataclasses.dataclass
@@ -1145,12 +1140,10 @@ class DirectoryOutput(Output):
     Use this type when you need to specify a group of many file-based outputs,
     or an unknown number of file-based outputs, by grouping them together in a
     directory.
-
-    Attributes:
-        contents: An iterable of `Output`s representing the contents of this
-            directory. The `key` of each output must be the file name or pattern.
     """
     contents: typing.Union[typing.Iterable[Input], None] = None
+    """An iterable of `Output`s representing the contents of this directory.
+    The `key` of each output must be the file name or pattern."""
 
 
 @dataclasses.dataclass
@@ -1169,11 +1162,9 @@ class NumberOutput(Output):
 
     Use a more specific type (such as `IntegerOutput`, `RatioOutput`, or
     `PercentOutput`) where applicable.
-
-    Attributes:
-        units: The units of measurement for this numeric value
     """
     units: typing.Union[pint.Unit, None] = None
+    """The units of measurement for this numeric value"""
 
 
 @dataclasses.dataclass
@@ -1214,12 +1205,10 @@ class StringOutput(Output):
 
 @dataclasses.dataclass
 class OptionStringOutput(Output):
-    """A string output, or result, which is limited to a set of options.
+    """A string output, or result, which is limited to a set of options."""
 
-    Attributes:
-        options: A list of the values that this input may take
-    """
     options: typing.Union[list, None] = None
+    """A list of the values that this input may take"""
 
 
 @dataclasses.dataclass

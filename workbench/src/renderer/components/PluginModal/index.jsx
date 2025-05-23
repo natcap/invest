@@ -287,7 +287,7 @@ export default function PluginModal(props) {
 
   return (
     <React.Fragment>
-      <Button onClick={handleModalOpen} variant="outline-dark">
+      <Button onClick={handleModalOpen} variant="outline-dark" aria-label="plugins">
         {t('Manage plugins')}
       </Button>
 
