@@ -1,3 +1,4 @@
+
 """InVEST Wind Energy model."""
 import logging
 import math
@@ -18,6 +19,7 @@ from osgeo import ogr
 from osgeo import osr
 from scipy import integrate
 from shapely import speedups
+from rtree import index
 
 from . import gettext
 from . import spec
@@ -62,13 +64,6 @@ INPUT_WIND_DATA_FIELDS = {
 
 OUTPUT_WIND_DATA_FIELDS = {
     **INPUT_WIND_DATA_FIELDS,
-    "lam": {
-        "type": "number",
-        "units": u.none,
-        "about": gettext(
-            "Weibull scale factor calculated for the "
-            "proposed hub height at this point.")
-    },
     "ref_lam": {
         "type": "number",
         "units": u.degree,
@@ -87,6 +82,41 @@ OUTPUT_WIND_DATA_FIELDS = {
         "about": gettext(
             "Predicted energy harvested from a wind "
             "farm centered on this point.")
+    },
+    "DepthVal": {
+        "type": "number",
+        "units": u.meter,
+        "about": gettext(
+            "Ocean depth at this point.")
+    },
+    "DistVal": {
+        "type": "number",
+        "units": u.meter,
+        "about": gettext(
+            "Distance to shore from this point. Included only "
+            "if distance parameters were provided.")
+    },
+    "CO2_Tons": {
+        "type": "number",
+        "units": u.metric_ton/u.year,
+        "about": gettext(
+            "Offset carbon emissions for a farm centered "
+            "on this point. Included only if Valuation is run.")
+    },
+    "Level_Cost": {
+        "type": "number",
+        "units": u.currency/u.kilowatt_hour,
+        "about": gettext(
+            "Energy price that would be required to set the "
+            "present value of a farm centered on this point "
+            "equal to zero. Included only if Valuation is run.")
+    },
+    "NPV": {
+        "type": "number",
+        "units": u.currency,
+        "about": gettext(
+            "The net present value of a farm centered on "
+            "this point. Included only if Valuation is run.")
     }
 }
 
@@ -122,11 +152,11 @@ MODEL_SPEC = spec.build_model_spec({
             **spec.AOI,
             "projected": True,
             "projection_units": u.meter,
-            "required": "valuation_container and grid_points_path",
+            "required": "valuation_container",
             "about": gettext(
                 "Map of the area(s) of interest over which to run the model "
                 "and aggregate valuation results. Required if Run Valuation "
-                "is selected and the Grid Connection Points table is provided."
+                "is selected."
             )
         },
         "bathymetry_path": {
@@ -447,6 +477,24 @@ MODEL_SPEC = spec.build_model_spec({
         "output": {
             "type": "directory",
             "contents": {
+                "wind_energy_points.shp": {
+                    "about": gettext("Map of summarized data at each point."),
+                    "geometries": spec.POINT,
+                    "fields": OUTPUT_WIND_DATA_FIELDS
+                }
+            }
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "aoi_raster.tif": {
+                    "about": "Empty raster covering the extent of the AOI",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "bathymetry_projected.tif": {
+                    "about": "Clipped and reprojected bathymetry map",
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
                 "carbon_emissions_tons.tif": {
                     "about": gettext(
                         "Map of offset carbon emissions for a farm centered "
@@ -456,12 +504,21 @@ MODEL_SPEC = spec.build_model_spec({
                         "units": u.metric_ton/u.year
                     }}
                 },
-                "density_W_per_m2.tif": {
-                    "about": gettext("Map of power density."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.watt/u.meter**2
-                    }}
+                "depth_mask.tif": {
+                    "about": (
+                        "Bathymetry map masked to show only the pixels that "
+                        "fall within the allowed depth range"),
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "distance_mask.tif": {
+                    "about": (
+                        "Distance to shore, masked to show only the pixels "
+                        "that fall within the allowed distance range"),
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "distance_trans.tif": {
+                    "about": "Distance to shore from each pixel",
+                    "bands": {1: {"type": "number", "units": u.meter}}
                 },
                 "harvested_energy_MWhr_per_yr.tif": {
                     "about": gettext(
@@ -486,40 +543,6 @@ MODEL_SPEC = spec.build_model_spec({
                         "Map of the net present value of a farm centered on each pixel."),
                     "bands": {1: {"type": "number", "units": u.currency}}
                 },
-                "wind_energy_points.shp": {
-                    "about": gettext("Map of summarized data at each point."),
-                    "geometries": spec.POINT,
-                    "fields": OUTPUT_WIND_DATA_FIELDS
-                }
-            }
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "aoi_raster.tif": {
-                    "about": "Empty raster covering the extent of the AOI",
-                    "bands": {1: {"type": "integer"}}
-                },
-                "bathymetry_projected.tif": {
-                    "about": "Clipped and reprojected bathymetry map",
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                "depth_mask.tif": {
-                    "about": (
-                        "Bathymetry map masked to show only the pixels that "
-                        "fall within the allowed depth range"),
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                "distance_mask.tif": {
-                    "about": (
-                        "Distance to shore, masked to show only the pixels "
-                        "that fall within the allowed distance range"),
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                "distance_trans.tif": {
-                    "about": "Distance to shore from each pixel",
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
                 "projected_clipped_land_poly.shp": {
                     "about": "Clipped and reprojected land polygon vector",
                     "fields": {},
@@ -527,14 +550,6 @@ MODEL_SPEC = spec.build_model_spec({
                 },
                 "projection_params.pickle": {
                     "about": "Pickled bathymetry reprojection parameters"
-                },
-                "temp_density.tif": {
-                    "about": "Interpolated wind power density",
-                    "bands": {1: {"type": "number", "units": u.watt/u.meter**2}}
-                },
-                "temp_harvested.tif": {
-                    "about": "Interpolated harvested wind energy",
-                    "bands": {1: {"type": "number", "units": u.megawatt_hour/u.year}}
                 },
                 "wind_data.pickle": {"about": "Pickled wind data dictionary"},
                 "wind_energy_points_from_data.shp": {
@@ -571,13 +586,25 @@ _ALPHA = 0.11
 # Field name to be added to the land point shapefile
 _LAND_TO_GRID_FIELD = 'L2G'
 
-# The field names for the two output fields, Harvested Wind Energy and Wind
-# Density, to be added to the point shapefile
+# The names for the computed output fields to be added to the point shapefile:
 _DENSITY_FIELD_NAME = 'Dens_W/m2'
 _HARVESTED_FIELD_NAME = 'Harv_MWhr'
+_DEPTH_FIELD_NAME = 'DepthVal'
+_DIST_FIELD_NAME = 'DistVal'
+_NPV_FIELD_NAME = 'NPV'
+_LEVELIZED_COST_FIELD_NAME = 'Level_Cost'
+_CARBON_FIELD_NAME = 'CO2_Tons'
+
+# The field name that will be added to the intermediate point shapefile,
+# indicating whether or not a point is masked out by depth / distance.
+_MASK_FIELD_NAME = 'Masked'
 
 # Resample method for target rasters
 _TARGET_RESAMPLE_METHOD = 'near'
+# Target pixel size, in meters. Given the increased availability of
+# high-resolution wind data (e.g. 2km horizontal resolution), we want a fine
+# resolution for rasterizing wind point vector values.
+_TARGET_PIXEL_SIZE = (1500, -1500)
 
 
 def execute(args):
@@ -701,7 +728,7 @@ def execute(args):
         target_pixel_size = (mean_pixel_size, -mean_pixel_size)
         LOGGER.debug('Target pixel size: %s' % (target_pixel_size,))
 
-        resapmle_bathymetry_task = task_graph.add_task(
+        resample_bathymetry_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
             args=(args['bathymetry_path'], target_pixel_size, bathymetry_path,
                   _TARGET_RESAMPLE_METHOD),
@@ -709,7 +736,7 @@ def execute(args):
             task_name='resample_bathymetry')
 
         # Build the task list when clipping and reprojecting bathymetry later.
-        bathy_dependent_task_list = [resapmle_bathymetry_task]
+        bathy_dependent_task_list = [resample_bathymetry_task]
 
     number_of_turbines = int(args['number_of_turbines'])
 
@@ -731,9 +758,11 @@ def execute(args):
     if ('valuation_container' not in args or
             args['valuation_container'] is False):
         LOGGER.info('Valuation Not Selected')
+        run_valuation = False
     else:
         LOGGER.info(
             'Valuation Selected. Checking required parameters from CSV files.')
+        run_valuation = True
 
         # If Price Table provided use that for price of energy, validate inputs
         time = parameters_dict['time_period']
@@ -773,46 +802,26 @@ def execute(args):
         target_path_list=[wind_data_pickle_path],
         task_name='compute_density_harvested_fields')
 
+    # Instantiate lists needed for writing raster values to vector later
+    raster_field_to_vector_list = []
+    mask_keys = []
+    write_vector_dependent_task_list = []
+
     if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
         LOGGER.info('AOI Provided')
         aoi_vector_path = args['aoi_vector_path']
 
-        # Get suitable projection parameters for clipping and reprojecting
-        # bathymetry layers
-        proj_params_pickle_path = os.path.join(
-            inter_dir, 'projection_params%s.pickle' % suffix)
-        task_graph.add_task(
-            func=_get_suitable_projection_params,
-            args=(bathymetry_path, aoi_vector_path, proj_params_pickle_path),
-            target_path_list=[proj_params_pickle_path],
-            task_name='get_suitable_projection_params_from_bathy',
-            dependent_task_list=bathy_dependent_task_list)
-
-        # Clip and project the bathymetry shapefile to AOI
-        LOGGER.info('Clip and project bathymetry to AOI')
         bathymetry_proj_raster_path = os.path.join(
             inter_dir, 'bathymetry_projected%s.tif' % suffix)
-
-        # Join here because all the following tasks need to unpickle parameters
-        # from ``get_suitable_projection_params`` task first
-        task_graph.join()
-        with open(proj_params_pickle_path, 'rb') as pickle_file:
-            target_sr_wkt, target_pixel_size, target_bounding_box = pickle.load(
-                pickle_file)
-        LOGGER.debug('target_sr_wkt: %s\ntarget_pixel_size: %s\n' +
-                     'target_bounding_box: %s\n', target_sr_wkt,
-                     (target_pixel_size,), target_bounding_box)
-
-        clip_bathy_to_projection_task = task_graph.add_task(
-            func=_clip_to_projection_with_square_pixels,
-            args=(bathymetry_path, aoi_vector_path,
-                  bathymetry_proj_raster_path, target_sr_wkt,
-                  target_pixel_size, target_bounding_box),
+        reproject_bathy_task = task_graph.add_task(
+            func=_reproject_bathymetry,
+            args=(bathymetry_path, aoi_vector_path, _TARGET_PIXEL_SIZE,
+                  bathymetry_proj_raster_path),
             target_path_list=[bathymetry_proj_raster_path],
-            task_name='clip_to_projection_with_square_pixels')
+            task_name='reproject_bathymetry')
 
-        # Creation of depth mask raster is dependent on the final bathymetry
-        depth_mask_dependent_task_list = [clip_bathy_to_projection_task]
+        # Depth mask will be dependent on the final bathymetry
+        depth_mask_dependent_task_list = [reproject_bathy_task]
 
         # Since an AOI was provided the wind energy points shapefile will need
         # to be clipped and projected. Thus save the construction of the
@@ -825,6 +834,9 @@ def execute(args):
         LOGGER.info('Create point shapefile from wind data')
         # Use the projection from the projected bathymetry as reference to
         # create wind point vector from wind data dictionary
+        target_sr_wkt = pygeoprocessing.get_vector_info(
+            aoi_vector_path)['projection_wkt']
+
         wind_data_to_vector_task = task_graph.add_task(
             func=_wind_data_to_point_vector,
             args=(wind_data_pickle_path, 'wind_data', wind_point_vector_path),
@@ -836,7 +848,7 @@ def execute(args):
         # Clip the wind energy point shapefile to AOI
         LOGGER.info('Clip and project wind points to AOI')
         clipped_wind_point_vector_path = os.path.join(
-            out_dir, 'wind_energy_points%s.shp' % suffix)
+            inter_dir, 'unmasked_wind_energy_points%s.shp' % suffix)
         clip_wind_vector_task = task_graph.add_task(
             func=_clip_vector_by_vector,
             args=(wind_point_vector_path, aoi_vector_path,
@@ -845,15 +857,15 @@ def execute(args):
             task_name='clip_wind_point_by_aoi',
             dependent_task_list=[wind_data_to_vector_task])
 
-        # Creating density and harvested rasters depends on the clipped wind
-        # vector
-        density_harvest_rasters_dependent_task_list = [clip_wind_vector_task]
+        # Writing raster values to wind vector depends on clipped wind vector
+        write_vector_dependent_task_list.append(clip_wind_vector_task)
 
-        # Set the bathymetry and points path to use in the rest of the model.
+        # Set the bathymetry path to use for creating the depth mask and the
+        # wind point vector path to use for the rest of the model.
         # In this case these paths refer to the projected files. This may not
-        # be the case if an AOI is not provided
+        # be the case if an AOI is not provided.
         final_bathy_raster_path = bathymetry_proj_raster_path
-        final_wind_point_vector_path = clipped_wind_point_vector_path
+        intermediate_wind_point_vector_path = clipped_wind_point_vector_path
 
         # Try to handle the distance inputs and land datasource if they
         # are present
@@ -861,7 +873,9 @@ def execute(args):
             min_distance = float(args['min_distance'])
             max_distance = float(args['max_distance'])
             land_polygon_vector_path = args['land_polygon_vector_path']
-        except KeyError:
+        # ValueError will be thrown if run via workbench without params,
+        # since min_distance and max_distance will both be ''
+        except (KeyError, ValueError):
             LOGGER.info('Distance information not provided')
         else:
             # Clip and project the land polygon shapefile to AOI
@@ -875,38 +889,23 @@ def execute(args):
                 target_path_list=[land_poly_proj_vector_path],
                 task_name='clip_and_reproject_land_poly_to_aoi')
 
-            # If the distance inputs are present create a mask for the output
-            # area that restricts where the wind energy farms can be based
-            # on distance
-            aoi_raster_path = os.path.join(inter_dir,
-                                           'aoi_raster%s.tif' % suffix)
-
-            # Make a raster from AOI using the reprojected bathymetry raster's
-            # pixel size
-            LOGGER.info('Create Raster From AOI')
-            create_aoi_raster_task = task_graph.add_task(
-                func=_create_aoi_raster,
-                args=(aoi_vector_path, aoi_raster_path, target_pixel_size,
-                      target_sr_wkt, inter_dir),
-                target_path_list=[aoi_raster_path],
-                task_name='create_aoi_raster_from_vector')
-
-            # Rasterize land polygon onto AOI and calculate distance transform
+            # Rasterize land polygon and calculate distance transform
             dist_trans_path = os.path.join(
                 inter_dir, 'distance_trans%s.tif' % suffix)
             create_distance_raster_task = task_graph.add_task(
                 func=_create_distance_raster,
-                args=(aoi_raster_path, land_poly_proj_vector_path,
+                args=(final_bathy_raster_path, land_poly_proj_vector_path,
                       dist_trans_path, inter_dir),
                 target_path_list=[dist_trans_path],
                 task_name='create_distance_raster',
-                dependent_task_list=[
-                    create_aoi_raster_task, clip_reproject_land_poly_task])
+                dependent_task_list=[reproject_bathy_task,
+                    clip_reproject_land_poly_task])
 
-            # Mask the distance raster by the min and max distances
+            # Create the distance mask:
+            LOGGER.info('Creating Distance Mask')
             dist_mask_path = os.path.join(inter_dir,
                                           'distance_mask%s.tif' % suffix)
-            mask_by_distance_task = task_graph.add_task(
+            create_dist_mask_task = task_graph.add_task(
                 func=_mask_by_distance,
                 args=(dist_trans_path, min_distance, max_distance,
                       _TARGET_NODATA, dist_mask_path),
@@ -914,49 +913,54 @@ def execute(args):
                 task_name='mask_raster_by_distance',
                 dependent_task_list=[create_distance_raster_task])
 
+            raster_field_to_vector_list.append(
+                (dist_mask_path, _DIST_FIELD_NAME))
+            mask_keys.append(_DIST_FIELD_NAME)
+            write_vector_dependent_task_list.append(create_dist_mask_task)
+
     else:
         LOGGER.info("AOI argument was not selected")
+        if run_valuation:
+            # Guard against trying to run the Valuation model without an AOI
+            LOGGER.warning("Run Valuation was selected but no AOI was provided. "
+                           "Please provide an AOI in order to run Valuation.")
+            run_valuation = False
 
-        # Since no AOI was provided the wind energy points shapefile that is
-        # created directly from dictionary will be the final output, so set the
-        # path to point to the output folder
-        wind_point_vector_path = os.path.join(
-            out_dir, 'wind_energy_points%s.shp' % suffix)
+        # Wind point vector that will be the template for the final
+        # shapefile; does not need to be clipped to AOI
+        intermediate_wind_point_vector_path = os.path.join(
+            inter_dir, 'unmasked_wind_energy_points%s.shp' % suffix)
 
         # Create point shapefile from wind data dictionary
         LOGGER.info('Create point shapefile from wind data')
         wind_data_to_vector_task = task_graph.add_task(
             func=_wind_data_to_point_vector,
-            args=(wind_data_pickle_path, 'wind_data', wind_point_vector_path),
-            target_path_list=[wind_point_vector_path],
+            args=(wind_data_pickle_path, 'wind_data',
+                  intermediate_wind_point_vector_path),
+            target_path_list=[intermediate_wind_point_vector_path],
             task_name='wind_data_to_vector_without_aoi',
             dependent_task_list=[compute_density_harvested_task])
 
-        # Creating density and harvested rasters depends on the wind vector
-        density_harvest_rasters_dependent_task_list = [
-            wind_data_to_vector_task]
-
-        # Set the bathymetry and points path to use in the rest of the model.
-        # In this case these paths refer to the unprojected files. This may not
-        # be the case if an AOI is provided
-        final_wind_point_vector_path = wind_point_vector_path
+        # Set the bathymetry path to use for creating the depth mask.
+        # In this case, this path refers to the unprojected file. This may not
+        # be the case if an AOI is provided.
         final_bathy_raster_path = bathymetry_path
 
-        # Creation of depth mask is not dependent on creating additional
-        # bathymetry mask
-        depth_mask_dependent_task_list = None
+        # Depth mask creation is not dependent on clipping bathymetry
+        depth_mask_dependent_task_list = []
 
+        # Writing raster values to wind vector depends on clipped wind vector
+        write_vector_dependent_task_list.append(wind_data_to_vector_task)
+
+    # Create a mask for values that are out of the range of the depth values:
     # Get the min and max depth values from the arguments and set to a negative
     # value indicating below sea level
     min_depth = abs(float(args['min_depth'])) * -1
     max_depth = abs(float(args['max_depth'])) * -1
 
-    # Create a mask for any values that are out of the range of the depth
-    # values
     LOGGER.info('Creating Depth Mask')
     depth_mask_path = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
-
-    task_graph.add_task(
+    create_depth_mask_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(final_bathy_raster_path, 1), (min_depth, 'raw'),
                (max_depth, 'raw')], _depth_op, depth_mask_path,
@@ -965,144 +969,83 @@ def execute(args):
         task_name='mask_depth_on_bathymetry',
         dependent_task_list=depth_mask_dependent_task_list)
 
-    # Set paths for creating density and harvested rasters
-    temp_density_raster_path = os.path.join(
-        inter_dir, 'temp_density%s.tif' % suffix)
-    temp_harvested_raster_path = os.path.join(
-        inter_dir, 'temp_harvested%s.tif' % suffix)
+    raster_field_to_vector_list.append(
+        (depth_mask_path, _DEPTH_FIELD_NAME))
+    mask_keys.append(_DEPTH_FIELD_NAME)
+    write_vector_dependent_task_list.append(create_depth_mask_task)
 
-    # Create rasters for density and harvested values
-    LOGGER.info('Create Density Raster')
-    create_density_raster_task = task_graph.add_task(
-        func=pygeoprocessing.create_raster_from_vector_extents,
-        args=(final_wind_point_vector_path, temp_density_raster_path,
-              target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA),
-        target_path_list=[temp_density_raster_path],
-        task_name='create_density_raster',
-        dependent_task_list=density_harvest_rasters_dependent_task_list)
+    if not run_valuation:
+        # Write Depth [and Distance] mask values to Wind Points Shapefile
+        LOGGER.info("Adding mask values to shapefile")
+        final_wind_point_vector_path = os.path.join(
+            out_dir, 'wind_energy_points%s.shp' % suffix)
+        task_graph.add_task(
+            func=_index_raster_values_to_point_vector,
+            args=(intermediate_wind_point_vector_path,
+                  raster_field_to_vector_list,
+                  final_wind_point_vector_path),
+            kwargs={'mask_keys': mask_keys,
+                    'mask_field': _MASK_FIELD_NAME},
+            target_path_list=[final_wind_point_vector_path],
+            task_name='add_masked_vals_to_wind_vector',
+            dependent_task_list=write_vector_dependent_task_list)
 
-    LOGGER.info('Create Harvested Raster')
-    create_harvested_raster_task = task_graph.add_task(
-        func=pygeoprocessing.create_raster_from_vector_extents,
-        args=(final_wind_point_vector_path, temp_harvested_raster_path,
-              target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA),
-        target_path_list=[temp_harvested_raster_path],
-        task_name='create_harvested_raster',
-        dependent_task_list=density_harvest_rasters_dependent_task_list)
+        LOGGER.info('Wind Energy Biophysical Model completed')
 
-    # Interpolate points onto raster for density values and harvested values:
-    LOGGER.info('Interpolate Density Points')
-    interpolate_density_task = task_graph.add_task(
-        func=pygeoprocessing.interpolate_points,
-        args=(final_wind_point_vector_path, _DENSITY_FIELD_NAME,
-              (temp_density_raster_path, 1)),
-        kwargs={'interpolation_mode': 'linear'},
-        task_name='interpolate_density_points',
-        dependent_task_list=[create_density_raster_task])
-
-    LOGGER.info('Interpolate Harvested Points')
-    interpolate_harvested_task = task_graph.add_task(
-        func=pygeoprocessing.interpolate_points,
-        args=(final_wind_point_vector_path, _HARVESTED_FIELD_NAME,
-              (temp_harvested_raster_path, 1)),
-        kwargs={'interpolation_mode': 'linear'},
-        task_name='interpolate_harvested_points',
-        dependent_task_list=[create_harvested_raster_task])
-
-    # Output paths for final Density and Harvested rasters after they've been
-    # masked by depth and distance
-    density_masked_path = os.path.join(
-        out_dir, 'density_W_per_m2%s.tif' % suffix)
-    harvested_masked_path = os.path.join(
-        out_dir, 'harvested_energy_MWhr_per_yr%s.tif' % suffix)
-
-    # List of paths to pass to raster_calculator for operations
-    density_mask_list = [temp_density_raster_path, depth_mask_path]
-    harvested_mask_list = [temp_harvested_raster_path, depth_mask_path]
-
-    # If a distance mask was created then add it to the raster list to pass in
-    # for masking out the output datasets
-    try:
-        density_mask_list.append(dist_mask_path)
-        harvested_mask_list.append(dist_mask_path)
-
-        # The align_and_resize_density_and_harvest_task will be dependent on
-        # the density, harvested raster interpolation tasks, as well as
-        # masking by distance task
-        align_and_resize_dependent_task_list = [
-            interpolate_density_task, interpolate_harvested_task,
-            mask_by_distance_task]
-    except NameError:
-        # No mask_by_distance_task is added to taskgraph
-        align_and_resize_dependent_task_list = [
-            interpolate_density_task, interpolate_harvested_task]
-        LOGGER.info('NO Distance Mask to add to list')
-
-    # Align and resize the mask rasters
-    LOGGER.info('Align and resize the Density rasters')
-    aligned_density_mask_list = [
-        path.replace('%s.tif' % suffix, '_aligned%s.tif' % suffix)
-        for path in density_mask_list
-    ]
-
-    aligned_harvested_mask_list = [
-        path.replace('%s.tif' % suffix, '_aligned%s.tif' % suffix)
-        for path in harvested_mask_list
-    ]
-
-    # Merge the density and harvest lists, and remove duplicates
-    merged_mask_list = density_mask_list + [
-        mask for mask in harvested_mask_list if mask not in density_mask_list
-    ]
-    merged_aligned_mask_list = aligned_density_mask_list + [
-        mask for mask in aligned_harvested_mask_list
-        if mask not in aligned_density_mask_list
-    ]
-    # Align and resize rasters in the density and harvest lists
-    align_and_resize_density_and_harvest_task = task_graph.add_task(
-        func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(merged_mask_list, merged_aligned_mask_list,
-              [_TARGET_RESAMPLE_METHOD] * len(merged_mask_list),
-              target_pixel_size, 'intersection'),
-        task_name='align_and_resize_density_and_harvest_list',
-        target_path_list=merged_aligned_mask_list,
-        dependent_task_list=align_and_resize_dependent_task_list)
-
-    # Mask out any areas where distance or depth has determined that wind farms
-    # cannot be located
-    LOGGER.info('Mask out depth and [distance] areas from Density raster')
-    task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=([(path, 1) for path in aligned_density_mask_list],
-              _mask_out_depth_dist, density_masked_path, _TARGET_DATA_TYPE,
-              _TARGET_NODATA),
-        task_name='mask_density_raster',
-        target_path_list=[density_masked_path],
-        dependent_task_list=[align_and_resize_density_and_harvest_task])
-
-    LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
-    masked_harvested_task = task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=([(path, 1) for path in aligned_harvested_mask_list],
-              _mask_out_depth_dist, harvested_masked_path, _TARGET_DATA_TYPE,
-              _TARGET_NODATA),
-        task_name='mask_harvested_raster',
-        target_path_list=[harvested_masked_path],
-        dependent_task_list=[align_and_resize_density_and_harvest_task])
-
-    LOGGER.info('Wind Energy Biophysical Model completed')
-
-    if 'valuation_container' in args and args['valuation_container'] is True:
-        LOGGER.info('Starting Wind Energy Valuation Model')
-
-        # path for final distance transform used in valuation calculations
-        final_dist_raster_path = os.path.join(
-            inter_dir, 'val_distance_trans%s.tif' % suffix)
-    else:
         task_graph.close()
         task_graph.join()
         LOGGER.info('Valuation Not Selected. Model completed')
         return
+
+    # Begin the valuation model run:
+    LOGGER.info('Starting Wind Energy Valuation Model')
+
+    # Rasterize harvested values:
+    LOGGER.info('Creating Harvested Raster')
+    initial_harvested_raster_path = os.path.join(
+        inter_dir, 'harvested_unmasked%s.tif' % suffix)
+
+    create_harvested_raster_task = task_graph.add_task(
+        func=pygeoprocessing.new_raster_from_base,
+        args=(depth_mask_path, initial_harvested_raster_path,
+              _TARGET_DATA_TYPE, [_TARGET_NODATA]),
+        target_path_list=[initial_harvested_raster_path],
+        task_name='create_harvested_raster',
+        dependent_task_list=[create_depth_mask_task])
+
+    LOGGER.info('Rasterizing Harvested Points')
+    rasterize_harvested_task = task_graph.add_task(
+        func=pygeoprocessing.rasterize,
+        args=(intermediate_wind_point_vector_path, initial_harvested_raster_path),
+        kwargs={'option_list': [f'ATTRIBUTE={_HARVESTED_FIELD_NAME}']},
+        task_name='rasterize_harvested_points',
+        dependent_task_list=[clip_wind_vector_task, create_harvested_raster_task])
+
+    # Mask out any areas where distance or depth has determined that wind farms
+    # cannot be located
+    LOGGER.info('Mask Harvested raster by depth and distance')
+    harvested_masked_path = os.path.join(
+        inter_dir, 'harvested_energy_MWhr_per_yr%s.tif' % suffix)
+
+    # We always will have a distance raster if we're running valuation
+    harvest_mask_list = [
+        initial_harvested_raster_path,
+        depth_mask_path,
+        dist_mask_path]
+
+    mask_harvested_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(path, 1) for path in harvest_mask_list],
+              _mask_out_depth_dist, harvested_masked_path, _TARGET_DATA_TYPE,
+              _TARGET_NODATA),
+        task_name='mask_harvested_raster',
+        target_path_list=[harvested_masked_path],
+        dependent_task_list=[rasterize_harvested_task,
+            create_dist_mask_task])
+
+    # path for final distance transform used in valuation calculations
+    final_dist_raster_path = os.path.join(
+        inter_dir, 'val_distance_trans%s.tif' % suffix)
 
     if 'grid_points_path' in args and args['grid_points_path']:
         # Handle Grid Points
@@ -1215,7 +1158,8 @@ def execute(args):
                               inter_dir),
                         target_path_list=[final_dist_raster_path],
                         task_name='calculate_distances_land_grid',
-                        dependent_task_list=[land_to_grid_task])
+                        dependent_task_list=[land_to_grid_task,
+                                             mask_harvested_task])
                 else:
                     LOGGER.debug(
                         'No land point lies within AOI. Energy transmission '
@@ -1262,7 +1206,7 @@ def execute(args):
             args=(harvested_masked_path, land_poly_proj_vector_path,
                   land_poly_dist_raster_path, inter_dir),
             target_path_list=[land_poly_dist_raster_path],
-            dependent_task_list=[masked_harvested_task],
+            dependent_task_list=[mask_harvested_task],
             task_name='create_land_poly_dist_raster')
 
         final_dist_task = task_graph.add_task(
@@ -1275,17 +1219,17 @@ def execute(args):
             task_name='calculate_final_distance_in_meters',
             dependent_task_list=[land_poly_dist_raster_task])
 
-    # Create output NPV and levelized rasters
-    npv_raster_path = os.path.join(out_dir, 'npv%s.tif' % suffix)
+    # Create NPV and levelized rasters
+    npv_raster_path = os.path.join(inter_dir, 'npv%s.tif' % suffix)
     levelized_raster_path = os.path.join(
-        out_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
+        inter_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
 
     # Include foundation_cost, discount_rate, number_of_turbines with
     # parameters_dict to pass for NPV calculation
     for key in ['foundation_cost', 'discount_rate', 'number_of_turbines']:
         parameters_dict[key] = float(args[key])
 
-    task_graph.add_task(
+    npv_levelized_task = task_graph.add_task(
         func=_calculate_npv_levelized_rasters,
         args=(harvested_masked_path, final_dist_raster_path, npv_raster_path,
               levelized_raster_path, parameters_dict, price_list),
@@ -1293,25 +1237,348 @@ def execute(args):
         task_name='calculate_npv_levelized_rasters',
         dependent_task_list=[final_dist_task])
 
-    # Creating output carbon offset raster
-    carbon_path = os.path.join(out_dir, 'carbon_emissions_tons%s.tif' % suffix)
+    # Creating carbon offset raster
+    carbon_raster_path = os.path.join(
+        inter_dir, 'carbon_emissions_tons%s.tif' % suffix)
 
     # The amount of CO2 not released into the atmosphere, with the constant
     # conversion factor provided in the users guide by Rob Griffin
     carbon_coef = parameters_dict['carbon_coefficient']
 
-    task_graph.add_task(
+    carbon_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(harvested_masked_path, 1), (carbon_coef, 'raw')],
-              _calculate_carbon_op, carbon_path, _TARGET_DATA_TYPE,
+              _calculate_carbon_op, carbon_raster_path, _TARGET_DATA_TYPE,
               _TARGET_NODATA),
-        target_path_list=[carbon_path],
-        dependent_task_list=[masked_harvested_task],
+        target_path_list=[carbon_raster_path],
+        dependent_task_list=[mask_harvested_task],
         task_name='calculate_carbon_raster')
+
+    # Write Valuation values to Wind Points shapefile
+    LOGGER.info("Adding valuation results to shapefile")
+    raster_field_to_vector_list = [
+        (harvested_masked_path, _HARVESTED_FIELD_NAME),
+        (carbon_raster_path, _CARBON_FIELD_NAME),
+        (levelized_raster_path, _LEVELIZED_COST_FIELD_NAME),
+        (npv_raster_path, _NPV_FIELD_NAME),
+        (depth_mask_path, _DEPTH_FIELD_NAME),
+        (dist_mask_path, _DIST_FIELD_NAME)
+    ]
+    mask_keys = [_DEPTH_FIELD_NAME, _DIST_FIELD_NAME]
+
+    final_wind_point_vector_path = os.path.join(
+        out_dir, 'wind_energy_points%s.shp' % suffix)
+    task_graph.add_task(
+        func=_index_raster_values_to_point_vector,
+        args=(intermediate_wind_point_vector_path,
+              raster_field_to_vector_list,
+              final_wind_point_vector_path),
+        kwargs={'mask_keys': mask_keys,
+                'mask_field': _MASK_FIELD_NAME},
+        target_path_list=[final_wind_point_vector_path],
+        task_name='add_harv_valuation_to_wind_vector',
+        dependent_task_list=[npv_levelized_task, carbon_task])
 
     task_graph.close()
     task_graph.join()
     LOGGER.info('Wind Energy Valuation Model Completed')
+
+
+def _index_raster_values_to_point_vector(
+        base_point_vector_path, raster_fieldname_list,
+        target_point_vector_path, mask_keys=[], mask_field=None):
+    """Add raster values to vector point feature fields.
+
+    This function does two things:
+        - Creates a copy of the base point vector and updates the copy to include
+          the fields in ``raster_fieldname_list``, the values of which are
+          pixel-picked from their corresponding raster. If ``mask_keys`` are
+          provided, points that would be NODATA based on the raster(s)
+          corresponding to fields in this list will be deleted from the copy.
+        - Optionally modifies the base vector to include an additional field,
+          ``mask_field``, that indicates whether or not a point was removed from
+          the copy based on NODATA values in the rasters corresponding to the
+          fieldnames in ``mask_keys``.
+
+    If the base vector contains points that fall beyond the extent of the rasters,
+    those points will be removed from the output vector. If ``mask_field`` is
+    provided, the value will remain NULL for those points.
+
+    Args:
+        base_point_vector_path (str): a path to an OGR point vector file.
+        raster_fieldname_list (list): a list of (raster_path, field_name)
+            tuples. The values of rasters in this list will be added to the
+            vector's features under the associated field name. All rasters must
+            already be aligned.
+        target_point_vector_path (str): a path to a shapefile that has the
+            target field name in addition to the existing fields in the base
+            point vector.
+        mask_keys (list): (optional) a list of string field names that appear in
+            ``raster_fieldname_list``, indicating that the associated raster
+            will be used to mask out vector features. Wherever a value in a mask
+            raster equals NODATA, the vector feature will be deleted from the
+            target point vector.
+        mask_field (str): (optional) a field name to add to the base point vector,
+            where the value indicates whether or not the point was masked out in
+            the target point vector, based on the values of rasters associated
+            with the fields in ``mask_keys``. If ``mask_field`` is provided but
+            ``mask_keys`` is not, it will be ignored.
+
+    Returns:
+        None
+
+    """
+    base_raster_path_list = [tup[0] for tup in raster_fieldname_list]
+    field_name_list = [tup[1] for tup in raster_fieldname_list]
+
+    if not set(mask_keys).issubset(set(field_name_list)):
+        raise ValueError(
+            f"Field name(s) in `mask_keys`: {mask_keys} do not appear in "
+            f"`raster_fieldname_list`: {field_name_list}")
+
+    # Check that raster inputs are all the same dimensions
+    raster_info_list = [
+        pygeoprocessing.get_raster_info(raster_path)
+        for raster_path in base_raster_path_list]
+    geospatial_info = [
+        raster_info['raster_size'] for raster_info in raster_info_list]
+    if len(set(geospatial_info)) > 1:
+        mismatched_rasters = [(raster_path, dimensions) for
+            (raster_path, dimensions) in
+            zip(base_raster_path_list, geospatial_info)]
+        raise ValueError(
+            "Input Rasters are not the same dimensions. The following rasters "
+            f"are not identical: {mismatched_rasters}")
+    # When writing values to the vector, we replace nodata with None;
+    # map the fieldnames to the nodata values of their corresponding rasters
+    raster_nodata = [raster_info['nodata'][0] for raster_info in raster_info_list]
+    field_nodata_map = {fieldname: nodata for fieldname, nodata in
+                        zip(field_name_list, raster_nodata)}
+
+    # Since rasters must all already be aligned, use first in list as ref
+    raster_info = raster_info_list[0]
+
+    base_vector = gdal.OpenEx(base_point_vector_path, gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName("ESRI Shapefile")
+    driver.CreateCopy(target_point_vector_path, base_vector)
+
+    # Add the mask field to the base vector
+    if mask_field:
+        base_vector = gdal.OpenEx(
+            base_point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+        base_layer = base_vector.GetLayer()
+        # Since we're mutating the base vector, if the
+        # supplied fieldname already exists, don't overwrite it
+        if base_layer.FindFieldIndex(mask_field, True) != -1:
+            i = 1
+            mask_field = f'Masked_{i}'
+            while base_layer.FindFieldIndex(mask_field, True) != -1:
+                i += 1
+            LOGGER.warning(
+                "A field with the same name as the supplied `mask_field` "
+                "already exists in the base vector. To avoid overwriting, "
+                f"the field name `{mask_field}` is being used instead.")
+        field_defn = ogr.FieldDefn(mask_field, ogr.OFTReal)
+        field_defn.SetWidth(24)
+        field_defn.SetPrecision(11)
+        base_layer.CreateField(field_defn)
+
+    target_vector = gdal.OpenEx(
+        target_point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_layer = target_vector.GetLayer()
+    raster_gt = raster_info['geotransform']
+    pixel_size_x, pixel_size_y, raster_min_x, raster_max_y = \
+        abs(raster_gt[1]), abs(raster_gt[5]), raster_gt[0], raster_gt[3]
+
+    # Create new fields for the vector attributes
+    for field_name in field_name_list:
+        field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+        field_defn.SetWidth(24)
+        field_defn.SetPrecision(11)
+
+        field_index = target_layer.FindFieldIndex(field_name, True)
+        # If the field doesn't already exist, create it
+        if field_index == -1:
+            target_layer.CreateField(field_defn)
+
+    # Create coordinate transformation from vector to raster, to make sure the
+    # vector points are in the same projection as raster
+    raster_sr = osr.SpatialReference()
+    raster_sr.ImportFromWkt(raster_info['projection_wkt'])
+    vector_sr = osr.SpatialReference()
+    vector_sr.ImportFromWkt(
+        pygeoprocessing.get_vector_info(base_point_vector_path)[
+            'projection_wkt'])
+    vector_coord_trans = utils.create_coordinate_transformer(
+        vector_sr, raster_sr)
+
+    # We'll check encountered features against this list at the end,
+    # for the purposes of removing any points that weren't encountered
+    all_fids = [feat.GetFID() for feat in target_layer]
+    encountered_fids = set()
+
+    # Initialize an R-Tree indexing object with point geom from base_vector
+    def generator_function():
+        for feat in target_layer:
+            fid = feat.GetFID()
+            geom = feat.GetGeometryRef()
+            geom_x, geom_y = geom.GetX(), geom.GetY()
+            geom_trans_x, geom_trans_y, _ = vector_coord_trans.TransformPoint(
+                geom_x, geom_y)
+            yield (fid, (
+                geom_trans_x, geom_trans_x, geom_trans_y, geom_trans_y), None)
+
+    vector_idx = index.Index(generator_function(), interleaved=False)
+
+    iterables = [pygeoprocessing.iterblocks((base_raster_path_list[index], 1))
+        for index in range(len(base_raster_path_list))]
+    for block_data in zip(*iterables):
+        # Rasters must all be aligned; use block data from first raster
+        block_info = block_data[0][0]
+        block_matrices = [block_data[index][1]
+            for index in range(len(base_raster_path_list))]
+
+        block_min_x = raster_min_x + block_info['xoff'] * pixel_size_x
+        block_max_x = raster_min_x + (
+            block_info['win_xsize'] + block_info['xoff']) * pixel_size_x
+
+        block_max_y = raster_max_y - block_info['yoff'] * pixel_size_y
+        block_min_y = raster_max_y - (
+            block_info['win_ysize'] + block_info['yoff']) * pixel_size_y
+
+        # Obtain a list of vector points that fall within the block
+        intersect_vectors = list(
+            vector_idx.intersection(
+                (block_min_x, block_max_x, block_min_y, block_max_y),
+                objects=True))
+
+        for vector in intersect_vectors:
+            vector_fid = vector.id
+
+            # Occasionally there could be points that intersect multiple block
+            # bounding boxes (like points that lie on the boundary of two
+            # blocks) and we don't want to double-count.
+            if vector_fid in encountered_fids:
+                continue
+
+            vector_trans_x, vector_trans_y = vector.bbox[0], vector.bbox[1]
+
+            # To get proper raster value we must index into the raster matrix
+            # by getting where the point is located in terms of the matrix
+            i = int((vector_trans_x - block_min_x) / pixel_size_x)
+            j = int((block_max_y - vector_trans_y) / pixel_size_y)
+
+            data = {}
+            for fieldname, block_matrix in zip(field_name_list, block_matrices):
+                try:
+                    block_value = block_matrix[j][i]
+                except IndexError:
+                    # It is possible for an index to be *just* on the edge of a
+                    # block and exceed the block dimensions.  If this happens,
+                    # pass on this point, as another block's bounding box should
+                    # catch this point instead.
+                    continue
+                else:
+                    # Use the nodata value specific to that raster
+                    if block_value == field_nodata_map[fieldname]:
+                        block_value = None
+                    else:
+                        block_value = float(block_value)
+                data[fieldname] = block_value
+
+            encountered_fids.add(vector_fid)
+            invalid_feature = False # Always valid if no mask
+            if mask_keys:
+                invalid_feature = None in [data.get(mask_key, None)
+                                           for mask_key in mask_keys]
+                if mask_field:
+                    base_vector_feat = base_layer.GetFeature(vector_fid)
+                    base_vector_feat.SetField(mask_field, invalid_feature)
+                    base_layer.SetFeature(base_vector_feat)
+
+            if invalid_feature:
+                target_layer.DeleteFeature(vector_fid)
+            else:
+                target_vector_feat = target_layer.GetFeature(vector_fid)
+                for fieldname, value in data.items():
+                    target_vector_feat.SetField(fieldname, value)
+                target_layer.SetFeature(target_vector_feat)
+                feat = None
+
+    # Finally, if any points fall outside of the raster extents, remove them
+    out_of_bounds_fids = set(all_fids).difference(encountered_fids)
+    if out_of_bounds_fids:
+        for vector_fid in out_of_bounds_fids:
+            target_layer.DeleteFeature(vector_fid)
+
+    target_vector.ExecuteSQL('REPACK ' + target_layer.GetName())
+    target_layer = None
+    target_vector = None
+
+    base_layer = None
+    base_vector = None
+
+
+def _reproject_bathymetry(base_raster_path, aoi_vector_path,
+        comparison_pixel_size, target_raster_path):
+    """Reproject and clip bathymetry raster to AOI bounding box and SRS.
+
+    The minimum of the ``comparison_pixel_size`` and the base raster's pixel
+    size will be used as the target pixel size in the ``warp_raster`` call.
+
+    Args:
+        base_raster_path (str): path to the bathymetry raster, which may not
+            be projected.
+        aoi_vector_path (str): path to the AOI vector, which will be used to
+            clip the bathymetry raster.
+        comparison_pixel_size (tuple): pixel size, in meters, to compare with
+            the base raster's pixel size.
+        target_raster_path (str): path to the target reprojected bathymetry
+            raster.
+
+    Returns:
+        None
+
+    """
+    LOGGER.info('Clipping and projecting bathymetry to AOI')
+
+    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
+    aoi_vector_info = pygeoprocessing.get_vector_info(aoi_vector_path)
+
+    base_raster_srs = osr.SpatialReference()
+    base_raster_srs.ImportFromWkt(base_raster_info['projection_wkt'])
+
+    target_sr_wkt = aoi_vector_info['projection_wkt']
+    target_bounding_box = aoi_vector_info['bounding_box']
+
+    if base_raster_srs.IsGeographic():
+        wgs84_sr = osr.SpatialReference()
+        wgs84_sr.ImportFromEPSG(4326)
+        aoi_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
+            target_bounding_box, target_sr_wkt, wgs84_sr.ExportToWkt())
+
+        centroid_y = (
+            aoi_wgs84_bounding_box[3] + aoi_wgs84_bounding_box[1]) / 2
+
+        # Get pixel size in square meters used for resizing the base
+        # raster later on
+        base_pixel_size = math.sqrt(
+            pygeoprocessing.geoprocessing._m2_area_of_wg84_pixel(
+            base_raster_info['pixel_size'][0], centroid_y))
+    else:
+        base_pixel_size = base_raster_info['pixel_size'][0]
+
+    min_pixel_size = min(base_pixel_size, comparison_pixel_size[0])
+    target_pixel_size = (min_pixel_size, -min_pixel_size)
+
+    LOGGER.debug(f'target_sr_wkt: {target_sr_wkt}\n'
+                 f'target_pixel_size: {target_pixel_size}\n'
+                 f'target_bounding_box: {target_bounding_box}')
+
+    pygeoprocessing.warp_raster(base_raster_path, target_pixel_size,
+        target_raster_path, _TARGET_RESAMPLE_METHOD,
+        target_bb=target_bounding_box,
+        target_projection_wkt=target_sr_wkt)
 
 
 def _calculate_npv_levelized_rasters(
@@ -1626,47 +1893,6 @@ def _add_avg_dist_op(tmp_dist, avg_grid_distance):
     out_array[valid_pixels_mask] = (
         tmp_dist[valid_pixels_mask] + avg_grid_distance)
     return out_array
-
-
-def _create_aoi_raster(base_aoi_vector_path, target_aoi_raster_path,
-                       target_pixel_size, target_sr_wkt, work_dir):
-    """Create an AOI raster from a vector w/ target pixel size and projection.
-
-    Args:
-        base_aoi_vector_path (str): a path to the base AOI vector to create
-            AOI raster from.
-        target_aoi_raster_path (str): a path to the target AOI raster.
-        target_pixel_size (tuple): a tuple of x, y pixel sizes for the target
-            AOI raster.
-        target_sr_wkt (str): a projection string used as the target projection
-            for the AOI raster.
-        work_dir (str): path to create a temp folder for saving temp files.
-
-    Returns:
-        None
-
-    """
-    base_sr_wkt = pygeoprocessing.get_vector_info(
-        base_aoi_vector_path)['projection_wkt']
-    if base_sr_wkt != target_sr_wkt:
-        # Reproject clip vector to the spatial reference of the base vector.
-        # Note: reproject_vector can be expensive if vector has many features.
-        temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='clip-')
-        file_ext, driver_name = _get_file_ext_and_driver_name(
-            base_aoi_vector_path)
-        reprojected_aoi_vector_path = os.path.join(
-            temp_dir, 'reprojected_aoi' + file_ext)
-        pygeoprocessing.reproject_vector(
-            base_aoi_vector_path, target_sr_wkt,
-            reprojected_aoi_vector_path, driver_name=driver_name)
-        pygeoprocessing.create_raster_from_vector_extents(
-            reprojected_aoi_vector_path, target_aoi_raster_path,
-            target_pixel_size, gdal.GDT_Byte, _TARGET_NODATA)
-        shutil.rmtree(temp_dir, ignore_errors=True)
-    else:
-        pygeoprocessing.create_raster_from_vector_extents(
-            base_aoi_vector_path, target_aoi_raster_path, target_pixel_size,
-            gdal.GDT_Byte, _TARGET_NODATA)
 
 
 def _mask_out_depth_dist(*rasters):
@@ -2153,172 +2379,6 @@ def _dictionary_to_point_vector(
         output_feature = None
 
     output_layer.SyncToDisk()
-
-
-def _get_suitable_projection_params(
-        base_raster_path, aoi_vector_path, target_pickle_path):
-    """Choose projection, pixel size and bounding box for clipping a raster.
-
-    If base raster is not already projected, choose a suitable UTM zone.
-    The target_pickle_path contains a tuple of three elements:
-        target_sr_wkt (str): a projection string used as the target projection
-            for warping the base raster later on.
-        target_pixel_size (tuple): a tuple of equal x, y pixel sizes in minimum
-            absolute value.
-        target_bounding_box (list): a list of the form [xmin, ymin, xmax, ymax]
-            that describes the largest fitting bounding box around the original
-            warped bounding box in ````new_epsg```` coordinate system.
-
-    Args:
-        base_raster_path (str): path to base raster that might not be projected
-        aoi_vector_path (str): path to base AOI vector that'll be used to
-            clip the raster.
-        target_pickle_path (str): a path to the pickle file for storing
-            target_sr_wkt, target_pixel_size, and target_bounding_box.
-
-    Returns:
-        None.
-
-    """
-    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
-    aoi_vector_info = pygeoprocessing.get_vector_info(aoi_vector_path)
-
-    base_raster_srs = osr.SpatialReference()
-    base_raster_srs.ImportFromWkt(base_raster_info['projection_wkt'])
-
-    if not base_raster_srs.IsProjected():
-        wgs84_sr = osr.SpatialReference()
-        wgs84_sr.ImportFromEPSG(4326)
-        aoi_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
-            aoi_vector_info['bounding_box'], aoi_vector_info['projection_wkt'],
-            wgs84_sr.ExportToWkt())
-
-        base_raster_bounding_box = pygeoprocessing.transform_bounding_box(
-            base_raster_info['bounding_box'],
-            base_raster_info['projection_wkt'], wgs84_sr.ExportToWkt())
-
-        target_bounding_box_wgs84 = pygeoprocessing.merge_bounding_box_list(
-            [aoi_wgs84_bounding_box, base_raster_bounding_box], 'intersection')
-
-        # Get the suitable UTM code
-        centroid_x = (
-            target_bounding_box_wgs84[2] + target_bounding_box_wgs84[0]) / 2
-        centroid_y = (
-            target_bounding_box_wgs84[3] + target_bounding_box_wgs84[1]) / 2
-
-        # Get target pixel size in square meters used for resizing the base
-        # raster later on
-        target_pixel_size = _convert_degree_pixel_size_to_square_meters(
-            base_raster_info['pixel_size'], centroid_y)
-
-        utm_code = (math.floor((centroid_x + 180) / 6) % 60) + 1
-        lat_code = 6 if centroid_y > 0 else 7
-        epsg_code = int('32%d%02d' % (lat_code, utm_code))
-        target_srs = osr.SpatialReference()
-        target_srs.ImportFromEPSG(epsg_code)
-
-        # Transform the merged unprojected bounding box of base raster and clip
-        # vector from WGS84 to the target UTM projection
-        target_bounding_box = pygeoprocessing.transform_bounding_box(
-            target_bounding_box_wgs84, wgs84_sr.ExportToWkt(),
-            target_srs.ExportToWkt())
-
-        target_sr_wkt = target_srs.ExportToWkt()
-    else:
-        # If the base raster is already projected, transform the bounding
-        # box from base raster and aoi vector bounding boxes
-        target_sr_wkt = base_raster_info['projection_wkt']
-
-        aoi_bounding_box = pygeoprocessing.transform_bounding_box(
-            aoi_vector_info['bounding_box'], aoi_vector_info['projection_wkt'],
-            target_sr_wkt)
-
-        target_bounding_box = pygeoprocessing.merge_bounding_box_list(
-            [aoi_bounding_box, base_raster_info['bounding_box']],
-            'intersection')
-
-        # Get the minimum square pixel size
-        min_pixel_size = numpy.min(numpy.absolute(base_raster_info['pixel_size']))
-        target_pixel_size = (min_pixel_size, -min_pixel_size)
-
-    with open(target_pickle_path, 'wb') as pickle_file:
-        pickle.dump(
-            (target_sr_wkt, target_pixel_size, target_bounding_box),
-            pickle_file)
-
-
-def _clip_to_projection_with_square_pixels(
-        base_raster_path, clip_vector_path, target_raster_path,
-        target_projection_wkt, target_pixel_size, target_bounding_box):
-    """Clip raster with vector into target projected coordinate system.
-
-    If pixel size of target raster is not square, the minimum absolute value
-    will be used for target_pixel_size.
-
-    Args:
-        base_raster_path (str): path to base raster.
-        clip_vector_path (str): path to base clip vector.
-        target_projection_wkt (str): a projection string used as the target
-            projection for warping the base raster.
-        target_pixel_size (tuple): a tuple of equal x, y pixel sizes in minimum
-            absolute value.
-        target_bounding_box (list): a list of the form [xmin, ymin, xmax, ymax]
-            that describes the largest fitting bounding box around the original
-            warped bounding box in ````new_epsg```` coordinate system.
-
-    Returns:
-        None.
-
-    """
-    pygeoprocessing.warp_raster(
-        base_raster_path,
-        target_pixel_size,
-        target_raster_path,
-        _TARGET_RESAMPLE_METHOD,
-        target_bb=target_bounding_box,
-        target_projection_wkt=target_projection_wkt,
-        vector_mask_options={'mask_vector_path': clip_vector_path})
-
-
-def _convert_degree_pixel_size_to_square_meters(pixel_size, center_lat):
-    """Calculate meter size of a wgs84 square pixel.
-
-    Adapted from: https://gis.stackexchange.com/a/127327/2397. If the pixel
-    is not square, this function will use the minimum absolute value from the
-    pixel dimension in the output meter_pixel_size_tuple.
-
-    Args:
-        pixel_size (tuple): [xsize, ysize] in degrees (float).
-        center_lat (float): latitude of the center of the pixel. Note this
-            value +/- half the ``pixel-size`` must not exceed 90/-90 degrees
-            latitude or an invalid area will be calculated.
-
-    Returns:
-        ``meter_pixel_size_tuple`` with minimum absolute value in the pixel
-            sizes.
-
-    """
-    m1 = 111132.92
-    m2 = -559.82
-    m3 = 1.175
-    m4 = -0.0023
-    p1 = 111412.84
-    p2 = -93.5
-    p3 = 0.118
-
-    lat = center_lat * math.pi / 180
-    latlen = (m1 + m2 * math.cos(2 * lat) + m3 * math.cos(4 * lat) +
-              m4 * math.cos(6 * lat))
-    longlen = abs(p1 * math.cos(lat) + p2 * math.cos(3 * lat) +
-                  p3 * math.cos(5 * lat))
-    x_meter_size = longlen * pixel_size[0]
-    y_meter_size = latlen * pixel_size[1]
-    meter_pixel_size_tuple = (x_meter_size, y_meter_size)
-    if not numpy.isclose(x_meter_size, y_meter_size):
-        min_meter_size = numpy.min(numpy.absolute(meter_pixel_size_tuple))
-        meter_pixel_size_tuple = (min_meter_size, -min_meter_size)
-
-    return meter_pixel_size_tuple
 
 
 def _wind_data_to_point_vector(wind_data_pickle_path,
