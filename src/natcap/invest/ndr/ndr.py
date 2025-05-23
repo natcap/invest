@@ -24,30 +24,6 @@ LOGGER = logging.getLogger(__name__)
 
 MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
 
-LOAD_TYPE_OPTIONS = {
-    "type": "option_string",
-    "required": True,
-    "options": {
-        "application-rate": {
-            "description": gettext(
-                "Treat the load values as nutrient "
-                "application rates (e.g. fertilizer, livestock "
-                "waste, ...)."
-                "The model will adjust the load using the "
-                "application rate and retention efficiency: "
-                "load_[NUTRIENT] * (1 - eff_[NUTRIENT]).")},
-        "measured-runoff": {
-            "description": gettext(
-                "Treat the load values as measured contaminant "
-                "runoff.")},
-    },
-    "about": gettext(
-        "Whether the nutrient load in column "
-        "load_[NUTRIENT] should be treated as "
-        "nutrient application rate or measured contaminant "
-        "runoff. 'application-rate' | 'measured-runoff'")
-}
-
 MODEL_SPEC = {
     "model_id": "ndr",
     "model_name": MODEL_METADATA["ndr"].model_title,
@@ -101,8 +77,52 @@ MODEL_SPEC = {
             "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
-                "load_type_p": LOAD_TYPE_OPTIONS,
-                "load_type_n": LOAD_TYPE_OPTIONS,
+                "load_type_p": {
+                    "type": "option_string",
+                    "required": True,
+                    "options": {
+                        "application-rate": {
+                            "description": gettext(
+                                "Treat the load values as nutrient "
+                                "application rates (e.g. fertilizer, livestock "
+                                "waste, ...)."
+                                "The model will adjust the load using the "
+                                "application rate and retention efficiency: "
+                                "load_p * (1 - eff_p).")},
+                        "measured-runoff": {
+                            "description": gettext(
+                                "Treat the load values as measured contaminant "
+                                "runoff.")},
+                    },
+                    "about": gettext(
+                        "Whether the nutrient load in column "
+                        "load_p should be treated as "
+                        "nutrient application rate or measured contaminant "
+                        "runoff. 'application-rate' | 'measured-runoff'")
+                },
+                "load_type_n": {
+                    "type": "option_string",
+                    "required": True,
+                    "options": {
+                        "application-rate": {
+                            "description": gettext(
+                                "Treat the load values as nutrient "
+                                "application rates (e.g. fertilizer, livestock "
+                                "waste, ...)."
+                                "The model will adjust the load using the "
+                                "application rate and retention efficiency: "
+                                "load_n * (1 - eff_n).")},
+                        "measured-runoff": {
+                            "description": gettext(
+                                "Treat the load values as measured contaminant "
+                                "runoff.")},
+                    },
+                    "about": gettext(
+                        "Whether the nutrient load in column "
+                        "load_n should be treated as "
+                        "nutrient application rate or measured contaminant "
+                        "runoff. 'application-rate' | 'measured-runoff'")
+                },
                 "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
