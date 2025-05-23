@@ -20,6 +20,7 @@ import sys
 from unittest.mock import MagicMock
 
 import natcap.invest
+from natcap.invest import models
 from sphinx.ext import apidoc
 
 DOCS_SOURCE_DIR = os.path.dirname(__file__)
@@ -199,8 +200,8 @@ MODEL_ENTRYPOINTS_FILE = os.path.join(DOCS_SOURCE_DIR, 'models.rst')
 # Write sphinx autodoc function for each entrypoint
 with open(MODEL_ENTRYPOINTS_FILE, 'w') as models_rst:
     models_rst.write(MODEL_RST_TEMPLATE)
-    for model_id, pyname in sorted(natcap.invest.models.model_id_to_pyname.items()):
-        model_title = natcap.invest.models.model_id_to_spec[model_id].model_title
+    for model_id, pyname in sorted(models.model_id_to_pyname.items()):
+        model_title = models.model_id_to_spec[model_id].model_title
         underline = ''.join(['=']*len(model_title))
         models_rst.write(
             f'{model_title}\n'
