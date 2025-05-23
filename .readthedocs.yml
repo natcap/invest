@@ -27,7 +27,8 @@ build:
       - g++ --version
       - g++-13 --version
       - alias g++="g++-13"
-      - update-alternatives --query g++
-      - update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 50
+      - g++ --version
+      # - update-alternatives --query g++
+      # - update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 50
     post_install:
       - make install
