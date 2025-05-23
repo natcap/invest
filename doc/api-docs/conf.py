@@ -194,26 +194,16 @@ see :ref:`CreatingPythonScripts`.
     :local:
 
 """
-
 MODEL_ENTRYPOINTS_FILE = os.path.join(DOCS_SOURCE_DIR, 'models.rst')
-# Find all importable modules with an execute function
-# write out to a file models.rst in the source directory
-invest_model_modules = {}
-for _, name, _ in pkgutil.walk_packages(path=[INVEST_LIB_DIR],
-                                        prefix='natcap.'):
-    module = importlib.import_module(name)
-    # any module with a MODEL_SPEC is an invest model
-    if hasattr(module, 'MODEL_SPEC'):
-        model_title = module.MODEL_SPEC['model_name']
-        invest_model_modules[model_title] = name
 
 # Write sphinx autodoc function for each entrypoint
 with open(MODEL_ENTRYPOINTS_FILE, 'w') as models_rst:
     models_rst.write(MODEL_RST_TEMPLATE)
-    for model_title, name in sorted(invest_model_modules.items()):
+    for model_id, pyname in sorted(natcap.invest.models.model_id_to_pyname.items()):
+        model_title = natcap.invest.models.model_id_to_spec[model_id].model_title
         underline = ''.join(['=']*len(model_title))
         models_rst.write(
             f'{model_title}\n'
             f'{underline}\n'
-            f'.. autofunction:: {name}.execute\n'
+            f'.. autofunction:: {pyname}.execute\n'
             '   :noindex:\n\n')
