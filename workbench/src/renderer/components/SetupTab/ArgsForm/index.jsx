@@ -124,6 +124,7 @@ class ArgsForm extends React.Component {
       argsEnabled,
       argsDropdownOptions,
       userguide,
+      isCoreModel,
       scrollEventCount,
     } = this.props;
     const formItems = [];
@@ -137,6 +138,7 @@ class ArgsForm extends React.Component {
             argkey={argkey}
             argSpec={argsSpec[argkey]}
             userguide={userguide}
+            isCoreModel={isCoreModel}
             dropdownOptions={argsDropdownOptions[argkey]}
             enabled={argsEnabled[argkey]}
             updateArgValues={this.props.updateArgValues}
@@ -199,7 +201,9 @@ ArgsForm.propTypes = {
   argsOrder: PropTypes.arrayOf(
     PropTypes.arrayOf(PropTypes.string)
   ).isRequired,
+  argsEnabled: PropTypes.objectOf(PropTypes.bool),
   userguide: PropTypes.string.isRequired,
+  isCoreModel: PropTypes.bool.isRequired,
   updateArgValues: PropTypes.func.isRequired,
   loadParametersFromFile: PropTypes.func.isRequired,
   scrollEventCount: PropTypes.number,

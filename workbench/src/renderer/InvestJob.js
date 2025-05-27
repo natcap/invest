@@ -32,11 +32,36 @@ export default class InvestJob {
         (key) => investJobStore.getItem(key)
       ));
     }
+    // Migrate old-style jobs
+    // We can eventually remove this code once it's likely that most users
+    // will have updated and ran a newer version of the workbench
+    jobArray = await Promise.all(jobArray.map(async (job) => {
+      if (job.modelID === undefined) {
+        job.modelID = job.modelRunName;
+        job.modelTitle = job.modelHumanName;
+        delete job.modelRunName;
+        delete job.modelHumanName;
+        await investJobStore.setItem(job.hash, job);
+      }
+      return job;
+    }));
     return jobArray;
   }
 
   static async clearStore() {
     await investJobStore.clear();
+    return InvestJob.getJobStore();
+  }
+
+  static async deleteJob(hash) {
+    await investJobStore.removeItem(hash);
+    // also remove item from the array that tracks the order of the jobs
+    const sortedJobHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
+    const idx = sortedJobHashes.indexOf(hash);
+    if (idx > -1) {
+      sortedJobHashes.splice(idx, 1); // remove one item only
+    }
+    await investJobStore.setItem(HASH_ARRAY_KEY, sortedJobHashes);
     return InvestJob.getJobStore();
   }
 
@@ -65,30 +90,34 @@ export default class InvestJob {
 
   /**
    * @param {object} obj - with the following properties
-   * @param {string} obj.modelRunName - name to be passed to `invest run`
-   * @param {string} obj.modelHumanName - colloquial name of the invest model
+   * @param {string} obj.modelID - name to be passed to `invest run`
+   * @param {string} obj.modelTitle - colloquial name of the invest model
    * @param {object} obj.argsValues - an invest "args dict" with initial values
    * @param {string} obj.logfile - path to an existing invest logfile
    * @param {string} obj.status - one of 'running'|'error'|'success'
+   * @param {string} obj.type - 'plugin' or 'core'
    */
   constructor(
     {
-      modelRunName,
-      modelHumanName,
+      modelID,
+      modelTitle,
       argsValues,
       logfile,
       status,
+      type,
     }
   ) {
-    if (!modelRunName || !modelHumanName) {
+    if (!modelID || !modelTitle) {
       throw new Error(
-        'Cannot create instance of InvestJob without modelRunName and modelHumanName properties')
+        'Cannot create instance of InvestJob without modelID and modelTitle properties'
+      );
     }
-    this.modelRunName = modelRunName;
-    this.modelHumanName = modelHumanName;
+    this.modelID = modelID;
+    this.modelTitle = modelTitle;
     this.argsValues = argsValues;
     this.logfile = logfile;
     this.status = status;
+    this.type = type;
     this.hash = null;
   }
 }

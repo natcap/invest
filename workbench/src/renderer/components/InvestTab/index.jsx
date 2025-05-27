@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import Spinner from 'react-bootstrap/Spinner';
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
@@ -10,7 +11,7 @@ import Col from 'react-bootstrap/Col';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 import {
-  MdKeyboardArrowRight,
+  MdKeyboardArrowRight
 } from 'react-icons/md';
 import { withTranslation } from 'react-i18next';
 
@@ -19,33 +20,10 @@ import SetupTab from '../SetupTab';
 import LogTab from '../LogTab';
 import ResourcesLinks from '../ResourcesLinks';
 import { getSpec } from '../../server_requests';
-import { UI_SPEC } from '../../ui_config';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 const { logger } = window.Workbench;
-
-/** Get an invest model's MODEL_SPEC when a model button is clicked.
-
- *
- * @param {string} modelName - as in a model name appearing in `invest list`
- * @returns {object} destructures to:
- *   { modelSpec, argsSpec, uiSpec }
- */
-async function investGetSpec(modelName) {
-  const spec = await getSpec(modelName);
-  if (spec) {
-    const { args, ...modelSpec } = spec;
-    const uiSpec = UI_SPEC[modelName];
-    if (uiSpec) {
-      return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
-    }
-    logger.error(`no UI spec found for ${modelName}`);
-  } else {
-    logger.error(`no args spec found for ${modelName}`);
-  }
-  return undefined;
-}
 
 /**
  * Render an invest model setup form, log display, etc.
@@ -59,9 +37,9 @@ class InvestTab extends React.Component {
       activeTab: 'setup',
       modelSpec: null, // MODEL_SPEC dict with all keys except MODEL_SPEC.args
       argsSpec: null, // MODEL_SPEC.args, the immutable args stuff
-      uiSpec: null,
       userTerminated: false,
       executeClicked: false,
+      tabStatus: '',
       showErrorModal: false,
     };
 
@@ -76,14 +54,35 @@ class InvestTab extends React.Component {
 
   async componentDidMount() {
     const { job } = this.props;
-    const {
-      modelSpec, argsSpec, uiSpec,
-    } = await investGetSpec(job.modelRunName);
-    this.setState({
-      modelSpec: modelSpec,
-      argsSpec: argsSpec,
-      uiSpec: uiSpec,
-    }, () => { this.switchTabs('setup'); });
+    // if it's a plugin, may need to start up the server
+    // otherwise, the core invest server should already be running
+    if (job.type === 'plugin') {
+      // if plugin server is already running, don't re-launch
+      // this will happen if we have >1 tab open with the same plugin
+      let pid = await ipcRenderer.invoke(
+        ipcMainChannels.GET_SETTING, `plugins.${job.modelID}.pid`);
+      if (!pid) {
+        pid = await ipcRenderer.invoke(
+          ipcMainChannels.LAUNCH_PLUGIN_SERVER,
+          job.modelID
+        );
+        if (!pid) {
+          this.setState({ tabStatus: 'failed' });
+          return;
+        }
+      }
+    }
+    try {
+      const { args, ...model_spec } = await getSpec(job.modelID);
+      this.setState({
+        modelSpec: model_spec,
+        argsSpec: args,
+      }, () => { this.switchTabs('setup'); });
+    } catch (error) {
+      console.log(error);
+      this.setState({ tabStatus: 'failed' });
+      return;
+    }
     const { tabID } = this.props;
     ipcRenderer.on(`invest-logging-${tabID}`, this.investLogfileCallback);
     ipcRenderer.on(`invest-exit-${tabID}`, this.investExitCallback);
@@ -160,8 +159,7 @@ class InvestTab extends React.Component {
 
     ipcRenderer.send(
       ipcMainChannels.INVEST_RUN,
-      job.modelRunName,
-      this.state.modelSpec.pyname,
+      job.modelID,
       args,
       tabID
     );
@@ -209,27 +207,44 @@ class InvestTab extends React.Component {
       activeTab,
       modelSpec,
       argsSpec,
-      uiSpec,
       executeClicked,
+      tabStatus,
       showErrorModal,
     } = this.state;
     const {
       status,
-      modelRunName,
+      modelID,
       argsValues,
       logfile,
     } = this.props.job;
 
-    const { tabID, t } = this.props;
+    const { tabID, investList, t } = this.props;
+
+    if (tabStatus === 'failed') {
+      return (
+        <div className="invest-tab-loading">
+          {t('Failed to launch plugin')}
+        </div>
+      );
+    }
 
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
-      return (<div />);
+      return (
+        <div className="invest-tab-loading">
+          <Spinner animation="border" role="status">
+            <span className="sr-only">Loading...</span>
+          </Spinner>
+          <br />
+          {t('Starting up model...')}
+        </div>
+      );
     }
 
     const logDisabled = !logfile;
     const sidebarSetupElementId = `sidebar-setup-${tabID}`;
     const sidebarFooterElementId = `sidebar-footer-${tabID}`;
+    const isCoreModel = investList[modelID].type === 'core';
 
     return (
       <>
@@ -260,7 +275,8 @@ class InvestTab extends React.Component {
               />
               <div className="sidebar-row sidebar-links">
                 <ResourcesLinks
-                  moduleName={modelRunName}
+                  modelID={modelID}
+                  isCoreModel={isCoreModel}
                   docs={modelSpec.userguide}
                 />
               </div>
@@ -288,17 +304,18 @@ class InvestTab extends React.Component {
                   aria-label="model setup tab"
                 >
                   <SetupTab
-                    pyModuleName={modelSpec.pyname}
                     userguide={modelSpec.userguide}
-                    modelName={modelRunName}
+                    isCoreModel={isCoreModel}
+                    modelID={modelID}
                     argsSpec={argsSpec}
-                    uiSpec={uiSpec}
+                    inputFieldOrder={modelSpec.input_field_order}
                     argsInitValues={argsValues}
                     investExecute={this.investExecute}
                     sidebarSetupElementId={sidebarSetupElementId}
                     sidebarFooterElementId={sidebarFooterElementId}
                     executeClicked={executeClicked}
                     switchTabs={this.switchTabs}
+                    investList={investList}
                     tabID={tabID}
                     updateJobProperties={this.props.updateJobProperties}
                   />
@@ -333,15 +350,19 @@ class InvestTab extends React.Component {
 
 InvestTab.propTypes = {
   job: PropTypes.shape({
-    modelRunName: PropTypes.string.isRequired,
-    modelHumanName: PropTypes.string.isRequired,
+    modelID: PropTypes.string.isRequired,
     argsValues: PropTypes.object,
     logfile: PropTypes.string,
     status: PropTypes.string,
+    type: PropTypes.string,
   }).isRequired,
   tabID: PropTypes.string.isRequired,
   saveJob: PropTypes.func.isRequired,
   updateJobProperties: PropTypes.func.isRequired,
+  investList: PropTypes.shape({
+    modelTitle: PropTypes.string,
+  }).isRequired,
+  t: PropTypes.func.isRequired,
 };
 
 export default withTranslation()(InvestTab);

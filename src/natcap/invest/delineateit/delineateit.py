@@ -15,30 +15,36 @@ from osgeo import ogr
 from osgeo import osr
 
 from .. import gettext
-from .. import spec_utils
+from .. import spec
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 from . import delineateit_core
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "delineateit",
-    "model_name": MODEL_METADATA["delineateit"].model_title,
-    "pyname": MODEL_METADATA["delineateit"].pyname,
-    "userguide": MODEL_METADATA["delineateit"].userguide,
+    "model_title": gettext("DelineateIt"),
+    "userguide": "delineateit.html",
+    "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['dem_path', 'detect_pour_points', 'outlet_vector_path', 'skip_invalid_geometry'],
+            ['snap_points', 'flow_threshold', 'snap_distance'],
+        ]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "outlet_vector_path"],
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "dem_path": {
-            **spec_utils.DEM,
+            **spec.DEM,
             "projected": True
         },
         "detect_pour_points": {
@@ -53,8 +59,9 @@ MODEL_SPEC = {
         "outlet_vector_path": {
             "type": "vector",
             "fields": {},
-            "geometries": spec_utils.ALL_GEOMS,
+            "geometries": spec.ALL_GEOMS,
             "required": "not detect_pour_points",
+            "allowed": "not detect_pour_points",
             "about": gettext(
                 "A map of watershed outlets from which to delineate the "
                 "watersheds. Required if Detect Pour Points is not checked."),
@@ -74,10 +81,11 @@ MODEL_SPEC = {
             "name": gettext("snap points to the nearest stream")
         },
         "flow_threshold": {
-            **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
+            **spec.THRESHOLD_FLOW_ACCUMULATION,
             "required": "snap_points",
+            "allowed": "snap_points",
             "about": gettext(
-                spec_utils.THRESHOLD_FLOW_ACCUMULATION["about"] +
+                spec.THRESHOLD_FLOW_ACCUMULATION["about"] +
                 " Required if Snap Points is selected."),
         },
         "snap_distance": {
@@ -85,6 +93,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.pixels,
             "required": "snap_points",
+            "allowed": "snap_points",
             "about": gettext(
                 "Maximum distance to relocate watershed outlet points in "
                 "order to snap them to a stream. Required if Snap Points "
@@ -94,6 +103,7 @@ MODEL_SPEC = {
         "skip_invalid_geometry": {
             "type": "boolean",
             "required": False,
+            "allowed": "not detect_pour_points",
             "about": gettext(
                 "Skip delineation for any invalid geometries found in the "
                 "Outlet Features. Otherwise, an invalid geometry will cause "
@@ -102,18 +112,18 @@ MODEL_SPEC = {
         }
     },
     "outputs": {
-        "filled_dem.tif": spec_utils.FILLED_DEM,
-        "flow_direction.tif": spec_utils.FLOW_DIRECTION_D8,
-        "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
+        "filled_dem.tif": spec.FILLED_DEM,
+        "flow_direction.tif": spec.FLOW_DIRECTION_D8,
+        "flow_accumulation.tif": spec.FLOW_ACCUMULATION,
         "preprocessed_geometries.gpkg": {
             "about": (
                 "A vector containing only those geometries that the model can "
                 "verify are valid. The geometries appearing in this vector "
                 "will be the ones passed to watershed delineation."),
-            "geometries": spec_utils.ALL_GEOMS,
+            "geometries": spec.ALL_GEOMS,
             "fields": {}
         },
-        "streams.tif": spec_utils.STREAM,
+        "streams.tif": spec.STREAM,
         "snapped_outlets.gpkg": {
             "about": (
                 "A vector that indicates where outlet points (point "
@@ -121,7 +131,7 @@ MODEL_SPEC = {
                 "Threshold Flow Accumulation and Pixel Distance to Snap "
                 "Outlet Points. Any non-point geometries will also have been "
                 "copied over to this vector, but will not have been altered."),
-            "geometries": spec_utils.POINT,
+            "geometries": spec.POINT,
             "fields": {}
         },
         "watersheds.gpkg": {
@@ -129,18 +139,18 @@ MODEL_SPEC = {
                 "A vector defining the areas that are upstream from the "
                 "snapped outlet points, where upstream area is defined by the "
                 "D8 flow algorithm implementation in PyGeoprocessing."),
-            "geometries": spec_utils.POLYGON,
+            "geometries": spec.POLYGON,
             "fields": {}
         },
         "pour_points.gpkg": {
             "about": (
                 "Points where water flows off the defined area of the map."),
-            "geometries": spec_utils.POINT,
+            "geometries": spec.POINT,
             "fields": {}
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 _OUTPUT_FILES = {
     'preprocessed_geometries': 'preprocessed_geometries.gpkg',
@@ -818,5 +828,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC)

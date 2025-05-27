@@ -18,32 +18,41 @@ from osgeo import gdal
 from osgeo import ogr
 
 from .. import gettext
-from .. import spec_utils
+from .. import spec
 from .. import urban_nature_access
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "sdr",
-    "model_name": MODEL_METADATA["sdr"].model_title,
-    "pyname": MODEL_METADATA["sdr"].pyname,
-    "userguide": MODEL_METADATA["sdr"].userguide,
+    "model_title": gettext("Sediment Delivery Ratio"),
+    "userguide": "sdr.html",
+    "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['dem_path', 'erosivity_path', 'erodibility_path'],
+            ['lulc_path', 'biophysical_table_path'],
+            ['watersheds_path', 'drainage_path'],
+            ['flow_dir_algorithm', 'threshold_flow_accumulation',
+             'k_param', 'sdr_max', 'ic_0_param', 'l_max']
+        ]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
                          "lulc_path", "drainage_path", "watersheds_path", ],
         "different_projections_ok": False,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "dem_path": {
-            **spec_utils.DEM,
+            **spec.DEM,
             "projected": True
         },
         "erosivity_path": {
@@ -70,15 +79,15 @@ MODEL_SPEC = {
             "name": gettext("soil erodibility")
         },
         "lulc_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
-            "about": spec_utils.LULC['about'] + " " + gettext(
+            "about": spec.LULC['about'] + " " + gettext(
                 "All values in this raster must "
                 "have corresponding entries in the Biophysical Table.")
         },
         "watersheds_path": {
             "type": "vector",
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "projected": True,
             "fields": {},
             "about": gettext(
@@ -91,7 +100,7 @@ MODEL_SPEC = {
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "usle_c": {
                     "type": "ratio",
                     "about": gettext("Cover-management factor for the USLE")},
@@ -105,7 +114,7 @@ MODEL_SPEC = {
                 "corresponding entries in this table."),
             "name": gettext("biophysical table")
         },
-        "threshold_flow_accumulation": spec_utils.THRESHOLD_FLOW_ACCUMULATION,
+        "threshold_flow_accumulation": spec.THRESHOLD_FLOW_ACCUMULATION,
         "k_param": {
             "type": "number",
             "units": u.none,
@@ -142,7 +151,7 @@ MODEL_SPEC = {
                 "streams. Pixels with 0 are not drainages."),
             "name": gettext("drainages")
         },
-        **spec_utils.FLOW_DIR_ALGORITHM
+        **spec.FLOW_DIR_ALGORITHM
     },
     "outputs": {
         "avoided_erosion.tif": {
@@ -180,7 +189,7 @@ MODEL_SPEC = {
                 "units": u.metric_ton/u.hectare
             }}
         },
-        "stream.tif": spec_utils.STREAM,
+        "stream.tif": spec.STREAM,
         "stream_and_drainage.tif": {
             "created_if": "drainage_path",
             "about": "This raster is the union of that layer with the calculated stream layer(Eq. (85)). Values of 1 represent streams, values of 0 are non-stream pixels.",
@@ -195,7 +204,7 @@ MODEL_SPEC = {
         },
         "watershed_results_sdr.shp": {
             "about": "Table containing biophysical values for each watershed",
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "sed_export": {
                     "type": "number",
@@ -261,8 +270,8 @@ MODEL_SPEC = {
                         "units": u.metric_ton/(u.hectare*u.year)
                     }}
                 },
-                "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
-                "flow_direction.tif": spec_utils.FLOW_DIRECTION,
+                "flow_accumulation.tif": spec.FLOW_ACCUMULATION,
+                "flow_direction.tif": spec.FLOW_DIRECTION,
                 "ic.tif": {
                     "about": gettext("Index of connectivity (Eq. (70))"),
                     "bands": {1: {
@@ -277,7 +286,7 @@ MODEL_SPEC = {
                         "units": u.none
                     }}
                 },
-                "pit_filled_dem.tif": spec_utils.FILLED_DEM,
+                "pit_filled_dem.tif": spec.FILLED_DEM,
                 "s_accumulation.tif": {
                     "about": gettext(
                         "Flow accumulation weighted by the thresholded slope. "
@@ -300,7 +309,7 @@ MODEL_SPEC = {
                     "about": gettext("Sediment delivery ratio (Eq. (75))"),
                     "bands": {1: {"type": "ratio"}}
                 },
-                "slope.tif": spec_utils.SLOPE,
+                "slope.tif": spec.SLOPE,
                 "slope_threshold.tif": {
                     "about": gettext(
                         "Percent slope, thresholded to be no less than 0.005 "
@@ -450,9 +459,9 @@ MODEL_SPEC = {
                 }
             },
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 _OUTPUT_BASE_FILES = {
     'rkls_path': 'rkls.tif',
@@ -553,9 +562,9 @@ def execute(args):
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table_path'],
-        **MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = MODEL_SPEC.get_input(
+        'biophysical_table_path').get_validated_dataframe(
+        args['biophysical_table_path'])
 
     # Test to see if c or p values are outside of 0..1
     for key in ['usle_c', 'usle_p']:
@@ -1590,5 +1599,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC)

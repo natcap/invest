@@ -40,17 +40,6 @@ const FORUM_TAGS = {
   wind_energy: 'wind-energy',
 };
 
-
-/**
- * Open the target href in an electron window.
- */
-function handleUGClick(event) {
-  event.preventDefault();
-  ipcRenderer.send(
-    ipcMainChannels.OPEN_LOCAL_HTML, event.currentTarget.href
-  );
-}
-
 /** Render model-relevant links to the User's Guide and Forum.
  *
  * This should be a link to the model's User's Guide chapter and
@@ -58,46 +47,75 @@ function handleUGClick(event) {
  * e.g. https://community.naturalcapitalproject.org/tag/carbon
  */
 export default function ResourcesTab(props) {
-  const { docs, moduleName } = props;
+  const { docs, isCoreModel, modelID } = props;
 
   let forumURL = FORUM_ROOT;
-  const tagName = FORUM_TAGS[moduleName];
+  const tagName = FORUM_TAGS[modelID];
   if (tagName) {
     forumURL = `${FORUM_ROOT}/tag/${tagName}`;
   }
 
-  const { t, i18n } = useTranslation();
-  const userGuideURL = `${window.Workbench.USERGUIDE_PATH}/${window.Workbench.LANGUAGE}/${docs}`;
+  const { t } = useTranslation();
+
+  const userGuideURL = (
+    isCoreModel
+    ? `${window.Workbench.USERGUIDE_PATH}/${window.Workbench.LANGUAGE}/${docs}`
+    : docs
+  );
+  const userGuideDisplayText = isCoreModel ? "User's Guide" : "Plugin Documentation";
+  const userGuideAddlInfo = isCoreModel ? '(opens in new window)' : '(opens in web browser)';
+  const userGuideAriaLabel = `${userGuideDisplayText} ${userGuideAddlInfo}`;
+
+  /**
+   * Open the target href in an electron window.
+   */
+  const handleUGClick = (event) => {
+    event.preventDefault();
+    if (isCoreModel) {
+      ipcRenderer.send(
+        ipcMainChannels.OPEN_LOCAL_HTML, event.currentTarget.href
+      );
+    } else {
+      ipcRenderer.send(
+        ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
+      );
+    }
+  }
 
   return (
     <React.Fragment>
-      <a
-        href={userGuideURL}
-        title={userGuideURL}
-        aria-label="go to user's guide in web browser"
-        onClick={handleUGClick}
-      >
-        <MdOpenInNew className="mr-1" />
-        {t("User's Guide")}
-      </a>
+      {
+        userGuideURL
+        &&
+        <a
+          href={userGuideURL}
+          title={userGuideURL}
+          aria-label={t(userGuideAriaLabel)}
+          onClick={handleUGClick}
+        >
+          <MdOpenInNew className="mr-1" />
+          {t(userGuideDisplayText)}
+        </a>
+      }
       <a
         href={forumURL}
         title={forumURL}
-        aria-label="go to frequently asked questions in web browser"
+        aria-label={t('Frequently Asked Questions (opens in web browser)')}
         onClick={openLinkInBrowser}
       >
         <MdOpenInNew className="mr-1" />
-        {t("Frequently Asked Questions")}
+        {t('Frequently Asked Questions')}
       </a>
     </React.Fragment>
   );
 }
 
 ResourcesTab.propTypes = {
-  moduleName: PropTypes.string,
+  modelID: PropTypes.string,
+  isCoreModel: PropTypes.bool.isRequired,
   docs: PropTypes.string,
 };
 ResourcesTab.defaultProps = {
-  moduleName: undefined,
+  modelID: undefined,
   docs: '',
 };

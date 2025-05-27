@@ -24,7 +24,7 @@ class OpenButton extends React.Component {
   }
 
   async browseFile() {
-    const { t } = this.props;
+    const { t, investList, openInvestModel } = this.props;
     const data = await ipcRenderer.invoke(ipcMainChannels.SHOW_OPEN_DIALOG);
     if (!data.canceled) {
       let datastack;
@@ -38,29 +38,32 @@ class OpenButton extends React.Component {
         return;
       }
       const job = new InvestJob({
-        modelRunName: datastack.model_run_name,
-        modelHumanName: datastack.model_human_name,
+        modelID: datastack.model_id,
+        modelTitle: investList[datastack.model_id].modelTitle,
         argsValues: datastack.args,
+        type: investList[datastack.model_id].type,
       });
-      this.props.openInvestModel(job);
+      openInvestModel(job);
     }
   }
 
   render() {
-    const { t } = this.props;
-    const tipText = t('Browse to a datastack (.json) or InVEST logfile (.txt)');
+    const { t, className } = this.props;
+    const tipText = t(
+      `Open an InVEST model by loading input parameters from
+      a .json, .tgz, or InVEST logfile (.txt)`);
     return (
       <OverlayTrigger
-        placement="left"
+        placement="right"
         delay={{ show: 250, hide: 400 }}
         overlay={<Tooltip>{tipText}</Tooltip>}
       >
         <Button
-          className={this.props.className}
+          className={className}
           onClick={this.browseFile}
-          variant="outline-dark"
+          variant="outline-primary"
         >
-          {t("Open")}
+          {t('Browse to a datastack or InVEST logfile')}
         </Button>
       </OverlayTrigger>
     );
@@ -69,6 +72,12 @@ class OpenButton extends React.Component {
 
 OpenButton.propTypes = {
   openInvestModel: PropTypes.func.isRequired,
+  investList: PropTypes.shape({
+    modelTitle: PropTypes.string,
+    type: PropTypes.string,
+  }).isRequired,
+  t: PropTypes.func.isRequired,
+  className: PropTypes.string.isRequired,
 };
 
 export default withTranslation()(OpenButton);

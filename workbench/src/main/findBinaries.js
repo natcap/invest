@@ -1,5 +1,6 @@
-import path from 'path';
-import { spawnSync } from 'child_process';
+import upath from 'upath';
+import fs from 'fs';
+import { execSync, spawnSync } from 'child_process';
 
 import { ipcMain } from 'electron';
 
@@ -14,7 +15,7 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
  * @param {boolean} isDevMode - a boolean designating dev mode or not.
  * @returns {string} invest binary path string.
  */
-export default function findInvestBinaries(isDevMode) {
+export function findInvestBinaries(isDevMode) {
   // Binding to the invest server binary:
   let investExe;
   const ext = (process.platform === 'win32') ? '.exe' : '';
@@ -23,7 +24,7 @@ export default function findInvestBinaries(isDevMode) {
   if (isDevMode) {
     investExe = filename; // assume an active python env w/ exe on path
   } else {
-    investExe = path.join(process.resourcesPath, 'invest', filename);
+    investExe = upath.join(process.resourcesPath, 'invest', filename);
     // It's likely the exe path includes spaces because it's composed of
     // app's Product Name, a user-facing name given to electron-builder.
     // Quoting depends on the shell, ('/bin/sh' or 'cmd.exe') and type of
@@ -50,4 +51,28 @@ export default function findInvestBinaries(isDevMode) {
     ipcMainChannels.INVEST_VERSION, () => investVersion
   );
   return investExe;
+}
+
+/**
+ * Return the available micromamba executable.
+ *
+ * @param {boolean} isDevMode - a boolean designating dev mode or not.
+ * @returns {string} micromamba executable.
+ */
+export function findMicromambaExecutable(isDevMode) {
+  let micromambaExe;
+  if (isDevMode) {
+    micromambaExe = 'micromamba'; // assume that micromamba is available
+  } else {
+    micromambaExe = `"${upath.join(process.resourcesPath, 'micromamba')}"`;
+  }
+  // Check that the executable is working
+  const { stderr, error } = spawnSync(micromambaExe, ['--help'], { shell: true });
+  if (error) {
+    logger.error(stderr.toString());
+    logger.error('micromamba executable is not where we expected it.');
+    throw error;
+  }
+  logger.info(`using micromamba executable '${micromambaExe}'`);
+  return micromambaExe;
 }

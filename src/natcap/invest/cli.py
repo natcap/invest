@@ -3,6 +3,7 @@
 import argparse
 import codecs
 import datetime
+import gettext
 import importlib
 import json
 import logging
@@ -14,84 +15,103 @@ import warnings
 
 import natcap.invest
 from natcap.invest import datastack
-from natcap.invest import model_metadata
-from natcap.invest import spec_utils
+from natcap.invest import set_locale
+from natcap.invest import spec
 from natcap.invest import ui_server
 from natcap.invest import utils
+from natcap.invest import models
 from pygeoprocessing.geoprocessing_core import GDALUseExceptions
 
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
 
-# Build up an index mapping aliases to model_name.
-# ``model_name`` is the key to the MODEL_METADATA dict.
-_MODEL_ALIASES = {}
-for model_name, meta in model_metadata.MODEL_METADATA.items():
-    for alias in meta.aliases:
-        assert alias not in _MODEL_ALIASES, (
-            'Alias %s already defined for model %s') % (
-                alias, _MODEL_ALIASES[alias])
-        _MODEL_ALIASES[alias] = model_name
 
-
-def build_model_list_table():
+def build_model_list_table(locale_code):
     """Build a table of model names, aliases and other details.
 
     This table is a table only in the sense that its contents are aligned
     into columns, but are not separated by a delimiter.  This table
     is intended to be printed to stdout.
 
+    Args:
+        locale_code (str): Language code to pass to gettext. The model names
+            will be returned in this language.
+
     Returns:
         A string representation of the formatted table.
     """
-    from natcap.invest import gettext
-    model_names = sorted(model_metadata.MODEL_METADATA.keys())
-    max_model_name_length = max(len(name) for name in model_names)
+    from natcap.invest import LOCALE_DIR
+    translation = gettext.translation(
+        'messages',
+        languages=[locale_code],
+        localedir=LOCALE_DIR,
+        # fall back to a NullTranslation, which returns the English messages
+        fallback=True)
+    max_model_id_length = max(
+        len(_id) for _id in models.model_id_to_spec.keys())
 
     # Adding 3 to max alias name length for the parentheses plus some padding.
-    max_alias_name_length = max(len(', '.join(meta.aliases))
-                                for meta in model_metadata.MODEL_METADATA.values()) + 3
-    template_string = '    {model_name} {aliases} {model_title} {usage}'
-    strings = [gettext('Available models:')]
-    for model_name in model_names:
-        usage_string = '(No GUI available)'
-        if model_metadata.MODEL_METADATA[model_name].gui is not None:
-            usage_string = ''
+    max_alias_name_length = max(len(', '.join(
+        model_spec.aliases)) for model_spec in models.model_id_to_spec.values()) + 3
+    template_string = '    {model_id} {aliases} {model_title}'
+    strings = [translation.gettext('Available models:')]
+    for model_id, model_spec in models.model_id_to_spec.items():
 
-        alias_string = ', '.join(model_metadata.MODEL_METADATA[model_name].aliases)
+        alias_string = ', '.join(model_spec.aliases)
         if alias_string:
-            alias_string = '(%s)' % alias_string
+            alias_string = f'({alias_string})'
 
         strings.append(template_string.format(
-            model_name=model_name.ljust(max_model_name_length),
+            model_id=model_id.ljust(max_model_id_length),
             aliases=alias_string.ljust(max_alias_name_length),
-            model_title=model_metadata.MODEL_METADATA[model_name].model_title,
-            usage=usage_string))
+            model_title=translation.gettext(model_spec.model_title)))
     return '\n'.join(strings) + '\n'
 
 
-def build_model_list_json():
+def build_model_list_json(locale_code):
     """Build a json object of relevant information for the CLI.
 
     The json object returned uses the human-readable model names for keys
     and the values are another dict containing the internal name
     of the model and the aliases recognized by the CLI.
 
+    Args:
+        locale_code (str): Language code to pass to gettext. The model names
+            will be returned in this language.
+
     Returns:
         A string representation of the JSON object.
 
     """
+    from natcap.invest import LOCALE_DIR
+    translation = gettext.translation(
+        'messages',
+        languages=[locale_code],
+        localedir=LOCALE_DIR,
+        # fall back to a NullTranslation, which returns the English messages
+        fallback=True)
+
     json_object = {}
-    for model_name, model_data in model_metadata.MODEL_METADATA.items():
-        json_object[model_data.model_title] = {
-            'model_name': model_name,
-            'aliases': model_data.aliases
+    for model_id, model_spec in models.model_id_to_spec.items():
+        json_object[model_id] = {
+            'model_title': translation.gettext(model_spec.model_title),
+            'aliases': model_spec.aliases
         }
 
     return json.dumps(json_object)
 
 
-def export_to_python(target_filepath, model, args_dict=None):
+def export_to_python(target_filepath, model_id, args_dict=None):
+    """Generate a python script that executes a model.
+
+    Args:
+        target_filepath (str): path to generate the python file
+        model_id (str): ID of the model to generate the script for
+        args_dict (dict): If provided, prefill these arg values in the script
+
+    Returns:
+        None
+    """
     script_template = textwrap.dedent("""\
     # coding=UTF-8
     # -----------------------------------------------
@@ -121,17 +141,14 @@ def export_to_python(target_filepath, model, args_dict=None):
     """)
 
     if args_dict is None:
-        model_module = importlib.import_module(
-            name=model_metadata.MODEL_METADATA[model].pyname)
-        spec = model_module.MODEL_SPEC
-        cast_args = {key: '' for key in spec['args'].keys()}
+        cast_args = {
+            arg_spec.id: '' for arg_spec in models.model_id_to_spec[model_id].inputs}
     else:
         cast_args = dict((str(key), value) for (key, value)
                          in args_dict.items())
 
     with codecs.open(target_filepath, 'w', encoding='utf-8') as py_file:
         args = pprint.pformat(cast_args, indent=4)  # 4 spaces
-
         # Tweak formatting from pprint:
         # * Bump parameter inline with starting { to next line
         # * add trailing comma to last item item pair
@@ -141,8 +158,8 @@ def export_to_python(target_filepath, model, args_dict=None):
         py_file.write(script_template.format(
             invest_version=natcap.invest.__version__,
             today=datetime.datetime.now().strftime('%c'),
-            model_title=model_metadata.MODEL_METADATA[model].model_title,
-            pyname=model_metadata.MODEL_METADATA[model].pyname,
+            model_title=models.model_id_to_spec[model_id].model_title,
+            pyname=models.model_id_to_pyname[model_id],
             model_args=args))
 
 
@@ -161,11 +178,11 @@ class SelectModelAction(argparse.Action):
 
         Identifiable model names are:
 
-            * the model name (verbatim) as identified in the keys of MODEL_METADATA
+            * the model id (exactly matching the MODEL_SPEC.model_id)
             * a uniquely identifiable prefix for the model name (e.g. "d"
               matches "delineateit", but "co" matches both
               "coastal_vulnerability" and "coastal_blue_carbon").
-            * a known model alias, as registered in MODEL_METADATA
+            * a known model alias, as registered in MODEL_SPEC.aliases
 
         If no single model can be identified based on these rules, an error
         message is printed and the parser exits with a nonzero exit code.
@@ -176,7 +193,7 @@ class SelectModelAction(argparse.Action):
 
         Overridden from argparse.Action.__call__.
         """
-        known_models = sorted(list(model_metadata.MODEL_METADATA.keys()))
+        known_models = sorted(list(models.model_id_to_spec.keys()))
 
         matching_models = [model for model in known_models if
                            model.startswith(values)]
@@ -185,11 +202,11 @@ class SelectModelAction(argparse.Action):
                          model == values]
 
         if len(matching_models) == 1:  # match an identifying substring
-            modelname = matching_models[0]
-        elif len(exact_matches) == 1:  # match an exact modelname
-            modelname = exact_matches[0]
-        elif values in _MODEL_ALIASES:  # match an alias
-            modelname = _MODEL_ALIASES[values]
+            model_id = matching_models[0]
+        elif len(exact_matches) == 1:  # match an exact model id
+            model_id = exact_matches[0]
+        elif values in models.model_alias_to_id:  # match an alias
+            model_id = models.model_alias_to_id[values]
         elif len(matching_models) == 0:
             parser.exit(status=1, message=(
                 "Error: '%s' not a known model" % values))
@@ -201,7 +218,7 @@ class SelectModelAction(argparse.Action):
                     "    {matching_models}").format(
                         model=values,
                         matching_models=' '.join(matching_models)))
-        setattr(namespace, self.dest, modelname)
+        setattr(namespace, self.dest, model_id)
 
 
 def main(user_args=None):
@@ -359,12 +376,10 @@ def main(user_args=None):
         logging.getLogger('natcap').setLevel(logging.DEBUG)
 
         if args.subcommand == 'list':
-            # reevaluate the model names in the new language
-            importlib.reload(model_metadata)
             if args.json:
-                message = build_model_list_json()
+                message = build_model_list_json(args.language)
             else:
-                message = build_model_list_table()
+                message = build_model_list_table(args.language)
 
             sys.stdout.write(message)
             parser.exit()
@@ -379,7 +394,7 @@ def main(user_args=None):
             # reload validation module first so it's also in the correct language
             importlib.reload(importlib.import_module('natcap.invest.validation'))
             model_module = importlib.reload(importlib.import_module(
-                name=parsed_datastack.model_name))
+                name=models.model_id_to_pyname[parsed_datastack.model_id]))
 
             try:
                 validation_result = model_module.validate(parsed_datastack.args)
@@ -412,15 +427,12 @@ def main(user_args=None):
             parser.exit(0)
 
         if args.subcommand == 'getspec':
-            target_model = model_metadata.MODEL_METADATA[args.model].pyname
+            target_model = models.model_id_to_pyname[args.model]
             model_module = importlib.reload(
                 importlib.import_module(name=target_model))
-            spec = model_module.MODEL_SPEC
+            model_spec = model_module.MODEL_SPEC
 
-            if args.json:
-                message = spec_utils.serialize_args_spec(spec)
-            else:
-                message = pprint.pformat(spec)
+            message = model_spec.to_json()
             sys.stdout.write(message)
             parser.exit(0)
 
@@ -448,18 +460,20 @@ def main(user_args=None):
             else:
                 parsed_datastack.args['workspace_dir'] = args.workspace
 
-            target_model = model_metadata.MODEL_METADATA[args.model].pyname
+            target_model = models.model_id_to_pyname[args.model]
             model_module = importlib.import_module(name=target_model)
             LOGGER.info('Imported target %s from %s',
                         model_module.__name__, model_module)
 
             with utils.prepare_workspace(parsed_datastack.args['workspace_dir'],
-                                         name=parsed_datastack.model_name,
+                                         model_id=parsed_datastack.model_id,
                                          logging_level=log_level):
-                LOGGER.log(datastack.ARGS_LOG_LEVEL,
-                           'Starting model with parameters: \n%s',
-                           datastack.format_args_dict(parsed_datastack.args,
-                                                      parsed_datastack.model_name))
+                LOGGER.log(
+                    datastack.ARGS_LOG_LEVEL,
+                    'Starting model with parameters: \n%s',
+                    datastack.format_args_dict(
+                        parsed_datastack.args,
+                        parsed_datastack.model_id))
 
                 # We're deliberately not validating here because the user
                 # can just call ``invest validate <datastack>`` to validate.
@@ -472,7 +486,7 @@ def main(user_args=None):
                 try:
                     # If there's an exception from creating metadata
                     # I don't think we want to indicate a model failure
-                    spec_utils.generate_metadata_for_outputs(
+                    spec.generate_metadata_for_outputs(
                         model_module, parsed_datastack.args)
                 except Exception as exc:
                     LOGGER.warning(
@@ -488,7 +502,6 @@ def main(user_args=None):
                 target_filepath = f'{args.model}_execute.py'
             export_to_python(target_filepath, args.model)
             parser.exit()
-
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

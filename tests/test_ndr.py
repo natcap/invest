@@ -124,18 +124,12 @@ class NDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
         new_table_path = os.path.join(self.workspace_dir, 'table_c_len_0.csv')
-        with open(new_table_path, 'w') as target_file:
-            with open(args['biophysical_table_path'], 'r') as table_file:
-                target_file.write(table_file.readline())
-                while True:
-                    line = table_file.readline()
-                    if not line:
-                        break
-                    line_list = line.split(',')
-                    # replace the crit_len_p with 0 in this column
-                    line = (
-                        ','.join(line_list[0:12] + ['0.0'] + line_list[13::]))
-                    target_file.write(line)
+
+        bio_df = pandas.read_csv(args['biophysical_table_path'])
+        # replace the crit_len_p with 0 in this column
+        bio_df['crit_len_p'] = 0
+        bio_df.to_csv(new_table_path)
+        bio_df = None
 
         args['biophysical_table_path'] = new_table_path
         ndr.execute(args)
@@ -376,6 +370,39 @@ class NDRTests(unittest.TestCase):
         if mismatch_list:
             raise RuntimeError("results not expected: %s" % mismatch_list)
 
+    def test_mask_raster_nodata_overflow(self):
+        """NDR test when target nodata value overflows source dtype."""
+        from natcap.invest.ndr import ndr
+
+        source_raster_path = os.path.join(self.workspace_dir, 'source.tif')
+        target_raster_path = os.path.join(
+            self.workspace_dir, 'target.tif')
+        source_dtype = numpy.int8
+        target_dtype = gdal.GDT_Int32
+        target_nodata = numpy.iinfo(numpy.int32).min
+
+        pygeoprocessing.numpy_array_to_raster(
+            base_array=numpy.full((4, 4), 1, dtype=source_dtype),
+            target_nodata=None,
+            pixel_size=(1, -1),
+            origin=(0, 0),
+            projection_wkt=None,
+            target_path=source_raster_path)
+
+        ndr._mask_raster(
+            source_raster_path=source_raster_path,
+            mask_raster_path=source_raster_path,  # mask=source for convenience
+            target_masked_raster_path=target_raster_path,
+            target_nodata=target_nodata,
+            target_dtype=target_dtype)
+
+        # Mostly we're testing that _mask_raster did not raise an OverflowError,
+        # but we can assert the results anyway.
+        array = pygeoprocessing.raster_to_numpy_array(target_raster_path)
+        numpy.testing.assert_array_equal(
+            array,
+            numpy.full((4, 4), 1, dtype=numpy.int32))  # matches target_dtype
+
     def test_validation(self):
         """NDR test argument validation."""
         from natcap.invest import validation
@@ -537,3 +564,56 @@ class NDRTests(unittest.TestCase):
         expected_rpi = runoff_proxy_array/numpy.mean(runoff_proxy_array)
 
         numpy.testing.assert_allclose(actual_rpi, expected_rpi)
+    
+    def test_calculate_load_type(self):
+        """Test ``_calculate_load`` for both load_types."""
+        from natcap.invest.ndr import ndr
+
+        # make simple lulc raster
+        lulc_path = os.path.join(self.workspace_dir, "lulc-load-type.tif")
+        lulc_array = numpy.array(
+            [[1, 2, 3, 4], [4, 3, 2, 1]], dtype=numpy.int16)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        projection_wkt = srs.ExportToWkt()
+        origin = (461251, 4923445)
+        pixel_size = (30, -30)
+        no_data = -1
+        pygeoprocessing.numpy_array_to_raster(
+            lulc_array, no_data, pixel_size, origin, projection_wkt,
+            lulc_path)
+
+        target_load_path = os.path.join(self.workspace_dir, "load_raster.tif")
+
+        # Calculate load
+        lucode_to_params = {
+            1: {'load_n': 10.0, 'eff_n': 0.5, 'load_type_n': 'measured-runoff'},
+            2: {'load_n': 20.0, 'eff_n': 0.5, 'load_type_n': 'measured-runoff'},
+            3: {'load_n': 10.0, 'eff_n': 0.5, 'load_type_n': 'application-rate'},
+            4: {'load_n': 20.0, 'eff_n': 0.5, 'load_type_n': 'application-rate'}}
+        ndr._calculate_load(lulc_path, lucode_to_params, 'n', target_load_path)
+
+        expected_results = numpy.array(
+            [[10.0, 20.0, 5.0, 10.0], [10.0, 5.0, 20.0, 10.0]])
+        actual_results = pygeoprocessing.raster_to_numpy_array(target_load_path)
+
+        numpy.testing.assert_allclose(actual_results, expected_results)
+    
+    def test_calculate_load_type_raises_error(self):
+        """Test ``_calculate_load`` raises ValueError on bad load_type's."""
+        from natcap.invest.ndr import ndr
+
+        lulc_path = os.path.join(self.workspace_dir, "lulc-load-type.tif")
+        target_load_path = os.path.join(self.workspace_dir, "load_raster.tif")
+
+        # Calculate load
+        lucode_to_params = {
+            1: {'load_n': 10.0, 'eff_n': 0.5, 'load_type_n': 'measured-runoff'},
+            2: {'load_n': 20.0, 'eff_n': 0.5, 'load_type_n': 'cheese'},
+            3: {'load_n': 10.0, 'eff_n': 0.5, 'load_type_n': 'application-rate'},
+            4: {'load_n': 20.0, 'eff_n': 0.5, 'load_type_n': 'application-rate'}}
+
+        with self.assertRaises(ValueError) as cm:
+            ndr._calculate_load(lulc_path, lucode_to_params, 'n', target_load_path)
+        actual_message = str(cm.exception)
+        self.assertTrue('found value of: "cheese"' in actual_message)

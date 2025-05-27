@@ -8,6 +8,7 @@ import Alert from 'react-bootstrap/Alert';
 import Table from 'react-bootstrap/Table';
 import {
   MdErrorOutline,
+  MdClose,
 } from 'react-icons/md';
 import { withTranslation } from 'react-i18next';
 
@@ -19,7 +20,7 @@ const { logger } = window.Workbench;
 
 // A URL for sampledata to use in devMode, when the token containing the URL
 // associated with a production build of the Workbench does not exist.
-const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.13.0/data';
+const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.15.1/data';
 const DEFAULT_FILESIZE = 0;
 
 /** Render a dialog with a form for configuring global invest settings */
@@ -65,13 +66,13 @@ class DataDownloadModal extends React.Component {
 
     const linksArray = [];
     const modelCheckBoxState = {};
-    Object.entries(registry).forEach(([modelName, data]) => {
+    Object.entries(registry).forEach(([modelTitle, data]) => {
       linksArray.push(`${baseURL}/${data.filename}`);
-      modelCheckBoxState[modelName] = true;
+      modelCheckBoxState[modelTitle] = true;
       try {
-        registry[modelName].filesize = filesizes[data.filename];
+        registry[modelTitle].filesize = filesizes[data.filename];
       } catch {
-        registry[modelName].filesize = DEFAULT_FILESIZE;
+        registry[modelTitle].filesize = DEFAULT_FILESIZE;
       }
     });
 
@@ -137,20 +138,20 @@ class DataDownloadModal extends React.Component {
     });
   }
 
-  handleCheckList(event, modelName) {
+  handleCheckList(event, modelTitle) {
     let {
       selectedLinksArray,
       modelCheckBoxState,
       dataRegistry,
       baseURL,
     } = this.state;
-    const url = `${baseURL}/${dataRegistry[modelName].filename}`;
+    const url = `${baseURL}/${dataRegistry[modelTitle].filename}`;
     if (event.currentTarget.checked) {
       selectedLinksArray.push(url);
-      modelCheckBoxState[modelName] = true;
+      modelCheckBoxState[modelTitle] = true;
     } else {
       selectedLinksArray = selectedLinksArray.filter((val) => val !== url);
-      modelCheckBoxState[modelName] = false;
+      modelCheckBoxState[modelTitle] = false;
     }
     this.setState({
       allDataCheck: false,
@@ -209,26 +210,26 @@ class DataDownloadModal extends React.Component {
     const downloadEnabled = Boolean(selectedLinksArray.length);
     const DatasetCheckboxRows = [];
     Object.keys(modelCheckBoxState)
-      .forEach((modelName) => {
-        const filesize = parseFloat(dataRegistry[modelName].filesize);
+      .forEach((modelTitle) => {
+        const filesize = parseFloat(dataRegistry[modelTitle].filesize);
         const filesizeStr = `${(filesize / 1000000).toFixed(2)} MB`;
-        const note = dataRegistry[modelName].note || '';
+        const note = dataRegistry[modelTitle].note || '';
         DatasetCheckboxRows.push(
-          <tr key={modelName}>
+          <tr key={modelTitle}>
             <td>
               <Form.Check
                 className="pt-1"
-                id={modelName}
+                id={modelTitle}
               >
                 <Form.Check.Input
                   type="checkbox"
-                  checked={modelCheckBoxState[modelName]}
+                  checked={modelCheckBoxState[modelTitle]}
                   onChange={(event) => this.handleCheckList(
-                    event, modelName
+                    event, modelTitle
                   )}
                 />
                 <Form.Check.Label>
-                  {displayNames[modelName]}
+                  {displayNames[modelTitle]}
                 </Form.Check.Label>
               </Form.Check>
             </td>
@@ -263,10 +264,20 @@ class DataDownloadModal extends React.Component {
                     <p className="mb-0"><em>{this.state.alertPath}</em></p>
                   </Alert>
                 )
-                : <Modal.Title id="download-modal-title">
+                : (
+                  <Modal.Title id="download-modal-title">
                     {t("Download InVEST sample data")}
                   </Modal.Title>
+                )
             }
+            <Button
+              variant="secondary-outline"
+              onClick={this.closeDialog}
+              className="float-right"
+              aria-label="Close modal"
+            >
+              <MdClose />
+            </Button>
           </Modal.Header>
           <Modal.Body>
             <Table
@@ -294,12 +305,6 @@ class DataDownloadModal extends React.Component {
             </Table>
           </Modal.Body>
           <Modal.Footer>
-            <Button
-              variant="secondary"
-              onClick={this.closeDialog}
-            >
-              {t("Cancel")}
-            </Button>
             <Button
               variant="primary"
               onClick={this.handleSubmit}

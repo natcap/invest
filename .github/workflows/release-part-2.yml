@@ -42,7 +42,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: pip install twine
+        run: |
+          # Workaround for setuptools generating invalid metadata
+          # https://github.com/natcap/invest/issues/1913
+          pip install "twine>=6.1.0"
+          pip install -U packaging
 
       - name: Extract version from autorelease branch name
         if: ${{ github.head_ref }}

@@ -14,12 +14,15 @@ test('Open File: displays a tooltip on hover', async () => {
     <OpenButton
       openInvestModel={() => {}}
       batchUpdateArgs={() => {}}
+      investList={{}}
+      className=''
     />
   );
 
-  const openButton = await findByRole('button', { name: 'Open' });
+  const openButton = await findByRole(
+    'button', { name: /Browse to a datastack or InVEST logfile/i });
   await userEvent.hover(openButton);
-  const hoverText = 'Browse to a datastack (.json) or InVEST logfile (.txt)';
+  const hoverText = /Open an InVEST model by loading/i;
   expect(await findByText(hoverText)).toBeInTheDocument();
   await userEvent.unhover(openButton);
   await waitFor(() => {
@@ -29,8 +32,8 @@ test('Open File: displays a tooltip on hover', async () => {
 
 test('Open File: sends correct payload', async () => {
   const mockDatastack = {
-    model_run_name: 'foo',
-    model_human_name: 'Foo',
+    model_id: 'foo',
+    model_title: 'Foo',
     args: {},
   };
   const filename = 'data.json';
@@ -41,10 +44,18 @@ test('Open File: sends correct payload', async () => {
     <OpenButton
       openInvestModel={() => {}}
       batchUpdateArgs={() => {}}
+      className=''
+      investList={{
+        foo: {
+          modelTitle: 'Foo Model',
+          type: 'core',
+        },
+      }}
     />
   );
 
-  const openButton = await findByRole('button', { name: 'Open' });
+  const openButton = await findByRole(
+    'button', { name: /Browse to a datastack or InVEST logfile/i });
   await userEvent.click(openButton);
 
   await waitFor(() => {

@@ -16,13 +16,12 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from . import datastack
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,15 +48,26 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "habitat_risk_assessment",
-    "model_name": MODEL_METADATA["habitat_risk_assessment"].model_title,
-    "pyname": MODEL_METADATA["habitat_risk_assessment"].pyname,
-    "userguide": MODEL_METADATA["habitat_risk_assessment"].userguide,
+    "model_title": gettext("Habitat Risk Assessment"),
+    "userguide": "habitat_risk_assessment.html",
+    "aliases": ("hra",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['info_table_path', 'criteria_table_path'],
+            ['resolution', 'max_rating'],
+            ['risk_eq', 'decay_eq'],
+            ['aoi_vector_path'],
+            ['n_overlapping_stressors'],
+            ['visualize_outputs']
+        ]
+    },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "info_table_path": {
             "name": gettext("habitat stressor table"),
             "about": gettext("A table describing each habitat and stressor."),
@@ -81,7 +91,7 @@ MODEL_SPEC = {
                             "values besides 0 or 1 will be treated as 0.")
                     }},
                     "fields": {},
-                    "geometries": spec_utils.ALL_GEOMS,
+                    "geometries": spec.ALL_GEOMS,
                     "about": gettext(
                         "Map of where the habitat or stressor exists. For "
                         "rasters, a pixel value of 1 indicates presence of "
@@ -173,7 +183,7 @@ MODEL_SPEC = {
             }
         },
         "aoi_vector_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "projected": True,
             "projection_units": u.meter,
             "fields": {
@@ -286,7 +296,7 @@ MODEL_SPEC = {
                     "about": (
                         "Map of habitat-specific risk visualized in gradient "
                         "color from white to red on a map."),
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "fields": {
                         "Risk Score": {
                             "type": "integer",
@@ -301,7 +311,7 @@ MODEL_SPEC = {
                     "about": (
                         "Map of ecosystem risk visualized in gradient "
                         "color from white to red on a map."),
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "fields": {
                         "Risk Score": {
                             "type": "integer",
@@ -314,7 +324,7 @@ MODEL_SPEC = {
                 },
                 "STRESSOR_[STRESSOR].geojson": {
                     "about": "Map of stressor extent visualized in orange color.",
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "fields": {}
                 },
                 "SUMMARY_STATISTICS.csv": {
@@ -384,7 +394,7 @@ MODEL_SPEC = {
                 "polygonized_[HABITAT/STRESSOR].gpkg": {
                     "about": "Polygonized habitat or stressor map",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON
+                    "geometries": spec.POLYGON
                 },
                 "reclass_[HABITAT]_[STRESSOR].tif": {
                     "about": (
@@ -408,7 +418,7 @@ MODEL_SPEC = {
                         "were provided in a spatial vector format, it will be "
                         "reprojected to the AOI projection."),
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS
+                    "geometries": spec.POLYGONS
                 },
                 "rewritten_[HABITAT/STRESSOR/CRITERIA].tif": {
                     "about": (
@@ -428,16 +438,16 @@ MODEL_SPEC = {
                         "provided are simplified to 1/2 the user-defined "
                         "raster resolution in order to speed up rasterization."),
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS
+                    "geometries": spec.POLYGONS
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
-_VALID_RISK_EQS = set(MODEL_SPEC['args']['risk_eq']['options'].keys())
-_VALID_DECAY_TYPES = set(MODEL_SPEC['args']['decay_eq']['options'].keys())
+_VALID_RISK_EQS = set(MODEL_SPEC.get_input('risk_eq').options.keys())
+_VALID_DECAY_TYPES = set(MODEL_SPEC.get_input('decay_eq').options.keys())
 
 
 def execute(args):
@@ -1778,8 +1788,8 @@ def _parse_info_table(info_table_path):
     info_table_path = os.path.abspath(info_table_path)
 
     try:
-        table = validation.get_validated_dataframe(
-            info_table_path, **MODEL_SPEC['args']['info_table_path'])
+        table = MODEL_SPEC.get_input(
+            'info_table_path').get_validated_dataframe(info_table_path)
     except ValueError as err:
         if 'Index has duplicate keys' in str(err):
             raise ValueError("Habitat and stressor names may not overlap.")
@@ -2431,7 +2441,7 @@ def _override_datastack_archive_criteria_table_path(
                     os.path.splitext(os.path.basename(value))[0])
                 LOGGER.info(f"Copying spatial file {value} --> "
                             f"{dir_for_this_spatial_data}")
-                new_path = datastack._copy_spatial_files(
+                new_path = utils.copy_spatial_files(
                     value, dir_for_this_spatial_data)
                 criteria_table_array[row, col] = new_path
                 known_files[value] = new_path
@@ -2461,4 +2471,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(args, MODEL_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC)

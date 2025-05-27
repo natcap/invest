@@ -19,6 +19,8 @@ import {
   archiveDatastack,
   fetchDatastackFromFile,
   fetchValidation,
+  fetchArgsEnabled,
+  getDynamicDropdowns,
   saveToPython,
   writeParametersToFile
 } from '../../server_requests';
@@ -33,7 +35,7 @@ const { logger } = window.Workbench;
  * Values initialize with either a complete args dict, or with empty/default values.
  *
  * @param {object} argsSpec - an InVEST model's MODEL_SPEC.args
- * @param {object} uiSpec - the model's UI Spec.
+ * @param {object} inputFieldOrder - the order in which to display the input fields.
  * @param {object} argsDict - key: value pairs of InVEST model arguments, or {}.
  *
  * @returns {object} to destructure into two args,
@@ -43,11 +45,11 @@ const { logger } = window.Workbench;
  *     {object} argsDropdownOptions - stores lists of dropdown options for
  *       args of type 'option_string'.
  */
-function initializeArgValues(argsSpec, uiSpec, argsDict) {
+function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
   const initIsEmpty = Object.keys(argsDict).length === 0;
   const argsValues = {};
   const argsDropdownOptions = {};
-  uiSpec.order.flat().forEach((argkey) => {
+  inputFieldOrder.flat().forEach((argkey) => {
     // When initializing with undefined values, assign defaults so that,
     // a) values are handled well by the html inputs and
     // b) the object exported to JSON on "Save" or "Execute" includes defaults.
@@ -85,6 +87,8 @@ class SetupTab extends React.Component {
     super(props);
     this._isMounted = false;
     this.validationTimer = null;
+    this.enabledTimer = null;
+    this.dropdownTimer = null;
 
     this.state = {
       argsValues: null,
@@ -104,13 +108,16 @@ class SetupTab extends React.Component {
     this.wrapInvestExecute = this.wrapInvestExecute.bind(this);
     this.investValidate = this.investValidate.bind(this);
     this.debouncedValidate = this.debouncedValidate.bind(this);
+    this.investArgsEnabled = this.investArgsEnabled.bind(this);
+    this.debouncedArgsEnabled = this.debouncedArgsEnabled.bind(this);
     this.updateArgTouched = this.updateArgTouched.bind(this);
     this.updateArgValues = this.updateArgValues.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
-    this.callUISpecFunctions = this.callUISpecFunctions.bind(this);
     this.browseForDatastack = this.browseForDatastack.bind(this);
     this.loadParametersFromFile = this.loadParametersFromFile.bind(this);
     this.triggerScrollEvent = this.triggerScrollEvent.bind(this);
+    this.callDropdownFunctions = this.callDropdownFunctions.bind(this);
+    this.debouncedDropdownFunctions = this.debouncedDropdownFunctions.bind(this);
   }
 
   componentDidMount() {
@@ -122,12 +129,12 @@ class SetupTab extends React.Component {
     * not on every re-render.
     */
     this._isMounted = true;
-    const { argsInitValues, argsSpec, uiSpec } = this.props;
+    const { argsInitValues, argsSpec, inputFieldOrder } = this.props;
 
     const {
       argsValues,
       argsDropdownOptions,
-    } = initializeArgValues(argsSpec, uiSpec, argsInitValues || {});
+    } = initializeArgValues(argsSpec, inputFieldOrder, argsInitValues || {});
 
     // map each arg to an empty object, to fill in later
     // here we use the argsSpec because it includes all args, even ones like
@@ -136,10 +143,10 @@ class SetupTab extends React.Component {
       acc[argkey] = {};
       return acc;
     }, {});
-    // here we only use the keys in uiSpec.order because args that
+    // here we only use the keys in inputFieldOrder because args that
     // aren't displayed in the form don't need an enabled/disabled state.
     // all args default to being enabled
-    const argsEnabled = uiSpec.order.flat().reduce((acc, argkey) => {
+    const argsEnabled = inputFieldOrder.flat().reduce((acc, argkey) => {
       acc[argkey] = true;
       return acc;
     }, {});
@@ -151,13 +158,15 @@ class SetupTab extends React.Component {
       argsDropdownOptions: argsDropdownOptions,
     }, () => {
       this.investValidate();
-      this.callUISpecFunctions();
+      this.investArgsEnabled();
     });
   }
 
   componentWillUnmount() {
     this._isMounted = false;
     clearTimeout(this.validationTimer);
+    clearTimeout(this.enabledTimer);
+    clearTimeout(this.dropdownTimer);
   }
 
   /**
@@ -173,38 +182,6 @@ class SetupTab extends React.Component {
     }));
   }
 
-  /**
-   * Call functions from the UI spec to determine the enabled/disabled
-   * state and dropdown options for each input, if applicable.
-   *
-   * @returns {undefined}
-   */
-  async callUISpecFunctions() {
-    const { enabledFunctions, dropdownFunctions } = this.props.uiSpec;
-
-    if (enabledFunctions) {
-      // this model has some fields that are conditionally enabled
-      const { argsEnabled } = this.state;
-      Object.keys(enabledFunctions).forEach((key) => {
-        argsEnabled[key] = enabledFunctions[key](this.state);
-      });
-      if (this._isMounted) {
-        this.setState({ argsEnabled: argsEnabled });
-      }
-    }
-
-    if (dropdownFunctions) {
-      // this model has a dropdown that's dynamically populated
-      const { argsDropdownOptions } = this.state;
-      await Promise.all(Object.keys(dropdownFunctions).map(async (key) => {
-        argsDropdownOptions[key] = await dropdownFunctions[key](this.state);
-      }));
-      if (this._isMounted) {
-        this.setState({ argsDropdownOptions: argsDropdownOptions });
-      }
-    }
-  }
-
   /** Save the current invest arguments to a python script via datastack.py API.
    *
    * @param {string} filepath - desired path to the python script
@@ -212,12 +189,12 @@ class SetupTab extends React.Component {
    */
   async savePythonScript(filepath) {
     const {
-      modelName,
+      modelID,
     } = this.props;
     const args = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: filepath,
-      modelname: modelName,
+      model_id: modelID,
       args: JSON.stringify(args),
     };
     const response = await saveToPython(payload);
@@ -225,33 +202,29 @@ class SetupTab extends React.Component {
   }
 
   async saveJsonFile(datastackPath, relativePaths) {
-    const {
-      pyModuleName,
-    } = this.props;
+    const { modelID } = this.props;
     const args = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: datastackPath,
-      moduleName: pyModuleName,
+      model_id: modelID,
       relativePaths: relativePaths,
       args: JSON.stringify(args),
     };
-    const {message, error} = await writeParametersToFile(payload);
+    const { message, error } = await writeParametersToFile(payload);
     this.setSaveAlert(message, error);
   }
 
   async saveDatastack(datastackPath) {
-    const {
-      pyModuleName,
-    } = this.props;
+    const { modelID } = this.props;
     const args = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: datastackPath,
-      moduleName: pyModuleName,
+      model_id: modelID,
       args: JSON.stringify(args),
     };
     const key = window.crypto.getRandomValues(new Uint16Array(1))[0].toString();
     this.setSaveAlert('archiving...', false, key);
-    const {message, error} = await archiveDatastack(payload);
+    const { message, error } = await archiveDatastack(payload);
     this.setSaveAlert(message, error, key);
   }
 
@@ -296,7 +269,7 @@ class SetupTab extends React.Component {
   }
 
   async loadParametersFromFile(filepath) {
-    const { pyModuleName, switchTabs, t } = this.props;
+    const { modelID, switchTabs, t, investList } = this.props;
     let datastack;
     try {
       if (filepath.endsWith('gz')) { // .tar.gz, .tgz
@@ -313,6 +286,7 @@ class SetupTab extends React.Component {
             ipcMainChannels.CHECK_FILE_PERMISSIONS, directoryPath);
           if (writable) {
             datastack = await fetchDatastackFromFile({
+              model_id: modelID,
               filepath: filepath,
               extractPath: directoryPath,
             });
@@ -323,7 +297,9 @@ class SetupTab extends React.Component {
           }
         } else { return; } // dialog closed without selection
       } else {
-        datastack = await fetchDatastackFromFile({ filepath: filepath });
+        datastack = await fetchDatastackFromFile(
+          { model_id: modelID, filepath: filepath }
+        );
       }
     } catch (error) {
       logger.error(error);
@@ -332,15 +308,15 @@ class SetupTab extends React.Component {
       );
       return;
     }
-    if (datastack.module_name === pyModuleName) {
+    if (datastack.model_id === modelID) {
       this.batchUpdateArgs(datastack.args);
       switchTabs('setup');
       this.triggerScrollEvent();
     } else {
       alert( // eslint-disable-line no-alert
         t(
-          'Datastack/Logfile for {{modelName}} does not match this model.',
-          { modelName: datastack.model_human_name }
+          'Datastack/Logfile for model {{modelTitle}} does not match this model.',
+          { modelTitle: investList[datastack.model_id].modelTitle }
         )
       );
     }
@@ -399,7 +375,8 @@ class SetupTab extends React.Component {
         status: undefined,  // Clear job status to hide model status indicator.
       });
       this.debouncedValidate();
-      this.callUISpecFunctions();
+      this.debouncedArgsEnabled();
+      this.debouncedDropdownFunctions();
     });
   }
 
@@ -408,19 +385,80 @@ class SetupTab extends React.Component {
    * @param {object} argsDict - key: value pairs of InVEST arguments.
    */
   batchUpdateArgs(argsDict) {
-    const { argsSpec, uiSpec } = this.props;
+    const { argsSpec, inputFieldOrder } = this.props;
     const {
       argsValues,
       argsDropdownOptions,
-    } = initializeArgValues(argsSpec, uiSpec, argsDict);
+    } = initializeArgValues(argsSpec, inputFieldOrder, argsDict);
 
     this.setState({
       argsValues: argsValues,
       argsDropdownOptions: argsDropdownOptions,
     }, () => {
       this.investValidate();
-      this.callUISpecFunctions();
+      this.investArgsEnabled();
     });
+  }
+
+  /** Get a debounced version of investArgsEnabled.
+   *
+   * The original function will not be called until after the
+   * debounced version stops being invoked for 200 milliseconds.
+   *
+   * @returns {undefined}
+   */
+  debouncedArgsEnabled() {
+    if (this.enabledTimer) {
+      clearTimeout(this.enabledTimer);
+    }
+    // we want this check to be very responsive,
+    // but also to wait for a pause in data entry.
+    this.enabledTimer = setTimeout(this.investArgsEnabled, 200);
+  }
+
+  /** Set the enabled/disabled status of args.
+   *
+   * @returns {undefined}
+   */
+  async investArgsEnabled() {
+    const { modelID } = this.props;
+    const { argsValues } = this.state;
+
+    if (this._isMounted) {
+      this.setState({
+        argsEnabled: await fetchArgsEnabled({
+          model_id: modelID,
+          args: JSON.stringify(argsDictFromObject(argsValues)),
+        }),
+      });
+    }
+  }
+
+  debouncedDropdownFunctions() {
+    if (this.dropdownTimer) {
+      clearTimeout(this.dropdownTimer);
+    }
+    // we want this check to be very responsive,
+    // but also to wait for a pause in data entry.
+    this.dropdownTimer = setTimeout(this.callDropdownFunctions, 200);
+  }
+
+  /** Call endpoint to get dynamically populated dropdown options.
+   *
+   * @returns {undefined}
+   */
+  async callDropdownFunctions() {
+    const { modelID } = this.props;
+    const { argsValues, argsDropdownOptions } = this.state;
+    const payload = {
+      model_id: modelID,
+      args: JSON.stringify(argsDictFromObject(argsValues)),
+    };
+    const results = await getDynamicDropdowns(payload);
+    Object.keys(results).forEach((argkey) => {
+      argsDropdownOptions[argkey] = results[argkey];
+    });
+    this.setState({ argsDropdownOptions: argsDropdownOptions });
   }
 
   /** Get a debounced version of investValidate.
@@ -444,11 +482,11 @@ class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async investValidate() {
-    const { argsSpec, pyModuleName } = this.props;
+    const { argsSpec, modelID } = this.props;
     const { argsValues, argsValidation, argsValid } = this.state;
     const keyset = new Set(Object.keys(argsSpec));
     const payload = {
-      model_module: pyModuleName,
+      model_id: modelID,
       args: JSON.stringify(argsDictFromObject(argsValues)),
     };
     const results = await fetchValidation(payload);
@@ -514,11 +552,12 @@ class SetupTab extends React.Component {
       const {
         argsSpec,
         userguide,
+        isCoreModel,
+        inputFieldOrder,
         sidebarSetupElementId,
         sidebarFooterElementId,
         executeClicked,
-        uiSpec,
-        modelName,
+        modelID,
       } = this.props;
 
       const SaveAlerts = [];
@@ -560,6 +599,7 @@ class SetupTab extends React.Component {
           )
           : <span>{t('Run')}</span>
       );
+
       return (
         <Container fluid>
           <Row>
@@ -569,8 +609,9 @@ class SetupTab extends React.Component {
               argsValidation={argsValidation}
               argsEnabled={argsEnabled}
               argsDropdownOptions={argsDropdownOptions}
-              argsOrder={uiSpec.order}
+              argsOrder={inputFieldOrder}
               userguide={userguide}
+              isCoreModel={isCoreModel}
               updateArgValues={this.updateArgValues}
               updateArgTouched={this.updateArgTouched}
               loadParametersFromFile={this.loadParametersFromFile}
@@ -597,15 +638,13 @@ class SetupTab extends React.Component {
               </Button>
             </OverlayTrigger>
             <SaveAsModal
-              modelName={modelName}
+              modelID={modelID}
               savePythonScript={this.savePythonScript}
               saveJsonFile={this.saveJsonFile}
               saveDatastack={this.saveDatastack}
               removeSaveErrors={this.removeSaveErrors}
             />
-            <React.Fragment>
-              {SaveAlerts}
-            </React.Fragment>
+            {SaveAlerts}
           </Portal>
           <Portal elId={sidebarFooterElementId}>
             <Button
@@ -629,20 +668,16 @@ class SetupTab extends React.Component {
 export default withTranslation()(SetupTab);
 
 SetupTab.propTypes = {
-  pyModuleName: PropTypes.string.isRequired,
   userguide: PropTypes.string.isRequired,
-  modelName: PropTypes.string.isRequired,
+  isCoreModel: PropTypes.bool.isRequired,
+  modelID: PropTypes.string.isRequired,
   argsSpec: PropTypes.objectOf(
     PropTypes.shape({
       name: PropTypes.string,
       type: PropTypes.string,
     })
   ).isRequired,
-  uiSpec: PropTypes.shape({
-    order: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.string)).isRequired,
-    enabledFunctions: PropTypes.objectOf(PropTypes.func),
-    dropdownFunctions: PropTypes.objectOf(PropTypes.func),
-  }).isRequired,
+  inputFieldOrder: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.string)).isRequired,
   argsInitValues: PropTypes.objectOf(PropTypes.oneOfType(
     [PropTypes.string, PropTypes.bool, PropTypes.number])),
   investExecute: PropTypes.func.isRequired,
@@ -650,6 +685,11 @@ SetupTab.propTypes = {
   sidebarFooterElementId: PropTypes.string.isRequired,
   executeClicked: PropTypes.bool.isRequired,
   switchTabs: PropTypes.func.isRequired,
+  investList: PropTypes.shape({
+    modelTitle: PropTypes.string,
+    type: PropTypes.string,
+  }).isRequired,
+  t: PropTypes.func.isRequired,
   tabID: PropTypes.string.isRequired,
   updateJobProperties: PropTypes.func.isRequired,
 };

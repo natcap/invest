@@ -23,9 +23,9 @@
   - Urban Flood Risk
   - Urban Nature Access
   - Urban Stormwater Retention
+  - Visitation: Recreation and Tourism
   - Wave Energy
   - Wind Energy
-  - Visitation: Recreation and Tourism
 
   Workbench fixes/enhancements:
   - Workbench
@@ -64,6 +64,10 @@
 Unreleased Changes
 ------------------
 
+General
+=======
+* The workbench and the natcap.invest python package now support plugins.
+
 Workbench
 =========
 * Metadata is now generated for files when creating a datastack (with any
@@ -88,6 +92,49 @@ NDR
   pixels were mistakenly used as real data. The effect of this change is most
   pronounced along stream edges and should not affect the overall pattern of
   results. (`#1845 <https://github.com/natcap/invest/issues/1845>`_)
+* ``stream.tif`` is now saved in the main output folder rather than the
+  intermediate folder (`#1864 <https://github.com/natcap/invest/issues/1864>`_).
+* Added a feature that allows the nutrient load to be entered as an
+  application rate or as an "extensive"/export measured value.
+  Previously, the model's biophysical table expected the ``load_[n|p]``
+  column to be an "extensive"/export measured value. Now, a new
+  column for both nitrogen and phosphorous, ``load_type_[n|p]``, is
+  required with expected values of either ``application-rate`` or
+  ``measured-runoff``. See the Data Needs section of the NDR User
+  Guide for more details.
+  (`#1044 <https://github.com/natcap/invest/issues/1044>`_).
+* Fixed a bug where input rasters (e.g. LULC) without a defined nodata value could
+  cause an OverflowError. (`#1904 <https://github.com/natcap/invest/issues/1904>`_).
+
+Seasonal Water Yield
+====================
+* ``stream.tif`` is now saved in the main output folder rather than the
+  intermediate folder (`#1864 <https://github.com/natcap/invest/issues/1864>`_).
+
+Urban Flood Risk
+================
+* The raster output ``Runoff_retention.tif`` has been renamed
+  ``Runoff_retention_index.tif`` to clarify the difference between it and
+  ``Runoff_retention_m3.tif``
+  (`#1837 <https://github.com/natcap/invest/issues/1837>`_).
+
+Visitation: Recreation and Tourism
+==================================
+* user-day variables ``pr_PUD``, ``pr_TUD``, and ``avg_pr_UD`` are calculated
+  and written to ``regression_data.gpkg`` even if the Compute Regression
+  option is not selected.
+  (`#1893 <https://github.com/natcap/invest/issues/1893>`_).
+
+Wind Energy
+===========
+* The model no longer returns results as rasters; instead, values are
+  written to the output ``wind_energy_points`` shapefile for each point
+  (`#1698 <https://github.com/natcap/invest/issues/1698>`_).
+  Any Decision Record (ADR): `ADR-0004: Remove Wind Energy Raster Outputs <https://github.com/natcap/invest/blob/main/doc/decision-records/ADR-0004-Remove-Wind-Energy-Raster-Outputs.md>`_
+* The output ``wind_energy_points.shp`` no longer returns Harvested or
+  Valuation-related values for points that are invalid wind farm locations
+  due to depth or distance constraints
+  (`#1699 <https://github.com/natcap/invest/issues/1699>`_).
 
 
 3.15.1 (2025-05-06)
