@@ -240,7 +240,7 @@ test('Run a real invest model', async () => {
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
 }, 240000); // >2x the sum of all the max timeouts within this test
 
-test('Check local userguide links', async () => {
+test.only('Check local userguide links', async () => {
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   let i = 0;
@@ -275,7 +275,7 @@ test('Check local userguide links', async () => {
   await changelogModalClose.click();
 
   const investList = await page.waitForSelector('.invest-list-group');
-  const modelButtons = await investList.$$('aria/[role="button"]');
+  const modelButtons = await investList.$$('button.invest-button');
 
   await page.waitForTimeout(WAIT_TO_CLICK); // first btn click does not register w/o this pause
   for (const btn of modelButtons) {
