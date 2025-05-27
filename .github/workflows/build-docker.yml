@@ -56,8 +56,15 @@ jobs:
               run: |
                   # Replace / (invalid tag character) with .
                   SANITIZED_REF="$(echo ${{github.ref_name}} | sed 's|/|.|g')"
+                  if [[ "${{github.event_name }}" == "pull_request" ]]
+                  then
+                      # If we're in a PR, build the container from the fork's source.
+                      INVEST_REPO="${{ github.event.pull_request.head.repo.full_name }}"
+                  else
+                      INVEST_REPO="${{ github.repository }}"
+                  fi
                   cd docker && docker build \
-                        --build-arg="INVEST_REPO=${{ github.repository }}" \
+                        --build-arg="INVEST_REPO=${INVEST_REPO}" \
                         --build-arg="INVEST_VERSION=${{ github.sha }}" \
                         -t ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:latest \
                         -t ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:${{ github.sha }} \
