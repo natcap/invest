@@ -34,13 +34,60 @@ export default function PluginModal(props) {
   const [needsMSVC, setNeedsMSVC] = useState(false);
   const [plugins, setPlugins] = useState({});
   const [installFrom, setInstallFrom] = useState('url');
+  const [userAcknowledgment, setUserAcknowledgment] = useState(false);
+  const [userAcknowledgmentError, setUserAcknowledgmentError] = useState(false);
+  const [pluginSourceMissingError, setPluginSourceMissingError] = useState(false);
 
   const handleModalClose = () => {
     setURL('');
     setRevision('');
     setInstallErr('');
     setUninstallErr('');
+    clearFormErrors();
     closeModal();
+  };
+
+  const clearFormErrors = () => {
+    setUserAcknowledgmentError(false);
+    setPluginSourceMissingError(false);
+  };
+
+  useEffect(() => {
+    clearFormErrors();
+  }, [installFrom]);
+
+  useEffect(() => {
+    if (pluginSourceMissingError) {
+      setPluginSourceMissingError(false);
+    }
+  }, [url, path]);
+
+  useEffect(() => {
+    if (userAcknowledgment) {
+      setUserAcknowledgmentError(false);
+    }
+  }, [userAcknowledgment]);
+
+  const handleAddPluginClick = () => {
+    clearFormErrors();
+    if (validateAddPluginForm()) {
+      addPlugin();
+    }
+  };
+
+  const validateAddPluginForm = () => {
+    let formValid = true;
+    if ((installFrom === 'url' && !url)
+        || (installFrom === 'path' && !path)
+    ) {
+      formValid = false;
+      setPluginSourceMissingError(true);
+    }
+    if (!userAcknowledgment) {
+      formValid = false;
+      setUserAcknowledgmentError(true);
+    }
+    return formValid;
   };
 
   const addPlugin = () => {
@@ -124,10 +171,27 @@ export default function PluginModal(props) {
             placeholder="https://github.com/owner/repo.git"
             value={url}
             onChange={(event) => setURL(event.currentTarget.value)}
+            aria-describedby={`about-git-url${pluginSourceMissingError ? ' url-error' : ''}`}
           />
-          <Form.Text className="text-muted">
-            <i>{t('Default branch used unless otherwise specified')}</i>
+          <Form.Text
+            as="span"
+            muted
+            id="about-git-url"
+            className="plugin-form-text text-italic"
+          >
+            {t('Default branch used unless otherwise specified.')}
           </Form.Text>
+          {
+            pluginSourceMissingError
+            &&
+            <Form.Text
+              as="span"
+              id="url-error"
+              className="plugin-error plugin-source-missing-error"
+            >
+              {t('Error: URL is required.')}
+            </Form.Text>
+          }
         </Form.Group>
         <Form.Group as={Col}>
           <Form.Label htmlFor="branch">{t('Branch, tag, or commit')}</Form.Label>
@@ -136,9 +200,15 @@ export default function PluginModal(props) {
             type="text"
             value={revision}
             onChange={(event) => setRevision(event.currentTarget.value)}
+            aria-describedby="about-branch-tag-commit"
           />
-          <Form.Text className="text-muted">
-            <i>{t('Optional')}</i>
+          <Form.Text
+            as="span"
+            muted
+            id="about-branch-tag-commit"
+            className="plugin-form-text text-italic"
+          >
+            {t('Optional')}
           </Form.Text>
         </Form.Group>
       </Form.Row>
@@ -155,16 +225,28 @@ export default function PluginModal(props) {
             : 'C:\\Documents\\path\\to\\plugin\\'}
           value={path}
           onChange={(event) => setPath(event.currentTarget.value)}
+          aria-describedby={pluginSourceMissingError ? 'path-error' : ''}
         />
+        {
+          pluginSourceMissingError
+          &&
+          <Form.Text
+            as="span"
+            id="path-error"
+            className="plugin-error plugin-source-missing-error"
+          >
+            {t('Error: Path is required.')}
+          </Form.Text>
+        }
       </Form.Group>
     );
   }
 
   let modalBody = (
     <Modal.Body>
-      <Form>
+      <Form aria-labelledby="add-plugin-form-title">
         <Form.Group>
-          <h5 className="mb-3">{t('Add a plugin')}</h5>
+          <h5 id="add-plugin-form-title" className="mb-3">{t('Add a plugin')}</h5>
           <Form.Group>
             <Form.Label htmlFor="installFrom">{t('Install from')}</Form.Label>
             <Form.Control
@@ -178,9 +260,43 @@ export default function PluginModal(props) {
             </Form.Control>
           </Form.Group>
           {pluginFields}
+          <Form.Group>
+            <Form.Text
+              as="span"
+              id="plugin-installation-risk-statement"
+              className="plugin-form-text"
+            >
+              {t('As with any third-party software, installing a plugin for use with InVEST '
+                + 'may pose a risk to your data, computer, and/or network. Please make sure '
+                + 'you trust the authors of the plugin you are installing. If you are '
+                + 'installing from a git URL, you are encouraged to review the source code, '
+                + 'which can change over time.')}
+            </Form.Text>
+          </Form.Group>
+          <Form.Group>
+            <Form.Check
+              id="user-acknowledgement-checkbox"
+              label={t('I acknowledge and accept the risks associated with installing this plugin.')}
+              value={userAcknowledgment}
+              onChange={(event) => setUserAcknowledgment(event.target.checked)}
+              aria-describedby={`plugin-installation-risk-statement${userAcknowledgmentError ? ' user-acknowledgment-error' : ''}`}
+            />
+          </Form.Group>
+          {
+            userAcknowledgmentError
+            &&
+            <Form.Text
+              as="span"
+              id="user-acknowledgment-error"
+              className="plugin-error plugin-user-acknowledgment-error"
+            >
+              {t('Error: Before installing a plugin, you must agree to the terms by selecting the checkbox.')}
+            </Form.Text>
+          }
           <Button
             disabled={installLoading}
-            onClick={addPlugin}
+            onClick={handleAddPluginClick}
+            aria-describedby="plugin-installation-duration-notice"
           >
             {
               installLoading ? (
@@ -193,13 +309,20 @@ export default function PluginModal(props) {
               ) : t('Add')
             }
           </Button>
-          <Form.Text className="text-muted">
-            {t('This may take several minutes')}
+          <Form.Text
+            as="span"
+            muted
+            id="plugin-installation-duration-notice"
+            className="plugin-form-text"
+          >
+            {t('This may take several minutes.')}
           </Form.Text>
         </Form.Group>
-        <hr />
+      </Form>
+      <hr />
+      <Form aria-labelledby="remove-plugin-form-title">
         <Form.Group>
-          <h5 className="mb-3">{t('Remove a plugin')}</h5>
+          <h5 id="remove-plugin-form-title" className="mb-3">{t('Remove a plugin')}</h5>
           <Form.Label htmlFor="selectPluginToRemove">{t('Plugin name')}</Form.Label>
           <Form.Control
             id="selectPluginToRemove"
@@ -244,7 +367,7 @@ export default function PluginModal(props) {
     modalBody = (
       <Modal.Body>
         <h5>{t('Error installing plugin:')}</h5>
-        <div className="plugin-error">{installErr}</div>
+        <div className="plugin-error plugin-install-remove-error">{installErr}</div>
         <Button
           onClick={() => ipcRenderer.send(
             ipcMainChannels.SHOW_ITEM_IN_FOLDER,
@@ -259,7 +382,7 @@ export default function PluginModal(props) {
     modalBody = (
       <Modal.Body>
         <h5>{t('Error removing plugin:')}</h5>
-        <div className="plugin-error">{uninstallErr}</div>
+        <div className="plugin-error plugin-install-remove-error">{uninstallErr}</div>
         <Button
           onClick={() => ipcRenderer.send(
             ipcMainChannels.SHOW_ITEM_IN_FOLDER,
@@ -302,7 +425,7 @@ export default function PluginModal(props) {
           variant="secondary-outline"
           onClick={handleModalClose}
           className="float-right"
-          aria-label="Close modal"
+          aria-label={t('Close modal')}
         >
           <MdClose />
         </Button>
