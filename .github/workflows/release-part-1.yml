@@ -101,6 +101,7 @@ jobs:
         uses: BellCubeDev/update-package-version-by-release-tag@v2
         with:
           version: ${{ inputs.version }}
+          ignore-semver-check: false  # allow PEP 440 alpha/beta/rc releases
           package-json-path: workbench/package.json
 
       - name: Commit updated HISTORY.rst, changelog.html, and package.json
