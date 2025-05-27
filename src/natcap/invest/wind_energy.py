@@ -1,4 +1,3 @@
-
 """InVEST Wind Energy model."""
 import logging
 import math
