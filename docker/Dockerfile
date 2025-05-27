@@ -20,7 +20,7 @@ COPY --from=build /invest/dist/*.whl /tmp/
 ARG DEBIAN_GDAL_VERSION="3.6"
 
 # The environment.yml file will be built during github actions.
-COPY --chown=$MAMBA_USER:$MAMBA_USER environment.yml /tmp/environment.yml
+COPY --chown=$MAMBA_USER:$MAMBA_USER docker/environment.yml /tmp/environment.yml
 RUN micromamba install -y -n base -c conda-forge python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} && \
         micromamba install -y -n base -c conda-forge -f /tmp/environment.yml && \
         micromamba clean --all --yes && \
