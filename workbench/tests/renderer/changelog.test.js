@@ -10,10 +10,10 @@ import { getInvestModelIDs } from '../../src/renderer/server_requests';
 jest.mock('../../src/renderer/server_requests');
 
 const MOCK_MODEL_TITLE = 'Carbon';
-const MOCK_MODEL_RUN_NAME = 'carbon';
+const MOCK_MODEL_ID = 'carbon';
 const MOCK_INVEST_LIST = {
-  [MOCK_MODEL_TITLE]: {
-    model_name: MOCK_MODEL_RUN_NAME,
+  [MOCK_MODEL_ID]: {
+    model_title: MOCK_MODEL_TITLE,
   },
 };
 
@@ -48,7 +48,7 @@ describe('Changelog', () => {
   });
 
   test('On first run (of any version), Changelog modal opens after Download modal is closed', async () => {
-    const { findByRole, getByText } = render(<App isFirstRun isNewVersion />);
+    const { findByRole, getByRole } = render(<App isFirstRun isNewVersion />);
 
     let changelogModalFound = true;
     try {
@@ -61,7 +61,7 @@ describe('Changelog', () => {
     const downloadModal = await findByRole('dialog', { name: 'Download InVEST sample data' });
     expect(downloadModal).toBeInTheDocument();
 
-    await userEvent.click(getByText('Cancel'));
+    await userEvent.click(getByRole('button', { name: /close modal/i }));
     expect(downloadModal).not.toBeInTheDocument();
     const changelogModal = await findByRole('dialog', { name: 'New in this version' });
     expect(changelogModal).toBeInTheDocument();

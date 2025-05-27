@@ -13,16 +13,11 @@ import {
   fetchValidation,
   fetchDatastackFromFile,
   fetchArgsEnabled,
-  getSupportedLanguages,
   getGeoMetaMakerProfile,
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
-import {
-  settingsStore,
-  setupSettingsHandlers
-} from '../../src/main/settingsStore';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
-import { removeIpcMainListeners } from '../../src/main/main';
+import pkg from '../../package.json';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -145,7 +140,8 @@ describe('Various ways to open and close InVEST models', () => {
       <App />
     );
 
-    const openButton = await findByRole('button', { name: 'Open' });
+    const openButton = await findByRole(
+      'button', { name: /browse to a datastack or invest logfile/i });
     expect(openButton).not.toBeDisabled();
     await userEvent.click(openButton);
     const executeButton = await findByRole('button', { name: /Run/ });
@@ -175,7 +171,8 @@ describe('Various ways to open and close InVEST models', () => {
       <App />
     );
 
-    const openButton = await findByRole('button', { name: 'Open' });
+    const openButton = await findByRole(
+      'button', { name: /browse to a datastack or invest logfile/i });
     await userEvent.click(openButton);
     const homeTab = await findByRole('tabpanel', { name: 'home tab' });
     // expect we're on the same tab we started on instead of switching to Setup
@@ -305,7 +302,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
     await waitFor(() => {
       initialJobs.forEach((job, idx) => {
         const recent = recentJobs[idx];
-        const card = getByText(job.modelTitle)
+        const card = getByText(job.argsValues.workspace_dir)
           .closest('button');
         expect(within(card).getByText(job.argsValues.workspace_dir))
           .toBeInTheDocument();
@@ -369,7 +366,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
     const { findByText, queryByText } = render(<App />);
 
     expect(queryByText(job1.modelTitle)).toBeNull();
-    expect(await findByText(/Set up a model from a sample datastack file/))
+    expect(await findByText('Welcome!'))
       .toBeInTheDocument();
   });
 
@@ -378,13 +375,11 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
       <App />
     );
 
-    const node = await findByText(/Set up a model from a sample datastack file/);
+    const node = await findByText('Welcome!');
     expect(node).toBeInTheDocument();
   });
 
-  test('Recent Jobs: cleared by button', async () => {
-    // we need this mock because the settings dialog is opened
-    getGeoMetaMakerProfile.mockResolvedValue({});
+  test('Recent Jobs: cleared by clear all button', async () => {
     const job1 = new InvestJob({
       modelID: MOCK_MODEL_ID,
       modelTitle: 'Carbon Sequestration',
@@ -405,100 +400,167 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
           .toBeTruthy();
       });
     });
-    await userEvent.click(getByRole('button', { name: 'settings' }));
-    await userEvent.click(getByText('Clear Recent Jobs'));
-    const node = await findByText(/Set up a model from a sample datastack file/);
+    await userEvent.click(getByText(/clear all model runs/i));
+    const node = await findByText('Welcome!');
+    expect(node).toBeInTheDocument();
+  });
+
+  test('Recent Jobs: delete single job', async () => {
+    const job1 = new InvestJob({
+      modelID: MOCK_MODEL_ID,
+      modelTitle: 'Carbon Sequestration',
+      argsValues: {
+        workspace_dir: 'work1',
+      },
+      status: 'success',
+      // leave out the 'type' attribute to make sure it defaults to core
+      // for backwards compatibility
+    });
+    const recentJobs = await InvestJob.saveJob(job1);
+
+    const { getByText, findByText, getByRole } = render(<App />);
+
+    await waitFor(() => {
+      recentJobs.forEach((job) => {
+        expect(getByText(job.argsValues.workspace_dir))
+          .toBeTruthy();
+      });
+    });
+    await userEvent.click(getByRole('button', { name: 'delete' }));
+    const node = await findByText('Welcome!');
     expect(node).toBeInTheDocument();
   });
 });
 
-describe('InVEST global settings: dialog interactions', () => {
-  const nWorkersLabelText = 'Taskgraph n_workers parameter';
-  const loggingLabelText = 'Logging threshold';
-  const tgLoggingLabelText = 'Taskgraph logging threshold';
-  const languageLabelText = 'Language';
-
-  beforeAll(() => {
-    setupSettingsHandlers();
+describe('Main menu interactions', () => {
+  beforeEach(() => {
+    getInvestModelIDs.mockResolvedValue(MOCK_INVEST_LIST);
   });
 
-  afterAll(() => {
-    removeIpcMainListeners();
-  });
-
-  beforeEach(async () => {
-    getInvestModelIDs.mockResolvedValue({});
-    getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
-    getGeoMetaMakerProfile.mockResolvedValue({});
-  });
-
-  test('Invest settings save on change', async () => {
-    const nWorkersLabel = 'Threaded task management (0)';
-    const nWorkersValue = 0;
-    const loggingLevel = 'DEBUG';
-    const tgLoggingLevel = 'DEBUG';
-    const languageValue = 'es';
-    const spyInvoke = jest.spyOn(ipcRenderer, 'invoke');
-
+  test('Open sampledata download Modal from menu', async () => {
     const {
-      getByText, getByLabelText, findByRole, findByText,
+      findByText, findByRole,
     } = render(
       <App />
     );
 
-    await userEvent.click(await findByRole('button', { name: 'settings' }));
-    const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
-    const loggingInput = getByLabelText(loggingLabelText);
-    const tgLoggingInput = getByLabelText(tgLoggingLabelText);
+    const dropdownBtn = await findByRole('button', { name: 'menu' });
+    await userEvent.click(dropdownBtn);
+    await userEvent.click(
+      await findByRole('button', { name: /Download Sample Data/i })
+    );
 
-    await userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
-    await waitFor(() => { expect(nWorkersInput).toHaveValue(nWorkersValue.toString()); });
-    await userEvent.selectOptions(loggingInput, [loggingLevel]);
-    await waitFor(() => { expect(loggingInput).toHaveValue(loggingLevel); });
-    await userEvent.selectOptions(tgLoggingInput, [tgLoggingLevel]);
-    await waitFor(() => { expect(tgLoggingInput).toHaveValue(tgLoggingLevel); });
-
-    // Check values were saved
-    expect(settingsStore.get('nWorkers')).toBe(nWorkersValue);
-    expect(settingsStore.get('loggingLevel')).toBe(loggingLevel);
-    expect(settingsStore.get('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
-
-    // language is handled differently; changing it triggers electron to restart
-    const languageInput = getByLabelText(languageLabelText, { exact: false });
-    await userEvent.selectOptions(languageInput, [languageValue]);
-    await userEvent.click(await findByText('Change to spanish'));
-    expect(spyInvoke)
-      .toHaveBeenCalledWith(ipcMainChannels.CHANGE_LANGUAGE, languageValue);
+    expect(await findByText(/Download InVEST sample data/i))
+      .toBeInTheDocument();
+    await userEvent.click(
+      await findByRole('button', { name: /close modal/i })
+    );
   });
 
-  test('Access sampledata download Modal from settings', async () => {
+  test('Open Metadata Modal from menu', async () => {
     const {
-      findByText, findByRole, queryByText,
+      findByText, findByRole,
     } = render(
       <App />
     );
 
-    const settingsBtn = await findByRole('button', { name: 'settings' });
-    await userEvent.click(settingsBtn);
+    const dropdownBtn = await findByRole('button', { name: 'menu' });
+    await userEvent.click(dropdownBtn);
     await userEvent.click(
-      await findByRole('button', { name: 'Download Sample Data' })
+      await findByRole('button', { name: /Configure Metadata/i })
     );
 
-    expect(await findByText('Download InVEST sample data'))
+    expect(await findByText(/contact information/i))
       .toBeInTheDocument();
-    expect(queryByText('Settings')).toBeNull();
+    await userEvent.click(
+      await findByRole('button', { name: /close modal/i })
+    );
   });
 
-  test('Access metadata form from settings', async () => {
-    const { findByRole } = render(<App />);
+  test('Open Plugins Modal from menu', async () => {
+    ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
+      }
+      return Promise.resolve();
+    });
 
-    const settingsBtn = await findByRole('button', { name: 'settings' });
-    await userEvent.click(settingsBtn);
-    await userEvent.click(
-      await findByRole('button', { name: 'Configure Metadata' })
+    const {
+      findByText, findByRole,
+    } = render(
+      <App />
     );
 
-    expect(await findByRole('button', { name: 'Save Metadata' }))
+    const dropdownBtn = await findByRole('button', { name: 'menu' });
+    await userEvent.click(dropdownBtn);
+    await userEvent.click(
+      await findByRole('button', { name: /Manage Plugins/i })
+    );
+
+    expect(await findByText(/add a plugin/i))
       .toBeInTheDocument();
+    await userEvent.click(
+      await findByRole('button', { name: /close modal/i })
+    );
+  });
+
+  test('Open Changelog Modal from menu', async () => {
+    const currentVersion = pkg.version;
+    const nonexistentVersion = '1.0.0';
+    jest.spyOn(window, 'fetch')
+      .mockResolvedValueOnce({
+        ok: true,
+        text: () => `
+            <html>
+              <head></head>
+              <body>
+                <section>
+                  <h1>${currentVersion}</h1>
+                </section>
+                <section>
+                  <h1>${nonexistentVersion}</h1>
+                </section>
+              </body>
+            </html>
+        `
+      });
+
+    const {
+      findByText, findByRole,
+    } = render(
+      <App />
+    );
+
+    const dropdownBtn = await findByRole('button', { name: 'menu' });
+    await userEvent.click(dropdownBtn);
+    await userEvent.click(
+      await findByRole('button', { name: /view changelog/i })
+    );
+
+    expect(await findByText(/new in this version/i))
+      .toBeInTheDocument();
+    await userEvent.click(
+      await findByRole('button', { name: /close modal/i })
+    );
+  });
+
+  test('Open Settings Modal from menu', async () => {
+    const {
+      findByText, findByRole,
+    } = render(
+      <App />
+    );
+
+    const dropdownBtn = await findByRole('button', { name: 'menu' });
+    await userEvent.click(dropdownBtn);
+    await userEvent.click(
+      await findByRole('button', { name: /settings/i })
+    );
+
+    expect(await findByText(/invest settings/i))
+      .toBeInTheDocument();
+    await userEvent.click(
+      await findByRole('button', { name: /close modal/i })
+    );
   });
 });

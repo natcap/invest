@@ -19,10 +19,12 @@ import { AiOutlineTrademarkCircle } from 'react-icons/ai';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
+import AppMenu from './components/AppMenu';
 import SettingsModal from './components/SettingsModal';
 import DataDownloadModal from './components/DataDownloadModal';
 import DownloadProgressBar from './components/DownloadProgressBar';
 import PluginModal from './components/PluginModal';
+import MetadataModal from './components/MetadataModal';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 import { ipcMainChannels } from '../main/ipcMainChannels';
@@ -45,8 +47,11 @@ export default class App extends React.Component {
       investList: null,
       recentJobs: [],
       showDownloadModal: false,
+      showPluginModal: false,
       downloadedNofN: null,
       showChangelog: false,
+      showSettingsModal: false,
+      showMetadataModal: false,
       changelogDismissed: false,
     };
     this.switchTabs = this.switchTabs.bind(this);
@@ -54,8 +59,12 @@ export default class App extends React.Component {
     this.closeInvestModel = this.closeInvestModel.bind(this);
     this.updateJobProperties = this.updateJobProperties.bind(this);
     this.saveJob = this.saveJob.bind(this);
+    this.deleteJob = this.deleteJob.bind(this);
     this.clearRecentJobs = this.clearRecentJobs.bind(this);
-    this.showDownloadModal = this.showDownloadModal.bind(this);
+    this.toggleDownloadModal = this.toggleDownloadModal.bind(this);
+    this.toggleSettingsModal = this.toggleSettingsModal.bind(this);
+    this.toggleMetadataModal = this.toggleMetadataModal.bind(this);
+    this.togglePluginModal = this.togglePluginModal.bind(this);
     this.updateInvestList = this.updateInvestList.bind(this);
   }
 
@@ -86,8 +95,8 @@ export default class App extends React.Component {
     ipcRenderer.removeAllListeners('download-status');
   }
 
-  /** Change the tab that is currently visible.
-   *
+  /**
+   * Change the tab that is currently visible.
    * @param {string} key - the value of one of the Nav.Link eventKey.
    */
   switchTabs(key) {
@@ -96,7 +105,7 @@ export default class App extends React.Component {
     );
   }
 
-  showDownloadModal(shouldShow) {
+  toggleDownloadModal(shouldShow) {
     this.setState({
       showDownloadModal: shouldShow,
     });
@@ -116,8 +125,26 @@ export default class App extends React.Component {
     });
   }
 
-  /** Push data for a new InvestTab component to an array.
-   *
+  togglePluginModal(show) {
+    this.setState({
+      showPluginModal: show
+    });
+  }
+
+  toggleMetadataModal(show) {
+    this.setState({
+      showMetadataModal: show
+    });
+  }
+
+  toggleSettingsModal(show) {
+    this.setState({
+      showSettingsModal: show
+    });
+  }
+
+  /**
+   * Push data for a new InvestTab component to an array.
    * @param {InvestJob} job - as constructed by new InvestJob()
    */
   openInvestModel(job) {
@@ -135,7 +162,6 @@ export default class App extends React.Component {
 
   /**
    * Click handler for the close-tab button on an Invest model tab.
-   *
    * @param  {string} tabID - the eventKey of the tab containing the
    *   InvestTab component that will be removed.
    */
@@ -163,8 +189,8 @@ export default class App extends React.Component {
     });
   }
 
-  /** Update properties of an open InvestTab.
-   *
+  /**
+   * Update properties of an open InvestTab.
    * @param {string} tabID - the unique identifier of an open tab
    * @param {obj} jobObj - key-value pairs of any job properties to be updated
    */
@@ -176,10 +202,8 @@ export default class App extends React.Component {
     });
   }
 
-  /** Save data describing an invest job to a persistent store.
-   *
-   * And update the app's view of that store.
-   *
+  /**
+   * Save data describing an invest job to a persistent store.
    * @param {string} tabID - the unique identifier of an open InvestTab.
    */
   async saveJob(tabID) {
@@ -190,6 +214,20 @@ export default class App extends React.Component {
     });
   }
 
+  /**
+   * Delete the job record from the store.
+   * @param {string} jobHash - the unique identifier of a saved Job.
+   */
+  async deleteJob(jobHash) {
+    const recentJobs = await InvestJob.deleteJob(jobHash);
+    this.setState({
+      recentJobs: recentJobs,
+    });
+  }
+
+  /**
+   * Delete all the jobs from the store.
+   */
   async clearRecentJobs() {
     const recentJobs = await InvestJob.clearStore();
     this.setState({
@@ -221,7 +259,10 @@ export default class App extends React.Component {
       openTabIDs,
       activeTab,
       showDownloadModal,
+      showPluginModal,
       showChangelog,
+      showSettingsModal,
+      showMetadataModal,
       downloadedNofN,
     } = this.state;
 
@@ -325,17 +366,38 @@ export default class App extends React.Component {
         {showDownloadModal && (
           <DataDownloadModal
             show={showDownloadModal}
-            closeModal={() => this.showDownloadModal(false)}
+            closeModal={() => this.toggleDownloadModal(false)}
           />
         )}
-        {
-          showChangelog && (
-            <Changelog
-              show={showChangelog}
-              close={() => this.closeChangelogModal()}
-            />
-          )
-        }
+        {showPluginModal && (
+          <PluginModal
+            show={showPluginModal}
+            closeModal={() => this.togglePluginModal(false)}
+            openModal={() => this.togglePluginModal(true)}
+            updateInvestList={this.updateInvestList}
+            closeInvestModel={this.closeInvestModel}
+            openJobs={openJobs}
+          />
+        )}
+        {showChangelog && (
+          <Changelog
+            show={showChangelog}
+            close={() => this.closeChangelogModal()}
+          />
+        )}
+        {showMetadataModal && (
+          <MetadataModal
+            show={showMetadataModal}
+            close={() => this.toggleMetadataModal(false)}
+          />
+        )}
+        {showSettingsModal && (
+          <SettingsModal
+            show={showSettingsModal}
+            close={() => this.toggleSettingsModal(false)}
+            nCPU={this.props.nCPU}
+          />
+        )}
         <TabContainer activeKey={activeTab}>
           <Navbar
             onDragOver={dragOverHandlerNone}
@@ -377,16 +439,12 @@ export default class App extends React.Component {
                     )
                     : <div />
                 }
-                <PluginModal
-                  updateInvestList={this.updateInvestList}
-                  closeInvestModel={this.closeInvestModel}
-                  openJobs={openJobs}
-                />
-                <SettingsModal
-                  className="mx-3"
-                  clearJobsStorage={this.clearRecentJobs}
-                  showDownloadModal={() => this.showDownloadModal(true)}
-                  nCPU={this.props.nCPU}
+                <AppMenu
+                  openDownloadModal={() => this.toggleDownloadModal(true)}
+                  openPluginModal={() => this.togglePluginModal(true)}
+                  openChangelogModal={() => this.setState({ showChangelog: true })}
+                  openSettingsModal={() => this.toggleSettingsModal(true)}
+                  openMetadataModal={() => this.toggleMetadataModal(true)}
                 />
               </Col>
             </Row>
@@ -407,6 +465,8 @@ export default class App extends React.Component {
                     openInvestModel={this.openInvestModel}
                     recentJobs={recentJobs}
                     batchUpdateArgs={this.batchUpdateArgs}
+                    deleteJob={this.deleteJob}
+                    clearRecentJobs={this.clearRecentJobs}
                   />
                 ) : <div />}
             </TabPane>

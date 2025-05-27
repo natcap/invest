@@ -29,12 +29,12 @@ describe('Sample Data Download Form', () => {
   test('Modal displays immediately on user`s first run', async () => {
     const {
       findByText,
-      getByText,
+      getByRole,
     } = render(<App isFirstRun />);
 
     const modalTitle = await findByText('Download InVEST sample data');
     expect(modalTitle).toBeInTheDocument();
-    userEvent.click(getByText('Cancel'));
+    await userEvent.click(getByRole('button', { name: /close modal/i }));
     await waitFor(() => {
       expect(modalTitle).not.toBeInTheDocument();
     });

@@ -53,6 +53,18 @@ export default class InvestJob {
     return InvestJob.getJobStore();
   }
 
+  static async deleteJob(hash) {
+    await investJobStore.removeItem(hash);
+    // also remove item from the array that tracks the order of the jobs
+    const sortedJobHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
+    const idx = sortedJobHashes.indexOf(hash);
+    if (idx > -1) {
+      sortedJobHashes.splice(idx, 1); // remove one item only
+    }
+    await investJobStore.setItem(HASH_ARRAY_KEY, sortedJobHashes);
+    return InvestJob.getJobStore();
+  }
+
   static async saveJob(job) {
     job.hash = window.crypto.getRandomValues(
       new Uint32Array(1)
