@@ -59,7 +59,8 @@ jobs:
                   if [[ "${{github.event_name }}" == "pull_request" ]]
                   then
                       # If we're in a PR, build the container from the fork's source.
-                      INVEST_REPO="${{ github.event.pull_request.head.repo.full_name }}"
+                      #INVEST_REPO="${{ github.event.pull_request.head.repo.full_name }}"
+                      INVEST_REPO="${{ github.repository }}"
                       INVEST_VERSION="${{ github.event.pull_request.merge_commit_sha }}"
                   else
                       INVEST_REPO="${{ github.repository }}"
