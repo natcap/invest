@@ -5,6 +5,17 @@ import userEvent from '@testing-library/user-event';
 
 import App from '../../src/renderer/app';
 import pkg from '../../package.json';
+import { getInvestModelIDs } from '../../src/renderer/server_requests';
+
+jest.mock('../../src/renderer/server_requests');
+
+const MOCK_MODEL_TITLE = 'Carbon';
+const MOCK_MODEL_ID = 'carbon';
+const MOCK_INVEST_LIST = {
+  [MOCK_MODEL_ID]: {
+    model_title: MOCK_MODEL_TITLE,
+  },
+};
 
 describe('Changelog', () => {
   const currentVersion = pkg.version;
@@ -27,6 +38,7 @@ describe('Changelog', () => {
             </html>
         `
       });
+    getInvestModelIDs.mockResolvedValue(MOCK_INVEST_LIST);
   });
 
   test('Changelog modal opens immediately on launch of a new version', async () => {
@@ -36,7 +48,7 @@ describe('Changelog', () => {
   });
 
   test('On first run (of any version), Changelog modal opens after Download modal is closed', async () => {
-    const { findByRole, getByText } = render(<App isFirstRun isNewVersion />);
+    const { findByRole, getByRole } = render(<App isFirstRun isNewVersion />);
 
     let changelogModalFound = true;
     try {
@@ -49,7 +61,7 @@ describe('Changelog', () => {
     const downloadModal = await findByRole('dialog', { name: 'Download InVEST sample data' });
     expect(downloadModal).toBeInTheDocument();
 
-    await userEvent.click(getByText('Cancel'));
+    await userEvent.click(getByRole('button', { name: /close modal/i }));
     expect(downloadModal).not.toBeInTheDocument();
     const changelogModal = await findByRole('dialog', { name: 'New in this version' });
     expect(changelogModal).toBeInTheDocument();

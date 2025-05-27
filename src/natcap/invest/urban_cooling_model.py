@@ -1,4 +1,5 @@
 """Urban Cooling Model."""
+import copy
 import logging
 import math
 import os
@@ -19,32 +20,41 @@ from osgeo import ogr
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
 _LOGGING_PERIOD = 5
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "urban_cooling_model",
-    "model_name": MODEL_METADATA["urban_cooling_model"].model_title,
-    "pyname": MODEL_METADATA["urban_cooling_model"].pyname,
-    "userguide": MODEL_METADATA["urban_cooling_model"].userguide,
+    "model_title": gettext("Urban Cooling"),
+    "userguide": "urban_cooling_model.html",
+    "aliases": ("ucm",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['lulc_raster_path', 'ref_eto_raster_path', 'aoi_vector_path', 'biophysical_table_path'],
+            ['t_ref', 'uhi_max', 't_air_average_radius', 'green_area_cooling_distance', 'cc_method'],
+            ['do_energy_valuation', 'building_vector_path', 'energy_consumption_table_path'],
+            ['do_productivity_valuation', 'avg_rel_humidity'],
+            ['cc_weight_shade', 'cc_weight_albedo', 'cc_weight_eti'],
+        ]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_raster_path", "ref_eto_raster_path",
                          "aoi_vector_path", "building_vector_path"],
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "lulc_raster_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "projection_units": u.meter,
             "about": gettext(
@@ -52,14 +62,14 @@ MODEL_SPEC = {
                 "raster must have corresponding entries in the Biophysical "
                 "Table.")
         },
-        "ref_eto_raster_path": spec_utils.ET0,
-        "aoi_vector_path": spec_utils.AOI,
+        "ref_eto_raster_path": spec.ET0,
+        "aoi_vector_path": spec.AOI,
         "biophysical_table_path": {
             "name": gettext("biophysical table"),
             "type": "csv",
             "index_col": "lucode",
             "columns": {
-                "lucode": spec_utils.LULC_TABLE_COLUMN,
+                "lucode": spec.LULC_TABLE_COLUMN,
                 "kc": {
                     "type": "number",
                     "units": u.none,
@@ -150,6 +160,7 @@ MODEL_SPEC = {
             "name": gettext("average relative humidity"),
             "type": "percent",
             "required": "do_productivity_valuation",
+            "allowed": "do_productivity_valuation",
             "about": gettext(
                 "The average relative humidity over the time period of "
                 "interest. Required if Run Work Productivity Valuation is "
@@ -164,8 +175,9 @@ MODEL_SPEC = {
                     "about": gettext(
                         "Code indicating the building type. These codes must "
                         "match those in the Energy Consumption Table.")}},
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "required": "do_energy_valuation",
+            "allowed": "do_energy_valuation",
             "about": gettext(
                 "A map of built infrastructure footprints. Required if Run "
                 "Energy Savings Valuation is selected.")
@@ -200,6 +212,7 @@ MODEL_SPEC = {
                 }
             },
             "required": "do_energy_valuation",
+            "allowed": "do_energy_valuation",
             "about": gettext(
                 "A table of energy consumption data for each building type. "
                 "Required if Run Energy Savings Valuation is selected.")
@@ -255,7 +268,7 @@ MODEL_SPEC = {
             "about": (
                 "A copy of the input Area of Interest vector with "
                 "additional fields."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "avg_cc": {
                     "about": "Average CC value",
@@ -294,7 +307,7 @@ MODEL_SPEC = {
         },
         "buildings_with_stats.shp": {
             "about": "A copy of the input vector “Building Footprints” with additional fields.",
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "energy_sav": {
                     "about": "Energy savings value (kWh or currency if optional energy cost input column was provided in the Energy Consumption Table). Savings are relative to a theoretical scenario where the city contains NO natural areas nor green spaces; where CC = 0 for all LULC classes.",
@@ -342,14 +355,14 @@ MODEL_SPEC = {
                     "about": (
                         "The Area of Interest vector reprojected to the "
                         "spatial reference of the LULC."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 },
                 "reprojected_buildings.shp": {
                     "about": (
                         "The buildings vector reprojected to the spatial "
                         "reference of the LULC."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {}
                 },
                 "albedo.tif": {
@@ -394,9 +407,9 @@ MODEL_SPEC = {
                 },
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 
 def execute(args):
@@ -461,9 +474,9 @@ def execute(args):
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate')
     utils.make_directories([args['workspace_dir'], intermediate_dir])
-    biophysical_df = validation.get_validated_dataframe(
-        args['biophysical_table_path'],
-        **MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = MODEL_SPEC.get_input(
+        'biophysical_table_path').get_validated_dataframe(
+        args['biophysical_table_path'])
 
     # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide
@@ -1146,9 +1159,9 @@ def calculate_energy_savings(
                   for field in target_building_layer.schema]
     type_field_index = fieldnames.index('type')
 
-    energy_consumption_df = validation.get_validated_dataframe(
-        energy_consumption_table_path,
-        **MODEL_SPEC['args']['energy_consumption_table_path'])
+    energy_consumption_df = MODEL_SPEC.get_input(
+        'energy_consumption_table_path').get_validated_dataframe(
+        energy_consumption_table_path)
 
     target_building_layer.StartTransaction()
     last_time = time.time()
@@ -1522,26 +1535,24 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+    validation_warnings = validation.validate(args, MODEL_SPEC)
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     if ('biophysical_table_path' not in invalid_keys and
             'cc_method' not in invalid_keys):
+        spec = copy.deepcopy(MODEL_SPEC.get_input('biophysical_table_path'))
         if args['cc_method'] == 'factors':
-            extra_biophysical_keys = ['shade', 'albedo']
+            spec.columns.get('shade').required = True
+            spec.columns.get('albedo').required = True
         else:
             # args['cc_method'] must be 'intensity'.
             # If args['cc_method'] isn't one of these two allowed values
             # ('intensity' or 'factors'), it'll be caught by
             # validation.validate due to the allowed values stated in
             # MODEL_SPEC.
-            extra_biophysical_keys = ['building_intensity']
+            spec.columns.get('building_intensity').required = True
 
-        error_msg = validation.check_csv(
-            args['biophysical_table_path'],
-            header_patterns=extra_biophysical_keys,
-            axis=1)
+        error_msg = spec.validate(args['biophysical_table_path'])
         if error_msg:
             validation_warnings.append((['biophysical_table_path'], error_msg))
 

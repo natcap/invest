@@ -64,6 +64,10 @@
 Unreleased Changes
 ------------------
 
+General
+=======
+* The workbench and the natcap.invest python package now support plugins.
+
 Workbench
 =========
 * Metadata is now generated for files when creating a datastack (with any

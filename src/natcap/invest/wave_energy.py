@@ -18,10 +18,9 @@ from osgeo import ogr
 import taskgraph
 import pygeoprocessing
 from . import utils
-from . import spec_utils
+from . import spec
 from .unit_registry import u
 from . import validation
-from .model_metadata import MODEL_METADATA
 from . import gettext
 
 
@@ -131,29 +130,41 @@ CAPTURED_WEM_FIELDS = {
     }
 }
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "wave_energy",
-    "model_name": MODEL_METADATA["wave_energy"].model_title,
-    "pyname": MODEL_METADATA["wave_energy"].pyname,
-    "userguide": MODEL_METADATA["wave_energy"].userguide,
+    "model_title": gettext("Wave Energy Production"),
+    "userguide": "wave_energy.html",
+    "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['wave_base_data_path', 'analysis_area', 'aoi_path', 'dem_path'],
+            ['machine_perf_path', 'machine_param_path'],
+            ['valuation_container', 'land_gridPts_path', 'machine_econ_path', 'number_of_machines'],
+        ]
+    },
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["aoi_path", "dem_path"],
+        "different_projections_ok": True
+    },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "wave_base_data_path": {
             "type": "directory",
             "contents": {
                 "NAmerica_WestCoast_4m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "about": gettext(
                         "Point vector for the west coast of North America and "
                         "Hawaii.")},
                 "WCNA_extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": gettext(
                         "Extract vector for the west coast of North America "
                         "and Hawaii.")},
@@ -165,14 +176,14 @@ MODEL_SPEC = {
                 "NAmerica_EastCoast_4m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "about": gettext(
                         "Point vector for the East Coast of North America and "
                         "Puerto Rico.")},
                 "ECNA_extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": gettext(
                         "Extract vector for the East Coast of North America "
                         "and Puerto Rico.")},
@@ -184,13 +195,13 @@ MODEL_SPEC = {
                 "North_Sea_4m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "about": gettext(
                         "Point vector for the North Sea 4 meter resolution.")},
                 "North_Sea_4m_Extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": gettext(
                         "Extract vector for the North Sea 4 meter resolution.")},
                 "North_Sea_4m.bin": {
@@ -201,13 +212,13 @@ MODEL_SPEC = {
                 "North_Sea_10m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "about": gettext(
                         "Point vector for the North Sea 10 meter resolution.")},
                 "North_Sea_10m_Extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": gettext(
                         "Extract vector for the North Sea 10 meter resolution.")},
                 "North_Sea_10m.bin": {
@@ -218,12 +229,12 @@ MODEL_SPEC = {
                 "Australia_4m.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "about": gettext("Point vector for Australia.")},
                 "Australia_Extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": gettext("Extract vector for Australia.")},
                 "Australia_4m.bin": {
                     "type": "file",
@@ -231,12 +242,12 @@ MODEL_SPEC = {
                 "Global.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "about": gettext("Global point vector.")},
                 "Global_extract.shp": {
                     "type": "vector",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "about": gettext("Global extract vector.")},
                 "Global_WW3.txt.bin": {
                     "type": "file",
@@ -266,7 +277,7 @@ MODEL_SPEC = {
             "name": gettext("analysis area")
         },
         "aoi_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "projected": True,
             "projection_units": u.meter,
             "required": False
@@ -306,6 +317,7 @@ MODEL_SPEC = {
                     "about": gettext("Value of the machine parameter.")
                 }
             },
+            "index_col": "name",
             "about": gettext("Table of parameters for the wave energy machine in use."),
             "name": gettext("machine parameter table")
         },
@@ -325,6 +337,7 @@ MODEL_SPEC = {
             "type": "csv",
             "columns": LAND_GRID_POINT_FIELDS,
             "required": "valuation_container",
+            "allowed": "valuation_container",
             "about": gettext(
                 "A table of data for each connection point. Required if "
                 "Run Valuation is selected."),
@@ -355,7 +368,9 @@ MODEL_SPEC = {
                     "about": gettext("Value of the machine parameter.")
                 }
             },
+            "index_col": "name",
             "required": "valuation_container",
+            "allowed": "valuation_container",
             "about": gettext(
                 "Table of economic parameters for the wave energy machine. "
                 "Required if Run Valuation is selected."),
@@ -366,6 +381,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.none,
             "required": "valuation_container",
+            "allowed": "valuation_container",
             "about": gettext(
                 "Number of wave machines to model. Required if Run Valuation "
                 "is selected."),
@@ -491,17 +507,17 @@ MODEL_SPEC = {
             "contents": {
                 "aoi_clipped_to_extract_path.shp": {
                     "about": "AOI clipped to the analysis area",
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "fields": {}
                 },
                 "Captured_WEM_InputOutput_Pts.shp": {
                     "about": "Map of wave data points.",
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "fields": CAPTURED_WEM_FIELDS
                 },
                 "Final_WEM_InputOutput_Pts.shp": {
                     "about": "Map of wave data points.",
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "fields": {
                         **CAPTURED_WEM_FIELDS,
                         "W2L_MDIST": {
@@ -539,7 +555,7 @@ MODEL_SPEC = {
                 "Indexed_WEM_InputOutput_Pts.shp": {
                     "about": "Map of wave data points.",
                     "fields": INDEXED_WEM_FIELDS,
-                    "geometries": spec_utils.POINT
+                    "geometries": spec.POINT
                 },
                 "interpolated_capwe_mwh.tif": {
                     "about": "Interpolated wave energy",
@@ -563,7 +579,7 @@ MODEL_SPEC = {
                 },
                 "WEM_InputOutput_Pts.shp": {
                     "about": "Map of wave data points.",
-                    "geometries": spec_utils.POINT,
+                    "geometries": spec.POINT,
                     "fields": WEM_FIELDS
                 },
                 "GridPt.txt": {
@@ -576,9 +592,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 
 # Set nodata value and target_pixel_type for new rasters
@@ -742,21 +758,15 @@ def execute(args):
     LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
     LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
 
-    machine_param_dict = validation.get_validated_dataframe(
-        args['machine_param_path'],
-        index_col='name',
-        columns={
-            'name': {'type': 'option_string'},
-            'value': {'type': 'number'}
-        },
-    )['value'].to_dict()
+    machine_param_dict = MODEL_SPEC.get_input(
+        'machine_param_path').get_validated_dataframe(
+        args['machine_param_path'])['value'].to_dict()
 
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_df dataframe for later use in valuation
-        grid_land_df = validation.get_validated_dataframe(
-            args['land_gridPts_path'],
-            **MODEL_SPEC['args']['land_gridPts_path'])
+        grid_land_df = MODEL_SPEC.get_input(
+            'land_gridPts_path').get_validated_dataframe(args['land_gridPts_path'])
         missing_grid_land_fields = []
         for field in ['id', 'type', 'lat', 'long', 'location']:
             if field not in grid_land_df.columns:
@@ -768,14 +778,9 @@ def execute(args):
                 'Connection Points File: %s' % missing_grid_land_fields)
 
     if 'valuation_container' in args and args['valuation_container']:
-        machine_econ_dict = validation.get_validated_dataframe(
-            args['machine_econ_path'],
-            index_col='name',
-            columns={
-                'name': {'type': 'option_string'},
-                'value': {'type': 'number'}
-            }
-        )['value'].to_dict()
+        machine_econ_dict = MODEL_SPEC.get_input(
+            'machine_econ_path').get_validated_dataframe(
+            args['machine_econ_path'])['value'].to_dict()
 
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
@@ -2371,4 +2376,4 @@ def validate(args, limit_to=None):
             validation warning.
 
     """
-    return validation.validate(args, MODEL_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC)

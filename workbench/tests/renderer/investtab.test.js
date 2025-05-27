@@ -14,7 +14,9 @@ import {
   saveToPython,
   writeParametersToFile,
   fetchValidation,
-  fetchDatastackFromFile
+  fetchDatastackFromFile,
+  fetchArgsEnabled,
+  getDynamicDropdowns
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import setupDialogs from '../../src/main/setupDialogs';
@@ -23,24 +25,12 @@ import setupOpenLocalHtml from '../../src/main/setupOpenLocalHtml';
 import { removeIpcMainListeners } from '../../src/main/main';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 
-// It's quite a pain to dynamically mock a const from a module,
-// here we do it by importing as another object, then
-// we can overwrite the object we want to mock later
-// https://stackoverflow.com/questions/42977961/how-to-mock-an-exported-const-in-jest
-import * as uiConfig from '../../src/renderer/ui_config';
-
 jest.mock('../../src/renderer/server_requests');
 
 const DEFAULT_JOB = new InvestJob({
-  modelRunName: 'carbon',
-  modelHumanName: 'Carbon Model',
+  modelID: 'carbon',
+  modelTitle: 'Carbon Model',
 });
-
-function mockUISpec(spec) {
-  return {
-    [DEFAULT_JOB.modelRunName]: { order: [Object.keys(spec.args)] }
-  };
-}
 
 function renderInvestTab(job = DEFAULT_JOB) {
   const tabID = crypto.randomBytes(4).toString('hex');
@@ -50,23 +40,21 @@ function renderInvestTab(job = DEFAULT_JOB) {
       tabID={tabID}
       saveJob={() => {}}
       updateJobProperties={() => {}}
+      investList={{
+        carbon: { modelTitle: 'Carbon Model', type: 'core' },
+        foo: { modelTitle: 'Foo Model', type: 'plugin' },
+      }}
     />
   );
   return utils;
 }
 
-// Because we mock UI_SPEC without using jest's API
-// we alse need to a reset it without jest's API.
-const { UI_SPEC } = uiConfig;
-afterEach(() => {
-  uiConfig.UI_SPEC = UI_SPEC;
-});
-
 describe('Run status Alert renders with status from a recent run', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
-    model_name: 'Foo Model',
+    model_title: 'Foo Model',
     userguide: 'foo.html',
+    input_field_order: [['workspace']],
     args: {
       workspace: {
         name: 'Workspace',
@@ -79,12 +67,14 @@ describe('Run status Alert renders with status from a recent run', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    uiConfig.UI_SPEC = mockUISpec(spec);
+    fetchArgsEnabled.mockResolvedValue({ workspace: true });
+    getDynamicDropdowns.mockResolvedValue({});
     setupDialogs();
   });
 
   afterEach(() => {
     removeIpcMainListeners();
+    jest.resetAllMocks();
   });
 
   test.each([
@@ -92,12 +82,16 @@ describe('Run status Alert renders with status from a recent run', () => {
     ['error', 'Error: see log for details'],
     ['canceled', 'Run Canceled'],
   ])('status message displays on %s', async (status, message) => {
+    // mock a defined value for ipcMainChannels.INVEST_SERVE so the tab loads
+    ipcRenderer.invoke.mockResolvedValueOnce('foo');
+
     const job = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Model',
+      modelID: 'carbon',
+      modelTitle: 'Carbon Model',
       status: status,
       argsValues: {},
       logfile: 'foo.txt',
+      type: 'core',
     });
 
     const { findByRole } = renderInvestTab(job);
@@ -108,9 +102,11 @@ describe('Run status Alert renders with status from a recent run', () => {
   test.each([
     'success', 'error', 'canceled',
   ])('Open Workspace button is available on %s', async (status) => {
+    // mock a defined value for ipcMainChannels.INVEST_SERVE so the tab loads
+    ipcRenderer.invoke.mockResolvedValueOnce('foo');
     const job = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Model',
+      modelID: 'carbon',
+      modelTitle: 'Carbon Model',
       status: status,
       argsValues: {},
       logfile: 'foo.txt',
@@ -128,6 +124,7 @@ describe('Open Workspace button', () => {
     model_name: 'Foo Model',
     userguide: 'foo.html',
     args: {},
+    input_field_order: [],
   };
 
   const baseJob = {
@@ -138,7 +135,7 @@ describe('Open Workspace button', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    uiConfig.UI_SPEC = mockUISpec(spec);
+    getDynamicDropdowns.mockResolvedValue({});
     setupDialogs();
   });
 
@@ -190,9 +187,11 @@ describe('Open Workspace button', () => {
 
 describe('Sidebar Buttons', () => {
   const spec = {
+    model_id: 'foo',
     pyname: 'natcap.invest.foo',
-    model_name: 'Foo Model',
+    model_title: 'Foo Model',
     userguide: 'foo.html',
+    input_field_order: [['workspace', 'port']],
     args: {
       workspace: {
         name: 'Workspace',
@@ -209,9 +208,16 @@ describe('Sidebar Buttons', () => {
   beforeEach(async () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    uiConfig.UI_SPEC = mockUISpec(spec);
+    fetchArgsEnabled.mockResolvedValue({ workspace: true, port: true });
+    getDynamicDropdowns.mockResolvedValue({});
     setupOpenExternalUrl();
     setupOpenLocalHtml();
+    ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === ipcMainChannels.SHOW_SAVE_DIALOG) {
+        return { canceled: false, filePath: 'foo.json' };
+      }
+      return {};
+    });
   });
 
   afterEach(() => {
@@ -237,10 +243,10 @@ describe('Sidebar Buttons', () => {
 
     const payload = writeParametersToFile.mock.calls[0][0];
     expect(Object.keys(payload)).toEqual(expect.arrayContaining(
-      ['filepath', 'moduleName', 'relativePaths', 'args']
+      ['filepath', 'model_id', 'relativePaths', 'args']
     ));
     Object.keys(payload).forEach((key) => {
-      expect(payload[key]).not.toBeUndefined();
+      expect(payload[key]).toBeDefined();
     });
     const args = JSON.parse(payload.args);
     const argKeys = Object.keys(args);
@@ -269,14 +275,14 @@ describe('Sidebar Buttons', () => {
 
     const payload = saveToPython.mock.calls[0][0];
     expect(Object.keys(payload)).toEqual(expect.arrayContaining(
-      ['filepath', 'modelname', 'args']
+      ['filepath', 'model_id', 'args']
     ));
     expect(typeof payload.filepath).toBe('string');
-    expect(typeof payload.modelname).toBe('string');
+    expect(typeof payload.model_id).toBe('string');
     // guard against a common mistake of passing a model title
-    expect(payload.modelname.split(' ')).toHaveLength(1);
+    expect(payload.model_id.split(' ')).toHaveLength(1);
 
-    expect(payload.args).not.toBeUndefined();
+    expect(payload.args).toBeDefined();
     const args = JSON.parse(payload.args);
     const argKeys = Object.keys(args);
     expect(argKeys).toEqual(
@@ -297,7 +303,7 @@ describe('Sidebar Buttons', () => {
     const mockDialogData = { canceled: false, filePath: 'data.tgz' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    const { findByText, findByLabelText, findByRole, getByRole } = renderInvestTab();
+    const { findByText, findByLabelText, findByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
     await userEvent.click(saveAsButton);
     const datastackOption = await findByLabelText((content) => content.startsWith('Parameters and data'));
@@ -307,14 +313,14 @@ describe('Sidebar Buttons', () => {
 
     const payload = archiveDatastack.mock.calls[0][0];
     expect(Object.keys(payload)).toEqual(expect.arrayContaining(
-      ['filepath', 'moduleName', 'args']
+      ['filepath', 'model_id', 'args']
     ));
     expect(typeof payload.filepath).toBe('string');
-    expect(typeof payload.moduleName).toBe('string');
+    expect(typeof payload.model_id).toBe('string');
     // guard against a common mistake of passing a model title
-    expect(payload.moduleName.split(' ')).toHaveLength(1);
+    expect(payload.model_id.split(' ')).toHaveLength(1);
 
-    expect(payload.args).not.toBeUndefined();
+    expect(payload.args).toBeDefined();
     const args = JSON.parse(payload.args);
     const argKeys = Object.keys(args);
     expect(argKeys).toEqual(
@@ -446,7 +452,7 @@ describe('Sidebar Buttons', () => {
 
   test('Load parameters from file: loads parameters', async () => {
     const mockDatastack = {
-      module_name: spec.pyname,
+      model_id: 'foo',
       args: {
         workspace: 'myworkspace',
         port: '9999',
@@ -455,15 +461,15 @@ describe('Sidebar Buttons', () => {
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
     const mockDialogData = {
       canceled: false,
-      filePaths: ['foo.json']
+      filePaths: ['foo.json'],
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
     // Render with a completed model run so we can navigate to Log Tab
     // and assert that Loading new params toggles back to Setup Tab
     const job = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Model',
+      modelID: 'foo',
+      modelTitle: 'Foo Model',
       status: 'success',
       argsValues: {},
       logfile: 'foo.txt',
@@ -485,7 +491,7 @@ describe('Sidebar Buttons', () => {
 
   test('Load parameters from datastack: tgz asks for extract location', async () => {
     const mockDatastack = {
-      module_name: spec.pyname,
+      model_id: 'carbon',
       args: {
         workspace: 'myworkspace',
         port: '9999',
@@ -507,8 +513,8 @@ describe('Sidebar Buttons', () => {
     });
 
     const job = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Model',
+      modelID: 'carbon',
+      modelTitle: 'Carbon Model',
       argsValues: {},
     });
     const { findByText, findByLabelText } = renderInvestTab(job);
@@ -571,6 +577,25 @@ describe('Sidebar Buttons', () => {
     });
   });
 
+  test('Plugin Documentation link points to userguide URL from plugin model spec and invokes OPEN_EXTERNAL_URL', async () => {
+    const spy = jest.spyOn(ipcRenderer, 'send')
+      .mockImplementation(() => Promise.resolve());
+
+    const { findByRole, queryByRole } = renderInvestTab(new InvestJob({
+      modelID: 'foo',
+      modelTitle: 'Foo Model',
+    }));
+    const ugLink = await queryByRole('link', { name: /user's guide/i });
+    expect(ugLink).toBeNull();
+    const docsLink = await findByRole('link', { name: /plugin documentation/i });
+    expect(docsLink.getAttribute('href')).toEqual(spec.userguide);
+    await userEvent.click(docsLink);
+    await waitFor(() => {
+      const calledChannels = spy.mock.calls.map(call => call[0]);
+      expect(calledChannels).toContain(ipcMainChannels.OPEN_EXTERNAL_URL);
+    });
+  });
+
   test('Forum link opens externally', async () => {
     const { findByRole } = renderInvestTab();
     const link = await findByRole('link', { name: /frequently asked questions/i });
@@ -584,8 +609,9 @@ describe('Sidebar Buttons', () => {
 describe('InVEST Run Button', () => {
   const spec = {
     pyname: 'natcap.invest.bar',
-    model_name: 'Bar Model',
+    model_title: 'Bar Model',
     userguide: 'bar.html',
+    input_field_order: [['a', 'b', 'c']],
     args: {
       a: {
         name: 'abar',
@@ -604,7 +630,7 @@ describe('InVEST Run Button', () => {
 
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
-    uiConfig.UI_SPEC = mockUISpec(spec);
+    fetchArgsEnabled.mockResolvedValue({ a: true, b: true, c: true });
   });
 
   test('Changing inputs trigger validation & enable/disable Run', async () => {

@@ -12,9 +12,10 @@ import natcap.invest
 from natcap.invest import cli
 from natcap.invest import datastack
 from natcap.invest import set_locale
-from natcap.invest.model_metadata import MODEL_METADATA
-from natcap.invest import spec_utils
+from natcap.invest import models
+from natcap.invest import spec
 from natcap.invest import usage
+from natcap.invest import validation
 
 LOGGER = logging.getLogger(__name__)
 
@@ -25,11 +26,6 @@ CORS(app, resources={
         'origins': ['http://localhost:*', 'http://127.0.0.1:*']
     }
 })
-
-PYNAME_TO_MODEL_NAME_MAP = {
-    metadata.pyname: model_name
-    for model_name, metadata in MODEL_METADATA.items()
-}
 
 
 @app.route(f'/{PREFIX}/ready', methods=['GET'])
@@ -50,9 +46,8 @@ def get_invest_models():
         A JSON string
     """
     LOGGER.debug('get model list')
-    set_locale(request.args.get('language', 'en'))
-    importlib.reload(natcap.invest.model_metadata)
-    return cli.build_model_list_json()
+    locale_code = request.args.get('language', 'en')
+    return cli.build_model_list_json(locale_code)
 
 
 @app.route(f'/{PREFIX}/getspec', methods=['POST'])
@@ -69,11 +64,36 @@ def get_invest_getspec():
     """
     set_locale(request.args.get('language', 'en'))
     target_model = request.get_json()
-    target_module = MODEL_METADATA[target_model].pyname
-    importlib.reload(natcap.invest.spec_utils)
+    target_module = models.model_id_to_pyname[target_model]
+    importlib.reload(natcap.invest.validation)
     model_module = importlib.reload(
         importlib.import_module(name=target_module))
-    return spec_utils.serialize_args_spec(model_module.MODEL_SPEC)
+    return model_module.MODEL_SPEC.to_json()
+
+
+@app.route(f'/{PREFIX}/dynamic_dropdowns', methods=['POST'])
+def get_dynamic_dropdown_options():
+    """Gets the list of dynamically populated dropdown options.
+
+    Body (JSON string):
+        model_id: string (e.g. carbon)
+        args: JSON string of InVEST model args keys and values
+
+    Returns:
+        A JSON string.
+    """
+    payload = request.get_json()
+    LOGGER.debug(payload)
+    results = {}
+    model_module = importlib.import_module(
+        name=models.model_id_to_pyname[payload['model_id']])
+    for arg_spec in model_module.MODEL_SPEC.inputs:
+        if (isinstance(arg_spec, spec.OptionStringInput) and
+                arg_spec.dropdown_function):
+            results[arg_spec.id] = arg_spec.dropdown_function(
+                json.loads(payload['args']))
+    LOGGER.debug(results)
+    return json.dumps(results)
 
 
 @app.route(f'/{PREFIX}/validate', methods=['POST'])
@@ -81,7 +101,7 @@ def get_invest_validate():
     """Gets the return value of an InVEST model's validate function.
 
     Body (JSON string):
-        model_module: string (e.g. natcap.invest.carbon)
+        model_id: string (e.g. carbon)
         args: JSON string of InVEST model args keys and values
 
     Accepts a `language` query parameter which should be an ISO 639-1 language
@@ -101,7 +121,8 @@ def get_invest_validate():
     set_locale(request.args.get('language', 'en'))
     importlib.reload(natcap.invest.validation)
     model_module = importlib.reload(
-        importlib.import_module(name=payload['model_module']))
+        importlib.import_module(
+            name=models.model_id_to_pyname[payload['model_id']]))
 
     results = model_module.validate(
         json.loads(payload['args']), limit_to=limit_to)
@@ -109,36 +130,28 @@ def get_invest_validate():
     return json.dumps(results)
 
 
-@app.route(f'/{PREFIX}/colnames', methods=['POST'])
-def get_vector_colnames():
-    """Get a list of column names from a vector.
-    This is used to fill in dropdown menu options in a couple models.
+@app.route(f'/{PREFIX}/args_enabled', methods=['POST'])
+def get_args_enabled():
+    """Gets the return value of an InVEST model's validate function.
 
     Body (JSON string):
-        vector_path (string): path to a vector file
+        model_id: string (e.g. carbon)
+        args: JSON string of InVEST model args keys and values
+
+    Accepts a `language` query parameter which should be an ISO 639-1 language
+    code. Validation messages will be translated to the requested language if
+    translations are available, or fall back to English otherwise.
 
     Returns:
-        a JSON string.
+        A JSON string.
     """
     payload = request.get_json()
     LOGGER.debug(payload)
-    vector_path = payload['vector_path']
-    # a lot of times the path will be empty so don't even try to open it
-    if vector_path:
-        try:
-            vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
-            colnames = [defn.GetName() for defn in vector.GetLayer().schema]
-            LOGGER.debug(colnames)
-            return json.dumps(colnames)
-        except Exception as e:
-            LOGGER.exception(
-                f'Could not read column names from {vector_path}. ERROR: {e}')
-    else:
-        LOGGER.error('Empty vector path.')
-    # 422 Unprocessable Entity: the server understands the content type
-    # of the request entity, and the syntax of the request entity is
-    # correct, but it was unable to process the contained instructions.
-    return json.dumps([]), 422
+    model_spec = importlib.import_module(
+        name=models.model_id_to_pyname[payload['model_id']]).MODEL_SPEC
+    results = validation.args_enabled(json.loads(payload['args']), model_spec)
+    LOGGER.debug(results)
+    return json.dumps(results)
 
 
 @app.route(f'/{PREFIX}/post_datastack_file', methods=['POST'])
@@ -153,13 +166,10 @@ def post_datastack_file():
     payload = request.get_json()
     stack_type, stack_info = datastack.get_datastack_info(
         payload['filepath'], payload.get('extractPath', None))
-    model_name = PYNAME_TO_MODEL_NAME_MAP[stack_info.model_name]
     result_dict = {
         'type': stack_type,
         'args': stack_info.args,
-        'module_name': stack_info.model_name,
-        'model_run_name': model_name,
-        'model_human_name': MODEL_METADATA[model_name].model_title,
+        'model_id': stack_info.model_id,
         'invest_version': stack_info.invest_version
     }
     return json.dumps(result_dict)
@@ -171,7 +181,7 @@ def write_parameter_set_file():
 
     Body (JSON string):
         filepath: string
-        moduleName: string(e.g. natcap.invest.carbon)
+        model_id: string (e.g. carbon)
         args: JSON string of InVEST model args keys and values
         relativePaths: boolean
 
@@ -182,13 +192,13 @@ def write_parameter_set_file():
     """
     payload = request.get_json()
     filepath = payload['filepath']
-    modulename = payload['moduleName']
+    model_id = payload['model_id']
     args = json.loads(payload['args'])
     relative_paths = payload['relativePaths']
 
     try:
         datastack.build_parameter_set(
-            args, modulename, filepath, relative=relative_paths)
+            args, model_id, filepath, relative=relative_paths)
     except ValueError as message:
         LOGGER.error(str(message))
         return {
@@ -207,7 +217,7 @@ def save_to_python():
 
     Body (JSON string):
         filepath: string
-        modelname: string (a key in natcap.invest.MODEL_METADATA)
+        model_id: string (matching a model_id from a MODEL_SPEC)
         args_dict: JSON string of InVEST model args keys and values
 
     Returns:
@@ -215,11 +225,11 @@ def save_to_python():
     """
     payload = request.get_json()
     save_filepath = payload['filepath']
-    modelname = payload['modelname']
+    model_id = payload['model_id']
     args_dict = json.loads(payload['args'])
 
     cli.export_to_python(
-        save_filepath, modelname, args_dict)
+        save_filepath, model_id, args_dict)
 
     return 'python script saved'
 
@@ -230,7 +240,7 @@ def build_datastack_archive():
 
     Body (JSON string):
         filepath: string - the target path to save the archive
-        moduleName: string (e.g. natcap.invest.carbon) the python module name
+        model_id: string (e.g. carbon) the model id
         args: JSON string of InVEST model args keys and values
 
     Returns:
@@ -242,7 +252,7 @@ def build_datastack_archive():
     try:
         datastack.build_datastack_archive(
             json.loads(payload['args']),
-            payload['moduleName'],
+            payload['model_id'],
             payload['filepath'])
     except ValueError as message:
         LOGGER.error(str(message))
@@ -260,10 +270,12 @@ def build_datastack_archive():
 def log_model_start():
     payload = request.get_json()
     usage._log_model(
-        payload['model_pyname'],
-        json.loads(payload['model_args']),
-        payload['invest_interface'],
-        payload['session_id'])
+        pyname=models.model_id_to_pyname[payload['model_id']],
+        model_args=json.loads(payload['model_args']),
+        invest_interface=payload['invest_interface'],
+        session_id=payload['session_id'],
+        type=payload['type'],
+        source=payload.get('source', None))  # source only used for plugins
     return 'OK'
 
 

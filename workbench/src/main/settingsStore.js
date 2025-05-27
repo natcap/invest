@@ -73,7 +73,7 @@ export const settingsStore = initStore();
 export function setupSettingsHandlers() {
   ipcMain.handle(
     ipcMainChannels.GET_SETTING,
-    (event, key) => settingsStore.get(key)
+    (event, key) => Promise.resolve(settingsStore.get(key))
   );
 
   ipcMain.on(

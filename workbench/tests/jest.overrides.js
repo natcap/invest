@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import fetch from 'node-fetch';
 
 import '../src/renderer/i18n/i18n';

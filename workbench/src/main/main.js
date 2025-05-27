@@ -1,5 +1,4 @@
 import path from 'path';
-import i18n from './i18n/i18n';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {
   app,
@@ -9,13 +8,29 @@ import {
   ipcMain
 } from 'electron';
 
+import i18n from './i18n/i18n';
 import BASE_URL from './baseUrl';
 import {
-  createPythonFlaskProcess,
-  getFlaskIsReady,
-  shutdownPythonProcess,
+  createCoreServerProcess,
+  shutdownPythonProcess
 } from './createPythonFlaskProcess';
-import findInvestBinaries from './findInvestBinaries';
+import { findInvestBinaries, findMicromambaExecutable } from './findBinaries';
+import setupDownloadHandlers from './setupDownloadHandlers';
+import setupDialogs from './setupDialogs';
+import setupContextMenu from './setupContextMenu';
+import setupCheckFilePermissions from './setupCheckFilePermissions';
+import { setupCheckFirstRun } from './setupCheckFirstRun';
+import { setupCheckStorageToken } from './setupCheckStorageToken';
+import {
+  setupInvestRunHandlers,
+  setupLaunchPluginServerHandler,
+  setupInvestLogReaderHandler
+} from './setupInvestHandlers';
+import {
+  setupAddPlugin,
+  setupRemovePlugin,
+  setupWindowsMSVCHandlers
+} from './setupAddRemovePlugin';
 import { ipcMainChannels } from './ipcMainChannels';
 import ELECTRON_DEV_MODE from './isDevMode';
 import { getLogger } from './logger';
@@ -23,23 +38,12 @@ import menuTemplate from './menubar';
 import pkg from '../../package.json';
 import { settingsStore, setupSettingsHandlers } from './settingsStore';
 import { setupBaseUrl } from './setupBaseUrl';
-import setupCheckFilePermissions from './setupCheckFilePermissions';
-import { setupCheckFirstRun } from './setupCheckFirstRun';
-import { setupCheckStorageToken } from './setupCheckStorageToken';
-import setupContextMenu from './setupContextMenu';
-import setupDialogs from './setupDialogs';
-import setupDownloadHandlers from './setupDownloadHandlers';
 import setupGetElectronPaths from './setupGetElectronPaths';
 import setupGetNCPUs from './setupGetNCPUs';
-import {
-  setupInvestLogReaderHandler,
-  setupInvestRunHandlers,
-} from './setupInvestHandlers';
 import { setupIsNewVersion } from './setupIsNewVersion';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
 import setupRendererLogger from './setupRendererLogger';
-
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -53,15 +57,10 @@ process.on('unhandledRejection', (err, promise) => {
   process.exit(1);
 });
 
-if (!process.env.PORT) {
-  process.env.PORT = '56789';
-}
-
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
 let splashScreen;
-let flaskSubprocess;
 let forceQuit = false;
 
 export function destroyWindow() {
@@ -84,8 +83,19 @@ export const createWindow = async () => {
   });
   splashScreen.loadURL(path.join(BASE_URL, 'splash.html'));
 
-  const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
-  flaskSubprocess = createPythonFlaskProcess(investExe);
+  settingsStore.set('investExe', findInvestBinaries(ELECTRON_DEV_MODE));
+  settingsStore.set('micromamba', findMicromambaExecutable(ELECTRON_DEV_MODE));
+  // No plugin server processes should persist between workbench sessions
+  // In case any were left behind, remove them
+  const plugins = settingsStore.get('plugins');
+  if (plugins) {
+    Object.keys(plugins).forEach((modelID) => {
+      settingsStore.set(`plugins.${modelID}.pid`, '');
+      settingsStore.set(`plugins.${modelID}.port`, '');
+    });
+  }
+
+  await createCoreServerProcess();
   setupDialogs();
   setupCheckFilePermissions();
   setupCheckFirstRun();
@@ -98,7 +108,6 @@ export const createWindow = async () => {
   setupOpenExternalUrl();
   setupRendererLogger();
   setupBaseUrl();
-  await getFlaskIsReady();
 
   const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';
   // Create the browser window.
@@ -108,7 +117,7 @@ export const createWindow = async () => {
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       defaultEncoding: 'UTF-8',
-      additionalArguments: [devModeArg, `--port=${process.env.PORT}`],
+      additionalArguments: [devModeArg],
     },
   });
   Menu.setApplicationMenu(
@@ -151,7 +160,11 @@ export const createWindow = async () => {
   // have callbacks that won't work until the invest server is ready.
   setupContextMenu(mainWindow);
   setupDownloadHandlers(mainWindow);
-  setupInvestRunHandlers(investExe);
+  setupInvestRunHandlers();
+  setupLaunchPluginServerHandler();
+  setupAddPlugin(i18n);
+  setupRemovePlugin();
+  setupWindowsMSVCHandlers();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
   if (ELECTRON_DEV_MODE) {
     // The timing of this is fussy due a chromium bug. It seems to only
@@ -203,8 +216,22 @@ export function main() {
     if (shuttingDown) { return; }
     event.preventDefault();
     shuttingDown = true;
+    await shutdownPythonProcess(settingsStore.get('core.pid'));
+    settingsStore.set('core.pid', '');
+    settingsStore.set('core.port', '');
+    const pluginServerPIDs = [];
+    const plugins = settingsStore.get('plugins') || {};
+    Object.keys(plugins).forEach((pluginID) => {
+      const pid = settingsStore.get(`plugins.${pluginID}.pid`);
+      if (pid) {
+        pluginServerPIDs.push(pid);
+      }
+      settingsStore.set(`plugins.${pluginID}.pid`, '');
+      settingsStore.set(`plugins.${pluginID}.port`, '');
+    });
+    await Promise.all(pluginServerPIDs.map((pid) => shutdownPythonProcess(pid)));
+
     removeIpcMainListeners();
-    await shutdownPythonProcess(flaskSubprocess);
     app.quit();
   });
 }

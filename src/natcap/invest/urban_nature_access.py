@@ -19,11 +19,10 @@ from osgeo import ogr
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
-from .spec_utils import u
+from .spec import u
 
 LOGGER = logging.getLogger(__name__)
 UINT32_NODATA = int(numpy.iinfo(numpy.uint32).max)
@@ -39,11 +38,19 @@ RADIUS_OPT_URBAN_NATURE = 'radius per urban nature class'
 RADIUS_OPT_POP_GROUP = 'radius per population group'
 POP_FIELD_REGEX = '^pop_'
 ID_FIELDNAME = 'adm_unit_id'
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     'model_id': 'urban_nature_access',
-    'model_name': MODEL_METADATA['urban_nature_access'].model_title,
-    'pyname': MODEL_METADATA['urban_nature_access'].pyname,
-    'userguide': MODEL_METADATA['urban_nature_access'].userguide,
+    'model_title': gettext('Urban Nature Access'),
+    'userguide': 'urban_nature_access.html',
+    'aliases': ('una',),
+    'ui_spec': {
+        'order': [
+            ['workspace_dir', 'results_suffix'],
+            ['lulc_raster_path', 'lulc_attribute_table'],
+            ['population_raster_path', 'admin_boundaries_vector_path', 'population_group_radii_table', 'urban_nature_demand', 'aggregate_by_pop_group'],
+            ['search_radius_mode', 'decay_function', 'search_radius']
+        ]
+    },
     'args_with_spatial_overlap': {
         'spatial_keys': [
             'lulc_raster_path', 'population_raster_path',
@@ -51,11 +58,11 @@ MODEL_SPEC = {
         'different_projections_ok': True,
     },
     'args': {
-        'workspace_dir': spec_utils.WORKSPACE,
-        'results_suffix': spec_utils.SUFFIX,
-        'n_workers': spec_utils.N_WORKERS,
+        'workspace_dir': spec.WORKSPACE,
+        'results_suffix': spec.SUFFIX,
+        'n_workers': spec.N_WORKERS,
         'lulc_raster_path': {
-            **spec_utils.LULC,
+            **spec.LULC,
             'projected': True,
             'projection_units': u.meter,
             'about': (
@@ -79,7 +86,7 @@ MODEL_SPEC = {
             ),
             'index_col': 'lucode',
             'columns': {
-                'lucode': spec_utils.LULC_TABLE_COLUMN,
+                'lucode': spec.LULC_TABLE_COLUMN,
                 'urban_nature': {
                     'type': 'ratio',
                     'about': (
@@ -122,7 +129,7 @@ MODEL_SPEC = {
         'admin_boundaries_vector_path': {
             'type': 'vector',
             'name': 'administrative boundaries',
-            'geometries': spec_utils.POLYGONS,
+            'geometries': spec.POLYGONS,
             'fields': {
                 "pop_[POP_GROUP]": {
                     "type": "ratio",
@@ -251,6 +258,7 @@ MODEL_SPEC = {
             'units': u.m,
             'expression': 'value > 0',
             'required': f'search_radius_mode == "{RADIUS_OPT_UNIFORM}"',
+            'allowed': f'search_radius_mode == "{RADIUS_OPT_UNIFORM}"',
             'about': gettext(
                 'The search radius to use when running the model under a '
                 'uniform search radius. Required when running the model '
@@ -260,6 +268,7 @@ MODEL_SPEC = {
             'name': 'population group radii table',
             'type': 'csv',
             'required': f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
+            'allowed': f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
             'index_col': 'pop_group',
             'columns': {
                 "pop_group": {
@@ -341,7 +350,7 @@ MODEL_SPEC = {
                     "about": (
                         "A copy of the user's administrative boundaries "
                         "vector with a single layer."),
-                    "geometries": spec_utils.POLYGONS,
+                    "geometries": spec.POLYGONS,
                     "fields": {
                         "SUP_DEMadm_cap": {
                             "type": "number",
@@ -612,9 +621,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        'taskgraph_cache': spec_utils.TASKGRAPH_DIR,
+        'taskgraph_cache': spec.TASKGRAPH_DIR,
     }
-}
+})
 
 
 _OUTPUT_BASE_FILES = {
@@ -934,9 +943,8 @@ def execute(args):
                     aoi_reprojection_task, lulc_mask_task]
             )
 
-    attr_table = validation.get_validated_dataframe(
-        args['lulc_attribute_table'],
-        **MODEL_SPEC['args']['lulc_attribute_table'])
+    attr_table = MODEL_SPEC.get_input(
+        'lulc_attribute_table').get_validated_dataframe(args['lulc_attribute_table'])
     kernel_paths = {}  # search_radius, kernel path
     kernel_tasks = {}  # search_radius, kernel task
 
@@ -954,15 +962,15 @@ def execute(args):
         lucode_to_search_radii = list(
             urban_nature_attrs[['search_radius_m']].itertuples(name=None))
     elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
-        pop_group_table = validation.get_validated_dataframe(
-            args['population_group_radii_table'],
-            **MODEL_SPEC['args']['population_group_radii_table'])
+        pop_group_table = MODEL_SPEC.get_input(
+            'population_group_radii_table').get_validated_dataframe(
+            args['population_group_radii_table'])
         search_radii = set(pop_group_table['search_radius_m'].unique())
         # Build a dict of {pop_group: search_radius_m}
         search_radii_by_pop_group = pop_group_table['search_radius_m'].to_dict()
     else:
         valid_options = ', '.join(
-            MODEL_SPEC['args']['search_radius_mode']['options'].keys())
+            MODEL_SPEC.get_input('search_radius_mode').options.keys())
         raise ValueError(
             "Invalid search radius mode provided: "
             f"{args['search_radius_mode']}; must be one of {valid_options}")
@@ -1834,8 +1842,8 @@ def _reclassify_urban_nature_area(
     Returns:
         ``None``
     """
-    lulc_attribute_df = validation.get_validated_dataframe(
-        lulc_attribute_table, **MODEL_SPEC['args']['lulc_attribute_table'])
+    lulc_attribute_df = MODEL_SPEC.get_input(
+        'lulc_attribute_table').get_validated_dataframe(lulc_attribute_table)
 
     squared_pixel_area = abs(
         numpy.multiply(*_square_off_pixels(lulc_raster_path)))
@@ -1867,9 +1875,9 @@ def _reclassify_urban_nature_area(
         target_datatype=gdal.GDT_Float32,
         target_nodata=FLOAT32_NODATA,
         error_details={
-            'raster_name': MODEL_SPEC['args']['lulc_raster_path']['name'],
+            'raster_name': MODEL_SPEC.get_input('lulc_raster_path').name,
             'column_name': 'urban_nature',
-            'table_name': MODEL_SPEC['args']['lulc_attribute_table']['name'],
+            'table_name': MODEL_SPEC.get_input('lulc_attribute_table').name
         }
     )
 
@@ -2591,5 +2599,4 @@ def _mask_raster(source_raster_path, mask_raster_path, target_raster_path):
 
 
 def validate(args, limit_to=None):
-    return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC)

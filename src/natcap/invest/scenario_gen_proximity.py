@@ -17,10 +17,9 @@ import taskgraph
 from osgeo import gdal
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -29,17 +28,27 @@ MISSING_CONVERT_OPTION_MSG = gettext(
     'One or more of "convert_nearest_to_edge" or "convert_farthest_from_edge" '
     'must be selected')
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "scenario_generator_proximity",
-    "model_name": MODEL_METADATA["scenario_generator_proximity"].model_title,
-    "pyname": MODEL_METADATA["scenario_generator_proximity"].pyname,
-    "userguide": MODEL_METADATA["scenario_generator_proximity"].userguide,
+    "model_title": gettext("Scenario Generator: Proximity Based"),
+    "userguide": "scenario_gen_proximity.html",
+    "aliases": ("sgp",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['base_lulc_path', 'aoi_path'],
+            ['area_to_convert', 'focal_landcover_codes',
+             'convertible_landcover_codes', 'replacement_lucode'],
+            ['convert_farthest_from_edge', 'convert_nearest_to_edge',
+             'n_fragmentation_steps']
+        ]
+    },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "base_lulc_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "about": gettext("Base map from which to generate scenarios."),
             "name": gettext("base LULC map")
@@ -88,7 +97,7 @@ MODEL_SPEC = {
             "name": gettext("number of conversion steps")
         },
         "aoi_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "required": False,
             "about": gettext(
                 "Area over which to run the conversion. Provide this input if "
@@ -190,9 +199,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 
 # This sets the largest number of elements that will be packed at once and
@@ -908,7 +917,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC['args'])
+    validation_warnings = validation.validate(args, MODEL_SPEC)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 
     if ('convert_nearest_to_edge' not in invalid_keys and

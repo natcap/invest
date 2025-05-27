@@ -12,11 +12,10 @@ from osgeo import gdal
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .crop_production_regression import NUTRIENTS
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -241,11 +240,17 @@ nutrient_units = {
     "vitk":        u.microgram/u.hectogram,  # vitamin K
 }
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "crop_production_percentile",
-    "model_name": MODEL_METADATA["crop_production_percentile"].model_title,
-    "pyname": MODEL_METADATA["crop_production_percentile"].pyname,
-    "userguide": MODEL_METADATA["crop_production_percentile"].userguide,
+    "model_title": gettext("Crop Production: Percentile"),
+    "userguide": "crop_production.html",
+    "aliases": ("cpp",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['model_data_path', 'landcover_raster_path', 'landcover_to_crop_table_path', 'aggregate_polygon_path']
+        ]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "landcover_raster_path",
@@ -254,11 +259,11 @@ MODEL_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "landcover_raster_path": {
-            **spec_utils.LULC,
+            **spec.LULC,
             "projected": True,
             "projection_units": u.meter
         },
@@ -279,7 +284,7 @@ MODEL_SPEC = {
             "name": gettext("LULC to Crop Table")
         },
         "aggregate_polygon_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "projected": True,
             "required": False
         },
@@ -504,9 +509,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 _INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
 
@@ -608,9 +613,9 @@ def execute(args):
         None.
 
     """
-    crop_to_landcover_df = validation.get_validated_dataframe(
-        args['landcover_to_crop_table_path'],
-        **MODEL_SPEC['args']['landcover_to_crop_table_path'])
+    crop_to_landcover_df = MODEL_SPEC.get_input(
+        'landcover_to_crop_table_path').get_validated_dataframe(
+            args['landcover_to_crop_table_path'])
 
     lucodes_in_table = set(list(
         crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER]))
@@ -716,11 +721,11 @@ def execute(args):
         climate_percentile_yield_table_path = os.path.join(
             args['model_data_path'],
             _CLIMATE_PERCENTILE_TABLE_PATTERN % crop_name)
-        crop_climate_percentile_df = validation.get_validated_dataframe(
-            climate_percentile_yield_table_path,
-            **MODEL_SPEC['args']['model_data_path']['contents'][
-                'climate_percentile_yield_tables']['contents'][
-                '[CROP]_percentile_yield_table.csv'])
+        crop_climate_percentile_df = MODEL_SPEC.get_input(
+            'model_data_path').contents.get(
+            'climate_percentile_yield_tables').contents.get(
+            '[CROP]_percentile_yield_table.csv').get_validated_dataframe(
+            climate_percentile_yield_table_path)
         yield_percentile_headers = [
             x for x in crop_climate_percentile_df.columns if x != 'climate_bin']
 
@@ -873,9 +878,11 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_df = validation.get_validated_dataframe(
-        os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
-        **MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv'])
+    nutrient_df = MODEL_SPEC.get_input(
+        'model_data_path').contents.get(
+        'crop_nutrient.csv').get_validated_dataframe(
+            os.path.join(args['model_data_path'], 'crop_nutrient.csv'))
+
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)
 
@@ -1265,5 +1272,4 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(
-        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC)

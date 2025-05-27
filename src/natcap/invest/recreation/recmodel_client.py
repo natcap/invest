@@ -30,10 +30,9 @@ from osgeo import osr
 # prefer to do intrapackage imports to avoid case where global package is
 # installed and we import the global version of it rather than the local
 from .. import gettext
-from .. import spec_utils
+from .. import spec
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -59,7 +58,7 @@ predictor_table_columns = {
         "about": gettext("A spatial file to use as a predictor."),
         "bands": {1: {"type": "number", "units": u.none}},
         "fields": {},
-        "geometries": spec_utils.ALL_GEOMS
+        "geometries": spec.ALL_GEOMS
     },
     "type": {
         "type": "option_string",
@@ -100,17 +99,26 @@ predictor_table_columns = {
 }
 
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "recreation",
-    "model_name": MODEL_METADATA["recreation"].model_title,
-    "pyname": MODEL_METADATA["recreation"].pyname,
-    "userguide": MODEL_METADATA["recreation"].userguide,
+    "model_title": gettext("Visitation: Recreation and Tourism"),
+    "userguide": "recreation.html",
+    "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['aoi_path'],
+            ['start_year', 'end_year'],
+            ['compute_regression', 'predictor_table_path', 'scenario_predictor_table_path'],
+            ['grid_aoi', 'grid_type', 'cell_size'],
+        ]
+    },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "aoi_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "about": gettext("Map of area(s) over which to run the model.")
         },
         "hostname": {
@@ -119,7 +127,8 @@ MODEL_SPEC = {
             "about": gettext(
                 "FQDN to a recreation server.  If not provided, a default is "
                 "assumed."),
-            "name": gettext("hostname")
+            "name": gettext("hostname"),
+            "hidden": True
         },
         "port": {
             "type": "number",
@@ -129,7 +138,8 @@ MODEL_SPEC = {
             "about": gettext(
                 "the port on ``hostname`` to use for contacting the "
                 "recreation server."),
-            "name": gettext("port")
+            "name": gettext("port"),
+            "hidden": True
         },
         "start_year": {
             "type": "number",
@@ -169,6 +179,7 @@ MODEL_SPEC = {
                 "hexagon": {"display_name": gettext("hexagon")}
             },
             "required": "grid_aoi",
+            "allowed": "grid_aoi",
             "about": gettext(
                 "The shape of grid cells to make within the AOI polygons. "
                 "Required if Grid AOI is selected."),
@@ -179,6 +190,7 @@ MODEL_SPEC = {
             "expression": "value > 0",
             "units": u.other,  # any unit of length is ok
             "required": "grid_aoi",
+            "allowed": "grid_aoi",
             "about": gettext(
                 "Size of grid cells to make, measured in the projection units "
                 "of the AOI. If the Grid Type is 'square', this is the length "
@@ -199,6 +211,7 @@ MODEL_SPEC = {
             "index_col": "id",
             "columns": predictor_table_columns,
             "required": "compute_regression",
+            "allowed": "compute_regression",
             "about": gettext(
                 "A table that maps predictor IDs to spatial files and their "
                 "predictor metric types. The file paths can be absolute or "
@@ -210,6 +223,7 @@ MODEL_SPEC = {
             "index_col": "id",
             "columns": predictor_table_columns,
             "required": False,
+            "allowed": "compute_regression",
             "about": gettext(
                 "A table of future or alternative scenario predictors. Maps "
                 "IDs to files and their types. The file paths can be absolute "
@@ -221,7 +235,7 @@ MODEL_SPEC = {
         "PUD_results.gpkg": {
             "about": gettext(
                 "Results of photo-user-days aggregations in the AOI."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "PUD_YR_AVG": {
                     "about": gettext(
@@ -240,7 +254,7 @@ MODEL_SPEC = {
         "TUD_results.gpkg": {
             "about": gettext(
                 "Results of twitter-user-days aggregations in the AOI."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "PUD_YR_AVG": {
                     "about": gettext(
@@ -295,7 +309,7 @@ MODEL_SPEC = {
             "about": gettext(
                 "AOI polygons with all the variables needed to compute a regression, "
                 "including predictor attributes and the user-days response variable."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "[PREDICTOR]": {
                     "type": "number",
@@ -340,7 +354,7 @@ MODEL_SPEC = {
             "about": gettext(
                 "Results of scenario, including the predictor data used in the "
                 "scenario and the predicted visitation patterns for the scenario."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "[PREDICTOR]": {
                     "type": "number",
@@ -365,7 +379,7 @@ MODEL_SPEC = {
                     "about": gettext(
                         "Copy of the input AOI, gridded if applicable."),
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS
+                    "geometries": spec.POLYGONS
                 },
                 "aoi.zip": {
                     "about": gettext("Compressed AOI")
@@ -398,9 +412,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 
 # Have 5 seconds between timed progress outputs
@@ -596,9 +610,9 @@ def execute(args):
         # Compute the regression
         coefficient_json_path = os.path.join(
             intermediate_dir, 'predictor_estimates.json')
-        predictor_df = validation.get_validated_dataframe(
-            args['predictor_table_path'],
-            **MODEL_SPEC['args']['predictor_table_path'])
+        predictor_df = MODEL_SPEC.get_input(
+            'predictor_table_path').get_validated_dataframe(
+            args['predictor_table_path'])
         predictor_id_list = predictor_df.index
         compute_regression_task = task_graph.add_task(
             func=_compute_and_summarize_regression,
@@ -992,8 +1006,8 @@ def _schedule_predictor_data_processing(
         'line_intersect_length': _line_intersect_length,
     }
 
-    predictor_df = validation.get_validated_dataframe(
-        predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
+    predictor_df = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(predictor_table_path)
     predictor_task_list = []
     predictor_json_list = []  # tracks predictor files to add to gpkg
 
@@ -1754,8 +1768,8 @@ def _validate_same_id_lengths(table_path):
         string message if IDs are too long
 
     """
-    predictor_df = validation.get_validated_dataframe(
-        table_path, **MODEL_SPEC['args']['predictor_table_path'])
+    predictor_df = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(table_path)
     too_long = set()
     for p_id in predictor_df.index:
         if len(p_id) > 10:
@@ -1783,12 +1797,13 @@ def _validate_same_ids_and_types(
         string message if any of the fields in 'id' and 'type' don't match
         between tables.
     """
-    predictor_df = validation.get_validated_dataframe(
-        predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
+    predictor_df = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(
+        predictor_table_path)
 
-    scenario_predictor_df = validation.get_validated_dataframe(
-        scenario_predictor_table_path,
-        **MODEL_SPEC['args']['scenario_predictor_table_path'])
+    scenario_predictor_df = MODEL_SPEC.get_input(
+        'scenario_predictor_table_path').get_validated_dataframe(
+        scenario_predictor_table_path)
 
     predictor_pairs = set([
         (p_id, row['type']) for p_id, row in predictor_df.iterrows()])
@@ -1813,9 +1828,9 @@ def _validate_same_projection(base_vector_path, table_path):
     """
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
-    data_paths = validation.get_validated_dataframe(
-        table_path, **MODEL_SPEC['args']['predictor_table_path']
-    )['path'].tolist()
+    data_paths = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(
+        table_path)['path'].tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
@@ -1856,8 +1871,8 @@ def _validate_predictor_types(table_path):
         string message if any value in the ``type`` column does not match a
         valid type, ignoring leading/trailing whitespace.
     """
-    df = validation.get_validated_dataframe(
-        table_path, **MODEL_SPEC['args']['predictor_table_path'])
+    df = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(table_path)
     # ignore leading/trailing whitespace because it will be removed
     # when the type values are used
     valid_types = set({'raster_mean', 'raster_sum', 'point_count',
@@ -1916,7 +1931,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_messages = validation.validate(args, MODEL_SPEC['args'])
+    validation_messages = validation.validate(args, MODEL_SPEC)
     sufficient_valid_keys = (validation.get_sufficient_keys(args) -
                              validation.get_invalid_keys(validation_messages))
 

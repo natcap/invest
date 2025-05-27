@@ -201,7 +201,7 @@ class CLIHeadlessTests(unittest.TestCase):
         from natcap.invest import cli, validation
 
         datastack_dict = {
-            'model_name': 'natcap.invest.carbon',
+            'model_id': 'carbon',
             'invest_version': '3.10',
             'args': {}
         }
@@ -292,7 +292,7 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: Get validation results as JSON from cli."""
         from natcap.invest import cli
         datastack_dict = {
-            'model_name': 'natcap.invest.carbon',
+            'model_id': 'carbon',
             'invest_version': '3.10',
             'args': {}
         }
@@ -384,7 +384,7 @@ class CLIUnitTests(unittest.TestCase):
 
     def test_export_to_python_default_args(self):
         """Export a python script w/ default args for a model."""
-        from natcap.invest import cli, model_metadata
+        from natcap.invest import cli, models
 
         filename = 'foo.py'
         target_filepath = os.path.join(self.workspace_dir, filename)
@@ -394,10 +394,10 @@ class CLIUnitTests(unittest.TestCase):
 
         self.assertTrue(os.path.exists(target_filepath))
 
-        target_model = model_metadata.MODEL_METADATA[target_model].pyname
+        target_model = models.model_id_to_pyname[target_model]
         model_module = importlib.import_module(name=target_model)
         spec = model_module.MODEL_SPEC
-        expected_args = {key: '' for key in spec['args'].keys()}
+        expected_args = {key: '' for key in spec.inputs_dict.keys()}
 
         module_name = str(uuid.uuid4()) + 'testscript'
         spec = importlib.util.spec_from_file_location(module_name, target_filepath)
