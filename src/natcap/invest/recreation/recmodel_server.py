@@ -203,7 +203,8 @@ class RecManager(object):
                     # If an exception occurred in the worker, do not raise it
                     # here in the process running the Pyro daemon.
                     results[label] = future.result()
-                except Exception:
+                except Exception as error:
+                    LOGGER.exception(error)
                     # Exceptions are not pickle-able so return this instead:
                     trace_str = '.'.join(traceback.format_exception(
                         *sys.exc_info()))
