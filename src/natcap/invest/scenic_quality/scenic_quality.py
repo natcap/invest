@@ -55,7 +55,8 @@ MODEL_SPEC = spec.build_model_spec({
         "order": [
             ['workspace_dir', 'results_suffix'],
             ['aoi_path', 'structure_path', 'dem_path', 'refraction'],
-            ['do_valuation', 'valuation_function', 'a_coef', 'b_coef', 'max_valuation_radius'],
+            ['do_valuation', 'valuation_function', 'a_coef', 'b_coef',
+             'max_valuation_radius'],
         ]
     },
     "args_with_spatial_overlap": {

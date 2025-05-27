@@ -38,7 +38,8 @@ MODEL_SPEC = spec.build_model_spec({
             ['dem_path', 'erosivity_path', 'erodibility_path'],
             ['lulc_path', 'biophysical_table_path'],
             ['watersheds_path', 'drainage_path'],
-            ['flow_dir_algorithm', 'threshold_flow_accumulation', 'k_param', 'sdr_max', 'ic_0_param', 'l_max']
+            ['flow_dir_algorithm', 'threshold_flow_accumulation',
+             'k_param', 'sdr_max', 'ic_0_param', 'l_max']
         ]
     },
     "args_with_spatial_overlap": {
