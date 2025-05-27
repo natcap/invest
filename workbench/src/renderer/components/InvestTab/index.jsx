@@ -244,6 +244,7 @@ class InvestTab extends React.Component {
     const logDisabled = !logfile;
     const sidebarSetupElementId = `sidebar-setup-${tabID}`;
     const sidebarFooterElementId = `sidebar-footer-${tabID}`;
+    const isCoreModel = investList[modelID].type === 'core';
 
     return (
       <>
@@ -275,6 +276,7 @@ class InvestTab extends React.Component {
               <div className="sidebar-row sidebar-links">
                 <ResourcesLinks
                   modelID={modelID}
+                  isCoreModel={isCoreModel}
                   docs={modelSpec.userguide}
                 />
               </div>
@@ -303,6 +305,7 @@ class InvestTab extends React.Component {
                 >
                   <SetupTab
                     userguide={modelSpec.userguide}
+                    isCoreModel={isCoreModel}
                     modelID={modelID}
                     argsSpec={argsSpec}
                     inputFieldOrder={modelSpec.input_field_order}
