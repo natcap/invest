@@ -94,6 +94,17 @@ NDR
   results. (`#1845 <https://github.com/natcap/invest/issues/1845>`_)
 * ``stream.tif`` is now saved in the main output folder rather than the
   intermediate folder (`#1864 <https://github.com/natcap/invest/issues/1864>`_).
+* Added a feature that allows the nutrient load to be entered as an
+  application rate or as an "extensive"/export measured value.
+  Previously, the model's biophysical table expected the ``load_[n|p]``
+  column to be an "extensive"/export measured value. Now, a new
+  column for both nitrogen and phosphorous, ``load_type_[n|p]``, is
+  required with expected values of either ``application-rate`` or
+  ``measured-runoff``. See the Data Needs section of the NDR User
+  Guide for more details.
+  (`#1044 <https://github.com/natcap/invest/issues/1044>`_).
+* Fixed a bug where input rasters (e.g. LULC) without a defined nodata value could
+  cause an OverflowError. (`#1904 <https://github.com/natcap/invest/issues/1904>`_).
 
 Seasonal Water Yield
 ====================

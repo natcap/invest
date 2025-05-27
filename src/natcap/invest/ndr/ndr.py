@@ -9,6 +9,7 @@ import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
 from osgeo import gdal
+from osgeo import gdal_array
 from osgeo import ogr
 
 from .. import gettext
@@ -85,7 +86,53 @@ MODEL_SPEC = spec.build_model_spec({
             "index_col": "lucode",
             "columns": {
                 "lucode": spec.LULC_TABLE_COLUMN,
-                "load_n": {
+                "load_type_p": {
+                    "type": "option_string",
+                    "required": True,
+                    "options": {
+                        "application-rate": {
+                            "description": gettext(
+                                "Treat the load values as nutrient "
+                                "application rates (e.g. fertilizer, livestock "
+                                "waste, ...)."
+                                "The model will adjust the load using the "
+                                "application rate and retention efficiency: "
+                                "load_p * (1 - eff_p).")},
+                        "measured-runoff": {
+                            "description": gettext(
+                                "Treat the load values as measured contaminant "
+                                "runoff.")},
+                    },
+                    "about": gettext(
+                        "Whether the nutrient load in column "
+                        "load_p should be treated as "
+                        "nutrient application rate or measured contaminant "
+                        "runoff. 'application-rate' | 'measured-runoff'")
+                },
+                "load_type_n": {
+                    "type": "option_string",
+                    "required": True,
+                    "options": {
+                        "application-rate": {
+                            "description": gettext(
+                                "Treat the load values as nutrient "
+                                "application rates (e.g. fertilizer, livestock "
+                                "waste, ...)."
+                                "The model will adjust the load using the "
+                                "application rate and retention efficiency: "
+                                "load_n * (1 - eff_n).")},
+                        "measured-runoff": {
+                            "description": gettext(
+                                "Treat the load values as measured contaminant "
+                                "runoff.")},
+                    },
+                    "about": gettext(
+                        "Whether the nutrient load in column "
+                        "load_n should be treated as "
+                        "nutrient application rate or measured contaminant "
+                        "runoff. 'application-rate' | 'measured-runoff'")
+                },
+                "load_n": {  # nitrogen or phosphorus nutrient loads
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
                     "required": "calc_n",
@@ -135,7 +182,7 @@ MODEL_SPEC = spec.build_model_spec({
                         "is dissolved into the subsurface. By default, this "
                         "value should be set to 0, indicating that all "
                         "nutrients are delivered via surface flow. There is "
-                        "no equivalent of this for phosphorus.")}
+                        "no equivalent of this for phosphorus.")},
             },
             "about": gettext(
                 "A table mapping each LULC class to its biophysical "
@@ -394,14 +441,14 @@ MODEL_SPEC = spec.build_model_spec({
                     "about": "Above ground nitrogen loads",
                     "bands": {1: {
                         "type": "number",
-                        "units": u.kilogram/u.year
+                        "units": u.kilogram/u.hectare/u.year,
                     }}
                 },
                 "surface_load_p.tif": {
                     "about": "Above ground phosphorus loads",
                     "bands": {1: {
                         "type": "number",
-                        "units": u.kilogram/u.year
+                        "units": u.kilogram/u.hectare/u.year,
                     }}
                 },
                 "thresholded_slope.tif": {
@@ -682,7 +729,7 @@ def execute(args):
             'mask_raster_path': f_reg['mask_path'],
             'target_masked_raster_path': f_reg['masked_runoff_proxy_path'],
             'target_dtype': gdal.GDT_Float32,
-            'default_nodata': _TARGET_NODATA,
+            'target_nodata': _TARGET_NODATA,
         },
         dependent_task_list=[mask_task, align_raster_task],
         target_path_list=[f_reg['masked_runoff_proxy_path']],
@@ -695,7 +742,7 @@ def execute(args):
             'mask_raster_path': f_reg['mask_path'],
             'target_masked_raster_path': f_reg['masked_dem_path'],
             'target_dtype': gdal.GDT_Float32,
-            'default_nodata': float(numpy.finfo(numpy.float32).min),
+            'target_nodata': float(numpy.finfo(numpy.float32).min),
         },
         dependent_task_list=[mask_task, align_raster_task],
         target_path_list=[f_reg['masked_dem_path']],
@@ -708,7 +755,7 @@ def execute(args):
             'mask_raster_path': f_reg['mask_path'],
             'target_masked_raster_path': f_reg['masked_lulc_path'],
             'target_dtype': gdal.GDT_Int32,
-            'default_nodata': numpy.iinfo(numpy.int32).min,
+            'target_nodata': numpy.iinfo(numpy.int32).min,
         },
         dependent_task_list=[mask_task, align_raster_task],
         target_path_list=[f_reg['masked_lulc_path']],
@@ -932,7 +979,10 @@ def execute(args):
             func=_calculate_load,
             args=(
                 f_reg['masked_lulc_path'],
-                biophysical_df[f'load_{nutrient}'],
+                biophysical_df[
+                    [f'load_{nutrient}', f'eff_{nutrient}',
+                     f'load_type_{nutrient}']].to_dict('index'),
+                nutrient,
                 load_path),
             dependent_task_list=[align_raster_task, mask_lulc_task],
             target_path_list=[load_path],
@@ -1190,7 +1240,7 @@ def _create_mask_raster(source_raster_path, source_vector_path,
 
 
 def _mask_raster(source_raster_path, mask_raster_path,
-                 target_masked_raster_path, default_nodata, target_dtype):
+                 target_masked_raster_path, target_nodata, target_dtype):
     """Using a raster of 1s and 0s, determine which pixels remain in output.
 
     Args:
@@ -1202,8 +1252,8 @@ def _mask_raster(source_raster_path, mask_raster_path,
             target raster.
         target_masked_raster_path (str): The path to where the target raster
             should be written.
-        default_nodata (int, float, None): The nodata value that should be used
-            if ``source_raster_path`` does not have a defined nodata value.
+        target_nodata (int, float): The target nodata value that should match
+            ``target_dtype``.
         target_dtype (int): The ``gdal.GDT_*`` datatype of the target raster.
 
     Returns:
@@ -1211,22 +1261,20 @@ def _mask_raster(source_raster_path, mask_raster_path,
     """
     source_raster_info = pygeoprocessing.get_raster_info(source_raster_path)
     source_nodata = source_raster_info['nodata'][0]
-    nodata = source_nodata
-    if nodata is None:
-        nodata = default_nodata
+    target_numpy_dtype = gdal_array.GDALTypeCodeToNumericTypeCode(target_dtype)
 
     def _mask_op(mask, raster):
-        result = numpy.full(mask.shape, nodata,
-                            dtype=source_raster_info['numpy_type'])
+        result = numpy.full(mask.shape, target_nodata,
+                            dtype=target_numpy_dtype)
         valid_pixels = (
-            ~pygeoprocessing.array_equals_nodata(raster, nodata) &
+            ~pygeoprocessing.array_equals_nodata(raster, source_nodata) &
             (mask == 1))
         result[valid_pixels] = raster[valid_pixels]
         return result
 
     pygeoprocessing.raster_calculator(
         [(mask_raster_path, 1), (source_raster_path, 1)], _mask_op,
-        target_masked_raster_path, target_dtype, nodata)
+        target_masked_raster_path, target_dtype, target_nodata)
 
 
 def _add_fields_to_shapefile(field_pickle_map, target_vector_path):
@@ -1351,13 +1399,18 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path,
         target_dtype=numpy.float32)
 
 
-def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
+def _calculate_load(
+        lulc_raster_path, lucode_to_load, nutrient_type, target_load_raster):
     """Calculate load raster by mapping landcover.
+
+    If load type is 'application-rate' adjust by ``1 - efficiency``.
 
     Args:
         lulc_raster_path (string): path to integer landcover raster.
-        lucode_to_load (dict): a mapping of landcover IDs to per-area
-            nutrient load.
+        lucode_to_load (dict): a mapping of landcover IDs to nutrient load,
+            efficiency, and load type. The load type value can be one of:
+            [ 'measured-runoff' | 'appliation-rate' ].
+        nutrient_type (str): the nutrient type key ('p' | 'n').
         target_load_raster (string): path to target raster that will have
             load values (kg/ha) mapped to pixels based on LULC.
 
@@ -1365,12 +1418,34 @@ def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
         None.
 
     """
+    app_rate = 'application-rate'
+    measured_runoff = 'measured-runoff'
+    load_key = f'load_{nutrient_type}'
+    eff_key = f'eff_{nutrient_type}'
+    load_type_key = f'load_type_{nutrient_type}'
+
+    # Raise ValueError if unknown load_type
+    for key, value in lucode_to_load.items():
+        load_type = value[load_type_key]
+        if not load_type in [app_rate, measured_runoff]:
+            # unknown load type, raise ValueError
+            raise ValueError(
+                'nutrient load type must be: '
+                f'"{app_rate}" | "{measured_runoff}". Instead '
+                f'found value of: "{load_type}".')
+
     def _map_load_op(lucode_array):
-        """Convert unit load to total load & handle nodata."""
+        """Convert unit load to total load."""
         result = numpy.empty(lucode_array.shape)
         for lucode in numpy.unique(lucode_array):
             try:
-                result[lucode_array == lucode] = (lucode_to_load[lucode])
+                if lucode_to_load[lucode][load_type_key] == measured_runoff:
+                    result[lucode_array == lucode] = (
+                        lucode_to_load[lucode][load_key])
+                elif lucode_to_load[lucode][load_type_key] == app_rate:
+                    result[lucode_array == lucode] = (
+                        lucode_to_load[lucode][load_key] * (
+                            1 - lucode_to_load[lucode][eff_key]))
             except KeyError:
                 raise KeyError(
                     'lucode: %d is present in the landuse raster but '
@@ -1391,8 +1466,7 @@ def _map_surface_load(
     """Calculate surface load from landcover raster.
 
     Args:
-        modified_load_path (string): path to modified load raster with units
-            of kg/pixel.
+        modified_load_path (string): path to modified load raster.
         lulc_raster_path (string): path to landcover raster.
         lucode_to_subsurface_proportion (dict): maps landcover codes to
             subsurface proportion values. Or if None, no subsurface transfer
