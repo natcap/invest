@@ -8,6 +8,7 @@ RUN apt update && apt install -y python3 python3-dev python3-pip python3-build b
 ADD src /invest/src
 ADD pyproject.toml /invest/pyproject.toml
 ADD setup.py /invest/setup.py
+ADD requirements.txt /invest/requirements.txt
 RUN cd /invest && python3 -m build
 
 # Create the container for distribution that has runtime dependencies.
