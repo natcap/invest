@@ -9,6 +9,7 @@ ADD src /invest/src
 ADD pyproject.toml /invest/pyproject.toml
 ADD setup.py /invest/setup.py
 ADD requirements.txt /invest/requirements.txt
+ADD .git /invest/.git
 RUN cd /invest && python3 -m build
 
 # Create the container for distribution that has runtime dependencies.
