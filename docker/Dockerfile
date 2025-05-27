@@ -18,9 +18,15 @@ FROM mambaorg/micromamba:1.5.0-bookworm-slim
 ARG PYTHON_VERSION="3.11"
 COPY --from=build /invest/dist/*.whl /tmp/
 
+
+# Define this to be the GDAL version used to build the InVEST wheel in the debian step.
+# Check the debian package repo for the debian release above to confirm the version.
+# Debian's GDAL version will undoubtedly be earlier than what's available in conda-forge.
+ARG DEBIAN_GDAL_VERSION="3.6"
+
 # The environment.yml file will be built during github actions.
 COPY --chown=$MAMBA_USER:$MAMBA_USER environment.yml /tmp/environment.yml
-RUN micromamba install -y -n base -c conda-forge python==${PYTHON_VERSION} && \
+RUN micromamba install -y -n base -c conda-forge python==${PYTHON_VERSION} gdal=${DEBIAN_GDAL_VERSION} && \
         micromamba install -y -n base -c conda-forge -f /tmp/environment.yml && \
         micromamba clean --all --yes && \
         /opt/conda/bin/python -m pip install /tmp/*.whl && \
