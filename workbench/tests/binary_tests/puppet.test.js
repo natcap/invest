@@ -181,7 +181,7 @@ test('Run a real invest model', async () => {
     'aria/[name="Download InVEST sample data"][role="dialog"]'
   );
   const downloadModalCancel = await downloadModal.waitForSelector(
-    'aria/[name="Cancel"][role="button"]');
+    'aria/[name="Close modal"][role="button"]');
   await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
   await downloadModalCancel.click();
 
@@ -262,7 +262,7 @@ test('Check local userguide links', async () => {
     'aria/[name="Download InVEST sample data"][role="dialog"]'
   );
   const downloadModalCancel = await downloadModal.waitForSelector(
-    'aria/[name="Cancel"][role="button"]');
+    'aria/[name="Close modal"][role="button"]');
   await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
   await downloadModalCancel.click();
 
@@ -323,7 +323,7 @@ test.skip('Install and run a plugin', async () => {
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
   const downloadModal = await page.waitForSelector('.modal-dialog');
   const downloadModalCancel = await downloadModal.waitForSelector(
-    'aria/[name="Cancel"][role="button"]'
+    'aria/[name="close modal"][role="button"]'
   );
   await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
   await downloadModalCancel.click();
@@ -334,9 +334,11 @@ test.skip('Install and run a plugin', async () => {
   await page.waitForTimeout(WAIT_TO_CLICK);
   await changelogModalCancel.click();
 
-  const addPluginButton = await page.waitForSelector('aria/[name="plugins"][role="button"]');
-  await addPluginButton.click();
-  console.log('clicked add plugin');
+  const dropdownButton = await page.waitForSelector('aria/[name="menu"][role="button"]');
+  await dropdownButton.click();
+  const pluginsModalButton = await page.waitForSelector('aria/[name="Manage plugins"][role="button"]');
+  await pluginsModalButton.click();
+  console.log('opened plugin modal');
   const urlInputField = await page.waitForSelector('aria/[name="Git URL"][role="textbox"]');
   console.log('found url field');
   await urlInputField.type(TEST_PLUGIN_GIT_URL, { delay: TYPE_DELAY });
