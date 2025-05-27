@@ -312,7 +312,7 @@ class RasterInput(FileInput):
     are allowed), which may have multiple bands.
     """
     bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=[])
-    """An iterable of `RasterBand`s representing the bands expected to be in
+    """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
     projected: typing.Union[bool, None] = None
@@ -510,15 +510,32 @@ class VectorInput(FileInput):
 
 @dataclasses.dataclass
 class RasterOrVectorInput(FileInput):
-    """An invest model input of either a single-band raster or a vector."""
-    type: typing.ClassVar[str] = 'raster_or_vector'
+    """An invest model input that can be either a single-band raster or a vector."""
 
     data_type: typing.Type = float
+    """Data type for the raster values (float or int)"""
+
     units: typing.Union[pint.Unit, None] = None
+    """Units of measurement of the raster values"""
+
     geometry_types: set = dataclasses.field(default_factory=dict)
+    """A set of geometry type(s) that are allowed for this vector"""
+
     fields: typing.Union[typing.Iterable[Input], None] = None
+    """An iterable of `Input`s representing the fields that this vector is
+    expected to have. The `key` of each input must match the corresponding
+    field name."""
+
     projected: typing.Union[bool, None] = None
+    """Defaults to None, indicating a projected (as opposed to geographic)
+    coordinate system is not required. Set to True if a projected coordinate
+    system is required."""
+
     projection_units: typing.Union[pint.Unit, None] = None
+    """Defaults to None. If `projected` is `True`, and a specific unit of
+    projection (such as meters) is required, indicate it here."""
+
+    type: typing.ClassVar[str] = 'raster_or_vector'
 
     def __post_init__(self):
         self.single_band_raster_input = SingleBandRasterInput(

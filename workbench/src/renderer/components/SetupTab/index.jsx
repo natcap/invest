@@ -552,6 +552,7 @@ class SetupTab extends React.Component {
       const {
         argsSpec,
         userguide,
+        isCoreModel,
         inputFieldOrder,
         sidebarSetupElementId,
         sidebarFooterElementId,
@@ -598,6 +599,7 @@ class SetupTab extends React.Component {
           )
           : <span>{t('Run')}</span>
       );
+
       return (
         <Container fluid>
           <Row>
@@ -609,6 +611,7 @@ class SetupTab extends React.Component {
               argsDropdownOptions={argsDropdownOptions}
               argsOrder={inputFieldOrder}
               userguide={userguide}
+              isCoreModel={isCoreModel}
               updateArgValues={this.updateArgValues}
               updateArgTouched={this.updateArgTouched}
               loadParametersFromFile={this.loadParametersFromFile}
@@ -666,6 +669,7 @@ export default withTranslation()(SetupTab);
 
 SetupTab.propTypes = {
   userguide: PropTypes.string.isRequired,
+  isCoreModel: PropTypes.bool.isRequired,
   modelID: PropTypes.string.isRequired,
   argsSpec: PropTypes.objectOf(
     PropTypes.shape({
