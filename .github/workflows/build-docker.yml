@@ -66,9 +66,9 @@ jobs:
                       INVEST_REPO="${{ github.repository }}"
                       INVEST_VERSION="${{ github.sha }}"
                   fi
+                  #--build-arg="INVEST_REPO=${INVEST_REPO}" \
+                  #--build-arg="INVEST_VERSION=${INVEST_VERSION}" \
                   cd docker && docker build \
-                        --build-arg="INVEST_REPO=${INVEST_REPO}" \
-                        --build-arg="INVEST_VERSION=${INVEST_VERSION}" \
                         -t ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:latest \
                         -t ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:${{ github.sha }} \
                         -t ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:${SANITIZED_REF} \
