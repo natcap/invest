@@ -147,15 +147,14 @@ export function setupAddPlugin(i18n) {
            'python', '-m', 'pip', 'install', installString]
         );
         logger.info('installed plugin into its env');
-
         event.sender.send('plugin-install-status', i18n.t('Importing plugin...'));
         // Access plugin metadata from the MODEL_SPEC
         const modelID = execSync(
-          `micromamba run --prefix "${pluginEnvPrefix}" ` +
+          `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
           `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
         ).toString().trim();
         const modelTitle= execSync(
-          `micromamba run --prefix "${pluginEnvPrefix}" ` +
+          `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
           `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
         ).toString().trim();
 
@@ -178,7 +177,7 @@ export function setupAddPlugin(i18n) {
         );
         logger.info('successfully added plugin');
       } catch (error) {
-        console.log(error);
+        logger.info(error);
         return error;
       }
     }
