@@ -153,20 +153,11 @@ apidoc.main([
     '/*.so'  # must be absolute path, see https://github.com/sphinx-doc/sphinx/issues/10200
 ])
 
-
+# Download the demo plugin pyproject.toml to display in the plugins page
 urlretrieve (
     "https://raw.githubusercontent.com/natcap/invest-demo-plugin/main/pyproject.toml",
     "pyproject.toml"
 )
-# urlretrieve (
-#     "https://raw.githubusercontent.com/natcap/invest-demo-plugin/main/pyproject.toml",
-#     "invest-demo-plugin/pyproject.toml"
-# )
-# urlretrieve (
-#     "https://raw.githubusercontent.com/natcap/invest-demo-plugin/main/pyproject.toml",
-#     "invest-demo-plugin/pyproject.toml"
-# )
-
 
 # -- Generate model entrypoints file --------------------------------------
 

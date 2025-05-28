@@ -79,7 +79,8 @@ The ``pyproject.toml`` contains standard information used to build your python p
 as well as custom configuration for other software that interacts with the package. InVEST looks for metadata
 about your package in the ``pyproject.toml``. Configuration specific to InVEST is defined in the ``[tool.natcap.invest]`` block. See the `python packaging guide <https://packaging.python.org/en/latest/guides/writing-pyproject-toml/>`_ for more general information on ``pyproject.toml``.
 
-.. include: invest-demo-plugin/pyproject.toml
+.. literalinclude:: pyproject.toml
+   :language: TOML
 
 .. note::
 
@@ -87,7 +88,7 @@ about your package in the ``pyproject.toml``. Configuration specific to InVEST i
     in which to run the plugin. This environment contains the dependencies that the plugin needs,
     and prevents dependency conflicts with other plugins.
 
-    _If you are familiar with ``conda``, note that ``micromamba`` is very similar. It can install the same packages and has a similar API._
+    If you are familiar with ``conda``, note that ``micromamba`` is very similar. It can install the same packages and has a similar API.
 
     A plugin will likely depend on some other python packages like ``numpy`` or ``pandas``.
     It may also depend on some other software that is not available as a pure python package,
@@ -100,7 +101,7 @@ The plugin python package must have the attributes ``MODEL_SPEC``, ``execute``, 
 
 ``MODEL_SPEC``
 ~~~~~~~~~~~~~~
-An instance of :func:`.spec.ModelSpec`. This object stores key information about the model, its inputs, and its outputs. See the API documentation for the specifics on instantiating this object.
+An instance of :func:`natcap.invest.spec.ModelSpec`. This object stores key information about the model, its inputs, and its outputs. See the API documentation for the specifics on instantiating this object.
 
 ``execute``
 ~~~~~~~~~~~
@@ -132,19 +133,19 @@ If you need to validate properties of the input data that are not covered by the
 
 Specifying model inputs and outputs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Model inputs are specified in the ``inputs`` attribute of the ``MODEL_SPEC``. Many different types of model inputs are supported, including numbers, CSVs, raster and vector files, etc. Each input in ``inputs`` is an instance of a subclass of :func:`.spec.Input` that represents the data type. There are many different input data types supported including numbers, CSVs, raster and vector files, etc. Choose the most appropriate ``Input`` type available in ``spec``. You may also subclass from :func:`.spec.Input` if you wish to create a custom type.
+Model inputs are specified in the ``inputs`` attribute of the ``MODEL_SPEC``. Many different types of model inputs are supported, including numbers, CSVs, raster and vector files, etc. Each input in ``inputs`` is an instance of a subclass of :func:`natcap.invest.spec.Input` that represents the data type. There are many different input data types supported including numbers, CSVs, raster and vector files, etc. Choose the most appropriate ``Input`` type available in ``spec``. You may also subclass from :func:`natcap.invest.spec.Input` if you wish to create a custom type.
 
 User-provided values for all input types are ultimately passed to the ``execute`` function as strings or numbers. For instance, all file-based types will accept a path string.
 
-Model outputs are specified in the ``outputs`` attribute of the ``MODEL_SPEC``. All InVEST model outputs are files - there are no plain number or string outputs. Choose the most appropriate ``Output`` type available in ``spec``. You may also subclass from :func:`.spec.Output` if you wish to create a custom type.
+Model outputs are specified in the ``outputs`` attribute of the ``MODEL_SPEC``. All InVEST model outputs are files - there are no plain number or string outputs. Choose the most appropriate ``Output`` type available in ``spec``. You may also subclass from :func:`natcap.invest.spec.Output` if you wish to create a custom type.
 
 .. note::
 
-    Required inputs: All models must include the inputs ``workspace_dir``, ``results_suffix`` and ``n_workers``. Standard specs for these inputs are provided in :func:`.spec`.
+    Required inputs: All models must include the inputs ``workspace_dir``, ``results_suffix`` and ``n_workers``. Standard specs for these inputs are provided in :func:`natcap.invest.spec`.
 
 Specifying units
 ^^^^^^^^^^^^^^^^
-Some input and output types have a ``units`` attribute representing the units of measurement of the data. We use `pint <https://github.com/hgrecco/pint/tree/master>`_ to manage units. In ``pint``, all unit objects must derive from the same ``UnitRegistry`` in order to be used together. Therefore, you should reference ``natcap.invest``'s shared unit registry, :func:`.spec.u`. Example: ``spec.u.meter ** 3`` (cubic meters).
+Some input and output types have a ``units`` attribute representing the units of measurement of the data. We use `pint <https://github.com/hgrecco/pint/tree/master>`_ to manage units. In ``pint``, all unit objects must derive from the same ``UnitRegistry`` in order to be used together. Therefore, you should reference ``natcap.invest``'s shared unit registry, :func:`natcap.invest.spec.u`. Example: ``spec.u.meter ** 3`` (cubic meters).
 
 Nested data
 ^^^^^^^^^^^
