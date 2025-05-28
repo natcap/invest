@@ -88,8 +88,8 @@ about your package in the ``pyproject.toml``. Configuration specific to InVEST i
 .. note::
 
     When InVEST installs a plugin, it uses ``micromamba`` to create an isolated environment
-    in which to run the plugin. This environment can contain specific versions of dependencies
-    that the plugin needs.
+    in which to run the plugin. This environment contains the dependencies that the plugin needs,
+    and prevents dependency conflicts with other plugins.
 
     _If you are familiar with ``conda``, note that ``micromamba`` is very similar. It can install the same packages and has a similar API._
 
@@ -110,7 +110,7 @@ A plugin python pacakge must have the following attributes -
 
 ``MODEL_SPEC``
 ^^^^^^^^^^^^^^
-This is a dictionary that describes key information about the model, its inputs, and its outputs. The structure of this dictionary is fully specified below.
+An instance of ``natcap.invest.spec.ModelSpec``. This object stores key information about the model, its inputs, and its outputs.
 
 ``model_id``
 ============
@@ -126,9 +126,6 @@ type: ``string``
 Good: ``'Carbon Storage'``
 Bad: ``'Carbon storage'``, ``The Carbon Storage Model``, ``carbon_storage``
 
-``pyname``
-==========
-
 ``userguide``
 =============
 
@@ -136,11 +133,7 @@ Bad: ``'Carbon storage'``, ``The Carbon Storage Model``, ``carbon_storage``
 ===========
 
 
-``ui_spec``
-===========
-type: ``dict``. This sub-dictionary tells the workbench how to display the input form for the plugin.
-
-``ui_spec['order']``
+``input_field_order``
 ====================
 This is a list that specifies the order and grouping of model inputs. Inputs will displayed in the input form from top to bottom in the order listed here. Sub-lists represent groups of inputs that will be visually separated by a horizontal line. This improves UX by breaking up long lists and visually grouping related inputs. If you do not wish to use groups, all inputs may go in the same sub-list. It is a convention to begin with a group of ``workspace_dir`` and ``results_suffix``.
 
@@ -149,12 +142,6 @@ Example: ``[['workspace_dir', 'results_suffix'], ['foo'], ['bar', baz']]``
 type: ``list`` of ``list``s of ``string``s
 Constraints: each item in the sub-lists must match a key in ``MODEL_SPEC['args']``. Each key in ``MODEL_SPEC['args']`` must be included exactly once, unless it is included in ``ui_spec['hidden']``.
 
-``ui_spec['hidden']``
-=====================
-This is a list of arg keys to hide from the input form. For most models, this should be ``["n_workers"]`` because the value of ``n_workers`` is provided from the workbench settings menu, and not from the model input form.
-
-type: ``list`` of ``string``s
-Constraints: each item in ``ui_spec['hidden']`` must match a key in ``MODEL_SPEC['args']``.
 
 ``args``
 ========
