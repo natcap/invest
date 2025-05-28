@@ -107,7 +107,7 @@ The plugin python package must have the attributes ``MODEL_SPEC``, ``execute``, 
 An instance of ``natcap.invest.spec.ModelSpec``. This object stores key information about the model, its inputs, and its outputs. See the API documentation for the specifics on instantiating this object.
 
 Specifying model inputs and outputs
-===================================
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Model inputs are specified in the ``inputs`` attribute of the ``MODEL_SPEC``. Many different types of model inputs are supported, including numbers, CSVs, raster and vector files, etc. Each input in ``inputs`` is an instance of a subclass of ``spec.Input`` that represents the data type. There are many different input data types supported including numbers, CSVs, raster and vector files, etc. Choose the most appropriate ``Input`` type available in ``spec``. You may also subclass from ``spec.Input`` if you wish to create a custom type.
 
 User-provided values for all input types are ultimately passed to the ``execute`` function as strings or numbers. For instance, all file-based types will accept a path string.
@@ -119,11 +119,11 @@ Model outputs are specified in the ``outputs`` attribute of the ``MODEL_SPEC``. 
     Required inputs: All models must include the inputs ``workspace_dir``, ``results_suffix`` and ``n_workers``. Standard specs for these inputs are provided in ``natcap.invest.spec``.
 
 Specifying units
-================
+~~~~~~~~~~~~~~~~
 Some input and output types have a ``units`` attribute representing the units of measurement of the data. We use ``pint``https://github.com/hgrecco/pint/tree/master to manage units. In ``pint``, all unit objects must derive from the same ``UnitRegistry`` in order to be used together. Therefore, you should reference ``natcap.invest``'s shared unit registry, ``spec.u``. Example: ``spec.u.meter ** 3`` (cubic meters).
 
 Nested data
-===========
+~~~~~~~~~~~
 Certain input and output types contain multiple types of data (such as columns in a CSV, or fields in a vector).
 
 - ``CSVInput`` and ``CSVOutput``: The ``columns`` attribute is an iterable of ``Input``\ s or ``Output``\ s that represent the data stored in each column of the CSV. The ``id`` of each ``Input``/``Output`` must match the column header.
@@ -132,27 +132,26 @@ Certain input and output types contain multiple types of data (such as columns i
 
 - ``DirectoryInput`` and ``DirectoryOutput``: The ``contents`` attribute is an iterable of ``Input``\ s or ``Output``\ s that represent the file contents of the directory. The ``id`` of each ``Input``/``Output`` must match the file name.
 
-Example:
+Example: ::
 
-``python
-CSVInput(
-    id="biophysical_table_path",
-    name="biophysical table",
-    about="Table of crop coefficients for each LULC class.",
-    columns=[
-        IntegerInput(
-            id="lulc_code",
-            about="Land use/land cover code"
-        ),
-        NumberInput(
-            id="kc_factor",
-            about="Crop coefficient for each land use/land cover class",
-            units=None
-        )
-    ],
-    index_col="lulc_code"
-)
-``
+    CSVInput(
+        id="biophysical_table_path",
+        name="biophysical table",
+        about="Table of crop coefficients for each LULC class.",
+        columns=[
+            IntegerInput(
+                id="lulc_code",
+                about="Land use/land cover code"
+            ),
+            NumberInput(
+                id="kc_factor",
+                about="Crop coefficient for each land use/land cover class",
+                units=None
+            )
+        ],
+        index_col="lulc_code"
+    )
+
 
 ``execute``
 ^^^^^^^^^^^
@@ -163,7 +162,7 @@ Arguments: ``args`` (dictionary). Maps input ids (matching the ``id`` of each ``
 Returns: ``None``. When ``execute`` returns, the model run is complete.
 
 Using ``taskgraph``
-===================
+~~~~~~~~~~~~~~~~~~~
 All core InVEST models use ``taskgraph`` to organize the steps of execution. This is optional, but using ``taskgraph`` has several benefits including avoided recomputation, distributing tasks over multiple CPUs, and logically organizing the model as a workflow of tasks that process data. See the InVEST source code for many examples of using ``taskgraph``.
 
 ``validate``
@@ -174,15 +173,13 @@ Arguments: ``args`` (dictionary). Maps input ids (matching the ``id`` of each ``
 
 Returns: A list of tuples where the first element of the tuple is an iterable of keys affected by the error in question and the second element of the tuple is the string message of the error. If no validation errors were found, an empty list is returned.
 
-The following implementation of ``validate`` will suffice for most models:
+The following implementation of ``validate`` will suffice for most models: ::
 
-``python
-from natcap.invest import validation
+    from natcap.invest import validation
 
-@validation.invest_validator
-def validate(args):
-    return validation.validate(args, MODEL_SPEC)
-``
+    @validation.invest_validator
+    def validate(args):
+        return validation.validate(args, MODEL_SPEC)
 
 ``validation.validate`` performs pre-defined validation for each input type based on its properties. See the ``validate`` method of each ``Input`` class to see exactly what checks are performed.
 
