@@ -18,7 +18,7 @@ In a technical sense, an InVEST plugin is a python package that conforms to the
 InVEST workbench and the ``invest`` command line tool. The plugin can execute any
 arbitrary code when it runs. Commonly the ecosystem services model logic will be
 implemented in the python package, but it could also invoke another software tool -
-for example, if your model is already implemented as a command line tool, you could
+for example, if your model is already implemented in another language, you could
 develop the plugin as a python wrapper for it.
 
 Why make a plugin?
@@ -54,11 +54,9 @@ exist in your math or your code.
 
 How to develop a plugin
 -----------------------
-.. note:: This guide is written for python developers. If you are unfamiliar with python packaging, helpful documentation is available from https://packaging.python.org/en/latest/.
+.. note:: This guide is written for python developers. If you are unfamiliar with python packaging, the `Python Packaging User Guide <https://packaging.python.org/en/latest/>`_ is a helpful resource.
 
-The plugin template repo is a great place to start. Code snippets in this guide are
-pulled from there. The core InVEST models' source code is also a great place to look
-for examples.
+The `plugin template repo <link URL>`_ is a great place to start. The core InVEST models' `source code <https://github.com/natcap/invest/tree/main/src/natcap/invest>`_ is also full of examples.
 
 At its most basic, a plugin is a python package. Begin by creating a directory
 with a simple python package structure: ::
@@ -73,17 +71,15 @@ with a simple python package structure: ::
 The model code is in ``src/foo.py``. ``pyproject.toml`` is a standard configuration
 file that defines the package. A full-fledged plugin will contain many other optional
 files as well, like a readme, license, test suite, and sample data, but these are not
-required. (and demonstrated in the plugin template repo).
+required.
 
 Writing the ``pyproject.toml``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-See the python packaging guide for more general information on ``pyproject.toml``: https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
 The ``pyproject.toml`` contains standard information used to build your python package,
 as well as custom configuration for other software that interacts with the package. InVEST looks for metadata
-about your package in the ``pyproject.toml``. Configuration specific to InVEST is defined in the ``[tool.natcap.invest]`` block.
+about your package in the ``pyproject.toml``. Configuration specific to InVEST is defined in the ``[tool.natcap.invest]`` block. See the `python packaging guide <https://packaging.python.org/en/latest/guides/writing-pyproject-toml/>`_ for more general information on ``pyproject.toml``.
 
 .. include: invest-demo-plugin/pyproject.toml
-
 
 .. note::
 
@@ -103,34 +99,62 @@ Writing the main module
 The plugin python package must have the attributes ``MODEL_SPEC``, ``execute``, and ``validate``:
 
 ``MODEL_SPEC``
-^^^^^^^^^^^^^^
-An instance of ``natcap.invest.spec.ModelSpec``. This object stores key information about the model, its inputs, and its outputs. See the API documentation for the specifics on instantiating this object.
+~~~~~~~~~~~~~~
+An instance of :func:`.spec.ModelSpec`. This object stores key information about the model, its inputs, and its outputs. See the API documentation for the specifics on instantiating this object.
+
+``execute``
+~~~~~~~~~~~
+This function executes the model. When a user runs the model, this function is invoked with the inputs that the user provided. When this function returns, the model run is complete.
+
+Arguments: ``args`` (dictionary). Maps input ids (matching the ``id`` of each ``Input`` in ``MODEL_SPEC.inputs``) to their values to run the model on.
+
+Returns: ``None``. When ``execute`` returns, the model run is complete.
+
+``validate``
+~~~~~~~~~~~~
+This function validates the model inputs. Its purpose is to identify problems with the user's data before running the model, and give helpful feedback so the problems can be fixed. When a user enters data into the workbench UI, ``validate`` is called and its output is used to provide instant feedback (for instance, highlighting problematic inputs in red). The "Run" button will be disabled until all inputs validate successfully and ``validate`` returns ``[]``.
+
+Arguments: ``args`` (dictionary). Maps input ids (matching the ``id`` of each ``Input`` in ``MODEL_SPEC.inputs``) to their values to run the model on.
+
+Returns: A list of tuples where the first element of the tuple is an iterable of keys affected by the error in question and the second element of the tuple is the string message of the error. If no validation errors were found, an empty list is returned.
+
+The following implementation of ``validate`` will suffice for most models: ::
+
+    from natcap.invest import validation
+
+    @validation.invest_validator
+    def validate(args):
+        return validation.validate(args, MODEL_SPEC)
+
+``validation.validate`` performs pre-defined validation for each input type based on its properties. See the ``validate`` method of each ``Input`` class to see exactly what checks are performed.
+
+If you need to validate properties of the input data that are not covered by the pre-defined checks, you may add on to this basic ``validate`` function.
 
 Specifying model inputs and outputs
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Model inputs are specified in the ``inputs`` attribute of the ``MODEL_SPEC``. Many different types of model inputs are supported, including numbers, CSVs, raster and vector files, etc. Each input in ``inputs`` is an instance of a subclass of ``spec.Input`` that represents the data type. There are many different input data types supported including numbers, CSVs, raster and vector files, etc. Choose the most appropriate ``Input`` type available in ``spec``. You may also subclass from ``spec.Input`` if you wish to create a custom type.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Model inputs are specified in the ``inputs`` attribute of the ``MODEL_SPEC``. Many different types of model inputs are supported, including numbers, CSVs, raster and vector files, etc. Each input in ``inputs`` is an instance of a subclass of :func:`.spec.Input` that represents the data type. There are many different input data types supported including numbers, CSVs, raster and vector files, etc. Choose the most appropriate ``Input`` type available in ``spec``. You may also subclass from :func:`.spec.Input` if you wish to create a custom type.
 
 User-provided values for all input types are ultimately passed to the ``execute`` function as strings or numbers. For instance, all file-based types will accept a path string.
 
-Model outputs are specified in the ``outputs`` attribute of the ``MODEL_SPEC``. All InVEST model outputs are files - there are no plain number or string outputs. Choose the most appropriate ``Output`` type available in ``spec``. You may also subclass from ``spec.Output`` if you wish to create a custom type.
+Model outputs are specified in the ``outputs`` attribute of the ``MODEL_SPEC``. All InVEST model outputs are files - there are no plain number or string outputs. Choose the most appropriate ``Output`` type available in ``spec``. You may also subclass from :func:`.spec.Output` if you wish to create a custom type.
 
 .. note::
 
-    Required inputs: All models must include the inputs ``workspace_dir``, ``results_suffix`` and ``n_workers``. Standard specs for these inputs are provided in ``natcap.invest.spec``.
+    Required inputs: All models must include the inputs ``workspace_dir``, ``results_suffix`` and ``n_workers``. Standard specs for these inputs are provided in :func:`.spec`.
 
 Specifying units
-~~~~~~~~~~~~~~~~
-Some input and output types have a ``units`` attribute representing the units of measurement of the data. We use ``pint``https://github.com/hgrecco/pint/tree/master to manage units. In ``pint``, all unit objects must derive from the same ``UnitRegistry`` in order to be used together. Therefore, you should reference ``natcap.invest``'s shared unit registry, ``spec.u``. Example: ``spec.u.meter ** 3`` (cubic meters).
+^^^^^^^^^^^^^^^^
+Some input and output types have a ``units`` attribute representing the units of measurement of the data. We use `pint <https://github.com/hgrecco/pint/tree/master>`_ to manage units. In ``pint``, all unit objects must derive from the same ``UnitRegistry`` in order to be used together. Therefore, you should reference ``natcap.invest``'s shared unit registry, :func:`.spec.u`. Example: ``spec.u.meter ** 3`` (cubic meters).
 
 Nested data
-~~~~~~~~~~~
+^^^^^^^^^^^
 Certain input and output types contain multiple types of data (such as columns in a CSV, or fields in a vector).
 
-- ``CSVInput`` and ``CSVOutput``: The ``columns`` attribute is an iterable of ``Input``\ s or ``Output``\ s that represent the data stored in each column of the CSV. The ``id`` of each ``Input``/``Output`` must match the column header.
+- :func:`.CSVInput` and :func:`.CSVOutput`: The ``columns`` attribute is an iterable of ``Input``\ s or ``Output``\ s that represent the data stored in each column of the CSV. The ``id`` of each ``Input``/``Output`` must match the column header.
 
-- ``VectorInput`` and ``VectorOutput``: The ``fields`` attribute is an iterable of ``Input``\ s or ``Output``\ s that represent the data stored in each field of the Vector. The ``id`` of each ``Input``/``Output`` must match the field name.
+- :func:`.VectorInput` and :func:`.VectorOutput`: The ``fields`` attribute is an iterable of ``Input``\ s or ``Output``\ s that represent the data stored in each field of the Vector. The ``id`` of each ``Input``/``Output`` must match the field name.
 
-- ``DirectoryInput`` and ``DirectoryOutput``: The ``contents`` attribute is an iterable of ``Input``\ s or ``Output``\ s that represent the file contents of the directory. The ``id`` of each ``Input``/``Output`` must match the file name.
+- :func:`.DirectoryInput` and :func:`.DirectoryOutput`: The ``contents`` attribute is an iterable of ``Input``\ s or ``Output``\ s that represent the file contents of the directory. The ``id`` of each ``Input``/``Output`` must match the file name.
 
 Example: ::
 
@@ -152,40 +176,26 @@ Example: ::
         index_col="lulc_code"
     )
 
-
-``execute``
-^^^^^^^^^^^
-This function executes the model. When a user runs the model, this function is invoked with the inputs that the user provided. When this function returns, the model run is complete.
-
-Arguments: ``args`` (dictionary). Maps input ids (matching the ``id`` of each ``Input`` in ``MODEL_SPEC.inputs``) to their values to run the model on.
-
-Returns: ``None``. When ``execute`` returns, the model run is complete.
-
 Using ``taskgraph``
-~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^
 All core InVEST models use ``taskgraph`` to organize the steps of execution. This is optional, but using ``taskgraph`` has several benefits including avoided recomputation, distributing tasks over multiple CPUs, and logically organizing the model as a workflow of tasks that process data. See the InVEST source code for many examples of using ``taskgraph``.
-
-``validate``
-^^^^^^^^^^^^
-This function validates the model inputs. Its purpose is to identify problems with the user's data before running the model, and give helpful feedback so the problems can be fixed. When a user enters data into the workbench UI, ``validate`` is called and its output is used to provide instant feedback (for instance, highlighting problematic inputs in red). The "Run" button will be disabled until all inputs validate successfully and ``validate`` returns ``[]``.
-
-Arguments: ``args`` (dictionary). Maps input ids (matching the ``id`` of each ``Input`` in ``MODEL_SPEC.inputs``) to their values to run the model on.
-
-Returns: A list of tuples where the first element of the tuple is an iterable of keys affected by the error in question and the second element of the tuple is the string message of the error. If no validation errors were found, an empty list is returned.
-
-The following implementation of ``validate`` will suffice for most models: ::
-
-    from natcap.invest import validation
-
-    @validation.invest_validator
-    def validate(args):
-        return validation.validate(args, MODEL_SPEC)
-
-``validation.validate`` performs pre-defined validation for each input type based on its properties. See the ``validate`` method of each ``Input`` class to see exactly what checks are performed.
-
-If you need to validate properties of the input data that are not covered by the pre-defined checks, you may add on to this basic ``validate`` function.
-
 
 ``__init__.py``
 ^^^^^^^^^^^^^^^
 If you are following the project layout described above, and demonstrated in the demo plugin repo, ``MODEL_SPEC``, ``execute``, and ``validate`` will be properties of the ``foo`` submodule. You must make them available at the level of the ``invest_plugin`` package by importing them into ``__init__.py``. This is demonstrated in the demo plugin repo.
+
+
+How InVEST interacts with plugins
+---------------------------------
+At the python level, when ``natcap.invest`` is imported, it searches for other installed python packages that look like plugins. Plugins are identified by having a package name beginning with ``invest`` and having the expected attributes described above. All identified plugin packages are recorded in ``natcap.invest.models`` and become available to ``natcap.invest`` just like the core models.
+
+At the workbench level, plugins are installed through the "Manage Plugins" window. The user provides the plugin source code (as either a git URL or a local path), and the workbench follows this process to install it:
+
+1. If installing from a git URL, download the ``pyproject.toml``.
+2. Parse metadata from the ``pyproject.toml``.
+3. Create a micromamba environment for the plugin to run in. The environment contains ``python`` and ``git`` by default, plus any dependencies specified in ``pyproject.toml`` in ``tool.natcap.invest.conda_dependencies``.
+4. Use ``pip`` to install the plugin into the environment created in step 3.
+5. Import the plugin and access metadata from the ``MODEL_SPEC``.
+6. Save the plugin information to the workbench settings store.
+
+The settings store is where the workbench tracks what plugins are installed. When a user launches a plugin, a new ``natcap.invest`` server is launched from the plugin's environment. This server runs on a different port than the ``natcap.invest`` server that serves core models. All model-specific requests related to running the plugin are sent to that port.
