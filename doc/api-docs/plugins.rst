@@ -54,19 +54,19 @@ exist in your math or your code.
 
 How to develop a plugin
 -----------------------
-.. note:: This guide assumes the reader is familiar with python.
+.. note:: This guide is written for python developers. If you are unfamiliar with python packaging, helpful documentation is available from https://packaging.python.org/en/latest/.
 
 The plugin template repo is a great place to start. Code snippets in this guide are
 pulled from there. The core InVEST models' source code is also a great place to look
-for examples of
+for examples.
 
 At its most basic, a plugin is a python package. Begin by creating a directory
 with a simple python package structure: ::
 
-    invest_plugin/
+    invest-demo-plugin/
     |- pyproject.toml
     |- src/
-       |- invest_plugin/
+       |- invest_demo_plugin/
           |- __init__.py
           |- foo.py
 
@@ -100,214 +100,95 @@ about your package in the ``pyproject.toml``. Configuration specific to InVEST i
 
 Writing the main module
 ^^^^^^^^^^^^^^^^^^^^^^^
-
-The plugin python package must have
-
-Plugin API specification
-------------------------
-
-A plugin python pacakge must have the following attributes -
+The plugin python package must have the attributes ``MODEL_SPEC``, ``execute``, and ``validate``:
 
 ``MODEL_SPEC``
 ^^^^^^^^^^^^^^
-An instance of ``natcap.invest.spec.ModelSpec``. This object stores key information about the model, its inputs, and its outputs.
+An instance of ``natcap.invest.spec.ModelSpec``. This object stores key information about the model, its inputs, and its outputs. See the API documentation for the specifics on instantiating this object.
 
-``model_id``
-============
-The unique identifier for the plugin model, used internally by invest. This identifier should be concise, meaningful, and unique - a good choice is often a short version of the ``model_title``, or the name of the github repo. Using snake-case is recommended for consistancy. Including the word "model" is redundant and not recommended.
-type: ``string``
-Good: ``'carbon_storage'``
-Bad: ``'Carbon storage'``, ``carbon_storage_model``
+Specifying model inputs and outputs
+===================================
+Model inputs are specified in the ``inputs`` attribute of the ``MODEL_SPEC``. Many different types of model inputs are supported, including numbers, CSVs, raster and vector files, etc. Each input in ``inputs`` is an instance of a subclass of ``spec.Input`` that represents the data type. There are many different input data types supported including numbers, CSVs, raster and vector files, etc. Choose the most appropriate ``Input`` type available in ``spec``. You may also subclass from ``spec.Input`` if you wish to create a custom type.
 
-``model_title``
-===============
-The user-facing title for the plugin. This is displayed in the workbench. Title-case is recommended. Including the word "model" is redundant and not recommended.
-type: ``string``
-Good: ``'Carbon Storage'``
-Bad: ``'Carbon storage'``, ``The Carbon Storage Model``, ``carbon_storage``
+User-provided values for all input types are ultimately passed to the ``execute`` function as strings or numbers. For instance, all file-based types will accept a path string.
 
-``userguide``
-=============
-
-``aliases``
-===========
-
-
-``input_field_order``
-====================
-This is a list that specifies the order and grouping of model inputs. Inputs will displayed in the input form from top to bottom in the order listed here. Sub-lists represent groups of inputs that will be visually separated by a horizontal line. This improves UX by breaking up long lists and visually grouping related inputs. If you do not wish to use groups, all inputs may go in the same sub-list. It is a convention to begin with a group of ``workspace_dir`` and ``results_suffix``.
-
-Example: ``[['workspace_dir', 'results_suffix'], ['foo'], ['bar', baz']]``
-
-type: ``list`` of ``list``s of ``string``s
-Constraints: each item in the sub-lists must match a key in ``MODEL_SPEC['args']``. Each key in ``MODEL_SPEC['args']`` must be included exactly once, unless it is included in ``ui_spec['hidden']``.
-
-
-``args``
-========
-This is a sub-dictionary where the keys identify model inputs and the values describe the specification for those inputs.
-
-Keys should be snake-cased strings that uniquely and concisely identify inputs within the model.
-Good: ``precipitation``
-Bad: ``precipitation map``
-
-Values are dictionaries that store information about and constraints on the data inputs provided for each key.
-
-``args[arg]``
-==============
-
-Attributes that apply to all types:
-
-``args[arg]['name']`` (all types)
-=================================
-The user-facing name of this input. The workbench UI displays this property as a label for each input. The name should be as short as possible. Any extra description should go in ``args[arg]['about']``. It should be all lower-case, except for things that are always capitalized (acronyms, proper names). Any capitalization rules such as "always capitalize the first letter" will be applied on the workbench side.
-type: ``string``
-Good: ``precipitation``, ``Kc factor``, ``valuation table``
-Bad: ``PRECIPITATION``, ``kc_factor``, ``table of valuation parameters``
-
-
-``args[arg]['about']`` (all types)
-==================================
-
-``args[arg]['type']`` (all types)
-=================================
-Specifies the data type of the input. The supported data types reflect the types of data commonly used in our models.
-
-This controls how the input is rendered in the model input form. Path types (``'directory'``, ``'file'``, ``'raster'``, ``'vector'``, ``'csv'``) display as a text box with a file finder button, so users may type in the path or select one through the OS file navigation. Booleans display as a toggle button, where ``False`` is "off" and ``True`` is "on". ``'option_string'`` displays as a dropdown menu. All other types display as a regular text box.
-
-type: ``string``, one of:
-
-- ``'directory'``: a path to a directory on the user's computer
-- ``'raster'``: a path to a GDAL-supported raster file
-- ``'vector'`` - a path to a GDAL-supported vector file
-- ``'csv'`` - a path to a CSV file (comma-or-semicolon delimited, possibly with a UTF-8 BOM)
-- ``'file'``: a path to a file on the user's computer. Use this only for files which do not fall under one of the other types (``'raster'``, ``'vector'``, ``'csv'``, or ``'directory``').
-- ``'number'`` - a decimal (floating-point) number
-- ``'integer'`` - an integer number
-- ``'ratio'``: a decimal number representing a ratio (scale of 0 to 1), though values less than 0 or greater than 1 are also allowed. This is important to distinguish from a percent (1.0 = 100%).
-- ``'percent'``: a decimal number representing a percent (scale of 0 to 100), though values less than 0 or greater than 100 are also allowed. This is important to distinguish from a ratio (100% = 1.0).
-- ``'freestyle_string'`` - a string that may contain any UTF-8 characters.
-- ``'option_string'`` - a string where the value must belong to a set of options.
-- ``'boolean'``: a boolean value (either true or false, or something that can be cast to true or false).
-
-
-``args[arg]['required']`` (all types)
-=====================================
-Indicates whether the input is required to be provided. Defaults to ``True``. If the input is optional, set ``args[arg]['required']: False``.
-
-type: ``bool``. Required.
-
-
-``args[arg]['units']`` (``number`` types only)
-==============================================
-The unit of measurement of this number. Required.
-type: ``pint.Unit``
-Example: ``pint.UnitRegistry().meter``
-
-``args[arg]['expression']`` (``number`` types only)
-===================================================
-Optional. This is an expression that allows you to set custom constraints on the input value, such as upper and lower bounds. The expression must contain the string ``value``, which will represent the user-provided value (after it has been cast to a float). The expression must evaluate to a boolean, or a type that is castable to boolean. If ``bool(eval(expression)) is False``, validation will reject the input.
-
-type: ``string``
-Example: ``"(value >= 0) & (value <= 1)"``
-
-
-``args[arg]['columns']`` (``csv`` types only)
-=============================================
-A sub-dictionary specifying columns in the CSV table. Keys are column names. Values are nested arg specs.
-type: ``dict`` mapping ``string``\ s to ``dict``\ s. Required.
-Example: ::
-
-    'columns': {
-        'lucode': {
-            'type': 'integer',
-            'about': 'LULC codes matching those in the LULC raster.'
-        },
-        'root_depth': {
-            'type': 'number',
-            'units': u.millimeter,
-            'about': 'Maximum root depth for plants in this LULC class.'
-        },
-        'kc': {
-            'type': 'number',
-            'units': u.none,
-            'about': 'Crop coefficient for this LULC class.'
-        }
-    }
-
-
-``args[arg]['bands']`` (``raster`` types only)
-==============================================
-A sub-dictionary specifying bands in the raster. Keys are integer band IDs. Values are nested arg specs. For single-band rasters, the band ID is ``1``\ .
-
-type: ``dict`` mapping ``int``\ s to ``dict``\ s. Required.
-Example: ::
-
-    'bands': {
-        1: {
-            'type': 'number',
-            'units': u.meter
-        }
-    }
-
-``args[arg]['fields']`` (``vector`` types only)
-===============================================
-A sub-dictionary specifying fields in the vector. Keys are field names. Values are nested arg specs. If no fields are required, set this to an empty dictionary.
-
-type: ``dict`` mapping ``string``\ s to ``dict``\ s. Required.
-
-Example: ::
-
-    'fields': {
-        'watershed_id': {
-            'type': 'string',
-            'about': 'Unique identifier for each watershed'
-        },
-        'weight': {
-            'type': 'ratio',
-            'about': 'Relative weight to give to the watershed in calculation'
-        }
-    }
-
-
-``args[arg]['geometries']`` (``vector`` types only)
-===================================================
-The set of allowed geometry types in the vector.
-types are defined in spec_utils.py and should be imported from there.
-type: ``set``\ . Required.
-Example: ``{'POLYGON', 'MULTIPOLYGON'}``
-
-``args[arg]['projected']`` (``raster`` and ``vector`` types only)
-=================================================================
-If ``True``\ , the dataset must have a projected (as opposed to geographic) coordinate system.
-type: ``bool``\ . Required. Defaults to ``False``\ .
-
-``args[arg]['projection_units']`` (``raster`` and ``vector`` types only)
-========================================================================
-If the model has a requirement for the linear units of the coordinate system, this may be specified. May only be used if ``args[arg]['projected'] is True``\ .
-
-type: ``pint.Unit``\ . Optional.
-Example: ``pint.UnitRegistry().meter``
-
-``args[arg]['options']`` (``option_string`` types only)
-=======================================================
+Model outputs are specified in the ``outputs`` attribute of the ``MODEL_SPEC``. All InVEST model outputs are files - there are no plain number or string outputs. Choose the most appropriate ``Output`` type available in ``spec``. You may also subclass from ``spec.Output`` if you wish to create a custom type.
 
 .. note::
 
-    Required args: All models must include the args ``workspace_dir``, ``results_suffix`` and ``n_workers``. Standard specs for these args are provided in ``natcap.invest.spec_utils``.
+    Required inputs: All models must include the inputs ``workspace_dir``, ``results_suffix`` and ``n_workers``. Standard specs for these inputs are provided in ``natcap.invest.spec``.
 
-``outputs``
+Specifying units
+================
+Some input and output types have a ``units`` attribute representing the units of measurement of the data. We use ``pint``https://github.com/hgrecco/pint/tree/master to manage units. In ``pint``, all unit objects must derive from the same ``UnitRegistry`` in order to be used together. Therefore, you should reference ``natcap.invest``'s shared unit registry, ``spec.u``. Example: ``spec.u.meter ** 3`` (cubic meters).
+
+Nested data
+===========
+Certain input and output types contain multiple types of data (such as columns in a CSV, or fields in a vector).
+
+- ``CSVInput`` and ``CSVOutput``: The ``columns`` attribute is an iterable of ``Input``\ s or ``Output``\ s that represent the data stored in each column of the CSV. The ``id`` of each ``Input``/``Output`` must match the column header.
+
+- ``VectorInput`` and ``VectorOutput``: The ``fields`` attribute is an iterable of ``Input``\ s or ``Output``\ s that represent the data stored in each field of the Vector. The ``id`` of each ``Input``/``Output`` must match the field name.
+
+- ``DirectoryInput`` and ``DirectoryOutput``: The ``contents`` attribute is an iterable of ``Input``\ s or ``Output``\ s that represent the file contents of the directory. The ``id`` of each ``Input``/``Output`` must match the file name.
+
+Example:
+
+``python
+CSVInput(
+    id="biophysical_table_path",
+    name="biophysical table",
+    about="Table of crop coefficients for each LULC class.",
+    columns=[
+        IntegerInput(
+            id="lulc_code",
+            about="Land use/land cover code"
+        ),
+        NumberInput(
+            id="kc_factor",
+            about="Crop coefficient for each land use/land cover class",
+            units=None
+        )
+    ],
+    index_col="lulc_code"
+)
+``
 
 ``execute``
 ^^^^^^^^^^^
 This function executes the model. When a user runs the model, this function is invoked with the inputs that the user provided. When this function returns, the model run is complete.
 
-Arguments: ``args`` (dictionary). Maps input keys (which match those in ``MODEL_SPEC['args']``) to their values to run the model on.
+Arguments: ``args`` (dictionary). Maps input ids (matching the ``id`` of each ``Input`` in ``MODEL_SPEC.inputs``) to their values to run the model on.
+
 Returns: ``None``. When ``execute`` returns, the model run is complete.
+
+Using ``taskgraph``
+===================
+All core InVEST models use ``taskgraph`` to organize the steps of execution. This is optional, but using ``taskgraph`` has several benefits including avoided recomputation, distributing tasks over multiple CPUs, and logically organizing the model as a workflow of tasks that process data. See the InVEST source code for many examples of using ``taskgraph``.
 
 ``validate``
 ^^^^^^^^^^^^
 This function validates the model inputs. Its purpose is to identify problems with the user's data before running the model, and give helpful feedback so the problems can be fixed. When a user enters data into the workbench UI, ``validate`` is called and its output is used to provide instant feedback (for instance, highlighting problematic inputs in red). The "Run" button will be disabled until all inputs validate successfully and ``validate`` returns ``[]``.
 
-Arguments: ``args`` (dictionary). Maps input keys (which match those in ``MODEL_SPEC['args']``) to their values to run the model on.
+Arguments: ``args`` (dictionary). Maps input ids (matching the ``id`` of each ``Input`` in ``MODEL_SPEC.inputs``) to their values to run the model on.
+
 Returns: A list of tuples where the first element of the tuple is an iterable of keys affected by the error in question and the second element of the tuple is the string message of the error. If no validation errors were found, an empty list is returned.
+
+The following implementation of ``validate`` will suffice for most models:
+
+``python
+from natcap.invest import validation
+
+@validation.invest_validator
+def validate(args):
+    return validation.validate(args, MODEL_SPEC)
+``
+
+``validation.validate`` performs pre-defined validation for each input type based on its properties. See the ``validate`` method of each ``Input`` class to see exactly what checks are performed.
+
+If you need to validate properties of the input data that are not covered by the pre-defined checks, you may add on to this basic ``validate`` function.
+
+
+``__init__.py``
+^^^^^^^^^^^^^^^
+If you are following the project layout described above, and demonstrated in the demo plugin repo, ``MODEL_SPEC``, ``execute``, and ``validate`` will be properties of the ``foo`` submodule. You must make them available at the level of the ``invest_plugin`` package by importing them into ``__init__.py``. This is demonstrated in the demo plugin repo.
