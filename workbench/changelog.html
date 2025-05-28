@@ -56,9 +56,18 @@ The order of groups should be as follows:
 6. InVEST model Z (model names should be sorted A-Z) -->
     <!-- Unreleased Changes
 ------------------ -->
+    <section id="a3-2025-05-28">
+        <h1>3.16.0a3 (2025-05-28)</h1>
+        <section id="general">
+            <h2>General</h2>
+            <ul>
+                <li>Fixed a micromamba command bug in 3.16.0a1 that was calling micromamba directly, instead of using the path to the executable (<a href="https://github.com/natcap/invest/issues/1965">#1965</a>). This was mistakenly not actually released in 3.16.0a2.</li>
+            </ul>
+        </section>
+    </section>
     <section id="a2-2025-05-28">
         <h1>3.16.0a2 (2025-05-28)</h1>
-        <section id="general">
+        <section id="general-1">
             <h2>General</h2>
             <ul>
                 <li>Fixed a micromamba command bug in 3.16.0a1 that was calling micromamba directly, instead of using the path to the executable (<a href="https://github.com/natcap/invest/issues/1965">#1965</a>).</li>
@@ -67,7 +76,7 @@ The order of groups should be as follows:
     </section>
     <section id="a1-2025-05-28">
         <h1>3.16.0a1 (2025-05-28)</h1>
-        <section id="general-1">
+        <section id="general-2">
             <h2>General</h2>
             <ul>
                 <li>The workbench and the natcap.invest python package now support plugins.</li>
@@ -128,7 +137,7 @@ The order of groups should be as follows:
     </section>
     <section id="section-1">
         <h1>3.15.1 (2025-05-06)</h1>
-        <section id="general-2">
+        <section id="general-3">
             <h2>General</h2>
             <ul>
                 <li>Handle exceptions that can arise during <code>validation.check_spatial_overlap</code> when a layer's bounding box cannot be transformed to EPSG:4326. (<a href="https://github.com/natcap/invest/issues/1849">#1849</a>).</li>
@@ -180,7 +189,7 @@ The order of groups should be as follows:
                 <li>InVEST model outputs now include metadata. Open the '.yml' files in a text editor to read and add to the metadata.</li>
             </ul>
         </section>
-        <section id="general-3">
+        <section id="general-4">
             <h2>General</h2>
             <ul>
                 <li>Fixed an issue where a user's PROJ_DATA environment variable could trigger a RuntimeError about a missing proj.db file. <a href="https://github.com/natcap/invest/issues/1742">https://github.com/natcap/invest/issues/1742</a></li>
