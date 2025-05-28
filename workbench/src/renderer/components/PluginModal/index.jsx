@@ -275,7 +275,7 @@ export default function PluginModal(props) {
           </Form.Group>
           <Form.Group>
             <Form.Check
-              id="user-acknowledgement-checkbox"
+              id="user-acknowledgment-checkbox"
               label={t('I acknowledge and accept the risks associated with installing this plugin.')}
               value={userAcknowledgment}
               onChange={(event) => setUserAcknowledgment(event.target.checked)}
