@@ -30,7 +30,7 @@ from osgeo import osr
 # prefer to do intrapackage imports to avoid case where global package is
 # installed and we import the global version of it rather than the local
 from .. import gettext
-from .. import spec_utils
+from .. import spec
 from .. import utils
 from .. import validation
 from ..unit_registry import u
@@ -58,7 +58,7 @@ predictor_table_columns = {
         "about": gettext("A spatial file to use as a predictor."),
         "bands": {1: {"type": "number", "units": u.none}},
         "fields": {},
-        "geometries": spec_utils.ALL_GEOMS
+        "geometries": spec.ALL_GEOMS
     },
     "type": {
         "type": "option_string",
@@ -99,7 +99,7 @@ predictor_table_columns = {
 }
 
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "recreation",
     "model_title": gettext("Visitation: Recreation and Tourism"),
     "userguide": "recreation.html",
@@ -111,15 +111,14 @@ MODEL_SPEC = {
             ['start_year', 'end_year'],
             ['compute_regression', 'predictor_table_path', 'scenario_predictor_table_path'],
             ['grid_aoi', 'grid_type', 'cell_size'],
-        ],
-        "hidden": ['n_workers', 'hostname', 'port']
+        ]
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "aoi_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "about": gettext("Map of area(s) over which to run the model.")
         },
         "hostname": {
@@ -128,7 +127,8 @@ MODEL_SPEC = {
             "about": gettext(
                 "FQDN to a recreation server.  If not provided, a default is "
                 "assumed."),
-            "name": gettext("hostname")
+            "name": gettext("hostname"),
+            "hidden": True
         },
         "port": {
             "type": "number",
@@ -138,7 +138,8 @@ MODEL_SPEC = {
             "about": gettext(
                 "the port on ``hostname`` to use for contacting the "
                 "recreation server."),
-            "name": gettext("port")
+            "name": gettext("port"),
+            "hidden": True
         },
         "start_year": {
             "type": "number",
@@ -234,7 +235,7 @@ MODEL_SPEC = {
         "PUD_results.gpkg": {
             "about": gettext(
                 "Results of photo-user-days aggregations in the AOI."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "PUD_YR_AVG": {
                     "about": gettext(
@@ -253,7 +254,7 @@ MODEL_SPEC = {
         "TUD_results.gpkg": {
             "about": gettext(
                 "Results of twitter-user-days aggregations in the AOI."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "PUD_YR_AVG": {
                     "about": gettext(
@@ -308,7 +309,7 @@ MODEL_SPEC = {
             "about": gettext(
                 "AOI polygons with all the variables needed to compute a regression, "
                 "including predictor attributes and the user-days response variable."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "[PREDICTOR]": {
                     "type": "number",
@@ -353,7 +354,7 @@ MODEL_SPEC = {
             "about": gettext(
                 "Results of scenario, including the predictor data used in the "
                 "scenario and the predicted visitation patterns for the scenario."),
-            "geometries": spec_utils.POLYGONS,
+            "geometries": spec.POLYGONS,
             "fields": {
                 "[PREDICTOR]": {
                     "type": "number",
@@ -378,7 +379,7 @@ MODEL_SPEC = {
                     "about": gettext(
                         "Copy of the input AOI, gridded if applicable."),
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS
+                    "geometries": spec.POLYGONS
                 },
                 "aoi.zip": {
                     "about": gettext("Compressed AOI")
@@ -411,9 +412,9 @@ MODEL_SPEC = {
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
 
 # Have 5 seconds between timed progress outputs
@@ -565,7 +566,7 @@ def execute(args):
     prep_aoi_task.join()
 
     # All the server communication happens in this task.
-    user_days_task = task_graph.add_task(
+    calc_user_days_task = task_graph.add_task(
         func=_retrieve_user_days,
         args=(file_registry['local_aoi_path'],
               file_registry['compressed_aoi_path'],
@@ -578,6 +579,15 @@ def execute(args):
                           file_registry['tud_monthly_table_path'],
                           file_registry['server_version']],
         task_name='user-day-calculation')
+
+    assemble_userday_variables_task = task_graph.add_task(
+        func=_assemble_regression_data,
+        args=(file_registry['pud_results_path'],
+              file_registry['tud_results_path'],
+              file_registry['regression_vector_path']),
+        target_path_list=[file_registry['regression_vector_path']],
+        dependent_task_list=[calc_user_days_task],
+        task_name='assemble userday variables')
 
     if 'compute_regression' in args and args['compute_regression']:
         # Prepare the AOI for geoprocessing.
@@ -592,26 +602,17 @@ def execute(args):
         assemble_predictor_data_task = _schedule_predictor_data_processing(
             file_registry['local_aoi_path'],
             file_registry['response_polygons_lookup'],
-            prepare_response_polygons_task,
+            [prepare_response_polygons_task, assemble_userday_variables_task],
             args['predictor_table_path'],
             file_registry['regression_vector_path'],
             intermediate_dir, task_graph)
 
-        assemble_regression_data_task = task_graph.add_task(
-            func=_assemble_regression_data,
-            args=(file_registry['pud_results_path'],
-                  file_registry['tud_results_path'],
-                  file_registry['regression_vector_path']),
-            target_path_list=[file_registry['regression_vector_path']],
-            dependent_task_list=[assemble_predictor_data_task, user_days_task],
-            task_name='assemble predictor data')
-
         # Compute the regression
         coefficient_json_path = os.path.join(
             intermediate_dir, 'predictor_estimates.json')
-        predictor_df = validation.get_validated_dataframe(
-            args['predictor_table_path'],
-            **MODEL_SPEC['args']['predictor_table_path'])
+        predictor_df = MODEL_SPEC.get_input(
+            'predictor_table_path').get_validated_dataframe(
+            args['predictor_table_path'])
         predictor_id_list = predictor_df.index
         compute_regression_task = task_graph.add_task(
             func=_compute_and_summarize_regression,
@@ -625,16 +626,27 @@ def execute(args):
             target_path_list=[file_registry['regression_coefficients'],
                               file_registry['regression_summary'],
                               coefficient_json_path],
-            dependent_task_list=[assemble_regression_data_task],
+            dependent_task_list=[assemble_predictor_data_task],
             task_name='compute regression')
 
         if ('scenario_predictor_table_path' in args and
                 args['scenario_predictor_table_path'] != ''):
+            driver = gdal.GetDriverByName('GPKG')
+            if os.path.exists(file_registry['scenario_results_path']):
+                driver.Delete(file_registry['scenario_results_path'])
+            aoi_vector = gdal.OpenEx(file_registry['local_aoi_path'])
+            target_vector = driver.CreateCopy(
+                file_registry['scenario_results_path'], aoi_vector)
+            target_layer = target_vector.GetLayer()
+            _rename_layer_from_parent(target_layer)
+            target_vector = target_layer = None
+            aoi_vector = None
             utils.make_directories([scenario_dir])
+
             build_scenario_data_task = _schedule_predictor_data_processing(
                 file_registry['local_aoi_path'],
                 file_registry['response_polygons_lookup'],
-                prepare_response_polygons_task,
+                [prepare_response_polygons_task],
                 args['scenario_predictor_table_path'],
                 file_registry['scenario_results_path'],
                 scenario_dir, task_graph)
@@ -940,9 +952,8 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 
 def _schedule_predictor_data_processing(
         response_vector_path, response_polygons_pickle_path,
-        prepare_response_polygons_task,
-        predictor_table_path, target_predictor_vector_path,
-        working_dir, task_graph):
+        dependent_task_list, predictor_table_path,
+        target_predictor_vector_path, working_dir, task_graph):
     """Summarize spatial predictor data by polygons in the response vector.
 
     Build a shapefile with geometry from the response vector, and tabular
@@ -954,8 +965,7 @@ def _schedule_predictor_data_processing(
         response_polygons_pickle_path (string): path to pickle that stores a
             dict which maps each feature FID from ``response_vector_path`` to
             its shapely geometry.
-        prepare_response_polygons_task (Taskgraph.Task object):
-            A Task needed for dependent_task_lists in this scope.
+        dependent_task_list (list): list of Taskgraph.Task objects.
         predictor_table_path (string): path to a CSV file with three columns
             'id', 'path' and 'type'.  'id' is the unique ID for that predictor
             and must be less than 10 characters long. 'path' indicates the
@@ -996,8 +1006,8 @@ def _schedule_predictor_data_processing(
         'line_intersect_length': _line_intersect_length,
     }
 
-    predictor_df = validation.get_validated_dataframe(
-        predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
+    predictor_df = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(predictor_table_path)
     predictor_task_list = []
     predictor_json_list = []  # tracks predictor files to add to gpkg
 
@@ -1027,7 +1037,7 @@ def _schedule_predictor_data_processing(
                 args=(predictor_type, response_polygons_pickle_path,
                       row['path'], predictor_target_path),
                 target_path_list=[predictor_target_path],
-                dependent_task_list=[prepare_response_polygons_task],
+                dependent_task_list=dependent_task_list,
                 task_name=f'predictor {predictor_id}'))
         else:
             predictor_target_path = os.path.join(
@@ -1038,13 +1048,12 @@ def _schedule_predictor_data_processing(
                 args=(response_polygons_pickle_path,
                       row['path'], predictor_target_path),
                 target_path_list=[predictor_target_path],
-                dependent_task_list=[prepare_response_polygons_task],
+                dependent_task_list=dependent_task_list,
                 task_name=f'predictor {predictor_id}'))
 
-    # return predictor_task_list, predictor_json_list
     assemble_predictor_data_task = task_graph.add_task(
         func=_json_to_gpkg_table,
-        args=(response_vector_path, target_predictor_vector_path,
+        args=(target_predictor_vector_path,
               predictor_json_list),
         target_path_list=[target_predictor_vector_path],
         dependent_task_list=predictor_task_list,
@@ -1071,20 +1080,11 @@ def _prepare_response_polygons_lookup(
 
 
 def _json_to_gpkg_table(
-        response_vector_path, predictor_vector_path,
-        predictor_json_list):
+        regression_vector_path, predictor_json_list):
     """Create a GeoPackage and a field with data from each json file."""
-    driver = gdal.GetDriverByName('GPKG')
-    if os.path.exists(predictor_vector_path):
-        driver.Delete(predictor_vector_path)
-    response_vector = gdal.OpenEx(
-        response_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-    predictor_vector = driver.CreateCopy(
-        predictor_vector_path, response_vector)
-    response_vector = None
-
-    layer = predictor_vector.GetLayer()
-    _rename_layer_from_parent(layer)
+    target_vector = gdal.OpenEx(
+        regression_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_layer = target_vector.GetLayer()
 
     predictor_id_list = []
     for json_filename in predictor_json_list:
@@ -1092,23 +1092,22 @@ def _json_to_gpkg_table(
         predictor_id_list.append(predictor_id)
         # Create a new field for the predictor
         # Delete the field first if it already exists
-        field_index = layer.FindFieldIndex(
+        field_index = target_layer.FindFieldIndex(
             str(predictor_id), 1)
         if field_index >= 0:
-            layer.DeleteField(field_index)
+            target_layer.DeleteField(field_index)
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
-        layer.CreateField(predictor_field)
+        target_layer.CreateField(predictor_field)
 
         with open(json_filename, 'r') as file:
             predictor_results = json.load(file)
         for feature_id, value in predictor_results.items():
-            feature = layer.GetFeature(int(feature_id))
+            feature = target_layer.GetFeature(int(feature_id))
             feature.SetField(str(predictor_id), value)
-            layer.SetFeature(feature)
+            target_layer.SetFeature(feature)
 
-    layer = None
-    predictor_vector.FlushCache()
-    predictor_vector = None
+    target_layer = None
+    target_vector = None
 
 
 def _raster_sum_mean(
@@ -1390,7 +1389,7 @@ def _ogr_to_geometry_list(vector_path):
 
 
 def _assemble_regression_data(
-        pud_vector_path, tud_vector_path, regression_vector_path):
+        pud_vector_path, tud_vector_path, target_vector_path):
     """Update the vector with the predictor data, adding response variables.
 
     Args:
@@ -1398,7 +1397,7 @@ def _assemble_regression_data(
             layer with PUD_YR_AVG.
         tud_vector_path (string): Path to the vector polygon
             layer with TUD_YR_AVG.
-        regression_vector_path (string): The response polygons with predictor data.
+        target_vector_path (string): The response polygons with predictor data.
             Fields will be added in order to compute the linear regression:
                 * pr_PUD
                 * pr_TUD
@@ -1414,18 +1413,22 @@ def _assemble_regression_data(
     tud_vector = gdal.OpenEx(
         tud_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
     tud_layer = tud_vector.GetLayer()
-    target_vector = gdal.OpenEx(
-        regression_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+
+    driver = gdal.GetDriverByName('GPKG')
+    if os.path.exists(target_vector_path):
+        driver.Delete(target_vector_path)
+    target_vector = driver.CreateCopy(
+        target_vector_path, pud_vector)
 
     target_layer = target_vector.GetLayer()
+    _rename_layer_from_parent(target_layer)
+
+    for field in target_layer.schema:
+        if field.name != POLYGON_ID_FIELD:
+            target_layer.DeleteField(
+                target_layer.FindFieldIndex(field.name, 1))
 
     def _create_field(fieldname):
-        # Create a new field for the predictor
-        # Delete the field first if it already exists
-        field_index = target_layer.FindFieldIndex(
-            str(fieldname), 1)
-        if field_index >= 0:
-            target_layer.DeleteField(field_index)
         field = ogr.FieldDefn(str(fieldname), ogr.OFTReal)
         target_layer.CreateField(field)
 
@@ -1688,7 +1691,7 @@ def _calculate_scenario(
         scenario_results_path (string): path to desired output scenario
             vector result which will be geometrically a copy of the input
             AOI but contain the scenario predictor data fields as well as the
-            scenario esimated response.
+            scenario estimated response.
         response_id (string): text ID of response variable to write to
             the scenario result.
         coefficient_json_path (string): path to json file with the pre-existing
@@ -1765,8 +1768,8 @@ def _validate_same_id_lengths(table_path):
         string message if IDs are too long
 
     """
-    predictor_df = validation.get_validated_dataframe(
-        table_path, **MODEL_SPEC['args']['predictor_table_path'])
+    predictor_df = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(table_path)
     too_long = set()
     for p_id in predictor_df.index:
         if len(p_id) > 10:
@@ -1794,12 +1797,13 @@ def _validate_same_ids_and_types(
         string message if any of the fields in 'id' and 'type' don't match
         between tables.
     """
-    predictor_df = validation.get_validated_dataframe(
-        predictor_table_path, **MODEL_SPEC['args']['predictor_table_path'])
+    predictor_df = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(
+        predictor_table_path)
 
-    scenario_predictor_df = validation.get_validated_dataframe(
-        scenario_predictor_table_path,
-        **MODEL_SPEC['args']['scenario_predictor_table_path'])
+    scenario_predictor_df = MODEL_SPEC.get_input(
+        'scenario_predictor_table_path').get_validated_dataframe(
+        scenario_predictor_table_path)
 
     predictor_pairs = set([
         (p_id, row['type']) for p_id, row in predictor_df.iterrows()])
@@ -1824,9 +1828,9 @@ def _validate_same_projection(base_vector_path, table_path):
     """
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
-    data_paths = validation.get_validated_dataframe(
-        table_path, **MODEL_SPEC['args']['predictor_table_path']
-    )['path'].tolist()
+    data_paths = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(
+        table_path)['path'].tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
@@ -1867,8 +1871,8 @@ def _validate_predictor_types(table_path):
         string message if any value in the ``type`` column does not match a
         valid type, ignoring leading/trailing whitespace.
     """
-    df = validation.get_validated_dataframe(
-        table_path, **MODEL_SPEC['args']['predictor_table_path'])
+    df = MODEL_SPEC.get_input(
+        'predictor_table_path').get_validated_dataframe(table_path)
     # ignore leading/trailing whitespace because it will be removed
     # when the type values are used
     valid_types = set({'raster_mean', 'raster_sum', 'point_count',
@@ -1927,7 +1931,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_messages = validation.validate(args, MODEL_SPEC['args'])
+    validation_messages = validation.validate(args, MODEL_SPEC)
     sufficient_valid_keys = (validation.get_sufficient_keys(args) -
                              validation.get_invalid_keys(validation_messages))
 

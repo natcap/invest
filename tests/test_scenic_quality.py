@@ -4,7 +4,6 @@ import os
 import shutil
 import tempfile
 import unittest
-import pytest
 
 import numpy
 import pygeoprocessing
@@ -19,6 +18,7 @@ gdal.UseExceptions()
 _SRS = osr.SpatialReference()
 _SRS.ImportFromEPSG(32731)  # WGS84 / UTM zone 31s
 WKT = _SRS.ExportToWkt()
+
 
 class ScenicQualityTests(unittest.TestCase):
     """Tests for the InVEST Scenic Quality model."""

@@ -7,22 +7,26 @@ const HOSTNAME = 'http://127.0.0.1';
 const PREFIX = 'api';
 
 /**
- * Get the port number running the server to use for the given model.
+ * Get the port number running the server and model ID to use for the given model.
  *
  * Server must already be started. If the model is a core invest model, the core
  * port is returned. If a plugin, the port for that plugin's server is returned.
+ * Model ID is returned unchanged for core models. For plugins, the version is
+ * removed from the id string.
  * @param {string} modelID - model name as given by `invest list`
  * @returns {Promise} resolves object
  */
-async function getPort(modelID) {
-  let port;
+async function getPortAndID(modelID) {
+  let port, id;
   const plugins = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins');
   if (plugins && Object.keys(plugins).includes(modelID)) {
     port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `plugins.${modelID}.port`);
+    id = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `plugins.${modelID}.modelID`);
   } else {
     port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
+    id = modelID
   }
-  return port;
+  return { port, id };
 }
 
 async function getCorePort() {
@@ -53,11 +57,11 @@ export async function getInvestModelIDs() {
  * @returns {Promise} resolves object
  */
 export async function getSpec(modelID) {
-  const port = await getPort(modelID);
+  const { port, id } = await getPortAndID(modelID);
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/getspec?language=${LANGUAGE}`, {
       method: 'post',
-      body: JSON.stringify(modelID),
+      body: JSON.stringify(id),
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
@@ -75,7 +79,8 @@ export async function getSpec(modelID) {
  * @returns {Promise} resolves object
  */
 export async function getDynamicDropdowns(payload) {
-  const port = await getCorePort();
+  const { port, id } = await getPortAndID(payload.model_id);
+  payload.model_id = id;
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/dynamic_dropdowns`, {
       method: 'post',
@@ -97,7 +102,8 @@ export async function getDynamicDropdowns(payload) {
  * @returns {Promise} resolves object
  */
 export async function fetchArgsEnabled(payload) {
-  const port = await getPort(payload.model_id);
+  const { port, id } = await getPortAndID(payload.model_id);
+  payload.model_id = id;
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/args_enabled`, {
       method: 'post',
@@ -125,7 +131,8 @@ export async function fetchArgsEnabled(payload) {
  * @returns {Promise} resolves array
  */
 export async function fetchValidation(payload) {
-  const port = await getPort(payload.model_id);
+  const { port, id } = await getPortAndID(payload.model_id);
+  payload.model_id = id;
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/validate?language=${LANGUAGE}`, {
       method: 'post',
@@ -172,7 +179,8 @@ export async function fetchDatastackFromFile(payload) {
  * @returns {Promise} resolves undefined
  */
 export async function saveToPython(payload) {
-  const port = await getPort(payload.model_id);
+  const { port, id } = await getPortAndID(payload.model_id);
+  payload.model_id = id;
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/save_to_python`, {
       method: 'post',
@@ -199,7 +207,8 @@ export async function saveToPython(payload) {
  * @returns {Promise} resolves undefined
  */
 export async function archiveDatastack(payload) {
-  const port = await getPort(payload.model_id);
+  const { port, id } = await getPortAndID(payload.model_id);
+  payload.model_id = id;
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/build_datastack_archive`, {
       method: 'post',
@@ -231,7 +240,8 @@ export async function archiveDatastack(payload) {
  * @returns {Promise} resolves undefined
  */
 export async function writeParametersToFile(payload) {
-  const port = await getPort(payload.model_id);
+  const { port, id } = await getPortAndID(payload.model_id);
+  payload.model_id = id;
   return (
     window.fetch(`${HOSTNAME}:${port}/${PREFIX}/write_parameter_set_file`, {
       method: 'post',
@@ -273,8 +283,9 @@ export async function getSupportedLanguages() {
  * @returns {Promise} resolves object
  */
 export async function getGeoMetaMakerProfile() {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/get_geometamaker_profile`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/get_geometamaker_profile`, {
       method: 'get',
     })
       .then((response) => response.json())
@@ -300,8 +311,9 @@ export async function getGeoMetaMakerProfile() {
  * @returns {Promise} resolves object
  */
 export async function setGeoMetaMakerProfile(payload) {
+  const port = await getCorePort();
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/set_geometamaker_profile`, {
+    window.fetch(`${HOSTNAME}:${port}/${PREFIX}/set_geometamaker_profile`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },

@@ -7,14 +7,21 @@ import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import Spinner from 'react-bootstrap/Spinner';
 import { useTranslation } from 'react-i18next';
+import { MdClose } from 'react-icons/md';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 
 export default function PluginModal(props) {
-  const { updateInvestList, closeInvestModel, openJobs } = props;
-  const [showPluginModal, setShowPluginModal] = useState(false);
+  const {
+    updateInvestList,
+    closeInvestModel,
+    openJobs,
+    show,
+    closeModal,
+    openModal,
+  } = props;
   const [url, setURL] = useState('');
   const [revision, setRevision] = useState('');
   const [path, setPath] = useState('');
@@ -33,15 +40,7 @@ export default function PluginModal(props) {
     setRevision('');
     setInstallErr('');
     setUninstallErr('');
-    setShowPluginModal(false);
-  };
-  const handleModalOpen = () => {
-    if (window.Workbench.OS === 'win32') {
-      ipcRenderer.invoke(ipcMainChannels.HAS_MSVC).then((hasMSVC) => {
-        setNeedsMSVC(!hasMSVC);
-      });
-    }
-    setShowPluginModal(true);
+    closeModal();
   };
 
   const addPlugin = () => {
@@ -84,11 +83,21 @@ export default function PluginModal(props) {
   };
 
   const downloadMSVC = () => {
-    setShowPluginModal(false);
+    closeModal();
     ipcRenderer.invoke(ipcMainChannels.DOWNLOAD_MSVC).then(
-      () => { handleModalOpen(); }
+      openModal()
     );
-  }
+  };
+
+  useEffect(() => {
+    if (show) {
+      if (window.Workbench.OS === 'win32') {
+        ipcRenderer.invoke(ipcMainChannels.HAS_MSVC).then((hasMSVC) => {
+          setNeedsMSVC(!hasMSVC);
+        });
+      }
+    }
+  }, [show]);
 
   useEffect(() => {
     ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins').then(
@@ -286,22 +295,27 @@ export default function PluginModal(props) {
   }
 
   return (
-    <React.Fragment>
-      <Button onClick={handleModalOpen} variant="outline-dark">
-        {t('Manage plugins')}
-      </Button>
-
-      <Modal show={showPluginModal} onHide={handleModalClose} contentClassName="plugin-modal">
-        <Modal.Header>
-          <Modal.Title>{t('Manage plugins')}</Modal.Title>
-        </Modal.Header>
-        {modalBody}
-      </Modal>
-    </React.Fragment>
+    <Modal show={show} onHide={handleModalClose} contentClassName="plugin-modal">
+      <Modal.Header>
+        <Modal.Title>{t('Manage plugins')}</Modal.Title>
+        <Button
+          variant="secondary-outline"
+          onClick={handleModalClose}
+          className="float-right"
+          aria-label="Close modal"
+        >
+          <MdClose />
+        </Button>
+      </Modal.Header>
+      {modalBody}
+    </Modal>
   );
 }
 
 PluginModal.propTypes = {
+  show: PropTypes.bool.isRequired,
+  closeModal: PropTypes.func.isRequired,
+  openModal: PropTypes.func.isRequired,
   updateInvestList: PropTypes.func.isRequired,
   closeInvestModel: PropTypes.func.isRequired,
   openJobs: PropTypes.shape({

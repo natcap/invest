@@ -115,4 +115,22 @@ describe('InvestJob', () => {
     recentJobs = await InvestJob.clearStore();
     expect(recentJobs).toHaveLength(0);
   });
+
+  test('deleteJob deletes the job', async () => {
+    const job1 = new InvestJob({
+      modelID: 'foo',
+      modelTitle: 'Foo',
+      argsValues: baseArgsValues,
+    });
+    const job2 = new InvestJob({
+      modelID: 'foo',
+      modelTitle: 'Foo',
+      argsValues: baseArgsValues,
+    });
+    let recentJobs = await InvestJob.saveJob(job1);
+    recentJobs = await InvestJob.saveJob(job2);
+    expect(recentJobs).toHaveLength(2);
+    recentJobs = await InvestJob.deleteJob(job1.hash);
+    expect(recentJobs).toHaveLength(1);
+  });
 });

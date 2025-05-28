@@ -32,11 +32,36 @@ export default class InvestJob {
         (key) => investJobStore.getItem(key)
       ));
     }
+    // Migrate old-style jobs
+    // We can eventually remove this code once it's likely that most users
+    // will have updated and ran a newer version of the workbench
+    jobArray = await Promise.all(jobArray.map(async (job) => {
+      if (job.modelID === undefined) {
+        job.modelID = job.modelRunName;
+        job.modelTitle = job.modelHumanName;
+        delete job.modelRunName;
+        delete job.modelHumanName;
+        await investJobStore.setItem(job.hash, job);
+      }
+      return job;
+    }));
     return jobArray;
   }
 
   static async clearStore() {
     await investJobStore.clear();
+    return InvestJob.getJobStore();
+  }
+
+  static async deleteJob(hash) {
+    await investJobStore.removeItem(hash);
+    // also remove item from the array that tracks the order of the jobs
+    const sortedJobHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
+    const idx = sortedJobHashes.indexOf(hash);
+    if (idx > -1) {
+      sortedJobHashes.splice(idx, 1); // remove one item only
+    }
+    await investJobStore.setItem(HASH_ARRAY_KEY, sortedJobHashes);
     return InvestJob.getJobStore();
   }
 

@@ -15,18 +15,12 @@ import warnings
 
 import natcap.invest
 from natcap.invest import datastack
-from natcap.invest import spec_utils
+from natcap.invest import set_locale
+from natcap.invest import spec
 from natcap.invest import ui_server
 from natcap.invest import utils
+from natcap.invest import models
 from pygeoprocessing.geoprocessing_core import GDALUseExceptions
-with GDALUseExceptions():
-    import natcap.invest
-    from natcap.invest import datastack
-    from natcap.invest import set_locale
-    from natcap.invest import spec_utils
-    from natcap.invest import ui_server
-    from natcap.invest import utils
-    from natcap.invest import models
 
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
@@ -58,19 +52,19 @@ def build_model_list_table(locale_code):
 
     # Adding 3 to max alias name length for the parentheses plus some padding.
     max_alias_name_length = max(len(', '.join(
-        spec['aliases'])) for spec in models.model_id_to_spec.values()) + 3
+        model_spec.aliases)) for model_spec in models.model_id_to_spec.values()) + 3
     template_string = '    {model_id} {aliases} {model_title}'
     strings = [translation.gettext('Available models:')]
     for model_id, model_spec in models.model_id_to_spec.items():
 
-        alias_string = ', '.join(model_spec['aliases'])
+        alias_string = ', '.join(model_spec.aliases)
         if alias_string:
             alias_string = f'({alias_string})'
 
         strings.append(template_string.format(
             model_id=model_id.ljust(max_model_id_length),
             aliases=alias_string.ljust(max_alias_name_length),
-            model_title=translation.gettext(model_spec['model_title'])))
+            model_title=translation.gettext(model_spec.model_title)))
     return '\n'.join(strings) + '\n'
 
 
@@ -100,8 +94,8 @@ def build_model_list_json(locale_code):
     json_object = {}
     for model_id, model_spec in models.model_id_to_spec.items():
         json_object[model_id] = {
-            'model_title': translation.gettext(model_spec['model_title']),
-            'aliases': model_spec['aliases']
+            'model_title': translation.gettext(model_spec.model_title),
+            'aliases': model_spec.aliases
         }
 
     return json.dumps(json_object)
@@ -148,7 +142,7 @@ def export_to_python(target_filepath, model_id, args_dict=None):
 
     if args_dict is None:
         cast_args = {
-            key: '' for key in models.model_id_to_spec[model_id]['args'].keys()}
+            arg_spec.id: '' for arg_spec in models.model_id_to_spec[model_id].inputs}
     else:
         cast_args = dict((str(key), value) for (key, value)
                          in args_dict.items())
@@ -164,7 +158,7 @@ def export_to_python(target_filepath, model_id, args_dict=None):
         py_file.write(script_template.format(
             invest_version=natcap.invest.__version__,
             today=datetime.datetime.now().strftime('%c'),
-            model_title=models.model_id_to_spec[model_id]['model_title'],
+            model_title=models.model_id_to_spec[model_id].model_title,
             pyname=models.model_id_to_pyname[model_id],
             model_args=args))
 
@@ -184,11 +178,11 @@ class SelectModelAction(argparse.Action):
 
         Identifiable model names are:
 
-            * the model id (exactly matching the MODEL_SPEC['model_id'])
+            * the model id (exactly matching the MODEL_SPEC.model_id)
             * a uniquely identifiable prefix for the model name (e.g. "d"
               matches "delineateit", but "co" matches both
               "coastal_vulnerability" and "coastal_blue_carbon").
-            * a known model alias, as registered in MODEL_SPEC['aliases']
+            * a known model alias, as registered in MODEL_SPEC.aliases
 
         If no single model can be identified based on these rules, an error
         message is printed and the parser exits with a nonzero exit code.
@@ -436,12 +430,9 @@ def main(user_args=None):
             target_model = models.model_id_to_pyname[args.model]
             model_module = importlib.reload(
                 importlib.import_module(name=target_model))
-            spec = model_module.MODEL_SPEC
+            model_spec = model_module.MODEL_SPEC
 
-            if args.json:
-                message = spec_utils.serialize_args_spec(spec)
-            else:
-                message = pprint.pformat(spec)
+            message = model_spec.to_json()
             sys.stdout.write(message)
             parser.exit(0)
 
@@ -495,7 +486,7 @@ def main(user_args=None):
                 try:
                     # If there's an exception from creating metadata
                     # I don't think we want to indicate a model failure
-                    spec_utils.generate_metadata_for_outputs(
+                    spec.generate_metadata_for_outputs(
                         model_module, parsed_datastack.args)
                 except Exception as exc:
                     LOGGER.warning(

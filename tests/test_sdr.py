@@ -3,7 +3,6 @@ import os
 import shutil
 import tempfile
 import unittest
-import pytest
 
 import numpy
 import pygeoprocessing
@@ -14,6 +13,7 @@ gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr')
 SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
+
 
 def assert_expected_results_in_vector(expected_results, vector_path):
     """Assert one feature vector maps to expected_results key/value pairs."""
@@ -371,7 +371,7 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            'could not be interpreted as ratios', str(context.exception))
+            'could not be interpreted as RatioInput', str(context.exception))
 
     def test_lucode_not_a_number(self):
         """SDR test expected exception for invalid data in lucode column."""
@@ -392,7 +392,7 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            'could not be interpreted as integers', str(context.exception))
+            'could not be interpreted as IntegerInput', str(context.exception))
 
     def test_missing_lulc_value(self):
         """SDR test for ValueError when LULC value not found in table."""

@@ -149,6 +149,31 @@ describe('requests to flask endpoints', () => {
       break;
     }
   });
+
+  test('get geometamaker profile', async () => {
+    const profile = await serverRequests.getGeoMetaMakerProfile();
+    expect(profile).toHaveProperty('contact');
+    expect(profile).toHaveProperty('license');
+  });
+
+  test('set geometamaker profile', async () => {
+    const result = {
+      message: 'Metadata profile saved',
+      error: false,
+    };
+    jest.spyOn(window, 'fetch')
+      .mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(result),
+      });
+
+    const payload = {
+      contact: {},
+      license: {},
+    };
+    const response = await serverRequests.setGeoMetaMakerProfile(payload);
+    expect(response).toStrictEqual(result);
+  });
 });
 
 /** Some tests make http requests to check that links are status 200.
@@ -187,18 +212,18 @@ describe('Test building model UIs and forum links', () => {
     'coastal_vulnerability',
     'crop_production_percentile',
     'crop_production_regression',
-    //'delineateit',
+    'delineateit',
     'forest_carbon_edge_effect',
     'habitat_quality',
     'habitat_risk_assessment',
-    //'ndr',
+    'ndr',
     'pollination',
-    //'recreation',
+    'recreation',
     'routedem',
     'scenario_generator_proximity',
-    //'scenic_quality',
-    //'sdr',
-    //'seasonal_water_yield',
+    'scenic_quality',
+    'sdr',
+    'seasonal_water_yield',
     'stormwater',
     'urban_cooling_model',
     'urban_flood_risk_mitigation',
@@ -214,7 +239,8 @@ describe('Test building model UIs and forum links', () => {
         modelID={modelID}
         argsSpec={argsSpec.args}
         userguide={argsSpec.userguide}
-        uiSpec={argsSpec.ui_spec}
+        isCoreModel={true}
+        inputFieldOrder={argsSpec.input_field_order}
         argsInitValues={undefined}
         investExecute={() => {}}
         nWorkers="-1"
@@ -233,6 +259,7 @@ describe('Test building model UIs and forum links', () => {
     const { findByRole } = render(
       <ResourcesLinks
         modelID={modelID}
+        isCoreModel={true}
         docs={argsSpec.userguide}
       />
     );

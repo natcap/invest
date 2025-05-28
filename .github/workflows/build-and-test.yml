@@ -157,7 +157,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
-          path: dist/*.whl
+          path: dist
 
       - name: Upload conda env artifact
         uses: actions/upload-artifact@v4
@@ -387,9 +387,8 @@ jobs:
           Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv  # Choco-provided command to reload environment variables
 
-        # Ignoring compiled modules for plugin development
-        #- name: Build userguide
-        #run: make userguide
+      - name: Build userguide
+        run: make userguide
 
       - name: Build binaries
         run: make CONDA="$MAMBA_EXE" binaries
@@ -453,8 +452,17 @@ jobs:
         working-directory: workbench
         run: npx cross-env CI=true yarn run test-electron-app
 
+      # gsutil (part of make deploy) can't use python 3.13 yet, so set up 3.12 for use for now.
+      - name: Set up python 3.12 for gsutil
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+        id: python-312-task
+
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
+        env:
+          CLOUDSDK_GSUTIL_PYTHON: ${{ steps.python-312-task.outputs.python-path }}
         run: make deploy
 
       # This relies on the file existing on GCP, so it must be run after `make
@@ -473,12 +481,12 @@ jobs:
           name: Workbench-${{ runner.os }}-binary
           path: workbench/dist/*.${{ matrix.binary-extension }}
 
-#      - name: Upload user's guide artifact (Windows)
-#        if: matrix.os == 'windows-latest'
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: InVEST-user-guide
-#          path: dist/InVEST_*_userguide.zip
+      - name: Upload user's guide artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: InVEST-user-guide
+          path: dist/InVEST_*_userguide.zip
 
       - name: Upload workbench logging from puppeteer
         uses: actions/upload-artifact@v4

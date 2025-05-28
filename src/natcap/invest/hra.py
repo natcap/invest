@@ -17,7 +17,7 @@ from osgeo import ogr
 from osgeo import osr
 
 from . import gettext
-from . import spec_utils
+from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
@@ -48,7 +48,7 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
 
-MODEL_SPEC = {
+MODEL_SPEC = spec.build_model_spec({
     "model_id": "habitat_risk_assessment",
     "model_title": gettext("Habitat Risk Assessment"),
     "userguide": "habitat_risk_assessment.html",
@@ -62,13 +62,12 @@ MODEL_SPEC = {
             ['aoi_vector_path'],
             ['n_overlapping_stressors'],
             ['visualize_outputs']
-        ],
-        "hidden": ["n_workers"]
+        ]
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": spec.WORKSPACE,
+        "results_suffix": spec.SUFFIX,
+        "n_workers": spec.N_WORKERS,
         "info_table_path": {
             "name": gettext("habitat stressor table"),
             "about": gettext("A table describing each habitat and stressor."),
@@ -92,7 +91,7 @@ MODEL_SPEC = {
                             "values besides 0 or 1 will be treated as 0.")
                     }},
                     "fields": {},
-                    "geometries": spec_utils.ALL_GEOMS,
+                    "geometries": spec.ALL_GEOMS,
                     "about": gettext(
                         "Map of where the habitat or stressor exists. For "
                         "rasters, a pixel value of 1 indicates presence of "
@@ -184,7 +183,7 @@ MODEL_SPEC = {
             }
         },
         "aoi_vector_path": {
-            **spec_utils.AOI,
+            **spec.AOI,
             "projected": True,
             "projection_units": u.meter,
             "fields": {
@@ -297,7 +296,7 @@ MODEL_SPEC = {
                     "about": (
                         "Map of habitat-specific risk visualized in gradient "
                         "color from white to red on a map."),
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "fields": {
                         "Risk Score": {
                             "type": "integer",
@@ -312,7 +311,7 @@ MODEL_SPEC = {
                     "about": (
                         "Map of ecosystem risk visualized in gradient "
                         "color from white to red on a map."),
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "fields": {
                         "Risk Score": {
                             "type": "integer",
@@ -325,7 +324,7 @@ MODEL_SPEC = {
                 },
                 "STRESSOR_[STRESSOR].geojson": {
                     "about": "Map of stressor extent visualized in orange color.",
-                    "geometries": spec_utils.POLYGON,
+                    "geometries": spec.POLYGON,
                     "fields": {}
                 },
                 "SUMMARY_STATISTICS.csv": {
@@ -395,7 +394,7 @@ MODEL_SPEC = {
                 "polygonized_[HABITAT/STRESSOR].gpkg": {
                     "about": "Polygonized habitat or stressor map",
                     "fields": {},
-                    "geometries": spec_utils.POLYGON
+                    "geometries": spec.POLYGON
                 },
                 "reclass_[HABITAT]_[STRESSOR].tif": {
                     "about": (
@@ -419,7 +418,7 @@ MODEL_SPEC = {
                         "were provided in a spatial vector format, it will be "
                         "reprojected to the AOI projection."),
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS
+                    "geometries": spec.POLYGONS
                 },
                 "rewritten_[HABITAT/STRESSOR/CRITERIA].tif": {
                     "about": (
@@ -439,16 +438,16 @@ MODEL_SPEC = {
                         "provided are simplified to 1/2 the user-defined "
                         "raster resolution in order to speed up rasterization."),
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS
+                    "geometries": spec.POLYGONS
                 }
             }
         },
-        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec.TASKGRAPH_DIR
     }
-}
+})
 
-_VALID_RISK_EQS = set(MODEL_SPEC['args']['risk_eq']['options'].keys())
-_VALID_DECAY_TYPES = set(MODEL_SPEC['args']['decay_eq']['options'].keys())
+_VALID_RISK_EQS = set(MODEL_SPEC.get_input('risk_eq').options.keys())
+_VALID_DECAY_TYPES = set(MODEL_SPEC.get_input('decay_eq').options.keys())
 
 
 def execute(args):
@@ -1640,14 +1639,12 @@ def _simplify(source_vector_path, tolerance, target_vector_path,
     target_layer_name = os.path.splitext(
         os.path.basename(target_vector_path))[0]
 
-    # Using wkbUnknown is important here because a user can provide a single
-    # vector with multiple geometry types.  GPKG can handle whatever geom types
-    # we want it to use, but it will only be a conformant GPKG if and only if
-    # we set the layer type to ogr.wkbUnknown.  Otherwise, the GPKG standard
-    # would expect that all geometries in a layer match the geom type of the
-    # layer and GDAL will raise a warning if that's not the case.
+    # Use the same geometry type from the source layer. This may be wkbUnknown
+    # if the layer contains multiple geometry types.
     target_layer = target_vector.CreateLayer(
-        target_layer_name, source_layer.GetSpatialRef(), ogr.wkbUnknown)
+        target_layer_name,
+        srs=source_layer.GetSpatialRef(),
+        geom_type=source_layer.GetGeomType())
 
     for field in source_layer.schema:
         if field.GetName().lower() in preserve_columns:
@@ -1791,8 +1788,8 @@ def _parse_info_table(info_table_path):
     info_table_path = os.path.abspath(info_table_path)
 
     try:
-        table = validation.get_validated_dataframe(
-            info_table_path, **MODEL_SPEC['args']['info_table_path'])
+        table = MODEL_SPEC.get_input(
+            'info_table_path').get_validated_dataframe(info_table_path)
     except ValueError as err:
         if 'Index has duplicate keys' in str(err):
             raise ValueError("Habitat and stressor names may not overlap.")
@@ -2474,4 +2471,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(args, MODEL_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC)

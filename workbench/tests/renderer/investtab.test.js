@@ -15,7 +15,8 @@ import {
   writeParametersToFile,
   fetchValidation,
   fetchDatastackFromFile,
-  fetchArgsEnabled
+  fetchArgsEnabled,
+  getDynamicDropdowns
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import setupDialogs from '../../src/main/setupDialogs';
@@ -39,7 +40,10 @@ function renderInvestTab(job = DEFAULT_JOB) {
       tabID={tabID}
       saveJob={() => {}}
       updateJobProperties={() => {}}
-      investList={{ foo: { modelTitle: 'Foo Model' } }}
+      investList={{
+        carbon: { modelTitle: 'Carbon Model', type: 'core' },
+        foo: { modelTitle: 'Foo Model', type: 'plugin' },
+      }}
     />
   );
   return utils;
@@ -50,9 +54,7 @@ describe('Run status Alert renders with status from a recent run', () => {
     pyname: 'natcap.invest.foo',
     model_title: 'Foo Model',
     userguide: 'foo.html',
-    ui_spec: {
-      order: [['workspace']],
-    },
+    input_field_order: [['workspace']],
     args: {
       workspace: {
         name: 'Workspace',
@@ -66,6 +68,7 @@ describe('Run status Alert renders with status from a recent run', () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     fetchArgsEnabled.mockResolvedValue({ workspace: true });
+    getDynamicDropdowns.mockResolvedValue({});
     setupDialogs();
   });
 
@@ -88,6 +91,7 @@ describe('Run status Alert renders with status from a recent run', () => {
       status: status,
       argsValues: {},
       logfile: 'foo.txt',
+      type: 'core',
     });
 
     const { findByRole } = renderInvestTab(job);
@@ -120,7 +124,7 @@ describe('Open Workspace button', () => {
     model_name: 'Foo Model',
     userguide: 'foo.html',
     args: {},
-    ui_spec: { order: [] },
+    input_field_order: [],
   };
 
   const baseJob = {
@@ -131,6 +135,7 @@ describe('Open Workspace button', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
+    getDynamicDropdowns.mockResolvedValue({});
     setupDialogs();
   });
 
@@ -186,9 +191,7 @@ describe('Sidebar Buttons', () => {
     pyname: 'natcap.invest.foo',
     model_title: 'Foo Model',
     userguide: 'foo.html',
-    ui_spec: {
-      order: [['workspace', 'port']],
-    },
+    input_field_order: [['workspace', 'port']],
     args: {
       workspace: {
         name: 'Workspace',
@@ -206,6 +209,7 @@ describe('Sidebar Buttons', () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     fetchArgsEnabled.mockResolvedValue({ workspace: true, port: true });
+    getDynamicDropdowns.mockResolvedValue({});
     setupOpenExternalUrl();
     setupOpenLocalHtml();
     ipcRenderer.invoke.mockImplementation((channel) => {
@@ -573,6 +577,25 @@ describe('Sidebar Buttons', () => {
     });
   });
 
+  test('Plugin Documentation link points to userguide URL from plugin model spec and invokes OPEN_EXTERNAL_URL', async () => {
+    const spy = jest.spyOn(ipcRenderer, 'send')
+      .mockImplementation(() => Promise.resolve());
+
+    const { findByRole, queryByRole } = renderInvestTab(new InvestJob({
+      modelID: 'foo',
+      modelTitle: 'Foo Model',
+    }));
+    const ugLink = await queryByRole('link', { name: /user's guide/i });
+    expect(ugLink).toBeNull();
+    const docsLink = await findByRole('link', { name: /plugin documentation/i });
+    expect(docsLink.getAttribute('href')).toEqual(spec.userguide);
+    await userEvent.click(docsLink);
+    await waitFor(() => {
+      const calledChannels = spy.mock.calls.map(call => call[0]);
+      expect(calledChannels).toContain(ipcMainChannels.OPEN_EXTERNAL_URL);
+    });
+  });
+
   test('Forum link opens externally', async () => {
     const { findByRole } = renderInvestTab();
     const link = await findByRole('link', { name: /frequently asked questions/i });
@@ -588,9 +611,7 @@ describe('InVEST Run Button', () => {
     pyname: 'natcap.invest.bar',
     model_title: 'Bar Model',
     userguide: 'bar.html',
-    ui_spec: {
-      order: [['a', 'b', 'c']],
-    },
+    input_field_order: [['a', 'b', 'c']],
     args: {
       a: {
         name: 'abar',

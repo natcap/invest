@@ -27,9 +27,9 @@ InVEST model names:
 - Urban Flood Risk
 - Urban Nature Access
 - Urban Stormwater Retention
+- Visitation: Recreation and Tourism
 - Wave Energy
 - Wind Energy
-- Visitation: Recreation and Tourism
 Workbench fixes/enhancements:
 - Workbench
 Everything else:
@@ -56,15 +56,76 @@ The order of groups should be as follows:
 6. InVEST model Z (model names should be sorted A-Z) -->
     <!-- Unreleased Changes
 ------------------ -->
+    <section id="a1-2025-05-28">
+        <h1>3.16.0a1 (2025-05-28)</h1>
+        <section id="general">
+            <h2>General</h2>
+            <ul>
+                <li>The workbench and the natcap.invest python package now support plugins.</li>
+            </ul>
+        </section>
+        <section id="workbench">
+            <h2>Workbench</h2>
+            <ul>
+                <li>Metadata is now generated for files when creating a datastack (with any existing user-added metadata preserved) (<a href="https://github.com/natcap/invest/issues/1774">#1774</a>).</li>
+            </ul>
+        </section>
+        <section id="coastal-blue-carbon">
+            <h2>Coastal Blue Carbon</h2>
+            <ul>
+                <li>Updated the Coastal Blue Carbon documentation to clarify what happens when a class transitions from a state of accumulation or decay to a No Carbon Change ("NCC") state. (<a href="https://github.com/natcap/invest/issues/671">#671</a>).</li>
+            </ul>
+        </section>
+        <section id="hra">
+            <h2>HRA</h2>
+            <ul>
+                <li>The intermediate simplified vectors will now inherit their geometry type from the input vectors, rather than using <code>ogr.wkbUnknown</code> (<a href="https://github.com/natcap/invest/issues/1881">#1881</a>).</li>
+            </ul>
+        </section>
+        <section id="ndr">
+            <h2>NDR</h2>
+            <ul>
+                <li>Fixed a bug in the effective retention calculation where nodata pour point pixels were mistakenly used as real data. The effect of this change is most pronounced along stream edges and should not affect the overall pattern of results. (<a href="https://github.com/natcap/invest/issues/1845">#1845</a>)</li>
+                <li><code>stream.tif</code> is now saved in the main output folder rather than the intermediate folder (<a href="https://github.com/natcap/invest/issues/1864">#1864</a>).</li>
+                <li>Added a feature that allows the nutrient load to be entered as an application rate or as an "extensive"/export measured value. Previously, the model's biophysical table expected the <code>load_[n|p]</code> column to be an "extensive"/export measured value. Now, a new column for both nitrogen and phosphorous, <code>load_type_[n|p]</code>, is required with expected values of either <code>application-rate</code> or <code>measured-runoff</code>. See the Data Needs section of the NDR User Guide for more details. (<a href="https://github.com/natcap/invest/issues/1044">#1044</a>).</li>
+                <li>Fixed a bug where input rasters (e.g. LULC) without a defined nodata value could cause an OverflowError. (<a href="https://github.com/natcap/invest/issues/1904">#1904</a>).</li>
+            </ul>
+        </section>
+        <section id="seasonal-water-yield">
+            <h2>Seasonal Water Yield</h2>
+            <ul>
+                <li><code>stream.tif</code> is now saved in the main output folder rather than the intermediate folder (<a href="https://github.com/natcap/invest/issues/1864">#1864</a>).</li>
+            </ul>
+        </section>
+        <section id="urban-flood-risk">
+            <h2>Urban Flood Risk</h2>
+            <ul>
+                <li>The raster output <code>Runoff_retention.tif</code> has been renamed <code>Runoff_retention_index.tif</code> to clarify the difference between it and <code>Runoff_retention_m3.tif</code> (<a href="https://github.com/natcap/invest/issues/1837">#1837</a>).</li>
+            </ul>
+        </section>
+        <section id="visitation-recreation-and-tourism">
+            <h2>Visitation: Recreation and Tourism</h2>
+            <ul>
+                <li>user-day variables <code>pr_PUD</code>, <code>pr_TUD</code>, and <code>avg_pr_UD</code> are calculated and written to <code>regression_data.gpkg</code> even if the Compute Regression option is not selected. (<a href="https://github.com/natcap/invest/issues/1893">#1893</a>).</li>
+            </ul>
+        </section>
+        <section id="wind-energy">
+            <h2>Wind Energy</h2>
+            <ul>
+                <li>The model no longer returns results as rasters; instead, values are written to the output <code>wind_energy_points</code> shapefile for each point (<a href="https://github.com/natcap/invest/issues/1698">#1698</a>). Any Decision Record (ADR): <a href="https://github.com/natcap/invest/blob/main/doc/decision-records/ADR-0004-Remove-Wind-Energy-Raster-Outputs.md">ADR-0004: Remove Wind Energy Raster Outputs</a></li>
+                <li>The output <code>wind_energy_points.shp</code> no longer returns Harvested or Valuation-related values for points that are invalid wind farm locations due to depth or distance constraints (<a href="https://github.com/natcap/invest/issues/1699">#1699</a>).</li>
+            </ul>
+        </section>
+    </section>
     <section id="section-1">
         <h1>3.15.1 (2025-05-06)</h1>
-        <section id="general">
+        <section id="general-1">
             <h2>General</h2>
             <ul>
                 <li>Handle exceptions that can arise during <code>validation.check_spatial_overlap</code> when a layer's bounding box cannot be transformed to EPSG:4326. (<a href="https://github.com/natcap/invest/issues/1849">#1849</a>).</li>
             </ul>
         </section>
-        <section id="workbench">
+        <section id="workbench-1">
             <h2>Workbench</h2>
             <ul>
                 <li>Fixed a bug that did not allow users to select a folder as the location to extract a datastack archive. (<a href="https://github.com/natcap/invest/issues/1879">#1879</a>).</li>
@@ -78,13 +139,13 @@ The order of groups should be as follows:
                 <li>The Regression model now correctly validates crop names against the existence of a corresponding regression yield table (<a href="https://github.com/natcap/invest/issues/1723">#1723</a>).</li>
             </ul>
         </section>
-        <section id="seasonal-water-yield">
+        <section id="seasonal-water-yield-1">
             <h2>Seasonal Water Yield</h2>
             <ul>
                 <li>Fixed bug in quickflow calculation where <cite>NoData</cite> values in precipitation were being incorrectly converted to 0's (<a href="https://github.com/natcap/invest/issues/1592">#1592</a>).</li>
             </ul>
         </section>
-        <section id="wind-energy">
+        <section id="wind-energy-1">
             <h2>Wind Energy</h2>
             <ul>
                 <li>Fixed a bug where the model would error if no AOI was provided when run from the workbench or from a datastack file where the value for 'aoi_vector_path' was an empty string. (<a href="https://github.com/natcap/invest/issues/1900">#1900</a>)</li>
@@ -110,7 +171,7 @@ The order of groups should be as follows:
                 <li>InVEST model outputs now include metadata. Open the '.yml' files in a text editor to read and add to the metadata.</li>
             </ul>
         </section>
-        <section id="general-1">
+        <section id="general-2">
             <h2>General</h2>
             <ul>
                 <li>Fixed an issue where a user's PROJ_DATA environment variable could trigger a RuntimeError about a missing proj.db file. <a href="https://github.com/natcap/invest/issues/1742">https://github.com/natcap/invest/issues/1742</a></li>
@@ -122,7 +183,7 @@ The order of groups should be as follows:
                 <li>Removed the warning about <code>gdal.UseExceptions()</code>. Python API users should still call <code>gdal.UseExceptions()</code>, but no longer need to do so before importing <code>natcap.invest</code>. <a href="https://github.com/natcap/invest/issues/1702">https://github.com/natcap/invest/issues/1702</a></li>
             </ul>
         </section>
-        <section id="workbench-1">
+        <section id="workbench-2">
             <h2>Workbench</h2>
             <ul>
                 <li>Auto-scrolling of log output is halted on user-initiated scrolling, enabling easier inspection of log output while a model is running (<a href="https://github.com/natcap/invest/issues/1533">InVEST #1533</a>).</li>
@@ -145,7 +206,7 @@ The order of groups should be as follows:
                 <li>Fixed bug where discount rate and annual price change were incorrectly treated as ratios instead of percentages. (<a href="https://github.com/natcap/invest/issues/1827">InVEST #1827</a>).</li>
             </ul>
         </section>
-        <section id="coastal-blue-carbon">
+        <section id="coastal-blue-carbon-1">
             <h2>Coastal Blue Carbon</h2>
             <ul>
                 <li>The <code>code</code> column in the model's biophysical table input, as well as the <code>code</code> column in the preprocessor's LULC lookup table input and <code>carbon_pool_transient_template</code> output, have been renamed <code>lucode</code>, for consistency with other InVEST models (<a href="https://github.com/natcap/invest/issues/1249">InVEST #1249</a>).</li>
@@ -171,7 +232,7 @@ The order of groups should be as follows:
                 <li>Adjusted total habitat degradation calculation to calculate degradation for each threat and create intermediate degradation rasters. Total degradation is now calculated using these individual threat degradation rasters. <a href="https://github.com/natcap/invest/issues/1100">https://github.com/natcap/invest/issues/1100</a></li>
             </ul>
         </section>
-        <section id="ndr">
+        <section id="ndr-1">
             <h2>NDR</h2>
             <ul>
                 <li>Align rasters to the grid of the DEM raster (<a href="https://github.com/natcap/invest/issues/1488">#1488</a>).</li>
@@ -199,7 +260,7 @@ The order of groups should be as follows:
                 <li>D8 routing is now supported in addition to MFD (<a href="https://github.com/natcap/invest/issues/1440">#1440</a>).</li>
             </ul>
         </section>
-        <section id="seasonal-water-yield-1">
+        <section id="seasonal-water-yield-2">
             <h2>Seasonal Water Yield</h2>
             <ul>
                 <li>D8 routing is now supported in addition to MFD (<a href="https://github.com/natcap/invest/issues/1440">#1440</a>).</li>
@@ -219,7 +280,7 @@ The order of groups should be as follows:
                 <li>Fixed a bug causing <code>inf</code> values in volume outputs because nodata values were not being set correctly (<a href="https://github.com/natcap/invest/issues/1850">InVEST #1850</a>).</li>
             </ul>
         </section>
-        <section id="visitation-recreation-and-tourism">
+        <section id="visitation-recreation-and-tourism-1">
             <h2>Visitation: Recreation and Tourism</h2>
             <ul>
                 <li>Added a database of geotagged tweets to support calculating twitter-user-days (TUD) as proxy for visitation rates. The model now calculates photo-user-days (PUD) and TUD and uses their average as the response variable in the regression model. Please refer to the User's Guide for more details on the regression model.</li>
@@ -227,7 +288,7 @@ The order of groups should be as follows:
                 <li>Regression coefficients are still listed in a summary text file, and are now also included in a tabular output: "regression_coefficients.csv".</li>
             </ul>
         </section>
-        <section id="wind-energy-1">
+        <section id="wind-energy-2">
             <h2>Wind Energy</h2>
             <ul>
                 <li>Fixed a bug that could cause the Workbench to crash when running the Wind Energy model with <code>Taskgraph</code> logging set to <code>DEBUG</code> (<a href="https://github.com/natcap/invest/issues/1497">InVEST #1497</a>).</li>
