@@ -61,9 +61,15 @@
 
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+
+General
+=======
+* Fixed a micromamba command bug in 3.16.0a1 that was calling micromamba
+  directly, instead of using the path to the executable
+  (`#1966 <https://github.com/natcap/invest/issues/1965>`_).
+
 
 3.16.0a1 (2025-05-28)
 ---------------------
