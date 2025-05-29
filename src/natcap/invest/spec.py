@@ -1179,7 +1179,7 @@ class DirectoryOutput(Output):
     or an unknown number of file-based outputs, by grouping them together in a
     directory.
     """
-    contents: typing.Union[typing.Iterable[Input], None] = None
+    contents: typing.Union[typing.Iterable[Output], None] = None
     """An iterable of `Output`s representing the contents of this directory.
     The `key` of each output must be the file name or pattern."""
 
