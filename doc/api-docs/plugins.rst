@@ -105,7 +105,7 @@ The plugin python package must have the attributes ``MODEL_SPEC``, ``execute``, 
 ~~~~~~~~~~~~~~
 An instance of :func:`natcap.invest.spec.ModelSpec`. This object stores key information about the model, its inputs, and its outputs. See the :ref:`API Reference<api>` for the specifics on instantiating this object.
 
-Here is an example ``MODEL_SPEC`` taken from the demo plugin. It describes a model that takes in three inputs: a raster file; an integer multiplication factor; and a workspace directory in which to produce the results. The model produces a raster file output which is the result of multiplying the input raster pixelwise by the multiplication factor. ::
+Here is an example ``MODEL_SPEC`` taken from the demo plugin. It describes a model that takes in three inputs: a raster file, an integer multiplication factor, and a workspace directory in which to produce the results. The model produces a raster file output which is the result of multiplying the input raster pixelwise by the multiplication factor. ::
 
     from natcap.invest import spec
 
