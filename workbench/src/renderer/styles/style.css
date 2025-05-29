@@ -1,5 +1,7 @@
 :root {
   font-size: 16px;
+  --invest-green: #148F68;
+  --digital-red: #B1040E;
   --bootstrap-secondary-gray:#6c757d;
 }
 
@@ -13,8 +15,6 @@
   to appear with height: 100%, even when parent has a fixed height;
 */
 body {
-  --invest-green: #148F68;
-  --color-error: #f13232;
   --header-height: 64px;
   --content-height: calc(100vh - var(--header-height));
   min-height: 100vh;
@@ -386,7 +386,7 @@ exceed 100% of window.*/
 }
 
 .card-footer .status-error {
-  color: var(--color-error);
+  color: var(--digital-red);
 }
 
 .card-footer .status-success {
@@ -650,11 +650,11 @@ input[type=text]::placeholder {
 }
 
 #log-display .invest-log-primary-warning {
-  color: var(--color-error);
+  color: var(--digital-red);
 }
 
 #log-display .invest-log-error {
-  color: var(--color-error);
+  color: var(--digital-red);
   font-weight: bold;
 }
 
@@ -762,7 +762,7 @@ input[type=text]::placeholder {
 }
 
 .plugin-error {
-  color: var(--color-error);
+  color: var(--digital-red);
 }
 
 .plugin-install-remove-error {
