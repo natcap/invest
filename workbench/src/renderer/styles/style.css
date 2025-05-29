@@ -221,7 +221,6 @@ exceed 100% of window.*/
 .invest-button:hover {
   color: white;
   background-color: var(--invest-green);
-  opacity: 75%;
   font-weight: 600;
 }
 
@@ -283,7 +282,6 @@ exceed 100% of window.*/
   position: relative;
   display: flex;
   background-color: var(--invest-green);
-  filter: opacity(0.75);
   padding: var(--card-header-top-bottom-padding) 3.375rem var(--card-header-top-bottom-padding) 1.25rem;
   min-height: calc(var(--card-header-button-height) + 2*var(--card-header-button-offset));
   /* Adjust width & margins to correct the optical illusion created by the card border. */
