@@ -12,7 +12,7 @@ authors:
     website: 'https://naturalcapitalproject.stanford.edu'
 identifiers:
   - type: doi
-    value: 10.60793/invest-3.16.0
+    value: 10.60793/natcap-invest-3.16.0
     description: Persistent identifier for this version of InVEST
 repository-code: 'https://github.com/natcap/invest'
 url: 'https://naturalcapitalproject.stanford.edu/software/invest'
