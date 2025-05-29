@@ -99,10 +99,10 @@ export default class HomeTab extends React.Component {
             {investButtons}
             <ListGroup.Item
               key="browse"
-              className="py-2 border-0"
+              className="px-0 py-2 border-0"
             >
               <OpenButton
-                className="w-100 border-1 py-2 pl-3 text-left text-truncate"
+                className="open-button text-wrap"
                 openInvestModel={openInvestModel}
                 investList={investList}
               />
