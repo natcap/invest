@@ -322,27 +322,29 @@ test.skip('Install and run a plugin', async () => {
   });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
   const downloadModal = await page.waitForSelector('.modal-dialog');
-  const downloadModalCancel = await downloadModal.waitForSelector(
-    'aria/[name="close modal"][role="button"]'
+  const downloadModalClose = await downloadModal.waitForSelector(
+    'aria/[name="Close modal"][role="button"]'
   );
   await page.waitForTimeout(WAIT_TO_CLICK); // waiting for click handler to be ready
-  await downloadModalCancel.click();
+  await downloadModalClose.click();
   const changelogModal = await page.waitForSelector('.modal-dialog');
-  const changelogModalCancel = await changelogModal.waitForSelector(
+  const changelogModalClose = await changelogModal.waitForSelector(
     'aria/[name="Close modal"][role="button"]'
   );
   await page.waitForTimeout(WAIT_TO_CLICK);
-  await changelogModalCancel.click();
+  await changelogModalClose.click();
 
   const dropdownButton = await page.waitForSelector('aria/[name="menu"][role="button"]');
   await dropdownButton.click();
-  const pluginsModalButton = await page.waitForSelector('aria/[name="Manage plugins"][role="button"]');
+  const pluginsModalButton = await page.waitForSelector('aria/[name="Manage Plugins"][role="button"]');
   await pluginsModalButton.click();
   console.log('opened plugin modal');
   const urlInputField = await page.waitForSelector('aria/[name="Git URL"][role="textbox"]');
   console.log('found url field');
   await urlInputField.type(TEST_PLUGIN_GIT_URL, { delay: TYPE_DELAY });
   console.log('typed into input field');
+  const userAcknowledgmentCheckbox = await page.waitForSelector('#user-acknowledgment-checkbox');
+  await userAcknowledgmentCheckbox.click();
   const submitButton = await page.waitForSelector('aria/[name="Add"][role="button"]');
   console.log('found submit button');
   console.log(submitButton);
