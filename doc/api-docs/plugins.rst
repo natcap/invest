@@ -58,7 +58,7 @@ How to develop a plugin
 -----------------------
 .. note:: This guide is written for python developers. If you are unfamiliar with python packaging, the `Python Packaging User Guide <https://packaging.python.org/en/latest/>`_ is a helpful resource.
 
-The `plugin template repo <link URL>`_ is a great place to start. The core InVEST models' `source code <https://github.com/natcap/invest/tree/main/src/natcap/invest>`_ is also full of examples.
+The `plugin template repo <https://github.com/natcap/invest-demo-plugin>`_ is a great place to start. The core InVEST models' `source code <https://github.com/natcap/invest/tree/main/src/natcap/invest>`_ is also full of examples.
 
 At its most basic, a plugin is a python package. Begin by creating a directory
 with a simple python package structure: ::
@@ -155,7 +155,7 @@ This function executes the model. When a user runs the model, this function is i
 
 Arguments: ``args`` (dictionary). Maps input ids (matching the ``id`` of each ``Input`` in ``MODEL_SPEC.inputs``) to their values to run the model on.
 
-Returns: ``None``. When ``execute`` returns, the model run is complete.
+Returns: ``None``
 
 Here is an example implementation of ``execute`` corresponding to the example ``MODEL_SPEC`` above. It multiplies a raster pixelwise by an integer value, and writes out the result to a new raster file: ::
 
