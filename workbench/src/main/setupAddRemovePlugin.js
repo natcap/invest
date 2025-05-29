@@ -11,6 +11,7 @@ import crypto from 'crypto';
 import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
 import { settingsStore } from './settingsStore';
+import { shutdownPythonProcess } from './createPythonFlaskProcess';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -147,15 +148,14 @@ export function setupAddPlugin(i18n) {
            'python', '-m', 'pip', 'install', installString]
         );
         logger.info('installed plugin into its env');
-
         event.sender.send('plugin-install-status', i18n.t('Importing plugin...'));
         // Access plugin metadata from the MODEL_SPEC
         const modelID = execSync(
-          `micromamba run --prefix "${pluginEnvPrefix}" ` +
+          `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
           `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
         ).toString().trim();
         const modelTitle= execSync(
-          `micromamba run --prefix "${pluginEnvPrefix}" ` +
+          `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
           `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
         ).toString().trim();
 
@@ -178,7 +178,7 @@ export function setupAddPlugin(i18n) {
         );
         logger.info('successfully added plugin');
       } catch (error) {
-        console.log(error);
+        logger.info(error);
         return error;
       }
     }
@@ -191,6 +191,9 @@ export function setupRemovePlugin() {
     async (e, pluginID) => {
       logger.info('removing plugin', pluginID);
       try {
+        // Shut down the plugin server process
+        const pluginPID = settingsStore.get(`plugins.${pluginID}.pid`);
+        await shutdownPythonProcess(pluginPID);
         // Delete the plugin's conda env
         const env = settingsStore.get(`plugins.${pluginID}.env`);
         const micromamba = settingsStore.get('micromamba');

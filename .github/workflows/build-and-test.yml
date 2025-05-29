@@ -452,8 +452,17 @@ jobs:
         working-directory: workbench
         run: npx cross-env CI=true yarn run test-electron-app
 
+      # gsutil (part of make deploy) can't use python 3.13 yet, so set up 3.12 for use for now.
+      - name: Set up python 3.12 for gsutil
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+        id: python-312-task
+
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
+        env:
+          CLOUDSDK_GSUTIL_PYTHON: ${{ steps.python-312-task.outputs.python-path }}
         run: make deploy
 
       # This relies on the file existing on GCP, so it must be run after `make
