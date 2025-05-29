@@ -1,7 +1,7 @@
 .. _plugins:
 
-InVEST Plugins: Developer's Guide
-=================================
+InVEST® Plugins: Developer's Guide
+==================================
 
 What is a plugin?
 -----------------
@@ -29,6 +29,9 @@ where a user can enter the model inputs, run the model, watch its progress, and
 access the results. All the necessary information to display the model in the
 workbench is pulled from the plugin python package - no frontend development needed.
 This is handy when resources are too limited to develop a separate GUI for a project.
+It is a major benefit for developers to be able to focus on their model and not
+worry about maintaining a desktop application or distributing it across multiple
+operating systems.
 
 The data validation component of InVEST is also very useful for projects that don't
 have enough resources to develop this independently. The plugin API requires
@@ -44,12 +47,11 @@ together and comparing them.
 The plugin API is a useful framework in which to think of developing a model.
 This framework is helpful when tackling the task of turning a "model" (which may
 exist in the form of mathematical equations, scripts, or other software)
-into a well-documented, reusable, distributable software tool.
-
-Implementing the plugin API requires attention to many details that are easily
-overlooked when writing a basic script. Going through the process of developing
-a model into a plugin will help to catch bugs and identify assumptions that may
-exist in your math or your code.
+into a well-documented, reusable, distributable software tool. Implementing the
+plugin API requires attention to many details that are easily overlooked when
+writing a basic script. Going through the process of developing a model into a
+plugin will help to catch bugs and identify assumptions that may exist in your
+math or your code.
 
 
 How to develop a plugin
@@ -103,6 +105,50 @@ The plugin python package must have the attributes ``MODEL_SPEC``, ``execute``, 
 ~~~~~~~~~~~~~~
 An instance of :func:`natcap.invest.spec.ModelSpec`. This object stores key information about the model, its inputs, and its outputs. See the API documentation for the specifics on instantiating this object.
 
+Here is an example ``MODEL_SPEC`` taken from the demo plugin. It describes a model that takes in three inputs: a raster file; an integer multiplication factor; and a workspace directory in which to produce the results. The model produces a raster file output which is the result of multiplying the input raster pixelwise by the multiplication factor. ::
+
+    from natcap.invest import spec
+
+    MODEL_SPEC = spec.ModelSpec(
+        model_id="demo",
+        model_title="Demo Plugin",
+        userguide='',
+        input_field_order=[
+            ['workspace_dir', 'results_suffix'],
+            ['raster_path', 'factor']],
+        inputs=[
+            spec.DirectoryInput(
+                id="workspace_dir",
+                name=gettext("workspace"),
+                about=gettext(
+                    "The folder where all the model's output files will be written. If "
+                    "this folder does not exist, it will be created. If data already "
+                    "exists in the folder, it will be overwritten."),
+                contents={},
+                must_exist=False,
+                permissions="rwx"
+            ),
+            spec.SingleBandRasterInput(
+                id="raster_path",
+                name="Input Raster",
+                data_type=float,
+                units=None
+            ),
+            spec.IntegerInput(
+                id="factor",
+                name="Multiplication Factor"
+            )
+        ],
+        outputs=[
+            spec.SingleBandRasterOutput(
+                id="result.tif",
+                about="Raster multiplied by factor",
+                data_type=float,
+                units=None
+            )
+        ]
+    )
+
 ``execute``
 ~~~~~~~~~~~
 This function executes the model. When a user runs the model, this function is invoked with the inputs that the user provided. When this function returns, the model run is complete.
@@ -110,6 +156,26 @@ This function executes the model. When a user runs the model, this function is i
 Arguments: ``args`` (dictionary). Maps input ids (matching the ``id`` of each ``Input`` in ``MODEL_SPEC.inputs``) to their values to run the model on.
 
 Returns: ``None``. When ``execute`` returns, the model run is complete.
+
+Here is an example implementation of ``execute`` corresponding to the example ``MODEL_SPEC`` above. It multiplies a raster pixelwise by an integer value, and writes out the result to a new raster file: ::
+
+    import os
+    from natcap.invest import utils
+
+    def execute(args):
+        utils.make_directories([args['workspace_dir']])
+        target_path = os.path.join(args['workspace_dir'], 'result.tif')
+        graph = taskgraph.TaskGraph(args['workspace_dir'], -1)
+        graph.add_task(
+            func=multiply_op,
+            kwargs={
+                'raster_path': args['raster_path'],
+                'factor': int(args['factor']),
+                'target_path': target_path
+            },
+            target_path_list=[target_path],
+            task_name='multiply raster by factor')
+        graph.join()
 
 ``validate``
 ~~~~~~~~~~~~
@@ -127,9 +193,7 @@ The following implementation of ``validate`` will suffice for most models: ::
     def validate(args):
         return validation.validate(args, MODEL_SPEC)
 
-``validation.validate`` performs pre-defined validation for each input type based on its properties. See the ``validate`` method of each ``Input`` class to see exactly what checks are performed.
-
-If you need to validate properties of the input data that are not covered by the pre-defined checks, you may add on to this basic ``validate`` function.
+``validation.validate`` performs pre-defined validation for each input type based on its properties. See the ``validate`` method of each ``Input`` class to see exactly what checks are performed. If you need to validate properties of the input data that are not covered by the pre-defined checks, you may add on to this basic ``validate`` function.
 
 Specifying model inputs and outputs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -176,10 +240,6 @@ Example: ::
         ],
         index_col="lulc_code"
     )
-
-Using ``taskgraph``
-^^^^^^^^^^^^^^^^^^^
-All core InVEST models use ``taskgraph`` to organize the steps of execution. This is optional, but using ``taskgraph`` has several benefits including avoided recomputation, distributing tasks over multiple CPUs, and logically organizing the model as a workflow of tasks that process data. See the InVEST source code for many examples of using ``taskgraph``.
 
 ``__init__.py``
 ^^^^^^^^^^^^^^^
