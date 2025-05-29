@@ -133,7 +133,7 @@ If you need to validate properties of the input data that are not covered by the
 
 Specifying model inputs and outputs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Model inputs are specified in the ``inputs`` attribute of the ``MODEL_SPEC``. Many different types of model inputs are supported, including numbers, CSVs, raster and vector files, etc. Each input in ``inputs`` is an instance of a subclass of :func:`natcap.invest.spec.Input` that represents the data type. There are many different input data types supported including numbers, CSVs, raster and vector files, etc. Choose the most appropriate ``Input`` type available in ``spec``. You may also subclass from :func:`natcap.invest.spec.Input` if you wish to create a custom type.
+Model inputs are specified in the ``inputs`` attribute of the ``MODEL_SPEC``. Many different types of model inputs are supported, including numbers, CSVs, raster and vector files, etc. Each input in ``inputs`` is an instance of a subclass of :func:`natcap.invest.spec.Input` that represents the data type. Choose the most appropriate ``Input`` type available in ``spec``. You may also subclass from :func:`natcap.invest.spec.Input` if you wish to create a custom type.
 
 User-provided values for all input types are ultimately passed to the ``execute`` function as strings or numbers. For instance, all file-based types will accept a path string.
 
