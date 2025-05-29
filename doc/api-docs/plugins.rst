@@ -206,11 +206,11 @@ User-provided values for all input types are ultimately passed to the ``execute`
 
 Model outputs are specified in the ``outputs`` attribute of the ``MODEL_SPEC``. All InVEST model outputs are files - there are no plain number or string outputs. Choose the most appropriate ``Output`` type available in ``spec``. You may also subclass from :func:`natcap.invest.spec.Output` if you wish to create a custom type.
 
-
-
 .. note::
 
     Common inputs: All core InVEST models include the inputs ``workspace_dir`` (a target directory where all model results are written), ``results_suffix`` (a suffix appended to all model results, which may be used to differentiate model runs in the same workspace), and ``n_workers`` (passed to ``taskgraph`` to configure the number of CPUs used). Standard specs for these inputs are provided in :func:`natcap.invest.spec`.
+
+    The ``n_workers`` input is normally hidden from display in core InVEST models (using the ``hidden`` attribute). ``n_workers`` is configured as a workbench-level setting, rather than a model-level input. The workbench adds the ``n_workers`` value from its settings to the ``args`` passed to the model. If you do not use ``taskgraph``, you are free to ignore this value.
 
 Specifying units
 ^^^^^^^^^^^^^^^^
