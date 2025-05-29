@@ -162,17 +162,19 @@ body {
   background-color: transparent;
   border: none;
   font-size: 2rem;
-  vertical-align: text-bottom;
   margin-right: 2px;
-}
+  height: 2.75rem;
+  display: flex;
+  align-items: center;
 
-.app-menu-button:hover{
-  color: white;
-  background-color: var(--bootstrap-secondary-gray);
-}
+  &:hover {
+    color: white;
+    background-color: var(--bootstrap-secondary-gray);
+  }
 
-.app-menu-button:after {
-  display: none;
+  &:after {
+    display: none;  /* Hide caret icon inserted by Bootstrap. */
+  }
 }
 
 .language-icon {
