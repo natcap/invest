@@ -222,10 +222,10 @@ function RecentInvestJobs(props) {
     <Container>
       <Row>
         {recentButtons.length
-          ? <div />
+          ? recentButtons
           : (
             <Card
-              className="text-left recent-job-card mr-2 w-100"
+              className="col-12 text-left recent-job-card mr-2 w-100"
               key="placeholder"
             >
               <Card.Header>
@@ -239,22 +239,20 @@ function RecentInvestJobs(props) {
                 </Card.Title>
               </Card.Body>
             </Card>
-          )}
-        {recentButtons}
+        )}
       </Row>
       {recentButtons.length
-        ? (
-          <Row>
-            <Button
-              variant="secondary"
-              onClick={clearRecentJobs}
-              className="col-12"
-            >
-              {t('Clear all model runs')}
-            </Button>
-          </Row>
-        )
-        : <div />}
+        &&
+        <Row>
+          <Button
+            variant="secondary"
+            onClick={clearRecentJobs}
+            className="col-12"
+          >
+            {t('Clear all model runs')}
+          </Button>
+        </Row>
+      }
     </Container>
   );
 }
