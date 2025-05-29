@@ -22,6 +22,22 @@ body {
   overflow-y: hidden;
 }
 
+/* Default focus styles for buttons & links, to override system defaults.
+   Bootstrap-styled buttons have different focus styles, based on element/background colors.
+   This is a fallback, to be applied to elements whose focus styles are not defined by Bootstrap. */
+a,
+button,
+.btn-link {
+  &:focus {
+    outline-color: var(--invest-green);
+  }
+}
+
+.btn-link:focus {
+  outline-style: auto;
+  outline-width: 0.25rem;
+}
+
 /*Top Navigation*/
 
 .navbar {
@@ -42,6 +58,7 @@ body {
 .navbar-brand:hover {
   text-decoration-line: underline;
   text-decoration-thickness: 3px;
+  text-decoration-color: var(--invest-green);
 }
 
 .navbar-middle {
