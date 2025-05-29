@@ -88,7 +88,7 @@ MODEL_SPEC = spec.build_model_spec({
                 "lucode": spec.LULC_TABLE_COLUMN,
                 "load_type_p": {
                     "type": "option_string",
-                    "required": True,
+                    "required": "calc_p",
                     "options": {
                         "application-rate": {
                             "description": gettext(
@@ -111,7 +111,7 @@ MODEL_SPEC = spec.build_model_spec({
                 },
                 "load_type_n": {
                     "type": "option_string",
-                    "required": True,
+                    "required": "calc_n",
                     "options": {
                         "application-rate": {
                             "description": gettext(
