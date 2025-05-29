@@ -194,9 +194,12 @@ button,
   }
 }
 
-.dropdown-menu {
-  /* !important needed to override Bootstrap-defined box-shadow */
-  box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .5) !important;
+.app-menu {
+  box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .5);
+  & .dropdown-item {
+    height: 2.5rem;
+    font-weight: 500;
+  }
 }
 
 .language-icon {
