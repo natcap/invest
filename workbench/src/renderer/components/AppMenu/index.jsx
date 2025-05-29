@@ -11,7 +11,7 @@ export default function AppMenu(props) {
     <Dropdown>
       <Dropdown.Toggle
         className="app-menu-button"
-        aria-label="menu"
+        aria-label={t('menu')}
         childBsPrefix="outline-secondary"
       >
         <GiHamburgerMenu />
@@ -24,31 +24,31 @@ export default function AppMenu(props) {
           as="button"
           onClick={props.openPluginModal}
         >
-          Manage Plugins
+          {t('Manage Plugins')}
         </Dropdown.Item>
         <Dropdown.Item
           as="button"
           onClick={props.openDownloadModal}
         >
-          Download Sample Data
+          {t('Download Sample Data')}
         </Dropdown.Item>
         <Dropdown.Item
           as="button"
           onClick={props.openMetadataModal}
         >
-          Configure Metadata
+          {t('Configure Metadata')}
         </Dropdown.Item>
         <Dropdown.Item
           as="button"
           onClick={props.openChangelogModal}
         >
-          View Changelog
+          {t('View Changelog')}
         </Dropdown.Item>
         <Dropdown.Item
           as="button"
           onClick={props.openSettingsModal}
         >
-          Settings
+          {t('Settings')}
         </Dropdown.Item>
       </Dropdown.Menu>
     </Dropdown>
