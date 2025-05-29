@@ -297,7 +297,7 @@ class FileInput(Input):
 
 
 @dataclasses.dataclass
-class RasterBand(FileInput):
+class RasterBand():
     """A single-band raster input, or parameter, of an invest model.
 
     This represents a raster file input (all GDAL-supported raster file types
