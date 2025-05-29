@@ -70,7 +70,7 @@ with a simple python package structure: ::
           |- __init__.py
           |- foo.py
 
-The model code is in ``src/foo.py``. ``pyproject.toml`` is a standard configuration
+The model code is in ``src/invest_demo_plugin/foo.py``. ``pyproject.toml`` is a standard configuration
 file that defines the package. A full-fledged plugin will contain many other optional
 files as well, like a readme, license, test suite, and sample data, but these are not
 required.
