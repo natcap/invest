@@ -320,7 +320,7 @@ class RasterInput(FileInput):
     This represents a raster file input (all GDAL-supported raster file types
     are allowed), which may have multiple bands.
     """
-    bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=[])
+    bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=list)
     """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
@@ -1129,7 +1129,7 @@ class RasterOutput(Output):
     This represents a raster file output (all GDAL-supported raster file types
     are allowed), which may have multiple bands.
     """
-    bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=[])
+    bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=list)
     """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
