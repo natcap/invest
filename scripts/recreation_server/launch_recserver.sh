@@ -2,6 +2,8 @@
 # activate a python environment before calling this script:
 # mamba activate /usr/local/recreation-server/invest_3_15_0/invest/env
 # I think I had a hard time doing the activation within this script, for some reason.
+export PYRO_LOGFILE=/usr/local/recreation-server/invest_3_15_0/server/pyro.log
+export PYRO_LOGLEVEL=DEBUG
 nohup python -u /usr/local/recreation-server/invest_3_15_0/invest/scripts/recreation_server/execute_recmodel_server.py \
 -w /usr/local/recreation-server/invest_3_15_0/server > \
 /usr/local/recreation-server/invest_3_15_0/server/log.txt 2>&1 &
