@@ -60,9 +60,29 @@
   6. InVEST model Z (model names should be sorted A-Z)
 
 
-
 Unreleased Changes
 ------------------
+
+General
+=======
+* Fixed a micromamba command bug in 3.16.0a1 that was calling micromamba
+  directly, instead of using the path to the executable
+  (`#1965 <https://github.com/natcap/invest/issues/1965>`_). This was
+  mistakenly not actually released in 3.16.0a2.
+
+
+3.16.0a2 (2025-05-28)
+---------------------
+
+General
+=======
+* Fixed a micromamba command bug in 3.16.0a1 that was calling micromamba
+  directly, instead of using the path to the executable
+  (`#1965 <https://github.com/natcap/invest/issues/1965>`_).
+
+
+3.16.0a1 (2025-05-28)
+---------------------
 
 General
 =======
