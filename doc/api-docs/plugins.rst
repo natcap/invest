@@ -177,6 +177,9 @@ Here is an example implementation of ``execute`` corresponding to the example ``
             task_name='multiply raster by factor')
         graph.join()
 
+.. note::
+    All core InVEST models use `taskgraph <https://github.com/natcap/taskgraph>`_ to organize the steps of execution. This is optional, but ``taskgraph`` has several benefits including avoided recomputation, distributing tasks over multiple CPUs, and logically organizing the model as a workflow of tasks that process data. See the InVEST source code for many examples of using ``taskgraph``.
+
 ``validate``
 ~~~~~~~~~~~~
 This function validates the model inputs. Its purpose is to identify problems with the user's data before running the model, and give helpful feedback so the problems can be fixed. When a user enters data into the workbench UI, ``validate`` is called and its output is used to provide instant feedback (for instance, highlighting problematic inputs in red). The "Run" button will be disabled until all inputs validate successfully and ``validate`` returns ``[]``.
