@@ -10,8 +10,8 @@ import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
 import { useTranslation } from 'react-i18next';
 import {
-  MdClose,
-} from 'react-icons/md';
+  BsTrash3,
+} from 'react-icons/bs';
 
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
@@ -173,19 +173,21 @@ function RecentInvestJobs(props) {
       }
       recentButtons.push(
         <Card
-          className="text-left recent-job-card mr-2 w-100"
+          className="col-12 text-left recent-job-card mr-2 w-100"
           key={job.hash}
         >
           <Card.Header>
-            {badge}
+            <div className="badge-container">
+              {badge}
+            </div>
             <span className="header-title">{job.modelTitle}</span>
             <Button
               variant="outline-light"
               onClick={() => deleteJob(job.hash)}
-              className="float-right p-1 mr-1 border-0"
+              className="float-right border-0"
               aria-label="delete"
             >
-              <MdClose />
+              <BsTrash3 size="1.5rem" />
             </Button>
           </Card.Header>
           <Card.Body
@@ -246,7 +248,7 @@ function RecentInvestJobs(props) {
             <Button
               variant="secondary"
               onClick={clearRecentJobs}
-              className="mr-2 w-100"
+              className="col-12"
             >
               {t('Clear all model runs')}
             </Button>

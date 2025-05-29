@@ -242,13 +242,11 @@ exceed 100% of window.*/
 .recent-job-card-col {
   height: var(--content-height);
   overflow-y: auto;
-  padding-right: 0.5rem;
 }
 
 .recent-job-card-col .container {
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
-  padding-right: 0.5rem;
 }
 
 .recent-job-card-col .container .row {
@@ -256,7 +254,6 @@ exceed 100% of window.*/
 }
 
 .recent-job-card {
-  width: inherit;
   padding: 0;
   height: fit-content;
   filter: drop-shadow(2px 2px 2px grey);
@@ -274,25 +271,53 @@ exceed 100% of window.*/
 }
 
 .card-header {
+  --card-header-title-font-size: 1.25rem;
+  --card-header-title-line-height: 1.2;
+  --card-header-button-height: 2.625rem;
+  --card-header-button-offset: 0.375rem;
+  --card-header-top-bottom-padding: calc(
+    var(--card-header-button-offset)
+    + var(--card-header-button-height) / 2
+    - (var(--card-header-title-font-size) * var(--card-header-title-line-height)) / 2
+  );
+  position: relative;
+  display: flex;
   background-color: var(--invest-green);
   filter: opacity(0.75);
-  margin-left: -0.1rem;
-  margin-right: -0.05rem;
-  padding-right: 0;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-}
+  padding: var(--card-header-top-bottom-padding) 3.375rem var(--card-header-top-bottom-padding) 1.25rem;
+  min-height: calc(var(--card-header-button-height) + 2*var(--card-header-button-offset));
+  /* Adjust width & margins to correct the optical illusion created by the card border. */
+  width: calc(100% + 1.5px);
+  margin-right: -1px;
+  margin-top: -1px;
+  margin-left: -0.5px;
 
-.card-header .header-title {
-  color: white;
-  font-size: 1.35rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
+  & .badge-container {
+    display: flex;
+    align-items: center;
+    margin-right: 0.375rem;
+    height: calc(var(--card-header-title-font-size) * var(--card-header-title-line-height));
+  }
 
-.card-header .btn:hover {
-  background-color: white;
-  color: var(--invest-green);
+  & .header-title {
+    color: white;
+    font-size: var(--card-header-title-font-size);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    line-height: var(--card-header-title-line-height);
+  }
+
+  & .btn {
+    position: absolute;
+    right: var(--card-header-button-offset);
+    top: var(--card-header-button-offset);
+    height: var(--card-header-button-height);
+    padding: 0.5rem;
+    &:hover {
+      background-color: white;
+      color: var(--invest-green);
+    }
+  }
 }
 
 .card-title {
