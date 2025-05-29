@@ -75,13 +75,13 @@ describe('Add plugin modal', () => {
 
       await userEvent.click(await findByRole('button', { name: 'menu' }));
       const managePluginsButton = await findByText(/Manage plugins/i);
-      userEvent.click(managePluginsButton);
+      await userEvent.click(managePluginsButton);
 
       const userAcknowledgmentCheckbox = await findByLabelText(/I acknowledge and accept/i);
-      userEvent.click(userAcknowledgmentCheckbox);
+      await userEvent.click(userAcknowledgmentCheckbox);
 
       const submitButton = await findByText('Add');
-      userEvent.click(submitButton);
+      await userEvent.click(submitButton);
 
       const missingUrlError = await findByText('Error: URL is required.');
       expect(missingUrlError).toBeInTheDocument();
@@ -96,16 +96,16 @@ describe('Add plugin modal', () => {
 
       await userEvent.click(await findByRole('button', { name: 'menu' }));
       const managePluginsButton = await findByText(/Manage plugins/i);
-      userEvent.click(managePluginsButton);
+      await userEvent.click(managePluginsButton);
 
       const sourceType = await findByLabelText('Install from');
-      userEvent.selectOptions(sourceType, 'local path');
+      await userEvent.selectOptions(sourceType, 'local path');
 
       const userAcknowledgmentCheckbox = await findByLabelText(/I acknowledge and accept/i);
-      userEvent.click(userAcknowledgmentCheckbox);
+      await userEvent.click(userAcknowledgmentCheckbox);
 
       const submitButton = await findByText('Add');
-      userEvent.click(submitButton);
+      await userEvent.click(submitButton);
 
       const missingPathError = await findByText('Error: Path is required.');
       expect(missingPathError).toBeInTheDocument();
@@ -120,13 +120,13 @@ describe('Add plugin modal', () => {
 
       await userEvent.click(await findByRole('button', { name: 'menu' }));
       const managePluginsButton = await findByText(/Manage plugins/i);
-      userEvent.click(managePluginsButton);
+      await userEvent.click(managePluginsButton);
 
       const urlField = await findByLabelText('Git URL');
       await userEvent.type(urlField, 'fake url', { delay: 0 });
 
       const submitButton = await findByText('Add');
-      userEvent.click(submitButton);
+      await userEvent.click(submitButton);
 
       const userAcknowledgmentError = await findByText(/Error: Before installing a plugin/i);
       expect(userAcknowledgmentError).toBeInTheDocument();
@@ -157,14 +157,15 @@ describe('Add plugin modal', () => {
 
     await userEvent.click(await findByRole('button', { name: 'menu' }));
     const managePluginsButton = await findByText(/Manage plugins/i);
-    userEvent.click(managePluginsButton);
+    await userEvent.click(managePluginsButton);
 
     const urlField = await findByLabelText('Git URL');
     await userEvent.type(urlField, 'fake url', { delay: 0 });
     const userAcknowledgmentCheckbox = await findByLabelText(/I acknowledge and accept/i);
-    userEvent.click(userAcknowledgmentCheckbox);
+    await userEvent.click(userAcknowledgmentCheckbox);
 
     const submitButton = await findByText('Add');
+    // The following event is synchronous bc awaiting it causes the test to fail.
     userEvent.click(submitButton);
 
     await findByText('Adding...');
