@@ -200,15 +200,17 @@ The following implementation of ``validate`` will suffice for most models: ::
 
 Specifying model inputs and outputs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Model inputs are specified in the ``inputs`` attribute of the ``MODEL_SPEC``. Many different types of model inputs are supported, including numbers, CSVs, raster and vector files, etc. Each input in ``inputs`` is an instance of a subclass of :func:`natcap.invest.spec.Input` that represents the data type. Choose the most appropriate ``Input`` type available in ``spec``. You may also subclass from :func:`natcap.invest.spec.Input` if you wish to create a custom type.
+Model inputs are specified in the ``inputs`` attribute of the ``MODEL_SPEC``. Many different types of model inputs are supported, including numbers, CSVs, raster and vector files, etc. Each input in ``inputs`` is an instance of a subclass of :func:`natcap.invest.spec.Input` that represents the data type. Choose the most appropriate ``Input`` type available in ``spec``. You may also subclass from :func:`natcap.invest.spec.Input` if you wish to create a custom type. Each ``Input`` type should define an ``id`` (uniquely identifies the input within the model), a ``name`` (user-facing input name, displayed in the workbench), and an ``about`` (user-facing description of the input), in addition to the properties specific to the input type.
 
 User-provided values for all input types are ultimately passed to the ``execute`` function as strings or numbers. For instance, all file-based types will accept a path string.
 
 Model outputs are specified in the ``outputs`` attribute of the ``MODEL_SPEC``. All InVEST model outputs are files - there are no plain number or string outputs. Choose the most appropriate ``Output`` type available in ``spec``. You may also subclass from :func:`natcap.invest.spec.Output` if you wish to create a custom type.
 
+
+
 .. note::
 
-    Required inputs: All models must include the inputs ``workspace_dir``, ``results_suffix`` and ``n_workers``. Standard specs for these inputs are provided in :func:`natcap.invest.spec`.
+    Common inputs: All core InVEST models include the inputs ``workspace_dir`` (a target directory where all model results are written), ``results_suffix`` (a suffix appended to all model results, which may be used to differentiate model runs in the same workspace), and ``n_workers`` (passed to ``taskgraph`` to configure the number of CPUs used). Standard specs for these inputs are provided in :func:`natcap.invest.spec`.
 
 Specifying units
 ^^^^^^^^^^^^^^^^
