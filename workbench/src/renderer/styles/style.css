@@ -194,6 +194,11 @@ button,
   }
 }
 
+.dropdown-menu {
+  /* !important needed to override Bootstrap-defined box-shadow */
+  box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .5) !important;
+}
+
 .language-icon {
   color: black;
   font-size: 1rem;
