@@ -190,7 +190,16 @@ class Input:
     """Input identifier that should be unique within a model"""
 
     name: str = ''
-    """User-facing name for the input"""
+    """The user-facing name of the input. The workbench UI displays this
+    property as a label for each input. The name should be as short as
+    possible. Any extra description should go in ``about``. The name should
+    be all lower-case, except for things that are always capitalized (acronyms,
+    proper names).
+
+    Good examples: ``precipitation``, ``Kc factor``, ``valuation table``
+
+    Bad examples: ``PRECIPITATION``, ``kc_factor``, ``table of valuation parameters``
+    """
 
     about: str = ''
     """User-facing description of the input"""
@@ -288,7 +297,7 @@ class FileInput(Input):
 
 
 @dataclasses.dataclass
-class RasterBand(FileInput):
+class RasterBand():
     """A single-band raster input, or parameter, of an invest model.
 
     This represents a raster file input (all GDAL-supported raster file types
@@ -311,7 +320,7 @@ class RasterInput(FileInput):
     This represents a raster file input (all GDAL-supported raster file types
     are allowed), which may have multiple bands.
     """
-    bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=[])
+    bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=list)
     """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
@@ -1114,6 +1123,18 @@ class SingleBandRasterOutput(Output):
 
 
 @dataclasses.dataclass
+class RasterOutput(Output):
+    """A raster output, or result, of an invest model.
+
+    This represents a raster file output (all GDAL-supported raster file types
+    are allowed), which may have multiple bands.
+    """
+    bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=list)
+    """An iterable of `RasterBand` representing the bands expected to be in
+    the raster."""
+
+
+@dataclasses.dataclass
 class VectorOutput(Output):
     """A vector output, or result, of an invest model.
 
@@ -1158,7 +1179,7 @@ class DirectoryOutput(Output):
     or an unknown number of file-based outputs, by grouping them together in a
     directory.
     """
-    contents: typing.Union[typing.Iterable[Input], None] = None
+    contents: typing.Union[typing.Iterable[Output], None] = None
     """An iterable of `Output`s representing the contents of this directory.
     The `key` of each output must be the file name or pattern."""
 
