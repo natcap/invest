@@ -347,7 +347,7 @@ exceed 100% of window.*/
 }
 
 .card-title {
-  padding-left: 1.25rem;
+  padding: 0 1.25rem;
   font-size: 1.1rem;
 }
 
@@ -364,7 +364,7 @@ exceed 100% of window.*/
   display: flex;
   justify-content: space-between;
   white-space: nowrap;
-  padding-right: 1rem;
+  padding: 0.75rem 1.25rem;
 }
 
 .card-footer span {
