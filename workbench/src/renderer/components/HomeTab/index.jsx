@@ -10,8 +10,8 @@ import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
 import { useTranslation } from 'react-i18next';
 import {
-  MdClose,
-} from 'react-icons/md';
+  BsTrash3,
+} from 'react-icons/bs';
 
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
@@ -99,10 +99,10 @@ export default class HomeTab extends React.Component {
             {investButtons}
             <ListGroup.Item
               key="browse"
-              className="py-2 border-0"
+              className="px-0 py-2 border-0"
             >
               <OpenButton
-                className="w-100 border-1 py-2 pl-3 text-left text-truncate"
+                className="open-button text-wrap"
                 openInvestModel={openInvestModel}
                 investList={investList}
               />
@@ -173,19 +173,21 @@ function RecentInvestJobs(props) {
       }
       recentButtons.push(
         <Card
-          className="text-left recent-job-card mr-2 w-100"
+          className="col-12 text-left recent-job-card mr-2 w-100"
           key={job.hash}
         >
           <Card.Header>
-            {badge}
+            <div className="badge-container">
+              {badge}
+            </div>
             <span className="header-title">{job.modelTitle}</span>
             <Button
               variant="outline-light"
               onClick={() => deleteJob(job.hash)}
-              className="float-right p-1 mr-1 border-0"
+              className="float-right border-0"
               aria-label="delete"
             >
-              <MdClose />
+              <BsTrash3 size="1.5rem" />
             </Button>
           </Card.Header>
           <Card.Body
@@ -220,10 +222,10 @@ function RecentInvestJobs(props) {
     <Container>
       <Row>
         {recentButtons.length
-          ? <div />
+          ? recentButtons
           : (
             <Card
-              className="text-left recent-job-card mr-2 w-100"
+              className="col-12 text-left recent-job-card mr-2 w-100"
               key="placeholder"
             >
               <Card.Header>
@@ -237,22 +239,20 @@ function RecentInvestJobs(props) {
                 </Card.Title>
               </Card.Body>
             </Card>
-          )}
-        {recentButtons}
+        )}
       </Row>
       {recentButtons.length
-        ? (
-          <Row>
-            <Button
-              variant="secondary"
-              onClick={clearRecentJobs}
-              className="mr-2 w-100"
-            >
-              {t('Clear all model runs')}
-            </Button>
-          </Row>
-        )
-        : <div />}
+        &&
+        <Row>
+          <Button
+            variant="secondary"
+            onClick={clearRecentJobs}
+            className="col-12"
+          >
+            {t('Clear all model runs')}
+          </Button>
+        </Row>
+      }
     </Container>
   );
 }
