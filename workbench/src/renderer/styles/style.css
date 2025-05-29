@@ -1,5 +1,6 @@
 :root {
   font-size: 16px;
+  --bootstrap-secondary-gray:#6c757d;
 }
 
 
@@ -157,7 +158,7 @@ body {
 }
 
 .app-menu-button {
-  color: gray;
+  color: var(--bootstrap-secondary-gray);
   background-color: transparent;
   border: none;
   font-size: 2rem;
@@ -167,7 +168,7 @@ body {
 
 .app-menu-button:hover{
   color: white;
-  background-color: gray;
+  background-color: var(--bootstrap-secondary-gray);
 }
 
 .app-menu-button:after {
@@ -324,7 +325,7 @@ exceed 100% of window.*/
 }
 
 .card-title .text-heading {
-  color: gray;
+  color: var(--bootstrap-secondary-gray);
 }
 
 .card-title .text-mono {
