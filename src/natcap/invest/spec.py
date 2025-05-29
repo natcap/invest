@@ -190,7 +190,16 @@ class Input:
     """Input identifier that should be unique within a model"""
 
     name: str = ''
-    """User-facing name for the input"""
+    """The user-facing name of the input. The workbench UI displays this
+    property as a label for each input. The name should be as short as
+    possible. Any extra description should go in ``about``. The name should
+    be all lower-case, except for things that are always capitalized (acronyms,
+    proper names).
+
+    Good examples: ``precipitation``, ``Kc factor``, ``valuation table``
+
+    Bad examples: ``PRECIPITATION``, ``kc_factor``, ``table of valuation parameters``
+    """
 
     about: str = ''
     """User-facing description of the input"""
@@ -1111,6 +1120,18 @@ class SingleBandRasterOutput(Output):
 
     units: typing.Union[pint.Unit, None] = None
     """units of measurement of the raster values"""
+
+
+@dataclasses.dataclass
+class RasterOutput(Output):
+    """A raster output, or result, of an invest model.
+
+    This represents a raster file output (all GDAL-supported raster file types
+    are allowed), which may have multiple bands.
+    """
+    bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=[])
+    """An iterable of `RasterBand` representing the bands expected to be in
+    the raster."""
 
 
 @dataclasses.dataclass
