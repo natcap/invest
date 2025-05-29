@@ -79,7 +79,7 @@ Writing the ``pyproject.toml``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The ``pyproject.toml`` contains standard information used to build your python package,
 as well as custom configuration for other software that interacts with the package. InVEST looks for metadata
-about your package in the ``pyproject.toml``. Configuration specific to InVEST is defined in the ``[tool.natcap.invest]`` block. See the `python packaging guide <https://packaging.python.org/en/latest/guides/writing-pyproject-toml/>`_ for more general information on ``pyproject.toml``.
+about your package in the ``pyproject.toml``. Configuration specific to InVEST is defined in the ``[tool.natcap.invest]`` block. See the `Python Packaging User Guide <https://packaging.python.org/en/latest/guides/writing-pyproject-toml/>`_ for more general information on ``pyproject.toml``.
 
 .. literalinclude:: pyproject.toml
    :language: TOML
