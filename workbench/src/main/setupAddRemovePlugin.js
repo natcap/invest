@@ -11,6 +11,7 @@ import crypto from 'crypto';
 import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
 import { settingsStore } from './settingsStore';
+import { shutdownPythonProcess } from './createPythonFlaskProcess';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -190,6 +191,9 @@ export function setupRemovePlugin() {
     async (e, pluginID) => {
       logger.info('removing plugin', pluginID);
       try {
+        // Shut down the plugin server process
+        const pluginPID = settingsStore.get(`plugins.${pluginID}.pid`);
+        await shutdownPythonProcess(pluginPID);
         // Delete the plugin's conda env
         const env = settingsStore.get(`plugins.${pluginID}.env`);
         const micromamba = settingsStore.get('micromamba');
