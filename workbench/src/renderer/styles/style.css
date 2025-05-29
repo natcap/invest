@@ -183,6 +183,8 @@ button,
   height: 2.75rem;
   display: flex;
   align-items: center;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
 
   &:hover {
     color: white;
