@@ -71,7 +71,7 @@ General
   mistakenly not actually released in 3.16.0a2.
 * InVEST now has a file, CITATION.cff, which includes information needed for a
   citation, including a DOI for the 3.16.0 release,
-  https://doi.org/10.80394/natcap-invest-3.16.0.
+  https://doi.org/10.60793/natcap-invest-3.16.0.
   (`#1548 <https://github.com/natcap/invest/issues/1548>`_)
 
 
