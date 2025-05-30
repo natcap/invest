@@ -9,9 +9,9 @@ What is a plugin?
 Conceptually, an InVEST plugin is an ecosystem services model. Like the core InVEST
 models, it takes in data of various formats (usually including some geospatial data),
 processes that data, and produces output files that contain the results.
-Unlike the core models, a plugin is not "official". Plugins may be developed, used,
-and distributed totally independently of the ``natcap/invest`` repo and the Natural
-Capital Project.
+Unlike the core models, a plugin is not "official", i.e., not reviewed or maintained
+by NatCap. Plugins may be developed, used, and distributed totally independently of
+the ``natcap/invest`` repo and the Natural Capital Project.
 
 In a technical sense, an InVEST plugin is a python package that conforms to the
 ``natcap.invest`` plugin API. This makes it possible to run the plugin from the
@@ -56,7 +56,7 @@ math or your code.
 
 How to develop a plugin
 -----------------------
-.. note:: This guide is written for python developers. If you are unfamiliar with python packaging, the `Python Packaging User Guide <https://packaging.python.org/en/latest/>`_ is a helpful resource.
+.. note:: This guide is written for python developers. If you are unfamiliar with python packaging, the `Python Packaging User Guide <https://packaging.python.org/en/latest/>`__ is a helpful resource.
 
 The `plugin template repo <https://github.com/natcap/invest-demo-plugin>`_ is a great place to start. The core InVEST models' `source code <https://github.com/natcap/invest/tree/main/src/natcap/invest>`_ is also full of examples.
 
@@ -79,7 +79,7 @@ Writing the ``pyproject.toml``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The ``pyproject.toml`` contains standard information used to build your python package,
 as well as custom configuration for other software that interacts with the package. InVEST looks for metadata
-about your package in the ``pyproject.toml``. Configuration specific to InVEST is defined in the ``[tool.natcap.invest]`` block. See the `Python Packaging User Guide <https://packaging.python.org/en/latest/guides/writing-pyproject-toml/>`_ for more general information on ``pyproject.toml``.
+about your package in the ``pyproject.toml``. Configuration specific to InVEST is defined in the ``[tool.natcap.invest]`` block. See the `Python Packaging User Guide <https://packaging.python.org/en/latest/guides/writing-pyproject-toml/>`__ for more general information on ``pyproject.toml``.
 
 .. literalinclude:: pyproject.toml
    :language: TOML
@@ -265,3 +265,10 @@ At the workbench level, plugins are installed through the "Manage Plugins" windo
 6. Save the plugin information to the workbench settings store.
 
 The settings store is where the workbench tracks what plugins are installed. When a user launches a plugin, a new ``natcap.invest`` server is launched from the plugin's environment. This server runs on a different port than the ``natcap.invest`` server that serves core models. All model-specific requests related to running the plugin are sent to that port.
+
+.. note::
+   The workbench uniquely identifies plugins by a hash of a combination of the ``model_id`` from the ``MODEL_SPEC`` and the ``package.version`` from the ``pyproject.toml``. Therefore it is possible to have multiple versions of the same plugin simultaneously installed. At the python level, only one plugin with the same package name can be used at a time.
+
+Testing Your Plugin
+-------------------
+Automated tests help ensure your plugin continues to work as expected as you develop it. See the InVEST repo for examples of model tests.
