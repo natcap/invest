@@ -53,12 +53,20 @@ writing a basic script. Going through the process of developing a model into a
 plugin will help to catch bugs and identify assumptions that may exist in your
 math or your code.
 
+Example plugins
+---------------
+
+The NatCap team maintains a small number of InVEST plugins. The following are some examples you may find useful as you develop your own plugin:
+
+- `InVEST Demo Plugin <https://github.com/natcap/invest-demo-plugin>`_ (referenced in more detail in later sections of this guide)
+- `InVEST GCM Downscaling <https://github.com/natcap/invest-gcm-downscaling>`_
+- `Sediment Delivery Ratio with USLE C Raster Input <https://github.com/natcap/invest-sdr-usle-c-raster>`_
+
+In addition, you may wish to consult the source code of the `core InVEST models <https://github.com/natcap/invest/tree/main/src/natcap/invest>`_ for examples of model code.
 
 How to develop a plugin
 -----------------------
 .. note:: This guide is written for python developers. If you are unfamiliar with python packaging, the `Python Packaging User Guide <https://packaging.python.org/en/latest/>`__ is a helpful resource.
-
-The `plugin template repo <https://github.com/natcap/invest-demo-plugin>`_ is a great place to start. The core InVEST models' `source code <https://github.com/natcap/invest/tree/main/src/natcap/invest>`_ is also full of examples.
 
 At its most basic, a plugin is a python package. Begin by creating a directory
 with a simple python package structure: ::
