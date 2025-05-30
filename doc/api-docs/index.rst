@@ -41,4 +41,5 @@ Resources
 
     Model Entry Points <models>
     Full API Reference <api>
+    Plugins <plugins>
     Changelog <changelog>
