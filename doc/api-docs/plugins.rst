@@ -103,7 +103,7 @@ The plugin python package must have the attributes ``MODEL_SPEC``, ``execute``, 
 
 ``MODEL_SPEC``
 ~~~~~~~~~~~~~~
-An instance of :func:`natcap.invest.spec.ModelSpec`. This object stores key information about the model, its inputs, and its outputs. See the :ref:`API Reference<api>` for the specifics on instantiating this object.
+An instance of :func:`natcap.invest.spec.ModelSpec`. This object stores key information about the model, its inputs, and its outputs. See the :ref:`API Reference<api>` for the specifics on instantiating this object. Note that the ``model_id`` should be globally unique, i.e. different from the ``model_id`` of any core InVEST model or any other plugin. To help ensure uniqueness among other plugins, it is a good idea for the ``model_id`` to match the python package name.
 
 Here is an example ``MODEL_SPEC`` taken from the demo plugin. It describes a model that takes in three inputs: a raster file, an integer multiplication factor, and a workspace directory in which to produce the results. The model produces a raster file output which is the result of multiplying the input raster pixelwise by the multiplication factor. ::
 
