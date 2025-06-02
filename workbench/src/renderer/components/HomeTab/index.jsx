@@ -241,7 +241,7 @@ function RecentInvestJobs(props) {
             </Card>
         )}
       </Row>
-      {recentButtons.length
+      {recentButtons.length > 0
         &&
         <Row>
           <Button
