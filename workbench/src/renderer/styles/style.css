@@ -70,6 +70,7 @@ button,
 }
 
 .navbar-right {
+  display: flex;
   max-width: fit-content;
   margin-left: 0.5rem;
   margin-right: -15px;
