@@ -82,6 +82,7 @@ function renderSetupFromSpec(baseSpec, inputFieldOrder, initValues = undefined, 
       sidebarFooterElementId="foo"
       executeClicked={false}
       switchTabs={() => {}}
+      investList={{}}
       tabID={'999'}
       updateJobProperties={() => {}}
     />
@@ -379,9 +380,6 @@ describe('Arguments form interactions', () => {
 describe('UI spec functionality', () => {
   beforeEach(() => {
     fetchValidation.mockResolvedValue([]);
-    fetchArgsEnabled.mockResolvedValue({
-      arg1: true, arg2: true, arg3: true, arg4: true, arg5: true, arg6: true
-    });
   });
 
   test('A UI spec with conditionally enabled args', async () => {
@@ -396,14 +394,6 @@ describe('UI spec functionality', () => {
           name: 'Bfoo',
           type: 'boolean',
         },
-        arg3: {
-          name: 'Cfoo',
-          type: 'number',
-        },
-        arg4: {
-          name: 'Dfoo',
-          type: 'number',
-        },
       },
     };
     fetchArgsEnabled.mockResolvedValue({ arg1: false, arg2: true });
@@ -413,11 +403,11 @@ describe('UI spec functionality', () => {
     const { findByLabelText } = renderSetupFromSpec(spec, inputFieldOrder);
     const arg1 = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
     const arg2 = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
-    const arg3 = await findByLabelText((content) => content.startsWith(spec.args.arg3.name));
-    const arg4 = await findByLabelText((content) => content.startsWith(spec.args.arg4.name));
 
     await waitFor(() => {
       expect(arg1).toBeDisabled();
+    });
+    await waitFor(() => {
       expect(arg2).toBeEnabled();
     });
   });
@@ -483,6 +473,10 @@ describe('UI spec functionality', () => {
         },
       },
     };
+
+    fetchArgsEnabled.mockResolvedValue({
+      arg1: true, arg2: true, arg3: true, arg4: true, arg5: true, arg6: true
+    });
 
     // intentionally leaving out arg6, it should not be in the setup form
     const inputFieldOrder = [['arg4'], ['arg3', 'arg2'], ['arg1'], ['arg5']];
@@ -657,7 +651,7 @@ describe('Form drag-and-drop', () => {
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
       value: { files: [fileValue] },
     });
-    fireEvent(setupForm, fileDropEvent);
+    await fireEvent(setupForm, fileDropEvent);
 
     expect(await findByLabelText((content) => content.startsWith(spec.args.arg1.name)))
       .toHaveValue(mockDatastack.args.arg1);
@@ -711,7 +705,7 @@ describe('Form drag-and-drop', () => {
     Object.defineProperty(fileDragEvent, 'dataTransfer', {
       value: { files: [fileValue] },
     });
-    fireEvent(setupForm, fileDragEvent);
+    await fireEvent(setupForm, fileDragEvent);
 
     expect(setupForm).toHaveClass('dragging');
 
@@ -719,7 +713,7 @@ describe('Form drag-and-drop', () => {
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
       value: { files: [fileValue] },
     });
-    fireEvent(setupForm, fileDropEvent);
+    await fireEvent(setupForm, fileDropEvent);
 
     expect(await findByLabelText((content) => content.startsWith(spec.args.arg1.name)))
       .toHaveValue(mockDatastack.args.arg1);
@@ -763,12 +757,12 @@ describe('Form drag-and-drop', () => {
     Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
       value: { files: [fileValue] },
     });
-    fireEvent(setupForm, fileDragEnterEvent);
+    await fireEvent(setupForm, fileDragEnterEvent);
 
     expect(setupForm).toHaveClass('dragging');
 
     const fileDragLeaveEvent = createEvent.dragLeave(setupForm);
-    fireEvent(setupForm, fileDragLeaveEvent);
+    await fireEvent(setupForm, fileDragLeaveEvent);
 
     expect(setupForm).not.toHaveClass('dragging');
   });
@@ -811,7 +805,7 @@ describe('Form drag-and-drop', () => {
     Object.defineProperty(fileDragEvent, 'dataTransfer', {
       value: { files: [fileValue] },
     });
-    fireEvent(setupInput, fileDragEvent);
+    await fireEvent(setupInput, fileDragEvent);
 
     expect(setupForm).not.toHaveClass('dragging');
     expect(setupInput).toHaveClass('input-dragging');
@@ -820,7 +814,7 @@ describe('Form drag-and-drop', () => {
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
       value: { files: [fileValue] },
     });
-    fireEvent(setupInput, fileDropEvent);
+    await fireEvent(setupInput, fileDropEvent);
 
     expect(setupInput).not.toHaveClass('input-dragging');
     expect(setupForm).not.toHaveClass('dragging');
@@ -862,7 +856,7 @@ describe('Form drag-and-drop', () => {
     Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
       value: { files: [fileValue] },
     });
-    fireEvent(setupInput, fileDragEnterEvent);
+    await fireEvent(setupInput, fileDragEnterEvent);
 
     expect(setupInput).toHaveClass('input-dragging');
 
@@ -870,7 +864,7 @@ describe('Form drag-and-drop', () => {
     Object.defineProperty(fileDragLeaveEvent, 'dataTransfer', {
       value: { files: [fileValue] },
     });
-    fireEvent(setupInput, fileDragLeaveEvent);
+    await fireEvent(setupInput, fileDragLeaveEvent);
 
     expect(setupInput).not.toHaveClass('input-dragging');
   });
@@ -912,7 +906,7 @@ describe('Form drag-and-drop', () => {
     Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
       value: { files: [fileValue] },
     });
-    fireEvent(setupInput, fileDragEnterEvent);
+    await fireEvent(setupInput, fileDragEnterEvent);
 
     expect(setupInput).not.toHaveClass('input-dragging');
 
@@ -920,7 +914,7 @@ describe('Form drag-and-drop', () => {
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
       value: { files: [fileValue] },
     });
-    fireEvent(setupInput, fileDropEvent);
+    await fireEvent(setupInput, fileDropEvent);
 
     expect(setupInput).not.toHaveClass('input-dragging');
     expect(setupInput).toHaveValue('');

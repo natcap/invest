@@ -17,7 +17,6 @@ import ArgsForm from './ArgsForm';
 import SaveAsModal from '../SaveAsModal';
 import {
   archiveDatastack,
-  fetchDatastackFromFile,
   fetchValidation,
   fetchArgsEnabled,
   getDynamicDropdowns,
