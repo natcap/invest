@@ -51,9 +51,10 @@ export async function openDatastack(filepath) {
       const extractLocation = await ipcRenderer.invoke(
         ipcMainChannels.SHOW_OPEN_DIALOG,
         {
+          // title is only for Windows, but default 'Open' is misleading
           title: i18n.t('Choose a directory'),
           buttonLabel: t('Extract archive here'),
-          properties: ['openDirectory, createDirectory'],
+          properties: ['openDirectory', 'createDirectory'],
         }
       );
       if (extractLocation.filePaths.length) {
