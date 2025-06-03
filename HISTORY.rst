@@ -74,6 +74,16 @@ General
   https://doi.org/10.60793/natcap-invest-3.16.0.
   (`#1548 <https://github.com/natcap/invest/issues/1548>`_)
 
+Workbench
+=========
+* Fixed a bug where extracting and loading parameters from a datastack archive
+  would overwrite data in the extraction location. Now, a new directory
+  will be created in the chosen extraction location.
+  (`#1996 <https://github.com/natcap/invest/issues/1996>`_)
+* Fixed a bug where the "Open" button on the home page would not
+  open archived datastacks (.tgz) files.
+  (`#1993 <https://github.com/natcap/invest/issues/1993>`_)
+
 
 3.16.0a2 (2025-05-28)
 ---------------------
