@@ -51,8 +51,9 @@ export async function openDatastack(filepath) {
       const extractLocation = await ipcRenderer.invoke(
         ipcMainChannels.SHOW_OPEN_DIALOG,
         {
-          buttonLabel: t('Choose location to extract archive'),
-          properties: ['openDirectory'],
+          title: i18n.t('Choose a directory'),
+          buttonLabel: t('Extract archive here'),
+          properties: ['openDirectory, createDirectory'],
         }
       );
       if (extractLocation.filePaths.length) {

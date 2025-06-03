@@ -97,8 +97,10 @@ class DataDownloadModal extends React.Component {
     const data = await ipcRenderer.invoke(
       ipcMainChannels.SHOW_OPEN_DIALOG,
       {
-        buttonLabel: i18n.t('Choose location to save data'),
-        properties: ['openDirectory'],
+        // title is only for Windows, but default 'Open' is misleading
+        title: i18n.t('Choose a directory'),
+        buttonLabel: i18n.t('Download here'),
+        properties: ['openDirectory', 'createDirectory'],
       }
     );
     if (data.filePaths.length) {
