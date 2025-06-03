@@ -24,7 +24,7 @@ import {
   saveToPython,
   writeParametersToFile
 } from '../../server_requests';
-import { argsDictFromObject } from '../../utils';
+import { argsDictFromObject, openDatastack } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
@@ -272,41 +272,12 @@ class SetupTab extends React.Component {
     const { modelID, switchTabs, t, investList } = this.props;
     let datastack;
     try {
-      if (filepath.endsWith('gz')) { // .tar.gz, .tgz
-        const extractLocation = await ipcRenderer.invoke(
-          ipcMainChannels.SHOW_OPEN_DIALOG,
-          {
-            title: t('Choose location to extract archive'),
-            properties: ['openDirectory'],
-          }
-        );
-        if (extractLocation.filePaths.length) {
-          const directoryPath = extractLocation.filePaths[0];
-          const writable = await ipcRenderer.invoke(
-            ipcMainChannels.CHECK_FILE_PERMISSIONS, directoryPath);
-          if (writable) {
-            datastack = await fetchDatastackFromFile({
-              model_id: modelID,
-              filepath: filepath,
-              extractPath: directoryPath,
-            });
-          } else {
-            alert( // eslint-disable-line no-alert
-              `${t('Permission denied extracting files to:')}\n${directoryPath}`
-            );
-          }
-        } else { return; } // dialog closed without selection
-      } else {
-        datastack = await fetchDatastackFromFile(
-          { model_id: modelID, filepath: filepath }
-        );
-      }
+      datastack = await openDatastack(filepath);
     } catch (error) {
-      logger.error(error);
-      alert( // eslint-disable-line no-alert
-        `${t('No InVEST model data can be parsed from the file:')}\n${filepath}`
-      );
-      return;
+      alert(error);
+    }
+    if (!datastack) {
+      return; // the open dialog was cancelled
     }
     if (datastack.model_id === modelID) {
       this.batchUpdateArgs(datastack.args);
