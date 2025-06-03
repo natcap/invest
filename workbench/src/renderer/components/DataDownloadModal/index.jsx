@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import i18n from 'i18next';
 
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
@@ -95,7 +96,10 @@ class DataDownloadModal extends React.Component {
     // a directory, so must use OpenDialog.
     const data = await ipcRenderer.invoke(
       ipcMainChannels.SHOW_OPEN_DIALOG,
-      { properties: ['openDirectory'] }
+      {
+        buttonLabel: i18n.t('Choose location to save data'),
+        properties: ['openDirectory'],
+      }
     );
     if (data.filePaths.length) {
       const writable = await ipcRenderer.invoke(
