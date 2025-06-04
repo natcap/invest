@@ -337,7 +337,7 @@ export default function PluginModal(props) {
                     value={pluginID}
                     key={pluginID}
                   >
-                    {plugins[pluginID].modelTitle}
+                    {`${plugins[pluginID].modelTitle} (${plugins[pluginID].version})`}
                   </option>
                 )
               )
