@@ -90,8 +90,8 @@ export const createWindow = async () => {
   const plugins = settingsStore.get('plugins');
   if (plugins) {
     Object.keys(plugins).forEach((modelID) => {
-      settingsStore.set(`plugins.${modelID}.pid`, '');
-      settingsStore.set(`plugins.${modelID}.port`, '');
+      settingsStore.set(`plugins.${modelID.replaceAll('.', '\\.')}.pid`, '');
+      settingsStore.set(`plugins.${modelID.replaceAll('.', '\\.')}.port`, '');
     });
   }
 
@@ -222,12 +222,12 @@ export function main() {
     const pluginServerPIDs = [];
     const plugins = settingsStore.get('plugins') || {};
     Object.keys(plugins).forEach((pluginID) => {
-      const pid = settingsStore.get(`plugins.${pluginID}.pid`);
+      const pid = settingsStore.get(`plugins.${pluginID.replaceAll('.', '\\.')}.pid`);
       if (pid) {
         pluginServerPIDs.push(pid);
       }
-      settingsStore.set(`plugins.${pluginID}.pid`, '');
-      settingsStore.set(`plugins.${pluginID}.port`, '');
+      settingsStore.set(`plugins.${pluginID.replaceAll('.', '\\.')}.pid`, '');
+      settingsStore.set(`plugins.${pluginID.replaceAll('.', '\\.')}.port`, '');
     });
     await Promise.all(pluginServerPIDs.map((pid) => shutdownPythonProcess(pid)));
 

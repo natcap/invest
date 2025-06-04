@@ -93,16 +93,16 @@ export function setupInvestRunHandlers() {
       cmd = settingsStore.get('micromamba');
       cmdArgs = [
         'run',
-        `--prefix "${settingsStore.get(`plugins.${modelID}.env`)}"`,
+        `--prefix "${settingsStore.get(`plugins.${modelID.replaceAll('.', '\\.')}.env`)}"`,
         'invest',
         LOGLEVELMAP[loggingLevel],
         TGLOGLEVELMAP[taskgraphLoggingLevel],
         `--language "${language}"`,
         'run',
-        settingsStore.get(`plugins.${modelID}.modelID`),
+        settingsStore.get(`plugins.${modelID.replaceAll('.', '\\.')}.modelID`),
         `-d "${datastackPath}"`,
       ];
-      port = settingsStore.get(`plugins.${modelID}.port`);
+      port = settingsStore.get(`plugins.${modelID.replaceAll('.', '\\.')}.port`);
     } else {
       cmd = settingsStore.get('investExe');
       cmdArgs = [

@@ -164,9 +164,9 @@ export function setupAddPlugin(i18n) {
         // Uniquely identify plugin by a hash of its ID and version
         // Hashing because the version may contain dots,
         // which doesn't work well as a key for electron-store's set and get methods
-        const pluginID = crypto.createHash('sha1').update(`${modelID}@${version}`).digest('hex');
+        const pluginID = `${modelID}@${version}`;
         settingsStore.set(
-          `plugins.${pluginID}`,
+          `plugins.${pluginID.replaceAll('.', '\\.')}`,
           {
             modelID: modelID,
             modelTitle: modelTitle,
@@ -192,14 +192,14 @@ export function setupRemovePlugin() {
       logger.info('removing plugin', pluginID);
       try {
         // Shut down the plugin server process
-        const pluginPID = settingsStore.get(`plugins.${pluginID}.pid`);
+        const pluginPID = settingsStore.get(`plugins.${pluginID.replaceAll('.', '\\.')}.pid`);
         await shutdownPythonProcess(pluginPID);
         // Delete the plugin's conda env
-        const env = settingsStore.get(`plugins.${pluginID}.env`);
+        const env = settingsStore.get(`plugins.${pluginID.replaceAll('.', '\\.')}.env`);
         const micromamba = settingsStore.get('micromamba');
         await spawnWithLogging(micromamba, ['env', 'remove', '--yes', '--prefix', `"${env}"`]);
         // Delete the plugin's data from storage
-        settingsStore.delete(`plugins.${pluginID}`);
+        settingsStore.delete(`plugins.${pluginID.replaceAll('.', '\\.')}`);
         logger.info('successfully removed plugin');
       } catch (error) {
         logger.info('Error removing plugin:');
