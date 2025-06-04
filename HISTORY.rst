@@ -83,7 +83,7 @@ Highlights
   with expected values of either application-rate or measured-runoff. See the
   Data Needs section of the NDR User Guide for more details. (#1044).
 * The Wind Energy model no longer returns results as rasters; instead, values
-  are written to the output wind_energy_points shapefile for each point (#1698).
+  are written to the output ``wind_energy_points`` shapefile for each point.
   For more details on this check out the Any Decision Record (ADR):
   `ADR-0004: Remove Wind Energy Raster Outputs <https://github.com/natcap/invest/blob/main/doc/decision-records/ADR-0004-Remove-Wind-Energy-Raster-Outputs.md>`_
 
