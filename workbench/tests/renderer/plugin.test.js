@@ -222,6 +222,7 @@ describe('Add plugin modal', () => {
       foo: {
         modelTitle: 'Foo',
         type: 'plugin',
+        version: '1.0',
       },
     };
     const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
@@ -249,7 +250,7 @@ describe('Add plugin modal', () => {
     await userEvent.click(managePluginsButton);
 
     const pluginDropdown = await findByLabelText('Plugin name');
-    await userEvent.selectOptions(pluginDropdown, [getByRole('option', { name: 'Foo' })]);
+    await userEvent.selectOptions(pluginDropdown, [getByRole('option', { name: 'Foo (1.0)' })]);
 
     const submitButton = await findByText('Remove');
     await userEvent.click(submitButton);
