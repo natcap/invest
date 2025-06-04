@@ -162,11 +162,11 @@ export function setupAddPlugin(i18n) {
         // Write plugin metadata to the workbench's config.json
         logger.info('writing plugin info to settings store');
         // Uniquely identify plugin by a hash of its ID and version
-        // Hashing because the version may contain dots,
-        // which doesn't work well as a key for electron-store's set and get methods
-        const pluginID = crypto.createHash('sha1').update(`${modelID}@${version}`).digest('hex');
+        // Replace dots with underscores in the version, because dots are a
+        // special character in keys for electron-store's set and get methods
+        const pluginID = `${modelID}@${version}`;
         settingsStore.set(
-          `plugins.${pluginID}`,
+          `plugins.${pluginID.replaceAll('.', '_')}`,
           {
             modelID: modelID,
             modelTitle: modelTitle,

@@ -173,14 +173,17 @@ def build_datastack_archive(args, model_id, datastack_path):
 
     Args:
         args (dict): The arguments dictionary to include in the datastack.
-        model_id (string): The id the model these args are for.
+        model_id (string): The id the model these args are for. For core models,
+            this is the regular id. For plugins, this has the format model_id@version
         datastack_path (string): The path to where the datastack archive
             should be written.
 
     Returns:
         ``None``
     """
-    module = importlib.import_module(name=models.model_id_to_pyname[model_id])
+    module = importlib.import_module(
+        # For plugins, use the model id before the '@'
+        name=models.model_id_to_pyname[model_id.split('@')[0]])
 
     args = args.copy()
     temp_workspace = tempfile.mkdtemp(prefix='datastack_')

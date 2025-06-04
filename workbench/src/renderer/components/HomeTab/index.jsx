@@ -70,13 +70,20 @@ export default class HomeTab extends React.Component {
       }
     }
 
+    const titles = sortedModelIds.map((id) => { return investList[id].modelTitle });
+    const nonUniqueTitles = titles.filter(
+      item => titles.indexOf(item) !== titles.lastIndexOf(item)
+    );
     // A button in a table row for each model
     const investButtons = [];
     sortedModelIds.forEach((modelID) => {
-      const modelTitle = investList[modelID].modelTitle;
+      let modelTitle = investList[modelID].modelTitle;
       let badge;
       if (investList[modelID].type === 'plugin') {
         badge = <Badge className="mr-1" variant="secondary">Plugin</Badge>;
+      }
+      if (nonUniqueTitles.includes(modelTitle)) {
+        modelTitle = `${modelTitle} ${investList[modelID].version}`;
       }
       investButtons.push(
         <ListGroup.Item
