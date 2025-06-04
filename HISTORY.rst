@@ -60,8 +60,12 @@
   6. InVEST model Z (model names should be sorted A-Z)
 
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.16.0 (2025-06-04)
+-------------------
 
 Highlights
 ==========
