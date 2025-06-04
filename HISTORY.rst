@@ -63,6 +63,30 @@
 Unreleased Changes
 ------------------
 
+Highlights
+==========
+* InVEST now supports plugins. The plugins framework allows users to develop
+  their own models that can be loaded into the workbench and run like regular
+  InVEST models. For more information, see the
+  `InVEST API documentation <https://invest.readthedocs.io/en/latest/index.html>`_.
+* As part of the plugin release we developed two of our own plugin models.
+  One is a wrapper around a python library for spatial downscaling of CMIP6
+  climate data (`InVEST GCM Downscaling <https://github.com/natcap/invest-gcm-downscaling>`_).
+  The other is a version of the SDR model that takes in the landcover crop
+  coefficient input as a spatial raster layer
+  (`Sediment Delivery Ratio with USLE C Raster Input <https://github.com/natcap/invest-sdr-usle-c-raster>`_).
+* Added a feature to the NDR model that allows the nutrient load to be entered
+  as an application rate or as an "extensive"/export measured value.
+  Previously, the model's biophysical table expected the ``load_n`` and ``load_p``
+  columns to be an "extensive"/export measured value. Now, new columns for both
+  nitrogen and phosphorous, ``load_type_n`` and ``load_type_p``, are required
+  with expected values of either application-rate or measured-runoff. See the
+  Data Needs section of the NDR User Guide for more details. (#1044).
+* The Wind Energy model no longer returns results as rasters; instead, values
+  are written to the output wind_energy_points shapefile for each point (#1698).
+  For more details on this check out the Any Decision Record (ADR):
+  `ADR-0004: Remove Wind Energy Raster Outputs <https://github.com/natcap/invest/blob/main/doc/decision-records/ADR-0004-Remove-Wind-Energy-Raster-Outputs.md>`_
+
 General
 =======
 * Fixed a micromamba command bug in 3.16.0a1 that was calling micromamba
