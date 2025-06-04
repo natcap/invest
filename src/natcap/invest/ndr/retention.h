@@ -3,74 +3,71 @@
 #include <stack>
 #include <ctime>
 
-// Calculate flow downhill effective_retention to the channel.
+// Calculate flow downhill retention to the channel.
 // Args:
 //   flow_direction_path: a path to a flow direction raster (MFD or D8)
 //   stream_path: a path to a raster where 1 indicates a
 //     stream all other values ignored must be same dimensions and
 //     projection as flow_direction_path.
-//   retention_eff_lulc_path: a path to a raster indicating
+//   retention_efficiency_path: a path to a raster indicating
 //     the maximum retention efficiency that the landcover on that
 //     pixel can accumulate.
-//   crit_len_path: a path to a raster indicating the critical
+//   critical_length_path: a path to a raster indicating the critical
 //     length of the retention efficiency that the landcover on this
 //     pixel.
-//   effective_retention_path: path to a raster that is
+//   retention_path: path to a raster that is
 //     created by this call that contains a per-pixel effective
 //     sediment retention to the stream.
 template<class T>
-void run_effective_retention(
+void calculate_retention(
     char* flow_direction_path,
     char* stream_path,
-    char* retention_eff_lulc_path,
-    char* crit_len_path,
+    char* retention_efficiency_path,
+    char* critical_length_path,
     char* to_process_flow_directions_path,
-    char* effective_retention_path) {
-  // Within a stream, the effective retention is 0
-  int STREAM_EFFECTIVE_RETENTION = 0;
-  float effective_retention_nodata = -1;
+    char* retention_path) {
+  // Within a stream, the retention is 0
+  int STREAM_RETENTION = 0;
+  float retention_nodata = -1;
   stack<long> processing_stack;
 
   ManagedFlowDirRaster flow_dir_raster = ManagedFlowDirRaster<T>(
     flow_direction_path, 1, false);
   ManagedRaster stream_raster = ManagedRaster(stream_path, 1, false);
-  ManagedRaster retention_eff_lulc_raster = ManagedRaster(
-    retention_eff_lulc_path, 1, false);
-  ManagedRaster crit_len_raster = ManagedRaster(crit_len_path, 1, false);
+  ManagedRaster retention_efficiency_raster = ManagedRaster(
+    retention_efficiency_path, 1, false);
+  ManagedRaster critical_length_raster = ManagedRaster(critical_length_path, 1, false);
   ManagedRaster to_process_flow_directions_raster = ManagedRaster(
     to_process_flow_directions_path, 1, true);
-  ManagedRaster effective_retention_raster = ManagedRaster(
-    effective_retention_path, 1, true);
+  ManagedRaster retention_raster = ManagedRaster(retention_path, 1, true);
 
   long n_cols = flow_dir_raster.raster_x_size;
   long n_rows = flow_dir_raster.raster_y_size;
   // cell sizes must be square, so no reason to test at this point.
   double cell_size = stream_raster.geotransform[1];
 
-  double crit_len_nodata = crit_len_raster.nodata;
-  double retention_eff_nodata = retention_eff_lulc_raster.nodata;
-
   long win_xsize, win_ysize, xoff, yoff;
-  long global_col, global_row;
+  long x_i, y_i;
   unsigned long flat_index;
-  long flow_dir, neighbor_flow_dirs;
-  double current_step_factor, step_size, crit_len, retention_eff_lulc;
+  long flow_dir_i, neighbor_flow_dirs;
+  double step_factor, step_length, critical_length_i, retention_efficiency_i;
   long neighbor_row, neighbor_col;
-  int neighbor_outflow_dir, neighbor_outflow_dir_mask, neighbor_process_flow_dir;
+  int outflow_dir, outflow_dir_mask, directions_to_process;
   int outflow_dirs, dir_mask;
   NeighborTuple neighbor;
   bool should_seed;
-  double working_retention_eff;
-  DownslopeNeighborsNoSkip<T> dn_neighbors;
-  UpslopeNeighbors<T> up_neighbors;
+  double retention_i;
+  DownslopeNeighborsNoSkip<T> downslope_neighbors;
+  UpslopeNeighbors<T> upslope_neighbors;
   bool has_outflow;
-  double neighbor_effective_retention;
+  double retention_j;
   double intermediate_retention;
   string s;
   long flow_dir_sum;
   time_t last_log_time = time(NULL);
   unsigned long n_pixels_processed = 0;
   float total_n_pixels = flow_dir_raster.raster_x_size * flow_dir_raster.raster_y_size;
+  double sqrt_2 = sqrt(2);
 
   // efficient way to calculate ceiling division:
   // a divided by b rounded up = (a + (b - 1)) / b
@@ -96,26 +93,26 @@ void run_effective_retention(
         last_log_time = time(NULL);
         log_msg(
           LogLevel::info,
-          "Effective retention " + std::to_string(
+          "Retention " + std::to_string(
             100 * n_pixels_processed / total_n_pixels
           ) + " complete"
         );
       }
 
       for (int row_index = 0; row_index < win_ysize; row_index++) {
-        global_row = yoff + row_index;
+        y_i = yoff + row_index;
         for (int col_index = 0; col_index < win_xsize; col_index++) {
-          global_col = xoff + col_index;
+          x_i = xoff + col_index;
           outflow_dirs = int(to_process_flow_directions_raster.get(
-            global_col, global_row));
+            x_i, y_i));
           should_seed = false;
           // # see if this pixel drains to nodata or the edge, if so it's
           // # a drain
           for (int i = 0; i < 8; i++) {
             dir_mask = 1 << i;
             if ((outflow_dirs & dir_mask) > 0) {
-              neighbor_col = COL_OFFSETS[i] + global_col;
-              neighbor_row = ROW_OFFSETS[i] + global_row;
+              neighbor_col = COL_OFFSETS[i] + x_i;
+              neighbor_row = ROW_OFFSETS[i] + y_i;
               if (neighbor_col < 0 or neighbor_col >= n_cols or
                 neighbor_row < 0 or neighbor_row >= n_rows) {
                 should_seed = true;
@@ -137,8 +134,8 @@ void run_effective_retention(
           if (should_seed) {
             // mark all outflow directions processed
             to_process_flow_directions_raster.set(
-              global_col, global_row, outflow_dirs);
-            processing_stack.push(global_row * n_cols + global_col);
+              x_i, y_i, outflow_dirs);
+            processing_stack.push(y_i * n_cols + x_i);
           }
         }
       }
@@ -148,107 +145,105 @@ void run_effective_retention(
         // hasn't already been set for processing.
         flat_index = processing_stack.top();
         processing_stack.pop();
-        global_row = flat_index / n_cols;  // integer floor division
-        global_col = flat_index % n_cols;
+        y_i = flat_index / n_cols;  // integer floor division
+        x_i = flat_index % n_cols;
 
-        crit_len = crit_len_raster.get(global_col, global_row);
-        retention_eff_lulc = retention_eff_lulc_raster.get(global_col, global_row);
-        flow_dir = int(flow_dir_raster.get(global_col, global_row));
-        if (stream_raster.get(global_col, global_row) == 1) {
-          // if it's a stream, effective retention is 0.
-          effective_retention_raster.set(global_col, global_row, STREAM_EFFECTIVE_RETENTION);
-        } else if (is_close(crit_len, crit_len_nodata) or
-            is_close(retention_eff_lulc, retention_eff_nodata) or
-            flow_dir == 0) {
-          // if it's nodata, effective retention is nodata.
-          effective_retention_raster.set(
-            global_col, global_row, effective_retention_nodata);
+        critical_length_i = critical_length_raster.get(x_i, y_i);
+        retention_efficiency_i = retention_efficiency_raster.get(x_i, y_i);
+        flow_dir_i = int(flow_dir_raster.get(x_i, y_i));
+        if (stream_raster.get(x_i, y_i) == 1) {
+          // if pixel i is a stream, retention is 0.
+          retention_raster.set(x_i, y_i, STREAM_RETENTION);
+        } else if (
+            is_close(critical_length_i, critical_length_raster.nodata) or
+            is_close(retention_efficiency_i, retention_efficiency_raster.nodata) or
+            flow_dir_i == 0  // "nodata" for flow direction
+          ) {
+          // if inputs are nodata, retention is undefined.
+          retention_raster.set(x_i, y_i, retention_nodata);
         } else {
-          working_retention_eff = 0;
+          retention_i = 0;
 
-          dn_neighbors = DownslopeNeighborsNoSkip<T>(
-            Pixel<T>(flow_dir_raster, global_col, global_row));
+          downslope_neighbors = DownslopeNeighborsNoSkip<T>(
+            Pixel<T>(flow_dir_raster, x_i, y_i));
           has_outflow = false;
           flow_dir_sum = 0;
-          for (auto neighbor: dn_neighbors) {
+          // For each pixel j, a downslope neighbor of i
+          for (auto j: downslope_neighbors) {
             has_outflow = true;
-            flow_dir_sum += static_cast<long>(neighbor.flow_proportion);
-            if (neighbor.x < 0 or neighbor.x >= n_cols or
-              neighbor.y < 0 or neighbor.y >= n_rows) {
+            flow_dir_sum += static_cast<long>(j.flow_proportion);
+            if (j.x < 0 or j.x >= n_cols or j.y < 0 or j.y >= n_rows) {
               continue;
             }
-            neighbor_effective_retention = (
-              effective_retention_raster.get(
-                neighbor.x, neighbor.y));
-            if (is_close(neighbor_effective_retention, effective_retention_nodata)) {
+            retention_j = retention_raster.get(j.x, j.y);
+            if (is_close(retention_j, retention_nodata)) {
               continue;
             }
 
-            if (neighbor.direction % 2 == 1) {
-              step_size = cell_size * 1.41421356237;
+            // step length:
+            // the distance between the centerpoints of pixel i and pixel j
+            if (j.direction % 2 == 1) {
+              step_length = cell_size * sqrt_2;
             } else {
-              step_size = cell_size;
+              step_length = cell_size;
             }
             // guard against a critical length factor that's 0
-            if (crit_len > 0) {
-              current_step_factor = exp(-5 * step_size / crit_len);
+            if (critical_length_i > 0) {
+              step_factor = exp(-5 * step_length / critical_length_i);
             } else {
-              current_step_factor = 0;
+              step_factor = 0;
             }
 
             // Case 1: downslope neighbor is a stream pixel
-            if (neighbor_effective_retention == STREAM_EFFECTIVE_RETENTION) {
+            if (retention_j == STREAM_RETENTION) {
+              intermediate_retention = retention_efficiency_i * (1 - step_factor);
+            // Case 2: the current LULC's retention exceeds the neighbor's retention.
+            } else if (retention_efficiency_i > retention_j) {
               intermediate_retention = (
-                retention_eff_lulc * (1 - current_step_factor));
-             // Case 2: the current LULC's retention exceeds the neighbor's retention.
-            } else if (retention_eff_lulc > neighbor_effective_retention) {
-              intermediate_retention = (
-                (neighbor_effective_retention * current_step_factor) +
-                (retention_eff_lulc * (1 - current_step_factor)));
-            // Case 3: the other 2 cases have not been hit.
+                (retention_j * step_factor) +
+                (retention_efficiency_i * (1 - step_factor)));
+            // Case 3: the current LULC's retention does not exceed the neighbor's
             } else {
-              intermediate_retention = neighbor_effective_retention;
+              intermediate_retention = retention_j;
             }
 
-            working_retention_eff += (
-              intermediate_retention * neighbor.flow_proportion);
+            retention_i += intermediate_retention * neighbor.flow_proportion;
           }
 
           if (has_outflow) {
-            double v = working_retention_eff / flow_dir_sum;
-            effective_retention_raster.set(
-              global_col, global_row, v);
+            retention_i = retention_i / flow_dir_sum;
+            retention_raster.set(x_i, y_i, retention_i);
           } else {
             throw std::logic_error(
               "got to a cell that has no outflow! This error is happening"
               "in effective_retention.h");
           }
         }
-        // search upslope to see if we need to push a cell on the stack
-        up_neighbors = UpslopeNeighbors<T>(Pixel<T>(flow_dir_raster, global_col, global_row));
-        for (auto neighbor: up_neighbors) {
-          neighbor_outflow_dir = INFLOW_OFFSETS[neighbor.direction];
-          neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir;
-          neighbor_process_flow_dir = int(
-            to_process_flow_directions_raster.get(
-              neighbor.x, neighbor.y));
-          if (neighbor_process_flow_dir == 0) {
+
+        upslope_neighbors = UpslopeNeighbors<T>(Pixel<T>(flow_dir_raster, x_i, y_i));
+        // for each pixel k that is an upslope neighbor of i,
+        // check if we can push k onto the stack yet
+        for (auto k: upslope_neighbors) {
+          outflow_dir = INFLOW_OFFSETS[k.direction];
+          outflow_dir_mask = 1 << outflow_dir;
+          directions_to_process = int(
+            to_process_flow_directions_raster.get(k.x, k.y));
+          if (directions_to_process == 0) {
             // skip, due to loop invariant this must be a nodata pixel
             continue;
           }
-          if ((neighbor_process_flow_dir & neighbor_outflow_dir_mask )== 0) {
+          if ((directions_to_process & outflow_dir_mask) == 0) {
             // no outflow
             continue;
           }
           // mask out the outflow dir that this iteration processed
-          neighbor_process_flow_dir &= ~neighbor_outflow_dir_mask;
-          to_process_flow_directions_raster.set(
-            neighbor.x, neighbor.y, neighbor_process_flow_dir);
-          if (neighbor_process_flow_dir == 0) {
+          directions_to_process &= ~outflow_dir_mask;
+          to_process_flow_directions_raster.set(k.x, k.y, directions_to_process);
+          if (directions_to_process == 0) {
             // if 0 then all downslope have been processed,
             // push on stack, otherwise another downslope pixel will
             // pick it up
-            processing_stack.push(neighbor.y * n_cols + neighbor.x);
+            processing_stack.push(k.y * n_cols + k.x);
           }
         }
       }
@@ -256,10 +251,10 @@ void run_effective_retention(
     }
   }
   stream_raster.close();
-  crit_len_raster.close();
-  retention_eff_lulc_raster.close();
-  effective_retention_raster.close();
+  critical_length_raster.close();
+  retention_efficiency_raster.close();
+  retention_raster.close();
   flow_dir_raster.close();
   to_process_flow_directions_raster.close();
-  log_msg(LogLevel::info, "Effective retention 100% complete");
+  log_msg(LogLevel::info, "Retention 100% complete");
 }

@@ -10,7 +10,7 @@ from osgeo import gdal
 
 from ..managed_raster.managed_raster cimport D8
 from ..managed_raster.managed_raster cimport MFD
-from .effective_retention cimport run_effective_retention
+from .retention cimport calculate_retention
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
@@ -80,7 +80,7 @@ def ndr_eff_calculation(
         to_process_flow_directions_path, gdal.GDT_Byte, None)
 
     if algorithm == 'MFD':
-        run_effective_retention[MFD](
+        calculate_retention[MFD](
             flow_direction_path.encode('utf-8'),
             stream_path.encode('utf-8'),
             retention_eff_lulc_path.encode('utf-8'),
@@ -88,7 +88,7 @@ def ndr_eff_calculation(
             to_process_flow_directions_path.encode('utf-8'),
             effective_retention_path.encode('utf-8'))
     else: # D8
-        run_effective_retention[D8](
+        calculate_retention[D8](
             flow_direction_path.encode('utf-8'),
             stream_path.encode('utf-8'),
             retention_eff_lulc_path.encode('utf-8'),
