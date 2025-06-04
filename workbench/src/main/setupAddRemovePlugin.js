@@ -162,11 +162,11 @@ export function setupAddPlugin(i18n) {
         // Write plugin metadata to the workbench's config.json
         logger.info('writing plugin info to settings store');
         // Uniquely identify plugin by a hash of its ID and version
-        // Hashing because the version may contain dots,
-        // which doesn't work well as a key for electron-store's set and get methods
+        // Replace dots with underscores in the version, because dots are a
+        // special character in keys for electron-store's set and get methods
         const pluginID = `${modelID}@${version}`;
         settingsStore.set(
-          `plugins.${pluginID.replaceAll('.', '\\.')}`,
+          `plugins.${pluginID.replaceAll('.', '_')}`,
           {
             modelID: modelID,
             modelTitle: modelTitle,
@@ -192,14 +192,14 @@ export function setupRemovePlugin() {
       logger.info('removing plugin', pluginID);
       try {
         // Shut down the plugin server process
-        const pluginPID = settingsStore.get(`plugins.${pluginID.replaceAll('.', '\\.')}.pid`);
+        const pluginPID = settingsStore.get(`plugins.${pluginID}.pid`);
         await shutdownPythonProcess(pluginPID);
         // Delete the plugin's conda env
-        const env = settingsStore.get(`plugins.${pluginID.replaceAll('.', '\\.')}.env`);
+        const env = settingsStore.get(`plugins.${pluginID}.env`);
         const micromamba = settingsStore.get('micromamba');
         await spawnWithLogging(micromamba, ['env', 'remove', '--yes', '--prefix', `"${env}"`]);
         // Delete the plugin's data from storage
-        settingsStore.delete(`plugins.${pluginID.replaceAll('.', '\\.')}`);
+        settingsStore.delete(`plugins.${pluginID}`);
         logger.info('successfully removed plugin');
       } catch (error) {
         logger.info('Error removing plugin:');

@@ -20,8 +20,8 @@ async function getPortAndID(modelID) {
   let port, id;
   const plugins = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'plugins');
   if (plugins && Object.keys(plugins).includes(modelID)) {
-    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `plugins.${modelID.replaceAll('.', '\\.')}.port`);
-    id = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `plugins.${modelID.replaceAll('.', '\\.')}.modelID`);
+    port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `plugins.${modelID}.port`);
+    id = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, `plugins.${modelID}.modelID`);
   } else {
     port = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'core.port');
     id = modelID
