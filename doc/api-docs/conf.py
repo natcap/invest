@@ -18,10 +18,12 @@ import os
 import pkgutil
 import sys
 from unittest.mock import MagicMock
+from urllib.request import urlretrieve
 
 import natcap.invest
 from natcap.invest import models
 from sphinx.ext import apidoc
+
 
 DOCS_SOURCE_DIR = os.path.dirname(__file__)
 # get the directory that the natcap package lives in
@@ -151,6 +153,11 @@ apidoc.main([
     '/*.so'  # must be absolute path, see https://github.com/sphinx-doc/sphinx/issues/10200
 ])
 
+# Download the demo plugin pyproject.toml to display in the plugins page
+urlretrieve (
+    "https://raw.githubusercontent.com/natcap/invest-demo-plugin/main/pyproject.toml",
+    "pyproject.toml"
+)
 
 # -- Generate model entrypoints file --------------------------------------
 

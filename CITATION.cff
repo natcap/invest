@@ -1,0 +1,60 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: InVEST
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - name: Natural Capital Project
+    website: 'https://naturalcapitalproject.stanford.edu'
+identifiers:
+  - type: doi
+    value: 10.60793/natcap-invest-3.16.0
+    description: Persistent identifier for this version of InVEST
+repository-code: 'https://github.com/natcap/invest'
+url: 'https://naturalcapitalproject.stanford.edu/software/invest'
+repository-artifact: >-
+  http://releases.naturalcapitalproject.org/?prefix=invest/3.16.0
+abstract: >-
+  InVEST® is a suite of free, open-source software models
+  used to map and value the goods and services from nature
+  that sustain and fulfill human life.  If properly managed,
+  ecosystems yield a flow of services that are vital to
+  humanity, including the production of goods (e.g., food),
+  life-support processes (e.g., water purification), and
+  life-fulfilling conditions (e.g., beauty, opportunities
+  for recreation), and the conservation of options (e.g.,
+  genetic diversity for future use).  Despite its
+  importance, this natural capital is poorly understood,
+  scarcely monitored, and, in many cases, undergoing rapid
+  degradation and depletion.
+
+
+  Governments, non-profits, international lending
+  institutions, and corporations all manage natural
+  resources for multiple uses and inevitably must evaluate
+  tradeoffs among them. The multi-service, modular design of
+  InVEST provides an effective tool for balancing the
+  environmental and economic goals of these diverse
+  entities.
+
+
+  InVEST enables decision makers to assess quantified
+  tradeoffs associated with alternative management choices
+  and to identify areas where investment in natural capital
+  can enhance human development and conservation.  The
+  toolset includes distinct ecosystem service models
+  designed for terrestrial, freshwater, marine, and coastal
+  ecosystems, as well as a number of “helper tools” to
+  assist with locating and processing input data and with
+  understanding and visualizing outputs.
+keywords:
+  - Ecosystem Services
+  - Geospatial
+  - Natural Capital
+license: Apache-2.0
+version: 3.16.0
+date-released: '2025-06-04'

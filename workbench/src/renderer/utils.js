@@ -1,6 +1,10 @@
+import i18n from 'i18next';
+
 import { ipcMainChannels } from '../main/ipcMainChannels';
+import { fetchDatastackFromFile } from './server_requests';
 
 const { ipcRenderer } = window.Workbench.electron;
+const { logger } = window.Workbench;
 
 /**
  * Create a JSON string with invest argument keys and values.
@@ -37,4 +41,43 @@ export function openLinkInBrowser(event) {
     ipcMainChannels.OPEN_EXTERNAL_URL,
     event.currentTarget.href
   );
+}
+
+export async function openDatastack(filepath) {
+  const { t } = i18n;
+  let datastack;
+  try {
+    if (filepath.endsWith('gz')) { // .tar.gz, .tgz
+      const extractLocation = await ipcRenderer.invoke(
+        ipcMainChannels.SHOW_OPEN_DIALOG,
+        {
+          // title is only for Windows, but default 'Open' is misleading
+          title: i18n.t('Choose a directory'),
+          buttonLabel: t('Extract archive here'),
+          properties: ['openDirectory', 'createDirectory'],
+        }
+      );
+      if (extractLocation.filePaths.length) {
+        const directoryPath = extractLocation.filePaths[0];
+        const writable = await ipcRenderer.invoke(
+          ipcMainChannels.CHECK_FILE_PERMISSIONS, directoryPath);
+        if (writable) {
+          const newDir = filepath.split(/\\+|\/+/).pop()
+            .replace(/\.tgz|\.tar\.gz/gi, '');
+          datastack = await fetchDatastackFromFile({
+            filepath: filepath,
+            extractPath: `${directoryPath}/${newDir}`,
+          });
+        } else {
+          throw new Error(`${t('Permission denied extracting files to:')}\n${directoryPath}`);
+        }
+      }
+    } else {
+      datastack = await fetchDatastackFromFile({ filepath: filepath });
+    }
+  } catch (error) {
+    logger.error(error);
+    throw new Error(`${t('No InVEST model data can be parsed from the file:')}\n${filepath}`);
+  }
+  return datastack;
 }

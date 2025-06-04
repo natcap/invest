@@ -1,18 +1,20 @@
-import { ipcRenderer } from 'electron';
 import React from 'react';
+import { ipcRenderer } from 'electron';
+import '@testing-library/jest-dom';
 import {
-  within, render, waitFor
+  within, render, waitFor,
+  findByText
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
+
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
-import App from '../../src/renderer/app';
 import {
   getSpec,
   getInvestModelIDs,
   fetchArgsEnabled,
   fetchValidation
 } from '../../src/renderer/server_requests';
+import App from '../../src/renderer/app';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -45,7 +47,95 @@ describe('Add plugin modal', () => {
     getInvestModelIDs.mockResolvedValue({});
   });
 
-  test('Interface to add a plugin', async () => {
+  describe('"Add a plugin" form validation', () => {
+    let spy;
+
+    beforeEach(async () => {
+      spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
+        if (channel === ipcMainChannels.GET_SETTING) {
+          if (setting === 'plugins') {
+            return Promise.resolve({
+              foo: {
+                modelTitle: 'Foo',
+                type: 'plugin',
+              },
+            });
+          }
+        } else if (channel === ipcMainChannels.HAS_MSVC) {
+          return Promise.resolve(true);
+        }
+        return Promise.resolve();
+      });
+    });
+
+    test('Should render an error on submit if git URL is empty', async () => {
+      const {
+        findByText, findByLabelText, findByRole,
+      } = render(<App />);
+
+      await userEvent.click(await findByRole('button', { name: 'menu' }));
+      const managePluginsButton = await findByText(/Manage plugins/i);
+      await userEvent.click(managePluginsButton);
+
+      const userAcknowledgmentCheckbox = await findByLabelText(/I acknowledge and accept/i);
+      await userEvent.click(userAcknowledgmentCheckbox);
+
+      const submitButton = await findByText('Add');
+      await userEvent.click(submitButton);
+
+      const missingUrlError = await findByText('Error: URL is required.');
+      expect(missingUrlError).toBeInTheDocument();
+
+      expect(spy).not.toHaveBeenCalledWith(ipcMainChannels.ADD_PLUGIN);
+    });
+
+    test('Should render an error on submit if local path is empty', async () => {
+      const {
+        findByText, findByLabelText, findByRole,
+      } = render(<App />);
+
+      await userEvent.click(await findByRole('button', { name: 'menu' }));
+      const managePluginsButton = await findByText(/Manage plugins/i);
+      await userEvent.click(managePluginsButton);
+
+      const sourceType = await findByLabelText('Install from');
+      await userEvent.selectOptions(sourceType, 'local path');
+
+      const userAcknowledgmentCheckbox = await findByLabelText(/I acknowledge and accept/i);
+      await userEvent.click(userAcknowledgmentCheckbox);
+
+      const submitButton = await findByText('Add');
+      await userEvent.click(submitButton);
+
+      const missingPathError = await findByText('Error: Path is required.');
+      expect(missingPathError).toBeInTheDocument();
+
+      expect(spy).not.toHaveBeenCalledWith(ipcMainChannels.ADD_PLUGIN);
+    });
+
+    test('Should render an error on submit if user acknowledgment is unchecked', async () => {
+      const {
+        findByText, findByLabelText, findByRole,
+      } = render(<App />);
+
+      await userEvent.click(await findByRole('button', { name: 'menu' }));
+      const managePluginsButton = await findByText(/Manage plugins/i);
+      await userEvent.click(managePluginsButton);
+
+      const urlField = await findByLabelText('Git URL');
+      await userEvent.type(urlField, 'fake url', { delay: 0 });
+
+      const submitButton = await findByText('Add');
+      await userEvent.click(submitButton);
+
+      const userAcknowledgmentError = await findByText(/Error: Before installing a plugin/i);
+      expect(userAcknowledgmentError).toBeInTheDocument();
+
+      expect(spy).not.toHaveBeenCalledWith(ipcMainChannels.ADD_PLUGIN);
+    });
+  });
+
+  test('Add a plugin', async () => {
     const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.GET_SETTING) {
         if (setting === 'plugins') {
@@ -67,11 +157,15 @@ describe('Add plugin modal', () => {
 
     await userEvent.click(await findByRole('button', { name: 'menu' }));
     const managePluginsButton = await findByText(/Manage plugins/i);
-    userEvent.click(managePluginsButton);
+    await userEvent.click(managePluginsButton);
 
     const urlField = await findByLabelText('Git URL');
     await userEvent.type(urlField, 'fake url', { delay: 0 });
+    const userAcknowledgmentCheckbox = await findByLabelText(/I acknowledge and accept/i);
+    await userEvent.click(userAcknowledgmentCheckbox);
+
     const submitButton = await findByText('Add');
+    // The following event is synchronous bc awaiting it causes the test to fail.
     userEvent.click(submitButton);
 
     await findByText('Adding...');
@@ -128,6 +222,7 @@ describe('Add plugin modal', () => {
       foo: {
         modelTitle: 'Foo',
         type: 'plugin',
+        version: '1.0',
       },
     };
     const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
@@ -155,7 +250,7 @@ describe('Add plugin modal', () => {
     await userEvent.click(managePluginsButton);
 
     const pluginDropdown = await findByLabelText('Plugin name');
-    await userEvent.selectOptions(pluginDropdown, [getByRole('option', { name: 'Foo' })]);
+    await userEvent.selectOptions(pluginDropdown, [getByRole('option', { name: 'Foo (1.0)' })]);
 
     const submitButton = await findByText('Remove');
     await userEvent.click(submitButton);

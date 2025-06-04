@@ -63,12 +63,116 @@
 Unreleased Changes
 ------------------
 
+Highlights
+==========
+* InVEST now supports plugins. The plugins framework allows users to develop
+  their own models that can be loaded into the workbench and run like regular
+  InVEST models. For more information, see the
+  `InVEST API documentation <https://invest.readthedocs.io/en/latest/index.html>`_.
+* As part of the plugin release we developed two of our own plugin models.
+  One is a wrapper around a python library for spatial downscaling of CMIP6
+  climate data (`InVEST GCM Downscaling <https://github.com/natcap/invest-gcm-downscaling>`_).
+  The other is a version of the SDR model that takes in the landcover crop
+  coefficient input as a spatial raster layer
+  (`Sediment Delivery Ratio with USLE C Raster Input <https://github.com/natcap/invest-sdr-usle-c-raster>`_).
+* Added a feature to the NDR model that allows the nutrient load to be entered
+  as an application rate or as an "extensive"/export measured value.
+  Previously, the model's biophysical table expected the ``load_n`` and ``load_p``
+  columns to be an "extensive"/export measured value. Now, new columns for both
+  nitrogen and phosphorous, ``load_type_n`` and ``load_type_p``, are required
+  with expected values of either application-rate or measured-runoff. See the
+  `Data Needs section <https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/ndr.html#data-needs>`_ of the NDR User Guide for more details.
+* The Wind Energy model no longer returns results as rasters; instead, values
+  are written to the output ``wind_energy_points`` shapefile for each point.
+  For more details on this check out the Any Decision Record (ADR):
+  `ADR-0004: Remove Wind Energy Raster Outputs <https://github.com/natcap/invest/blob/main/doc/decision-records/ADR-0004-Remove-Wind-Energy-Raster-Outputs.md>`_
+
 General
 =======
+* The workbench and the natcap.invest python package now support plugins.
 * Fixed a micromamba command bug in 3.16.0a1 that was calling micromamba
   directly, instead of using the path to the executable
   (`#1965 <https://github.com/natcap/invest/issues/1965>`_). This was
   mistakenly not actually released in 3.16.0a2.
+* InVEST now has a file, CITATION.cff, which includes information needed for a
+  citation, including a DOI for the 3.16.0 release,
+  https://doi.org/10.60793/natcap-invest-3.16.0.
+  (`#1548 <https://github.com/natcap/invest/issues/1548>`_)
+
+Workbench
+=========
+* Fixed a bug where extracting and loading parameters from a datastack archive
+  would overwrite data in the extraction location. Now, a new directory
+  will be created in the chosen extraction location.
+  (`#1996 <https://github.com/natcap/invest/issues/1996>`_)
+* Fixed a bug where the "Open" button on the home page would not
+  open archived datastacks (.tgz) files.
+  (`#1993 <https://github.com/natcap/invest/issues/1993>`_)
+* Metadata is now generated for files when creating a datastack (with any
+  existing user-added metadata preserved)
+  (`#1774 <https://github.com/natcap/invest/issues/1774>`_).
+
+Coastal Blue Carbon
+===================
+* Updated the Coastal Blue Carbon documentation to clarify what happens when a
+  class transitions from a state of accumulation or decay to a No Carbon Change
+  ("NCC") state. (`#671 <https://github.com/natcap/invest/issues/671>`_).
+
+HRA
+===
+* The intermediate simplified vectors will now inherit their geometry type from
+  the input vectors, rather than using ``ogr.wkbUnknown``
+  (`#1881 <https://github.com/natcap/invest/issues/1881>`_).
+
+NDR
+===
+* Fixed a bug in the effective retention calculation where nodata pour point
+  pixels were mistakenly used as real data. The effect of this change is most
+  pronounced along stream edges and should not affect the overall pattern of
+  results. (`#1845 <https://github.com/natcap/invest/issues/1845>`_)
+* ``stream.tif`` is now saved in the main output folder rather than the
+  intermediate folder (`#1864 <https://github.com/natcap/invest/issues/1864>`_).
+* Added a feature that allows the nutrient load to be entered as an
+  application rate or as an "extensive"/export measured value.
+  Previously, the model's biophysical table expected the ``load_[n|p]``
+  column to be an "extensive"/export measured value. Now, a new
+  column for both nitrogen and phosphorous, ``load_type_[n|p]``, is
+  required with expected values of either ``application-rate`` or
+  ``measured-runoff``. See the Data Needs section of the NDR User
+  Guide for more details.
+  (`#1044 <https://github.com/natcap/invest/issues/1044>`_).
+* Fixed a bug where input rasters (e.g. LULC) without a defined nodata value could
+  cause an OverflowError. (`#1904 <https://github.com/natcap/invest/issues/1904>`_).
+
+Seasonal Water Yield
+====================
+* ``stream.tif`` is now saved in the main output folder rather than the
+  intermediate folder (`#1864 <https://github.com/natcap/invest/issues/1864>`_).
+
+Urban Flood Risk
+================
+* The raster output ``Runoff_retention.tif`` has been renamed
+  ``Runoff_retention_index.tif`` to clarify the difference between it and
+  ``Runoff_retention_m3.tif``
+  (`#1837 <https://github.com/natcap/invest/issues/1837>`_).
+
+Visitation: Recreation and Tourism
+==================================
+* user-day variables ``pr_PUD``, ``pr_TUD``, and ``avg_pr_UD`` are calculated
+  and written to ``regression_data.gpkg`` even if the Compute Regression
+  option is not selected.
+  (`#1893 <https://github.com/natcap/invest/issues/1893>`_).
+
+Wind Energy
+===========
+* The model no longer returns results as rasters; instead, values are
+  written to the output ``wind_energy_points`` shapefile for each point
+  (`#1698 <https://github.com/natcap/invest/issues/1698>`_).
+  Any Decision Record (ADR): `ADR-0004: Remove Wind Energy Raster Outputs <https://github.com/natcap/invest/blob/main/doc/decision-records/ADR-0004-Remove-Wind-Energy-Raster-Outputs.md>`_
+* The output ``wind_energy_points.shp`` no longer returns Harvested or
+  Valuation-related values for points that are invalid wind farm locations
+  due to depth or distance constraints
+  (`#1699 <https://github.com/natcap/invest/issues/1699>`_).
 
 
 3.16.0a2 (2025-05-28)

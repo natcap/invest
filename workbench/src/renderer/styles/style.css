@@ -1,5 +1,8 @@
 :root {
   font-size: 16px;
+  --invest-green: #148F68;
+  --digital-red: #B1040E;
+  --bootstrap-secondary-gray:#6c757d;
 }
 
 
@@ -12,13 +15,28 @@
   to appear with height: 100%, even when parent has a fixed height;
 */
 body {
-  --invest-green: #148F68;
   --header-height: 64px;
   --content-height: calc(100vh - var(--header-height));
   min-height: 100vh;
   background-color: rgba(0,0,0,0);
   margin: 0;
   overflow-y: hidden;
+}
+
+/* Default focus styles for buttons & links, to override system defaults.
+   Bootstrap-styled buttons have different focus styles, based on element/background colors.
+   This is a fallback, to be applied to elements whose focus styles are not defined by Bootstrap. */
+a,
+button,
+.btn-link {
+  &:focus {
+    outline-color: var(--invest-green);
+  }
+}
+
+.btn-link:focus {
+  outline-style: auto;
+  outline-width: 0.25rem;
 }
 
 /*Top Navigation*/
@@ -41,6 +59,7 @@ body {
 .navbar-brand:hover {
   text-decoration-line: underline;
   text-decoration-thickness: 3px;
+  text-decoration-color: var(--invest-green);
 }
 
 .navbar-middle {
@@ -51,6 +70,7 @@ body {
 }
 
 .navbar-right {
+  display: flex;
   max-width: fit-content;
   margin-left: 0.5rem;
   margin-right: -15px;
@@ -157,21 +177,33 @@ body {
 }
 
 .app-menu-button {
-  color: gray;
+  color: var(--bootstrap-secondary-gray);
   background-color: transparent;
   border: none;
   font-size: 2rem;
-  vertical-align: text-bottom;
   margin-right: 2px;
+  height: 2.75rem;
+  display: flex;
+  align-items: center;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+
+  &:hover {
+    color: white;
+    background-color: var(--bootstrap-secondary-gray);
+  }
+
+  &:after {
+    display: none;  /* Hide caret icon inserted by Bootstrap. */
+  }
 }
 
-.app-menu-button:hover{
-  color: white;
-  background-color: gray;
-}
-
-.app-menu-button:after {
-  display: none;
+.app-menu {
+  box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .5);
+  & .dropdown-item {
+    height: 2.5rem;
+    font-weight: 500;
+  }
 }
 
 .language-icon {
@@ -211,6 +243,12 @@ exceed 100% of window.*/
   margin-bottom: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  & .open-button {
+    font-weight: 600;
+    border-width: 0.125rem;
+    padding: 0.5rem 1.25rem;
+  }
 }
 
 .invest-button {
@@ -221,7 +259,6 @@ exceed 100% of window.*/
 .invest-button:hover {
   color: white;
   background-color: var(--invest-green);
-  opacity: 75%;
   font-weight: 600;
 }
 
@@ -242,13 +279,11 @@ exceed 100% of window.*/
 .recent-job-card-col {
   height: var(--content-height);
   overflow-y: auto;
-  padding-right: 0.5rem;
 }
 
 .recent-job-card-col .container {
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
-  padding-right: 0.5rem;
 }
 
 .recent-job-card-col .container .row {
@@ -256,7 +291,6 @@ exceed 100% of window.*/
 }
 
 .recent-job-card {
-  width: inherit;
   padding: 0;
   height: fit-content;
   filter: drop-shadow(2px 2px 2px grey);
@@ -274,46 +308,72 @@ exceed 100% of window.*/
 }
 
 .card-header {
+  --card-header-title-font-size: 1.25rem;
+  --card-header-title-line-height: 1.2;
+  --card-header-button-height: 2.625rem;
+  --card-header-button-offset: 0.375rem;
+  --card-header-top-bottom-padding: calc(
+    var(--card-header-button-offset)
+    + var(--card-header-button-height) / 2
+    - (var(--card-header-title-font-size) * var(--card-header-title-line-height)) / 2
+  );
+  position: relative;
+  display: flex;
   background-color: var(--invest-green);
-  filter: opacity(0.75);
-  margin-left: -0.1rem;
-  margin-right: -0.05rem;
-  padding-right: 0;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-}
+  padding: var(--card-header-top-bottom-padding) 3.375rem var(--card-header-top-bottom-padding) 1.25rem;
+  min-height: calc(var(--card-header-button-height) + 2*var(--card-header-button-offset));
+  /* Adjust width & margins to correct the optical illusion created by the card border. */
+  width: calc(100% + 1.5px);
+  margin-right: -1px;
+  margin-top: -1px;
+  margin-left: -0.5px;
 
-.card-header .header-title {
-  color: white;
-  font-size: 1.35rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
+  & .badge-container {
+    display: flex;
+    align-items: center;
+    margin-right: 0.375rem;
+    height: calc(var(--card-header-title-font-size) * var(--card-header-title-line-height));
+  }
 
-.card-header .btn:hover {
-  background-color: white;
-  color: var(--invest-green);
+  & .header-title {
+    color: white;
+    font-size: var(--card-header-title-font-size);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    line-height: var(--card-header-title-line-height);
+  }
+
+  & .btn {
+    position: absolute;
+    right: var(--card-header-button-offset);
+    top: var(--card-header-button-offset);
+    height: var(--card-header-button-height);
+    padding: 0.5rem;
+    &:hover {
+      background-color: white;
+      color: var(--invest-green);
+    }
+  }
 }
 
 .card-title {
-  padding-left: 1.25rem;
+  padding: 0 1.25rem;
   font-size: 1.1rem;
 }
 
 .card-title .text-heading {
-  color: gray;
+  color: var(--bootstrap-secondary-gray);
 }
 
 .card-title .text-mono {
   font-family: monospace;
-  font-size: 1.1rem;
 }
 
 .card-footer {
   display: flex;
   justify-content: space-between;
   white-space: nowrap;
-  padding-right: 1rem;
+  padding: 0.75rem 1.25rem;
 }
 
 .card-footer span {
@@ -327,7 +387,7 @@ exceed 100% of window.*/
 }
 
 .card-footer .status-error {
-  color: red;
+  color: var(--digital-red);
 }
 
 .card-footer .status-success {
@@ -591,11 +651,11 @@ input[type=text]::placeholder {
 }
 
 #log-display .invest-log-primary-warning {
-  color: #f13232;
+  color: var(--digital-red);
 }
 
 #log-display .invest-log-error {
-  color: #f13232;
+  color: var(--digital-red);
   font-weight: bold;
 }
 
@@ -703,13 +763,35 @@ input[type=text]::placeholder {
 }
 
 .plugin-error {
+  color: var(--digital-red);
+}
+
+.plugin-install-remove-error {
   font-family: monospace;
   margin: 1rem;
   overflow-wrap: break-word;
-  color: #f13232;
   font-weight: bold;
+}
+
+.plugin-source-missing-error,
+.plugin-user-acknowledgment-error {
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0.5rem 0 0;
+}
+
+.plugin-user-acknowledgment-error {
+  margin-bottom: 1rem;
+}
+
+.plugin-form-text {
+  font-size: 0.875rem;
 }
 
 code {
   color: inherit;
+}
+
+.text-italic {
+  font-style: italic;
 }
