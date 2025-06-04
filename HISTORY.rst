@@ -81,7 +81,7 @@ Highlights
   columns to be an "extensive"/export measured value. Now, new columns for both
   nitrogen and phosphorous, ``load_type_n`` and ``load_type_p``, are required
   with expected values of either application-rate or measured-runoff. See the
-  Data Needs section of the NDR User Guide for more details. (#1044).
+  `Data Needs section <https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/ndr.html#data-needs>`_ of the NDR User Guide for more details.
 * The Wind Energy model no longer returns results as rasters; instead, values
   are written to the output ``wind_energy_points`` shapefile for each point.
   For more details on this check out the Any Decision Record (ADR):
