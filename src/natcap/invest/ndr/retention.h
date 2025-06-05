@@ -215,7 +215,7 @@ void calculate_retention(
           } else {
             throw std::logic_error(
               "got to a cell that has no outflow! This error is happening"
-              "in effective_retention.h");
+              "in retention.h");
           }
         }
         // for each pixel k that is an upslope neighbor of i,
