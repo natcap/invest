@@ -63,6 +63,11 @@
 ..
   Unreleased Changes
   ------------------
+General
+=======
+* Updated Python version in Makefile env target from 3.8 to 3.9.
+  (`#1847 <https://github.com/natcap/invest/issues/1847>`_).
+
 
 3.16.0 (2025-06-04)
 -------------------
