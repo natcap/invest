@@ -60,9 +60,16 @@
   6. InVEST model Z (model names should be sorted A-Z)
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+
+General
+=======
+* Fixed a bug where the ``invest`` CLI could raise a circular
+  ``ImportError`` while trying to discover available plugins.
+  (`#2012 <https://github.com/natcap/invest/issues/2012>`_).
+
+
 
 3.16.0 (2025-06-04)
 -------------------
