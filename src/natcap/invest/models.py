@@ -43,7 +43,10 @@ for _, _name, _ispkg in pkgutil.iter_modules(natcap.invest.__path__):
 # and meet the basic API criteria for an invest plugin
 for _, _name, _ispkg in pkgutil.iter_modules():
     if _name.startswith('invest'):
-        _module = importlib.import_module(_name)
+        try:
+            _module = importlib.import_module(_name)
+        except ImportError:
+            continue
         if is_invest_compliant_model(_module):
             pyname_to_module[_name] = _module
 
