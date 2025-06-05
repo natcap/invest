@@ -51,6 +51,9 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+[tool.distutils.egg_info]
+egg_base = "build"
+
 [tool.setuptools_scm]
 version_scheme = "post-release"
 local_scheme = "node-and-date"

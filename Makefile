@@ -230,7 +230,7 @@ env:
 # compatible with pip>=7.0.0
 # REQUIRED: Need to remove natcap.invest.egg-info directory so recent versions
 # of pip don't think CWD is a valid package.
-install: $(DIST_DIR)/natcap.invest%.whl
+install: $(BUILD_DIR) $(DIST_DIR)/natcap.invest%.whl
 	-$(RMDIR) natcap.invest.egg-info
 	$(PIP) install --no-deps --isolated --upgrade --no-index --only-binary natcap.invest --find-links=dist "natcap.invest==$(VERSION)"
 
