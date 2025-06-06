@@ -1,5 +1,5 @@
 {
-        "contributors": "https://vpejnqubjf.us-east-2.awsapprunner.com/checkContributor?=",
+        "contributors": "https://vpejnqubjf.us-east-2.awsapprunner.com/contributor?checkContributor=",
         "message": "Thank you for your pull request and welcome to our community! We require contributors to sign our short [Contributor License Agreement](https://natcap.github.io/invest-cla/).  In order to review and merge your code, please follow the link above and follow the instructions to authenticate with your github account and agree to the CLA.  Then, please come back here and have the bot re-check the CLA by adding a new comment to the PR stating `@cla-bot recheck`.  If you have questions or received this message in error, please don't hesitate to mention @softwareteam or email us at natcap-software-legal@lists.stanford.edu.\n\nThe CLA has not been signed yet by github users {{usersWithoutCLA}}",
         "label": "cla-signed"
 }
