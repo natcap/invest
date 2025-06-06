@@ -51,6 +51,9 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools_scm]
+# Use default configuration. A warning is issued if this section is absent.
+
 [tool.isort]
 # isort can be installed from conda-forge
 # flake8-isort can also be used for flake8 linting integration
