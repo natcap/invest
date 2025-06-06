@@ -65,6 +65,8 @@ Unreleased Changes
 
 General
 =======
+* Updated Python version in Makefile env target from 3.8 to 3.9.
+  (`#1847 <https://github.com/natcap/invest/issues/1847>`_).
 * Fixed a bug where the ``invest`` CLI could raise a circular
   ``ImportError`` while trying to discover available plugins.
   (`#2012 <https://github.com/natcap/invest/issues/2012>`_).
