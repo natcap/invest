@@ -1,5 +1,5 @@
-cdef extern from "effective_retention.h":
-    void run_effective_retention[T](
+cdef extern from "retention.h":
+    void calculate_retention[T](
         char*,
         char*,
         char*,
