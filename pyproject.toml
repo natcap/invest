@@ -45,14 +45,13 @@ invest = "natcap.invest.cli:main"
 # that we can provide a much easier build experience so long as GDAL is
 # available at runtime.
 requires = [
-    'setuptools>=61', 'wheel', 'setuptools_scm>=8.0', 'cython>=3.0.0', 'babel',
+    'setuptools>=64', 'wheel', 'setuptools_scm>=8.0', 'cython>=3.0.0', 'babel',
     'numpy>=2'
 ]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-version_scheme = "post-release"
-local_scheme = "node-and-date"
+# Use default configuration. A warning is issued if this section is absent.
 
 [tool.isort]
 # isort can be installed from conda-forge
