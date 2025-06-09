@@ -123,7 +123,6 @@ export function setupAddPlugin(i18n) {
         // Access plugin metadata from the pyproject.toml
         const condaDeps = pyprojectTOML.tool.natcap.invest.conda_dependencies;
         const packageName = pyprojectTOML.tool.natcap.invest.package_name;
-        const version = pyprojectTOML.project.version;
 
         // Create a conda env containing the plugin and its dependencies
         // use timestamp to ensure a unique path
@@ -149,14 +148,19 @@ export function setupAddPlugin(i18n) {
         );
         logger.info('installed plugin into its env');
         event.sender.send('plugin-install-status', i18n.t('Importing plugin...'));
-        // Access plugin metadata from the MODEL_SPEC
+        // Access plugin metadata from the package
         const modelID = execSync(
           `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
           `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
         ).toString().trim();
-        const modelTitle= execSync(
+        const modelTitle = execSync(
           `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
           `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
+        ).toString().trim();
+        const version = execSync(
+          `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
+          `python -c "from importlib.metadata import version; ` +
+          `print(version('${packageName}'))"`
         ).toString().trim();
 
         // Write plugin metadata to the workbench's config.json
