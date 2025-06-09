@@ -149,6 +149,7 @@ def main():
     args = parser.parse_args()
 
     username, repo = args.repo.split('/')
+    print(f"Checking PR {args.pr_num} on {username}/{repo}")
     pr_committers = contributors_to_pr(
         int(args.pr_num), username, repo)
     signed_committers = set()
@@ -158,6 +159,9 @@ def main():
             signed_committers.add(committer)
         else:
             unsigned_committers.add(committer)
+
+    LOGGER.info(f"Committers who have signed: {signed_committers}")
+    LOGGER.info(f"Committers who have not signed: {unsigned_committers}")
     if len(unsigned_committers) == 0:
         parser.exit(0)
 
