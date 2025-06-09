@@ -1,3 +1,25 @@
+"""Verify that contributors to a PR have signed the CLA.
+
+This command-line script is intended to be run as a part of a github actions
+workflow that takes the output of this script and posts it as a comment on the
+relevant PR.  Having said that, there is nothing that is GHA-specific within
+this script, so it could be run anywhere, without the GHA context, without any
+issue.
+
+The script makes use of the public GitHub REST API, which means that we don't
+need to bother with API keys, but there are also rate limits in place.  There
+is not currently an option to provide an API key to the github API requests.
+
+To install dependencies, run:
+    $ pip install requests
+
+To invoke this script on a PR in the natcap/invest repo, use
+    $ python scripts/check-cla.py 1268
+
+To invoke this on a PR that's in a fork of InVEST, use
+    $ python scripts/check-cla.py <pr_num> --repo=<user>/invest
+"""
+
 import argparse
 import datetime
 import logging
