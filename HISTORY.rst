@@ -76,6 +76,11 @@ Plugins
   ``importlib`` rather than being read directly from the ``pyproject.toml``
   (`#2025 <https://github.com/natcap/invest/issues/2025>`_).
 
+Visitation: Recreation and Tourism
+==================================
+* Fixed a bug which caused the recreation model to error when using
+  numpy>=2.3.0 (`#2032 <https://github.com/natcap/invest/issues/2032>`_).
+
 3.16.0 (2025-06-04)
 -------------------
 
