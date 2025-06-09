@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import logging
 import math
 import os
@@ -23,7 +24,11 @@ UNSIGNED_MSG = textwrap.dedent("""\
     please don't hesitate to mention @softwareteam or leave a comment here in
     the PR.
 
-    The CLA has not yet been signed by github users {users_without_cla}""")
+    The CLA has not yet been signed by github users {users_without_cla}
+    <!--
+        METADATA {last_checked_metadata}
+    -->
+    """)
 
 
 def check_contributor(github_username):
@@ -124,14 +129,22 @@ def main():
     username, repo = args.repo.split('/')
     pr_committers = contributors_to_pr(
         int(args.pr_num), username, repo)
+    signed_committers = set()
     unsigned_committers = set()
     for committer in pr_committers:
-        if not check_contributor(committer):
+        if check_contributor(committer):
+            signed_committers.add(committer)
+        else:
             unsigned_committers.add(committer)
     if len(unsigned_committers) == 0:
         parser.exit(0)
 
     print(UNSIGNED_MSG.format(
+        metadata={
+            "last_checked": datetime.datetime.now().isoformat(),
+            "signed_committers": sorted(signed_committers),
+            "unsigned_committers": sorted(unsigned_committers),
+        },
         users_without_cla=(", ".join(sorted(
             f"@{name}" for name in unsigned_committers)))))
     parser.exit(1)
