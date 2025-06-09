@@ -28,7 +28,7 @@ jobs:
                   REPO: ${{ github.repository }}
                   GH_TOKEN: ${{ github.token }}
               run: |
-                cla_output=$(python scripts/check-cla.py $PR_NUMBER $REPO)
+                cla_output=$(python scripts/check-cla.py $PR_NUMBER --repo=$REPO)
                 if [[ "$?" == "1" ]]
                 then
                     gh pr comment $PR_NUMBER -b "$cla_output"
