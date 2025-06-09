@@ -1,6 +1,8 @@
+import argparse
 import logging
 import math
 import os
+import textwrap
 
 import requests
 
@@ -11,6 +13,17 @@ GITHUB_HEADERS = {
     "X-GitHub-Api-Version": "2022-11-28",
     "Accept": "application/vnd.github+json",
 }
+UNSIGNED_MSG = textwrap.dedent("""\
+    Thank you for your pull request and welcome to our community! We require
+    contributors to sign our short [Contributor License
+    Agreement](https://natcap.github.io/invest-cla/).
+    In order to review and merge your code, please follow the link above and
+    follow the instructions to authenticate with your github account and agree
+    to the CLA.  If you have questions or received this message in error,
+    please don't hesitate to mention @softwareteam or leave a comment here in
+    the PR.
+
+    The CLA has not yet been signed by github users {users_without_cla}""")
 
 
 def check_contributor(github_username):
@@ -95,9 +108,34 @@ def contributors_to_pr(pr_num, github_org='natcap', github_repo='invest'):
 
 
 def main():
-    pass
+    parser = argparse.ArgumentParser(
+        prog=os.path.basename(__file__),
+        description="Check the CLA signing status for a PR")
+    parser.add_argument('pr_num', help="The PR number of the current PR")
+    parser.add_argument(
+        '--repo',
+        help=(
+            "The github repo the PR belongs to, in the form "
+            "username/reponame"),
+        default="natcap/invest")
+
+    args = parser.parse_args()
+
+    username, repo = args.repo.split('/')
+    pr_committers = contributors_to_pr(
+        int(args.pr_num), username, repo)
+    unsigned_committers = set()
+    for committer in pr_committers:
+        if not check_contributor(committer):
+            unsigned_committers.add(committer)
+    if len(unsigned_committers) == 0:
+        parser.exit(0)
+
+    print(UNSIGNED_MSG.format(
+        users_without_cla=(", ".join(sorted(
+            f"@{name}" for name in unsigned_committers)))))
+    parser.exit(1)
 
 
 if __name__ == '__main__':
-    check_contributor('phargogh')
-    print(contributors_to_pr(1268))
+    main()
