@@ -8,8 +8,8 @@ permissions:
     pull-requests: write
 
 jobs:
-    check-cla:
-        #if github.repository_owner == 'natcap'
+    check-cla-pr:
+        if: github.repository_owner == 'natcap'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -31,7 +31,8 @@ jobs:
                 cla_output=$(python scripts/check-cla.py $PR_NUMBER --repo=$REPO)
                 if [[ "$?" == "1" ]]
                 then
+                    echo "Some committers on this PR have not yet signed the CLA"
                     gh pr comment $PR_NUMBER -b "$cla_output"
                 else
-                    gh pr edit $PR_NUMBER --add-label "cla-signed"
+                    echo "All committers on this branch have signed the CLA!"
                 fi
