@@ -68,6 +68,11 @@ General
 * Fixed a bug where the ``invest`` CLI could raise a circular
   ``ImportError`` while trying to discover available plugins.
   (`#2012 <https://github.com/natcap/invest/issues/2012>`_).
+* Pull requests into the InVEST repository now verify that committers to
+  the PR have signed the InVEST Contributor License Agreement, with the results
+  viewable as a check alongside the tests that normally execute on GitHub
+  Actions. To review and sign the CLA, please visit https://natcap.github.io/invest-cla/.
+  (`#1593 <https://github.com/natcap/invest/issues/1593>`_)
 
 
 
