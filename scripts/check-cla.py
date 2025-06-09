@@ -153,7 +153,7 @@ def main():
     pr_committers = contributors_to_pr(
         int(args.pr_num), username, repo)
     signed_committers = set()
-    unsigned_committers = set()
+    unsigned_committers = set(['foo'])
     for committer in pr_committers:
         if check_contributor(committer):
             signed_committers.add(committer)
