@@ -1,0 +1,32 @@
+name: Check InVEST CLA
+
+on:
+    pull_request:
+
+jobs:
+    check-cla:
+        #if github.repository_owner == 'natcap'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.13"
+                  cache: "pip"
+
+            - run: pip install requests
+
+            - name: Check that the CLA has been signed
+              shell: bash
+              env:
+                  PR_NUMBER: ${{ github.event.number }}
+                  REPO: ${{ github.repository }}
+              run: |
+                cla_output=$(python scripts/check-cla.py $PR_NUMBER $REPO)
+                if [[ "$?" == "1" ]]
+                then
+                    gh pr comment $PR_NUMBER -b "$cla_output"
+                else
+                    gh pr edit $PR_NUMBER --add-label "cla-signed"
+                fi
