@@ -39,8 +39,7 @@ const { ipcRenderer } = window.Workbench.electron;
 export default function App(props) {
 
   const [activeTab, setActiveTab] = useState('home');
-  const [openTabIDs, setOpenTabIDs] = useState([]);
-  const [openJobs, setOpenJobs] = useState({});
+  const [openJobs, setOpenJobs] = useState(new Map());
   const [investList, setInvestList] = useState(null);
   const [recentJobs, setRecentJobs] = useState([]);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -97,11 +96,8 @@ export default function App(props) {
     const tabID = window.crypto.getRandomValues(
       new Uint32Array(1)
     ).toString();
-    const newOpenTabIDs = [ ...openTabIDs ];
-    const newOpenJobs = { ...openJobs };
-    newOpenTabIDs.push(tabID);
-    newOpenJobs[tabID] = job;
-    setOpenTabIDs(newOpenTabIDs);
+    const newOpenJobs = new Map(openJobs);
+    newOpenJobs.set(tabID, job);
     setOpenJobs(newOpenJobs);
     setActiveTab(tabID);
   }
@@ -112,24 +108,22 @@ export default function App(props) {
    *   InvestTab component that will be removed.
    */
   function closeInvestModel(tabID) {
-    let index;
-    const newOpenJobs = { ...openJobs };
-    const newOpenTabIDs = [ ...openTabIDs ];
-    delete newOpenJobs[tabID];
-    newOpenTabIDs.forEach((id) => {
-      if (id === tabID) {
-        index = newOpenTabIDs.indexOf(tabID);
-        newOpenTabIDs.splice(index, 1);
-      }
-    });
-    // Switch to the next tab if there is one, or the previous, or home.
-    let switchTo = 'home';
-    if (newOpenTabIDs[index]) {
-      switchTo = newOpenTabIDs[index];
-    } else if (newOpenTabIDs[index - 1]) {
-      switchTo = newOpenTabIDs[index - 1];
+    // Find the tab ID to switch to once this tab is closed
+    const openTabIDs = Array.from(openJobs.keys());
+    const index = openTabIDs.indexOf(tabID);
+    let switchTo;
+    // Switch to the next tab, if there is one
+    if (openTabIDs[index + 1]) {
+      switchTo = openTabIDs[index + 1];
+    // Otherwise, switch to the previous tab, if there is one
+    } else if (openTabIDs[index - 1]) {
+      switchTo = openTabIDs[index - 1];
+    // Otherwise, there are no tabs left. Switch to home.
+    } else {
+      switchTo = 'home';
     }
-    setOpenTabIDs(newOpenTabIDs);
+    const newOpenJobs = new Map(openJobs);
+    newOpenJobs.delete(tabID);
     setOpenJobs(newOpenJobs);
     setActiveTab(switchTo);
   }
@@ -140,8 +134,8 @@ export default function App(props) {
    * @param {obj} jobObj - key-value pairs of any job properties to be updated
    */
   function updateJobProperties(tabID, jobObj) {
-    const newOpenJobs = { ...openJobs };
-    newOpenJobs[tabID] = { ...openJobs[tabID], ...jobObj };
+    const newOpenJobs = new Map(openJobs);
+    newOpenJobs.set(tabID, { ...openJobs.get(tabID), ...jobObj });
     setOpenJobs(newOpenJobs);
   }
 
@@ -150,7 +144,7 @@ export default function App(props) {
    * @param {string} tabID - the unique identifier of an open InvestTab.
    */
   async function saveJob(tabID) {
-    const job = openJobs[tabID];
+    const job = openJobs.get(tabID);
     await InvestJob.saveJob(job);
     updateRecentJobs();
   }
@@ -200,8 +194,7 @@ export default function App(props) {
 
   const investNavItems = [];
   const investTabPanes = [];
-  openTabIDs.forEach((id) => {
-    const job = openJobs[id];
+  openJobs.forEach((job, id) => {
     let statusSymbol;
     switch (job.status) {
       case 'success':
