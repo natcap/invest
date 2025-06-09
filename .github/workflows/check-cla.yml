@@ -22,6 +22,7 @@ jobs:
               env:
                   PR_NUMBER: ${{ github.event.number }}
                   REPO: ${{ github.repository }}
+                  GH_TOKEN: ${{ github.token }}
               run: |
                 cla_output=$(python scripts/check-cla.py $PR_NUMBER $REPO)
                 if [[ "$?" == "1" ]]
