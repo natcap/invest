@@ -21,8 +21,14 @@ LOGGER = logging.getLogger(
 def _npy_append(filepath, array):
     """Append to a numpy array on disk without reading the entire array."""
     with open(filepath, 'rb+') as file:
+        # Check the numpy file format version
+        # We are not using structured arrays, so it's safe to assume version 1.
+        # It seems that calling read_magic is necessary before reading the
+        # array header (probably moving the file pointer to the correct place)
+        # https://github.com/numpy/numpy/issues/29159
         version = numpy.lib.format.read_magic(file)
-        header_tuple = numpy.lib.format._read_array_header(file, version)
+        assert version == (1, 0)
+        header_tuple = numpy.lib.format.read_array_header_1_0(file)
         header_dict = {
             'shape': header_tuple[0],
             'fortran_order': header_tuple[1],
@@ -34,7 +40,7 @@ def _npy_append(filepath, array):
         file.seek(0, 2)  # go to end to append data
         file.write(array)
         file.seek(0, 0)  # go to start to re-write header
-        numpy.lib.format._write_array_header(file, header_dict, version)
+        numpy.lib.format.write_array_header_1_0(file, header_dict)
 
 
 class BufferedNumpyDiskMap(object):
