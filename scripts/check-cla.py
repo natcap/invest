@@ -22,9 +22,11 @@ To invoke this on a PR that's in a fork of InVEST, use
 
 import argparse
 import datetime
+import json
 import logging
 import math
 import os
+import re
 import textwrap
 
 import requests
@@ -70,6 +72,24 @@ def check_contributor(github_username):
         })
     resp.raise_for_status()
     return bool(resp.json()['isContributor'])
+
+
+def clean_and_format_commit_member_json(commit_member):
+    """Return an author or committer json object without timestamps.
+
+    Args:
+        commit_member (dict): A commit author or committer dictionary from the
+            github api.
+
+    Returns:
+        identifiying_string (str): A rendered string identifying the author or
+            committer, derived from the input dict.
+    """
+    exclude_keys = set(['date'])
+    output_dict = dict(
+        (key, value) for (key, value) in commit_member.items()
+        if key not in exclude_keys)
+    return "JSON:" + json.dumps(output_dict, sort_keys=True)
 
 
 def contributors_to_pr(pr_num, github_org='natcap', github_repo='invest'):
@@ -122,8 +142,30 @@ def contributors_to_pr(pr_num, github_org='natcap', github_repo='invest'):
         for c in commits_data:
             # git tracks the author and committer separately.  These will often
             # be the same person, particularly for smaller projects like ours.
-            pr_committers.add(c['author']['login'])
-            pr_committers.add(c['committer']['login'])
+            #
+            # Also, if the author or committer has used local git
+            # identification information that is not matched up with a github
+            # username, then we will need to figure out a manual process for
+            # verification.
+            if c['author'] is None:
+                LOGGER.warning(
+                    "Author was not recognized by github: "
+                    f"{c['commit']['author']}")
+                pr_committers.add(
+                    clean_and_format_commit_member_json(
+                        c['commit']['author']))
+            else:
+                pr_committers.add(c['author']['login'])
+
+            if c['committer'] is None:
+                LOGGER.warning(
+                    "Committer was not recognized by github: "
+                    f"{c['commit']['committer']}")
+                pr_committers.add(
+                    clean_and_format_commit_member_json(
+                        c['commit']['committer']))
+            else:
+                pr_committers.add(c['committer']['login'])
 
     # clean up committers that are part of github's web interface
     for invalid_committer in [
@@ -153,20 +195,27 @@ def main():
     pr_committers = contributors_to_pr(
         int(args.pr_num), username, repo)
     signed_committers = set()
-    unsigned_committers = set(['foo'])
+    unsigned_committers = set()
+    unknown_committers = set()
     for committer in pr_committers:
-        if check_contributor(committer):
+        # Github usernames are only allowed to contain alphanumeric chars and
+        # dashes, so if it doesn't match this regexp then it must represent an
+        # non-github git committer.
+        if not re.match('^[a-z0-9-]+$', committer):
+            unknown_committers.add(committer)
+        elif check_contributor(committer):
             signed_committers.add(committer)
         else:
             unsigned_committers.add(committer)
 
     LOGGER.info(f"Committers who have signed: {signed_committers}")
     LOGGER.info(f"Committers who have not signed: {unsigned_committers}")
+    LOGGER.info(f"Committers who are unknown to github: {unknown_committers}")
     if len(unsigned_committers) == 0:
         parser.exit(0)
 
     print(UNSIGNED_MSG.format(
-        metadata={
+        last_checked_metadata={
             "last_checked": datetime.datetime.now().isoformat(),
             "signed_committers": sorted(signed_committers),
             "unsigned_committers": sorted(unsigned_committers),
