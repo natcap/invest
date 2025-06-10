@@ -178,7 +178,7 @@ def contributors_to_pr(pr_num, github_org='natcap', github_repo='invest'):
 
 
 def have_we_already_commented(
-        pr_num, committer_metadata, github_org='natcap',
+        pr_num, unsigned_committers, github_org='natcap',
         github_repo='invest'):
     """Have we already commented on this PR with the current committer info?
 
@@ -188,13 +188,8 @@ def have_we_already_commented(
 
     Args:
         pr_num (int, str): The PR number to query.
-        committer_metadata (dict): A python dict with at least the keys:
-
-            * signed_committers (list): a list of string github usernames of
-                committers who have signed the CLA.
-            * unsigned_committers (list): A list of string github usernames of
-                committers who have NOT signed the CLA.
-
+        unsigned_committers (list): A list of github usernames of committers
+            who have not yet signed the CLA.
         github_org='natcap' (str): The github organization of the repo and PR
             that should be queried.
         github_repo='invest' (str): The github repo within the ``github_org``
@@ -214,7 +209,7 @@ def have_we_already_commented(
     for page_num in range(1, n_pages+1):
         comments_resp = requests.get(
             f'https://api.github.com/repos/{github_org}/{github_repo}/'
-            f'issues/{int(pr_num)}',
+            f'issues/{int(pr_num)}/comments',
             headers=GITHUB_HEADERS,
             params={
                 "page": page_num,
@@ -238,10 +233,11 @@ def have_we_already_commented(
         line = line.strip()
         if line.startswith('METADATA'):
             comment_metadata = json.loads(line.replace('METADATA', ''))
-            for key in ('signed_committers', 'unsigned_committers'):
-                if comment_metadata[key] != committer_metadata[key]:
-                    return False
+            last_unsigned_committers = set(
+                comment_metadata['unsigned_committers'])
 
+            if not set(unsigned_committers).issubset(last_unsigned_committers):
+                return False
     return True
 
 
@@ -306,7 +302,8 @@ def main():
         "unsigned_committers": sorted(unsigned_committers),
     }
     if have_we_already_commented(
-            pr_num, committer_metadata, username=username, repo=repo):
+            pr_num, committer_metadata['unsigned_committers'],
+            github_org=username, github_repo=repo):
         LOGGER.info(
             "Looks like we already commented on the repo and the committers "
             "have not changed. Not commenting again at this time.")
