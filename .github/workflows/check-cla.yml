@@ -30,11 +30,13 @@ jobs:
               run: |
                 set +e  # continue execution if a command returns a nonzero exit code.
                 cla_output=$(python scripts/check-cla.py $PR_NUMBER --repo=$REPO)
-                if [[ "$?" == "1" ]]
-                then
+                if [[ "$?" == "1" ]]; then
+                    echo "A comment was already posted with unsigned committers, so not posting again."
+                    exit 1  # deliberately fail so GHA check shows the failure
+                elif [[ "$?" == "2" ]]; then
                     echo "Some committers on this PR have not yet signed the CLA"
                     gh pr comment $PR_NUMBER -b "$cla_output"
-                    exit 1  # deliberately fail so the GHA check shows the failure.
+                    exit 2  # deliberately fail so the GHA check shows the failure.
                 else
                     echo "All committers on this branch have signed the CLA!"
                 fi

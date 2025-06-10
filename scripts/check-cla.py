@@ -307,13 +307,16 @@ def main():
         LOGGER.info(
             "Looks like we already commented on the repo and the committers "
             "have not changed. Not commenting again at this time.")
+        parser.exit(1)
     else:
         LOGGER.info("Printing formatted message for posting to the PR")
         print(UNSIGNED_MSG.format(
             last_checked_metadata=committer_metadata,
             committers_message='\n'.join(cla_messages),
         ))
-    parser.exit(1)
+        parser.exit(2)
+
+    parser.exit(255)  # This should not execute
 
 
 if __name__ == '__main__':
