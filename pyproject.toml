@@ -1,5 +1,3 @@
-# trivial change to test cla-bot
-# trivial change to test cla-bot
 [project]
 name = "natcap.invest"
 description = "InVEST Ecosystem Service models"
