@@ -212,7 +212,8 @@ def main():
     LOGGER.info(f"Committers who have not signed: {unsigned_committers}")
     LOGGER.info("Committers who are unknown to github and should be reviewed "
                 f"manually: {unknown_committers}")
-    if len(unsigned_committers) == 0:
+    if len(unsigned_committers) + len(unknown_committers) == 0:
+        LOGGER.info("Looks like everyone has signed the CLA!")
         parser.exit(0)
 
     print(UNSIGNED_MSG.format(
