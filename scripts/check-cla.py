@@ -136,7 +136,7 @@ def contributors_to_pr(pr_num, github_org='natcap', github_repo='invest'):
             params={
                 "page": page_num,
                 "per_page": commits_per_page,
-            }
+            },
         )
 
         commits_data = resp.json()
@@ -177,6 +177,74 @@ def contributors_to_pr(pr_num, github_org='natcap', github_repo='invest'):
     return pr_committers
 
 
+def have_we_already_commented(
+        pr_num, committer_metadata, github_org='natcap',
+        github_repo='invest'):
+    """Have we already commented on this PR with the current committer info?
+
+    Queries the PR and issues APIs to determine if we have already commented on
+    the PR with a message about signing the CLA.  If a new committer is added
+    to the PR's commits, then that counts as us not having posted.
+
+    Args:
+        pr_num (int, str): The PR number to query.
+        committer_metadata (dict): A python dict with at least the keys:
+
+            * signed_committers (list): a list of string github usernames of
+                committers who have signed the CLA.
+            * unsigned_committers (list): A list of string github usernames of
+                committers who have NOT signed the CLA.
+
+        github_org='natcap' (str): The github organization of the repo and PR
+            that should be queried.
+        github_repo='invest' (str): The github repo within the ``github_org``
+            organization that the target PR belongs to.
+
+    """
+    resp = requests.get(
+        f"https://api.github.com/repos/{github_org}/{github_repo}/pulls/{int(pr_num)}",
+        headers=GITHUB_HEADERS,
+    )
+    pr_data = resp.json()
+    n_comments = pr_data['comments']
+
+    comments_per_page = 30  # the github default
+    n_pages = math.ceil(n_comments / comments_per_page)
+    latest_matching_comment = None
+    for page_num in range(1, n_pages+1):
+        comments_resp = requests.get(
+            f'https://api.github.com/repos/{github_org}/{github_repo}/'
+            f'issues/{int(pr_num)}',
+            headers=GITHUB_HEADERS,
+            params={
+                "page": page_num,
+                "per_page": comments_per_page,
+            },
+        )
+        comments_resp.raise_for_status()
+        pr_comments = comments_resp.json()
+
+        for comment in pr_comments:
+            if (comment['user']['login'] == 'github-actions[bot]'
+                    and 'METADATA' in comment['body']):
+                latest_matching_comment = comment
+
+    # Base case: If no matching comments, we have not commented yet.
+    if not latest_matching_comment:
+        return False
+
+    # extract metadata
+    for line in latest_matching_comment:
+        line = line.strip()
+        if line.startswith('METADATA'):
+            comment_metadata = json.loads(line.replace('METADATA', ''))
+            for key in ('signed_committers', 'unsigned_committers'):
+                if comment_metadata[key] != committer_metadata[key]:
+                    return False
+
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog=os.path.basename(__file__),
@@ -191,10 +259,10 @@ def main():
 
     args = parser.parse_args()
 
+    pr_num = int(args.pr_num)
     username, repo = args.repo.split('/')
     LOGGER.info(f"Checking PR {args.pr_num} on {username}/{repo}")
-    pr_committers = contributors_to_pr(
-        int(args.pr_num), username, repo)
+    pr_committers = contributors_to_pr(pr_num, username, repo)
     signed_committers = set()
     unsigned_committers = set()
     unknown_committers = set()
@@ -232,14 +300,22 @@ def main():
 
         cla_messages.append(message)
 
-    print(UNSIGNED_MSG.format(
-        last_checked_metadata={
-            "last_checked": datetime.datetime.now().isoformat(),
-            "signed_committers": sorted(signed_committers),
-            "unsigned_committers": sorted(unsigned_committers),
-        },
-        committers_message='\n'.join(cla_messages),
-    ))
+    committer_metadata = {
+        "last_checked": datetime.datetime.now().isoformat(),
+        "signed_committers": sorted(signed_committers),
+        "unsigned_committers": sorted(unsigned_committers),
+    }
+    if have_we_already_commented(
+            pr_num, committer_metadata, username=username, repo=repo):
+        LOGGER.info(
+            "Looks like we already commented on the repo and the committers "
+            "have not changed. Not commenting again at this time.")
+    else:
+        LOGGER.info("Printing formatted message for posting to the PR")
+        print(UNSIGNED_MSG.format(
+            last_checked_metadata=committer_metadata,
+            committers_message='\n'.join(cla_messages),
+        ))
     parser.exit(1)
 
 
