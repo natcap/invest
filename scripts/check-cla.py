@@ -228,7 +228,7 @@ def main():
             "\nThe following authors/committers were not recognized by github "
             "and should be verified manually: ")
         for uc in unknown_committers:
-            message += (f"\n* {uc}")
+            message += (f"\n* `{uc}`")
 
         cla_messages.append(message)
 
