@@ -210,7 +210,8 @@ def main():
 
     LOGGER.info(f"Committers who have signed: {signed_committers}")
     LOGGER.info(f"Committers who have not signed: {unsigned_committers}")
-    LOGGER.info(f"Committers who are unknown to github: {unknown_committers}")
+    LOGGER.info("Committers who are unknown to github and should be reviewed "
+                f"manually: {unknown_committers}")
     if len(unsigned_committers) == 0:
         parser.exit(0)
 
