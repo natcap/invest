@@ -28,6 +28,7 @@ jobs:
                   REPO: ${{ github.repository }}
                   GH_TOKEN: ${{ github.token }}
               run: |
+                set +e  # continue execution if a command returns a nonzero exit code.
                 cla_output=$(python scripts/check-cla.py $PR_NUMBER --repo=$REPO)
                 if [[ "$?" == "1" ]]
                 then
