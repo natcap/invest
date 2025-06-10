@@ -9,7 +9,7 @@ permissions:
 
 jobs:
     check-cla-pr:
-        #if: github.repository_owner == 'natcap'
+        if: github.repository_owner == 'natcap'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
