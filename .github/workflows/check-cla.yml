@@ -34,6 +34,7 @@ jobs:
                 then
                     echo "Some committers on this PR have not yet signed the CLA"
                     gh pr comment $PR_NUMBER -b "$cla_output"
+                    exit 1  # deliberately fail so the GHA check shows the failure.
                 else
                     echo "All committers on this branch have signed the CLA!"
                 fi
