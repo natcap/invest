@@ -27,11 +27,12 @@ import logging
 import math
 import os
 import re
+import sys
 import textwrap
 
 import requests
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 LOGGER = logging.getLogger(os.path.basename(__file__))
 CLA_HOST = 'https://vpejnqubjf.us-east-2.awsapprunner.com/'
 GITHUB_HEADERS = {
