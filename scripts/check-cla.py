@@ -28,7 +28,6 @@ import math
 import os
 import re
 import sys
-import textwrap
 
 import requests
 
@@ -39,21 +38,22 @@ GITHUB_HEADERS = {
     "X-GitHub-Api-Version": "2022-11-28",
     "Accept": "application/vnd.github+json",
 }
-UNSIGNED_MSG = textwrap.dedent("""\
-    Thank you for your pull request and welcome to our community! We require
-    contributors to sign our short [Contributor License
-    Agreement](https://natcap.github.io/invest-cla/).
-    In order to review and merge your code, please follow the link above and
-    follow the instructions to authenticate with your github account and agree
-    to the CLA.  If you have questions or received this message in error,
-    please don't hesitate to mention @softwareteam or leave a comment here in
-    the PR.
-
-    The CLA has not yet been signed by github users {users_without_cla}
-    <!--
-        METADATA {last_checked_metadata}
-    -->
-    """)
+UNSIGNED_MSG = (
+    "Thank you for your pull request and welcome to our community! We require "
+    "contributors to sign our short [Contributor License "
+    "Agreement](https://natcap.github.io/invest-cla/). "
+    "In order to review and merge your code, please follow the link above "
+    "and follow the instructions to authenticate with your github account "
+    "and agree to the CLA.  If you have questions or received this message "
+    "in error, please don't hesitate to mention `@softwareteam` or leave a "
+    "comment here in the PR. \n"
+    "\n"
+    "{committers_message}\n"
+    "\n"
+    "<!--\n"
+    "    METADATA {last_checked_metadata}\n"
+    "-->\n"
+)
 
 
 def check_contributor(github_username):
@@ -192,7 +192,7 @@ def main():
     args = parser.parse_args()
 
     username, repo = args.repo.split('/')
-    print(f"Checking PR {args.pr_num} on {username}/{repo}")
+    LOGGER.info(f"Checking PR {args.pr_num} on {username}/{repo}")
     pr_committers = contributors_to_pr(
         int(args.pr_num), username, repo)
     signed_committers = set()
@@ -217,14 +217,29 @@ def main():
         LOGGER.info("Looks like everyone has signed the CLA!")
         parser.exit(0)
 
+    cla_messages = []
+    if unsigned_committers:
+        cla_messages.append(
+            "The CLA has not yet been signed by github users: "
+            ", ".join(sorted(f"@{c}" for c in unsigned_committers)))
+
+    if unknown_committers:
+        message = (
+            "\nThe following authors/committers were not recognized by github "
+            "and should be verified manually: ")
+        for uc in unknown_committers:
+            message += (f"\n* {uc}")
+
+        cla_messages.append(message)
+
     print(UNSIGNED_MSG.format(
         last_checked_metadata={
             "last_checked": datetime.datetime.now().isoformat(),
             "signed_committers": sorted(signed_committers),
             "unsigned_committers": sorted(unsigned_committers),
         },
-        users_without_cla=(", ".join(sorted(
-            f"@{name}" for name in unsigned_committers)))))
+        committers_message='\n'.join(cla_messages),
+    ))
     parser.exit(1)
 
 
