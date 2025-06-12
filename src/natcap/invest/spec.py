@@ -2179,7 +2179,7 @@ def write_metadata_file(datasource_path, spec, keywords_list,
         return names[key]
 
     try:
-        resource = geometamaker.describe(datasource_path)
+        resource = geometamaker.describe(datasource_path, compute_stats=True)
     except ValidationError:
         LOGGER.debug(
             f"Skipping metadata creation for {datasource_path}, as invalid "
@@ -2202,22 +2202,23 @@ def write_metadata_file(datasource_path, spec, keywords_list,
     if hasattr(spec, 'fields') and spec.fields:
         attr_specs = spec.fields
     if attr_specs:
+        # field names in attr_spec are always lowercase, but the
+        # actual fieldname in the data could be any case because
+        # invest does not require case-sensitive fieldnames
+        field_lookup = {field.name.lower(): field for field in resource._get_fields()}
         for nested_spec in attr_specs:
             try:
-                # field names in attr_spec are always lowercase, but the
-                # actual fieldname in the data could be any case because
-                # invest does not require case-sensitive fieldnames
-                yaml_key = _get_key(nested_spec.id, resource)
+                field_name = field_lookup[nested_spec.id]
+                field_metadata = resource.get_field_description(field_name)
+                # yaml_key = _get_key(nested_spec.id, resource)
                 # Field description only gets set if its empty, i.e. ''
-                if len(resource.get_field_description(yaml_key)
-                       .description.strip()) < 1:
-                    about = nested_spec.about
-                    resource.set_field_description(yaml_key, description=about)
+                if len(field_metadata.description.strip()) < 1:
+                    # about = nested_spec.about
+                    resource.set_field_description(field_name, description=nested_spec.about)
                 # units only get set if empty
-                if len(resource.get_field_description(yaml_key)
-                       .units.strip()) < 1:
+                if len(field_metadata.units.strip()) < 1:
                     units = format_unit(nested_spec.units) if hasattr(nested_spec, 'units') else ''
-                    resource.set_field_description(yaml_key, units=units)
+                    resource.set_field_description(field_name, units=units)
             except KeyError as error:
                 # fields that are in the spec but missing
                 # from model results because they are conditional.
