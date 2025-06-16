@@ -131,12 +131,25 @@ export function setupAddPlugin(i18n) {
         // import metadata from the MODEL_SPEC. And mamba does not support
         // renaming or moving environments after they're created.
         const pluginEnvPrefix = upath.join(rootPrefix, `plugin_${Date.now()}`);
+
+        // Create environment from a YML file so that we can specify nodefaults
+        // which is needed for licensing reasons. micromamba does not support
+        // disabling the default channel in the command line.
+        const pluginEnvYMLFile = upath.join(app.getPath('temp'), 'env.yml');
+        let envYMLContents = (
+          'channels:\n' +
+          '- conda-forge\n' +
+          '- nodefaults\n' +
+          'dependencies:\n' +
+          '- python\n' +
+          '- git\n')
+        if (condaDeps) { // include dependencies read from pyproject.toml
+          condaDeps.forEach((dep) => envYMLContents += `- ${dep}\n`);
+        }
+        fs.writeFileSync(pluginEnvYMLFile, envYMLContents);
         const createCommand = [
           'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
-          '--override-channels', '-c', 'conda-forge', 'python', 'git'];
-        if (condaDeps) { // include dependencies read from pyproject.toml
-          condaDeps.forEach((dep) => createCommand.push(`"${dep}"`));
-        }
+          '--file', `"${pluginEnvYMLFile}"`];
         event.sender.send('plugin-install-status', i18n.t('Creating plugin environment...'));
         await spawnWithLogging(micromamba, createCommand);
         logger.info('created micromamba env for plugin');
