@@ -57,6 +57,7 @@ runs:
       with:
         environment-file: environment.yml
         environment-name: env
+        create-args: pip
         condarc: |
               channels:
                 - conda-forge
