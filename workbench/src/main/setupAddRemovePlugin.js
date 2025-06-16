@@ -81,7 +81,7 @@ export function setupAddPlugin(i18n) {
             event.sender.send('plugin-install-status', i18n.t('Creating base environment...'));
             await spawnWithLogging(
               micromamba,
-              ['create', '--yes', '--prefix', `"${baseEnvPrefix}"`, '-c', 'conda-forge', 'git']
+              ['create', '--yes', '--prefix', `"${baseEnvPrefix}"`, '--override-channels', '-c', 'conda-forge', 'git']
             );
           }
 
@@ -133,7 +133,7 @@ export function setupAddPlugin(i18n) {
         const pluginEnvPrefix = upath.join(rootPrefix, `plugin_${Date.now()}`);
         const createCommand = [
           'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
-          '-c', 'conda-forge', 'python', 'git'];
+          '--override-channels', '-c', 'conda-forge', 'python', 'git'];
         if (condaDeps) { // include dependencies read from pyproject.toml
           condaDeps.forEach((dep) => createCommand.push(`"${dep}"`));
         }
