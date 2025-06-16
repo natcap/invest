@@ -874,9 +874,9 @@ def execute(args):
 
     # calculate total abundance of all pollinators for each season
     total_pollinator_abundance_task = {}
+    total_pollinator_abundance_index = {}
     for season in scenario_variables['season_list']:
-        # total_pollinator_abundance_index[season] PAT(x,j)=sum_s PA(x,s,j)
-        total_pollinator_abundance_index_path = os.path.join(
+        total_pollinator_abundance_index[season] = os.path.join(
             output_dir, _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
                 season, file_suffix))
 
@@ -889,12 +889,12 @@ def execute(args):
             func=pygeoprocessing.raster_calculator,
             args=(
                 pollinator_abundance_season_path_band_list, _sum_arrays,
-                total_pollinator_abundance_index_path, gdal.GDT_Float32,
+                total_pollinator_abundance_index[season], gdal.GDT_Float32,
                 _INDEX_NODATA),
             dependent_task_list=[
                 pollinator_abundance_task_map[(species, season)]
                 for species in scenario_variables['species_list']],
-            target_path_list=[total_pollinator_abundance_index_path])
+            target_path_list=[total_pollinator_abundance_index[season]])
 
     # next step is farm vector calculation, if no farms then okay to quit
     if farm_vector_path is None:
@@ -942,7 +942,7 @@ def execute(args):
                 op=on_farm_pollinator_abundance_op,
                 rasters=[
                     half_saturation_raster_path,
-                    total_pollinator_abundance_index_path],
+                    total_pollinator_abundance_index[season]],
                 target_path=farm_pollinator_season_path,
                 target_dtype=numpy.float32,
                 target_nodata=_INDEX_NODATA),
@@ -1029,13 +1029,13 @@ def execute(args):
     # aggregate the pollinator abundance results over the farms
     pollinator_abundance_results = {}
     for season in scenario_variables['season_list']:
-        total_pollinator_abundance_index_path = os.path.join(
-            output_dir, _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
-                season, file_suffix))
+        # total_pollinator_abundance_index_path = os.path.join(
+        #     output_dir, _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
+        #         season, file_suffix))
         total_pollinator_abundance_task[season].join()
         pollinator_abundance_results[season] = (
             pygeoprocessing.zonal_statistics(
-                (total_pollinator_abundance_index_path, 1),
+                (total_pollinator_abundance_index[season], 1),
                 target_farm_result_path))
 
     target_farm_vector = gdal.OpenEx(target_farm_result_path, 1)
