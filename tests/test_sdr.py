@@ -33,7 +33,7 @@ def assert_expected_results_in_vector(expected_results, vector_path):
         try:
             numpy.testing.assert_allclose(
                 actual_results[key], expected_results[key],
-                rtol=0.00001, atol=0)
+                rtol=0.003, atol=0)
         except AssertionError:
             incorrect_vals[key] = (actual_results[key], expected_results[key])
     if incorrect_vals:

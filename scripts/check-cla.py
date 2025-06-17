@@ -172,7 +172,14 @@ def contributors_to_pr(pr_num, github_org='natcap', github_repo='invest'):
     for invalid_committer in [
             "web-flow",  # The github git committer for web commits
             ]:
-        pr_committers.remove(invalid_committer)
+        try:
+            pr_committers.remove(invalid_committer)
+            LOGGER.info(
+                f"Removed {invalid_committer} from the list of committers to "
+                "this PR")
+        except KeyError:
+            # When the invalid_committer was not found in the PR.
+            pass
 
     return pr_committers
 
