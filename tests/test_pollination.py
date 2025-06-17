@@ -209,7 +209,7 @@ class PollinationTests(unittest.TestCase):
                 'y_wild': 0.07998548448
             },
         }
-        result_vector = ogr.Open(
+        result_vector = gdal.OpenEx(
             os.path.join(self.workspace_dir, 'farm_results.shp'))
         result_layer = result_vector.GetLayer()
         try:
