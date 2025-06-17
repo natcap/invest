@@ -1,7 +1,5 @@
 """Pollinator service model for InVEST."""
 import collections
-import hashlib
-import inspect
 import itertools
 import logging
 import os
@@ -772,7 +770,7 @@ def execute(args):
         # adequate kernel task has already been submitted
         try:
             alpha_kernel_raster_task = alpha_kernel_map[kernel_path]
-        except:
+        except KeyError:
             alpha_kernel_raster_task = task_graph.add_task(
                 task_name=f'decay_kernel_raster_{alpha}',
                 func=pygeoprocessing.kernels.exponential_decay_kernel,
@@ -1029,9 +1027,6 @@ def execute(args):
     # aggregate the pollinator abundance results over the farms
     pollinator_abundance_results = {}
     for season in scenario_variables['season_list']:
-        # total_pollinator_abundance_index_path = os.path.join(
-        #     output_dir, _TOTAL_POLLINATOR_ABUNDANCE_FILE_PATTERN % (
-        #         season, file_suffix))
         total_pollinator_abundance_task[season].join()
         pollinator_abundance_results[season] = (
             pygeoprocessing.zonal_statistics(

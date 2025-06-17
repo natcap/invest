@@ -132,6 +132,100 @@ class PollinationTests(unittest.TestCase):
         PollinationTests._test_same_files(
             EXPECTED_FILE_LIST, self.workspace_dir)
 
+    def test_pollination_regression_multiple_seasons(self):
+        """Pollination: regression testing sample data with two seasons."""
+        from natcap.invest import pollination
+
+        guild_table_path = os.path.join(self.workspace_dir, 'guild_table.csv')
+        biophysical_table_path = os.path.join(
+            self.workspace_dir, 'biophysical_table.csv')
+        farm_vector_path = os.path.join(self.workspace_dir, 'farms.shp')
+
+        pandas.DataFrame({
+            'SPECIES': ['Apis'],
+            'nesting_suitability_cavity_index': [1],
+            'foraging_activity_spring_index': [1],
+            'foraging_activity_summer_index': [0.1],
+            'alpha': [500],
+            'relative_abundance': [1]
+        }).to_csv(guild_table_path)
+
+        pandas.DataFrame({
+            'lucode': [1, 2, 3, 4],
+            'nesting_cavity_availability_index': [0.05, 0.8, 0.3, 0.05],
+            'floral_resources_spring_index': [0.9, 0.3, 0.8, 0],
+            'floral_resources_summer_index': [0.2, 0.1, 0.2, 0]
+        }).to_csv(biophysical_table_path)
+
+        landcover_raster_path = os.path.join(
+            REGRESSION_DATA, 'input', 'pollination_example_landcover.tif')
+        lulc_raster_info = pygeoprocessing.get_raster_info(landcover_raster_path)
+        # The farm will occupy a space within the landcover raster, which is
+        # about 1300x1300 meters in extent
+        farm_geom = shapely.box(*lulc_raster_info['bounding_box']).buffer(-400)
+        fields = {
+            'lucode': ogr.OFTInteger,
+            'crop_type': ogr.OFTString,
+            'half_sat': ogr.OFTReal,
+            'season': ogr.OFTString,
+            'fr_spring': ogr.OFTReal,
+            'fr_summer': ogr.OFTReal,
+            'n_cavity': ogr.OFTReal,
+            'p_dep': ogr.OFTReal,
+            'p_managed': ogr.OFTReal
+        }
+        attributes = {
+            'lucode': 1,
+            'crop_type': 'blueberry',
+            'half_sat': 0.5,
+            'season': 'spring',
+            'fr_spring': 0.9,
+            'fr_summer': 0.1,
+            'n_cavity': 0.05,
+            'p_dep': 0.65,
+            'p_managed': 0
+        }
+        pygeoprocessing.shapely_geometry_to_vector(
+            shapely_geometry_list=[farm_geom],
+            target_vector_path=farm_vector_path,
+            projection_wkt=lulc_raster_info['projection_wkt'],
+            vector_format='ESRI Shapefile',
+            fields=fields,
+            attribute_list=[attributes])
+
+        args = {
+            'results_suffix': '',
+            'workspace_dir': self.workspace_dir,
+            'landcover_raster_path': landcover_raster_path,
+            'guild_table_path': guild_table_path,
+            'landcover_biophysical_table_path': biophysical_table_path,
+            'farm_vector_path': farm_vector_path,
+        }
+
+        pollination.execute(args)
+        expected_farm_yields = {
+            'blueberry': {
+                'y_tot': 0.42998552322,
+                'y_wild': 0.07998548448
+            },
+        }
+        result_vector = ogr.Open(
+            os.path.join(self.workspace_dir, 'farm_results.shp'))
+        result_layer = result_vector.GetLayer()
+        try:
+            self.assertEqual(
+                result_layer.GetFeatureCount(), len(expected_farm_yields))
+            for feature in result_layer:
+                expected_yields = expected_farm_yields[
+                    feature.GetField('crop_type')]
+                for yield_type in expected_yields:
+                    self.assertAlmostEqual(
+                        expected_yields[yield_type],
+                        feature.GetField(yield_type), places=2)
+        finally:
+            result_layer = None
+            result_vector = None
+
     def test_pollination_missing_farm_header(self):
         """Pollination: regression testing missing farm headers."""
         from natcap.invest import pollination
