@@ -80,6 +80,8 @@ Plugins
 * The plugin package version is now queried programatically using
   ``importlib`` rather than being read directly from the ``pyproject.toml``
   (`#2025 <https://github.com/natcap/invest/issues/2025>`_).
+* Plugin environments are now created using the conda-forge channel only.
+  The default channel is excluded (`#1802 <https://github.com/natcap/invest/issues/1802>`_).
 
 Visitation: Recreation and Tourism
 ==================================
