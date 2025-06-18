@@ -250,302 +250,505 @@ BIOPHYSICAL_TABLE_COLUMNS = {
             "Annual rate of CO2E accumulation in the litter pool.")}
 }
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "coastal_blue_carbon",
-    "model_title": gettext("Coastal Blue Carbon"),
-    "userguide": "coastal_blue_carbon.html",
-    "aliases": ("cbc",),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['landcover_snapshot_csv', 'biophysical_table_path', 'landcover_transitions_table', 'analysis_year'],
-            ['do_economic_analysis', 'use_price_table', 'price', 'inflation_rate', 'price_table_path', 'discount_rate'],
-        ]
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "landcover_snapshot_csv": {
-            "type": "csv",
-            "index_col": "snapshot_year",
-            "columns": {
-                "snapshot_year": {
-                    "type": "integer",
-                    "about": gettext(
-                        "The snapshot year that this row's LULC raster "
-                        "represents. Each year in this table must be unique.")
-                },
-                "raster_path": {
-                    "type": "raster",
-                    "bands": {1: {"type": "integer"}},
-                    "about": gettext(
-                        "Map of LULC in the given snapshot "
-                        "year. All values in this raster must have "
-                        "corresponding entries in the Biophysical Table and "
-                        "Landcover Transitions Table.")
-                }
-            },
-            "about": gettext(
-                "A table mapping snapshot years to corresponding LULC maps."),
-            "name": gettext("landcover snapshots table"),
-        },
-        "analysis_year": {
-            "type": "number",
-            "units": u.year_AD,
-            "required": False,
-            "name": gettext("analysis year"),
-            "about": gettext(
-                "A year that may be used to extend the analysis beyond the "
-                "last snapshot year. If used, the model assumes that carbon "
-                "will continue to accumulate or emit after the last snapshot "
-                "year until the analysis year. This value must be greater "
-                "than the final snapshot year."),
-        },
-        "biophysical_table_path": {
-            "name": gettext("biophysical table"),
-            "type": "csv",
-            "index_col": "lucode",
-            "columns": BIOPHYSICAL_TABLE_COLUMNS,
-            "about": gettext("Table of biophysical properties for each LULC class.")
-        },
-        "landcover_transitions_table": {
-            "name": gettext("landcover transitions table"),
-            "type": "csv",
-            "index_col": "lulc-class",
-            "columns": {
-                "lulc-class": {
-                    "type": "freestyle_string",
-                    "about": gettext(
-                        "LULC class names matching those in the biophysical "
-                        "table.")},
-                "[LULC CODE]": {
-                    "type": "option_string",
-                    "options": {
-                        "accum": {
-                            "description": gettext("a state of carbon accumulation")
-                        },
+MODEL_SPEC = spec.ModelSpec(
+    model_id="coastal_blue_carbon",
+    model_title=gettext("Coastal Blue Carbon"),
+    userguide="coastal_blue_carbon.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=False,
+    aliases=("cbc",),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["landcover_snapshot_csv", "biophysical_table_path",
+         "landcover_transitions_table", "analysis_year"],
+        ["do_economic_analysis", "use_price_table", "price",
+         "inflation_rate", "price_table_path", "discount_rate"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.CSVInput(
+            id="landcover_snapshot_csv",
+            name=gettext("landcover snapshots table"),
+            about=gettext("A table mapping snapshot years to corresponding LULC maps."),
+            columns=[
+                spec.IntegerInput(
+                    id="snapshot_year",
+                    about=(
+                        "The snapshot year that this row's LULC raster represents. Each"
+                        " year in this table must be unique."
+                    )
+                ),
+                spec.SingleBandRasterInput(
+                    id="raster_path",
+                    about=gettext(
+                        "Map of LULC in the given snapshot year. All values in this"
+                        " raster must have corresponding entries in the Biophysical Table"
+                        " and Landcover Transitions Table."
+                    ),
+                    data_type=int,
+                    units=None,
+                    projected=None
+                )
+            ],
+            index_col="snapshot_year"
+        ),
+        spec.NumberInput(
+            id="analysis_year",
+            name=gettext("analysis year"),
+            about=gettext(
+                "A year that may be used to extend the analysis beyond the last snapshot"
+                " year. If used, the model assumes that carbon will continue to"
+                " accumulate or emit after the last snapshot year until the analysis"
+                " year. This value must be greater than the final snapshot year."
+            ),
+            required=False,
+            units=u.year_AD
+        ),
+        spec.CSVInput(
+            id="biophysical_table_path",
+            name=gettext("biophysical table"),
+            about=gettext("Table of biophysical properties for each LULC class."),
+            columns=[
+                spec.IntegerInput(
+                    id="lucode",
+                    about=gettext(
+                        "The LULC code that represents this LULC class in the LULC"
+                        " snapshot rasters."
+                    )
+                ),
+                spec.StringInput(
+                    id="lulc-class",
+                    about=gettext(
+                        "Name of the LULC class. This label must be unique among the all"
+                        " the LULC classes."
+                    ),
+                    regexp=None
+                ),
+                spec.NumberInput(
+                    id="biomass-initial",
+                    about=gettext(
+                        "The initial carbon stocks in the biomass pool for this LULC"
+                        " class."
+                    ),
+                    units=u.megametric_ton / u.hectare
+                ),
+                spec.NumberInput(
+                    id="soil-initial",
+                    about=gettext(
+                        "The initial carbon stocks in the soil pool for this LULC class."
+                    ),
+                    units=u.megametric_ton / u.hectare
+                ),
+                spec.NumberInput(
+                    id="litter-initial",
+                    about=gettext(
+                        "The initial carbon stocks in the litter pool for this LULC"
+                        " class."
+                    ),
+                    units=u.megametric_ton / u.hectare
+                ),
+                spec.NumberInput(
+                    id="biomass-half-life",
+                    about=gettext("The half-life of carbon in the biomass pool."),
+                    units=u.year,
+                    expression="value > 0"
+                ),
+                spec.RatioInput(
+                    id="biomass-low-impact-disturb",
+                    about=gettext(
+                        "Proportion of carbon stock in the biomass pool that is disturbed"
+                        " when a cell transitions away from this  LULC class in a"
+                        " low-impact disturbance."
+                    ),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="biomass-med-impact-disturb",
+                    about=gettext(
+                        "Proportion of carbon stock in the biomass pool that is disturbed"
+                        " when a cell transitions away from this LULC class in a"
+                        " medium-impact disturbance."
+                    ),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="biomass-high-impact-disturb",
+                    about=gettext(
+                        "Proportion of carbon stock in the biomass pool that is disturbed"
+                        " when a cell transitions away from this LULC class in a"
+                        " high-impact disturbance."
+                    ),
+                    units=None
+                ),
+                spec.NumberInput(
+                    id="biomass-yearly-accumulation",
+                    about=gettext(
+                        "Annual rate of CO2E accumulation in the biomass pool."
+                    ),
+                    units=u.megametric_ton / u.hectare / u.year
+                ),
+                spec.NumberInput(
+                    id="soil-half-life",
+                    about=gettext("The half-life of carbon in the soil pool."),
+                    units=u.year,
+                    expression="value > 0"
+                ),
+                spec.RatioInput(
+                    id="soil-low-impact-disturb",
+                    about=gettext(
+                        "Proportion of carbon stock in the soil pool that is disturbed"
+                        " when a cell transitions away from this LULC class in a"
+                        " low-impact disturbance."
+                    ),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="soil-med-impact-disturb",
+                    about=gettext(
+                        "Proportion of carbon stock in the soil pool that is disturbed"
+                        " when a cell transitions away from this LULC class in a"
+                        " medium-impact disturbance."
+                    ),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="soil-high-impact-disturb",
+                    about=gettext(
+                        "Proportion of carbon stock in the soil pool that is disturbed"
+                        " when a cell transitions away from this LULC class in a"
+                        " high-impact disturbance."
+                    ),
+                    units=None
+                ),
+                spec.NumberInput(
+                    id="soil-yearly-accumulation",
+                    about=gettext("Annual rate of CO2E accumulation in the soil pool."),
+                    units=u.megametric_ton / u.hectare / u.year
+                ),
+                spec.NumberInput(
+                    id="litter-yearly-accumulation",
+                    about=gettext("Annual rate of CO2E accumulation in the litter pool."),
+                    units=u.megametric_ton / u.hectare / u.year
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.CSVInput(
+            id="landcover_transitions_table",
+            name=gettext("landcover transitions table"),
+            about=gettext(
+                "A transition matrix mapping the type of carbon action undergone when one"
+                " LULC type transitions to another."
+            ),
+            columns=[
+                spec.StringInput(
+                    id="lulc-class",
+                    about=gettext(
+                        "LULC class names matching those in the biophysical table."
+                    ),
+                    regexp=None
+                ),
+                spec.OptionStringInput(
+                    id="[LULC CODE]",
+                    about=(
+                        "A transition matrix describing the type of carbon action that"
+                        " occurs when each LULC type transitions to each other type."
+                        " Values in the first column, 'lulc-class', represents the"
+                        " original LULC class that is transitioned away from. Values in"
+                        " the first row represents the LULC class that is transitioned"
+                        " to. Each cell in the matrix is filled with an option indicating"
+                        " the effect on carbon when transitioning from that cell's row's"
+                        " LULC class to that cell's column's LULC class. The classes in"
+                        " this table must exactly match the classes in the Biophysical"
+                        " Table 'lulc-class' column. A cell may be left empty if the"
+                        " transition never occurs."
+                    ),
+                    options={
+                        "accum": {"description": "a state of carbon accumulation"},
                         "high-impact-disturb": {
-                            "description": gettext("high carbon disturbance rate")
+                            "description": "high carbon disturbance rate"
                         },
                         "med-impact-disturb": {
-                            "description": gettext("medium carbon disturbance rate")
+                            "description": "medium carbon disturbance rate"
                         },
                         "low-impact-disturb": {
-                            "description": gettext("low carbon disturbance rate")
+                            "description": "low carbon disturbance rate"
                         },
                         "NCC": {
-                            "description": gettext(
-                                "no change in carbon. Defining 'NCC' for a "
-                                "transition will halt any in-progress carbon "
-                                "accumulation or emissions at the year of "
-                                "transition, until the class transitions "
-                                "again to a state of accumulation or "
-                                "disturbance."
+                            "description": (
+                                "no change in carbon. Defining 'NCC' for a transition"
+                                " will halt any in-progress carbon accumulation or"
+                                " emissions at the year of transition, until the class"
+                                " transitions again to a state of accumulation or"
+                                " disturbance."
                             )
-                        }
-                    },
-                    "about": gettext(
-                        "A transition matrix describing the type of carbon "
-                        "action that occurs when each LULC type transitions "
-                        "to each other type. Values in the first column, "
-                        "'lulc-class', represents the original LULC class "
-                        "that is transitioned away from. Values in the first "
-                        "row represents the LULC class that is transitioned "
-                        "to. Each cell in the matrix is filled with an option "
-                        "indicating the effect on carbon when transitioning "
-                        "from that cell's row's LULC class to that cell's "
-                        "column's LULC class. The classes in this table must "
-                        "exactly match the classes in the Biophysical Table "
-                        "'lulc-class' column. A cell may be left empty if "
-                        "the transition never occurs.")}
-            },
-            "about": gettext(
-                "A transition matrix mapping the type of carbon action "
-                "undergone when one LULC type transitions to another."),
-        },
-        "do_economic_analysis": {
-            "name": gettext("run valuation"),
-            "type": "boolean",
-            "required": False,
-            "about": gettext(
-                "Enable net present valuation analysis based on "
-                "carbon prices from either a yearly price table, or an "
-                "initial price and yearly interest rate."),
-        },
-        "use_price_table": {
-            "name": gettext("use price table"),
-            "type": "boolean",
-            "required": False,
-            "allowed": "do_economic_analysis",
-            "about": gettext(
-                "Use a yearly price table, rather than an initial "
-                "price and interest rate, to indicate carbon value over time."),
-        },
-        "price": {
-            "name": gettext("price"),
-            "type": "number",
-            "units": u.currency/u.megatonne,
-            "required": "do_economic_analysis and (not use_price_table)",
-            "allowed": "do_economic_analysis and not use_price_table",
-            "about": gettext(
-                "The price of CO2E at the baseline year. Required if Do "
-                "Valuation is selected and Use Price Table is not selected."),
-        },
-        "inflation_rate": {
-            "name": gettext("interest rate"),
-            "type": "percent",
-            "required": "do_economic_analysis and (not use_price_table)",
-            "allowed": "do_economic_analysis and not use_price_table",
-            "about": gettext(
-                "Annual increase in the price of CO2E. Required if Do "
-                "Valuation is selected and Use Price Table is not selected.")
-        },
-        "price_table_path": {
-            "name": gettext("price table"),
-            "type": "csv",
-            "required": "use_price_table",
-            "allowed": "use_price_table",
-            "index_col": "year",
-            "columns": {
-                "year": {
-                    "type": "number",
-                    "units": u.year_AD,
-                    "about": gettext(
-                        "Each year from the snapshot year to analysis year.")},
-                "price": {
-                    "type": "number",
-                    "units": u.currency/u.megatonne,
-                    "about": gettext("Price of CO2E in that year.")}
-            },
-            "about": gettext(
-                "Table of annual CO2E prices for each year from the baseline "
-                "year to the final snapshot or analysis year. Required if Do "
-                "Valuation is selected and Use Price Table is selected."),
-        },
-        "discount_rate": {
-            "name": gettext("discount rate"),
-            "type": "percent",
-            "required": "do_economic_analysis",
-            "allowed": "do_economic_analysis",
-            "about": gettext(
-                "Annual discount rate on the price of carbon. This is "
-                "compounded each year after the baseline year. "
-                "Required if Run Valuation is selected."),
-        },
-    },
-    "outputs": {
-        "carbon-accumulation-between-[YEAR1]-and-[YEAR2].tif": {
-            "about": "Amount of CO2E accumulated between the two specified years.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.megatonne/u.hectare
-            }}
-        },
-        "carbon-emissions-between-[YEAR1]-and-[YEAR2].tif": {
-            "about": "Amount of CO2E lost to disturbance between the two specified years.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.megatonne/u.hectare
-            }}
-        },
-        "carbon-stock-at-[YEAR].tif": {
-            "about": "Sum of the 3 carbon pools for each LULC for the specified year",
-            "bands": {1: {
-                "type": "number",
-                "units": u.megatonne/u.hectare
-            }}
-        },
+                        },
+                    }
+                )
+            ],
+            index_col="lulc-class"
+        ),
+        spec.BooleanInput(
+            id="do_economic_analysis",
+            name=gettext("run valuation"),
+            about=gettext(
+                "Enable net present valuation analysis based on carbon prices from either"
+                " a yearly price table, or an initial price and yearly interest rate."
+            ),
+            required=False
+        ),
+        spec.BooleanInput(
+            id="use_price_table",
+            name=gettext("use price table"),
+            about=gettext(
+                "Use a yearly price table, rather than an initial price and interest"
+                " rate, to indicate carbon value over time."
+            ),
+            required=False,
+            allowed="do_economic_analysis"
+        ),
+        spec.NumberInput(
+            id="price",
+            name=gettext("price"),
+            about=gettext(
+                "The price of CO2E at the baseline year. Required if Do Valuation is"
+                " selected and Use Price Table is not selected."
+            ),
+            required="do_economic_analysis and (not use_price_table)",
+            allowed="do_economic_analysis and not use_price_table",
+            units=u.currency / u.megametric_ton
+        ),
+        spec.PercentInput(
+            id="inflation_rate",
+            name=gettext("interest rate"),
+            about=gettext(
+                "Annual increase in the price of CO2E. Required if Do Valuation is"
+                " selected and Use Price Table is not selected."
+            ),
+            required="do_economic_analysis and (not use_price_table)",
+            allowed="do_economic_analysis and not use_price_table",
+            units=None
+        ),
+        spec.CSVInput(
+            id="price_table_path",
+            name=gettext("price table"),
+            about=gettext(
+                "Table of annual CO2E prices for each year from the baseline year to the"
+                " final snapshot or analysis year. Required if Do Valuation is selected"
+                " and Use Price Table is selected."
+            ),
+            required="use_price_table",
+            allowed="use_price_table",
+            columns=[
+                spec.NumberInput(
+                    id="year",
+                    about=gettext("Each year from the snapshot year to analysis year."),
+                    units=u.year_AD
+                ),
+                spec.NumberInput(
+                    id="price",
+                    about=gettext("Price of CO2E in that year."),
+                    units=u.currency / u.megametric_ton
+                )
+            ],
+            index_col="year"
+        ),
+        spec.PercentInput(
+            id="discount_rate",
+            name=gettext("discount rate"),
+            about=gettext(
+                "Annual discount rate on the price of carbon. This is compounded each"
+                " year after the baseline year. Required if Run Valuation is selected."
+            ),
+            required="do_economic_analysis",
+            allowed="do_economic_analysis",
+            units=None
+        )
+    ],
+    outputs=[
+        spec.SingleBandRasterOutput(
+            id="carbon-accumulation-between-[YEAR1]-and-[YEAR2].tif",
+            about=gettext("Amount of CO2E accumulated between the two specified years."),
+            data_type=float,
+            units=u.megametric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="carbon-emissions-between-[YEAR1]-and-[YEAR2].tif",
+            about=gettext(
+                "Amount of CO2E lost to disturbance between the two specified years."
+            ),
+            data_type=float,
+            units=u.megametric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="carbon-stock-at-[YEAR].tif",
+            about=gettext(
+                "Sum of the 3 carbon pools for each LULC for the specified year"
+            ),
+            data_type=float,
+            units=u.megametric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="total-net-carbon-sequestion-between-[YEAR1]-and-[YEAR2].tif",
+            about=gettext(
+                "Total carbon sequestration between the two specified years, based on"
+                " accumulation minus emissions during that time period."
+            ),
+            data_type=float,
+            units=u.megametric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="total-net-carbon-sequestration.tif",
+            about=gettext(
+                "Total carbon sequestration over the whole time period between the"
+                " Baseline and either the latest Snapshot Year or the Analysis Year,"
+                " based on accumulation minus emissions."
+            ),
+            data_type=float,
+            units=u.megametric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="net-present-value.tif",
+            about=gettext("Monetary value of carbon sequestration."),
+            data_type=float,
+            units=u.currency / u.hectare
+        ),
+        spec.DirectoryOutput(
+            id="intermediate",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="stocks-[POOL]-[YEAR].tif",
+                    about=gettext(
+                        "The carbon stocks available at the beginning of the year noted"
+                        " in the filename."
+                    ),
+                    data_type=float,
+                    units=u.megametric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="accumulation-[POOL]-[YEAR].tif",
+                    about=gettext(
+                        "The spatial distribution of rates of carbon accumulation in the"
+                        " given pool at the given year. Years will represent the snapshot"
+                        " years in which the accumulation raster takes effect."
+                    ),
+                    data_type=float,
+                    units=u.megametric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="halflife-[POOL]-[YEAR].tif",
+                    about=gettext(
+                        "A raster of the spatial distribution of the half-lives of carbon"
+                        " in the pool mentioned at the given snapshot year."
+                    ),
+                    data_type=float,
+                    units=u.year
+                ),
+                spec.SingleBandRasterOutput(
+                    id="disturbance-magnitude-[POOL]-[YEAR].tif",
+                    about=gettext(
+                        "The proportion of carbon disturbed in the given pool in the"
+                        " given snapshot year."
+                    ),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="disturbance-volume-[POOL]-[YEAR].tif",
+                    about=gettext(
+                        "the volume of the carbon disturbed in the snapshot year. This is"
+                        " a function of the carbon stocks at the year prior and the"
+                        " disturbance magnitude in the given snapshot year."
+                    ),
+                    data_type=float,
+                    units=u.megametric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="year-of-latest-disturbance-[POOL]-[YEAR].tif",
+                    about=gettext(
+                        "each cell indicates the most recent year in which the cell"
+                        " underwent a landcover transition."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="aligned-lulc-[SNAPSHOT TYPE]-[YEAR].tif",
+                    about=gettext(
+                        "The snapshot landcover raster of the given year, aligned to the"
+                        " intersection of the bounding boxes of all snapshot rasters, and"
+                        " with consistent cell sizes. The cell size of the aligned"
+                        " landcover rasters is the minimum of the incoming cell sizes."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="net-sequestration-[POOL]-[YEAR].tif",
+                    about=gettext(
+                        "the net sequestration in the given pool in the given year."
+                    ),
+                    data_type=float,
+                    units=u.megametric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="total-carbon-stocks-[YEAR].tif",
+                    about=gettext(
+                        "the sum of the stocks present across all three carbon pool at"
+                        " the given year."
+                    ),
+                    data_type=float,
+                    units=u.megametric_ton / u.hectare
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ],
+)
 
-        "total-net-carbon-sequestion-between-[YEAR1]-and-[YEAR2].tif": {
-            "about": "Total carbon sequestration between the two specified years, based on accumulation minus emissions during that time period.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.megatonne/u.hectare
-            }}
-        },
-        "total-net-carbon-sequestration.tif": {
-            "about": "Total carbon sequestration over the whole time period between the Baseline and either the latest Snapshot Year or the Analysis Year, based on accumulation minus emissions.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.megatonne/u.hectare
-            }}
-        },
-        "net-present-value.tif": {
-            "about": "Monetary value of carbon sequestration.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.currency/u.hectare
-            }}
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "stocks-[POOL]-[YEAR].tif": {
-                    "about": "The carbon stocks available at the beginning of the year noted in the filename.",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.megatonne/u.hectare
-                    }}
-                },
-                "accumulation-[POOL]-[YEAR].tif": {
-                    "about": "The spatial distribution of rates of carbon accumulation in the given pool at the given year. Years will represent the snapshot years in which the accumulation raster takes effect.",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.megatonne/u.hectare
-                    }}
-                },
-                "halflife-[POOL]-[YEAR].tif": {
-                    "about": "A raster of the spatial distribution of the half-lives of carbon in the pool mentioned at the given snapshot year.",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.year
-                    }}
-                },
-                "disturbance-magnitude-[POOL]-[YEAR].tif": {
-                    "about": "The proportion of carbon disturbed in the given pool in the given snapshot year.",
-                    "bands": {1: {
-                        "type": "ratio"
-                    }}
-                },
-                "disturbance-volume-[POOL]-[YEAR].tif": {
-                    "about": "the volume of the carbon disturbed in the snapshot year. This is a function of the carbon stocks at the year prior and the disturbance magnitude in the given snapshot year.",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.megatonne/u.hectare
-                    }}
-                },
-                "year-of-latest-disturbance-[POOL]-[YEAR].tif": {
-                    "about": "each cell indicates the most recent year in which the cell underwent a landcover transition.",
-                    "bands": {1: {
-                        "type": "integer"
-                    }}
-                },
-                "aligned-lulc-[SNAPSHOT TYPE]-[YEAR].tif": {
-                    "about": "The snapshot landcover raster of the given year, aligned to the intersection of the bounding boxes of all snapshot rasters, and with consistent cell sizes. The cell size of the aligned landcover rasters is the minimum of the incoming cell sizes.",
-                    "bands": {1: {
-                        "type": "integer"
-                    }}
-                },
-                "net-sequestration-[POOL]-[YEAR].tif": {
-                    "about": "the net sequestration in the given pool in the given year.",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.megatonne/u.hectare
-                    }}
-                },
-                "total-carbon-stocks-[YEAR].tif": {
-                    "about": "the sum of the stocks present across all three carbon pool at the given year.",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.megatonne/u.hectare
-                    }}
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
 
 
 def execute(args):
@@ -730,7 +933,7 @@ def execute(args):
         dependent_task_list=[
             stock_tasks[baseline_lulc_year][POOL_SOIL],
             stock_tasks[baseline_lulc_year][POOL_BIOMASS],
-            yearly_accum_tasks[baseline_lulc_year][POOL_LITTER],
+            yearly_accum_tasks[baseline_lulc_year][POOL_LITTER]
         ],
         target_path_list=[total_stock_rasters[baseline_lulc_year]],
         task_name=f'Calculating total carbon stocks in {baseline_lulc_year}')
@@ -779,7 +982,7 @@ def execute(args):
             dependent_task_list=[
                 stock_tasks[year][POOL_SOIL],
                 stock_tasks[year][POOL_BIOMASS],
-                yearly_accum_tasks[baseline_lulc_year][POOL_LITTER],
+                yearly_accum_tasks[baseline_lulc_year][POOL_LITTER]
             ],
             target_path_list=[total_stock_rasters[year]],
             task_name=f'Calculating total carbon stocks in {year}')
@@ -927,7 +1130,7 @@ def execute(args):
                 gdal.GDT_Float32,
                 NODATA_FLOAT32_MIN),
             target_path_list=[
-                total_accumulation_rasters[current_transition_year],
+                total_accumulation_rasters[current_transition_year]
             ],
             dependent_task_list=[
                 yearly_accum_tasks[prior_transition_year][POOL_BIOMASS],

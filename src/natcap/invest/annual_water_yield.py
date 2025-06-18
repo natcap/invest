@@ -106,7 +106,7 @@ WATERSHED_OUTPUT_FIELDS = {
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="annual_water_yield",
-    model_title="Annual Water Yield",
+    model_title=gettext("Annual Water Yield"),
     userguide="annual_water_yield.html",
     input_field_order=[
         ["workspace_dir", "results_suffix"],

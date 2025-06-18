@@ -38,196 +38,349 @@ CARBON_OUTPUTS = {
     ]
 }
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "carbon",
-    "model_title": gettext("Carbon Storage and Sequestration"),
-    "userguide": "carbonstorage.html",
-    "aliases": (),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['lulc_bas_path', 'carbon_pools_path'],
-            ['calc_sequestration', 'lulc_alt_path'],
-            ['do_valuation', 'lulc_bas_year', 'lulc_alt_year', 'price_per_metric_ton_of_c', 'discount_rate', 'rate_change'],
-        ],
-        "forum_tag": 'carbon'
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["lulc_bas_path", "lulc_alt_path"],
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "lulc_bas_path": {
-            **spec.LULC,
-            "projected": True,
-            "projection_units": u.meter,
-            "about": gettext(
-                "A map of LULC for the baseline scenario, which must occur "
-                "prior to the alternate scenario. All values in this raster "
-                "must have corresponding entries in the Carbon Pools table."),
-            "name": gettext("baseline LULC")
-        },
-        "calc_sequestration": {
-            "type": "boolean",
-            "required": "do_valuation",
-            "about": gettext(
-                "Run sequestration analysis. This requires inputs "
-                "of LULC maps for both baseline and alternate "
-                "scenarios. Required if run valuation model is selected."),
-            "name": gettext("calculate sequestration")
-        },
-        "lulc_alt_path": {
-            **spec.LULC,
-            "projected": True,
-            "projection_units": u.meter,
-            "required": "calc_sequestration",
-            "allowed": "calc_sequestration",
-            "about": gettext(
-                "A map of LULC for the alternate scenario, which must occur "
-                "after the baseline scenario. All values in this raster must "
-                "have corresponding entries in the Carbon Pools table. "
-                "This raster must align with the Baseline LULC raster. "
-                "Required if Calculate Sequestration is selected."),
-            "name": gettext("alternate LULC")
-        },
-        "carbon_pools_path": {
-            "type": "csv",
-            "columns": {
-                "lucode": spec.LULC_TABLE_COLUMN,
-                "c_above": {
-                    "type": "number",
-                    "units": u.metric_ton/u.hectare,
-                    "about": gettext("Carbon density of aboveground biomass.")},
-                "c_below": {
-                    "type": "number",
-                    "units": u.metric_ton/u.hectare,
-                    "about": gettext("Carbon density of belowground biomass.")},
-                "c_soil": {
-                    "type": "number",
-                    "units": u.metric_ton/u.hectare,
-                    "about": gettext("Carbon density of soil.")},
-                "c_dead": {
-                    "type": "number",
-                    "units": u.metric_ton/u.hectare,
-                    "about": gettext("Carbon density of dead matter.")}
-            },
-            "index_col": "lucode",
-            "about": gettext(
-                "A table that maps each LULC code to carbon pool data for "
-                "that LULC type."),
-            "name": gettext("carbon pools")
-        },
-        "lulc_bas_year": {
-            "expression": "float(value).is_integer()",
-            "type": "number",
-            "units": u.year_AD,
-            "required": "do_valuation",
-            "allowed": "do_valuation",
-            "about": gettext(
-                "The calendar year of the baseline scenario depicted in the "
-                "baseline LULC map. Must be < alternate LULC year. Required "
-                "if Run Valuation model is selected."),
-            "name": gettext("baseline LULC year")
-        },
-        "lulc_alt_year": {
-            "expression": "float(value).is_integer()",
-            "type": "number",
-            "units": u.year_AD,
-            "required": "do_valuation",
-            "allowed": "do_valuation",
-            "about": gettext(
-                "The calendar year of the alternate scenario depicted in the "
-                "alternate LULC map. Must be > baseline LULC year. Required "
-                "if Run Valuation model is selected."),
-            "name": gettext("alternate LULC year")
-        },
-        "do_valuation": {
-            "type": "boolean",
-            "required": False,
-            "allowed": "calc_sequestration",
-            "about": gettext(
-                "Calculate net present value for the alternate scenario "
-                "and report it in the final HTML document."),
-            "name": gettext("run valuation model")
-        },
-        "price_per_metric_ton_of_c": {
-            "type": "number",
-            "units": u.currency/u.metric_ton,
-            "required": "do_valuation",
-            "allowed": "do_valuation",
-            "about": gettext(
-                "The present value of carbon. "
-                "Required if Run Valuation model is selected."),
-            "name": gettext("price of carbon")
-        },
-        "discount_rate": {
-            "type": "percent",
-            "required": "do_valuation",
-            "allowed": "do_valuation",
-            "about": gettext(
-                "The annual market discount rate in the price of carbon, "
-                "which reflects society's preference for immediate benefits "
-                "over future benefits. Required if Run Valuation model is "
-                "selected. This assumes that the baseline scenario is current "
-                "and the alternate scenario is in the future."),
-            "name": gettext("annual market discount rate")
-        },
-        "rate_change": {
-            "type": "percent",
-            "required": "do_valuation",
-            "allowed": "do_valuation",
-            "about": gettext(
-                "The relative annual change of the price of carbon. "
-                "Required if Run Valuation model is selected."),
-            "name": gettext("annual price change")
-        }
-    },
-    "outputs": {
-        "report.html": {
-            "about": "This file presents a summary of all data computed by the model. It also includes descriptions of all other output files produced by the model, so it is a good place to begin exploring and understanding model results. Because this is an HTML file, it can be opened with any web browser."
-        },
-        "c_storage_bas.tif": {
-            "about": "Raster showing the amount of carbon stored in each pixel for the baseline scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.hectare
-            }}
-        },
-        "c_storage_alt.tif": {
-            "about": "Raster showing the amount of carbon stored in each pixel for the alternate scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.hectare
-            }},
-            "created_if": "lulc_alt_path"
-        },
-        "c_change_bas_alt.tif": {
-            "about": "Raster showing the difference in carbon stored between the alternate landscape and the baseline landscape. In this map some values may be negative and some positive. Positive values indicate sequestered carbon, negative values indicate carbon that was lost.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.hectare
-            }},
-            "created_if": "lulc_alt_path"
-        },
-        "npv_alt.tif": {
-            "about": "Rasters showing the economic value of carbon sequestered between the baseline and the alternate landscape dates.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.currency/u.hectare
-            }},
-            "created_if": "lulc_alt_path"
-        },
-        "intermediate_outputs": {
-            "type": "directory",
-            "contents": {
-                **CARBON_OUTPUTS
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+MODEL_SPEC = spec.ModelSpec(
+    model_id="carbon",
+    model_title=gettext("Carbon Storage and Sequestration"),
+    userguide="carbonstorage.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=False,
+    aliases=(),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["lulc_bas_path", "carbon_pools_path"],
+        ["calc_sequestration", "lulc_alt_path"],
+        ["do_valuation", "lulc_bas_year", "lulc_alt_year", "price_per_metric_ton_of_c",
+         "discount_rate", "rate_change"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=gettext(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.SingleBandRasterInput(
+            id="lulc_bas_path",
+            name=gettext("baseline LULC"),
+            about=gettext(
+                "A map of LULC for the baseline scenario, which must occur prior to the"
+                " alternate scenario. All values in this raster must have corresponding"
+                " entries in the Carbon Pools table."
+            ),
+            data_type=int,
+            units=None,
+            projected=True,
+            projection_units=u.meter
+        ),
+        spec.BooleanInput(
+            id="calc_sequestration",
+            name=gettext("calculate sequestration"),
+            about=gettext(
+                "Run sequestration analysis. This requires inputs of LULC maps for both"
+                " baseline and alternate scenarios. Required if run valuation model is"
+                " selected."
+            ),
+            required="do_valuation"
+        ),
+        spec.SingleBandRasterInput(
+            id="lulc_alt_path",
+            name=gettext("alternate LULC"),
+            about=gettext(
+                "A map of LULC for the alternate scenario, which must occur after the"
+                " baseline scenario. All values in this raster must have corresponding"
+                " entries in the Carbon Pools table. This raster must align with the"
+                " Baseline LULC raster. Required if Calculate Sequestration is selected."
+            ),
+            required="calc_sequestration",
+            allowed="calc_sequestration",
+            data_type=int,
+            units=None,
+            projected=True,
+            projection_units=u.meter
+        ),
+        spec.CSVInput(
+            id="carbon_pools_path",
+            name=gettext("carbon pools"),
+            about=gettext(
+                "A table that maps each LULC code to carbon pool data for that LULC type."
+            ),
+            columns=[
+                spec.IntegerInput(
+                    id="lucode",
+                    about=gettext(
+                        "LULC codes from the LULC raster. Each code must be a unique"
+                        " integer."
+                    )
+                ),
+                spec.NumberInput(
+                    id="c_above",
+                    about=gettext("Carbon density of aboveground biomass."),
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.NumberInput(
+                    id="c_below",
+                    about=gettext("Carbon density of belowground biomass."),
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.NumberInput(
+                    id="c_soil",
+                    about=gettext("Carbon density of soil."),
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.NumberInput(
+                    id="c_dead",
+                    about=gettext("Carbon density of dead matter."),
+                    units=u.metric_ton / u.hectare
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.NumberInput(
+            id="lulc_bas_year",
+            name=gettext("baseline LULC year"),
+            about=gettext(
+                "The calendar year of the baseline scenario depicted in the baseline LULC"
+                " map. Must be < alternate LULC year. Required if Run Valuation model is"
+                " selected."
+            ),
+            required="do_valuation",
+            allowed="do_valuation",
+            units=u.year_AD,
+            expression="float(value).is_integer()"
+        ),
+        spec.NumberInput(
+            id="lulc_alt_year",
+            name=gettext("alternate LULC year"),
+            about=gettext(
+                "The calendar year of the alternate scenario depicted in the alternate"
+                " LULC map. Must be > baseline LULC year. Required if Run Valuation model"
+                " is selected."
+            ),
+            required="do_valuation",
+            allowed="do_valuation",
+            units=u.year_AD,
+            expression="float(value).is_integer()"
+        ),
+        spec.BooleanInput(
+            id="do_valuation",
+            name=gettext("run valuation model"),
+            about=gettext(
+                "Calculate net present value for the alternate scenario and report it in"
+                " the final HTML document."
+            ),
+            required=False,
+            allowed="calc_sequestration"
+        ),
+        spec.NumberInput(
+            id="price_per_metric_ton_of_c",
+            name=gettext("price of carbon"),
+            about=gettext(
+                "The present value of carbon. Required if Run Valuation model is"
+                " selected."
+            ),
+            required="do_valuation",
+            allowed="do_valuation",
+            units=u.currency / u.metric_ton
+        ),
+        spec.PercentInput(
+            id="discount_rate",
+            name=gettext("annual market discount rate"),
+            about=gettext(
+                "The annual market discount rate in the price of carbon, which reflects"
+                " society's preference for immediate benefits over future benefits."
+                " Required if Run Valuation model is selected. This assumes that the"
+                " baseline scenario is current and the alternate scenario is in the"
+                " future."
+            ),
+            required="do_valuation",
+            allowed="do_valuation",
+            units=None
+        ),
+        spec.PercentInput(
+            id="rate_change",
+            name=gettext("annual price change"),
+            about=gettext(
+                "The relative annual change of the price of carbon. Required if Run"
+                " Valuation model is selected."
+            ),
+            required="do_valuation",
+            allowed="do_valuation",
+            units=None
+        )
+    ],
+    outputs=[
+        spec.FileOutput(
+            id="report.html",
+            about=gettext(
+                "This file presents a summary of all data computed by the model. It also"
+                " includes descriptions of all other output files produced by the model,"
+                " so it is a good place to begin exploring and understanding model"
+                " results. Because this is an HTML file, it can be opened with any web"
+                " browser."
+            )
+        ),
+        spec.SingleBandRasterOutput(
+            id="c_storage_bas.tif",
+            about=gettext(
+                "Raster showing the amount of carbon stored in each pixel for the"
+                " baseline scenario. It is a sum of all of the carbon pools provided by"
+                " the biophysical table."
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="c_storage_alt.tif",
+            about=gettext(
+                "Raster showing the amount of carbon stored in each pixel for the"
+                " alternate scenario. It is a sum of all of the carbon pools provided by"
+                " the biophysical table."
+            ),
+            created_if="lulc_alt_path",
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="c_change_bas_alt.tif",
+            about=gettext(
+                "Raster showing the difference in carbon stored between the alternate"
+                " landscape and the baseline landscape. In this map some values may be"
+                " negative and some positive. Positive values indicate sequestered"
+                " carbon, negative values indicate carbon that was lost."
+            ),
+            created_if="lulc_alt_path",
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="npv_alt.tif",
+            about=gettext(
+                "Rasters showing the economic value of carbon sequestered between the"
+                " baseline and the alternate landscape dates."
+            ),
+            created_if="lulc_alt_path",
+            data_type=float,
+            units=u.currency / u.hectare
+        ),
+        spec.DirectoryOutput(
+            id="intermediate_outputs",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="c_above_bas.tif",
+                    about=gettext(
+                        "Raster of aboveground carbon values in the baseline scenario,"
+                        " mapped from the Carbon Pools table to the LULC."
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="c_above_alt.tif",
+                    about=gettext(
+                        "Raster of aboveground carbon values in the alternate scenario,"
+                        " mapped from the Carbon Pools table to the LULC."
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="c_below_bas.tif",
+                    about=gettext(
+                        "Raster of belowground carbon values in the baseline scenario,"
+                        " mapped from the Carbon Pools table to the LULC."
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="c_below_alt.tif",
+                    about=gettext(
+                        "Raster of belowground carbon values in the alternate scenario,"
+                        " mapped from the Carbon Pools table to the LULC."
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="c_soil_bas.tif",
+                    about=gettext(
+                        "Raster of soil carbon values in the baseline scenario, mapped"
+                        " from the Carbon Pools table to the LULC."
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="c_soil_alt.tif",
+                    about=gettext(
+                        "Raster of soil carbon values in the alternate scenario, mapped"
+                        " from the Carbon Pools table to the LULC."
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="c_dead_bas.tif",
+                    about=gettext(
+                        "Raster of dead matter carbon values in the baseline scenario,"
+                        " mapped from the Carbon Pools table to the LULC."
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="c_dead_alt.tif",
+                    about=gettext(
+                        "Raster of dead matter carbon values in the alternate scenario,"
+                        " mapped from the Carbon Pools table to the LULC."
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ],
+)
+
 
 _OUTPUT_BASE_FILES = {
     'c_storage_bas': 'c_storage_bas.tif',
