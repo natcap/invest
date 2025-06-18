@@ -75,6 +75,15 @@ General
   Actions. To review and sign the CLA, please visit https://natcap.github.io/invest-cla/.
   (`#1593 <https://github.com/natcap/invest/issues/1593>`_)
 
+Workbench
+=========
+* Fixed a bug where recent jobs from models that no longer exist, or from
+  plugins that are no longer installed, could appear in the Recent Jobs list
+  (`#2028 <https://github.com/natcap/invest/issues/2028>`_).
+* Fixed a bug where recent jobs from a plugin would remain in the Recent Jobs
+  list after the plugin was uninstalled
+  (`#1977 <https://github.com/natcap/invest/issues/1977>`_).
+
 Plugins
 =======
 * The plugin package version is now queried programatically using
