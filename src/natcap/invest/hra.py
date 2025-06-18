@@ -48,403 +48,548 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "habitat_risk_assessment",
-    "model_title": gettext("Habitat Risk Assessment"),
-    "userguide": "habitat_risk_assessment.html",
-    "aliases": ("hra",),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['info_table_path', 'criteria_table_path'],
-            ['resolution', 'max_rating'],
-            ['risk_eq', 'decay_eq'],
-            ['aoi_vector_path'],
-            ['n_overlapping_stressors'],
-            ['visualize_outputs']
-        ]
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "info_table_path": {
-            "name": gettext("habitat stressor table"),
-            "about": gettext("A table describing each habitat and stressor."),
-            "type": "csv",
-            "index_col": "name",
-            "columns": {
-                "name": {
-                    "type": "freestyle_string",
-                    "about": gettext(
-                        "A unique name for each habitat or stressor. These "
-                        "names must match the habitat and stressor names in "
-                        "the Criteria Scores Table.")},
-                "path": {
-                    "type": {"raster", "vector"},
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.none,
-                        "about": gettext(
-                            "Pixel values are 1, indicating presence of the "
-                            "habitat/stressor, or 0 indicating absence. Any "
-                            "values besides 0 or 1 will be treated as 0.")
-                    }},
-                    "fields": {},
-                    "geometries": spec.ALL_GEOMS,
-                    "about": gettext(
-                        "Map of where the habitat or stressor exists. For "
-                        "rasters, a pixel value of 1 indicates presence of "
-                        "the habitat or stressor. 0 (or any other value) "
-                        "indicates absence of the habitat or stressor. For "
-                        "vectors, a geometry indicates an area where the "
-                        "habitat or stressor is present.")
-                },
-                "type": {
-                    "type": "option_string",
-                    "options": {
-                        "habitat": {"description": gettext("habitat")},
-                        "stressor": {"description": gettext("stressor")}
+MODEL_SPEC = spec.ModelSpec(
+    model_id="habitat_risk_assessment",
+    model_title=gettext("Habitat Risk Assessment"),
+    userguide="habitat_risk_assessment.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=False,
+    aliases=("hra",),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["info_table_path", "criteria_table_path"],
+        ["resolution", "max_rating"],
+        ["risk_eq", "decay_eq"],
+        ["aoi_vector_path"],
+        ["n_overlapping_stressors"],
+        ["visualize_outputs"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.CSVInput(
+            id="info_table_path",
+            name=gettext("habitat stressor table"),
+            about=gettext("A table describing each habitat and stressor."),
+            columns=[
+                spec.StringInput(
+                    id="name",
+                    about=gettext(
+                        "A unique name for each habitat or stressor. These names must"
+                        " match the habitat and stressor names in the Criteria Scores"
+                        " Table."
+                    ),
+                    regexp=None
+                ),
+                spec.RasterOrVectorInput(
+                    id="path",
+                    about=gettext(
+                        "Map of where the habitat or stressor exists. For rasters, a"
+                        " pixel value of 1 indicates presence of the habitat or stressor."
+                        " 0 (or any other value) indicates absence of the habitat or"
+                        " stressor. For vectors, a geometry indicates an area where the"
+                        " habitat or stressor is present."
+                    ),
+                    data_type=float,
+                    units=u.none,
+                    geometry_types={
+                        "LINESTRING",
+                        "POLYGON",
+                        "MULTIPOLYGON",
+                        "MULTIPOINT",
+                        "POINT",
+                        "MULTILINESTRING",
                     },
-                    "about": gettext(
-                        "Whether this row is for a habitat or a stressor.")
-                },
-                "stressor buffer (meters)": {
-                    "type": "number",
-                    "units": u.meter,
-                    "about": gettext(
-                        "The desired buffer distance used to expand a given "
-                        "stressor’s influence or footprint. This should be "
-                        "left blank for habitats, but must be filled in for "
-                        "stressors. Enter 0 if no buffering is desired for a "
-                        "given stressor. The model will round down this "
-                        "buffer distance to the nearest cell unit. e.g., a "
-                        "buffer distance of 600m will buffer a stressor’s "
-                        "footprint by two grid cells if the resolution of "
-                        "analysis is 250m.")
-                }
+                    fields=[],
+                    projected=None
+                ),
+                spec.OptionStringInput(
+                    id="type",
+                    about=gettext("Whether this row is for a habitat or a stressor."),
+                    options={
+                        "habitat": {"description": "habitat"},
+                        "stressor": {"description": "stressor"},
+                    }
+                ),
+                spec.NumberInput(
+                    id="stressor buffer (meters)",
+                    about=gettext(
+                        "The desired buffer distance used to expand a given stressor’s"
+                        " influence or footprint. This should be left blank for habitats,"
+                        " but must be filled in for stressors. Enter 0 if no buffering is"
+                        " desired for a given stressor. The model will round down this"
+                        " buffer distance to the nearest cell unit. e.g., a buffer"
+                        " distance of 600m will buffer a stressor’s footprint by two grid"
+                        " cells if the resolution of analysis is 250m."
+                    ),
+                    units=u.meter
+                )
+            ],
+            index_col="name"
+        ),
+        spec.CSVInput(
+            id="criteria_table_path",
+            name=gettext("criteria scores table"),
+            about=gettext("A table of criteria scores for all habitats and stressors."),
+            columns=None,
+            index_col=None
+        ),
+        spec.NumberInput(
+            id="resolution",
+            name=gettext("resolution of analysis"),
+            about=gettext(
+                "The resolution at which to run the analysis. The model outputs will have"
+                " this resolution."
+            ),
+            units=u.meter,
+            expression="value > 0"
+        ),
+        spec.NumberInput(
+            id="max_rating",
+            name=gettext("maximum criteria score"),
+            about=gettext("The highest possible criteria score in the scoring system."),
+            units=u.none,
+            expression="value > 0"
+        ),
+        spec.OptionStringInput(
+            id="risk_eq",
+            name=gettext("risk equation"),
+            about=gettext(
+                "The equation to use to calculate risk from exposure and consequence."
+            ),
+            options={
+                "multiplicative": {"display_name": "Multiplicative"},
+                "euclidean": {"display_name": "Euclidean"},
             }
-        },
-        "criteria_table_path": {
-            "name": gettext("criteria scores table"),
-            "about": gettext(
-                "A table of criteria scores for all habitats and stressors."),
-            "type": "csv"
-        },
-        "resolution": {
-            "name": gettext("resolution of analysis"),
-            "about": gettext(
-                "The resolution at which to run the analysis. The model "
-                "outputs will have this resolution."),
-            "type": "number",
-            "units": u.meter,
-            "expression": "value > 0",
-        },
-        "max_rating": {
-            "name": gettext("maximum criteria score"),
-            "about": gettext(
-                "The highest possible criteria score in the scoring system."),
-            "type": "number",
-            "units": u.none,
-            "expression": "value > 0"
-        },
-        "risk_eq": {
-            "name": gettext("risk equation"),
-            "about": gettext(
-                "The equation to use to calculate risk from exposure and "
-                "consequence."),
-            "type": "option_string",
-            "options": {
-                "multiplicative": {"display_name": gettext("Multiplicative")},
-                "euclidean": {"display_name": gettext("Euclidean")}
-            }
-        },
-        "decay_eq": {
-            "name": gettext("decay equation"),
-            "about": gettext(
-                "The equation to model effects of stressors in buffer areas."),
-            "type": "option_string",
-            "options": {
+        ),
+        spec.OptionStringInput(
+            id="decay_eq",
+            name=gettext("decay equation"),
+            about=gettext("The equation to model effects of stressors in buffer areas."),
+            options={
                 "none": {
-                    "display_name": gettext("None"),
-                    "description": gettext(
-                        "No decay. Stressor has full effect in the buffer "
-                        "area.")},
+                    "display_name": "None",
+                    "description": (
+                        "No decay. Stressor has full effect in the buffer area."
+                    ),
+                },
                 "linear": {
-                    "display_name": gettext("Linear"),
-                    "description": gettext(
-                        "Stressor effects in the buffer area decay linearly "
-                        "with distance from the stressor.")},
+                    "display_name": "Linear",
+                    "description": (
+                        "Stressor effects in the buffer area decay linearly with distance"
+                        " from the stressor."
+                    ),
+                },
                 "exponential": {
-                    "display_name": gettext("Exponential"),
-                    "description": gettext(
-                        "Stressor effects in the buffer area decay "
-                        "exponentially with distance from the stressor.")}
+                    "display_name": "Exponential",
+                    "description": (
+                        "Stressor effects in the buffer area decay exponentially with"
+                        " distance from the stressor."
+                    ),
+                },
             }
-        },
-        "aoi_vector_path": {
-            **spec.AOI,
-            "projected": True,
-            "projection_units": u.meter,
-            "fields": {
-                "name": {
-                    "required": False,
-                    "type": "freestyle_string",
-                    "about": gettext(
-                        "Uniquely identifies each feature. Required if "
-                        "the vector contains more than one feature.")
-                }
-            },
-            "about": gettext(
-                "A GDAL-supported vector file containing features "
-                "representing one or more planning regions or subregions."),
-        },
-        "n_overlapping_stressors": {
-            "name": gettext("Number of Overlapping Stressors"),
-            "type": "number",
-            "required": True,
-            "about": gettext(
-                "The number of overlapping stressors to consider as "
-                "'maximum' when reclassifying risk scores into "
-                "high/medium/low.  Affects the breaks between risk "
-                "classifications."),
-            "units": u.none,
-            "expression": "value > 0",
-        },
-        "visualize_outputs": {
-            "name": gettext("Generate GeoJSONs"),
-            "about": gettext(
-                "Generate GeoJSON outputs for web visualization."),
-            "type": "boolean",
-            "required": False,
-        }
-    },
-    "outputs": {
-        "outputs": {
-            "type": "directory",
-            "contents": {
-                "TOTAL_RISK_[HABITAT].tif": {
-                    "about": (
-                        "Habitat-specific cumulative risk from all the stressors"),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "TOTAL_RISK_Ecosystem.tif": {
-                    "about": (
-                        "Sum of habitat cumulative risk scores divided by the "
-                        "number of habitats occurring in each cell."),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "RECLASS_RISK_[HABITAT].tif": {
-                    "about": (
-                        "Reclassified habitat-specific risk from all the "
-                        "stressors in a grid cell into four categories, where "
-                        "0 = No Risk, 1 = Low Risk, 2 = Medium Risk, and "
-                        "3 = High Risk."),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "RECLASS_RISK_Ecosystem.tif": {
-                    "about": "Reclassified ecosystem risk in each cell.",
-                    "bands": {1: {"type": "integer"}}
-                },
-                "SUMMARY_STATISTICS.csv": {
-                    "about": (
-                        "Table of summary statistics for each combination of "
-                        "habitat, stressor, and subregion"),
-                    "columns": {
-                        "HABITAT": {"type": "freestyle_string", "about": "Habitat name"},
-                        "STRESSOR": {"type": "freestyle_string", "about": "Stressor name"},
-                        "SUBREGION": {"type": "freestyle_string", "about": "Subregion name"},
-                        "E_MEAN": {
-                            "type": "number", "units": u.none, "about": "Mean exposure score"},
-                        "E_MIN": {
-                            "type": "number", "units": u.none, "about": "Minimum exposure score"},
-                        "E_MAX": {
-                            "type": "number", "units": u.none, "about": "Maximum exposure score"},
-                        "C_MEAN": {
-                            "type": "number", "units": u.none, "about": "Mean consequence score"},
-                        "C_MIN": {
-                            "type": "number", "units": u.none, "about": "Minimum consequence score"},
-                        "C_MAX": {
-                            "type": "number", "units": u.none, "about": "Maximum consequence score"},
-                        "R_MEAN": {
-                            "type": "number", "units": u.none, "about": "Mean risk score"},
-                        "R_MIN": {
-                            "type": "number", "units": u.none, "about": "Minimum risk score"},
-                        "R_MAX": {
-                            "type": "number", "units": u.none, "about": "Maximum risk score"},
-                        "R_%HIGH": {
-                            "about": "the percentage of high risk areas.",
-                            "type": "percent"
-                        },
-                        "R_%MEDIUM": {
-                            "about": "the percentage of medium risk areas.",
-                            "type": "percent"
-                        },
-                        "R_%LOW": {
-                            "about": "the percentage of low risk areas.",
-                            "type": "percent"
-                        }
-                    }
-                }
-            }
-        },
-        "visualization_outputs": {
-            "type": "directory",
-            "created_if": "visualize_outputs",
-            "contents": {
-                "RECLASS_RISK_[HABITAT].geojson": {
-                    "about": (
-                        "Map of habitat-specific risk visualized in gradient "
-                        "color from white to red on a map."),
-                    "geometries": spec.POLYGON,
-                    "fields": {
-                        "Risk Score": {
-                            "type": "integer",
-                            "about": (
-                                "Habitat risk from all stressors where 0 = "
-                                "No Risk, 1 = Low Risk, 2 = Medium Risk, and "
-                                "3 = High Risk.")
-                        }
-                    }
-                },
-                "RECLASS_RISK_Ecosystem.geojson": {
-                    "about": (
-                        "Map of ecosystem risk visualized in gradient "
-                        "color from white to red on a map."),
-                    "geometries": spec.POLYGON,
-                    "fields": {
-                        "Risk Score": {
-                            "type": "integer",
-                            "about": (
-                                "Ecosystem risk from all stressors where 0 = "
-                                "No Risk, 1 = Low Risk, 2 = Medium Risk, and "
-                                "3 = High Risk.")
-                        }
-                    }
-                },
-                "STRESSOR_[STRESSOR].geojson": {
-                    "about": "Map of stressor extent visualized in orange color.",
-                    "geometries": spec.POLYGON,
-                    "fields": {}
-                },
-                "SUMMARY_STATISTICS.csv": {
-                    "about": (
-                        "This is the same file from one in the Output Folder. "
-                        "It is copied here so users can just upload the "
-                        "visualization outputs folder to the HRA web "
-                        "application, with all the files in one place."),
-                    "columns": {}
-                }
-            }
-        },
-        "intermediate_outputs": {
-            "type": "directory",
-            "contents": {
-                "aligned_[HABITAT/STRESSOR/CRITERIA].tif": {
-                    "about": "Copy of the input, aligned to the same projection and extent",
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "aoi_subregions": {
-                    "type": "directory",
-                    "contents": {
-                        "subregion_set_[N].tif": {
-                            "about": "The Nth non-intersecting set of subregions",
-                            "bands": {1: {"type": "integer"}}
-                        },
-                        "subregions.json": {"about": "Subregion data"}
-                    }
-                },
-                "C_[HABITAT]_[STRESSOR].tif": {
-                    "about": (
-                        "Consequence score for a particular habitat/stressor combination."),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "composite_criteria.csv": {
-                    "about": (
-                        "Table tracking each combination of habitat, stressor, "
-                        "criterion, rating, data quality, weight and whether "
-                        "the score applies to exposure or consequence."),
-                    "columns": {
-                        "habitat": {"about": "Habitat name", "type": "freestyle_string"},
-                        "stressor": {"about": "Stressor name", "type": "freestyle_string"},
-                        "criterion": {"about": "Criterion name", "type": "freestyle_string"},
-                        "rating": {"about": "Rating value or path to raster", "type": "freestyle_string"},
-                        "dq": {"about": "Data quality", "type": "integer"},
-                        "weight": {"about": "Weight", "type": "integer"},
-                        "e/c": {"about": "Exposure (E) or consequence (C)", "type": "freestyle_string"},
-                    }
-                },
-                "decayed_edt_[STRESSOR].tif": {
-                    "about": "Distance-weighted influence of the given stressor.",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "E_[HABITAT]_[STRESSOR].tif": {
-                    "about": (
-                        "Exposure score for a particular habitat/stressor combination."),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "habitat_mask.tif": {
-                    "about": "Presence of one or more habitats.",
-                    "bands": {1: {"type": "integer"}}
-                },
-                "polygonize_mask_[HABITAT/STRESSOR].tif": {
-                    "about": "Map of which pixels to polygonize.",
-                    "bands": {1: {"type": "integer"}}
-                },
-                "polygonized_[HABITAT/STRESSOR].gpkg": {
-                    "about": "Polygonized habitat or stressor map",
-                    "fields": {},
-                    "geometries": spec.POLYGON
-                },
-                "reclass_[HABITAT]_[STRESSOR].tif": {
-                    "about": (
-                        "The reclassified (high/medium/low) risk of the given "
-                        "stressor to the given habitat."),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "reclass_total_risk_[HABITAT].tif": {
-                    "about": "The reclassified (high/medium/low) total risk",
-                    "bands": {1: {"type": "integer"}}
-                },
-                "RECOVERY_[HABITAT].tif": {
-                    "about": (
-                        "The resilience or recovery potential for the given "
-                        "habitat"),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "reprojected_[HABITAT/STRESSOR/CRITERIA].shp": {
-                    "about": (
-                        "If any habitat, stressor or spatial criteria layers "
-                        "were provided in a spatial vector format, it will be "
-                        "reprojected to the AOI projection."),
-                    "fields": {},
-                    "geometries": spec.POLYGONS
-                },
-                "rewritten_[HABITAT/STRESSOR/CRITERIA].tif": {
-                    "about": (
-                        "If any habitat, stressor or spatial criteria layers "
-                        "were provided in a spatial raster format, it will be "
-                        "reprojected to the projection of the user’s Area of "
-                        "Interest and written as GeoTiff at this filepath."),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "RISK_[HABITAT]_[STRESSOR].tif": {
-                    "about": "Risk score for the given habitat-stressor pair.",
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "simplified_[HABITAT/STRESSOR/CRITERIA].gpkg": {
-                    "about": (
-                        "Any habitat, stressor or spatial criteria layers "
-                        "provided are simplified to 1/2 the user-defined "
-                        "raster resolution in order to speed up rasterization."),
-                    "fields": {},
-                    "geometries": spec.POLYGONS
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+        ),
+        spec.VectorInput(
+            id="aoi_vector_path",
+            name=gettext("area of interest"),
+            about=gettext(
+                "A GDAL-supported vector file containing features representing one or"
+                " more planning regions or subregions."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.StringInput(
+                    id="name",
+                    about=gettext(
+                        "Uniquely identifies each feature. Required if the vector"
+                        " contains more than one feature."
+                    ),
+                    required=False,
+                    regexp=None
+                )
+            ],
+            projected=True,
+            projection_units=u.meter
+        ),
+        spec.NumberInput(
+            id="n_overlapping_stressors",
+            name=gettext("Number of Overlapping Stressors"),
+            about=(
+                "The number of overlapping stressors to consider as 'maximum' when"
+                " reclassifying risk scores into high/medium/low.  Affects the breaks"
+                " between risk classifications."
+            ),
+            units=u.none,
+            expression="value > 0"
+        ),
+        spec.BooleanInput(
+            id="visualize_outputs",
+            name=gettext("Generate GeoJSONs"),
+            about=gettext("Generate GeoJSON outputs for web visualization."),
+            required=False
+        )
+    ],
+    outputs=[
+        spec.DirectoryOutput(
+            id="outputs",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="TOTAL_RISK_[HABITAT].tif",
+                    about=gettext(
+                        "Habitat-specific cumulative risk from all the stressors"
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="TOTAL_RISK_Ecosystem.tif",
+                    about=gettext(
+                        "Sum of habitat cumulative risk scores divided by the number of"
+                        " habitats occurring in each cell."
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="RECLASS_RISK_[HABITAT].tif",
+                    about=gettext(
+                        "Reclassified habitat-specific risk from all the stressors in a"
+                        " grid cell into four categories, where 0 = No Risk, 1 = Low"
+                        " Risk, 2 = Medium Risk, and 3 = High Risk."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="RECLASS_RISK_Ecosystem.tif",
+                    about=gettext("Reclassified ecosystem risk in each cell."),
+                    data_type=int,
+                    units=None
+                ),
+                spec.CSVOutput(
+                    id="SUMMARY_STATISTICS.csv",
+                    about=gettext(
+                        "Table of summary statistics for each combination of habitat,"
+                        " stressor, and subregion"
+                    ),
+                    columns=[
+                        spec.StringOutput(id="HABITAT", about=gettext("Habitat name")),
+                        spec.StringOutput(id="STRESSOR", about=gettext("Stressor name")),
+                        spec.StringOutput(
+                            id="SUBREGION", about=gettext("Subregion name")
+                        ),
+                        spec.NumberOutput(
+                            id="E_MEAN",
+                            about=gettext("Mean exposure score"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="E_MIN",
+                            about=gettext("Minimum exposure score"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="E_MAX",
+                            about=gettext("Maximum exposure score"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="C_MEAN",
+                            about=gettext("Mean consequence score"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="C_MIN",
+                            about=gettext("Minimum consequence score"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="C_MAX",
+                            about=gettext("Maximum consequence score"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="R_MEAN", about=gettext("Mean risk score"), units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="R_MIN", about=gettext("Minimum risk score"), units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="R_MAX", about=gettext("Maximum risk score"), units=u.none
+                        ),
+                        spec.PercentOutput(
+                            id="R_%HIGH",
+                            about=gettext("the percentage of high risk areas.")
+                        ),
+                        spec.PercentOutput(
+                            id="R_%MEDIUM",
+                            about=gettext("the percentage of medium risk areas.")
+                        ),
+                        spec.PercentOutput(
+                            id="R_%LOW",
+                            about=gettext("the percentage of low risk areas.")
+                        )
+                    ],
+                    index_col=None
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="visualization_outputs",
+            about=None,
+            created_if="visualize_outputs",
+            contents=[
+                spec.VectorOutput(
+                    id="RECLASS_RISK_[HABITAT].geojson",
+                    about=gettext(
+                        "Map of habitat-specific risk visualized in gradient color from"
+                        " white to red on a map."
+                    ),
+                    geometry_types={"POLYGON"},
+                    fields=[
+                        spec.IntegerOutput(
+                            id="Risk Score",
+                            about=gettext(
+                                "Habitat risk from all stressors where 0 = No Risk, 1 ="
+                                " Low Risk, 2 = Medium Risk, and 3 = High Risk."
+                            )
+                        )
+                    ]
+                ),
+                spec.VectorOutput(
+                    id="RECLASS_RISK_Ecosystem.geojson",
+                    about=gettext(
+                        "Map of ecosystem risk visualized in gradient color from white to"
+                        " red on a map."
+                    ),
+                    geometry_types={"POLYGON"},
+                    fields=[
+                        spec.IntegerOutput(
+                            id="Risk Score",
+                            about=gettext(
+                                "Ecosystem risk from all stressors where 0 = No Risk, 1 ="
+                                " Low Risk, 2 = Medium Risk, and 3 = High Risk."
+                            )
+                        )
+                    ]
+                ),
+                spec.VectorOutput(
+                    id="STRESSOR_[STRESSOR].geojson",
+                    about=gettext("Map of stressor extent visualized in orange color."),
+                    geometry_types={"POLYGON"},
+                    fields=[]
+                ),
+                spec.CSVOutput(
+                    id="SUMMARY_STATISTICS.csv",
+                    about=gettext(
+                        "This is the same file from one in the Output Folder. It is"
+                        " copied here so users can just upload the visualization outputs"
+                        " folder to the HRA web application, with all the files in one"
+                        " place."
+                    ),
+                    columns=[],
+                    index_col=None
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="intermediate_outputs",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="aligned_[HABITAT/STRESSOR/CRITERIA].tif",
+                    about=gettext(
+                        "Copy of the input, aligned to the same projection and extent"
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.DirectoryOutput(
+                    id="aoi_subregions",
+                    about=None,
+                    contents=[
+                        spec.SingleBandRasterOutput(
+                            id="subregion_set_[N].tif",
+                            about=gettext("The Nth non-intersecting set of subregions"),
+                            data_type=int,
+                            units=None
+                        ),
+                        spec.FileOutput(
+                            id="subregions.json", about=gettext("Subregion data")
+                        )
+                    ]
+                ),
+                spec.SingleBandRasterOutput(
+                    id="C_[HABITAT]_[STRESSOR].tif",
+                    about=gettext(
+                        "Consequence score for a particular habitat/stressor combination."
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.CSVOutput(
+                    id="composite_criteria.csv",
+                    about=gettext(
+                        "Table tracking each combination of habitat, stressor, criterion,"
+                        " rating, data quality, weight and whether the score applies to"
+                        " exposure or consequence."
+                    ),
+                    columns=[
+                        spec.StringOutput(id="habitat", about=gettext("Habitat name")),
+                        spec.StringOutput(id="stressor", about=gettext("Stressor name")),
+                        spec.StringOutput(
+                            id="criterion", about=gettext("Criterion name")
+                        ),
+                        spec.StringOutput(
+                            id="rating", about=gettext("Rating value or path to raster")
+                        ),
+                        spec.IntegerOutput(id="dq", about=gettext("Data quality")),
+                        spec.IntegerOutput(id="weight", about=gettext("Weight")),
+                        spec.StringOutput(
+                            id="e/c", about=gettext("Exposure (E) or consequence (C)")
+                        )
+                    ],
+                    index_col=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="decayed_edt_[STRESSOR].tif",
+                    about=gettext("Distance-weighted influence of the given stressor."),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="E_[HABITAT]_[STRESSOR].tif",
+                    about=gettext(
+                        "Exposure score for a particular habitat/stressor combination."
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="habitat_mask.tif",
+                    about=gettext("Presence of one or more habitats."),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="polygonize_mask_[HABITAT/STRESSOR].tif",
+                    about=gettext("Map of which pixels to polygonize."),
+                    data_type=int,
+                    units=None
+                ),
+                spec.VectorOutput(
+                    id="polygonized_[HABITAT/STRESSOR].gpkg",
+                    about=gettext("Polygonized habitat or stressor map"),
+                    geometry_types={"POLYGON"},
+                    fields=[]
+                ),
+                spec.SingleBandRasterOutput(
+                    id="reclass_[HABITAT]_[STRESSOR].tif",
+                    about=gettext(
+                        "The reclassified (high/medium/low) risk of the given stressor to"
+                        " the given habitat."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="reclass_total_risk_[HABITAT].tif",
+                    about=gettext("The reclassified (high/medium/low) total risk"),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="RECOVERY_[HABITAT].tif",
+                    about=gettext(
+                        "The resilience or recovery potential for the given habitat"
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.VectorOutput(
+                    id="reprojected_[HABITAT/STRESSOR/CRITERIA].shp",
+                    about=gettext(
+                        "If any habitat, stressor or spatial criteria layers were"
+                        " provided in a spatial vector format, it will be reprojected to"
+                        " the AOI projection."
+                    ),
+                    geometry_types={"POLYGON", "MULTIPOLYGON"},
+                    fields=[]
+                ),
+                spec.SingleBandRasterOutput(
+                    id="rewritten_[HABITAT/STRESSOR/CRITERIA].tif",
+                    about=gettext(
+                        "If any habitat, stressor or spatial criteria layers were"
+                        " provided in a spatial raster format, it will be reprojected to"
+                        " the projection of the user’s Area of Interest and written as"
+                        " GeoTiff at this filepath."
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="RISK_[HABITAT]_[STRESSOR].tif",
+                    about=gettext("Risk score for the given habitat-stressor pair."),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.VectorOutput(
+                    id="simplified_[HABITAT/STRESSOR/CRITERIA].gpkg",
+                    about=gettext(
+                        "Any habitat, stressor or spatial criteria layers provided are"
+                        " simplified to 1/2 the user-defined raster resolution in order"
+                        " to speed up rasterization."
+                    ),
+                    geometry_types={"POLYGON", "MULTIPOLYGON"},
+                    fields=[]
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ],
+)
 
 _VALID_RISK_EQS = set(MODEL_SPEC.get_input('risk_eq').options.keys())
 _VALID_DECAY_TYPES = set(MODEL_SPEC.get_input('decay_eq').options.keys())
@@ -711,7 +856,7 @@ def execute(args):
         target_path_list=list(itertools.chain(
             alignment_source_raster_paths.values(),
             alignment_source_vector_paths.values())),
-        dependent_task_list=alignment_dependent_tasks,
+        dependent_task_list=alignment_dependent_tasks
     )
 
     # --> Create a binary mask of habitat pixels.
@@ -931,7 +1076,7 @@ def execute(args):
             kwargs={
                 'base_raster_path_band_const_list': [
                     (aligned_habitat_raster_paths[habitat], 1),
-                    (reclassified_cumulative_risk_path, 1),
+                    (reclassified_cumulative_risk_path, 1)
                 ] + [(path, 1) for path in reclassified_pairwise_risk_paths],
                 'local_op': _maximum_reclassified_score,
                 'target_raster_path': max_risk_classification_path,
@@ -942,7 +1087,7 @@ def execute(args):
             target_path_list=[max_risk_classification_path],
             dependent_task_list=[
                 reclassified_cumulative_risk_task,
-                *reclassified_pairwise_risk_tasks,
+                *reclassified_pairwise_risk_tasks
             ]
         )
         all_pairwise_risk_tasks.extend(pairwise_risk_tasks)
@@ -968,7 +1113,7 @@ def execute(args):
         target_path_list=[ecosystem_risk_path],
         dependent_task_list=[
             all_habitats_mask_task,
-            *cumulative_risk_to_habitat_tasks,
+            *cumulative_risk_to_habitat_tasks
         ]
     )
 
@@ -1059,7 +1204,7 @@ def execute(args):
         dependent_task_list=[
             aoi_simplify_task,
             *all_pairwise_risk_tasks,
-            *reclassed_habitat_risk_tasks,
+            *reclassed_habitat_risk_tasks
         ]
     )
 
@@ -1455,7 +1600,7 @@ def _create_summary_statistics_file(
             'E_MIN', 'E_MAX', 'E_MEAN',
             'C_MIN', 'C_MAX', 'C_MEAN',
             'R_MIN', 'R_MAX', 'R_MEAN',
-            'R_%HIGH', 'R_%MEDIUM', 'R_%LOW', 'R_%NONE',
+            'R_%HIGH', 'R_%MEDIUM', 'R_%LOW', 'R_%NONE'
         ])
     out_dataframe.sort_values(['HABITAT', 'STRESSOR', 'SUBREGION'],
                               inplace=True)

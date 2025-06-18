@@ -32,360 +32,449 @@ MISSING_MAX_DIST_MSG = gettext(
     "Maximum distance value is missing for threats: {threat_list}.")
 MISSING_WEIGHT_MSG = gettext("Weight value is missing for threats: {threat_list}.")
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "habitat_quality",
-    "model_title": gettext("Habitat Quality"),
-    "userguide": "habitat_quality.html",
-    "aliases": ("hq",),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['lulc_cur_path', 'lulc_fut_path', 'lulc_bas_path'],
-            ['threats_table_path', 'access_vector_path', 'sensitivity_table_path', 'half_saturation_constant'],
-        ]
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": [
-            "lulc_cur_path", "lulc_fut_path", "lulc_bas_path",
-            "access_vector_path"],
-        "different_projections_ok": True,
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "lulc_cur_path": {
-            **spec.LULC,
-            "projected": True,
-            "about": gettext(
-                "Map of LULC at present. All values in this raster must "
-                "have corresponding entries in the Sensitivity table."),
-            "name": gettext("current land cover")
-        },
-        "lulc_fut_path": {
-            **spec.LULC,
-            "projected": True,
-            "required": False,
-            "about": gettext(
-                "Map of LULC in a future scenario. All values in this raster "
-                "must have corresponding entries in the Sensitivity "
-                "Table. Must use the same classification scheme and codes as "
-                "in the Current LULC map."),
-            "name": gettext("future land cover")
-        },
-        "lulc_bas_path": {
-            **spec.LULC,
-            "projected": True,
-            "required": False,
-            "about": gettext(
-                "Map of LULC in a baseline scenario, when intensive landscape "
-                "management was relatively rare. All values in this raster "
-                "must have corresponding entries in the Sensitivity "
-                "table. Must use the same classification scheme and codes as "
-                "in the Current LULC map."),
-            "name": gettext("baseline land cover")
-        },
-        "threats_table_path": {
-            "type": "csv",
-            "index_col": "threat",
-            "columns": {
-                "threat": {
-                    "type": "freestyle_string",
-                    "about": gettext(
-                        "Name of the threat. Each threat name must have a "
-                        "corresponding column in the Sensitivity table.")},
-                "max_dist": {
-                    "type": "number",
-                    "units": u.meter,
-                    "about": gettext(
-                        "The maximum distance over which each threat affects "
-                        "habitat quality. The impact of each degradation "
-                        "source will decline to zero at this maximum "
-                        "distance. This value must be greater than or equal "
-                        "to the pixel size of your LULC raster(s).")
-                },
-                "weight": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "The impact of each threat on habitat quality, "
-                        "relative to other threats.")
-                },
-                "decay": {
-                    "type": "option_string",
-                    "options": {
+MODEL_SPEC = spec.ModelSpec(
+    model_id="habitat_quality",
+    model_title=gettext("Habitat Quality"),
+    userguide="habitat_quality.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=("hq",),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["lulc_cur_path", "lulc_fut_path", "lulc_bas_path"],
+        ["threats_table_path", "access_vector_path",
+         "sensitivity_table_path", "half_saturation_constant"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.SingleBandRasterInput(
+            id="lulc_cur_path",
+            name=gettext("current land cover"),
+            about=gettext(
+                "Map of LULC at present. All values in this raster must have"
+                " corresponding entries in the Sensitivity table."
+            ),
+            data_type=int,
+            units=None,
+            projected=True
+        ),
+        spec.SingleBandRasterInput(
+            id="lulc_fut_path",
+            name=gettext("future land cover"),
+            about=gettext(
+                "Map of LULC in a future scenario. All values in this raster must have"
+                " corresponding entries in the Sensitivity Table. Must use the same"
+                " classification scheme and codes as in the Current LULC map."
+            ),
+            required=False,
+            data_type=int,
+            units=None,
+            projected=True
+        ),
+        spec.SingleBandRasterInput(
+            id="lulc_bas_path",
+            name=gettext("baseline land cover"),
+            about=gettext(
+                "Map of LULC in a baseline scenario, when intensive landscape management"
+                " was relatively rare. All values in this raster must have corresponding"
+                " entries in the Sensitivity table. Must use the same classification"
+                " scheme and codes as in the Current LULC map."
+            ),
+            required=False,
+            data_type=int,
+            units=None,
+            projected=True
+        ),
+        spec.CSVInput(
+            id="threats_table_path",
+            name=gettext("threats table"),
+            about=gettext(
+                "Table mapping each threat of interest to its properties and distribution"
+                " maps. Paths are relative to the threats table path."
+            ),
+            columns=[
+                spec.StringInput(
+                    id="threat",
+                    about=gettext(
+                        "Name of the threat. Each threat name must have a corresponding"
+                        " column in the Sensitivity table."
+                    ),
+                    regexp=None
+                ),
+                spec.NumberInput(
+                    id="max_dist",
+                    about=gettext(
+                        "The maximum distance over which each threat affects habitat"
+                        " quality. The impact of each degradation source will decline to"
+                        " zero at this maximum distance. This value must be greater than"
+                        " or equal to the pixel size of your LULC raster(s)."
+                    ),
+                    units=u.meter
+                ),
+                spec.RatioInput(
+                    id="weight",
+                    about=gettext(
+                        "The impact of each threat on habitat quality, relative to other"
+                        " threats."
+                    ),
+                    units=None
+                ),
+                spec.OptionStringInput(
+                    id="decay",
+                    about=gettext("The type of decay over space for each threat."),
+                    options={
                         "linear": {
-                            "description": gettext(
-                                "Effects of the threat decay linearly with "
-                                "distance from the threat.")},
+                            "description": (
+                                "Effects of the threat decay linearly with distance from"
+                                " the threat."
+                            )
+                        },
                         "exponential": {
-                            "description": gettext(
-                                "Effects of the threat decay exponentially "
-                                "with distance from the threat.")}
-                    },
-                    "about": gettext("The type of decay over space for each threat.")
-                },
-                "cur_path": {
-                    "type": "raster",
-                    "bands": {1: {"type": "ratio"}},
-                    "about": gettext(
-                        "Path to a raster of the threat's "
-                        "distribution in the current scenario. Each pixel "
-                        "value in this raster is the relative intensity "
-                        "of the threat at that location, with values between "
-                        "0 and 1.")
-                },
-                "fut_path": {
-                    "required": "lulc_fut_path",
-                    "type": "raster",
-                    "bands": {1: {"type": "ratio"}},
-                    "about": gettext(
-                        "Path to a raster of the threat's "
-                        "distribution in a future scenario. Each pixel "
-                        "value in this raster is the relative intensity "
-                        "of the threat at that location, with values between "
-                        "0 and 1.")
-                },
-                "base_path": {
-                    "required": "lulc_bas_path",
-                    "type": "raster",
-                    "bands": {1: {"type": "ratio"}},
-                    "about": gettext(
-                        "Path to a raster of the threat's "
-                        "distribution in the baseline scenario. Each pixel "
-                        "value in this raster is the relative intensity "
-                        "of the threat at that location, with values between "
-                        "0 and 1. Required if Baseline LULC is provided.")
-                }
-            },
-            "about": gettext(
-                "Table mapping each threat of interest to its properties and "
-                "distribution maps. Paths are relative to the threats "
-                "table path."),
-            "name": gettext("threats table")
-        },
-        "access_vector_path": {
-            "type": "vector",
-            "projected": False,
-            "fields": {
-                "access": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "The region's relative accessibility to threats, "
-                        "where 0 represents completely inaccessible and 1 "
-                        "represents completely accessible.")
-                }
-            },
-            "geometries": spec.POLYGONS,
-            "required": False,
-            "about": gettext(
-                "Map of the relative protection that legal, institutional, "
-                "social, and physical barriers provide against threats. Any "
-                "cells not covered by a polygon will be set to 1."),
-            "name": gettext("accessibility to threats")
-        },
-        "sensitivity_table_path": {
-            "type": "csv",
-            "index_col": "lucode",
-            "columns": {
-                "lucode": spec.LULC_TABLE_COLUMN,
-                "name": {
-                    "type": "freestyle_string",
-                    "required": False
-                },
-                "habitat": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "Suitability of this LULC class as habitat, where 0 "
-                        "is not suitable and 1 is completely suitable.")
-                },
-                "[THREAT]": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "The relative sensitivity of each LULC class to each "
-                        "type of threat, where 1 represents high sensitivity "
-                        "and 0 represents that it is unaffected. There must "
-                        "be one threat column for each threat name in the "
-                        "'threats' column of the Threats Table.")
-                }
-            },
-            "about": gettext(
-                "Table mapping each LULC class to data about the species' "
-                "habitat preference and threat sensitivity in areas with that "
-                "LULC."),
-            "name": gettext("sensitivity table")
-        },
-        "half_saturation_constant": {
-            "expression": "value > 0",
-            "type": "number",
-            "units": u.none,
-            "about": gettext(
-                "Half-saturation constant used in the degradation equation."),
-            "name": gettext("half-saturation constant")
-        },
-    },
-    "outputs": {
-        "output": {
-            "type": "directory",
-            "contents": {
-                "deg_sum_c.tif": {
-                    "about": (
-                        "Relative level of habitat degradation on the current "
-                        "landscape."),
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "deg_sum_f.tif": {
-                    "about": (
-                        "Relative level of habitat degradation on the future "
-                        "landscape."),
-                    "bands": {1: {"type": "ratio"}},
-                    "created_if": "lulc_fut_path"
-                },
-                "quality_c.tif": {
-                    "about": (
-                        "Relative level of habitat quality on the current "
-                        "landscape."),
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "quality_f.tif": {
-                    "about": (
-                        "Relative level of habitat quality on the future "
-                        "landscape."),
-                    "bands": {1: {"type": "ratio"}},
-                    "created_if": "lulc_fut_path"
-                },
-                "rarity_c.tif": {
-                    "about": (
-                        "Relative habitat rarity on the current landscape "
-                        "vis-a-vis the baseline map. The grid cell's values "
-                        "are defined between a range of 0 and 1 where 0.5 "
-                        "indicates no abundance change between the baseline "
-                        "and current or projected map. Values between 0 and 0.5 "
-                        "indicate a habitat is more abundant and the closer "
-                        "the value is to 0 the lesser the likelihood that the "
-                        "preservation of that habitat type on the current or "
-                        "future landscape is important to biodiversity conservation. "
-                        "Values between 0.5 and 1 indicate a habitat is less "
-                        "abundant and the closer the value is to 1 the greater "
-                        "the likelihood that the preservation of that habitat "
-                        "type on the current or future landscape is important "
-                        "to biodiversity conservation."),
-                    "created_if": "lulc_bas_path",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "rarity_f.tif": {
-                    "about": (
-                        "Relative habitat rarity on the future landscape "
-                        "vis-a-vis the baseline map. The grid cell's values "
-                        "are defined between a range of 0 and 1 where 0.5 "
-                        "indicates no abundance change between the baseline "
-                        "and current or projected map. Values between 0 and "
-                        "0.5 indicate a habitat is more abundant and the "
-                        "closer the value is to 0 the lesser the likelihood "
-                        "that the preservation of that habitat type on the "
-                        "current or future landscape is important to "
-                        "biodiversity conservation. Values between 0.5 and 1 "
-                        "indicate a habitat is less abundant and the closer "
-                        "the value is to 1 the greater the likelihood that "
-                        "the preservation of that habitat type on the current "
-                        "or future landscape is important to biodiversity "
-                        "conservation."),
-                    "created_if": "lulc_bas_path and lulc_fut_path",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "rarity_c.csv": {
-                    "about": ("Table of rarity values by LULC code for the "
-                              "current landscape."),
-                    "index_col": "lucode",
-                    "columns": {
-                        "lucode": {
-                            "type": "number",
-                            "units": u.none,
-                            "about": "LULC class",
+                            "description": (
+                                "Effects of the threat decay exponentially with distance"
+                                " from the threat."
+                            )
                         },
-                        "rarity_value": {
-                            "type": "number",
-                            "units": u.none,
-                            "about": (
-                                "Relative habitat rarity on the current landscape "
-                                "vis-a-vis the baseline map. The rarity values "
-                                "are defined between a range of 0 and 1 where 0.5 "
-                                "indicates no abundance change between the baseline "
-                                "and current or projected map. Values between 0 and 0.5 "
-                                "indicate a habitat is more abundant and the closer "
-                                "the value is to 0 the lesser the likelihood that the "
-                                "preservation of that habitat type on the current or "
-                                "future landscape is important to biodiversity conservation. "
-                                "Values between 0.5 and 1 indicate a habitat is less "
-                                "abundant and the closer the value is to 1 the greater "
-                                "the likelihood that the preservation of that habitat "
-                                "type on the current or future landscape is important "
-                                "to biodiversity conservation."),
-                        },
-                    },
-                    "created_if": "lulc_bas_path",
-                },
-                "rarity_f.csv": {
-                    "about": ("Table of rarity values by LULC code for the "
-                              "future landscape."),
-                    "index_col": "lucode",
-                    "columns": {
-                        "lucode": {
-                            "type": "number",
-                            "units": u.none,
-                            "about": "LULC class",
-                        },
-                        "rarity_value": {
-                            "type": "number",
-                            "units": u.none,
-                            "about": (
-                                "Relative habitat rarity on the future landscape "
-                                "vis-a-vis the baseline map. The rarity values "
-                                "are defined between a range of 0 and 1 where 0.5 "
-                                "indicates no abundance change between the baseline "
-                                "and current or projected map. Values between 0 and 0.5 "
-                                "indicate a habitat is more abundant and the closer "
-                                "the value is to 0 the lesser the likelihood that the "
-                                "preservation of that habitat type on the current or "
-                                "future landscape is important to biodiversity conservation. "
-                                "Values between 0.5 and 1 indicate a habitat is less "
-                                "abundant and the closer the value is to 1 the greater "
-                                "the likelihood that the preservation of that habitat "
-                                "type on the current or future landscape is important "
-                                "to biodiversity conservation."),
-                        },
-                    },
-                    "created_if": "lulc_bas_path and lulc_fut_path",
-                },
-            }
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "access_layer.tif": {
-                    "about": "Rasterized access map",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "[LULC]_aligned.tif": {
-                    "about": "Aligned copy of each LULC raster",
-                    "bands": {1: {"type": "integer"}},
-                },
-                "[THREAT]_aligned.tif": {
-                    "about": "Aligned copy of each threat raster",
-                    "bands": {1: {"type": "ratio"}},
-                },
-                "filtered_[THREAT]_aligned.tif": {
-                    "about": "Filtered threat raster",
-                    "bands": {1: {"type": "ratio"}},
-                },
-                "degradation_[THREAT].tif": {
-                    "about": "Degradation raster for each threat",
-                    "bands": {1: {"type": "ratio"}},
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+                    }
+                ),
+                spec.SingleBandRasterInput(
+                    id="cur_path",
+                    about=(
+                        "Path to a raster of the threat's distribution in the current"
+                        " scenario. Each pixel value in this raster is the relative"
+                        " intensity of the threat at that location, with values between 0"
+                        " and 1."
+                    ),
+                    data_type=float,
+                    units=None,
+                    projected=None
+                ),
+                spec.SingleBandRasterInput(
+                    id="fut_path",
+                    about=(
+                        "Path to a raster of the threat's distribution in a future"
+                        " scenario. Each pixel value in this raster is the relative"
+                        " intensity of the threat at that location, with values between 0"
+                        " and 1."
+                    ),
+                    required="lulc_fut_path",
+                    data_type=float,
+                    units=None,
+                    projected=None
+                ),
+                spec.SingleBandRasterInput(
+                    id="base_path",
+                    about=(
+                        "Path to a raster of the threat's distribution in the baseline"
+                        " scenario. Each pixel value in this raster is the relative"
+                        " intensity of the threat at that location, with values between 0"
+                        " and 1. Required if Baseline LULC is provided."
+                    ),
+                    required="lulc_bas_path",
+                    data_type=float,
+                    units=None,
+                    projected=None
+                )
+            ],
+            index_col="threat"
+        ),
+        spec.VectorInput(
+            id="access_vector_path",
+            name=gettext("accessibility to threats"),
+            about=gettext(
+                "Map of the relative protection that legal, institutional, social, and"
+                " physical barriers provide against threats. Any cells not covered by a"
+                " polygon will be set to 1."
+            ),
+            required=False,
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[
+                spec.RatioInput(
+                    id="access",
+                    about=(
+                        "The region's relative accessibility to threats, where 0"
+                        " represents completely inaccessible and 1 represents completely"
+                        " accessible."
+                    ),
+                    units=None
+                )
+            ],
+            projected=False
+        ),
+        spec.CSVInput(
+            id="sensitivity_table_path",
+            name=gettext("sensitivity table"),
+            about=(
+                "Table mapping each LULC class to data about the species' habitat"
+                " preference and threat sensitivity in areas with that LULC."
+            ),
+            columns=[
+                spec.IntegerInput(
+                    id="lucode",
+                    about=gettext(
+                        "LULC codes from the LULC raster. Each code must be a unique"
+                        " integer."
+                    )
+                ),
+                spec.StringInput(id="name", about=None, required=False, regexp=None),
+                spec.RatioInput(
+                    id="habitat",
+                    about=gettext(
+                        "Suitability of this LULC class as habitat, where 0 is not"
+                        " suitable and 1 is completely suitable."
+                    ),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="[THREAT]",
+                    about=(
+                        "The relative sensitivity of each LULC class to each type of"
+                        " threat, where 1 represents high sensitivity and 0 represents"
+                        " that it is unaffected. There must be one threat column for each"
+                        " threat name in the 'threats' column of the Threats Table."
+                    ),
+                    units=None
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.NumberInput(
+            id="half_saturation_constant",
+            name=gettext("half-saturation constant"),
+            about=gettext("Half-saturation constant used in the degradation equation."),
+            units=u.none,
+            expression="value > 0"
+        )
+    ],
+    outputs=[
+        spec.DirectoryOutput(
+            id="output",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="deg_sum_c.tif",
+                    about=gettext(
+                        "Relative level of habitat degradation on the current landscape."
+                    ),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="deg_sum_f.tif",
+                    about=gettext(
+                        "Relative level of habitat degradation on the future landscape."
+                    ),
+                    created_if="lulc_fut_path",
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="quality_c.tif",
+                    about=gettext(
+                        "Relative level of habitat quality on the current landscape."
+                    ),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="quality_f.tif",
+                    about=gettext(
+                        "Relative level of habitat quality on the future landscape."
+                    ),
+                    created_if="lulc_fut_path",
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="rarity_c.tif",
+                    about=(
+                        "Relative habitat rarity on the current landscape vis-a-vis the"
+                        " baseline map. The grid cell's values are defined between a"
+                        " range of 0 and 1 where 0.5 indicates no abundance change"
+                        " between the baseline and current or projected map. Values"
+                        " between 0 and 0.5 indicate a habitat is more abundant and the"
+                        " closer the value is to 0 the lesser the likelihood that the"
+                        " preservation of that habitat type on the current or future"
+                        " landscape is important to biodiversity conservation. Values"
+                        " between 0.5 and 1 indicate a habitat is less abundant and the"
+                        " closer the value is to 1 the greater the likelihood that the"
+                        " preservation of that habitat type on the current or future"
+                        " landscape is important to biodiversity conservation."
+                    ),
+                    created_if="lulc_bas_path",
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="rarity_f.tif",
+                    about=(
+                        "Relative habitat rarity on the future landscape vis-a-vis the"
+                        " baseline map. The grid cell's values are defined between a"
+                        " range of 0 and 1 where 0.5 indicates no abundance change"
+                        " between the baseline and current or projected map. Values"
+                        " between 0 and 0.5 indicate a habitat is more abundant and the"
+                        " closer the value is to 0 the lesser the likelihood that the"
+                        " preservation of that habitat type on the current or future"
+                        " landscape is important to biodiversity conservation. Values"
+                        " between 0.5 and 1 indicate a habitat is less abundant and the"
+                        " closer the value is to 1 the greater the likelihood that the"
+                        " preservation of that habitat type on the current or future"
+                        " landscape is important to biodiversity conservation."
+                    ),
+                    created_if="lulc_bas_path and lulc_fut_path",
+                    data_type=float,
+                    units=None
+                ),
+                spec.CSVOutput(
+                    id="rarity_c.csv",
+                    about=gettext(
+                        "Table of rarity values by LULC code for the current landscape."
+                    ),
+                    created_if="lulc_bas_path",
+                    columns=[
+                        spec.NumberOutput(
+                            id="lucode", about=gettext("LULC class"), units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="rarity_value",
+                            about=gettext(
+                                "Relative habitat rarity on the current landscape"
+                                " vis-a-vis the baseline map. The rarity values are"
+                                " defined between a range of 0 and 1 where 0.5 indicates"
+                                " no abundance change between the baseline and current or"
+                                " projected map. Values between 0 and 0.5 indicate a"
+                                " habitat is more abundant and the closer the value is to"
+                                " 0 the lesser the likelihood that the preservation of"
+                                " that habitat type on the current or future landscape is"
+                                " important to biodiversity conservation. Values between"
+                                " 0.5 and 1 indicate a habitat is less abundant and the"
+                                " closer the value is to 1 the greater the likelihood"
+                                " that the preservation of that habitat type on the"
+                                " current or future landscape is important to"
+                                " biodiversity conservation."
+                            ),
+                            units=u.none
+                        )
+                    ],
+                    index_col="lucode"
+                ),
+                spec.CSVOutput(
+                    id="rarity_f.csv",
+                    about=gettext(
+                        "Table of rarity values by LULC code for the future landscape."
+                    ),
+                    created_if="lulc_bas_path and lulc_fut_path",
+                    columns=[
+                        spec.NumberOutput(
+                            id="lucode", about=gettext("LULC class"), units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="rarity_value",
+                            about=gettext(
+                                "Relative habitat rarity on the future landscape"
+                                " vis-a-vis the baseline map. The rarity values are"
+                                " defined between a range of 0 and 1 where 0.5 indicates"
+                                " no abundance change between the baseline and current or"
+                                " projected map. Values between 0 and 0.5 indicate a"
+                                " habitat is more abundant and the closer the value is to"
+                                " 0 the lesser the likelihood that the preservation of"
+                                " that habitat type on the current or future landscape is"
+                                " important to biodiversity conservation. Values between"
+                                " 0.5 and 1 indicate a habitat is less abundant and the"
+                                " closer the value is to 1 the greater the likelihood"
+                                " that the preservation of that habitat type on the"
+                                " current or future landscape is important to"
+                                " biodiversity conservation."
+                            ),
+                            units=u.none
+                        )
+                    ],
+                    index_col="lucode"
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="intermediate",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="access_layer.tif",
+                    about=gettext("Rasterized access map"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="[LULC]_aligned.tif",
+                    about=gettext("Aligned copy of each LULC raster"),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="[THREAT]_aligned.tif",
+                    about=gettext("Aligned copy of each threat raster"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="filtered_[THREAT]_aligned.tif",
+                    about=gettext("Filtered threat raster"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="degradation_[THREAT].tif",
+                    about=gettext("Degradation raster for each threat"),
+                    data_type=float,
+                    units=None
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ],
+)
+
 # All out rasters besides rarity should be gte to 0. Set nodata accordingly.
 _OUT_NODATA = float(numpy.finfo(numpy.float32).min)
 # Scaling parameter from User's Guide eq. 4 for quality of habitat

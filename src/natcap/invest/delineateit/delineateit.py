@@ -23,134 +23,224 @@ from . import delineateit_core
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "delineateit",
-    "model_title": gettext("DelineateIt"),
-    "userguide": "delineateit.html",
-    "aliases": (),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['dem_path', 'detect_pour_points', 'outlet_vector_path', 'skip_invalid_geometry'],
-            ['snap_points', 'flow_threshold', 'snap_distance'],
-        ]
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["dem_path", "outlet_vector_path"],
-        "different_projections_ok": True,
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "dem_path": {
-            **spec.DEM,
-            "projected": True
-        },
-        "detect_pour_points": {
-            "type": "boolean",
-            "required": False,
-            "about": gettext(
-                "Detect pour points (watershed outlets) based on "
-                "the DEM, and use these instead of a user-provided outlet "
-                "features vector."),
-            "name": gettext("detect pour points")
-        },
-        "outlet_vector_path": {
-            "type": "vector",
-            "fields": {},
-            "geometries": spec.ALL_GEOMS,
-            "required": "not detect_pour_points",
-            "allowed": "not detect_pour_points",
-            "about": gettext(
-                "A map of watershed outlets from which to delineate the "
-                "watersheds. Required if Detect Pour Points is not checked."),
-            "name": gettext("watershed outlets")
-        },
-        "snap_points": {
-            "type": "boolean",
-            "required": False,
-            "about": gettext(
-                "Whether to snap point geometries to the nearest stream "
-                "pixel.  If ``True``, ``args['flow_threshold']`` and "
-                "``args['snap_distance']`` must also be defined. If a point "
-                "is equally near to more than one stream pixel, it will be "
-                "snapped to the stream pixel with the highest flow "
-                "accumulation value. This has no effect if Detect Pour Points "
-                "is selected."),
-            "name": gettext("snap points to the nearest stream")
-        },
-        "flow_threshold": {
-            **spec.THRESHOLD_FLOW_ACCUMULATION,
-            "required": "snap_points",
-            "allowed": "snap_points",
-            "about": gettext(
-                spec.THRESHOLD_FLOW_ACCUMULATION["about"] +
-                " Required if Snap Points is selected."),
-        },
-        "snap_distance": {
-            "expression": "value > 0",
-            "type": "number",
-            "units": u.pixels,
-            "required": "snap_points",
-            "allowed": "snap_points",
-            "about": gettext(
-                "Maximum distance to relocate watershed outlet points in "
-                "order to snap them to a stream. Required if Snap Points "
-                "is selected."),
-            "name": gettext("snap distance")
-        },
-        "skip_invalid_geometry": {
-            "type": "boolean",
-            "required": False,
-            "allowed": "not detect_pour_points",
-            "about": gettext(
-                "Skip delineation for any invalid geometries found in the "
-                "Outlet Features. Otherwise, an invalid geometry will cause "
-                "the model to crash."),
-            "name": gettext("skip invalid geometries")
-        }
-    },
-    "outputs": {
-        "filled_dem.tif": spec.FILLED_DEM,
-        "flow_direction.tif": spec.FLOW_DIRECTION_D8,
-        "flow_accumulation.tif": spec.FLOW_ACCUMULATION,
-        "preprocessed_geometries.gpkg": {
-            "about": (
-                "A vector containing only those geometries that the model can "
-                "verify are valid. The geometries appearing in this vector "
-                "will be the ones passed to watershed delineation."),
-            "geometries": spec.ALL_GEOMS,
-            "fields": {}
-        },
-        "streams.tif": spec.STREAM,
-        "snapped_outlets.gpkg": {
-            "about": (
-                "A vector that indicates where outlet points (point "
-                "geometries only) were snapped to based on the values of "
-                "Threshold Flow Accumulation and Pixel Distance to Snap "
-                "Outlet Points. Any non-point geometries will also have been "
-                "copied over to this vector, but will not have been altered."),
-            "geometries": spec.POINT,
-            "fields": {}
-        },
-        "watersheds.gpkg": {
-            "about": (
-                "A vector defining the areas that are upstream from the "
-                "snapped outlet points, where upstream area is defined by the "
-                "D8 flow algorithm implementation in PyGeoprocessing."),
-            "geometries": spec.POLYGON,
-            "fields": {}
-        },
-        "pour_points.gpkg": {
-            "about": (
-                "Points where water flows off the defined area of the map."),
-            "geometries": spec.POINT,
-            "fields": {}
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+MODEL_SPEC = spec.ModelSpec(
+    model_id="delineateit",
+    model_title=gettext("DelineateIt"),
+    userguide="delineateit.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=(),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["dem_path", "detect_pour_points", "outlet_vector_path", "skip_invalid_geometry"],
+        ["snap_points", "flow_threshold", "snap_distance"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.SingleBandRasterInput(
+            id="dem_path",
+            name=gettext("digital elevation model"),
+            about=gettext("Map of elevation above sea level."),
+            data_type=float,
+            units=u.meter,
+            projected=True
+        ),
+        spec.BooleanInput(
+            id="detect_pour_points",
+            name=gettext("detect pour points"),
+            about=gettext(
+                "Detect pour points (watershed outlets) based on the DEM, and use these"
+                " instead of a user-provided outlet features vector."
+            ),
+            required=False
+        ),
+        spec.VectorInput(
+            id="outlet_vector_path",
+            name=gettext("watershed outlets"),
+            about=gettext(
+                "A map of watershed outlets from which to delineate the watersheds."
+                " Required if Detect Pour Points is not checked."
+            ),
+            required="not detect_pour_points",
+            allowed="not detect_pour_points",
+            geometry_types={
+                "MULTIPOINT",
+                "MULTILINESTRING",
+                "POLYGON",
+                "LINESTRING",
+                "MULTIPOLYGON",
+                "POINT",
+            },
+            fields=[],
+            projected=None
+        ),
+        spec.BooleanInput(
+            id="snap_points",
+            name=gettext("snap points to the nearest stream"),
+            about=(
+                "Whether to snap point geometries to the nearest stream pixel.  If"
+                " ``True``, ``args['flow_threshold']`` and ``args['snap_distance']`` must"
+                " also be defined. If a point is equally near to more than one stream"
+                " pixel, it will be snapped to the stream pixel with the highest flow"
+                " accumulation value. This has no effect if Detect Pour Points is"
+                " selected."
+            ),
+            required=False
+        ),
+        spec.NumberInput(
+            id="flow_threshold",
+            name=gettext("threshold flow accumulation"),
+            about=gettext(
+                "The number of upslope pixels that must flow into a pixel before it is"
+                " classified as a stream. Required if Snap Points is selected."
+            ),
+            required="snap_points",
+            allowed="snap_points",
+            units=u.pixel,
+            expression="value >= 0"
+        ),
+        spec.NumberInput(
+            id="snap_distance",
+            name=gettext("snap distance"),
+            about=gettext(
+                "Maximum distance to relocate watershed outlet points in order to snap"
+                " them to a stream. Required if Snap Points is selected."
+            ),
+            required="snap_points",
+            allowed="snap_points",
+            units=u.pixel,
+            expression="value > 0"
+        ),
+        spec.BooleanInput(
+            id="skip_invalid_geometry",
+            name=gettext("skip invalid geometries"),
+            about=gettext(
+                "Skip delineation for any invalid geometries found in the Outlet"
+                " Features. Otherwise, an invalid geometry will cause the model to crash."
+            ),
+            required=False,
+            allowed="not detect_pour_points"
+        )
+    ],
+    outputs=[
+        spec.SingleBandRasterOutput(
+            id="filled_dem.tif",
+            about=gettext("Map of elevation after any pits are filled"),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="flow_direction.tif",
+            about=gettext("D8 flow direction."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="flow_accumulation.tif",
+            about=gettext("Map of flow accumulation"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.VectorOutput(
+            id="preprocessed_geometries.gpkg",
+            about=gettext(
+                "A vector containing only those geometries that the model can verify are"
+                " valid. The geometries appearing in this vector will be the ones passed"
+                " to watershed delineation."
+            ),
+            geometry_types={
+                "MULTIPOINT",
+                "MULTILINESTRING",
+                "POLYGON",
+                "LINESTRING",
+                "MULTIPOLYGON",
+                "POINT",
+            },
+            fields=[]
+        ),
+        spec.SingleBandRasterOutput(
+            id="streams.tif",
+            about=gettext(
+                "Stream network, created using flow direction and flow accumulation"
+                " derived from the DEM and Threshold Flow Accumulation. Values of 1"
+                " represent streams, values of 0 are non-stream pixels."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.VectorOutput(
+            id="snapped_outlets.gpkg",
+            about=gettext(
+                "A vector that indicates where outlet points (point geometries only) were"
+                " snapped to based on the values of Threshold Flow Accumulation and Pixel"
+                " Distance to Snap Outlet Points. Any non-point geometries will also have"
+                " been copied over to this vector, but will not have been altered."
+            ),
+            geometry_types={"POINT"},
+            fields=[]
+        ),
+        spec.VectorOutput(
+            id="watersheds.gpkg",
+            about=gettext(
+                "A vector defining the areas that are upstream from the snapped outlet"
+                " points, where upstream area is defined by the D8 flow algorithm"
+                " implementation in PyGeoprocessing."
+            ),
+            geometry_types={"POLYGON"},
+            fields=[]
+        ),
+        spec.VectorOutput(
+            id="pour_points.gpkg",
+            about=gettext("Points where water flows off the defined area of the map."),
+            geometry_types={"POINT"},
+            fields=[]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ]
+
+)
 
 _OUTPUT_FILES = {
     'preprocessed_geometries': 'preprocessed_geometries.gpkg',
