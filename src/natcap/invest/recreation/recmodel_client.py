@@ -99,322 +99,518 @@ predictor_table_columns = {
 }
 
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "recreation",
-    "model_title": gettext("Visitation: Recreation and Tourism"),
-    "userguide": "recreation.html",
-    "aliases": (),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['aoi_path'],
-            ['start_year', 'end_year'],
-            ['compute_regression', 'predictor_table_path', 'scenario_predictor_table_path'],
-            ['grid_aoi', 'grid_type', 'cell_size'],
-        ]
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "aoi_path": {
-            **spec.AOI,
-            "about": gettext("Map of area(s) over which to run the model.")
-        },
-        "hostname": {
-            "type": "freestyle_string",
-            "required": False,
-            "about": gettext(
-                "FQDN to a recreation server.  If not provided, a default is "
-                "assumed."),
-            "name": gettext("hostname"),
-            "hidden": True
-        },
-        "port": {
-            "type": "number",
-            "expression": "value >= 0",
-            "units": u.none,
-            "required": False,
-            "about": gettext(
-                "the port on ``hostname`` to use for contacting the "
-                "recreation server."),
-            "name": gettext("port"),
-            "hidden": True
-        },
-        "start_year": {
-            "type": "number",
-            "expression": f"{MIN_YEAR} <= value <= {MAX_YEAR}",
-            "units": u.year_AD,
-            "about": gettext(
-                "Year at which to start user-day calculations. "
-                "Calculations start on the first day of the year. Year "
-                f"must be in the range {MIN_YEAR} - {MAX_YEAR}, and must be "
-                "less than or equal to the End Year."),
-            "name": gettext("start year")
-        },
-        "end_year": {
-            "type": "number",
-            "expression": f"{MIN_YEAR} <= value <= {MAX_YEAR}",
-            "units": u.year_AD,
-            "about": gettext(
-                "Year at which to end user-day calculations. "
-                "Calculations continue through the last day of the year. "
-                f"Year must be in the range {MIN_YEAR} - {MAX_YEAR}, and must "
-                "be greater than or equal to the Start Year."),
-            "name": gettext("end year")
-        },
-        "grid_aoi": {
-            "type": "boolean",
-            "required": False,
-            "about": gettext(
-                "Divide the AOI polygons into equal-sized grid cells, and "
-                "compute results for those cells instead of the original "
-                "polygons."),
-            "name": gettext("grid the AOI")
-        },
-        "grid_type": {
-            "type": "option_string",
-            "options": {
-                "square": {"display_name": gettext("square")},
-                "hexagon": {"display_name": gettext("hexagon")}
-            },
-            "required": "grid_aoi",
-            "allowed": "grid_aoi",
-            "about": gettext(
-                "The shape of grid cells to make within the AOI polygons. "
-                "Required if Grid AOI is selected."),
-            "name": gettext("grid type")
-        },
-        "cell_size": {
-            "type": "number",
-            "expression": "value > 0",
-            "units": u.other,  # any unit of length is ok
-            "required": "grid_aoi",
-            "allowed": "grid_aoi",
-            "about": gettext(
-                "Size of grid cells to make, measured in the projection units "
-                "of the AOI. If the Grid Type is 'square', this is the length "
-                "of each side of the square. If the Grid Type is 'hexagon', "
-                "this is the hexagon's maximal diameter."),
-            "name": gettext("cell size")
-        },
-        "compute_regression": {
-            "type": "boolean",
-            "required": False,
-            "about": gettext(
-                "Run the regression model using the predictor table and "
-                "scenario table, if provided."),
-            "name": gettext("compute regression")
-        },
-        "predictor_table_path": {
-            "type": "csv",
-            "index_col": "id",
-            "columns": predictor_table_columns,
-            "required": "compute_regression",
-            "allowed": "compute_regression",
-            "about": gettext(
-                "A table that maps predictor IDs to spatial files and their "
-                "predictor metric types. The file paths can be absolute or "
-                "relative to the table."),
-            "name": gettext("predictor table")
-        },
-        "scenario_predictor_table_path": {
-            "type": "csv",
-            "index_col": "id",
-            "columns": predictor_table_columns,
-            "required": False,
-            "allowed": "compute_regression",
-            "about": gettext(
-                "A table of future or alternative scenario predictors. Maps "
-                "IDs to files and their types. The file paths can be absolute "
-                "or relative to the table."),
-            "name": gettext("scenario predictor table")
-        }
-    },
-    "outputs": {
-        "PUD_results.gpkg": {
-            "about": gettext(
-                "Results of photo-user-days aggregations in the AOI."),
-            "geometries": spec.POLYGONS,
-            "fields": {
-                "PUD_YR_AVG": {
-                    "about": gettext(
-                        "The average photo-user-days per year"),
-                    "type": "number",
-                    "units": u.none
-                },
-                "PUD_[MONTH]": {
-                    "about": gettext(
-                        "The average photo-user-days for each month."),
-                    "type": "number",
-                    "units": u.none
-                }
+MODEL_SPEC = spec.ModelSpec(
+    model_id="recreation",
+    model_title=gettext("Visitation: Recreation and Tourism"),
+    userguide="recreation.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=False,
+    aliases=(),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["aoi_path"],
+        ["start_year", "end_year"],
+        ["compute_regression", "predictor_table_path", "scenario_predictor_table_path"],
+        ["grid_aoi", "grid_type", "cell_size"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.VectorInput(
+            id="aoi_path",
+            name=gettext("area of interest"),
+            about=gettext("Map of area(s) over which to run the model."),
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[],
+            projected=None
+        ),
+        spec.StringInput(
+            id="hostname",
+            name=gettext("hostname"),
+            about=gettext(
+                "FQDN to a recreation server.  If not provided, a default is assumed."
+            ),
+            required=False,
+            hidden=True,
+            regexp=None
+        ),
+        spec.NumberInput(
+            id="port",
+            name=gettext("port"),
+            about=gettext(
+                "the port on ``hostname`` to use for contacting the recreation server."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= 0"
+        ),
+        spec.NumberInput(
+            id="start_year",
+            name=gettext("start year"),
+            about=gettext(
+                "Year at which to start user-day calculations. Calculations start on the"
+                " first day of the year. Year must be in the range 2012 - 2017, and must"
+                " be less than or equal to the End Year."
+            ),
+            units=u.year_AD,
+            expression="2012 <= value <= 2017"
+        ),
+        spec.NumberInput(
+            id="end_year",
+            name=gettext("end year"),
+            about=gettext(
+                "Year at which to end user-day calculations. Calculations continue"
+                " through the last day of the year. Year must be in the range 2012 -"
+                " 2017, and must be greater than or equal to the Start Year."
+            ),
+            units=u.year_AD,
+            expression="2012 <= value <= 2017"
+        ),
+        spec.BooleanInput(
+            id="grid_aoi",
+            name=gettext("grid the AOI"),
+            about=gettext(
+                "Divide the AOI polygons into equal-sized grid cells, and compute results"
+                " for those cells instead of the original polygons."
+            ),
+            required=False
+        ),
+        spec.OptionStringInput(
+            id="grid_type",
+            name=gettext("grid type"),
+            about=gettext(
+                "The shape of grid cells to make within the AOI polygons. Required if"
+                " Grid AOI is selected."
+            ),
+            required="grid_aoi",
+            allowed="grid_aoi",
+            options={
+                "square": {"display_name": "square"},
+                "hexagon": {"display_name": "hexagon"},
             }
-        },
-        "TUD_results.gpkg": {
-            "about": gettext(
-                "Results of twitter-user-days aggregations in the AOI."),
-            "geometries": spec.POLYGONS,
-            "fields": {
-                "PUD_YR_AVG": {
-                    "about": gettext(
-                        "The average twitter-user-days per year"),
-                    "type": "number",
-                    "units": u.none
-                },
-                "PUD_[MONTH]": {
-                    "about": gettext(
-                        "The average twitter-user-days for each month."),
-                    "type": "number",
-                    "units": u.none
-                }
-            }
-        },
-        "PUD_monthly_table.csv": {
-            "about": gettext("Table of monthly photo-user-days in each AOI polygon."),
-            "index_col": "poly_id",
-            "columns": {
-                "poly_id": {
-                    "type": "integer",
-                    "about": gettext("Polygon ID")
-                },
-                "[YEAR]-[MONTH]": {
-                    "about": gettext(
-                        "Total photo-user-days counted in the polygon in the "
-                        "given month."),
-                    "type": "number",
-                    "units": u.none
-                }
-            }
-        },
-        "TUD_monthly_table.csv": {
-            "about": gettext("Table of monthly twitter-user-days in each AOI polygon."),
-            "index_col": "poly_id",
-            "columns": {
-                "poly_id": {
-                    "type": "integer",
-                    "about": gettext("Polygon ID")
-                },
-                "[YEAR]-[MONTH]": {
-                    "about": gettext(
-                        "Total twitter-user-days counted in the polygon in the "
-                        "given month."),
-                    "type": "number",
-                    "units": u.none
-                }
-            }
-        },
-        "regression_data.gpkg": {
-            "created_if": "compute_regression",
-            "about": gettext(
-                "AOI polygons with all the variables needed to compute a regression, "
-                "including predictor attributes and the user-days response variable."),
-            "geometries": spec.POLYGONS,
-            "fields": {
-                "[PREDICTOR]": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "Predictor attribute value for each polygon.")
-                },
-                "pr_TUD": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "proportion of the sum of TUD_YR_AVG across all features.")
-                },
-                "pr_PUD": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "proportion of the sum of PUD_YR_AVG across all features.")
-                },
-                "avg_pr_UD": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "average of pr_TUD and pr_TUD. This variable "
-                        "is logit-transformed and then used as the response "
-                        "variable in the regression model.")
-                }
-            }
-        },
-        "regression_summary.txt": {
-            "created_if": "compute_regression",
-            "about": gettext(
-                "This is a text file output of the regression analysis. It "
-                "includes estimates for each predictor variable. It also "
-                "contains a “server id hash” value which can be used to "
-                "correlate the PUD result with the data available on the PUD "
-                "server. If these results are used in publication this hash "
-                "should be included with the results for reproducibility.")
-        },
-        "scenario_results.gpkg": {
-            "created_if": "scenario_predictor_table_path",
-            "about": gettext(
-                "Results of scenario, including the predictor data used in the "
-                "scenario and the predicted visitation patterns for the scenario."),
-            "geometries": spec.POLYGONS,
-            "fields": {
-                "[PREDICTOR]": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "Predictor attribute value for each polygon.")
-                },
-                "pr_UD_EST": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "The estimated avg_pr_UD for each polygon. "
-                        "Estimated using the regression coefficients for each "
-                        "predictor in regression_coefficients.txt")
-                }
-            }
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "aoi.gpkg": {
-                    "about": gettext(
-                        "Copy of the input AOI, gridded if applicable."),
-                    "fields": {},
-                    "geometries": spec.POLYGONS
-                },
-                "aoi.zip": {
-                    "about": gettext("Compressed AOI")
-                },
-                "[PREDICTOR].json": {
-                    "about": gettext(
-                        "aggregated predictor values within each polygon")
-                },
-                "predictor_estimates.json": {
-                    "about": gettext("Predictor estimates")
-                },
-                "pud.zip": {
-                    "about": gettext("Compressed photo-user-day data")},
-                "response_polygons_lookup.pickle": {
-                    "about": gettext(
-                        "Pickled dictionary mapping FIDs to shapely geometries")
-                },
-                "scenario": {
-                    "type": "directory",
-                    "contents": {
-                        "[PREDICTOR].json": {
-                            "about": gettext(
-                                "aggregated scenario predictor values within "
-                                "each polygon")
-                        }
+        ),
+        spec.NumberInput(
+            id="cell_size",
+            name=gettext("cell size"),
+            about=(
+                "Size of grid cells to make, measured in the projection units of the AOI."
+                " If the Grid Type is 'square', this is the length of each side of the"
+                " square. If the Grid Type is 'hexagon', this is the hexagon's maximal"
+                " diameter."
+            ),
+            required="grid_aoi",
+            allowed="grid_aoi",
+            units=u.other,
+            expression="value > 0"
+        ),
+        spec.BooleanInput(
+            id="compute_regression",
+            name=gettext("compute regression"),
+            about=gettext(
+                "Run the regression model using the predictor table and scenario table,"
+                " if provided."
+            ),
+            required=False
+        ),
+        spec.CSVInput(
+            id="predictor_table_path",
+            name=gettext("predictor table"),
+            about=gettext(
+                "A table that maps predictor IDs to spatial files and their predictor"
+                " metric types. The file paths can be absolute or relative to the table."
+            ),
+            required="compute_regression",
+            allowed="compute_regression",
+            columns=[
+                spec.StringInput(
+                    id="id",
+                    about=gettext("A unique identifier for the predictor."),
+                    regexp=None
+                ),
+                spec.RasterOrVectorInput(
+                    id="path",
+                    about=gettext("A spatial file to use as a predictor."),
+                    data_type=float,
+                    units=u.none,
+                    geometry_types={
+                        "MULTIPOINT",
+                        "MULTIPOLYGON",
+                        "LINESTRING",
+                        "POINT",
+                        "MULTILINESTRING",
+                        "POLYGON",
+                    },
+                    fields=[],
+                    projected=None
+                ),
+                spec.OptionStringInput(
+                    id="type",
+                    about="The type of predictor file provided in the 'path' column.",
+                    options={
+                        "raster_mean": {
+                            "description": (
+                                "Predictor is a raster. Metric is the mean of values"
+                                " within the AOI grid cell or polygon."
+                            )
+                        },
+                        "raster_sum": {
+                            "description": (
+                                "Predictor is a raster. Metric is the sum of values"
+                                " within the AOI grid cell or polygon."
+                            )
+                        },
+                        "point_count": {
+                            "description": (
+                                "Predictor is a point vector. Metric is the number of"
+                                " points within each AOI grid cell or polygon."
+                            )
+                        },
+                        "point_nearest_distance": {
+                            "description": (
+                                "Predictor is a point vector. Metric is the Euclidean"
+                                " distance between the centroid of each AOI grid cell and"
+                                " the nearest point in this layer."
+                            )
+                        },
+                        "line_intersect_length": {
+                            "description": (
+                                "Predictor is a line vector. Metric is the total length"
+                                " of the lines that fall within each AOI grid cell."
+                            )
+                        },
+                        "polygon_area_coverage": {
+                            "description": (
+                                "Predictor is a polygon vector. Metric is the area of"
+                                " overlap between the polygon and each AOI grid cell."
+                            )
+                        },
+                        "polygon_percent_coverage": {
+                            "description": (
+                                "Predictor is a polygon vector. Metric is the percentage"
+                                " (0-100) of overlapping area between the polygon and"
+                                " each AOI grid cell."
+                            )
+                        },
                     }
-                },
-                "server_version.pickle": {
-                    "about": gettext("Server version info")
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+                )
+            ],
+            index_col="id"
+        ),
+        spec.CSVInput(
+            id="scenario_predictor_table_path",
+            name=gettext("scenario predictor table"),
+            about=gettext(
+                "A table of future or alternative scenario predictors. Maps IDs to files"
+                " and their types. The file paths can be absolute or relative to the"
+                " table."
+            ),
+            required=False,
+            allowed="compute_regression",
+            columns=[
+                spec.StringInput(
+                    id="id",
+                    about=gettext("A unique identifier for the predictor."),
+                    regexp=None
+                ),
+                spec.RasterOrVectorInput(
+                    id="path",
+                    about=gettext("A spatial file to use as a predictor."),
+                    data_type=float,
+                    units=u.none,
+                    geometry_types={
+                        "MULTIPOINT",
+                        "MULTIPOLYGON",
+                        "LINESTRING",
+                        "POINT",
+                        "MULTILINESTRING",
+                        "POLYGON",
+                    },
+                    fields=[],
+                    projected=None
+                ),
+                spec.OptionStringInput(
+                    id="type",
+                    about="The type of predictor file provided in the 'path' column.",
+                    options={
+                        "raster_mean": {
+                            "description": (
+                                "Predictor is a raster. Metric is the mean of values"
+                                " within the AOI grid cell or polygon."
+                            )
+                        },
+                        "raster_sum": {
+                            "description": (
+                                "Predictor is a raster. Metric is the sum of values"
+                                " within the AOI grid cell or polygon."
+                            )
+                        },
+                        "point_count": {
+                            "description": (
+                                "Predictor is a point vector. Metric is the number of"
+                                " points within each AOI grid cell or polygon."
+                            )
+                        },
+                        "point_nearest_distance": {
+                            "description": (
+                                "Predictor is a point vector. Metric is the Euclidean"
+                                " distance between the centroid of each AOI grid cell and"
+                                " the nearest point in this layer."
+                            )
+                        },
+                        "line_intersect_length": {
+                            "description": (
+                                "Predictor is a line vector. Metric is the total length"
+                                " of the lines that fall within each AOI grid cell."
+                            )
+                        },
+                        "polygon_area_coverage": {
+                            "description": (
+                                "Predictor is a polygon vector. Metric is the area of"
+                                " overlap between the polygon and each AOI grid cell."
+                            )
+                        },
+                        "polygon_percent_coverage": {
+                            "description": (
+                                "Predictor is a polygon vector. Metric is the percentage"
+                                " (0-100) of overlapping area between the polygon and"
+                                " each AOI grid cell."
+                            )
+                        },
+                    }
+                )
+            ],
+            index_col="id"
+        )
+    ],
+    outputs=[
+        spec.VectorOutput(
+            id="PUD_results.gpkg",
+            about=gettext("Results of photo-user-days aggregations in the AOI."),
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="PUD_YR_AVG",
+                    about=gettext("The average photo-user-days per year"),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="PUD_[MONTH]",
+                    about=gettext("The average photo-user-days for each month."),
+                    units=u.none
+                )
+            ]
+        ),
+        spec.VectorOutput(
+            id="TUD_results.gpkg",
+            about=gettext("Results of twitter-user-days aggregations in the AOI."),
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="PUD_YR_AVG",
+                    about=gettext("The average twitter-user-days per year"),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="PUD_[MONTH]",
+                    about=gettext("The average twitter-user-days for each month."),
+                    units=u.none
+                )
+            ]
+        ),
+        spec.CSVOutput(
+            id="PUD_monthly_table.csv",
+            about=gettext("Table of monthly photo-user-days in each AOI polygon."),
+            columns=[
+                spec.IntegerOutput(id="poly_id", about=gettext("Polygon ID")),
+                spec.NumberOutput(
+                    id="[YEAR]-[MONTH]",
+                    about=gettext(
+                        "Total photo-user-days counted in the polygon in the given month."
+                    ),
+                    units=u.none
+                )
+            ],
+            index_col="poly_id"
+        ),
+        spec.CSVOutput(
+            id="TUD_monthly_table.csv",
+            about=gettext("Table of monthly twitter-user-days in each AOI polygon."),
+            columns=[
+                spec.IntegerOutput(id="poly_id", about=gettext("Polygon ID")),
+                spec.NumberOutput(
+                    id="[YEAR]-[MONTH]",
+                    about=gettext(
+                        "Total twitter-user-days counted in the polygon in the given"
+                        " month."
+                    ),
+                    units=u.none
+                )
+            ],
+            index_col="poly_id"
+        ),
+        spec.VectorOutput(
+            id="regression_data.gpkg",
+            about=gettext(
+                "AOI polygons with all the variables needed to compute a regression,"
+                " including predictor attributes and the user-days response variable."
+            ),
+            created_if="compute_regression",
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="[PREDICTOR]",
+                    about=gettext("Predictor attribute value for each polygon."),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="pr_TUD",
+                    about=gettext(
+                        "proportion of the sum of TUD_YR_AVG across all features."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="pr_PUD",
+                    about=gettext(
+                        "proportion of the sum of PUD_YR_AVG across all features."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="avg_pr_UD",
+                    about=gettext(
+                        "average of pr_TUD and pr_TUD. This variable is logit-transformed"
+                        " and then used as the response variable in the regression model."
+                    ),
+                    units=u.none
+                )
+            ]
+        ),
+        spec.FileOutput(
+            id="regression_summary.txt",
+            about=gettext(
+                "This is a text file output of the regression analysis. It includes"
+                " estimates for each predictor variable. It also contains a “server id"
+                " hash” value which can be used to correlate the PUD result with the data"
+                " available on the PUD server. If these results are used in publication"
+                " this hash should be included with the results for reproducibility."
+            ),
+            created_if="compute_regression"
+        ),
+        spec.VectorOutput(
+            id="scenario_results.gpkg",
+            about=gettext(
+                "Results of scenario, including the predictor data used in the scenario"
+                " and the predicted visitation patterns for the scenario."
+            ),
+            created_if="scenario_predictor_table_path",
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="[PREDICTOR]",
+                    about=gettext("Predictor attribute value for each polygon."),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="pr_UD_EST",
+                    about=gettext(
+                        "The estimated avg_pr_UD for each polygon. Estimated using the"
+                        " regression coefficients for each predictor in"
+                        " regression_coefficients.txt"
+                    ),
+                    units=u.none
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="intermediate",
+            about=None,
+            contents=[
+                spec.VectorOutput(
+                    id="aoi.gpkg",
+                    about=gettext("Copy of the input AOI, gridded if applicable."),
+                    geometry_types={"MULTIPOLYGON", "POLYGON"},
+                    fields=[]
+                ),
+                spec.FileOutput(id="aoi.zip", about=gettext("Compressed AOI")),
+                spec.FileOutput(
+                    id="[PREDICTOR].json",
+                    about=gettext("aggregated predictor values within each polygon")
+                ),
+                spec.FileOutput(
+                    id="predictor_estimates.json", about=gettext("Predictor estimates")
+                ),
+                spec.FileOutput(
+                    id="pud.zip", about=gettext("Compressed photo-user-day data")
+                ),
+                spec.FileOutput(
+                    id="response_polygons_lookup.pickle",
+                    about=gettext(
+                        "Pickled dictionary mapping FIDs to shapely geometries"
+                    )
+                ),
+                spec.DirectoryOutput(
+                    id="scenario",
+                    about=None,
+                    contents=[
+                        spec.FileOutput(
+                            id="[PREDICTOR].json",
+                            about=gettext(
+                                "aggregated scenario predictor values within each polygon"
+                            )
+                        )
+                    ]
+                ),
+                spec.FileOutput(
+                    id="server_version.pickle", about=gettext("Server version info")
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ],
+)
 
 
 # Have 5 seconds between timed progress outputs
