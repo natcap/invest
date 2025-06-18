@@ -52,7 +52,7 @@ export default function App(props) {
 
   /** Initialize the list of invest models, recent invest jobs, etc. */
   useEffect(() => {
-    async function componentDidMount() {
+    async function setup() {
       await updateInvestList();
       setShowDownloadModal(props.isFirstRun);
       // Show changelog if this is a new version,
@@ -63,7 +63,7 @@ export default function App(props) {
         setDownloadedNofN(downloadedNofN)
       });
     }
-    componentDidMount();
+    setup();
 
     // Cleanup function to execute on component unmount
     return () => { ipcRenderer.removeAllListeners('download-status'); }
