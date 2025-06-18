@@ -79,10 +79,22 @@ export function setupAddPlugin(i18n) {
           // The purpose of this environment is just to ensure that git is available
           if (!fs.existsSync(baseEnvPrefix)) {
             event.sender.send('plugin-install-status', i18n.t('Creating base environment...'));
-            await spawnWithLogging(
-              micromamba,
-              ['create', '--yes', '--prefix', `"${baseEnvPrefix}"`, '-c', 'conda-forge', 'git']
-            );
+
+            // Create environment from a YML file so that we can specify nodefaults
+            // which is needed for licensing reasons. micromamba does not support
+            // disabling the default channel in the command line.
+            const baseEnvYMLPath = upath.join(app.getPath('temp'), 'baseEnv.yml');
+            let baseEnvYMLContents = (
+              'channels:\n' +
+              '- conda-forge\n' +
+              '- nodefaults\n' +
+              'dependencies:\n' +
+              '- git\n');
+            logger.info(`creating base environment from file:\n${baseEnvYMLContents}`);
+            fs.writeFileSync(baseEnvYMLPath, baseEnvYMLContents);
+            await spawnWithLogging(micromamba, [
+              'create', '--yes', '--prefix', `"${baseEnvPrefix}"`,
+              '--file', `"${baseEnvYMLPath}"`]);
           }
 
           // Create a temporary directory and check out the plugin's pyproject.toml,
@@ -131,14 +143,27 @@ export function setupAddPlugin(i18n) {
         // import metadata from the MODEL_SPEC. And mamba does not support
         // renaming or moving environments after they're created.
         const pluginEnvPrefix = upath.join(rootPrefix, `plugin_${Date.now()}`);
-        const createCommand = [
-          'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
-          '-c', 'conda-forge', 'python', 'git'];
+
+        // Create environment from a YML file so that we can specify nodefaults
+        // which is needed for licensing reasons. micromamba does not support
+        // disabling the default channel in the command line.
+        const pluginEnvYMLPath = upath.join(app.getPath('temp'), 'env.yml');
+        let pluginEnvYMLContents = (
+          'channels:\n' +
+          '- conda-forge\n' +
+          '- nodefaults\n' +
+          'dependencies:\n' +
+          '- python\n' +
+          '- git\n')
         if (condaDeps) { // include dependencies read from pyproject.toml
-          condaDeps.forEach((dep) => createCommand.push(`"${dep}"`));
+          condaDeps.forEach((dep) => pluginEnvYMLContents += `- ${dep}\n`);
         }
+        logger.info(`creating plugin environment from file:\n${pluginEnvYMLContents}`);
+        fs.writeFileSync(pluginEnvYMLPath, pluginEnvYMLContents);
         event.sender.send('plugin-install-status', i18n.t('Creating plugin environment...'));
-        await spawnWithLogging(micromamba, createCommand);
+        await spawnWithLogging(micromamba, [
+          'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
+          '--file', `"${pluginEnvYMLPath}"`]);
         logger.info('created micromamba env for plugin');
         event.sender.send('plugin-install-status', i18n.t('Installing plugin into environment...'));
         await spawnWithLogging(

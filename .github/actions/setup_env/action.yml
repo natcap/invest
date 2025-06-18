@@ -58,8 +58,9 @@ runs:
         environment-file: environment.yml
         environment-name: env
         condarc: |
-              channels:
-                - conda-forge
+          channels:
+            - conda-forge
+            - nodefaults
         init-shell: bash
         cache-environment: true
         cache-environment-key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}

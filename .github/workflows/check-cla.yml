@@ -1,0 +1,42 @@
+name: Check InVEST CLA
+
+on:
+    pull_request:
+
+permissions:
+    contents: read
+    pull-requests: write
+
+jobs:
+    check-cla-pr:
+        if: github.repository_owner == 'natcap'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.13"
+                  cache: "pip"
+
+            - run: pip install requests
+
+            - name: Check that the CLA has been signed
+              shell: bash
+              env:
+                  PR_NUMBER: ${{ github.event.number }}
+                  REPO: ${{ github.repository }}
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                set +e  # continue execution if a command returns a nonzero exit code.
+                cla_output=$(python scripts/check-cla.py $PR_NUMBER --repo=$REPO)
+                if [[ "$?" == "1" ]]; then
+                    echo "A comment was already posted with unsigned committers, so not posting again."
+                    exit 1  # deliberately fail so GHA check shows the failure
+                elif [[ "$?" == "2" ]]; then
+                    echo "Some committers on this PR have not yet signed the CLA"
+                    gh pr comment $PR_NUMBER -b "$cla_output"
+                    exit 2  # deliberately fail so the GHA check shows the failure.
+                else
+                    echo "All committers on this branch have signed the CLA!"
+                fi
