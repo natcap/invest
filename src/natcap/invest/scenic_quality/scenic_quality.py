@@ -46,187 +46,287 @@ _INTERMEDIATE_BASE_FILES = {
     'value_pattern': 'value_{id}.tif',
 }
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "scenic_quality",
-    "model_title": gettext("Scenic Quality"),
-    "userguide": "scenic_quality.html",
-    "aliases": ("sq",),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['aoi_path', 'structure_path', 'dem_path', 'refraction'],
-            ['do_valuation', 'valuation_function', 'a_coef', 'b_coef',
-             'max_valuation_radius'],
-        ]
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["aoi_path", "structure_path", "dem_path"],
-        "different_projections_ok": True,
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "aoi_path": {
-            **spec.AOI,
-        },
-        "structure_path": {
-            "name": gettext("features impacting scenic quality"),
-            "type": "vector",
-            "geometries": spec.POINT,
-            "fields": {
-                "radius": {
-                    "type": "number",
-                    "units": u.meter,
-                    "required": False,
-                    "about": gettext(
-                        "Maximum length of the line of sight originating from "
-                        "a viewpoint. The value can either be positive "
-                        "(preferred) or negative (kept for backwards "
-                        "compatibility), but is converted to a positive "
-                        "number. If this field is not provided, the model "
-                        "will include all pixels in the DEM in the visibility "
-                        "analysis. RADIUS preferred, but may also be called "
-                        "RADIUS2 for backwards compatibility.")},
-                "weight": {
-                    "type": "number",
-                    "units": u.none,
-                    "required": False,
-                    "about": gettext(
-                        "Viewshed importance coefficient. If this field is "
-                        "provided, the values are used to weight each "
-                        "feature's viewshed impacts. If not provided, all "
-                        "viewsheds are equally weighted with a weight of 1.")},
-                "height": {
-                    "type": "number",
-                    "units": u.meter,
-                    "required": False,
-                    "about": gettext(
-                        "Viewpoint height, the elevation above the ground of "
-                        "each feature. If this field is not provided, "
-                        "defaults to 0.")}
-            },
-            "about": gettext(
-                "Map of locations of objects that negatively affect scenic "
-                "quality. This must have the same projection as the DEM.")
-        },
-        "dem_path": {
-            **spec.DEM,
-            "projected": True,
-            "projection_units": u.meter
-        },
-        "refraction": {
-            "name": gettext("refractivity coefficient"),
-            "type": "ratio",
-            "about": gettext(
-                "The refractivity coefficient corrects for the curvature of "
-                "the earth and refraction of visible light in air.")
-        },
-        "do_valuation": {
-            "name": gettext("run valuation"),
-            "type": "boolean",
-            "required": False,
-            "about": gettext("Run the valuation model.")
-        },
-        "valuation_function": {
-            "name": gettext("Valuation function"),
-            "type": "option_string",
-            "required": "do_valuation",
-            "allowed": "do_valuation",
-            "options": {
-                "linear": {"display_name": gettext("linear: a + bx")},
-                "logarithmic": {"display_name": gettext(
-                    "logarithmic: a + b log(x+1)")},
-                "exponential": {"display_name": gettext("exponential: a * e^(-bx)")}
-            },
-            "about": gettext(
-                "Valuation function used to calculate the visual impact of "
-                "each feature, given distance from the feature 'x' and "
-                "parameters 'a' and 'b'."),
-        },
-        "a_coef": {
-            "name": gettext("coefficient a"),
-            "type": "number",
-            "units": u.none,
-            "required": "do_valuation",
-            "allowed": "do_valuation",
-            "about": gettext("First coefficient ('a') used by the valuation function"),
-        },
-        "b_coef": {
-            "name": gettext("coefficient b"),
-            "type": "number",
-            "units": u.none,
-            "required": "do_valuation",
-            "allowed": "do_valuation",
-            "about": gettext("Second coefficient ('b') used by the valuation function"),
-        },
-        "max_valuation_radius": {
-            "name": gettext("maximum valuation radius"),
-            "type": "number",
-            "units": u.meter,
-            "required": False,
-            "allowed": "do_valuation",
-            "expression": "value > 0",
-            "about": gettext(
-                "Valuation will only be computed for cells that fall within "
-                "this radius of a feature impacting scenic quality."),
-        },
-    },
-    "outputs": {
-        "output": {
-            "type": "directory",
-            "contents": {
-                "vshed_qual.tif": {
-                    "about": gettext(
-                        "Map of visual quality classified into quartiles."),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "vshed.tif": {
-                    "about": gettext("This raster layer contains the weighted sum of all visibility rasters. If no weight column is provided in the structures point vector, this raster will represent a count of the number of structure points that are visible from each pixel."),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "vshed_value.tif": {
-                    "about": gettext("This raster layer contains the weighted sum of the valuation rasters created for each point."),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                }
+MODEL_SPEC = spec.ModelSpec(
+    model_id="scenic_quality",
+    model_title=gettext("Scenic Quality"),
+    userguide="scenic_quality.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=("sq",),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["aoi_path", "structure_path", "dem_path", "refraction"],
+        ["do_valuation", "valuation_function", "a_coef", "b_coef",
+         "max_valuation_radius"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.VectorInput(
+            id="aoi_path",
+            name=gettext("area of interest"),
+            about=gettext(
+                "A map of areas over which to aggregate and summarize the final results."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[],
+            projected=None
+        ),
+        spec.VectorInput(
+            id="structure_path",
+            name=gettext("features impacting scenic quality"),
+            about=gettext(
+                "Map of locations of objects that negatively affect scenic quality. This"
+                " must have the same projection as the DEM."
+            ),
+            geometry_types={"POINT"},
+            fields=[
+                spec.NumberInput(
+                    id="radius",
+                    about=gettext(
+                        "Maximum length of the line of sight originating from a"
+                        " viewpoint. The value can either be positive (preferred) or"
+                        " negative (kept for backwards compatibility), but is converted"
+                        " to a positive number. If this field is not provided, the model"
+                        " will include all pixels in the DEM in the visibility analysis."
+                        " RADIUS preferred, but may also be called RADIUS2 for backwards"
+                        " compatibility."
+                    ),
+                    required=False,
+                    units=u.meter
+                ),
+                spec.NumberInput(
+                    id="weight",
+                    about=(
+                        "Viewshed importance coefficient. If this field is provided, the"
+                        " values are used to weight each feature's viewshed impacts. If"
+                        " not provided, all viewsheds are equally weighted with a weight"
+                        " of 1."
+                    ),
+                    required=False,
+                    units=u.none
+                ),
+                spec.NumberInput(
+                    id="height",
+                    about=gettext(
+                        "Viewpoint height, the elevation above the ground of each"
+                        " feature. If this field is not provided, defaults to 0."
+                    ),
+                    required=False,
+                    units=u.meter
+                )
+            ],
+            projected=None
+        ),
+        spec.SingleBandRasterInput(
+            id="dem_path",
+            name=gettext("digital elevation model"),
+            about=gettext("Map of elevation above sea level."),
+            data_type=float,
+            units=u.meter,
+            projected=True,
+            projection_units=u.meter
+        ),
+        spec.RatioInput(
+            id="refraction",
+            name=gettext("refractivity coefficient"),
+            about=gettext(
+                "The refractivity coefficient corrects for the curvature of the earth and"
+                " refraction of visible light in air."
+            ),
+            units=None
+        ),
+        spec.BooleanInput(
+            id="do_valuation",
+            name=gettext("run valuation"),
+            about=gettext("Run the valuation model."),
+            required=False
+        ),
+        spec.OptionStringInput(
+            id="valuation_function",
+            name=gettext("Valuation function"),
+            about=(
+                "Valuation function used to calculate the visual impact of each feature,"
+                " given distance from the feature 'x' and parameters 'a' and 'b'."
+            ),
+            required="do_valuation",
+            allowed="do_valuation",
+            options={
+                "linear": {"display_name": "linear: a + bx"},
+                "logarithmic": {"display_name": "logarithmic: a + b log(x+1)"},
+                "exponential": {"display_name": "exponential: a * e^(-bx)"},
             }
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "aoi_reprojected.shp": {
-                    "about": gettext("This vector is the AOI, reprojected to the DEM’s spatial reference and projection."),
-                    "geometries": spec.POLYGONS,
-                    "fields": {}
-                },
-                "dem_clipped.tif": {
-                    "about": gettext("This raster layer is a version of the DEM that has been clipped and masked to the AOI and tiled. This is the DEM file that is used for the viewshed analysis."),
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                "structures_clipped.shp": {
-                    "about": gettext(
-                        "Copy of the structures vector, clipped to the AOI extent."),
-                    "geometries": spec.POINT,
-                    "fields": {}
-                },
-                "structures_reprojected.shp": {
-                    "about": gettext("Copy of the structures vector, reprojected to the DEM’s spatial reference and projection."),
-                    "geometries": spec.POINT,
-                    "fields": {}
-                },
-                "value_[FEATURE_ID].tif": {
-                    "about": gettext("The calculated value of the viewshed amenity/disamenity given the distances of pixels from the structure's viewpoint, the weight of the viewpoint, the valuation function, and the a and b coefficients. The viewshed’s value is only evaluated for visible pixels."),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "visibility_[FEATURE_ID].tif": {
-                    "about": gettext("Map of visibility for a given structure's viewpoint. This raster has pixel values of 0 (not visible), 1 (visible), or nodata (where the DEM is nodata)."),
-                    "bands": {1: {"type": "integer"}}
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+        ),
+        spec.NumberInput(
+            id="a_coef",
+            name=gettext("coefficient a"),
+            about="First coefficient ('a') used by the valuation function",
+            required="do_valuation",
+            allowed="do_valuation",
+            units=u.none
+        ),
+        spec.NumberInput(
+            id="b_coef",
+            name=gettext("coefficient b"),
+            about="Second coefficient ('b') used by the valuation function",
+            required="do_valuation",
+            allowed="do_valuation",
+            units=u.none
+        ),
+        spec.NumberInput(
+            id="max_valuation_radius",
+            name=gettext("maximum valuation radius"),
+            about=gettext(
+                "Valuation will only be computed for cells that fall within this radius"
+                " of a feature impacting scenic quality."
+            ),
+            required=False,
+            allowed="do_valuation",
+            units=u.meter,
+            expression="value > 0"
+        )
+    ],
+    outputs=[
+        spec.DirectoryOutput(
+            id="output",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="vshed_qual.tif",
+                    about=gettext("Map of visual quality classified into quartiles."),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="vshed.tif",
+                    about=gettext(
+                        "This raster layer contains the weighted sum of all visibility"
+                        " rasters. If no weight column is provided in the structures"
+                        " point vector, this raster will represent a count of the number"
+                        " of structure points that are visible from each pixel."
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="vshed_value.tif",
+                    about=gettext(
+                        "This raster layer contains the weighted sum of the valuation"
+                        " rasters created for each point."
+                    ),
+                    data_type=float,
+                    units=u.none
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="intermediate",
+            about=None,
+            contents=[
+                spec.VectorOutput(
+                    id="aoi_reprojected.shp",
+                    about=gettext(
+                        "This vector is the AOI, reprojected to the DEM’s spatial"
+                        " reference and projection."
+                    ),
+                    geometry_types={"POLYGON", "MULTIPOLYGON"},
+                    fields=[]
+                ),
+                spec.SingleBandRasterOutput(
+                    id="dem_clipped.tif",
+                    about=gettext(
+                        "This raster layer is a version of the DEM that has been clipped"
+                        " and masked to the AOI and tiled. This is the DEM file that is"
+                        " used for the viewshed analysis."
+                    ),
+                    data_type=float,
+                    units=u.meter
+                ),
+                spec.VectorOutput(
+                    id="structures_clipped.shp",
+                    about=gettext(
+                        "Copy of the structures vector, clipped to the AOI extent."
+                    ),
+                    geometry_types={"POINT"},
+                    fields=[]
+                ),
+                spec.VectorOutput(
+                    id="structures_reprojected.shp",
+                    about=gettext(
+                        "Copy of the structures vector, reprojected to the DEM’s spatial"
+                        " reference and projection."
+                    ),
+                    geometry_types={"POINT"},
+                    fields=[]
+                ),
+                spec.SingleBandRasterOutput(
+                    id="value_[FEATURE_ID].tif",
+                    about=(
+                        "The calculated value of the viewshed amenity/disamenity given"
+                        " the distances of pixels from the structure's viewpoint, the"
+                        " weight of the viewpoint, the valuation function, and the a and"
+                        " b coefficients. The viewshed’s value is only evaluated for"
+                        " visible pixels."
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="visibility_[FEATURE_ID].tif",
+                    about=(
+                        "Map of visibility for a given structure's viewpoint. This raster"
+                        " has pixel values of 0 (not visible), 1 (visible), or nodata"
+                        " (where the DEM is nodata)."
+                    ),
+                    data_type=int,
+                    units=None
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ],
+)
 
 
 def execute(args):

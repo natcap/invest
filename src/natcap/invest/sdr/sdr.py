@@ -27,441 +27,624 @@ from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "sdr",
-    "model_title": gettext("Sediment Delivery Ratio"),
-    "userguide": "sdr.html",
-    "aliases": (),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['dem_path', 'erosivity_path', 'erodibility_path'],
-            ['lulc_path', 'biophysical_table_path'],
-            ['watersheds_path', 'drainage_path'],
-            ['flow_dir_algorithm', 'threshold_flow_accumulation',
-             'k_param', 'sdr_max', 'ic_0_param', 'l_max']
-        ]
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
-                         "lulc_path", "drainage_path", "watersheds_path", ],
-        "different_projections_ok": False,
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "dem_path": {
-            **spec.DEM,
-            "projected": True
-        },
-        "erosivity_path": {
-            "type": "raster",
-            "bands": {1: {
-                "type": "number",
-                "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)}},
-            "projected": True,
-            "about": gettext(
-                "Map of rainfall erosivity, reflecting the intensity and "
-                "duration of rainfall in the area of interest."),
-            "name": gettext("erosivity")
-        },
-        "erodibility_path": {
-            "type": "raster",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)}},
-            "projected": True,
-            "about": gettext(
-                "Map of soil erodibility, the susceptibility of soil "
-                "particles to detachment and transport by rainfall and "
-                "runoff."),
-            "name": gettext("soil erodibility")
-        },
-        "lulc_path": {
-            **spec.LULC,
-            "projected": True,
-            "about": spec.LULC['about'] + " " + gettext(
-                "All values in this raster must "
-                "have corresponding entries in the Biophysical Table.")
-        },
-        "watersheds_path": {
-            "type": "vector",
-            "geometries": spec.POLYGONS,
-            "projected": True,
-            "fields": {},
-            "about": gettext(
-                "Map of the boundaries of the watershed(s) over which to "
-                "aggregate results. Each watershed should contribute to a "
-                "point of interest where water quality will be analyzed."),
-            "name": gettext("Watersheds")
-        },
-        "biophysical_table_path": {
-            "type": "csv",
-            "index_col": "lucode",
-            "columns": {
-                "lucode": spec.LULC_TABLE_COLUMN,
-                "usle_c": {
-                    "type": "ratio",
-                    "about": gettext("Cover-management factor for the USLE")},
-                "usle_p": {
-                    "type": "ratio",
-                    "about": gettext("Support practice factor for the USLE")}
-            },
-            "about": gettext(
-                "A table mapping each LULC code to biophysical properties of "
-                "that LULC class. All values in the LULC raster must have "
-                "corresponding entries in this table."),
-            "name": gettext("biophysical table")
-        },
-        "threshold_flow_accumulation": spec.THRESHOLD_FLOW_ACCUMULATION,
-        "k_param": {
-            "type": "number",
-            "units": u.none,
-            "about": gettext("Borselli k parameter."),
-            "name": gettext("Borselli k parameter")
-        },
-        "sdr_max": {
-            "type": "ratio",
-            "about": gettext("The maximum SDR value that a pixel can have."),
-            "name": gettext("maximum SDR value")
-        },
-        "ic_0_param": {
-            "type": "number",
-            "units": u.none,
-            "about": gettext("Borselli IC0 parameter."),
-            "name": gettext("Borselli IC0 parameter")
-        },
-        "l_max": {
-            "type": "number",
-            "expression": "value > 0",
-            "units": u.none,
-            "about": gettext(
-                "The maximum allowed value of the slope length parameter (L) "
-                "in the LS factor."),
-            "name": gettext("maximum l value"),
-        },
-        "drainage_path": {
-            "type": "raster",
-            "bands": {1: {"type": "integer"}},
-            "required": False,
-            "about": gettext(
-                "Map of locations of artificial drainages that drain to the "
-                "watershed. Pixels with 1 are drainages and are treated like "
-                "streams. Pixels with 0 are not drainages."),
-            "name": gettext("drainages")
-        },
-        **spec.FLOW_DIR_ALGORITHM
-    },
-    "outputs": {
-        "avoided_erosion.tif": {
-            "about": "The contribution of vegetation to keeping soil from eroding from each pixel. (Eq. (82))",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.hectare
-            }}
-        },
-        "avoided_export.tif": {
-            "about": "The contribution of vegetation to keeping erosion from entering a stream. This combines local/on-pixel sediment retention with trapping of erosion from upslope of the pixel. (Eq. (83))",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.hectare
-            }}
-        },
-        "rkls.tif": {
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.hectare
-            }},
-            "about": "Total potential soil loss per pixel in the original land cover from the RKLS equation. Equivalent to the soil loss for bare soil. (Eq. (68), without applying the C or P factors)."
-        },
-        "sed_deposition.tif": {
-            "about": "The total amount of sediment deposited on the pixel from upslope sources as a result of trapping. (Eq. (80))",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.hectare
-            }}
-        },
-        "sed_export.tif": {
-            "about": "The total amount of sediment exported from each pixel that reaches the stream. (Eq. (76))",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.hectare
-            }}
-        },
-        "stream.tif": spec.STREAM,
-        "stream_and_drainage.tif": {
-            "created_if": "drainage_path",
-            "about": "This raster is the union of that layer with the calculated stream layer(Eq. (85)). Values of 1 represent streams, values of 0 are non-stream pixels.",
-            "bands": {1: {"type": "integer"}}
-        },
-        "usle.tif": {
-            "about": "Total potential soil loss per hectare in the original land cover calculated from the USLE equation. (Eq. (68))",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.hectare
-            }}
-        },
-        "watershed_results_sdr.shp": {
-            "about": "Table containing biophysical values for each watershed",
-            "geometries": spec.POLYGONS,
-            "fields": {
-                "sed_export": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": "Total amount of sediment exported to the stream per watershed. (Eq. (77) with sum calculated over the watershed area)"
-                },
-                "usle_tot": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": "Total amount of potential soil loss in each watershed calculated by the USLE equation. (Sum of USLE from (68) over the watershed area)"
-                },
-                "avoid_exp": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": "The sum of avoided export in the watershed."
-                },
-                "avoid_eros": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": "The sum of avoided local erosion in the watershed"
-                },
-                "sed_dep": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": "Total amount of sediment deposited on the landscape in each watershed, which does not enter the stream."
-                }
+MODEL_SPEC = spec.ModelSpec(
+    model_id="sdr",
+    model_title=gettext("Sediment Delivery Ratio"),
+    userguide="sdr.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=False,
+    aliases=(),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["dem_path", "erosivity_path", "erodibility_path"],
+        ["lulc_path", "biophysical_table_path"],
+        ["watersheds_path", "drainage_path"],
+        ["flow_dir_algorithm", "threshold_flow_accumulation", "k_param",
+         "sdr_max", "ic_0_param", "l_max"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.SingleBandRasterInput(
+            id="dem_path",
+            name=gettext("digital elevation model"),
+            about=gettext("Map of elevation above sea level."),
+            data_type=float,
+            units=u.meter,
+            projected=True
+        ),
+        spec.SingleBandRasterInput(
+            id="erosivity_path",
+            name=gettext("erosivity"),
+            about=gettext(
+                "Map of rainfall erosivity, reflecting the intensity and duration of"
+                " rainfall in the area of interest."
+            ),
+            data_type=float,
+            units=u.megajoule * u.millimeter / (u.hectare * u.hour * u.year),
+            projected=True
+        ),
+        spec.SingleBandRasterInput(
+            id="erodibility_path",
+            name=gettext("soil erodibility"),
+            about=gettext(
+                "Map of soil erodibility, the susceptibility of soil particles to"
+                " detachment and transport by rainfall and runoff."
+            ),
+            data_type=float,
+            units=u.metric_ton * u.hectare * u.hour/ (u.hectare * u.megajoule * u.millimeter),
+            projected=True
+        ),
+        spec.SingleBandRasterInput(
+            id="lulc_path",
+            name=gettext("land use/land cover"),
+            about=gettext(
+                "Map of land use/land cover codes. Each land use/land cover type must be"
+                " assigned a unique integer code. All values in this raster must have"
+                " corresponding entries in the Biophysical Table."
+            ),
+            data_type=int,
+            units=None,
+            projected=True
+        ),
+        spec.VectorInput(
+            id="watersheds_path",
+            name=gettext("Watersheds"),
+            about=gettext(
+                "Map of the boundaries of the watershed(s) over which to aggregate"
+                " results. Each watershed should contribute to a point of interest where"
+                " water quality will be analyzed."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[],
+            projected=True
+        ),
+        spec.CSVInput(
+            id="biophysical_table_path",
+            name=gettext("biophysical table"),
+            about=gettext(
+                "A table mapping each LULC code to biophysical properties of that LULC"
+                " class. All values in the LULC raster must have corresponding entries in"
+                " this table."
+            ),
+            columns=[
+                spec.IntegerInput(
+                    id="lucode",
+                    about=gettext(
+                        "LULC codes from the LULC raster. Each code must be a unique"
+                        " integer."
+                    )
+                ),
+                spec.RatioInput(
+                    id="usle_c",
+                    about=gettext("Cover-management factor for the USLE"),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="usle_p",
+                    about=gettext("Support practice factor for the USLE"),
+                    units=None
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.NumberInput(
+            id="threshold_flow_accumulation",
+            name=gettext("threshold flow accumulation"),
+            about=gettext(
+                "The number of upslope pixels that must flow into a pixel before it is"
+                " classified as a stream."
+            ),
+            units=u.pixel,
+            expression="value >= 0"
+        ),
+        spec.NumberInput(
+            id="k_param",
+            name=gettext("Borselli k parameter"),
+            about=gettext("Borselli k parameter."),
+            units=u.none
+        ),
+        spec.RatioInput(
+            id="sdr_max",
+            name=gettext("maximum SDR value"),
+            about=gettext("The maximum SDR value that a pixel can have."),
+            units=None
+        ),
+        spec.NumberInput(
+            id="ic_0_param",
+            name=gettext("Borselli IC0 parameter"),
+            about=gettext("Borselli IC0 parameter."),
+            units=u.none
+        ),
+        spec.NumberInput(
+            id="l_max",
+            name=gettext("maximum l value"),
+            about=gettext(
+                "The maximum allowed value of the slope length parameter (L) in the LS"
+                " factor."
+            ),
+            units=u.none,
+            expression="value > 0"
+        ),
+        spec.SingleBandRasterInput(
+            id="drainage_path",
+            name=gettext("drainages"),
+            about=gettext(
+                "Map of locations of artificial drainages that drain to the watershed."
+                " Pixels with 1 are drainages and are treated like streams. Pixels with 0"
+                " are not drainages."
+            ),
+            required=False,
+            data_type=int,
+            units=None,
+            projected=None
+        ),
+        spec.OptionStringInput(
+            id="flow_dir_algorithm",
+            name=gettext("flow direction algorithm"),
+            about=gettext("Flow direction algorithm to use."),
+            options={
+                "D8": {"display_name": "D8", "description": "D8 flow direction"},
+                "MFD": {"display_name": "MFD", "description": "Multiple flow direction"},
             }
-        },
-        "intermediate_outputs": {
-            "type": "directory",
-            "contents": {
-                "cp.tif": {
-                    "about": gettext(
-                        "CP factor derived by mapping usle_c and usle_p from "
-                        "the biophysical table to the LULC raster."),
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "d_dn.tif": {
-                    "about": gettext(
-                        "Downslope factor of the index of connectivity (Eq. (74))"),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "d_up.tif": {
-                    "about": gettext(
-                        "Upslope factor of the index of connectivity (Eq. (73))"),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "e_prime.tif": {
-                    "about": gettext(
-                        "Sediment downslope deposition, the amount of sediment "
-                        "from a given pixel that does not reach a stream (Eq. (78))"),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.metric_ton/(u.hectare*u.year)
-                    }}
-                },
-                "f.tif": {
-                    "about": gettext(
-                        "Map of sediment flux for sediment that does not "
-                        "reach the stream (Eq. (81))"),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.metric_ton/(u.hectare*u.year)
-                    }}
-                },
-                "flow_accumulation.tif": spec.FLOW_ACCUMULATION,
-                "flow_direction.tif": spec.FLOW_DIRECTION,
-                "ic.tif": {
-                    "about": gettext("Index of connectivity (Eq. (70))"),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.none
-                    }}
-                },
-                "ls.tif": {
-                    "about": gettext("LS factor for USLE (Eq. (69))"),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.none
-                    }}
-                },
-                "pit_filled_dem.tif": spec.FILLED_DEM,
-                "s_accumulation.tif": {
-                    "about": gettext(
-                        "Flow accumulation weighted by the thresholded slope. "
-                        "Used in calculating s_bar."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.none
-                    }}
-                },
-                "s_bar.tif": {
-                    "about": gettext(
-                        "Mean thresholded slope gradient of the upslope "
-                        "contributing area (in eq. (73))"),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.none
-                    }}
-                },
-                "sdr_factor.tif": {
-                    "about": gettext("Sediment delivery ratio (Eq. (75))"),
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "slope.tif": spec.SLOPE,
-                "slope_threshold.tif": {
-                    "about": gettext(
-                        "Percent slope, thresholded to be no less than 0.005 "
-                        "and no greater than 1 (eq. (71)). 1 is equivalent to "
-                        "a 45 degree slope."),
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "w_accumulation.tif": {
-                    "about": gettext(
-                        "Flow accumulation weighted by the thresholded "
-                        "cover-management factor. Used in calculating w_bar."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.none
-                    }}
-                },
-                "w_bar.tif": {
-                    "about": gettext(
-                        "Mean thresholded cover-management factor for upslope "
-                        "contributing area (in eq. (73))"),
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "w.tif": {
-                    "about": gettext(
-                        "Cover-management factor derived by mapping usle_c "
-                        "from the biophysical table to the LULC raster."),
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "w_threshold.tif": {
-                    "about": gettext(
-                        "Cover-management factor thresholded to be no less "
-                        "than 0.001 (eq. (72))"),
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "weighted_avg_aspect.tif": {
-                    "about": gettext(
-                        "Average aspect weighted by flow direction (in eq. (69))"),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "what_drains_to_stream.tif": {
-                    "about": gettext(
-                        "Map of which pixels drain to a stream. A value of "
-                        "1 means that at least some of the runoff from that "
-                        "pixel drains to a stream in stream.tif. A value of 0 "
-                        "means that it does not drain at all to any stream "
-                        "in stream.tif."),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "ws_inverse.tif": {
-                    "about": gettext(
-                        "Inverse of the thresholded cover-management factor "
-                        "times the thresholded slope (in eq. (74))"),
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "aligned_dem.tif": {
-                    "about": gettext(
-                        "Copy of the input DEM, clipped to the extent "
-                        "of the other raster inputs."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.meter
-                    }}
-                },
-                "aligned_drainage.tif": {
-                    "about": gettext(
-                        "Copy of the input drainage map, clipped to "
-                        "the extent of the other raster inputs and "
-                        "aligned to the DEM."),
-                    "bands": {1: {"type": "integer"}},
-                },
-                "aligned_erodibility.tif": {
-                    "about": gettext(
-                        "Copy of the input erodibility map, clipped to "
-                        "the extent of the other raster inputs and "
-                        "aligned to the DEM."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)
-                    }}
-                },
-                "aligned_erosivity.tif": {
-                    "about": gettext(
-                        "Copy of the input erosivity map, clipped to "
-                        "the extent of the other raster inputs and "
-                        "aligned to the DEM."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)
-                    }}
-                },
-                "aligned_lulc.tif": {
-                    "about": gettext(
-                        "Copy of the input Land Use Land Cover map, clipped to "
-                        "the extent of the other raster inputs and "
-                        "aligned to the DEM."),
-                    "bands": {1: {"type": "integer"}},
-                },
-                "mask.tif": {
-                    "about": gettext(
-                        "A raster aligned to the DEM and clipped to the "
-                        "extent of the other raster inputs. Pixel values "
-                        "indicate where a nodata value exists in the stack "
-                        "of aligned rasters (pixel value of 0), or if all "
-                        "values in the stack of rasters at this pixel "
-                        "location are valid."),
-                    "bands": {1: {"type": "integer"}},
-                },
-                "masked_dem.tif": {
-                    "about": gettext(
+        )
+    ],
+    outputs=[
+        spec.SingleBandRasterOutput(
+            id="avoided_erosion.tif",
+            about=gettext(
+                "The contribution of vegetation to keeping soil from eroding from each"
+                " pixel. (Eq. (82))"
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="avoided_export.tif",
+            about=gettext(
+                "The contribution of vegetation to keeping erosion from entering a"
+                " stream. This combines local/on-pixel sediment retention with trapping"
+                " of erosion from upslope of the pixel. (Eq. (83))"
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="rkls.tif",
+            about=gettext(
+                "Total potential soil loss per pixel in the original land cover from the"
+                " RKLS equation. Equivalent to the soil loss for bare soil. (Eq. (68),"
+                " without applying the C or P factors)."
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="sed_deposition.tif",
+            about=gettext(
+                "The total amount of sediment deposited on the pixel from upslope sources"
+                " as a result of trapping. (Eq. (80))"
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="sed_export.tif",
+            about=gettext(
+                "The total amount of sediment exported from each pixel that reaches the"
+                " stream. (Eq. (76))"
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="stream.tif",
+            about=gettext(
+                "Stream network, created using flow direction and flow accumulation"
+                " derived from the DEM and Threshold Flow Accumulation. Values of 1"
+                " represent streams, values of 0 are non-stream pixels."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="stream_and_drainage.tif",
+            about=gettext(
+                "This raster is the union of that layer with the calculated stream"
+                " layer(Eq. (85)). Values of 1 represent streams, values of 0 are"
+                " non-stream pixels."
+            ),
+            created_if="drainage_path",
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="usle.tif",
+            about=gettext(
+                "Total potential soil loss per hectare in the original land cover"
+                " calculated from the USLE equation. (Eq. (68))"
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.VectorOutput(
+            id="watershed_results_sdr.shp",
+            about=gettext("Table containing biophysical values for each watershed"),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="sed_export",
+                    about=gettext(
+                        "Total amount of sediment exported to the stream per watershed."
+                        " (Eq. (77) with sum calculated over the watershed area)"
+                    ),
+                    units=u.metric_ton
+                ),
+                spec.NumberOutput(
+                    id="usle_tot",
+                    about=gettext(
+                        "Total amount of potential soil loss in each watershed calculated"
+                        " by the USLE equation. (Sum of USLE from (68) over the watershed"
+                        " area)"
+                    ),
+                    units=u.metric_ton
+                ),
+                spec.NumberOutput(
+                    id="avoid_exp",
+                    about=gettext("The sum of avoided export in the watershed."),
+                    units=u.metric_ton
+                ),
+                spec.NumberOutput(
+                    id="avoid_eros",
+                    about=gettext("The sum of avoided local erosion in the watershed"),
+                    units=u.metric_ton
+                ),
+                spec.NumberOutput(
+                    id="sed_dep",
+                    about=gettext(
+                        "Total amount of sediment deposited on the landscape in each"
+                        " watershed, which does not enter the stream."
+                    ),
+                    units=u.metric_ton
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="intermediate_outputs",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="cp.tif",
+                    about=gettext(
+                        "CP factor derived by mapping usle_c and usle_p from the"
+                        " biophysical table to the LULC raster."
+                    ),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="d_dn.tif",
+                    about=gettext(
+                        "Downslope factor of the index of connectivity (Eq. (74))"
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="d_up.tif",
+                    about=gettext(
+                        "Upslope factor of the index of connectivity (Eq. (73))"
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="e_prime.tif",
+                    about=gettext(
+                        "Sediment downslope deposition, the amount of sediment from a"
+                        " given pixel that does not reach a stream (Eq. (78))"
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare / u.year
+                ),
+                spec.SingleBandRasterOutput(
+                    id="f.tif",
+                    about=gettext(
+                        "Map of sediment flux for sediment that does not reach the stream"
+                        " (Eq. (81))"
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare / u.year
+                ),
+                spec.SingleBandRasterOutput(
+                    id="flow_accumulation.tif",
+                    about=gettext("Map of flow accumulation"),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="flow_direction.tif",
+                    about=gettext(
+                        "MFD flow direction. Note: the pixel values should not be"
+                        " interpreted directly. Each 32-bit number consists of 8 4-bit"
+                        " numbers. Each 4-bit number represents the proportion of flow"
+                        " into one of the eight neighboring pixels."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="ic.tif",
+                    about=gettext("Index of connectivity (Eq. (70))"),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="ls.tif",
+                    about=gettext("LS factor for USLE (Eq. (69))"),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="pit_filled_dem.tif",
+                    about=gettext("Map of elevation after any pits are filled"),
+                    data_type=float,
+                    units=u.meter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="s_accumulation.tif",
+                    about=gettext(
+                        "Flow accumulation weighted by the thresholded slope. Used in"
+                        " calculating s_bar."
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="s_bar.tif",
+                    about=gettext(
+                        "Mean thresholded slope gradient of the upslope contributing area"
+                        " (in eq. (73))"
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="sdr_factor.tif",
+                    about=gettext("Sediment delivery ratio (Eq. (75))"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="slope.tif",
+                    about=gettext(
+                        "Percent slope, calculated from the pit-filled DEM. 100 is"
+                        " equivalent to a 45 degree slope."
+                    ),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="slope_threshold.tif",
+                    about=gettext(
+                        "Percent slope, thresholded to be no less than 0.005 and no"
+                        " greater than 1 (eq. (71)). 1 is equivalent to a 45 degree"
+                        " slope."
+                    ),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="w_accumulation.tif",
+                    about=gettext(
+                        "Flow accumulation weighted by the thresholded cover-management"
+                        " factor. Used in calculating w_bar."
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="w_bar.tif",
+                    about=gettext(
+                        "Mean thresholded cover-management factor for upslope"
+                        " contributing area (in eq. (73))"
+                    ),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="w.tif",
+                    about=gettext(
+                        "Cover-management factor derived by mapping usle_c from the"
+                        " biophysical table to the LULC raster."
+                    ),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="w_threshold.tif",
+                    about=gettext(
+                        "Cover-management factor thresholded to be no less than 0.001"
+                        " (eq. (72))"
+                    ),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="weighted_avg_aspect.tif",
+                    about=gettext(
+                        "Average aspect weighted by flow direction (in eq. (69))"
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="what_drains_to_stream.tif",
+                    about=gettext(
+                        "Map of which pixels drain to a stream. A value of 1 means that"
+                        " at least some of the runoff from that pixel drains to a stream"
+                        " in stream.tif. A value of 0 means that it does not drain at all"
+                        " to any stream in stream.tif."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="ws_inverse.tif",
+                    about=gettext(
+                        "Inverse of the thresholded cover-management factor times the"
+                        " thresholded slope (in eq. (74))"
+                    ),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="aligned_dem.tif",
+                    about=gettext(
+                        "Copy of the input DEM, clipped to the extent of the other raster"
+                        " inputs."
+                    ),
+                    data_type=float,
+                    units=u.meter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="aligned_drainage.tif",
+                    about=gettext(
+                        "Copy of the input drainage map, clipped to the extent of the"
+                        " other raster inputs and aligned to the DEM."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="aligned_erodibility.tif",
+                    about=gettext(
+                        "Copy of the input erodibility map, clipped to the extent of the"
+                        " other raster inputs and aligned to the DEM."
+                    ),
+                    data_type=float,
+                    units=u.metric_ton * u.hectare * u.hour / (u.hectare * u.megajoule * u.millimeter)
+                ),
+                spec.SingleBandRasterOutput(
+                    id="aligned_erosivity.tif",
+                    about=gettext(
+                        "Copy of the input erosivity map, clipped to the extent of the"
+                        " other raster inputs and aligned to the DEM."
+                    ),
+                    data_type=float,
+                    units=u.megajoule * u.millimeter / (u.hectare * u.hour * u.year)
+                ),
+                spec.SingleBandRasterOutput(
+                    id="aligned_lulc.tif",
+                    about=gettext(
+                        "Copy of the input Land Use Land Cover map, clipped to the extent"
+                        " of the other raster inputs and aligned to the DEM."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="mask.tif",
+                    about=gettext(
+                        "A raster aligned to the DEM and clipped to the extent of the"
+                        " other raster inputs. Pixel values indicate where a nodata value"
+                        " exists in the stack of aligned rasters (pixel value of 0), or"
+                        " if all values in the stack of rasters at this pixel location"
+                        " are valid."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="masked_dem.tif",
+                    about=gettext(
                         "A copy of the aligned DEM, masked using the mask raster."
                     ),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.meter}},
-                },
-                "masked_drainage.tif": {
-                    "about": gettext(
-                        "A copy of the aligned drainage map, masked using the "
-                        "mask raster."
+                    data_type=float,
+                    units=u.meter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="masked_drainage.tif",
+                    about=gettext(
+                        "A copy of the aligned drainage map, masked using the mask"
+                        " raster."
                     ),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "masked_erodibility.tif": {
-                    "about": gettext(
-                        "A copy of the aligned erodibility map, masked using "
-                        "the mask raster."
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="masked_erodibility.tif",
+                    about=gettext(
+                        "A copy of the aligned erodibility map, masked using the mask"
+                        " raster."
                     ),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)
-                    }},
-                },
-                "masked_erosivity.tif": {
-                    "about": gettext(
-                        "A copy of the aligned erosivity map, masked using "
-                        "the mask raster."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)
-                    }},
-                },
-                "masked_lulc.tif": {
-                    "about": gettext(
-                        "A copy of the aligned Land Use Land Cover map, "
-                        "masked using the mask raster."),
-                    "bands": {1: {"type": "integer"}},
-                }
-            },
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+                    data_type=float,
+                    units=u.metric_ton * u.hectare * u.hour / (u.hectare * u.megajoule * u.millimeter)
+                ),
+                spec.SingleBandRasterOutput(
+                    id="masked_erosivity.tif",
+                    about=gettext(
+                        "A copy of the aligned erosivity map, masked using the mask"
+                        " raster."
+                    ),
+                    data_type=float,
+                    units=u.megajoule * u.millimeter / (u.hectare * u.hour * u.year)
+                ),
+                spec.SingleBandRasterOutput(
+                    id="masked_lulc.tif",
+                    about=gettext(
+                        "A copy of the aligned Land Use Land Cover map, masked using the"
+                        " mask raster."
+                    ),
+                    data_type=int,
+                    units=None
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ],
+)
 
 _OUTPUT_BASE_FILES = {
     'rkls_path': 'rkls.tif',

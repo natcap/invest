@@ -16,269 +16,363 @@ LOGGER = logging.getLogger(__name__)
 
 INVALID_BAND_INDEX_MSG = gettext('Must be between 1 and {maximum}')
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "routedem",
-    "model_title": gettext("RouteDEM"),
-    "userguide": "routedem.html",
-    "aliases": (),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['dem_path', 'dem_band_index'],
-            ['calculate_slope'],
-            ['algorithm'],
-            ['calculate_flow_direction'],
-            ['calculate_flow_accumulation'],
-            ['calculate_stream_threshold', 'threshold_flow_accumulation',
-             'calculate_downslope_distance', 'calculate_stream_order',
-             'calculate_subwatersheds']
-        ]
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "dem_path": spec.DEM,
-        "dem_band_index": {
-            "type": "number",
-            "expression": "value >= 1",
-            "units": u.none,
-            "required": False,
-            "about": gettext(
-                "Index of the raster band to use, for multi-band rasters."),
-            "name": gettext("band index")
-        },
-        "algorithm": {
-            "type": "option_string",
-            "options": {
+MODEL_SPEC = spec.ModelSpec(
+    model_id="routedem",
+    model_title=gettext("RouteDEM"),
+    userguide="routedem.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=False,
+    aliases=(),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["dem_path", "dem_band_index"],
+        ["calculate_slope"],
+        ["algorithm"],
+        ["calculate_flow_direction"],
+        ["calculate_flow_accumulation"],
+        ["calculate_stream_threshold", "threshold_flow_accumulation",
+         "calculate_downslope_distance", "calculate_stream_order",
+         "calculate_subwatersheds"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.SingleBandRasterInput(
+            id="dem_path",
+            name=gettext("digital elevation model"),
+            about=gettext("Map of elevation above sea level."),
+            data_type=float,
+            units=u.meter,
+            projected=None
+        ),
+        spec.NumberInput(
+            id="dem_band_index",
+            name=gettext("band index"),
+            about=gettext("Index of the raster band to use, for multi-band rasters."),
+            required=False,
+            units=u.none,
+            expression="value >= 1"
+        ),
+        spec.OptionStringInput(
+            id="algorithm",
+            name=gettext("routing algorithm"),
+            about=gettext("The routing algorithm to use."),
+            options={
                 "D8": {
                     "display_name": "D8",
-                    "description": gettext(
-                        "All water on a pixel flows into the most downhill of "
-                        "its 8 surrounding pixels")},
+                    "description": (
+                        "All water on a pixel flows into the most downhill of its 8"
+                        " surrounding pixels"
+                    ),
+                },
                 "MFD": {
                     "display_name": "MFD",
-                    "description": gettext(
-                        "Flow off a pixel is modeled fractionally so that "
-                        "water is split among multiple downslope pixels")}
-            },
-            "about": gettext("The routing algorithm to use."),
-            "name": gettext("routing algorithm")
-        },
-        "calculate_flow_direction": {
-            "type": "boolean",
-            "required": False,
-            "about": gettext("Calculate flow direction from the provided DEM."),
-            "name": gettext("calculate flow direction")
-        },
-        "calculate_flow_accumulation": {
-            "type": "boolean",
-            "required": False,
-            "allowed": "calculate_flow_direction",
-            "about": gettext(
-                "Calculate flow accumulation from the flow direction output."),
-            "name": gettext("calculate flow accumulation")
-        },
-        "calculate_stream_threshold": {
-            "type": "boolean",
-            "required": False,
-            "allowed": "calculate_flow_accumulation",
-            "about": gettext(
-                "Calculate streams from the flow accumulation output. "),
-            "name": gettext("calculate streams")
-        },
-        "threshold_flow_accumulation": {
-            **spec.THRESHOLD_FLOW_ACCUMULATION,
-            "required": "calculate_stream_threshold",
-            "allowed": "calculate_stream_threshold",
-            "about": (
-                spec.THRESHOLD_FLOW_ACCUMULATION['about'] + " " +
-                gettext("Required if Calculate Streams is selected."))
-        },
-        "calculate_downslope_distance": {
-            "type": "boolean",
-            "required": False,
-            "allowed": "calculate_stream_threshold",
-            "about": gettext(
-                "Calculate flow distance from each pixel to a stream as "
-                "defined in the Calculate Streams output."),
-            "name": gettext("calculate distance to stream")
-        },
-        "calculate_slope": {
-            "type": "boolean",
-            "required": False,
-            "about": gettext("Calculate percent slope from the provided DEM."),
-            "name": gettext("calculate slope")
-        },
-        "calculate_stream_order": {
-            "type": "boolean",
-            "required": False,
-            "allowed": "calculate_stream_threshold and algorithm == 'D8'",
-            "about": gettext("Calculate the Strahler Stream order."),
-            "name": gettext("calculate strahler stream orders (D8 only)"),
-        },
-        "calculate_subwatersheds": {
-            "type": "boolean",
-            "required": False,
-            "allowed": "calculate_stream_order and algorithm == 'D8'",
-            "about": gettext("Determine subwatersheds from the stream order."),
-            "name": gettext("calculate subwatersheds (D8 only)"),
-        },
-    },
-    "outputs": {
-        "taskgraph_cache": spec.TASKGRAPH_DIR,
-        "filled.tif": spec.FILLED_DEM,
-        "flow_accumulation.tif": spec.FLOW_ACCUMULATION,
-        "flow_direction.tif": spec.FLOW_DIRECTION,
-        "slope.tif": spec.SLOPE,
-        "stream_mask.tif": spec.STREAM,
-        "strahler_stream_order.gpkg": {
-            "about": (
-                "A vector of line segments indicating the Strahler stream "
-                "order and other properties of each stream segment."),
-            "geometries": spec.LINESTRING,
-            "fields": {
-                "order": {
-                    "about": "The Strahler stream order.",
-                    "type": "number",
-                    "units": u.none,
+                    "description": (
+                        "Flow off a pixel is modeled fractionally so that water is split"
+                        " among multiple downslope pixels"
+                    ),
                 },
-                "river_id": {
-                    "about": (
-                        "A unique identifier used by all stream segments that "
-                        "connect to the same outlet."),
-                    "type": "number",
-                    "units": u.none,
-                },
-                "drop_distance": {
-                    "about": (
-                        "The drop distance in DEM elevation units from the "
-                        "upstream to downstream component of this stream "
-                        "segment."),
-                    "type": "number",
-                    "units": u.none,
-                },
-                "outlet": {
-                    "about": (
-                        "1 if this segment is an outlet, 0 if it is not."),
-                    "type": "number",
-                    "units": u.none,
-                },
-                "us_fa": {
-                    "about": (
-                        "The flow accumulation value at the upstream end of "
-                        "the stream segment."),
-                    "type": "number",
-                    "units": u.pixels,
-                },
-                "ds_fa": {
-                    "about": (
-                        "The flow accumulation value at the downstream end of "
-                        "the stream segment."),
-                    "type": "number",
-                    "units": u.pixels,
-                },
-                "thresh_fa": {
-                    "about": (
-                        "The final threshold flow accumulation value used to "
-                        "determine the river segments."),
-                    "type": "number",
-                    "units": u.pixels,
-                },
-                "upstream_d8_dir": {
-                    "about": (
-                        "The direction of flow immediately upstream."),
-                    "type": "number",
-                    "units": u.none,
-                },
-                "ds_x": {
-                    "about": (
-                        "The DEM X coordinate for the outlet in pixels from "
-                        "the origin."),
-                    "type": "number",
-                    "units": u.pixels,
-                },
-                "ds_y": {
-                    "about": (
-                        "The DEM Y coordinate for the outlet in pixels from "
-                        "the origin."),
-                    "type": "number",
-                    "units": u.pixels,
-                },
-                "ds_x_1": {
-                    "about": (
-                        "The DEM X coordinate that is 1 pixel upstream "
-                        "from the outlet."),
-                    "type": "number",
-                    "units": u.pixels,
-                },
-                "ds_y_1": {
-                    "about": (
-                        "The DEM Y coordinate that is 1 pixel upstream "
-                        "from the outlet."),
-                    "type": "number",
-                    "units": u.pixels,
-                },
-                "us_x": {
-                    "about": (
-                        "The DEM X coordinate for the upstream inlet."),
-                    "type": "number",
-                    "units": u.pixels,
-                },
-                "us_y": {
-                    "about": (
-                        "The DEM Y coordinate for the upstream inlet."),
-                    "type": "number",
-                    "units": u.pixels,
-                },
-            },
-        },
-        "subwatersheds.gpkg": {
-            "about": (
-                "A GeoPackage with polygon features representing "
-                "subwatersheds.  A new subwatershed is created for each "
-                "tributary of a stream and is influenced greatly by "
-                "your choice of Threshold Flow Accumulation value."),
-            "geometries": spec.POLYGON,
-            "fields": {
-                "stream_id": {
-                    "about": (
-                        "A unique stream id, matching the one in the Strahler "
-                        "stream order vector."),
-                    "type": "number",
-                    "units": u.none,
-                },
-                "terminated_early": {
-                    "about": (
-                        "Indicates whether generation of this subwatershed "
-                        "terminated early (1) or completed as expected (0). "
-                        "If you encounter a (1), please let us know via the "
-                        "forums, community.naturalcapitalproject.org."),
-                    "type": "number",
-                    "units": u.none,
-                },
-                "outlet_x": {
-                    "about": (
-                        "The X coordinate in pixels from the origin of the "
-                        "outlet of the watershed. This can be useful when "
-                        "determining other properties of the watershed when "
-                        "indexing with the underlying raster data."),
-                    "type": "number",
-                    "units": u.none,
-                },
-                "outlet_y": {
-                    "about": (
-                        "The X coordinate in pixels from the origin of the "
-                        "outlet of the watershed. This can be useful when "
-                        "determining other properties of the watershed when "
-                        "indexing with the underlying raster data."),
-                    "type": "number",
-                    "units": u.none,
-                },
-            },
-        },
-    }
-})
+            }
+        ),
+        spec.BooleanInput(
+            id="calculate_flow_direction",
+            name=gettext("calculate flow direction"),
+            about=gettext("Calculate flow direction from the provided DEM."),
+            required=False
+        ),
+        spec.BooleanInput(
+            id="calculate_flow_accumulation",
+            name=gettext("calculate flow accumulation"),
+            about=gettext("Calculate flow accumulation from the flow direction output."),
+            required=False,
+            allowed="calculate_flow_direction"
+        ),
+        spec.BooleanInput(
+            id="calculate_stream_threshold",
+            name=gettext("calculate streams"),
+            about=gettext("Calculate streams from the flow accumulation output. "),
+            required=False,
+            allowed="calculate_flow_accumulation"
+        ),
+        spec.NumberInput(
+            id="threshold_flow_accumulation",
+            name=gettext("threshold flow accumulation"),
+            about=gettext(
+                "The number of upslope pixels that must flow into a pixel before it is"
+                " classified as a stream. Required if Calculate Streams is selected."
+            ),
+            required="calculate_stream_threshold",
+            allowed="calculate_stream_threshold",
+            units=u.pixel,
+            expression="value >= 0"
+        ),
+        spec.BooleanInput(
+            id="calculate_downslope_distance",
+            name=gettext("calculate distance to stream"),
+            about=gettext(
+                "Calculate flow distance from each pixel to a stream as defined in the"
+                " Calculate Streams output."
+            ),
+            required=False,
+            allowed="calculate_stream_threshold"
+        ),
+        spec.BooleanInput(
+            id="calculate_slope",
+            name=gettext("calculate slope"),
+            about=gettext("Calculate percent slope from the provided DEM."),
+            required=False
+        ),
+        spec.BooleanInput(
+            id="calculate_stream_order",
+            name=gettext("calculate strahler stream orders (D8 only)"),
+            about=gettext("Calculate the Strahler Stream order."),
+            required=False,
+            allowed="calculate_stream_threshold and algorithm == 'D8'"
+        ),
+        spec.BooleanInput(
+            id="calculate_subwatersheds",
+            name=gettext("calculate subwatersheds (D8 only)"),
+            about=gettext("Determine subwatersheds from the stream order."),
+            required=False,
+            allowed="calculate_stream_order and algorithm == 'D8'"
+        )
+    ],
+    outputs=[
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        ),
+        spec.SingleBandRasterOutput(
+            id="filled.tif",
+            about=gettext("Map of elevation after any pits are filled"),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="flow_accumulation.tif",
+            about=gettext("Map of flow accumulation"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="flow_direction.tif",
+            about=gettext(
+                "MFD flow direction. Note: the pixel values should not be interpreted"
+                " directly. Each 32-bit number consists of 8 4-bit numbers. Each 4-bit"
+                " number represents the proportion of flow into one of the eight"
+                " neighboring pixels."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="slope.tif",
+            about=gettext(
+                "Percent slope, calculated from the pit-filled DEM. 100 is equivalent to"
+                " a 45 degree slope."
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="stream_mask.tif",
+            about=gettext(
+                "Stream network, created using flow direction and flow accumulation"
+                " derived from the DEM and Threshold Flow Accumulation. Values of 1"
+                " represent streams, values of 0 are non-stream pixels."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.VectorOutput(
+            id="strahler_stream_order.gpkg",
+            about=gettext(
+                "A vector of line segments indicating the Strahler stream order and other"
+                " properties of each stream segment."
+            ),
+            geometry_types={"LINESTRING"},
+            fields=[
+                spec.NumberOutput(
+                    id="order", about=gettext("The Strahler stream order."), units=u.none
+                ),
+                spec.NumberOutput(
+                    id="river_id",
+                    about=gettext(
+                        "A unique identifier used by all stream segments that connect to"
+                        " the same outlet."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="drop_distance",
+                    about=gettext(
+                        "The drop distance in DEM elevation units from the upstream to"
+                        " downstream component of this stream segment."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="outlet",
+                    about=gettext("1 if this segment is an outlet, 0 if it is not."),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="us_fa",
+                    about=gettext(
+                        "The flow accumulation value at the upstream end of the stream"
+                        " segment."
+                    ),
+                    units=u.pixel
+                ),
+                spec.NumberOutput(
+                    id="ds_fa",
+                    about=gettext(
+                        "The flow accumulation value at the downstream end of the stream"
+                        " segment."
+                    ),
+                    units=u.pixel
+                ),
+                spec.NumberOutput(
+                    id="thresh_fa",
+                    about=gettext(
+                        "The final threshold flow accumulation value used to determine"
+                        " the river segments."
+                    ),
+                    units=u.pixel
+                ),
+                spec.NumberOutput(
+                    id="upstream_d8_dir",
+                    about=gettext("The direction of flow immediately upstream."),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="ds_x",
+                    about=gettext(
+                        "The DEM X coordinate for the outlet in pixels from the origin."
+                    ),
+                    units=u.pixel
+                ),
+                spec.NumberOutput(
+                    id="ds_y",
+                    about=gettext(
+                        "The DEM Y coordinate for the outlet in pixels from the origin."
+                    ),
+                    units=u.pixel
+                ),
+                spec.NumberOutput(
+                    id="ds_x_1",
+                    about=gettext(
+                        "The DEM X coordinate that is 1 pixel upstream from the outlet."
+                    ),
+                    units=u.pixel
+                ),
+                spec.NumberOutput(
+                    id="ds_y_1",
+                    about=gettext(
+                        "The DEM Y coordinate that is 1 pixel upstream from the outlet."
+                    ),
+                    units=u.pixel
+                ),
+                spec.NumberOutput(
+                    id="us_x",
+                    about=gettext("The DEM X coordinate for the upstream inlet."),
+                    units=u.pixel
+                ),
+                spec.NumberOutput(
+                    id="us_y",
+                    about=gettext("The DEM Y coordinate for the upstream inlet."),
+                    units=u.pixel
+                )
+            ]
+        ),
+        spec.VectorOutput(
+            id="subwatersheds.gpkg",
+            about=gettext(
+                "A GeoPackage with polygon features representing subwatersheds.  A new"
+                " subwatershed is created for each tributary of a stream and is"
+                " influenced greatly by your choice of Threshold Flow Accumulation value."
+            ),
+            geometry_types={"POLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="stream_id",
+                    about=gettext(
+                        "A unique stream id, matching the one in the Strahler stream"
+                        " order vector."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="terminated_early",
+                    about=gettext(
+                        "Indicates whether generation of this subwatershed terminated"
+                        " early (1) or completed as expected (0). If you encounter a (1),"
+                        " please let us know via the forums,"
+                        " community.naturalcapitalproject.org."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="outlet_x",
+                    about=gettext(
+                        "The X coordinate in pixels from the origin of the outlet of the"
+                        " watershed. This can be useful when determining other properties"
+                        " of the watershed when indexing with the underlying raster data."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="outlet_y",
+                    about=gettext(
+                        "The X coordinate in pixels from the origin of the outlet of the"
+                        " watershed. This can be useful when determining other properties"
+                        " of the watershed when indexing with the underlying raster data."
+                    ),
+                    units=u.none
+                )
+            ]
+        )
+    ],
+)
+
 
 
 # replace %s with file suffix
@@ -494,7 +588,7 @@ def execute(args):
                         dependent_task_list=[
                             filled_pits_task,
                             flow_direction_task,
-                            flow_accum_task,
+                            flow_accum_task
                         ])
 
                     if bool(args.get('calculate_subwatersheds', False)):

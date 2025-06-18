@@ -28,180 +28,252 @@ MISSING_CONVERT_OPTION_MSG = gettext(
     'One or more of "convert_nearest_to_edge" or "convert_farthest_from_edge" '
     'must be selected')
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "scenario_generator_proximity",
-    "model_title": gettext("Scenario Generator: Proximity Based"),
-    "userguide": "scenario_gen_proximity.html",
-    "aliases": ("sgp",),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['base_lulc_path', 'aoi_path'],
-            ['area_to_convert', 'focal_landcover_codes',
-             'convertible_landcover_codes', 'replacement_lucode'],
-            ['convert_farthest_from_edge', 'convert_nearest_to_edge',
-             'n_fragmentation_steps']
-        ]
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "base_lulc_path": {
-            **spec.LULC,
-            "projected": True,
-            "about": gettext("Base map from which to generate scenarios."),
-            "name": gettext("base LULC map")
-        },
-        "replacement_lucode": {
-            "type": "integer",
-            "about": gettext("The LULC code to which habitat will be converted."),
-            "name": gettext("replacement landcover code")
-        },
-        "area_to_convert": {
-            "expression": "value > 0",
-            "type": "number",
-            "units": u.hectare,
-            "about": gettext("Maximum area to be converted to agriculture."),
-            "name": gettext("maximum area to convert")
-        },
-        "focal_landcover_codes": {
-            "type": "freestyle_string",
-            "regexp": "[0-9 ]+",
-            "about": gettext(
-                "A space-separated list of LULC codes that are used to "
-                "determine the proximity when referring to 'towards' or "
-                "'away' from the base landcover codes"),
-            "name": gettext("focal landcover codes")
-        },
-        "convertible_landcover_codes": {
-            "type": "freestyle_string",
-            "regexp": "[0-9 ]+",
-            "about": gettext(
-                "A space-separated list of LULC codes that can be "
-                "converted to agriculture."),
-            "name": gettext("convertible landcover codes")
-        },
-        "n_fragmentation_steps": {
-            "expression": "value > 0",
-            "type": "number",
-            "units": u.none,
-            "about": gettext(
-                "The number of steps that the simulation should take to "
-                "fragment the habitat of interest in the fragmentation "
-                "scenario. This parameter is used to divide the conversion "
-                "simulation into equal subareas of the requested max area. "
-                "During each sub-step the distance transform is recalculated "
-                "from the base landcover codes.  This can affect the final "
-                "result if the base types are also convertible types."),
-            "name": gettext("number of conversion steps")
-        },
-        "aoi_path": {
-            **spec.AOI,
-            "required": False,
-            "about": gettext(
-                "Area over which to run the conversion. Provide this input if "
-                "change is only desired in a subregion of the Base LULC map."),
-        },
-        "convert_farthest_from_edge": {
-            "type": "boolean",
-            "about": gettext(
-                "Convert the 'convertible' landcover codes starting at the "
-                "furthest pixel from the 'focal' land cover areas "
-                "and working inwards."),
-            "name": gettext("convert farthest from edge")
-        },
-        "convert_nearest_to_edge": {
-            "type": "boolean",
-            "about": gettext(
-                "Convert the 'convertible' landcover codes starting at the "
-                "nearest pixels to the 'focal' land cover areas "
-                "and working outwards."),
-            "name": gettext("convert nearest to edge")
-        }
-    },
-    "outputs": {
-        "nearest_to_edge.tif": {
-            "about": gettext("Map of the nearest-to-edge conversion scenario."),
-            "bands": {1: {"type": "integer"}}
-        },
-        "farthest_from_edge.tif": {
-            "about": gettext("Map of the farthest-from-edge conversion scenario."),
-            "bands": {1: {"type": "integer"}}
-        },
-        "nearest_to_edge.csv": {
-            "about": gettext(
-                "Table of land cover classes and the amount of each that was converted for the nearest-to-edge conversion scenario."),
-            "index_col": "original lucode",
-            "columns": {
-                "original lucode": {
-                    "type": "integer",
-                    "about": "Original LULC code of the land cover class"
-                },
-                "replacement lucode": {
-                    "type": "integer",
-                    "about": "LULC code to which habitat was converted"
-                },
-                "area converted (Ha)": {
-                    "type": "number",
-                    "units": u.hectare,
-                    "about": "Total area converted from this land cover class"
-                },
-                "pixels converted": {
-                    "type": "integer",
-                    "about": "Number of pixels converted from this land cover class"
-                }
-            }
-        },
-        "farthest_from_edge.csv": {
-            "about": gettext(
-                "Table of land cover classes and the amount of each that was converted for the farthest-from-edge conversion scenario."),
-            "index_col": "original lucode",
-            "columns": {
-                "original lucode": {
-                    "type": "integer",
-                    "about": "Original LULC code of the land cover class"
-                },
-                "replacement lucode": {
-                    "type": "integer",
-                    "about": "LULC code to which habitat was converted"
-                },
-                "area converted (Ha)": {
-                    "type": "number",
-                    "units": u.hectare,
-                    "about": "Total area converted from this land cover class"
-                },
-                "pixels converted": {
-                    "type": "integer",
-                    "about": "Number of pixels converted from this land cover class"
-                }
-            }
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "aoi_masked_lulc.tif": {
-                    "about": gettext(
-                        "Copy of the LULC raster masked to the AOI extent."),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "farthest_from_edge_distance.tif": {
-                    "about": gettext(
-                        "Map of the distance from each pixel to the farthest "
-                        "edge of the focal landcover."),
-                    "bands": {1: {"type": "number", "units": u.pixel}}
-                },
-                "nearest_to_edge_distance.tif": {
-                    "about": gettext(
-                        "Map of the distance from each pixel to the nearest "
-                        "edge of the focal landcover."),
-                    "bands": {1: {"type": "number", "units": u.pixel}}
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+MODEL_SPEC = spec.ModelSpec(
+    model_id="scenario_generator_proximity",
+    model_title=gettext("Scenario Generator: Proximity Based"),
+    userguide="scenario_gen_proximity.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=False,
+    aliases=("sgp",),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["base_lulc_path", "aoi_path"],
+        ["area_to_convert", "focal_landcover_codes",
+         "convertible_landcover_codes", "replacement_lucode"],
+        ["convert_farthest_from_edge", "convert_nearest_to_edge",
+         "n_fragmentation_steps"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.SingleBandRasterInput(
+            id="base_lulc_path",
+            name=gettext("base LULC map"),
+            about=gettext("Base map from which to generate scenarios."),
+            data_type=int,
+            units=None,
+            projected=True
+        ),
+        spec.IntegerInput(
+            id="replacement_lucode",
+            name=gettext("replacement landcover code"),
+            about=gettext("The LULC code to which habitat will be converted.")
+        ),
+        spec.NumberInput(
+            id="area_to_convert",
+            name=gettext("maximum area to convert"),
+            about=gettext("Maximum area to be converted to agriculture."),
+            units=u.hectare,
+            expression="value > 0"
+        ),
+        spec.StringInput(
+            id="focal_landcover_codes",
+            name=gettext("focal landcover codes"),
+            about=(
+                "A space-separated list of LULC codes that are used to determine the"
+                " proximity when referring to 'towards' or 'away' from the base landcover"
+                " codes"
+            ),
+            regexp="[0-9 ]+"
+        ),
+        spec.StringInput(
+            id="convertible_landcover_codes",
+            name=gettext("convertible landcover codes"),
+            about=gettext(
+                "A space-separated list of LULC codes that can be converted to"
+                " agriculture."
+            ),
+            regexp="[0-9 ]+"
+        ),
+        spec.NumberInput(
+            id="n_fragmentation_steps",
+            name=gettext("number of conversion steps"),
+            about=gettext(
+                "The number of steps that the simulation should take to fragment the"
+                " habitat of interest in the fragmentation scenario. This parameter is"
+                " used to divide the conversion simulation into equal subareas of the"
+                " requested max area. During each sub-step the distance transform is"
+                " recalculated from the base landcover codes.  This can affect the final"
+                " result if the base types are also convertible types."
+            ),
+            units=u.none,
+            expression="value > 0"
+        ),
+        spec.VectorInput(
+            id="aoi_path",
+            name=gettext("area of interest"),
+            about=gettext(
+                "Area over which to run the conversion. Provide this input if change is"
+                " only desired in a subregion of the Base LULC map."
+            ),
+            required=False,
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[],
+            projected=None
+        ),
+        spec.BooleanInput(
+            id="convert_farthest_from_edge",
+            name=gettext("convert farthest from edge"),
+            about=(
+                "Convert the 'convertible' landcover codes starting at the furthest pixel"
+                " from the 'focal' land cover areas and working inwards."
+            )
+        ),
+        spec.BooleanInput(
+            id="convert_nearest_to_edge",
+            name=gettext("convert nearest to edge"),
+            about=(
+                "Convert the 'convertible' landcover codes starting at the nearest pixels"
+                " to the 'focal' land cover areas and working outwards."
+            )
+        )
+    ],
+    outputs=[
+        spec.SingleBandRasterOutput(
+            id="nearest_to_edge.tif",
+            about=gettext("Map of the nearest-to-edge conversion scenario."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="farthest_from_edge.tif",
+            about=gettext("Map of the farthest-from-edge conversion scenario."),
+            data_type=int,
+            units=None
+        ),
+        spec.CSVOutput(
+            id="nearest_to_edge.csv",
+            about=gettext(
+                "Table of land cover classes and the amount of each that was converted"
+                " for the nearest-to-edge conversion scenario."
+            ),
+            columns=[
+                spec.IntegerOutput(
+                    id="original lucode",
+                    about=gettext("Original LULC code of the land cover class")
+                ),
+                spec.IntegerOutput(
+                    id="replacement lucode",
+                    about=gettext("LULC code to which habitat was converted")
+                ),
+                spec.NumberOutput(
+                    id="area converted (Ha)",
+                    about=gettext("Total area converted from this land cover class"),
+                    units=u.hectare
+                ),
+                spec.IntegerOutput(
+                    id="pixels converted",
+                    about=gettext(
+                        "Number of pixels converted from this land cover class"
+                    )
+                )
+            ],
+            index_col="original lucode"
+        ),
+        spec.CSVOutput(
+            id="farthest_from_edge.csv",
+            about=gettext(
+                "Table of land cover classes and the amount of each that was converted"
+                " for the farthest-from-edge conversion scenario."
+            ),
+            columns=[
+                spec.IntegerOutput(
+                    id="original lucode",
+                    about=gettext("Original LULC code of the land cover class")
+                ),
+                spec.IntegerOutput(
+                    id="replacement lucode",
+                    about=gettext("LULC code to which habitat was converted")
+                ),
+                spec.NumberOutput(
+                    id="area converted (Ha)",
+                    about=gettext("Total area converted from this land cover class"),
+                    units=u.hectare
+                ),
+                spec.IntegerOutput(
+                    id="pixels converted",
+                    about=gettext(
+                        "Number of pixels converted from this land cover class"
+                    )
+                )
+            ],
+            index_col="original lucode"
+        ),
+        spec.DirectoryOutput(
+            id="intermediate",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="aoi_masked_lulc.tif",
+                    about=gettext("Copy of the LULC raster masked to the AOI extent."),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="farthest_from_edge_distance.tif",
+                    about=gettext(
+                        "Map of the distance from each pixel to the farthest edge of the"
+                        " focal landcover."
+                    ),
+                    data_type=float,
+                    units=u.pixel
+                ),
+                spec.SingleBandRasterOutput(
+                    id="nearest_to_edge_distance.tif",
+                    about=gettext(
+                        "Map of the distance from each pixel to the nearest edge of the"
+                        " focal landcover."
+                    ),
+                    data_type=float,
+                    units=u.pixel
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ],
+)
+
 
 
 # This sets the largest number of elements that will be packed at once and
