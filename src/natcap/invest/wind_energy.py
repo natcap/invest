@@ -119,448 +119,764 @@ OUTPUT_WIND_DATA_FIELDS = {
     }
 }
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "wind_energy",
-    "model_title": gettext("Wind Energy Production"),
-    "userguide": "wind_energy.html",
-    "aliases": (),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['wind_data_path', 'aoi_vector_path', 'bathymetry_path', 'land_polygon_vector_path', 'global_wind_parameters_path'],
-            ['turbine_parameters_path', 'number_of_turbines', 'min_depth', 'max_depth', 'min_distance', 'max_distance'],
-            ['valuation_container', 'foundation_cost', 'discount_rate', 'grid_points_path', 'avg_grid_distance', 'price_table', 'wind_schedule', 'wind_price', 'rate_change'],
-        ]
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["aoi_vector_path", "bathymetry_path",
-                         "land_polygon_vector_path"],
-        "different_projections_ok": True,
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "wind_data_path": {
-            "type": "csv",
-            "columns": INPUT_WIND_DATA_FIELDS,
-            "about": gettext("Table of Weibull parameters for each wind data point."),
-            "name": gettext("wind data points")
-        },
-        "aoi_vector_path": {
-            **spec.AOI,
-            "projected": True,
-            "projection_units": u.meter,
-            "required": "valuation_container",
-            "about": gettext(
-                "Map of the area(s) of interest over which to run the model "
-                "and aggregate valuation results. Required if Run Valuation "
-                "is selected."
-            )
-        },
-        "bathymetry_path": {
-            "type": "raster",
-            "bands": {1: {"type": "number", "units": u.meter}},
-            "about": gettext("Map of ocean depth. Values should be negative."),
-            "name": gettext("bathymetry")
-        },
-        "land_polygon_vector_path": {
-            "type": "vector",
-            "fields": {},
-            "geometries": {"POLYGON", "MULTIPOLYGON"},
-            "required": "min_distance or max_distance or valuation_container",
-            "allowed": "aoi_vector_path",
-            "about": gettext(
-                "Map of the coastlines of landmasses in the area of interest. "
-                "Required if the Minimum Distance and Maximum Distance inputs "
-                "are provided."),
-            "name": gettext("land polygon")
-        },
-        "global_wind_parameters_path": {
-            "type": "csv",
-            "rows": {
-                "air_density": {
-                    "type": "number",
-                    "units": u.kilogram/(u.meter**3),
-                    "about": gettext("Standard atmosphere air density.")},
-                "exponent_power_curve": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext("Exponent to use in the power curve function.")},
-                "decommission_cost": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "Cost to decommission a turbine as a proportion of "
-                        "the total upfront costs (cables, foundations, "
-                        "installation?)")
-                },
-                "operation_maintenance_cost": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "The operations and maintenance costs as a proportion "
-                        "of capex_arr")},
-                "miscellaneous_capex_cost": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "The miscellaneous costs as a proportion of capex_arr")
-                },
-                "installation_cost": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "The installation costs as a proportion of capex_arr")
-                },
-                "infield_cable_length": {
-                    "type": "number",
-                    "units": u.kilometer,
-                    "about": gettext("The length of infield cable.")},
-                "infield_cable_cost": {
-                    "type": "number",
-                    "units": u.currency/u.kilometer,
-                    "about": gettext("The cost of infield cable.")},
-                "mw_coef_ac": {
-                    "type": "number",
-                    "units": u.currency/u.megawatt,
-                    "about": gettext("Cost of AC cable that scales with capacity.")},
-                "mw_coef_dc": {
-                    "type": "number",
-                    "units": u.currency/u.megawatt,
-                    "about": gettext("Cost of DC cable that scales with capacity.")},
-                "cable_coef_ac": {
-                    "type": "number",
-                    "units": u.currency/u.kilometer,
-                    "about": gettext("Cost of AC cable that scales with length.")},
-                "cable_coef_dc": {
-                    "type": "number",
-                    "units": u.currency/u.kilometer,
-                    "about": gettext("Cost of DC cable that scales with length.")},
-                "ac_dc_distance_break": {
-                    "type": "number",
-                    "units": u.kilometer,
-                    "about": gettext(
-                        "The threshold above which a wind farm’s distance "
-                        "from the grid requires a switch from AC to DC power "
-                        "to overcome line losses which reduce the amount of "
-                        "energy delivered")},
-                "time_period": {
-                    "type": "number",
-                    "units": u.year,
-                    "about": gettext("The expected lifetime of the facility")},
-                "carbon_coefficient": {
-                    "type": "number",
-                    "units": u.metric_ton/u.kilowatt_hour,
-                    "about": gettext(
-                        "Factor that translates carbon-free wind power to a "
-                        "corresponding amount of avoided CO2 emissions")},
-                "air_density_coefficient": {
-                    "type": "number",
-                    "units": u.kilogram/(u.meter**3 * u.meter),
-                    "about": gettext(
-                        "The reduction in air density per meter above sea "
-                        "level")},
-                "loss_parameter": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "The fraction of energy lost due to downtime, power "
-                        "conversion inefficiency, and electrical grid losses")}
-            },
-            "about": gettext(
-                "A table of wind energy infrastructure parameters."),
-            "name": gettext("global wind energy parameters")
-        },
-        "turbine_parameters_path": {
-            "type": "csv",
-            "rows": {
-                "hub_height": {
-                    "type": "number",
-                    "units": u.meter,
-                    "about": gettext("Height of the turbine hub above sea level.")},
-                "cut_in_wspd": {
-                    "type": "number",
-                    "units": u.meter/u.second,
-                    "about": gettext(
-                        "Wind speed at which the turbine begins producing "
-                        "power.")},
-                "rated_wspd": {
-                    "type": "number",
-                    "units": u.meter/u.second,
-                    "about": gettext(
-                        "Minimum wind speed at which the turbine reaches its "
-                        "rated power output.")},
-                "cut_out_wspd": {
-                    "type": "number",
-                    "units": u.meter/u.second,
-                    "about": gettext(
-                        "Wind speed above which the turbine stops generating "
-                        "power for safety reasons.")},
-                "turbine_rated_pwr": {
-                    "type": "number",
-                    "units": u.kilowatt,
-                    "about": gettext("The turbine's rated power output.")},
-                "turbine_cost": {
-                    "type": "number",
-                    "units": u.currency,
-                    "about": gettext("The cost of one turbine.")}
-            },
-            "about": gettext("A table of parameters specific to the type of turbine."),
-            "name": gettext("turbine parameters")
-        },
-        "number_of_turbines": {
-            "expression": "value > 0",
-            "type": "number",
-            "units": u.none,
-            "about": gettext("The number of wind turbines per wind farm."),
-            "name": gettext("number of turbines")
-        },
-        "min_depth": {
-            "type": "number",
-            "units": u.meter,
-            "about": gettext("Minimum depth for offshore wind farm installation."),
-            "name": gettext("minimum depth")
-        },
-        "max_depth": {
-            "type": "number",
-            "units": u.meter,
-            "about": gettext("Maximum depth for offshore wind farm installation."),
-            "name": gettext("maximum depth")
-        },
-        "min_distance": {
-            "type": "number",
-            "units": u.meter,
-            "required": "valuation_container",
-            "allowed": "land_polygon_vector_path",
-            "about": gettext(
-                "Minimum distance from shore for offshore wind farm "
-                "installation. Required if Run Valuation is selected."),
-            "name": gettext("minimum distance")
-        },
-        "max_distance": {
-            "type": "number",
-            "units": u.meter,
-            "required": "valuation_container",
-            "allowed": "land_polygon_vector_path",
-            "about": gettext(
-                "Maximum distance from shore for offshore wind farm "
-                "installation. Required if Run Valuation is selected."),
-            "name": gettext("maximum distance")
-        },
-        "valuation_container": {
-            "type": "boolean",
-            "required": False,
-            "about": gettext("Run the valuation component of the model."),
-            "name": gettext("run valuation")
-        },
-        "foundation_cost": {
-            "type": "number",
-            "units": u.currency,
-            "required": "valuation_container",
-            "allowed": "valuation_container",
-            "about": gettext("The cost of the foundation for one turbine."),
-            "name": gettext("foundation cost")
-        },
-        "discount_rate": {
-            "type": "ratio",
-            "required": "valuation_container",
-            "allowed": "valuation_container",
-            "about": gettext("Annual discount rate to apply to valuation."),
-            "name": gettext("discount rate")
-        },
-        "grid_points_path": {
-            "type": "csv",
-            "index_col": "id",
-            "columns": {
-                "id": {
-                    "type": "integer",
-                    "about": gettext("Unique identifier for each point.")},
-                "type": {
-                    "type": "option_string",
-                    "options": {
-                        "LAND": {"description": gettext(
-                            "This is a land connection point")},
-                        "GRID": {"description": gettext(
-                            "This is a grid connection point")},
-                    },
-                    "about": gettext("The type of connection at this point.")
-                },
-                "lati": {
-                    "type": "number",
-                    "units": u.degree,
-                    "about": gettext("Latitude of the connection point.")
-                },
-                "long": {
-                    "type": "number",
-                    "units": u.degree,
-                    "about": gettext("Longitude of the connection point.")
-                }
-            },
-            "required": "valuation_container and not avg_grid_distance",
-            "allowed": "valuation_container",
-            "about": gettext(
-                "Table of grid and land connection points to which cables "
-                "will connect. Required if Run Valuation is selected and "
-                "Average Shore-to-Grid Distance is not provided."),
-            "name": gettext("grid connection points")
-        },
-        "avg_grid_distance": {
-            "expression": "value > 0",
-            "type": "number",
-            "units": u.kilometer,
-            "required": "valuation_container and not grid_points_path",
-            "allowed": "valuation_container",
-            "about": gettext(
-                "Average distance to the onshore grid from coastal cable "
-                "landing points. Required if Run Valuation is selected and "
-                "the Grid Connection Points table is not provided."),
-            "name": gettext("average shore-to-grid distance")
-        },
-        "price_table": {
-            "type": "boolean",
-            "required": "valuation_container",
-            "allowed": "valuation_container",
-            "about": gettext(
-                "Use a Wind Energy Price Table instead of calculating annual "
-                "prices from the initial Energy Price and Rate of Price Change "
-                "inputs."),
-            "name": gettext("use price table")
-        },
-        "wind_schedule": {
-            "type": "csv",
-            "index_col": "year",
-            "columns": {
-                "year": {
-                    "type": "number",
-                    "units": u.year_AD,
-                    "about": gettext(
-                        "Consecutive years for each year in the lifespan of "
-                        "the wind farm. These may be the actual years: 2010, "
-                        "2011, 2012..., or the number of the years after the "
-                        "starting date: 1, 2, 3,...")
-                },
-                "price": {
-                    "type": "number",
-                    "units": u.currency/u.kilowatt_hour,
-                    "about": gettext("Price of energy for each year.")
-                }
-            },
-            "required": "valuation_container and price_table",
-            "allowed": "price_table",
-            "about": gettext(
-                "Table of yearly prices for wind energy. There must be a row "
-                "for each year in the lifespan given in the 'time_period' "
-                "column in the Global Wind Energy Parameters table. Required "
-                "if Run Valuation and Use Price Table are selected."),
-            "name": gettext("wind energy price table")
-        },
-        "wind_price": {
-            "type": "number",
-            "units": u.currency/u.kilowatt_hour,
-            "required": "valuation_container and (not price_table)",
-            "allowed": "valuation_container and not price_table",
-            "about": gettext(
-                "The initial price of wind energy, at the first year in the "
-                "wind energy farm lifespan. Required if Run Valuation is "
-                "selected and Use Price Table is not selected."),
-            "name": gettext("price of energy")
-        },
-        "rate_change": {
-            "type": "ratio",
-            "required": "valuation_container and not price_table",
-            "allowed": "valuation_container and not price_table",
-            "about": gettext(
-                "The annual rate of change in the price of wind energy. "
-                "Required if Run Valuation is selected and Use Price Table "
-                "is not selected."),
-            "name": gettext("rate of price change")
-        }
-    },
-    "outputs": {
-        "output": {
-            "type": "directory",
-            "contents": {
-                "wind_energy_points.shp": {
-                    "about": gettext("Map of summarized data at each point."),
-                    "geometries": spec.POINT,
-                    "fields": OUTPUT_WIND_DATA_FIELDS
-                }
-            }
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "aoi_raster.tif": {
-                    "about": "Empty raster covering the extent of the AOI",
-                    "bands": {1: {"type": "integer"}}
-                },
-                "bathymetry_projected.tif": {
-                    "about": "Clipped and reprojected bathymetry map",
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                "carbon_emissions_tons.tif": {
-                    "about": gettext(
-                        "Map of offset carbon emissions for a farm centered "
-                        "on each pixel"),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.metric_ton/u.year
-                    }}
-                },
-                "depth_mask.tif": {
-                    "about": (
-                        "Bathymetry map masked to show only the pixels that "
-                        "fall within the allowed depth range"),
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                "distance_mask.tif": {
-                    "about": (
-                        "Distance to shore, masked to show only the pixels "
-                        "that fall within the allowed distance range"),
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                "distance_trans.tif": {
-                    "about": "Distance to shore from each pixel",
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                "harvested_energy_MWhr_per_yr.tif": {
-                    "about": gettext(
-                        "Map of energy harvested from a farm centered on each pixel."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.megawatt_hour/u.year
-                    }}
-                },
-                "levelized_cost_price_per_kWh.tif": {
-                    "about": gettext(
-                        "Map of the energy price that would be required to "
-                        "set the present value of a farm centered on each "
-                        "pixel equal to zero."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.currency/u.kilowatt_hour
-                    }}
-                },
-                "npv.tif": {
-                    "about": gettext(
-                        "Map of the net present value of a farm centered on each pixel."),
-                    "bands": {1: {"type": "number", "units": u.currency}}
-                },
-                "projected_clipped_land_poly.shp": {
-                    "about": "Clipped and reprojected land polygon vector",
-                    "fields": {},
-                    "geometries": {"POLYGON", "MULTIPOLYGON"}
-                },
-                "projection_params.pickle": {
-                    "about": "Pickled bathymetry reprojection parameters"
-                },
-                "wind_data.pickle": {"about": "Pickled wind data dictionary"},
-                "wind_energy_points_from_data.shp": {
-                    "about": "Wind data",
-                    "geometries": spec.POINT,
-                    "fields": OUTPUT_WIND_DATA_FIELDS
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+MODEL_SPEC = spec.ModelSpec(
+    model_id="wind_energy",
+    model_title=gettext("Wind Energy Production"),
+    userguide="wind_energy.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=(),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["wind_data_path", "aoi_vector_path", "bathymetry_path",
+         "land_polygon_vector_path", "global_wind_parameters_path"],
+        ["turbine_parameters_path", "number_of_turbines", "min_depth",
+         "max_depth", "min_distance", "max_distance"],
+        ["valuation_container", "foundation_cost", "discount_rate",
+         "grid_points_path", "avg_grid_distance", "price_table",
+         "wind_schedule", "wind_price", "rate_change"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.CSVInput(
+            id="wind_data_path",
+            name=gettext("wind data points"),
+            about=gettext("Table of Weibull parameters for each wind data point."),
+            columns=[
+                spec.NumberInput(
+                    id="long",
+                    about=gettext("Longitude of the data point."),
+                    units=u.degree
+                ),
+                spec.NumberInput(
+                    id="lati",
+                    about=gettext("Latitude of the data point."),
+                    units=u.degree
+                ),
+                spec.NumberInput(
+                    id="lam",
+                    about=gettext(
+                        "Weibull scale factor at the reference hub height at this point."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberInput(
+                    id="k",
+                    about=gettext("Weibull shape factor at this point."),
+                    units=u.none
+                ),
+                spec.NumberInput(
+                    id="ref",
+                    about=gettext(
+                        "The reference hub height at this point, at which wind speed data"
+                        " was collected and LAM was estimated."
+                    ),
+                    units=u.meter
+                )
+            ],
+            index_col=None
+        ),
+        spec.VectorInput(
+            id="aoi_vector_path",
+            name=gettext("area of interest"),
+            about=gettext(
+                "Map of the area(s) of interest over which to run the model and aggregate"
+                " valuation results. Required if Run Valuation is selected."
+            ),
+            required="valuation_container",
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[],
+            projected=True,
+            projection_units=u.meter
+        ),
+        spec.SingleBandRasterInput(
+            id="bathymetry_path",
+            name=gettext("bathymetry"),
+            about=gettext("Map of ocean depth. Values should be negative."),
+            data_type=float,
+            units=u.meter,
+            projected=None
+        ),
+        spec.VectorInput(
+            id="land_polygon_vector_path",
+            name=gettext("land polygon"),
+            about=gettext(
+                "Map of the coastlines of landmasses in the area of interest. Required if"
+                " the Minimum Distance and Maximum Distance inputs are provided."
+            ),
+            required="min_distance or max_distance or valuation_container",
+            allowed="aoi_vector_path",
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[],
+            projected=None
+        ),
+        spec.CSVInput(
+            id="global_wind_parameters_path",
+            name=gettext("global wind energy parameters"),
+            about=gettext("A table of wind energy infrastructure parameters."),
+            columns=None,
+            rows=[
+                spec.NumberInput(
+                    id="air_density",
+                    about=gettext("Standard atmosphere air density."),
+                    units=u.kilogram / u.meter**3
+                ),
+                spec.NumberInput(
+                    id="exponent_power_curve",
+                    about=gettext("Exponent to use in the power curve function."),
+                    units=u.none
+                ),
+                spec.RatioInput(
+                    id="decommission_cost",
+                    about=gettext(
+                        "Cost to decommission a turbine as a proportion of the total"
+                        " upfront costs (cables, foundations, installation?)"
+                    ),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="operation_maintenance_cost",
+                    about=gettext(
+                        "The operations and maintenance costs as a proportion of"
+                        " capex_arr"
+                    ),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="miscellaneous_capex_cost",
+                    about=gettext("The miscellaneous costs as a proportion of capex_arr"),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="installation_cost",
+                    about=gettext("The installation costs as a proportion of capex_arr"),
+                    units=None
+                ),
+                spec.NumberInput(
+                    id="infield_cable_length",
+                    about=gettext("The length of infield cable."),
+                    units=u.kilometer
+                ),
+                spec.NumberInput(
+                    id="infield_cable_cost",
+                    about=gettext("The cost of infield cable."),
+                    units=u.currency / u.kilometer
+                ),
+                spec.NumberInput(
+                    id="mw_coef_ac",
+                    about=gettext("Cost of AC cable that scales with capacity."),
+                    units=u.currency / u.megawatt
+                ),
+                spec.NumberInput(
+                    id="mw_coef_dc",
+                    about=gettext("Cost of DC cable that scales with capacity."),
+                    units=u.currency / u.megawatt
+                ),
+                spec.NumberInput(
+                    id="cable_coef_ac",
+                    about=gettext("Cost of AC cable that scales with length."),
+                    units=u.currency / u.kilometer
+                ),
+                spec.NumberInput(
+                    id="cable_coef_dc",
+                    about=gettext("Cost of DC cable that scales with length."),
+                    units=u.currency / u.kilometer
+                ),
+                spec.NumberInput(
+                    id="ac_dc_distance_break",
+                    about=gettext(
+                        "The threshold above which a wind farm’s distance from the grid"
+                        " requires a switch from AC to DC power to overcome line losses"
+                        " which reduce the amount of energy delivered"
+                    ),
+                    units=u.kilometer
+                ),
+                spec.NumberInput(
+                    id="time_period",
+                    about=gettext("The expected lifetime of the facility"),
+                    units=u.year
+                ),
+                spec.NumberInput(
+                    id="carbon_coefficient",
+                    about=gettext(
+                        "Factor that translates carbon-free wind power to a corresponding"
+                        " amount of avoided CO2 emissions"
+                    ),
+                    units=u.metric_ton / u.kilowatt_hour
+                ),
+                spec.NumberInput(
+                    id="air_density_coefficient",
+                    about=gettext(
+                        "The reduction in air density per meter above sea level"
+                    ),
+                    units=u.kilogram / u.meter**4
+                ),
+                spec.RatioInput(
+                    id="loss_parameter",
+                    about=gettext(
+                        "The fraction of energy lost due to downtime, power conversion"
+                        " inefficiency, and electrical grid losses"
+                    ),
+                    units=None
+                )
+            ],
+            index_col=None
+        ),
+        spec.CSVInput(
+            id="turbine_parameters_path",
+            name=gettext("turbine parameters"),
+            about=gettext("A table of parameters specific to the type of turbine."),
+            columns=None,
+            rows=[
+                spec.NumberInput(
+                    id="hub_height",
+                    about=gettext("Height of the turbine hub above sea level."),
+                    units=u.meter
+                ),
+                spec.NumberInput(
+                    id="cut_in_wspd",
+                    about=gettext(
+                        "Wind speed at which the turbine begins producing power."
+                    ),
+                    units=u.meter / u.second
+                ),
+                spec.NumberInput(
+                    id="rated_wspd",
+                    about=gettext(
+                        "Minimum wind speed at which the turbine reaches its rated power"
+                        " output."
+                    ),
+                    units=u.meter / u.second
+                ),
+                spec.NumberInput(
+                    id="cut_out_wspd",
+                    about=gettext(
+                        "Wind speed above which the turbine stops generating power for"
+                        " safety reasons."
+                    ),
+                    units=u.meter / u.second
+                ),
+                spec.NumberInput(
+                    id="turbine_rated_pwr",
+                    about="The turbine's rated power output.",
+                    units=u.kilowatt
+                ),
+                spec.NumberInput(
+                    id="turbine_cost",
+                    about=gettext("The cost of one turbine."),
+                    units=u.currency
+                )
+            ],
+            index_col=None
+        ),
+        spec.NumberInput(
+            id="number_of_turbines",
+            name=gettext("number of turbines"),
+            about=gettext("The number of wind turbines per wind farm."),
+            units=u.none,
+            expression="value > 0"
+        ),
+        spec.NumberInput(
+            id="min_depth",
+            name=gettext("minimum depth"),
+            about=gettext("Minimum depth for offshore wind farm installation."),
+            units=u.meter
+        ),
+        spec.NumberInput(
+            id="max_depth",
+            name=gettext("maximum depth"),
+            about=gettext("Maximum depth for offshore wind farm installation."),
+            units=u.meter
+        ),
+        spec.NumberInput(
+            id="min_distance",
+            name=gettext("minimum distance"),
+            about=gettext(
+                "Minimum distance from shore for offshore wind farm installation."
+                " Required if Run Valuation is selected."
+            ),
+            required="valuation_container",
+            allowed="land_polygon_vector_path",
+            units=u.meter
+        ),
+        spec.NumberInput(
+            id="max_distance",
+            name=gettext("maximum distance"),
+            about=gettext(
+                "Maximum distance from shore for offshore wind farm installation."
+                " Required if Run Valuation is selected."
+            ),
+            required="valuation_container",
+            allowed="land_polygon_vector_path",
+            units=u.meter
+        ),
+        spec.BooleanInput(
+            id="valuation_container",
+            name=gettext("run valuation"),
+            about=gettext("Run the valuation component of the model."),
+            required=False
+        ),
+        spec.NumberInput(
+            id="foundation_cost",
+            name=gettext("foundation cost"),
+            about=gettext("The cost of the foundation for one turbine."),
+            required="valuation_container",
+            allowed="valuation_container",
+            units=u.currency
+        ),
+        spec.RatioInput(
+            id="discount_rate",
+            name=gettext("discount rate"),
+            about=gettext("Annual discount rate to apply to valuation."),
+            required="valuation_container",
+            allowed="valuation_container",
+            units=None
+        ),
+        spec.CSVInput(
+            id="grid_points_path",
+            name=gettext("grid connection points"),
+            about=gettext(
+                "Table of grid and land connection points to which cables will connect."
+                " Required if Run Valuation is selected and Average Shore-to-Grid"
+                " Distance is not provided."
+            ),
+            required="valuation_container and not avg_grid_distance",
+            allowed="valuation_container",
+            columns=[
+                spec.IntegerInput(
+                    id="id", about=gettext("Unique identifier for each point.")
+                ),
+                spec.OptionStringInput(
+                    id="type",
+                    about=gettext("The type of connection at this point."),
+                    options={
+                        "LAND": {"description": "This is a land connection point"},
+                        "GRID": {"description": "This is a grid connection point"},
+                    }
+                ),
+                spec.NumberInput(
+                    id="lati",
+                    about=gettext("Latitude of the connection point."),
+                    units=u.degree
+                ),
+                spec.NumberInput(
+                    id="long",
+                    about=gettext("Longitude of the connection point."),
+                    units=u.degree
+                )
+            ],
+            index_col="id"
+        ),
+        spec.NumberInput(
+            id="avg_grid_distance",
+            name=gettext("average shore-to-grid distance"),
+            about=gettext(
+                "Average distance to the onshore grid from coastal cable landing points."
+                " Required if Run Valuation is selected and the Grid Connection Points"
+                " table is not provided."
+            ),
+            required="valuation_container and not grid_points_path",
+            allowed="valuation_container",
+            units=u.kilometer,
+            expression="value > 0"
+        ),
+        spec.BooleanInput(
+            id="price_table",
+            name=gettext("use price table"),
+            about=gettext(
+                "Use a Wind Energy Price Table instead of calculating annual prices from"
+                " the initial Energy Price and Rate of Price Change inputs."
+            ),
+            required="valuation_container",
+            allowed="valuation_container"
+        ),
+        spec.CSVInput(
+            id="wind_schedule",
+            name=gettext("wind energy price table"),
+            about=(
+                "Table of yearly prices for wind energy. There must be a row for each"
+                " year in the lifespan given in the 'time_period' column in the Global"
+                " Wind Energy Parameters table. Required if Run Valuation and Use Price"
+                " Table are selected."
+            ),
+            required="valuation_container and price_table",
+            allowed="price_table",
+            columns=[
+                spec.NumberInput(
+                    id="year",
+                    about=gettext(
+                        "Consecutive years for each year in the lifespan of the wind"
+                        " farm. These may be the actual years: 2010, 2011, 2012..., or"
+                        " the number of the years after the starting date: 1, 2, 3,..."
+                    ),
+                    units=u.year_AD
+                ),
+                spec.NumberInput(
+                    id="price",
+                    about=gettext("Price of energy for each year."),
+                    units=u.currency / u.kilowatt_hour
+                )
+            ],
+            index_col="year"
+        ),
+        spec.NumberInput(
+            id="wind_price",
+            name=gettext("price of energy"),
+            about=gettext(
+                "The initial price of wind energy, at the first year in the wind energy"
+                " farm lifespan. Required if Run Valuation is selected and Use Price"
+                " Table is not selected."
+            ),
+            required="valuation_container and (not price_table)",
+            allowed="valuation_container and not price_table",
+            units=u.currency / u.kilowatt_hour
+        ),
+        spec.RatioInput(
+            id="rate_change",
+            name=gettext("rate of price change"),
+            about=gettext(
+                "The annual rate of change in the price of wind energy. Required if Run"
+                " Valuation is selected and Use Price Table is not selected."
+            ),
+            required="valuation_container and not price_table",
+            allowed="valuation_container and not price_table",
+            units=None
+        )
+    ],
+    outputs=[
+        spec.DirectoryOutput(
+            id="output",
+            about=None,
+            contents=[
+                spec.VectorOutput(
+                    id="wind_energy_points.shp",
+                    about=gettext("Map of summarized data at each point."),
+                    geometry_types={"POINT"},
+                    fields=[
+                        spec.NumberOutput(
+                            id="long",
+                            about=gettext("Longitude of the data point."),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="lati",
+                            about=gettext("Latitude of the data point."),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="lam",
+                            about=gettext(
+                                "Weibull scale factor at the reference hub height at this"
+                                " point."
+                            ),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="k",
+                            about=gettext("Weibull shape factor at this point."),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="ref",
+                            about=gettext(
+                                "The reference hub height at this point, at which wind"
+                                " speed data was collected and LAM was estimated."
+                            ),
+                            units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="ref_lam",
+                            about=gettext(
+                                "Weibull scale factor at the reference hub height at this"
+                                " point."
+                            ),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="Dens_W/m2",
+                            about=gettext("Power density at this point."),
+                            units=u.watt / u.meter**2
+                        ),
+                        spec.NumberOutput(
+                            id="Harv_MWhr",
+                            about=gettext(
+                                "Predicted energy harvested from a wind farm centered on"
+                                " this point."
+                            ),
+                            units=u.megawatt_hour / u.year
+                        ),
+                        spec.NumberOutput(
+                            id="DepthVal",
+                            about=gettext("Ocean depth at this point."),
+                            units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="DistVal",
+                            about=gettext(
+                                "Distance to shore from this point. Included only if"
+                                " distance parameters were provided."
+                            ),
+                            units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="CO2_Tons",
+                            about=gettext(
+                                "Offset carbon emissions for a farm centered on this"
+                                " point. Included only if Valuation is run."
+                            ),
+                            units=u.metric_ton / u.year
+                        ),
+                        spec.NumberOutput(
+                            id="Level_Cost",
+                            about=gettext(
+                                "Energy price that would be required to set the present"
+                                " value of a farm centered on this point equal to zero."
+                                " Included only if Valuation is run."
+                            ),
+                            units=u.currency / u.kilowatt_hour
+                        ),
+                        spec.NumberOutput(
+                            id="NPV",
+                            about=gettext(
+                                "The net present value of a farm centered on this point."
+                                " Included only if Valuation is run."
+                            ),
+                            units=u.currency
+                        )
+                    ]
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="intermediate",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="aoi_raster.tif",
+                    about=gettext("Empty raster covering the extent of the AOI"),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="bathymetry_projected.tif",
+                    about=gettext("Clipped and reprojected bathymetry map"),
+                    data_type=float,
+                    units=u.meter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="carbon_emissions_tons.tif",
+                    about=gettext(
+                        "Map of offset carbon emissions for a farm centered on each pixel"
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.year
+                ),
+                spec.SingleBandRasterOutput(
+                    id="depth_mask.tif",
+                    about=gettext(
+                        "Bathymetry map masked to show only the pixels that fall within"
+                        " the allowed depth range"
+                    ),
+                    data_type=float,
+                    units=u.meter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="distance_mask.tif",
+                    about=gettext(
+                        "Distance to shore, masked to show only the pixels that fall"
+                        " within the allowed distance range"
+                    ),
+                    data_type=float,
+                    units=u.meter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="distance_trans.tif",
+                    about=gettext("Distance to shore from each pixel"),
+                    data_type=float,
+                    units=u.meter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="harvested_energy_MWhr_per_yr.tif",
+                    about=gettext(
+                        "Map of energy harvested from a farm centered on each pixel."
+                    ),
+                    data_type=float,
+                    units=u.megawatt_hour / u.year
+                ),
+                spec.SingleBandRasterOutput(
+                    id="levelized_cost_price_per_kWh.tif",
+                    about=gettext(
+                        "Map of the energy price that would be required to set the"
+                        " present value of a farm centered on each pixel equal to zero."
+                    ),
+                    data_type=float,
+                    units=u.currency / u.kilowatt_hour
+                ),
+                spec.SingleBandRasterOutput(
+                    id="npv.tif",
+                    about=gettext(
+                        "Map of the net present value of a farm centered on each pixel."
+                    ),
+                    data_type=float,
+                    units=u.currency
+                ),
+                spec.VectorOutput(
+                    id="projected_clipped_land_poly.shp",
+                    about=gettext("Clipped and reprojected land polygon vector"),
+                    geometry_types={"POLYGON", "MULTIPOLYGON"},
+                    fields=[]
+                ),
+                spec.FileOutput(
+                    id="projection_params.pickle",
+                    about=gettext("Pickled bathymetry reprojection parameters")
+                ),
+                spec.FileOutput(
+                    id="wind_data.pickle", about=gettext("Pickled wind data dictionary")
+                ),
+                spec.VectorOutput(
+                    id="wind_energy_points_from_data.shp",
+                    about=gettext("Wind data"),
+                    geometry_types={"POINT"},
+                    fields=[
+                        spec.NumberOutput(
+                            id="long",
+                            about=gettext("Longitude of the data point."),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="lati",
+                            about=gettext("Latitude of the data point."),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="lam",
+                            about=gettext(
+                                "Weibull scale factor at the reference hub height at this"
+                                " point."
+                            ),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="k",
+                            about=gettext("Weibull shape factor at this point."),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="ref",
+                            about=gettext(
+                                "The reference hub height at this point, at which wind"
+                                " speed data was collected and LAM was estimated."
+                            ),
+                            units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="ref_lam",
+                            about=gettext(
+                                "Weibull scale factor at the reference hub height at this"
+                                " point."
+                            ),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="Dens_W/m2",
+                            about=gettext("Power density at this point."),
+                            units=u.watt / u.meter**2
+                        ),
+                        spec.NumberOutput(
+                            id="Harv_MWhr",
+                            about=gettext(
+                                "Predicted energy harvested from a wind farm centered on"
+                                " this point."
+                            ),
+                            units=u.megawatt_hour / u.year
+                        ),
+                        spec.NumberOutput(
+                            id="DepthVal",
+                            about=gettext("Ocean depth at this point."),
+                            units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="DistVal",
+                            about=gettext(
+                                "Distance to shore from this point. Included only if"
+                                " distance parameters were provided."
+                            ),
+                            units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="CO2_Tons",
+                            about=gettext(
+                                "Offset carbon emissions for a farm centered on this"
+                                " point. Included only if Valuation is run."
+                            ),
+                            units=u.metric_ton / u.year
+                        ),
+                        spec.NumberOutput(
+                            id="Level_Cost",
+                            about=gettext(
+                                "Energy price that would be required to set the present"
+                                " value of a farm centered on this point equal to zero."
+                                " Included only if Valuation is run."
+                            ),
+                            units=u.currency / u.kilowatt_hour
+                        ),
+                        spec.NumberOutput(
+                            id="NPV",
+                            about=gettext(
+                                "The net present value of a farm centered on this point."
+                                " Included only if Valuation is run."
+                            ),
+                            units=u.currency
+                        )
+                    ]
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ],
+)
 
 
 # The _SCALE_KEY is used in getting the right wind energy arguments that are

@@ -29,387 +29,523 @@ LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
 _LOGGING_PERIOD = 5
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "urban_cooling_model",
-    "model_title": gettext("Urban Cooling"),
-    "userguide": "urban_cooling_model.html",
-    "aliases": ("ucm",),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['lulc_raster_path', 'ref_eto_raster_path', 'aoi_vector_path', 'biophysical_table_path'],
-            ['t_ref', 'uhi_max', 't_air_average_radius', 'green_area_cooling_distance', 'cc_method'],
-            ['do_energy_valuation', 'building_vector_path', 'energy_consumption_table_path'],
-            ['do_productivity_valuation', 'avg_rel_humidity'],
-            ['cc_weight_shade', 'cc_weight_albedo', 'cc_weight_eti'],
-        ]
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["lulc_raster_path", "ref_eto_raster_path",
-                         "aoi_vector_path", "building_vector_path"],
-        "different_projections_ok": True,
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "lulc_raster_path": {
-            **spec.LULC,
-            "projected": True,
-            "projection_units": u.meter,
-            "about": gettext(
-                "Map of LULC for the area of interest. All values in this "
-                "raster must have corresponding entries in the Biophysical "
-                "Table.")
-        },
-        "ref_eto_raster_path": spec.ET0,
-        "aoi_vector_path": spec.AOI,
-        "biophysical_table_path": {
-            "name": gettext("biophysical table"),
-            "type": "csv",
-            "index_col": "lucode",
-            "columns": {
-                "lucode": spec.LULC_TABLE_COLUMN,
-                "kc": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext("Crop coefficient for this LULC class.")},
-                "green_area": {
-                    "type": "boolean",
-                    "about": gettext(
-                        "Enter 1 to indicate that the LULC is considered a "
-                        "green area. Enter 0 to indicate that the LULC is not "
-                        "considered a green area.")},
-                "shade":  {
-                    "type": "ratio",
-                    "required": "cc_method == 'factors'",
-                    "about": gettext(
-                        "The proportion of area in this LULC class that is "
-                        "covered by tree canopy at least 2 meters high. "
-                        "Required if the 'factors' option is selected for "
-                        "the Cooling Capacity Calculation Method.")},
-                "albedo": {
-                    "type": "ratio",
-                    "required": "cc_method == 'factors'",
-                    "about": gettext(
-                        "The proportion of solar radiation that is directly "
-                        "reflected by this LULC class. Required if the "
-                        "'factors' option is selected for the Cooling "
-                        "Capacity Calculation Method.")},
-                "building_intensity": {
-                    "type": "ratio",
-                    "required": "cc_method == 'intensity'",
-                    "about": gettext(
-                        "The ratio of building floor area to footprint "
-                        "area, with all values in this column normalized "
-                        "between 0 and 1. Required if the 'intensity' option "
-                        "is selected for the Cooling Capacity Calculation "
-                        "Method.")}
-            },
-            "about": gettext(
-                "A table mapping each LULC code to biophysical data for that "
-                "LULC class. All values in the LULC raster must have "
-                "corresponding entries in this table."),
-        },
-        "green_area_cooling_distance": {
-            "type": "number",
-            "units": u.meter,
-            "expression": "value >= 0",
-            "name": gettext("maximum cooling distance"),
-            "about": gettext(
-                "Distance over which green areas larger than 2 hectares have "
-                "a cooling effect."),
-        },
-        "t_air_average_radius": {
-            "type": "number",
-            "units": u.meter,
-            "expression": "value >= 0",
-            "name": gettext("air blending distance"),
-            "about": gettext(
-                "Radius over which to average air temperatures to account for "
-                "air mixing.")
-        },
-        "t_ref": {
-            "name": gettext("reference air temperature"),
-            "type": "number",
-            "units": u.degree_Celsius,
-            "about": gettext(
-                "Air temperature in a rural reference area where the urban "
-                "heat island effect is not observed.")
-        },
-        "uhi_max": {
-            "name": gettext("UHI effect"),
-            "type": "number",
-            "units": u.degree_Celsius,
-            "about": gettext(
-                "The magnitude of the urban heat island effect, i.e., the "
-                "difference between the rural reference temperature and the "
-                "maximum temperature observed in the city.")
-        },
-        "do_energy_valuation": {
-            "name": gettext("run energy savings valuation"),
-            "type": "boolean",
-            "about": gettext("Run the energy savings valuation model.")
-        },
-        "do_productivity_valuation": {
-            "name": gettext("run work productivity valuation"),
-            "type": "boolean",
-            "about": gettext("Run the work productivity valuation model.")
-        },
-        "avg_rel_humidity": {
-            "name": gettext("average relative humidity"),
-            "type": "percent",
-            "required": "do_productivity_valuation",
-            "allowed": "do_productivity_valuation",
-            "about": gettext(
-                "The average relative humidity over the time period of "
-                "interest. Required if Run Work Productivity Valuation is "
-                "selected."),
-        },
-        "building_vector_path": {
-            "name": gettext("buildings"),
-            "type": "vector",
-            "fields": {
-                "type": {
-                    "type": "integer",
-                    "about": gettext(
-                        "Code indicating the building type. These codes must "
-                        "match those in the Energy Consumption Table.")}},
-            "geometries": spec.POLYGONS,
-            "required": "do_energy_valuation",
-            "allowed": "do_energy_valuation",
-            "about": gettext(
-                "A map of built infrastructure footprints. Required if Run "
-                "Energy Savings Valuation is selected.")
-        },
-        "energy_consumption_table_path": {
-            "name": gettext("energy consumption table"),
-            "type": "csv",
-            "index_col": "type",
-            "columns": {
-                "type": {
-                    "type": "integer",
-                    "about": gettext(
-                        "Building type codes matching those in the Buildings "
-                        "vector.")
-                },
-                "consumption": {
-                    "type": "number",
-                    "units": u.kilowatt_hour/(u.degree_Celsius * u.meter**2),
-                    "about": gettext(
-                        "Energy consumption by footprint area for this "
-                        "building type.")
-                },
-                "cost": {
-                    "type": "number",
-                    "units": u.currency/u.kilowatt_hour,
-                    "required": False,
-                    "about": gettext(
-                        "The cost of electricity for this building type. "
-                        "If this column is provided, the energy savings "
-                        "outputs will be in the this currency unit rather "
-                        "than kWh.")
-                }
-            },
-            "required": "do_energy_valuation",
-            "allowed": "do_energy_valuation",
-            "about": gettext(
-                "A table of energy consumption data for each building type. "
-                "Required if Run Energy Savings Valuation is selected.")
-        },
-        "cc_method": {
-            "name": gettext("cooling capacity calculation method"),
-            "type": "option_string",
-            "options": {
-                "factors": {
-                    "display_name": gettext("factors"),
-                    "description": gettext(
-                        "Use the weighted shade, albedo, and ETI factors as a "
-                        "temperature predictor (for daytime temperatures).")},
-                "intensity": {
-                    "display_name": gettext("intensity"),
-                    "description": gettext(
-                        "Use building intensity as a temperature predictor "
-                        "(for nighttime temperatures).")}
-            },
-            "about": gettext("The air temperature predictor method to use.")
-        },
-        "cc_weight_shade": {
-            "name": gettext("shade weight"),
-            "type": "ratio",
-            "required": False,
-            "about": gettext(
-                "The relative weight to apply to shade when calculating the "
-                "cooling capacity index. If not provided, defaults to 0.6."),
-        },
-        "cc_weight_albedo": {
-            "name": gettext("albedo weight"),
-            "type": "ratio",
-            "required": False,
-            "about": gettext(
-                "The relative weight to apply to albedo when calculating the "
-                "cooling capacity index. If not provided, defaults to 0.2."),
-        },
-        "cc_weight_eti": {
-            "name": gettext("evapotranspiration weight"),
-            "type": "ratio",
-            "required": False,
-            "about": gettext(
-                "The relative weight to apply to ETI when calculating the "
-                "cooling capacity index. If not provided, defaults to 0.2.")
-        },
-    },
-    "outputs": {
-        "hm.tif": {
-            "about": "Map of heat mitigation index.",
-            "bands": {1: {"type": "ratio"}}
-        },
-        "uhi_results.shp": {
-            "about": (
-                "A copy of the input Area of Interest vector with "
-                "additional fields."),
-            "geometries": spec.POLYGONS,
-            "fields": {
-                "avg_cc": {
-                    "about": "Average CC value",
-                    "type": "number",
-                    "units": u.none
-                },
-                "avg_tmp_v": {
-                    "about": "Average temperature value",
-                    "type": "number",
-                    "units": u.degree_Celsius
-                },
-                "avg_tmp_an": {
-                    "about": "Average temperature anomaly",
-                    "type": "number",
-                    "units": u.degree_Celsius
-                },
-                "avd_eng_cn": {
-                    "about": "Avoided energy consumption (kWh or $ if optional energy cost input column was provided in the Energy Consumption Table).",
-                    "type": "number",
-                    "units": u.none
-                },
-                "avg_wbgt_v": {
-                    "about": "Average wet bulb globe temperature.",
-                    "type": "number",
-                    "units": u.degree_Celsius
-                },
-                "avg_ltls_v": {
-                    "about": "Average light work productivity loss",
-                    "type": "percent"
-                },
-                "avg_hvls_v": {
-                    "about": "Average heavy work productivity loss",
-                    "type": "percent"
-                }
-            }
-        },
-        "buildings_with_stats.shp": {
-            "about": "A copy of the input vector “Building Footprints” with additional fields.",
-            "geometries": spec.POLYGONS,
-            "fields": {
-                "energy_sav": {
-                    "about": "Energy savings value (kWh or currency if optional energy cost input column was provided in the Energy Consumption Table). Savings are relative to a theoretical scenario where the city contains NO natural areas nor green spaces; where CC = 0 for all LULC classes.",
-                    "type": "number",
-                    "units": u.none
-                },
-                "mean_t_air": {
-                    "about": (
-                        "Average temperature value in building. Calculated "
-                        "from the mean T_air pixel value under this building "
-                        "geometry."),
-                    "type": "number",
-                    "units": u.degree_Celsius
-                }
-            }
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "cc.tif": {
-                    "about": "Map of cooling capacity",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "cc_masked_green_areas.tif": {
-                    "about": "Cooling capacity map masked by non-green areas",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "T_air.tif": {
-                    "about": "Map of air temperature with air mixing.",
-                    "bands": {1: {"type": "number", "units": u.degree_Celsius}}
-                },
-                "T_air_nomix.tif": {
-                    "about": "Map of air temperature without air mixing.",
-                    "bands": {1: {"type": "number", "units": u.degree_Celsius}}
-                },
-                "eti.tif": {
-                    "about": "Map of the evapotranspiration index.",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "wbgt.tif": {
-                    "about": "Map of wet bulb globe temperature.",
-                    "bands": {1: {"type": "number", "units": u.degree_Celsius}}
-                },
-                "reprojected_aoi.shp": {
-                    "about": (
-                        "The Area of Interest vector reprojected to the "
-                        "spatial reference of the LULC."),
-                    "geometries": spec.POLYGONS,
-                    "fields": {}
-                },
-                "reprojected_buildings.shp": {
-                    "about": (
-                        "The buildings vector reprojected to the spatial "
-                        "reference of the LULC."),
-                    "geometries": spec.POLYGONS,
-                    "fields": {}
-                },
-                "albedo.tif": {
-                    "about": "Map of albedo.",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "area_kernel.tif": {
-                    "about": "Area kernel for green area convolution.",
-                    "bands": {1: {"type": "integer"}}
-                },
-                "green_area_sum.tif": {
-                    "about": (
-                        "Map of green area pixels within a search distance "
-                        "around each pixel."
+MODEL_SPEC = spec.ModelSpec(
+    model_id="urban_cooling_model",
+    model_title=gettext("Urban Cooling"),
+    userguide="urban_cooling_model.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=("ucm",),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["lulc_raster_path", "ref_eto_raster_path",
+         "aoi_vector_path", "biophysical_table_path"],
+        ["t_ref", "uhi_max", "t_air_average_radius",
+         "green_area_cooling_distance", "cc_method"],
+        ["do_energy_valuation", "building_vector_path", "energy_consumption_table_path"],
+        ["do_productivity_valuation", "avg_rel_humidity"],
+        ["cc_weight_shade", "cc_weight_albedo", "cc_weight_eti"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.SingleBandRasterInput(
+            id="lulc_raster_path",
+            name=gettext("land use/land cover"),
+            about=gettext(
+                "Map of LULC for the area of interest. All values in this raster must"
+                " have corresponding entries in the Biophysical Table."
+            ),
+            data_type=int,
+            units=None,
+            projected=True,
+            projection_units=u.meter
+        ),
+        spec.SingleBandRasterInput(
+            id="ref_eto_raster_path",
+            name=gettext("reference evapotranspiration"),
+            about=gettext("Map of reference evapotranspiration values."),
+            data_type=float,
+            units=u.millimeter,
+            projected=None
+        ),
+        spec.VectorInput(
+            id="aoi_vector_path",
+            name=gettext("area of interest"),
+            about=gettext(
+                "A map of areas over which to aggregate and summarize the final results."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[],
+            projected=None
+        ),
+        spec.CSVInput(
+            id="biophysical_table_path",
+            name=gettext("biophysical table"),
+            about=gettext(
+                "A table mapping each LULC code to biophysical data for that LULC class."
+                " All values in the LULC raster must have corresponding entries in this"
+                " table."
+            ),
+            columns=[
+                spec.IntegerInput(
+                    id="lucode",
+                    about=gettext(
+                        "LULC codes from the LULC raster. Each code must be a unique"
+                        " integer."
+                    )
+                ),
+                spec.NumberInput(
+                    id="kc",
+                    about=gettext("Crop coefficient for this LULC class."),
+                    units=u.none
+                ),
+                spec.BooleanInput(
+                    id="green_area",
+                    about=gettext(
+                        "Enter 1 to indicate that the LULC is considered a green area."
+                        " Enter 0 to indicate that the LULC is not considered a green"
+                        " area."
+                    )
+                ),
+                spec.RatioInput(
+                    id="shade",
+                    about=(
+                        "The proportion of area in this LULC class that is covered by"
+                        " tree canopy at least 2 meters high. Required if the 'factors'"
+                        " option is selected for the Cooling Capacity Calculation Method."
                     ),
-                    "bands": {1: {"type": "number", "units": u.none}}
+                    required="cc_method == 'factors'",
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="albedo",
+                    about=(
+                        "The proportion of solar radiation that is directly reflected by"
+                        " this LULC class. Required if the 'factors' option is selected"
+                        " for the Cooling Capacity Calculation Method."
+                    ),
+                    required="cc_method == 'factors'",
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="building_intensity",
+                    about=(
+                        "The ratio of building floor area to footprint area, with all"
+                        " values in this column normalized between 0 and 1. Required if"
+                        " the 'intensity' option is selected for the Cooling Capacity"
+                        " Calculation Method."
+                    ),
+                    required="cc_method == 'intensity'",
+                    units=None
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.NumberInput(
+            id="green_area_cooling_distance",
+            name=gettext("maximum cooling distance"),
+            about=gettext(
+                "Distance over which green areas larger than 2 hectares have a cooling"
+                " effect."
+            ),
+            units=u.meter,
+            expression="value >= 0"
+        ),
+        spec.NumberInput(
+            id="t_air_average_radius",
+            name=gettext("air blending distance"),
+            about=gettext(
+                "Radius over which to average air temperatures to account for air mixing."
+            ),
+            units=u.meter,
+            expression="value >= 0"
+        ),
+        spec.NumberInput(
+            id="t_ref",
+            name=gettext("reference air temperature"),
+            about=gettext(
+                "Air temperature in a rural reference area where the urban heat island"
+                " effect is not observed."
+            ),
+            units=u.degree_Celsius
+        ),
+        spec.NumberInput(
+            id="uhi_max",
+            name=gettext("UHI effect"),
+            about=gettext(
+                "The magnitude of the urban heat island effect, i.e., the difference"
+                " between the rural reference temperature and the maximum temperature"
+                " observed in the city."
+            ),
+            units=u.degree_Celsius
+        ),
+        spec.BooleanInput(
+            id="do_energy_valuation",
+            name=gettext("run energy savings valuation"),
+            about=gettext("Run the energy savings valuation model.")
+        ),
+        spec.BooleanInput(
+            id="do_productivity_valuation",
+            name=gettext("run work productivity valuation"),
+            about=gettext("Run the work productivity valuation model.")
+        ),
+        spec.PercentInput(
+            id="avg_rel_humidity",
+            name=gettext("average relative humidity"),
+            about=gettext(
+                "The average relative humidity over the time period of interest. Required"
+                " if Run Work Productivity Valuation is selected."
+            ),
+            required="do_productivity_valuation",
+            allowed="do_productivity_valuation",
+            units=None
+        ),
+        spec.VectorInput(
+            id="building_vector_path",
+            name=gettext("buildings"),
+            about=gettext(
+                "A map of built infrastructure footprints. Required if Run Energy Savings"
+                " Valuation is selected."
+            ),
+            required="do_energy_valuation",
+            allowed="do_energy_valuation",
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.IntegerInput(
+                    id="type",
+                    about=gettext(
+                        "Code indicating the building type. These codes must match those"
+                        " in the Energy Consumption Table."
+                    )
+                )
+            ],
+            projected=None
+        ),
+        spec.CSVInput(
+            id="energy_consumption_table_path",
+            name=gettext("energy consumption table"),
+            about=gettext(
+                "A table of energy consumption data for each building type. Required if"
+                " Run Energy Savings Valuation is selected."
+            ),
+            required="do_energy_valuation",
+            allowed="do_energy_valuation",
+            columns=[
+                spec.IntegerInput(
+                    id="type",
+                    about=gettext(
+                        "Building type codes matching those in the Buildings vector."
+                    )
+                ),
+                spec.NumberInput(
+                    id="consumption",
+                    about=gettext(
+                        "Energy consumption by footprint area for this building type."
+                    ),
+                    units=u.kilowatt_hour / u.degree_Celsius / u.meter**2
+                ),
+                spec.NumberInput(
+                    id="cost",
+                    about=gettext(
+                        "The cost of electricity for this building type. If this column"
+                        " is provided, the energy savings outputs will be in the this"
+                        " currency unit rather than kWh."
+                    ),
+                    required=False,
+                    units=u.currency / u.kilowatt_hour
+                )
+            ],
+            index_col="type"
+        ),
+        spec.OptionStringInput(
+            id="cc_method",
+            name=gettext("cooling capacity calculation method"),
+            about=gettext("The air temperature predictor method to use."),
+            options={
+                "factors": {
+                    "display_name": "factors",
+                    "description": (
+                        "Use the weighted shade, albedo, and ETI factors as a temperature"
+                        " predictor (for daytime temperatures)."
+                    ),
                 },
-                "kc.tif": {
-                    "about": "Map of crop coefficient.",
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "lulc.tif": {
-                    "about": "Map of land use/land cover.",
-                    "bands": {1: {"type": "integer"}}
-                },
-                "ref_eto.tif": {
-                    "about": (
-                        "Map of reference evapotranspiration reprojected and "
-                        "aligned to the intersection of the AOI, ET0, and LULC."
-                        ),
-                    "bands": {1: {"type": "number", "units": u.millimeter}}
-                },
-                "shade.tif": {
-                    "about": "Map of shade.",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "cc_ref_aoi_stats.pickle": {
-                    "about": "Cooling capacity zonal statistics for aoi.",
-                },
-                "t_air_aoi_stats.pickle": {
-                    "about": "Air temperature zonal statistics for aoi.",
+                "intensity": {
+                    "display_name": "intensity",
+                    "description": (
+                        "Use building intensity as a temperature predictor (for nighttime"
+                        " temperatures)."
+                    ),
                 },
             }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+        ),
+        spec.RatioInput(
+            id="cc_weight_shade",
+            name=gettext("shade weight"),
+            about=gettext(
+                "The relative weight to apply to shade when calculating the cooling"
+                " capacity index. If not provided, defaults to 0.6."
+            ),
+            required=False,
+            units=None
+        ),
+        spec.RatioInput(
+            id="cc_weight_albedo",
+            name=gettext("albedo weight"),
+            about=gettext(
+                "The relative weight to apply to albedo when calculating the cooling"
+                " capacity index. If not provided, defaults to 0.2."
+            ),
+            required=False,
+            units=None
+        ),
+        spec.RatioInput(
+            id="cc_weight_eti",
+            name=gettext("evapotranspiration weight"),
+            about=gettext(
+                "The relative weight to apply to ETI when calculating the cooling"
+                " capacity index. If not provided, defaults to 0.2."
+            ),
+            required=False,
+            units=None
+        )
+    ],
+    outputs=[
+        spec.SingleBandRasterOutput(
+            id="hm.tif",
+            about=gettext("Map of heat mitigation index."),
+            data_type=float,
+            units=None
+        ),
+        spec.VectorOutput(
+            id="uhi_results.shp",
+            about=gettext(
+                "A copy of the input Area of Interest vector with additional fields."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="avg_cc", about=gettext("Average CC value"), units=u.none
+                ),
+                spec.NumberOutput(
+                    id="avg_tmp_v",
+                    about=gettext("Average temperature value"),
+                    units=u.degree_Celsius
+                ),
+                spec.NumberOutput(
+                    id="avg_tmp_an",
+                    about=gettext("Average temperature anomaly"),
+                    units=u.degree_Celsius
+                ),
+                spec.NumberOutput(
+                    id="avd_eng_cn",
+                    about=gettext(
+                        "Avoided energy consumption (kWh or $ if optional energy cost"
+                        " input column was provided in the Energy Consumption Table)."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="avg_wbgt_v",
+                    about=gettext("Average wet bulb globe temperature."),
+                    units=u.degree_Celsius
+                ),
+                spec.PercentOutput(
+                    id="avg_ltls_v", about=gettext("Average light work productivity loss")
+                ),
+                spec.PercentOutput(
+                    id="avg_hvls_v", about=gettext("Average heavy work productivity loss")
+                )
+            ]
+        ),
+        spec.VectorOutput(
+            id="buildings_with_stats.shp",
+            about=gettext(
+                "A copy of the input vector “Building Footprints” with additional fields."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="energy_sav",
+                    about=gettext(
+                        "Energy savings value (kWh or currency if optional energy cost"
+                        " input column was provided in the Energy Consumption Table)."
+                        " Savings are relative to a theoretical scenario where the city"
+                        " contains NO natural areas nor green spaces; where CC = 0 for"
+                        " all LULC classes."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="mean_t_air",
+                    about=gettext(
+                        "Average temperature value in building. Calculated from the mean"
+                        " T_air pixel value under this building geometry."
+                    ),
+                    units=u.degree_Celsius
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="intermediate",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="cc.tif",
+                    about=gettext("Map of cooling capacity"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="cc_masked_green_areas.tif",
+                    about=gettext("Cooling capacity map masked by non-green areas"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="T_air.tif",
+                    about=gettext("Map of air temperature with air mixing."),
+                    data_type=float,
+                    units=u.degree_Celsius
+                ),
+                spec.SingleBandRasterOutput(
+                    id="T_air_nomix.tif",
+                    about=gettext("Map of air temperature without air mixing."),
+                    data_type=float,
+                    units=u.degree_Celsius
+                ),
+                spec.SingleBandRasterOutput(
+                    id="eti.tif",
+                    about=gettext("Map of the evapotranspiration index."),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="wbgt.tif",
+                    about=gettext("Map of wet bulb globe temperature."),
+                    data_type=float,
+                    units=u.degree_Celsius
+                ),
+                spec.VectorOutput(
+                    id="reprojected_aoi.shp",
+                    about=gettext(
+                        "The Area of Interest vector reprojected to the spatial reference"
+                        " of the LULC."
+                    ),
+                    geometry_types={"POLYGON", "MULTIPOLYGON"},
+                    fields=[]
+                ),
+                spec.VectorOutput(
+                    id="reprojected_buildings.shp",
+                    about=gettext(
+                        "The buildings vector reprojected to the spatial reference of the"
+                        " LULC."
+                    ),
+                    geometry_types={"POLYGON", "MULTIPOLYGON"},
+                    fields=[]
+                ),
+                spec.SingleBandRasterOutput(
+                    id="albedo.tif",
+                    about=gettext("Map of albedo."),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="area_kernel.tif",
+                    about=gettext("Area kernel for green area convolution."),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="green_area_sum.tif",
+                    about=gettext(
+                        "Map of green area pixels within a search distance around each"
+                        " pixel."
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="kc.tif",
+                    about=gettext("Map of crop coefficient."),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="lulc.tif",
+                    about=gettext("Map of land use/land cover."),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="ref_eto.tif",
+                    about=gettext(
+                        "Map of reference evapotranspiration reprojected and aligned to"
+                        " the intersection of the AOI, ET0, and LULC."
+                    ),
+                    data_type=float,
+                    units=u.millimeter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="shade.tif",
+                    about=gettext("Map of shade."),
+                    data_type=float,
+                    units=None
+                ),
+                spec.FileOutput(
+                    id="cc_ref_aoi_stats.pickle",
+                    about=gettext("Cooling capacity zonal statistics for aoi.")
+                ),
+                spec.FileOutput(
+                    id="t_air_aoi_stats.pickle",
+                    about=gettext("Air temperature zonal statistics for aoi.")
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ],
+)
 
 
 def execute(args):
@@ -705,7 +841,7 @@ def execute(args):
             (cc_raster_path, 1),
             (green_area_sum_raster_path, 1),
             (cc_park_raster_path, 1),
-            (green_area_threshold, 'raw'),
+            (green_area_threshold, 'raw')
         ], hm_op, hm_raster_path, gdal.GDT_Float32, TARGET_NODATA),
         target_path_list=[hm_raster_path],
         dependent_task_list=[cc_task, green_area_sum_task, cc_park_task],

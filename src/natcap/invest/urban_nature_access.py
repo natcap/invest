@@ -38,592 +38,638 @@ RADIUS_OPT_URBAN_NATURE = 'radius per urban nature class'
 RADIUS_OPT_POP_GROUP = 'radius per population group'
 POP_FIELD_REGEX = '^pop_'
 ID_FIELDNAME = 'adm_unit_id'
-MODEL_SPEC = spec.build_model_spec({
-    'model_id': 'urban_nature_access',
-    'model_title': gettext('Urban Nature Access'),
-    'userguide': 'urban_nature_access.html',
-    'aliases': ('una',),
-    'ui_spec': {
-        'order': [
-            ['workspace_dir', 'results_suffix'],
-            ['lulc_raster_path', 'lulc_attribute_table'],
-            ['population_raster_path', 'admin_boundaries_vector_path', 'population_group_radii_table', 'urban_nature_demand', 'aggregate_by_pop_group'],
-            ['search_radius_mode', 'decay_function', 'search_radius']
-        ]
-    },
-    'args_with_spatial_overlap': {
-        'spatial_keys': [
-            'lulc_raster_path', 'population_raster_path',
-            'admin_boundaries_vector_path'],
-        'different_projections_ok': True,
-    },
-    'args': {
-        'workspace_dir': spec.WORKSPACE,
-        'results_suffix': spec.SUFFIX,
-        'n_workers': spec.N_WORKERS,
-        'lulc_raster_path': {
-            **spec.LULC,
-            'projected': True,
-            'projection_units': u.meter,
-            'about': (
-                "A map of LULC codes. "
-                "Each land use/land cover type must be assigned a unique integer "
-                "code. All values in this raster must have corresponding entries "
-                "in the LULC attribute table. For this model in particular, "
-                "the urban nature types are of importance.  Non-nature types "
-                "are not required to be uniquely identified. All outputs "
-                "will be produced at the resolution of this raster."
+MODEL_SPEC = spec.ModelSpec(
+    model_id="urban_nature_access",
+    model_title=gettext("Urban Nature Access"),
+    userguide="urban_nature_access.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=("una",),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["lulc_raster_path", "lulc_attribute_table"],
+        [
+            "population_raster_path",
+            "admin_boundaries_vector_path",
+            "population_group_radii_table",
+            "urban_nature_demand",
+            "aggregate_by_pop_group"
+        ],
+        ["search_radius_mode", "decay_function", "search_radius"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
             ),
-        },
-        'lulc_attribute_table': {
-            'name': 'LULC attribute table',
-            'type': 'csv',
-            'about': (
-                "A table identifying which LULC codes represent urban nature. "
-                "All LULC classes in the Land Use Land Cover raster MUST have "
-                "corresponding values in this table.  Each row is a land use "
-                "land cover class."
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
             ),
-            'index_col': 'lucode',
-            'columns': {
-                'lucode': spec.LULC_TABLE_COLUMN,
-                'urban_nature': {
-                    'type': 'ratio',
-                    'about': (
-                        "The proportion (0-1) indicating the naturalness of "
-                        "the land types. 0 indicates the naturalness level of "
-                        "this LULC type is lowest (0% nature), while 1 "
-                        "indicates that of this LULC type is the highest "
-                        "(100% nature)"
-                    ),
-                },
-                'search_radius_m': {
-                    'type': 'number',
-                    'units': u.meter,
-                    'required':
-                        f'search_radius_mode == "{RADIUS_OPT_URBAN_NATURE}"',
-                    'expression': 'value >= 0',
-                    'about': (
-                        'The distance within which a LULC type is relevant '
-                        'to the population group of interest. This is the '
-                        'search distance that the model will apply for '
-                        'this LULC type. Values must be >= 0 and defined '
-                        'in meters. Required when running the model with '
-                        'search radii defined per urban nature class.'
-                    ),
-                }
-            },
-        },
-        'population_raster_path': {
-            'type': 'raster',
-            'name': 'population raster',
-            'bands': {
-                1: {'type': 'number', 'units': u.count}
-            },
-            'projected': True,
-            'projection_units': u.meter,
-            'about': (
-                "A raster representing the number of inhabitants per pixel."
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
             ),
-        },
-        'admin_boundaries_vector_path': {
-            'type': 'vector',
-            'name': 'administrative boundaries',
-            'geometries': spec.POLYGONS,
-            'fields': {
-                "pop_[POP_GROUP]": {
-                    "type": "ratio",
-                    "required": (
-                        f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
-                        "or aggregate_by_pop_group"),
-                    "about": gettext(
-                        "The proportion of the population within each "
-                        "administrative unit belonging to the identified "
-                        "population group (POP_GROUP). At least one column "
-                        "with the prefix 'pop_' is required when aggregating "
-                        "output by population groups."
-                    ),
-                }
-            },
-            'about': gettext(
-                "A vector representing administrative units. Polygons "
-                "representing administrative units should not overlap. "
-                "Overlapping administrative geometries may cause unexpected "
-                "results and for this reason should not overlap."
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.SingleBandRasterInput(
+            id="lulc_raster_path",
+            name=gettext("land use/land cover"),
+            about=gettext(
+                "A map of LULC codes. Each land use/land cover type must be assigned a"
+                " unique integer code. All values in this raster must have corresponding"
+                " entries in the LULC attribute table. For this model in particular, the"
+                " urban nature types are of importance.  Non-nature types are not"
+                " required to be uniquely identified. All outputs will be produced at the"
+                " resolution of this raster."
             ),
-        },
-        'urban_nature_demand': {
-            'type': 'number',
-            'name': 'urban nature demand per capita',
-            'units': u.m**2,  # defined as m² per capita
-            'expression': "value > 0",
-            'about': gettext(
-                "The amount of urban nature that each resident should have "
-                "access to. This is often defined by local urban planning "
-                "documents."
-            )
-        },
-        'decay_function': {
-            'name': 'decay function',
-            'type': 'option_string',
-            'options': {
-                KERNEL_LABEL_DICHOTOMY: {
-                    'display_name': 'Dichotomy',
-                    'description': gettext(
-                        'All pixels within the search radius contribute '
-                        'equally to an urban nature pixel.'),
-                },
-                KERNEL_LABEL_EXPONENTIAL: {
-                    'display_name': 'Exponential',
-                    'description': gettext(
-                        'Contributions to an urban nature pixel decrease '
-                        'exponentially, where '
-                        '"weight = e^(-pixel_dist / search_radius)"'),
-                },
-                KERNEL_LABEL_GAUSSIAN: {
-                    'display_name': 'Gaussian',
-                    'description': gettext(
-                        'Contributions to an urban nature pixel decrease '
-                        'according to a normal ("gaussian") distribution '
-                        'with a sigma of 3.'),
-                },
-                KERNEL_LABEL_DENSITY: {
-                    'display_name': 'Density',
-                    'description': gettext(
-                        'Contributions to an urban nature pixel decrease '
-                        'faster as distances approach the search radius. '
-                        'Weights are calculated by '
-                        '"weight = 0.75 * (1-(pixel_dist / search_radius)^2)"'
-                    ),
-                },
-                # KERNEL_LABEL_POWER: {
-                #     'display_name': 'Power',
-                #     'description': gettext(
-                #         'Contributions to an urban nature pixel decrease '
-                #         'according to a user-defined negative power function '
-                #         'of the form "weight = pixel_dist^beta", where beta '
-                #         'is expected to be negative and defined by the user.'
-                #     ),
-                # },
-            },
-            'about': (
-                'Pixels within the search radius of an urban nature pixel '
-                'have a distance-weighted contribution to an urban nature '
-                'pixel according to the selected distance-weighting '
-                'function.'),
-        },
-        'search_radius_mode': {
-            'name': 'search radius mode',
-            'type': 'option_string',
-            'required': True,
-            'about': gettext(
-                'The type of search radius to use.'
+            data_type=int,
+            units=None,
+            projected=True,
+            projection_units=u.meter
+        ),
+        spec.CSVInput(
+            id="lulc_attribute_table",
+            name=gettext("LULC attribute table"),
+            about=gettext(
+                "A table identifying which LULC codes represent urban nature. All LULC"
+                " classes in the Land Use Land Cover raster MUST have corresponding"
+                " values in this table.  Each row is a land use land cover class."
             ),
-            'options': {
-                RADIUS_OPT_UNIFORM: {
-                    'display_name': 'Uniform radius',
-                    'description': gettext(
-                        'The search radius is the same for all types of '
-                        'urban nature.'),
-                },
-                RADIUS_OPT_URBAN_NATURE: {
-                    'display_name': 'Radius defined per urban nature class',
-                    'description': gettext(
-                        'The search radius is defined for each distinct '
-                        'urban nature LULC classification.'),
-                },
-                RADIUS_OPT_POP_GROUP: {
-                    'display_name': 'Radius defined per population group',
-                    'description': gettext(
-                        'The search radius is defined for each distinct '
-                        'population group.'),
-                },
-            },
-        },
-        'aggregate_by_pop_group': {
-            'type': 'boolean',
-            'name': 'Aggregate by population groups',
-            'required': False,
-            'about': gettext(
-                'Whether to aggregate statistics by population group '
-                'within each administrative unit. If selected, population '
-                'groups will be read from the fields of the user-defined '
-                'administrative boundaries vector. This option is implied '
-                'if the search radii are defined by population groups.'
-            )
-        },
-        'search_radius': {
-            'type': 'number',
-            'name': 'uniform search radius',
-            'units': u.m,
-            'expression': 'value > 0',
-            'required': f'search_radius_mode == "{RADIUS_OPT_UNIFORM}"',
-            'allowed': f'search_radius_mode == "{RADIUS_OPT_UNIFORM}"',
-            'about': gettext(
-                'The search radius to use when running the model under a '
-                'uniform search radius. Required when running the model '
-                'with a uniform search radius. Units are in meters.'),
-        },
-        'population_group_radii_table': {
-            'name': 'population group radii table',
-            'type': 'csv',
-            'required': f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
-            'allowed': f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
-            'index_col': 'pop_group',
-            'columns': {
-                "pop_group": {
-                    "type": "freestyle_string",
-                    "required": False,
-                    "about": gettext(
-                        "The name of the population group. Names must match "
-                        "the names defined in the administrative boundaries "
-                        "vector."
+            columns=[
+                spec.IntegerInput(
+                    id="lucode",
+                    about=gettext(
+                        "LULC codes from the LULC raster. Each code must be a unique"
+                        " integer."
+                    )
+                ),
+                spec.RatioInput(
+                    id="urban_nature",
+                    about=gettext(
+                        "The proportion (0-1) indicating the naturalness of the land"
+                        " types. 0 indicates the naturalness level of this LULC type is"
+                        " lowest (0% nature), while 1 indicates that of this LULC type is"
+                        " the highest (100% nature)"
                     ),
-                },
-                'search_radius_m': {
-                    'type': 'number',
-                    'units': u.meter,
-                    'expression': 'value >= 0',
-                    'about': gettext(
-                        "The search radius in meters to use "
-                        "for this population group.  Values must be >= 0."
+                    units=None
+                ),
+                spec.NumberInput(
+                    id="search_radius_m",
+                    about=gettext(
+                        "The distance within which a LULC type is relevant to the"
+                        " population group of interest. This is the search distance that"
+                        " the model will apply for this LULC type. Values must be >= 0"
+                        " and defined in meters. Required when running the model with"
+                        " search radii defined per urban nature class."
                     ),
-                },
-            },
-            'about': gettext(
-                'A table associating population groups with the distance '
-                'in meters that members of the population group will, on '
-                'average, travel to find urban nature.  Required when '
-                'running the model with search radii defined per population '
-                'group.'
+                    required='search_radius_mode == "radius per urban nature class"',
+                    units=u.meter,
+                    expression="value >= 0"
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.SingleBandRasterInput(
+            id="population_raster_path",
+            name=gettext("population raster"),
+            about=gettext("A raster representing the number of inhabitants per pixel."),
+            data_type=float,
+            units=u.count,
+            projected=True,
+            projection_units=u.meter
+        ),
+        spec.VectorInput(
+            id="admin_boundaries_vector_path",
+            name=gettext("administrative boundaries"),
+            about=gettext(
+                "A vector representing administrative units. Polygons representing"
+                " administrative units should not overlap. Overlapping administrative"
+                " geometries may cause unexpected results and for this reason should not"
+                " overlap."
             ),
-        },
-        # 'decay_function_power_beta': {
-        #     'name': 'power function beta parameter',
-        #     'type': 'number',
-        #     'units': u.none,
-        #     'expression': 'float(value)',
-        #     'required': f'decay_function == "{KERNEL_LABEL_POWER}"',
-        #     'about': gettext(
-        #         'The beta parameter used for creating a power search '
-        #         'kernel.  Required when using the Power search kernel.'
-        #     ),
-        # }
-    },
-    'outputs': {
-        'output': {
-            "type": "directory",
-            "contents": {
-                "urban_nature_supply_percapita.tif": {
-                    "about": (
-                        "The calculated supply per capita of urban nature."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.m**2,
-                    }}},
-                "urban_nature_demand.tif": {
-                    "about": (
-                        "The required area of urban nature needed by the "
-                        "population residing in each pixel in order to "
-                        "fully satisfy their urban nature needs. "
-                        "Higher values indicate a greater demand for "
-                        "accessible urban nature from the surrounding area."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.m**2,
-                    }}},
-                "urban_nature_balance_totalpop.tif": {
-                    "about": (
-                        "The urban nature balance for the total population "
-                        "in a pixel. Positive values indicate an oversupply "
-                        "of urban nature relative to the stated urban nature "
-                        "demand. Negative values indicate an undersupply of "
-                        "urban nature relative to the stated urban nature "
-                        "demand. This output is of particular relevance to "
-                        "understand the total amount of nature deficit for "
-                        "the population in a particular pixel."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.m**2,
-                    }}},
-                "admin_boundaries.gpkg": {
-                    "about": (
-                        "A copy of the user's administrative boundaries "
-                        "vector with a single layer."),
-                    "geometries": spec.POLYGONS,
-                    "fields": {
-                        "SUP_DEMadm_cap": {
-                            "type": "number",
-                            "units": u.m**2/u.person,
-                            "about": (
-                                "The average urban nature supply/demand "
-                                "balance available per person within this "
-                                "administrative unit. If no people reside "
-                                "within this administrative unit, this field "
-                                "will have no value (NaN, NULL or None, "
-                                "depending on your GIS software).")
-                        },
-                        "Pund_adm": {
-                            "type": "number",
-                            "units": u.people,
-                            "about": (
-                                "The total population within the "
-                                "administrative unit that is undersupplied "
-                                "with urban nature. If aggregating by "
-                                "population groups, this will be the sum "
-                                "of undersupplied populations across all "
-                                "population groups within this administrative "
-                                "unit.")
-                        },
-                        "Povr_adm": {
-                            "type": "number",
-                            "units": u.people,
-                            "about": (
-                                "The total population within the "
-                                "administrative unit that is oversupplied "
-                                "with urban nature. If aggregating by "
-                                "population groups, this will be the sum "
-                                "of oversupplied populations across all "
-                                "population groups within this administrative "
-                                "unit.")
-                        },
-                        "SUP_DEMadm_cap_[POP_GROUP]": {
-                            "type": "number",
-                            "units": u.m**2/u.person,
-                            "about": (
-                                "The mean urban nature supply/demand "
-                                "balance available per person in population "
-                                "group POP_GROUP within this administrative "
-                                "unit."),
-                            "created_if": (
-                                f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
-                                "or aggregate_by_pop_group"),
-                        },
-                        "Pund_adm_[POP_GROUP]": {
-                            "type": "number",
-                            "units": u.people,
-                            "about": (
-                                "The total population belonging to the "
-                                "population group POP_GROUP within this "
-                                "administrative unit that are undersupplied "
-                                "with urban nature."),
-                            "created_if": (
-                                f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
-                                "or aggregate_by_pop_group"),
-                        },
-                        "Povr_adm_[POP_GROUP]": {
-                            "type": "number",
-                            "units": u.people,
-                            "about": (
-                                "The total population belonging to the "
-                                "population group POP_GROUP within this "
-                                "administrative unit that is oversupplied "
-                                "with urban nature."),
-                            "created_if": (
-                                f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
-                                "or aggregate_by_pop_group"),
-                        },
-                    },
-                },
-                "urban_nature_balance_[POP_GROUP].tif": {
-                    "about": gettext(
-                        "Positive pixel values indicate an oversupply of "
-                        "urban nature for the population group POP_GROUP "
-                        "relative to the stated urban nature demand. "
-                        "Negative values indicate an undersupply of urban "
-                        "nature for the population group POP_GROUP relative "
-                        "to the stated urban nature demand."),
-                    "bands": {1: {"type": "number", "units": u.m**2/u.person}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
-                },
-
-                # when RADIUS_OPT_UNIFORM
-                "accessible_urban_nature.tif": {
-                    "about": gettext(
-                        "The area of greenspace available within the defined "
-                        "radius, weighted by the selected decay function."),
-                    "bands": {1: {"type": "number", "units": u.m**2}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
-                },
-
-                # When RADIUS_OPT_URBAN_NATURE
-                "accessible_urban_nature_lucode_[LUCODE].tif": {
-                    "about": gettext(
-                        "The area of greenspace available within the radius "
-                        "associated with urban nature class LUCODE, weighted "
-                        "by the selected decay function."),
-                    "bands": {1: {"type": "number", "units": u.m**2}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
-                },
-
-                # When RADIUS_OPT_POP_GROUP
-                "accessible_urban_nature_to_[POP_GROUP].tif": {
-                    "about": gettext(
-                        "The area of greenspace available within the radius "
-                        "associated with group POP_GROUP, weighted by the "
-                        "selected decay function."),
-                    "bands": {1: {"type": "number", "units": u.m**2}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
-                },
-            },
-        },
-        'intermediate': {
-            'type': 'directory',
-            'contents': {
-                "aligned_lulc.tif": {
-                    "about": gettext(
-                        "A copy of the user's land use land cover raster. "
-                        "If the user-supplied LULC has non-square pixels, "
-                        "they will be resampled to square pixels in this "
-                        "raster."),
-                    "bands": {1: {"type": "integer"}},
-                },
-                "aligned_population.tif": {
-                    "about": gettext(
-                        "The user's population raster, aligned to the same "
-                        "resolution and dimensions as the aligned LULC."),
-                    "bands": {1: {'type': 'number', 'units': u.count}},
-                },
-                "undersupplied_population.tif": {
-                    "about": gettext(
-                        "The population experiencing an urban nature deficit."
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.RatioInput(
+                    id="pop_[POP_GROUP]",
+                    about=(
+                        "The proportion of the population within each administrative unit"
+                        " belonging to the identified population group (POP_GROUP). At"
+                        " least one column with the prefix 'pop_' is required when"
+                        " aggregating output by population groups."
                     ),
-                    "bands": {1: {'type': 'number', 'units': u.count}},
-                },
-                "oversupplied_population.tif": {
-                    "about": gettext(
-                        "The population experiencing an urban nature surplus."
+                    required=(
+                        "(search_radius_mode == 'radius per population group') or"
+                        " aggregate_by_pop_group"
                     ),
-                    "bands": {1: {'type': 'number', 'units': u.count}},
+                    units=None
+                )
+            ],
+            projected=None
+        ),
+        spec.NumberInput(
+            id="urban_nature_demand",
+            name=gettext("urban nature demand per capita"),
+            about=gettext(
+                "The amount of urban nature that each resident should have access to."
+                " This is often defined by local urban planning documents."
+            ),
+            units=u.meter**2,
+            expression="value > 0"
+        ),
+        spec.OptionStringInput(
+            id="decay_function",
+            name=gettext("decay function"),
+            about=gettext(
+                "Pixels within the search radius of an urban nature pixel have a"
+                " distance-weighted contribution to an urban nature pixel according to"
+                " the selected distance-weighting function."
+            ),
+            options={
+                "density": {
+                    "description": (
+                        "Contributions to an urban nature pixel decrease faster as"
+                        " distances approach the search radius. Weights are calculated by"
+                        ' "weight = 0.75 * (1-(pixel_dist / search_radius)^2)"'
+                    ),
+                    "display_name": "Density",
                 },
-
-                # when RADIUS_OPT_UNIFORM
-                "distance_weighted_population_within_[SEARCH_RADIUS].tif": {
-                    "about": gettext(
-                        "A sum of the population within the given search "
-                        "radius SEARCH_RADIUS, weighted by the user's decay "
-                        "function."),
-                    "bands": {1: {'type': 'number', 'units': u.count}},
-                    "created_if": (
-                        f"search_radius_mode == '{RADIUS_OPT_UNIFORM}' or "
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'"),
+                "dichotomy": {
+                    "description": (
+                        "All pixels within the search radius contribute equally to an"
+                        " urban nature pixel."
+                    ),
+                    "display_name": "Dichotomy",
                 },
-                "urban_nature_area.tif": {
-                    "about": gettext(
-                        "The area of urban nature (in square meters) "
-                        "represented in each pixel."),
-                    "bands": {1: {"type": "number", "units": u.m**2}},
-                    "created_if":
-                        (f"search_radius_mode == '{RADIUS_OPT_UNIFORM}' or "
-                         f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'"),
+                "exponential": {
+                    "description": (
+                        "Contributions to an urban nature pixel decrease exponentially,"
+                        ' where "weight = e^(-pixel_dist / search_radius)"'
+                    ),
+                    "display_name": "Exponential",
                 },
-                "urban_nature_population_ratio.tif": {
-                    "about": gettext(
-                        "The calculated urban nature/population ratio."),
-                    "bands": {1: {"type": "number", "units": u.m**2/u.person}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_UNIFORM}'",
+                "gaussian": {
+                    "description": (
+                        "Contributions to an urban nature pixel decrease according to a"
+                        ' normal ("gaussian") distribution with a sigma of 3.'
+                    ),
+                    "display_name": "Gaussian",
                 },
-
-                # When RADIUS_OPT_URBAN_NATURE
-                "urban_nature_area_[LUCODE].tif": {
-                    "about": gettext(
-                        "Pixel values represent the ares of urban nature "
-                        "(in square meters) represented in each pixel for "
-                        "the urban nature class represented by the land use "
-                        "land cover code LUCODE."),
-                    "bands": {1: {"type": "number", "units": u.m**2}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
-                },
-                "urban_nature_supply_percapita_lucode_[LUCODE].tif": {
-                    "about": gettext(
-                        "The urban nature supplied to populations due to the "
-                        "land use land cover code LUCODE"),
-                    "bands": {1: {"type": "number", "units": u.m**2/u.person}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
-                },
-                "urban_nature_population_ratio_lucode_[LUCODE].tif": {
-                    "about": gettext(
-                        "The calculated urban nature/population ratio for "
-                        "the urban nature class represented by the land use "
-                        "land cover code LUCODE."),
-                    "bands": {1: {"type": "number", "units": u.m**2/u.person}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
-                },
-
-                # When RADIUS_OPT_POP_GROUP
-                "population_in_[POP_GROUP].tif": {
-                    "about": gettext(
-                        "Each pixel represents the population of a pixel "
-                        "belonging to the population in the population group "
-                        "POP_GROUP."),
-                    "bands": {1: {"type": "number", "units": u.count}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
-                },
-                "proportion_of_population_in_[POP_GROUP].tif": {
-                    "about": gettext(
-                        "Each pixel represents the proportion of the total "
-                        "population that belongs to the population group "
-                        "POP_GROUP."),
-                    "bands": {1: {"type": "number", "units": u.none}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
-                },
-                "distance_weighted_population_in_[POP_GROUP].tif": {
-                    "about": gettext(
-                        "Each pixel represents the total number of people "
-                        "within the search radius for the population group "
-                        "POP_GROUP, weighted by the user's selection of "
-                        "decay function."),
-                    "bands": {1: {"type": "number", "units": u.people}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
-                },
-                "distance_weighted_population_all_groups.tif": {
-                    "about": gettext(
-                        "The total population, weighted by the appropriate "
-                        "decay function."),
-                    "bands": {1: {"type": "number", "units": u.people}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
-                },
-                "urban_nature_supply_percapita_to_[POP_GROUP].tif": {
-                    "about": gettext(
-                        "The urban nature supply per capita to population "
-                        "group POP_GROUP."),
-                    "bands": {1: {"type": "number", "units": u.m**2/u.person}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
-                },
-                "undersupplied_population_[POP_GROUP].tif": {
-                    "about": gettext(
-                        "The population in population group POP_GROUP that "
-                        "are experiencing an urban nature deficit."),
-                    "bands": {1: {"type": "number", "units": u.people}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
-                },
-                "oversupplied_population_[POP_GROUP].tif": {
-                    "about": gettext(
-                        "The population in population group POP_GROUP that "
-                        "are experiencing an urban nature surplus."),
-                    "bands": {1: {"type": "number", "units": u.people}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
-                }
             }
-        },
-        'taskgraph_cache': spec.TASKGRAPH_DIR,
-    }
-})
+        ),
+        spec.OptionStringInput(
+            id="search_radius_mode",
+            name=gettext("search radius mode"),
+            about=gettext("The type of search radius to use."),
+            options={
+                "uniform radius": {
+                    "display_name": "Uniform radius",
+                    "description": (
+                        "The search radius is the same for all types of urban nature."
+                    ),
+                },
+                "radius per urban nature class": {
+                    "display_name": "Radius defined per urban nature class",
+                    "description": (
+                        "The search radius is defined for each distinct urban nature LULC"
+                        " classification."
+                    ),
+                },
+                "radius per population group": {
+                    "display_name": "Radius defined per population group",
+                    "description": (
+                        "The search radius is defined for each distinct population group."
+                    ),
+                },
+            }
+        ),
+        spec.BooleanInput(
+            id="aggregate_by_pop_group",
+            name=gettext("Aggregate by population groups"),
+            about=gettext(
+                "Whether to aggregate statistics by population group within each"
+                " administrative unit. If selected, population groups will be read from"
+                " the fields of the user-defined administrative boundaries vector. This"
+                " option is implied if the search radii are defined by population groups."
+            ),
+            required=False
+        ),
+        spec.NumberInput(
+            id="search_radius",
+            name=gettext("uniform search radius"),
+            about=gettext(
+                "The search radius to use when running the model under a uniform search"
+                " radius. Required when running the model with a uniform search radius."
+                " Units are in meters."
+            ),
+            required='search_radius_mode == "uniform radius"',
+            allowed='search_radius_mode == "uniform radius"',
+            units=u.meter,
+            expression="value > 0"
+        ),
+        spec.CSVInput(
+            id="population_group_radii_table",
+            name=gettext("population group radii table"),
+            about=gettext(
+                "A table associating population groups with the distance in meters that"
+                " members of the population group will, on average, travel to find urban"
+                " nature.  Required when running the model with search radii defined per"
+                " population group."
+            ),
+            required='search_radius_mode == "radius per population group"',
+            allowed='search_radius_mode == "radius per population group"',
+            columns=[
+                spec.StringInput(
+                    id="pop_group",
+                    about=gettext(
+                        "The name of the population group. Names must match the names"
+                        " defined in the administrative boundaries vector."
+                    ),
+                    required=False,
+                    regexp=None
+                ),
+                spec.NumberInput(
+                    id="search_radius_m",
+                    about=gettext(
+                        "The search radius in meters to use for this population group. "
+                        " Values must be >= 0."
+                    ),
+                    units=u.meter,
+                    expression="value >= 0"
+                )
+            ],
+            index_col="pop_group"
+        )
+    ],
+    outputs=[
+        spec.DirectoryOutput(
+            id="output",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="urban_nature_supply_percapita.tif",
+                    about=gettext("The calculated supply per capita of urban nature."),
+                    data_type=float,
+                    units=u.meter**2
+                ),
+                spec.SingleBandRasterOutput(
+                    id="urban_nature_demand.tif",
+                    about=gettext(
+                        "The required area of urban nature needed by the population"
+                        " residing in each pixel in order to fully satisfy their urban"
+                        " nature needs. Higher values indicate a greater demand for"
+                        " accessible urban nature from the surrounding area."
+                    ),
+                    data_type=float,
+                    units=u.meter**2
+                ),
+                spec.SingleBandRasterOutput(
+                    id="urban_nature_balance_totalpop.tif",
+                    about=gettext(
+                        "The urban nature balance for the total population in a pixel."
+                        " Positive values indicate an oversupply of urban nature relative"
+                        " to the stated urban nature demand. Negative values indicate an"
+                        " undersupply of urban nature relative to the stated urban nature"
+                        " demand. This output is of particular relevance to understand"
+                        " the total amount of nature deficit for the population in a"
+                        " particular pixel."
+                    ),
+                    data_type=float,
+                    units=u.meter**2
+                ),
+                spec.VectorOutput(
+                    id="admin_boundaries.gpkg",
+                    about=(
+                        "A copy of the user's administrative boundaries vector with a"
+                        " single layer."
+                    ),
+                    geometry_types={"POLYGON", "MULTIPOLYGON"},
+                    fields=[
+                        spec.NumberOutput(
+                            id="SUP_DEMadm_cap",
+                            about=gettext(
+                                "The average urban nature supply/demand balance available"
+                                " per person within this administrative unit. If no"
+                                " people reside within this administrative unit, this"
+                                " field will have no value (NaN, NULL or None, depending"
+                                " on your GIS software)."
+                            ),
+                            units=u.meter**2 / u.person
+                        ),
+                        spec.NumberOutput(
+                            id="Pund_adm",
+                            about=gettext(
+                                "The total population within the administrative unit that"
+                                " is undersupplied with urban nature. If aggregating by"
+                                " population groups, this will be the sum of"
+                                " undersupplied populations across all population groups"
+                                " within this administrative unit."
+                            ),
+                            units=u.people
+                        ),
+                        spec.NumberOutput(
+                            id="Povr_adm",
+                            about=gettext(
+                                "The total population within the administrative unit that"
+                                " is oversupplied with urban nature. If aggregating by"
+                                " population groups, this will be the sum of oversupplied"
+                                " populations across all population groups within this"
+                                " administrative unit."
+                            ),
+                            units=u.people
+                        ),
+                        spec.NumberOutput(
+                            id="SUP_DEMadm_cap_[POP_GROUP]",
+                            about=gettext(
+                                "The mean urban nature supply/demand balance available"
+                                " per person in population group POP_GROUP within this"
+                                " administrative unit."
+                            ),
+                            created_if=(
+                                "(search_radius_mode == 'radius per population group') or"
+                                " aggregate_by_pop_group"
+                            ),
+                            units=u.meter**2 / u.person
+                        ),
+                        spec.NumberOutput(
+                            id="Pund_adm_[POP_GROUP]",
+                            about=gettext(
+                                "The total population belonging to the population group"
+                                " POP_GROUP within this administrative unit that are"
+                                " undersupplied with urban nature."
+                            ),
+                            created_if=(
+                                "(search_radius_mode == 'radius per population group') or"
+                                " aggregate_by_pop_group"
+                            ),
+                            units=u.people
+                        ),
+                        spec.NumberOutput(
+                            id="Povr_adm_[POP_GROUP]",
+                            about=gettext(
+                                "The total population belonging to the population group"
+                                " POP_GROUP within this administrative unit that is"
+                                " oversupplied with urban nature."
+                            ),
+                            created_if=(
+                                "(search_radius_mode == 'radius per population group') or"
+                                " aggregate_by_pop_group"
+                            ),
+                            units=u.people
+                        )
+                    ]
+                ),
+                spec.SingleBandRasterOutput(
+                    id="urban_nature_balance_[POP_GROUP].tif",
+                    about=gettext(
+                        "Positive pixel values indicate an oversupply of urban nature for"
+                        " the population group POP_GROUP relative to the stated urban"
+                        " nature demand. Negative values indicate an undersupply of urban"
+                        " nature for the population group POP_GROUP relative to the"
+                        " stated urban nature demand."
+                    ),
+                    created_if="search_radius_mode == 'radius per population group'",
+                    data_type=float,
+                    units=u.meter**2 / u.person
+                ),
+                spec.SingleBandRasterOutput(
+                    id="accessible_urban_nature.tif",
+                    about=gettext(
+                        "The area of greenspace available within the defined radius,"
+                        " weighted by the selected decay function."
+                    ),
+                    created_if="search_radius_mode == 'radius per urban nature class'",
+                    data_type=float,
+                    units=u.meter**2
+                ),
+                spec.SingleBandRasterOutput(
+                    id="accessible_urban_nature_lucode_[LUCODE].tif",
+                    about=gettext(
+                        "The area of greenspace available within the radius associated"
+                        " with urban nature class LUCODE, weighted by the selected decay"
+                        " function."
+                    ),
+                    created_if="search_radius_mode == 'radius per urban nature class'",
+                    data_type=float,
+                    units=u.meter**2
+                ),
+                spec.SingleBandRasterOutput(
+                    id="accessible_urban_nature_to_[POP_GROUP].tif",
+                    about=gettext(
+                        "The area of greenspace available within the radius associated"
+                        " with group POP_GROUP, weighted by the selected decay function."
+                    ),
+                    created_if="search_radius_mode == 'radius per population group'",
+                    data_type=float,
+                    units=u.meter**2
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="intermediate",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="aligned_lulc.tif",
+                    about=(
+                        "A copy of the user's land use land cover raster. If the"
+                        " user-supplied LULC has non-square pixels, they will be"
+                        " resampled to square pixels in this raster."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="aligned_population.tif",
+                    about=(
+                        "The user's population raster, aligned to the same resolution and"
+                        " dimensions as the aligned LULC."
+                    ),
+                    data_type=float,
+                    units=u.count
+                ),
+                spec.SingleBandRasterOutput(
+                    id="undersupplied_population.tif",
+                    about=gettext("The population experiencing an urban nature deficit."),
+                    data_type=float,
+                    units=u.count
+                ),
+                spec.SingleBandRasterOutput(
+                    id="oversupplied_population.tif",
+                    about=gettext("The population experiencing an urban nature surplus."),
+                    data_type=float,
+                    units=u.count
+                ),
+                spec.SingleBandRasterOutput(
+                    id="distance_weighted_population_within_[SEARCH_RADIUS].tif",
+                    about=(
+                        "A sum of the population within the given search radius"
+                        " SEARCH_RADIUS, weighted by the user's decay function."
+                    ),
+                    created_if=(
+                        "search_radius_mode == 'uniform radius' or search_radius_mode =="
+                        " 'radius per urban nature class'"
+                    ),
+                    data_type=float,
+                    units=u.count
+                ),
+                spec.SingleBandRasterOutput(
+                    id="urban_nature_area.tif",
+                    about=gettext(
+                        "The area of urban nature (in square meters) represented in each"
+                        " pixel."
+                    ),
+                    created_if=(
+                        "search_radius_mode == 'uniform radius' or search_radius_mode =="
+                        " 'radius per population group'"
+                    ),
+                    data_type=float,
+                    units=u.meter**2
+                ),
+                spec.SingleBandRasterOutput(
+                    id="urban_nature_population_ratio.tif",
+                    about=gettext("The calculated urban nature/population ratio."),
+                    created_if="search_radius_mode == 'uniform radius'",
+                    data_type=float,
+                    units=u.meter**2 / u.person
+                ),
+                spec.SingleBandRasterOutput(
+                    id="urban_nature_area_[LUCODE].tif",
+                    about=gettext(
+                        "Pixel values represent the ares of urban nature (in square"
+                        " meters) represented in each pixel for the urban nature class"
+                        " represented by the land use land cover code LUCODE."
+                    ),
+                    created_if="search_radius_mode == 'radius per urban nature class'",
+                    data_type=float,
+                    units=u.meter**2
+                ),
+                spec.SingleBandRasterOutput(
+                    id="urban_nature_supply_percapita_lucode_[LUCODE].tif",
+                    about=gettext(
+                        "The urban nature supplied to populations due to the land use"
+                        " land cover code LUCODE"
+                    ),
+                    created_if="search_radius_mode == 'radius per urban nature class'",
+                    data_type=float,
+                    units=u.meter**2 / u.person
+                ),
+                spec.SingleBandRasterOutput(
+                    id="urban_nature_population_ratio_lucode_[LUCODE].tif",
+                    about=gettext(
+                        "The calculated urban nature/population ratio for the urban"
+                        " nature class represented by the land use land cover code"
+                        " LUCODE."
+                    ),
+                    created_if="search_radius_mode == 'radius per urban nature class'",
+                    data_type=float,
+                    units=u.meter**2 / u.person
+                ),
+                spec.SingleBandRasterOutput(
+                    id="population_in_[POP_GROUP].tif",
+                    about=gettext(
+                        "Each pixel represents the population of a pixel belonging to the"
+                        " population in the population group POP_GROUP."
+                    ),
+                    created_if="search_radius_mode == 'radius per population group'",
+                    data_type=float,
+                    units=u.count
+                ),
+                spec.SingleBandRasterOutput(
+                    id="proportion_of_population_in_[POP_GROUP].tif",
+                    about=gettext(
+                        "Each pixel represents the proportion of the total population"
+                        " that belongs to the population group POP_GROUP."
+                    ),
+                    created_if="search_radius_mode == 'radius per population group'",
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="distance_weighted_population_in_[POP_GROUP].tif",
+                    about=(
+                        "Each pixel represents the total number of people within the"
+                        " search radius for the population group POP_GROUP, weighted by"
+                        " the user's selection of decay function."
+                    ),
+                    created_if="search_radius_mode == 'radius per population group'",
+                    data_type=float,
+                    units=u.people
+                ),
+                spec.SingleBandRasterOutput(
+                    id="distance_weighted_population_all_groups.tif",
+                    about=gettext(
+                        "The total population, weighted by the appropriate decay"
+                        " function."
+                    ),
+                    created_if="search_radius_mode == 'radius per population group'",
+                    data_type=float,
+                    units=u.people
+                ),
+                spec.SingleBandRasterOutput(
+                    id="urban_nature_supply_percapita_to_[POP_GROUP].tif",
+                    about=gettext(
+                        "The urban nature supply per capita to population group"
+                        " POP_GROUP."
+                    ),
+                    created_if="search_radius_mode == 'radius per population group'",
+                    data_type=float,
+                    units=u.meter**2 / u.person
+                ),
+                spec.SingleBandRasterOutput(
+                    id="undersupplied_population_[POP_GROUP].tif",
+                    about=gettext(
+                        "The population in population group POP_GROUP that are"
+                        " experiencing an urban nature deficit."
+                    ),
+                    created_if="search_radius_mode == 'radius per population group'",
+                    data_type=float,
+                    units=u.people
+                ),
+                spec.SingleBandRasterOutput(
+                    id="oversupplied_population_[POP_GROUP].tif",
+                    about=gettext(
+                        "The population in population group POP_GROUP that are"
+                        " experiencing an urban nature surplus."
+                    ),
+                    created_if="search_radius_mode == 'radius per population group'",
+                    data_type=float,
+                    units=u.people
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ],
+)
 
 
 _OUTPUT_BASE_FILES = {
@@ -796,7 +842,7 @@ def execute(args):
         kwargs={
             'raster_list': [
                 file_registry['aligned_lulc'],
-                file_registry['aligned_population'],
+                file_registry['aligned_population']
             ],
             'target_mask_path': file_registry['aligned_mask'],
         },
@@ -1082,7 +1128,7 @@ def execute(args):
                 f'{search_radius_m}'),
             target_path_list=[urban_nature_population_ratio_path],
             dependent_task_list=[
-                urban_nature_reclassification_task, decayed_population_task,
+                urban_nature_reclassification_task, decayed_population_task
             ])
 
         urban_nature_supply_percapita_task = graph.add_task(
@@ -1174,7 +1220,7 @@ def execute(args):
                 target_path_list=[urban_nature_population_ratio_path],
                 dependent_task_list=[
                     urban_nature_reclassification_task,
-                    decayed_population_tasks[search_radius_m],
+                    decayed_population_tasks[search_radius_m]
                 ])
 
             urban_nature_supply_percapita_path = os.path.join(
@@ -1296,7 +1342,7 @@ def execute(args):
                 file_registry['urban_nature_population_ratio']],
             dependent_task_list=[
                 urban_nature_reclassification_task,
-                sum_of_decayed_population_task,
+                sum_of_decayed_population_task
             ])
 
         urban_nature_supply_percapita_by_group_paths = {}
@@ -1347,7 +1393,7 @@ def execute(args):
                 target_path_list=[
                     per_cap_urban_nature_balance_pop_group_path],
                 dependent_task_list=[
-                    urban_nature_supply_percapita_by_group_task,
+                    urban_nature_supply_percapita_by_group_task
                 ])
 
             urban_nature_balance_totalpop_by_group_path = os.path.join(
@@ -1369,7 +1415,7 @@ def execute(args):
                     urban_nature_balance_totalpop_by_group_path],
                 dependent_task_list=[
                     per_cap_urban_nature_balance_pop_group_task,
-                    proportional_population_tasks[pop_group],
+                    proportional_population_tasks[pop_group]
                 ]))
 
             for supply_type, op in [('under', numpy.less),
@@ -1399,7 +1445,7 @@ def execute(args):
                     target_path_list=[supply_population_path],
                     dependent_task_list=[
                         per_cap_urban_nature_balance_pop_group_task,
-                        proportional_population_tasks[pop_group],
+                        proportional_population_tasks[pop_group]
                     ])
 
         urban_nature_supply_percapita_task = graph.add_task(
@@ -1417,7 +1463,7 @@ def execute(args):
             target_path_list=[file_registry['urban_nature_supply_percapita']],
             dependent_task_list=[
                 *urban_nature_supply_percapita_by_group_tasks,
-                *pop_group_proportion_tasks.values(),
+                *pop_group_proportion_tasks.values()
             ])
 
         per_capita_urban_nature_balance_task = graph.add_task(
@@ -1433,7 +1479,7 @@ def execute(args):
             target_path_list=[
                 file_registry['urban_nature_balance_percapita']],
             dependent_task_list=[
-                urban_nature_supply_percapita_task,
+                urban_nature_supply_percapita_task
             ])
 
         urban_nature_balance_totalpop_task = graph.add_task(
@@ -1469,7 +1515,7 @@ def execute(args):
                 *urban_nature_balance_totalpop_by_group_tasks,
                 *proportional_population_tasks.values(),
                 *supply_population_tasks['under'].values(),
-                *supply_population_tasks['over'].values(),
+                *supply_population_tasks['over'].values()
             ])
 
     # Greenspace budget, supply/demand and over/undersupply rasters are the
@@ -1490,7 +1536,7 @@ def execute(args):
             target_path_list=[
                 file_registry['urban_nature_balance_percapita']],
             dependent_task_list=[
-                urban_nature_supply_percapita_task,
+                urban_nature_supply_percapita_task
             ])
 
         # This is "SUP_DEMi" from the user's guide
@@ -1509,7 +1555,7 @@ def execute(args):
                 file_registry['urban_nature_balance_totalpop']],
             dependent_task_list=[
                  per_capita_urban_nature_balance_task,
-                 population_mask_task,
+                 population_mask_task
             ])
 
         supply_population_tasks = []
@@ -1549,7 +1595,7 @@ def execute(args):
                     dependent_task_list=[
                         per_capita_urban_nature_balance_task,
                         population_mask_task,
-                        *list(proportional_population_tasks.values()),
+                        *list(proportional_population_tasks.values())
                     ]))
 
         _ = graph.add_task(

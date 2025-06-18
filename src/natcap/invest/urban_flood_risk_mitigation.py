@@ -21,201 +21,299 @@ from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "urban_flood_risk_mitigation",
-    "model_title": gettext("Urban Flood Risk Mitigation"),
-    "userguide": "urban_flood_mitigation.html",
-    "aliases": ("ufrm",),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['aoi_watersheds_path', 'rainfall_depth'],
-            ['lulc_path', 'curve_number_table_path', 'soils_hydrological_group_raster_path'],
-            ['built_infrastructure_vector_path', 'infrastructure_damage_loss_table_path']
-        ]
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["aoi_watersheds_path", "lulc_path",
-                         "built_infrastructure_vector_path",
-                         "soils_hydrological_group_raster_path"],
-        "different_projections_ok": True,
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "aoi_watersheds_path": spec.AOI,
-        "rainfall_depth": {
-            "expression": "value > 0",
-            "type": "number",
-            "units": u.millimeter,
-            "about": gettext("Depth of rainfall for the design storm of interest."),
-            "name": gettext("rainfall depth")
-        },
-        "lulc_path": {
-            **spec.LULC,
-            "projected": True,
-            "about": gettext(
-                "Map of LULC. All values in this raster must have "
-                "corresponding entries in the Biophysical Table.")
-        },
-        "soils_hydrological_group_raster_path": {
-            **spec.SOIL_GROUP,
-            "projected": True
-        },
-        "curve_number_table_path": {
-            "type": "csv",
-            "index_col": "lucode",
-            "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC codes from the LULC raster. Each code must be "
-                        "a unique integer.")},
-                **{f"cn_{soilgroup.lower()}": {
-                    "type": "number", "units": u.none, "about": gettext(
-                        "The curve number value for this LULC type in the "
-                        f"soil group code") + f" {soilgroup}."}
-                    for soilgroup in "ABCD"}
-            },
-            "about": gettext(
-                "Table of curve number data for each LULC class. All LULC "
-                "codes in the LULC raster must have corresponding entries in "
-                "this table for each soil group."),
-            "name": gettext("biophysical table")
-        },
-        "built_infrastructure_vector_path": {
-            "type": "vector",
-            "fields": {
-                "type": {
-                    "type": "integer",
-                    "about": gettext(
-                        "Code indicating the building type. These codes "
-                        "must match those in the Damage Loss Table."
-                    )}},
-            "geometries": spec.POLYGONS,
-            "required": False,
-            "about": gettext("Map of building footprints."),
-            "name": gettext("built infrastructure")
-        },
-        "infrastructure_damage_loss_table_path": {
-            "type": "csv",
-            "index_col": "type",
-            "columns": {
-                "type": {
-                    "type": "integer",
-                    "about": gettext("Building type code.")},
-                "damage": {
-                    "type": "number",
-                    "units": u.currency/(u.meter**2),
-                    "about": gettext("Potential damage loss for this building type.")}
-            },
-            "required": "built_infrastructure_vector_path",
-            "about": gettext(
-                "Table of potential damage loss data for each building type. "
-                "All values in the Built Infrastructure vector 'type' field "
-                "must have corresponding entries in this table. Required if "
-                "the Built Infrastructure vector is provided."),
-            "name": gettext("damage loss table")
-        }
-    },
-    "outputs": {
-        "Runoff_retention_index.tif": {
-            "about": "Map of runoff retention index.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.none
-            }}
-        },
-        "Runoff_retention_m3.tif": {
-            "about": "Map of runoff retention volume.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.meter**3
-            }}
-        },
-        "Q_mm.tif": {
-            "about": "Map of runoff.",
-            "bands": {1: {
-                "type": "number",
-                "units": u.millimeter
-            }}
-        },
-        "flood_risk_service.shp": {
-            "about": "Aggregated results for each area of interest.",
-            "geometries": spec.POLYGONS,
-            "fields": {
-                "rnf_rt_idx": {
-                    "about": "Average runoff retention index.",
-                    "type": "number",
-                    "units": u.none
-                },
-                "rnf_rt_m3": {
-                    "about": "Average runoff retention volume.",
-                    "type": "number",
-                    "units": u.meter**3
-                },
-                "flood_vol": {
-                    "about": "Total flood volume",
-                    "type": "number",
-                    "units": u.meter**3
-                },
-                "aff_bld": {
-                    "about": "Total potential damage to built infrastructure.",
-                    "created_if": "built_infrastructure_vector_path",
-                    "type": "number",
-                    "units": u.currency
-                },
-                "serv_blt": {
-                    "about": "Total service value of built infrastructure.",
-                    "created_if": "built_infrastructure_vector_path",
-                    "type": "number",
-                    "units": u.currency*u.meter**3
-                }
-            }
-        },
-        "intermediate_files": {
-            "type": "directory",
-            "contents": {
-                "Q_m3.tif": {
-                    "about": "Map of runoff volume.",
-                    "bands": {1: {"type": "number", "units": u.meter**3}}
-                },
-                "reprojected_aoi.shp": {
-                    "about": (
-                        "Copy of AOI vector reprojected to the same spatial "
-                        "reference as the LULC."),
-                    "geometries": spec.POLYGONS,
-                    "fields": {}
-                },
-                "structures_reprojected.shp": {
-                    "about": (
-                        "Copy of built infrastructure vector reprojected to "
-                        "the same spatial reference as the LULC."),
-                    "geometries": spec.POLYGONS,
-                    "fields": {}
-                },
-                "aligned_lulc.tif": {
-                    "about": "Aligned and clipped copy of the LULC.",
-                    "bands": {1: {"type": "integer"}}
-                },
-                "aligned_soils_hydrological_group.tif": {
-                    "about": "Aligned and clipped copy of the soils map.",
-                    "bands": {1: {"type": "integer"}}
-                },
-                "cn_raster.tif": {
-                    "about": "Map of curve number.",
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "s_max.tif": {
-                    "about": "Map of potential retention.",
-                    "bands": {1: {"type": "number", "units": u.millimeter}}
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+MODEL_SPEC = spec.ModelSpec(
+    model_id="urban_flood_risk_mitigation",
+    model_title=gettext("Urban Flood Risk Mitigation"),
+    userguide="urban_flood_mitigation.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=("ufrm",),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["aoi_watersheds_path", "rainfall_depth"],
+        ["lulc_path", "curve_number_table_path", "soils_hydrological_group_raster_path"],
+        ["built_infrastructure_vector_path", "infrastructure_damage_loss_table_path"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.VectorInput(
+            id="aoi_watersheds_path",
+            name=gettext("area of interest"),
+            about=gettext(
+                "A map of areas over which to aggregate and summarize the final results."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[],
+            projected=None
+        ),
+        spec.NumberInput(
+            id="rainfall_depth",
+            name=gettext("rainfall depth"),
+            about=gettext("Depth of rainfall for the design storm of interest."),
+            units=u.millimeter,
+            expression="value > 0"
+        ),
+        spec.SingleBandRasterInput(
+            id="lulc_path",
+            name=gettext("land use/land cover"),
+            about=gettext(
+                "Map of LULC. All values in this raster must have corresponding entries"
+                " in the Biophysical Table."
+            ),
+            data_type=int,
+            units=None,
+            projected=True
+        ),
+        spec.SingleBandRasterInput(
+            id="soils_hydrological_group_raster_path",
+            name=gettext("soil hydrologic group"),
+            about=gettext(
+                "Map of soil hydrologic groups. Pixels may have values 1, 2, 3, or 4,"
+                " corresponding to soil hydrologic groups A, B, C, or D, respectively."
+            ),
+            data_type=int,
+            units=None,
+            projected=True
+        ),
+        spec.CSVInput(
+            id="curve_number_table_path",
+            name=gettext("biophysical table"),
+            about=gettext(
+                "Table of curve number data for each LULC class. All LULC codes in the"
+                " LULC raster must have corresponding entries in this table for each soil"
+                " group."
+            ),
+            columns=[
+                spec.IntegerInput(
+                    id="lucode",
+                    about=gettext(
+                        "LULC codes from the LULC raster. Each code must be a unique"
+                        " integer."
+                    )
+                ),
+                spec.NumberInput(
+                    id="cn_a",
+                    about=gettext(
+                        "The curve number value for this LULC type in the soil group"
+                        " code A."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberInput(
+                    id="cn_b",
+                    about=gettext(
+                        "The curve number value for this LULC type in the soil group"
+                        " code B."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberInput(
+                    id="cn_c",
+                    about=gettext(
+                        "The curve number value for this LULC type in the soil group"
+                        " code C."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberInput(
+                    id="cn_d",
+                    about=gettext(
+                        "The curve number value for this LULC type in the soil group"
+                        " code D."
+                    ),
+                    units=u.none
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.VectorInput(
+            id="built_infrastructure_vector_path",
+            name=gettext("built infrastructure"),
+            about=gettext("Map of building footprints."),
+            required=False,
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.IntegerInput(
+                    id="type",
+                    about=gettext(
+                        "Code indicating the building type. These codes must match those"
+                        " in the Damage Loss Table."
+                    )
+                )
+            ],
+            projected=None
+        ),
+        spec.CSVInput(
+            id="infrastructure_damage_loss_table_path",
+            name=gettext("damage loss table"),
+            about=(
+                "Table of potential damage loss data for each building type. All values"
+                " in the Built Infrastructure vector 'type' field must have corresponding"
+                " entries in this table. Required if the Built Infrastructure vector is"
+                " provided."
+            ),
+            required="built_infrastructure_vector_path",
+            columns=[
+                spec.IntegerInput(id="type", about=gettext("Building type code.")),
+                spec.NumberInput(
+                    id="damage",
+                    about=gettext("Potential damage loss for this building type."),
+                    units=u.currency / u.meter**2
+                )
+            ],
+            index_col="type"
+        )
+    ],
+    outputs=[
+        spec.SingleBandRasterOutput(
+            id="Runoff_retention_index.tif",
+            about=gettext("Map of runoff retention index."),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="Runoff_retention_m3.tif",
+            about=gettext("Map of runoff retention volume."),
+            data_type=float,
+            units=u.meter**3
+        ),
+        spec.SingleBandRasterOutput(
+            id="Q_mm.tif",
+            about=gettext("Map of runoff."),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.VectorOutput(
+            id="flood_risk_service.shp",
+            about=gettext("Aggregated results for each area of interest."),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="rnf_rt_idx",
+                    about=gettext("Average runoff retention index."),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="rnf_rt_m3",
+                    about=gettext("Average runoff retention volume."),
+                    units=u.meter**3
+                ),
+                spec.NumberOutput(
+                    id="flood_vol", about=gettext("Total flood volume"), units=u.meter**3
+                ),
+                spec.NumberOutput(
+                    id="aff_bld",
+                    about=gettext("Total potential damage to built infrastructure."),
+                    created_if="built_infrastructure_vector_path",
+                    units=u.currency
+                ),
+                spec.NumberOutput(
+                    id="serv_blt",
+                    about=gettext("Total service value of built infrastructure."),
+                    created_if="built_infrastructure_vector_path",
+                    units=u.currency * u.meter**3
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="intermediate_files",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="Q_m3.tif",
+                    about=gettext("Map of runoff volume."),
+                    data_type=float,
+                    units=u.meter**3
+                ),
+                spec.VectorOutput(
+                    id="reprojected_aoi.shp",
+                    about=gettext(
+                        "Copy of AOI vector reprojected to the same spatial reference as"
+                        " the LULC."
+                    ),
+                    geometry_types={"POLYGON", "MULTIPOLYGON"},
+                    fields=[]
+                ),
+                spec.VectorOutput(
+                    id="structures_reprojected.shp",
+                    about=gettext(
+                        "Copy of built infrastructure vector reprojected to the same"
+                        " spatial reference as the LULC."
+                    ),
+                    geometry_types={"POLYGON", "MULTIPOLYGON"},
+                    fields=[]
+                ),
+                spec.SingleBandRasterOutput(
+                    id="aligned_lulc.tif",
+                    about=gettext("Aligned and clipped copy of the LULC."),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="aligned_soils_hydrological_group.tif",
+                    about=gettext("Aligned and clipped copy of the soils map."),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="cn_raster.tif",
+                    about=gettext("Map of curve number."),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="s_max.tif",
+                    about=gettext("Map of potential retention."),
+                    data_type=float,
+                    units=u.millimeter
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ],
+)
 
 
 def execute(args):

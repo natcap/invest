@@ -130,471 +130,879 @@ CAPTURED_WEM_FIELDS = {
     }
 }
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "wave_energy",
-    "model_title": gettext("Wave Energy Production"),
-    "userguide": "wave_energy.html",
-    "aliases": (),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['wave_base_data_path', 'analysis_area', 'aoi_path', 'dem_path'],
-            ['machine_perf_path', 'machine_param_path'],
-            ['valuation_container', 'land_gridPts_path', 'machine_econ_path', 'number_of_machines'],
-        ]
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["aoi_path", "dem_path"],
-        "different_projections_ok": True
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "wave_base_data_path": {
-            "type": "directory",
-            "contents": {
-                "NAmerica_WestCoast_4m.shp": {
-                    "type": "vector",
-                    "fields": {},
-                    "geometries": spec.POINT,
-                    "about": gettext(
-                        "Point vector for the west coast of North America and "
-                        "Hawaii.")},
-                "WCNA_extract.shp": {
-                    "type": "vector",
-                    "fields": {},
-                    "geometries": spec.POLYGON,
-                    "about": gettext(
-                        "Extract vector for the west coast of North America "
-                        "and Hawaii.")},
-                "NAmerica_WestCoast_4m.txt.bin": {
-                    "type": "file",
-                    "about": gettext(
-                        "WaveWatchIII data for the west coast of North "
-                        "America and Hawaii.")},
-                "NAmerica_EastCoast_4m.shp": {
-                    "type": "vector",
-                    "fields": {},
-                    "geometries": spec.POINT,
-                    "about": gettext(
-                        "Point vector for the East Coast of North America and "
-                        "Puerto Rico.")},
-                "ECNA_extract.shp": {
-                    "type": "vector",
-                    "fields": {},
-                    "geometries": spec.POLYGON,
-                    "about": gettext(
-                        "Extract vector for the East Coast of North America "
-                        "and Puerto Rico.")},
-                "NAmerica_EastCoast_4m.txt.bin": {
-                    "type": "file",
-                    "about": gettext(
-                        "WaveWatchIII data for the East Coast of North "
-                        "America and Puerto Rico.")},
-                "North_Sea_4m.shp": {
-                    "type": "vector",
-                    "fields": {},
-                    "geometries": spec.POINT,
-                    "about": gettext(
-                        "Point vector for the North Sea 4 meter resolution.")},
-                "North_Sea_4m_Extract.shp": {
-                    "type": "vector",
-                    "fields": {},
-                    "geometries": spec.POLYGON,
-                    "about": gettext(
-                        "Extract vector for the North Sea 4 meter resolution.")},
-                "North_Sea_4m.bin": {
-                    "type": "file",
-                    "about": gettext(
-                        "WaveWatchIII data for the North Sea 4 meter "
-                        "resolution.")},
-                "North_Sea_10m.shp": {
-                    "type": "vector",
-                    "fields": {},
-                    "geometries": spec.POINT,
-                    "about": gettext(
-                        "Point vector for the North Sea 10 meter resolution.")},
-                "North_Sea_10m_Extract.shp": {
-                    "type": "vector",
-                    "fields": {},
-                    "geometries": spec.POLYGON,
-                    "about": gettext(
-                        "Extract vector for the North Sea 10 meter resolution.")},
-                "North_Sea_10m.bin": {
-                    "type": "file",
-                    "about": gettext(
-                        "WaveWatchIII data for the North Sea 10 meter "
-                        "resolution.")},
-                "Australia_4m.shp": {
-                    "type": "vector",
-                    "fields": {},
-                    "geometries": spec.POINT,
-                    "about": gettext("Point vector for Australia.")},
-                "Australia_Extract.shp": {
-                    "type": "vector",
-                    "fields": {},
-                    "geometries": spec.POLYGON,
-                    "about": gettext("Extract vector for Australia.")},
-                "Australia_4m.bin": {
-                    "type": "file",
-                    "about": gettext("WaveWatchIII data for Australia.")},
-                "Global.shp": {
-                    "type": "vector",
-                    "fields": {},
-                    "geometries": spec.POINT,
-                    "about": gettext("Global point vector.")},
-                "Global_extract.shp": {
-                    "type": "vector",
-                    "fields": {},
-                    "geometries": spec.POLYGON,
-                    "about": gettext("Global extract vector.")},
-                "Global_WW3.txt.bin": {
-                    "type": "file",
-                    "about": gettext("Global WaveWatchIII data.")}
-            },
-            "about": gettext(
-                "Pre-packaged wave energy data directory. This is provided "
-                "with the sample data."),
-            "name": gettext("wave base data")
-        },
-        "analysis_area": {
-            "type": "option_string",
-            "options": {
-                "westcoast": {"display_name": gettext(
-                    "West Coast of North America and Hawaii")},
-                "eastcoast": {"display_name": gettext(
-                    "East Coast of North America and Puerto Rico")},
-                "northsea4": {
-                    "display_name": gettext("North Sea 4 meter resolution")},
-                "northsea10": {
-                    "display_name": gettext("North Sea 10 meter resolution")},
-                "australia": {"display_name": gettext("Australia")},
-                "global": {"display_name": gettext("Global")}
-            },
-            "about": gettext(
-                "The analysis area over which to run the model."),
-            "name": gettext("analysis area")
-        },
-        "aoi_path": {
-            **spec.AOI,
-            "projected": True,
-            "projection_units": u.meter,
-            "required": False
-        },
-        "machine_perf_path": {
-            "type": "csv",
-            "about": gettext(
-                "A matrix of the wave machine performance, or ability to "
-                "capture wave energy, in different sea state conditions. The "
-                "first column contains wave height values (in meters, "
-                "increasing from top to bottom), and the first row contains "
-                "wave period values (in seconds, increasing from left to "
-                "right). Values within the matrix are the machine performance "
-                "in kilowatts at that sea state condition, described by the "
-                "wave height (row) and wave period (column). The model "
-                "linearly interpolates sea state data from the base wave "
-                "dataset onto this matrix to determine performance."),
-            "name": gettext("machine performance table")
-        },
-        "machine_param_path": {
-            "type": "csv",
-            # use columns because of the non standard format of this table,
-            # we cannot validate it with the rows as headers.
-            "columns": {
-                "name": {
-                    "type": "freestyle_string",
-                    "about": gettext(
-                        "Name of the machine parameter. Expected parameters are: "
-                        "'capmax' (maximum capacity for device, in kilowatts), "
-                        "'hsmax' (upper limit of wave height for device operation, "
-                        "in meters), and 'tpmax' (upper limit of wave period for "
-                        "device operation, in seconds).")
+MODEL_SPEC = spec.ModelSpec(
+    model_id="wave_energy",
+    model_title=gettext("Wave Energy Production"),
+    userguide="wave_energy.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=(),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["wave_base_data_path", "analysis_area", "aoi_path", "dem_path"],
+        ["machine_perf_path", "machine_param_path"],
+        ["valuation_container", "land_gridPts_path",
+         "machine_econ_path", "number_of_machines"]
+    ],
+    inputs=[
+        spec.DirectoryInput(
+            id="workspace_dir",
+            name=gettext("workspace"),
+            about=(
+                "The folder where all the model's output files will be written. If this"
+                " folder does not exist, it will be created. If data already exists in"
+                " the folder, it will be overwritten."
+            ),
+            contents=[],
+            permissions="rwx",
+            must_exist=False
+        ),
+        spec.StringInput(
+            id="results_suffix",
+            name=gettext("file suffix"),
+            about=gettext(
+                "Suffix that will be appended to all output file names. Useful to"
+                " differentiate between model runs."
+            ),
+            required=False,
+            regexp="[a-zA-Z0-9_-]*"
+        ),
+        spec.NumberInput(
+            id="n_workers",
+            name=gettext("taskgraph n_workers parameter"),
+            about=gettext(
+                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+                " to run synchronously. 0 will run all jobs in the same process, but"
+                " scheduling will take place asynchronously. Any other positive integer"
+                " will cause that many processes to be spawned to execute tasks."
+            ),
+            required=False,
+            hidden=True,
+            units=u.none,
+            expression="value >= -1"
+        ),
+        spec.DirectoryInput(
+            id="wave_base_data_path",
+            name=gettext("wave base data"),
+            about=gettext(
+                "Pre-packaged wave energy data directory. This is provided with the"
+                " sample data."
+            ),
+            contents=[
+                spec.VectorInput(
+                    id="NAmerica_WestCoast_4m.shp",
+                    about=gettext(
+                        "Point vector for the west coast of North America and Hawaii."
+                    ),
+                    geometry_types={"POINT"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.VectorInput(
+                    id="WCNA_extract.shp",
+                    about=gettext(
+                        "Extract vector for the west coast of North America and Hawaii."
+                    ),
+                    geometry_types={"POLYGON"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.FileInput(
+                    id="NAmerica_WestCoast_4m.txt.bin",
+                    about=gettext(
+                        "WaveWatchIII data for the west coast of North America and"
+                        " Hawaii."
+                    )
+                ),
+                spec.VectorInput(
+                    id="NAmerica_EastCoast_4m.shp",
+                    about=gettext(
+                        "Point vector for the East Coast of North America and Puerto"
+                        " Rico."
+                    ),
+                    geometry_types={"POINT"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.VectorInput(
+                    id="ECNA_extract.shp",
+                    about=gettext(
+                        "Extract vector for the East Coast of North America and Puerto"
+                        " Rico."
+                    ),
+                    geometry_types={"POLYGON"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.FileInput(
+                    id="NAmerica_EastCoast_4m.txt.bin",
+                    about=gettext(
+                        "WaveWatchIII data for the East Coast of North America and Puerto"
+                        " Rico."
+                    )
+                ),
+                spec.VectorInput(
+                    id="North_Sea_4m.shp",
+                    about=gettext("Point vector for the North Sea 4 meter resolution."),
+                    geometry_types={"POINT"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.VectorInput(
+                    id="North_Sea_4m_Extract.shp",
+                    about=gettext("Extract vector for the North Sea 4 meter resolution."),
+                    geometry_types={"POLYGON"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.FileInput(
+                    id="North_Sea_4m.bin",
+                    about=gettext(
+                        "WaveWatchIII data for the North Sea 4 meter resolution."
+                    )
+                ),
+                spec.VectorInput(
+                    id="North_Sea_10m.shp",
+                    about=gettext("Point vector for the North Sea 10 meter resolution."),
+                    geometry_types={"POINT"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.VectorInput(
+                    id="North_Sea_10m_Extract.shp",
+                    about=gettext(
+                        "Extract vector for the North Sea 10 meter resolution."
+                    ),
+                    geometry_types={"POLYGON"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.FileInput(
+                    id="North_Sea_10m.bin",
+                    about=gettext(
+                        "WaveWatchIII data for the North Sea 10 meter resolution."
+                    )
+                ),
+                spec.VectorInput(
+                    id="Australia_4m.shp",
+                    about=gettext("Point vector for Australia."),
+                    geometry_types={"POINT"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.VectorInput(
+                    id="Australia_Extract.shp",
+                    about=gettext("Extract vector for Australia."),
+                    geometry_types={"POLYGON"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.FileInput(
+                    id="Australia_4m.bin",
+                    about=gettext("WaveWatchIII data for Australia.")
+                ),
+                spec.VectorInput(
+                    id="Global.shp",
+                    about=gettext("Global point vector."),
+                    geometry_types={"POINT"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.VectorInput(
+                    id="Global_extract.shp",
+                    about=gettext("Global extract vector."),
+                    geometry_types={"POLYGON"},
+                    fields=[],
+                    projected=None
+                ),
+                spec.FileInput(
+                    id="Global_WW3.txt.bin", about=gettext("Global WaveWatchIII data.")
+                )
+            ],
+            permissions="rx",
+            must_exist=None
+        ),
+        spec.OptionStringInput(
+            id="analysis_area",
+            name=gettext("analysis area"),
+            about=gettext("The analysis area over which to run the model."),
+            options={
+                "westcoast": {"display_name": "West Coast of North America and Hawaii"},
+                "eastcoast": {
+                    "display_name": "East Coast of North America and Puerto Rico"
                 },
-                "value": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext("Value of the machine parameter.")
-                }
-            },
-            "index_col": "name",
-            "about": gettext("Table of parameters for the wave energy machine in use."),
-            "name": gettext("machine parameter table")
-        },
-        "dem_path": {
-            "name": gettext("bathymetry"),
-            "type": "raster",
-            "bands": {1: {"type": "number", "units": u.meter}},
-            "about": gettext("Map of ocean depth. Values should be negative.")
-        },
-        "valuation_container": {
-            "type": "boolean",
-            "required": False,
-            "about": gettext("Run the valuation model."),
-            "name": gettext("run valuation")
-        },
-        "land_gridPts_path": {
-            "type": "csv",
-            "columns": LAND_GRID_POINT_FIELDS,
-            "required": "valuation_container",
-            "allowed": "valuation_container",
-            "about": gettext(
-                "A table of data for each connection point. Required if "
-                "Run Valuation is selected."),
-            "name": gettext("grid connection points table")
-        },
-        "machine_econ_path": {
-            "type": "csv",
-            # use columns because of the non standard format of this table,
-            # we cannot validate it with the rows as headers.
-            "columns": {
-                "name": {
-                    "type": "freestyle_string",
-                    "about": gettext(
-                        "Name of the machine parameter. Expected parameters are: "
-                        "'capmax' (maximum capacity for device, in kilowatts), "
-                        "'cc' (capital cost per device installed, $/kilowatt), "
-                        "'cml' (cost of mooring lines, $/kilometer), "
-                        "'cul' (cost of underwater cable, $/kilometer), "
-                        "'col' (cost of overland transmission lines, $/kilometer), "
-                        "'omc' (operating and maintenance cost, $/kilowatt hour), "
-                        "'p' (price of electricity, $/kilowatt hour), "
-                        "'r' (discount rate, between 0 and 1), "
-                        "'smlpm' (number of slack lines required per machine)")
-                },
-                "value": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext("Value of the machine parameter.")
-                }
-            },
-            "index_col": "name",
-            "required": "valuation_container",
-            "allowed": "valuation_container",
-            "about": gettext(
-                "Table of economic parameters for the wave energy machine. "
-                "Required if Run Valuation is selected."),
-            "name": gettext("machine economic table")
-        },
-        "number_of_machines": {
-            "expression": "value > 0",
-            "type": "number",
-            "units": u.none,
-            "required": "valuation_container",
-            "allowed": "valuation_container",
-            "about": gettext(
-                "Number of wave machines to model. Required if Run Valuation "
-                "is selected."),
-            "name": gettext("number of machines")
-        }
-    },
-    "outputs": {
-        "output": {
-            "type": "directory",
-            "contents": {
-                "capwe_mwh.tif": {
-                    "about": gettext(
-                        "Map of captured wave energy per WEC device."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.megawatt_hour/u.year
-                    }}
-                },
-                "capwe_rc.tif": {
-                    "about": gettext(
-                        "Map of captured wave energy per WEC device "
-                        "reclassified by quantiles (1 = < 25%, 2 = 25-50%, "
-                        "3 = 50-75%, 4 = 75-90%, 5 = > 90%)."),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "capwe_rc.csv": {
-                    "about": gettext(
-                        "Table of value ranges for each captured wave energy "
-                        "quantile group as well as the number of pixels for "
-                        "each group."),
-                    "index_col": "Percentile Group",
-                    "columns": {
-                        **PERCENTILE_TABLE_FIELDS,
-                        "Value Range (megawatt hours per year, MWh/yr)": {
-                            "type": "number",
-                            "units": u.megawatt_hour/u.year,
-                            "about": gettext(
-                                "Range of wave energy values within this "
-                                "percentile bin.")
-                        }
-                    }
-                },
-                "GridPt_prj.shp": {
-                    "created_if": "valuation_container",
-                    "about": gettext("Vector map of the provided grid points"),
-                    "fields": LAND_GRID_POINT_FIELDS,
-                    "geometries": {"POINT"}
-                },
-                "LandPts_prj.shp": {
-                    "created_if": "valuation_container",
-                    "about": gettext("Vector map of the provided land points"),
-                    "fields": LAND_GRID_POINT_FIELDS,
-                    "geometries": {"POINT"}
-                },
-                "npv_rc.tif": {
-                    "about": gettext(
-                        "Map of positive values of net present value over the "
-                        "25-year lifespan of a wave energy facility, "
-                        "reclassified by quantiles (1 = < 25%, 2 = 25-50%, "
-                        "3 = 50-75%, 4 = 75-90%, 5 = > 90%)."),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "npv_rc.csv": {
-                    "about": gettext(
-                        "Table of value ranges for each net present value "
-                        "quantile group as well as the number of pixels for "
-                        "each group."),
-                    "index_col": "Percentile Group",
-                    "columns": {
-                        **PERCENTILE_TABLE_FIELDS,
-                        "Value Range (thousands of currency units, currency)": {
-                            "type": "number",
-                            "units": u.currency,
-                            "about": gettext(
-                                "Range of net present values within this "
-                                "percentile bin.")
-                        }
-                    }
-                },
-                "npv_usd.tif": {
-                    "about": gettext(
-                        "Map of net present value over the 25-year lifespan "
-                        "of a wave energy facility."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.kilocurrency
-                    }}
-                },
-                "wp_kw.tif": {
-                    "about": gettext("Map of potential wave power."),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.kilowatt/u.meter
-                    }}
-                },
-                "wp_rc.tif": {
-                    "about": gettext(
-                        "Map of potential wave power classified into "
-                        "quantiles (1 = < 25%, 2 = 25-50%, 3 = 50-75%, "
-                        "4 = 75-90%, 5 = > 90%)."),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "wp_rc.csv": {
-                    "about": gettext(
-                        "Table of value ranges for each wave power quantile "
-                        "group as well as the number of pixels for each group."),
-                    "index_col": "Percentile Group",
-                    "columns": {
-                        **PERCENTILE_TABLE_FIELDS,
-                        "Value Range (wave power per unit width of wave crest length, kW/m)": {
-                            "type": "number",
-                            "units": u.kilowatt/u.meter,
-                            "about": gettext(
-                                "Range of potential wave power values within this "
-                                "percentile bin.")
-                        }
-                    }
-                }
+                "northsea4": {"display_name": "North Sea 4 meter resolution"},
+                "northsea10": {"display_name": "North Sea 10 meter resolution"},
+                "australia": {"display_name": "Australia"},
+                "global": {"display_name": "Global"},
             }
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "aoi_clipped_to_extract_path.shp": {
-                    "about": "AOI clipped to the analysis area",
-                    "geometries": spec.POLYGON,
-                    "fields": {}
-                },
-                "Captured_WEM_InputOutput_Pts.shp": {
-                    "about": "Map of wave data points.",
-                    "geometries": spec.POINT,
-                    "fields": CAPTURED_WEM_FIELDS
-                },
-                "Final_WEM_InputOutput_Pts.shp": {
-                    "about": "Map of wave data points.",
-                    "geometries": spec.POINT,
-                    "fields": {
-                        **CAPTURED_WEM_FIELDS,
-                        "W2L_MDIST": {
-                            "about": "Euclidean distance to the nearest landing connection point",
-                            "type": "number",
-                            "units": u.meter
-                        },
-                        "L2G_MDIST": {
-                            "about": "Euclidean distance from LAND_ID to the nearest power grid connection",
-                            "type": "number",
-                            "units": u.meter
-                        },
-                        "LAND_ID": {
-                            "about": "ID of the closest landing connection point",
-                            "type": "number",
-                            "units": u.none
-                        },
-                        "NPV_25Y": {
-                            "about": "net present value of 25 year period",
-                            "type": "number",
-                            "units": u.kilocurrency
-                        },
-                        "CAPWE_ALL": {
-                            "about": "total captured wave energy for all machines at site",
-                            "type": "number",
-                            "units": u.megawatt_hour/u.year
-                        },
-                        "UNITS": {
-                            "about": "number of WEC devices assumed to be at this WEC facility site",
-                            "type": "number",
-                            "units": u.none,
-                        }
+        ),
+        spec.VectorInput(
+            id="aoi_path",
+            name=gettext("area of interest"),
+            about=gettext(
+                "A map of areas over which to aggregate and summarize the final results."
+            ),
+            required=False,
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[],
+            projected=True,
+            projection_units=u.meter
+        ),
+        spec.CSVInput(
+            id="machine_perf_path",
+            name=gettext("machine performance table"),
+            about=gettext(
+                "A matrix of the wave machine performance, or ability to capture wave"
+                " energy, in different sea state conditions. The first column contains"
+                " wave height values (in meters, increasing from top to bottom), and the"
+                " first row contains wave period values (in seconds, increasing from left"
+                " to right). Values within the matrix are the machine performance in"
+                " kilowatts at that sea state condition, described by the wave height"
+                " (row) and wave period (column). The model linearly interpolates sea"
+                " state data from the base wave dataset onto this matrix to determine"
+                " performance."
+            ),
+            columns=None,
+            index_col=None
+        ),
+        spec.CSVInput(
+            id="machine_param_path",
+            name=gettext("machine parameter table"),
+            about=gettext("Table of parameters for the wave energy machine in use."),
+            columns=[
+                spec.StringInput(
+                    id="name",
+                    about=(
+                        "Name of the machine parameter. Expected parameters are: 'capmax'"
+                        " (maximum capacity for device, in kilowatts), 'hsmax' (upper"
+                        " limit of wave height for device operation, in meters), and"
+                        " 'tpmax' (upper limit of wave period for device operation, in"
+                        " seconds)."
+                    ),
+                    regexp=None
+                ),
+                spec.NumberInput(
+                    id="value",
+                    about=gettext("Value of the machine parameter."),
+                    units=u.none
+                )
+            ],
+            index_col="name"
+        ),
+        spec.SingleBandRasterInput(
+            id="dem_path",
+            name=gettext("bathymetry"),
+            about=gettext("Map of ocean depth. Values should be negative."),
+            data_type=float,
+            units=u.meter,
+            projected=None
+        ),
+        spec.BooleanInput(
+            id="valuation_container",
+            name=gettext("run valuation"),
+            about=gettext("Run the valuation model."),
+            required=False
+        ),
+        spec.CSVInput(
+            id="land_gridPts_path",
+            name=gettext("grid connection points table"),
+            about=gettext(
+                "A table of data for each connection point. Required if Run Valuation is"
+                " selected."
+            ),
+            required="valuation_container",
+            allowed="valuation_container",
+            columns=[
+                spec.IntegerInput(
+                    id="id", about=gettext("Unique identifier for each point.")
+                ),
+                spec.OptionStringInput(
+                    id="type",
+                    about=gettext("The type of connection at this point."),
+                    options={
+                        "LAND": {"description": "This is a land connection point"},
+                        "GRID": {"description": "This is a grid connection point"},
                     }
-                },
-                "Indexed_WEM_InputOutput_Pts.shp": {
-                    "about": "Map of wave data points.",
-                    "fields": INDEXED_WEM_FIELDS,
-                    "geometries": spec.POINT
-                },
-                "interpolated_capwe_mwh.tif": {
-                    "about": "Interpolated wave energy",
-                    "bands": {1: {"type": "number", "units": u.megawatt_hour/u.year}}
-                },
-                "interpolated_wp_kw.tif": {
-                    "about": "Interpolated wave power",
-                    "bands": {1: {"type": "number", "units": u.kilowatt/u.meter}}
-                },
-                "npv_not_clipped.tif": {
-                    "about": "Interpolated net present value",
-                    "bands": {1: {"type": "number", "units": u.kilocurrency}}
-                },
-                "unclipped_capwe_mwh.tif": {
-                    "about": "Blank raster showing the extent of the AOI",
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "unclipped_wp_kw.tif": {
-                    "about": "Blank raster showing the extent of the AOI",
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "WEM_InputOutput_Pts.shp": {
-                    "about": "Map of wave data points.",
-                    "geometries": spec.POINT,
-                    "fields": WEM_FIELDS
-                },
-                "GridPt.txt": {
-                    "created_if": "valuation_container",
-                    "about": "This text file logs records of the grid point coordinates."
-                },
-                "LandPts.txt": {
-                    "created_if": "valuation_container",
-                    "about": "This text file logs records of the landing point coordinates."
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+                ),
+                spec.NumberInput(
+                    id="lat",
+                    about=gettext("Latitude of the connection point."),
+                    units=u.degree
+                ),
+                spec.NumberInput(
+                    id="long",
+                    about=gettext("Longitude of the connection point."),
+                    units=u.degree
+                ),
+                spec.StringInput(
+                    id="location",
+                    about=gettext("Name for the connection point location."),
+                    regexp=None
+                )
+            ],
+            index_col=None
+        ),
+        spec.CSVInput(
+            id="machine_econ_path",
+            name=gettext("machine economic table"),
+            about=gettext(
+                "Table of economic parameters for the wave energy machine. Required if"
+                " Run Valuation is selected."
+            ),
+            required="valuation_container",
+            allowed="valuation_container",
+            columns=[
+                spec.StringInput(
+                    id="name",
+                    about=(
+                        "Name of the machine parameter. Expected parameters are: 'capmax'"
+                        " (maximum capacity for device, in kilowatts), 'cc' (capital cost"
+                        " per device installed, $/kilowatt), 'cml' (cost of mooring"
+                        " lines, $/kilometer), 'cul' (cost of underwater cable,"
+                        " $/kilometer), 'col' (cost of overland transmission lines,"
+                        " $/kilometer), 'omc' (operating and maintenance cost, $/kilowatt"
+                        " hour), 'p' (price of electricity, $/kilowatt hour), 'r'"
+                        " (discount rate, between 0 and 1), 'smlpm' (number of slack"
+                        " lines required per machine)"
+                    ),
+                    regexp=None
+                ),
+                spec.NumberInput(
+                    id="value",
+                    about=gettext("Value of the machine parameter."),
+                    units=u.none
+                )
+            ],
+            index_col="name"
+        ),
+        spec.NumberInput(
+            id="number_of_machines",
+            name=gettext("number of machines"),
+            about=gettext(
+                "Number of wave machines to model. Required if Run Valuation is selected."
+            ),
+            required="valuation_container",
+            allowed="valuation_container",
+            units=u.none,
+            expression="value > 0"
+        )
+    ],
+    outputs=[
+        spec.DirectoryOutput(
+            id="output",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="capwe_mwh.tif",
+                    about=gettext("Map of captured wave energy per WEC device."),
+                    data_type=float,
+                    units=u.megawatt_hour / u.year
+                ),
+                spec.SingleBandRasterOutput(
+                    id="capwe_rc.tif",
+                    about=gettext(
+                        "Map of captured wave energy per WEC device reclassified by"
+                        " quantiles (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = >"
+                        " 90%)."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.CSVOutput(
+                    id="capwe_rc.csv",
+                    about=gettext(
+                        "Table of value ranges for each captured wave energy quantile"
+                        " group as well as the number of pixels for each group."
+                    ),
+                    columns=[
+                        spec.IntegerOutput(
+                            id="Percentile Group",
+                            about=gettext("Index of this percentile bin.")
+                        ),
+                        spec.StringOutput(
+                            id="Percentile Range",
+                            about=gettext("Percentile range within this bin.")
+                        ),
+                        spec.IntegerOutput(
+                            id="Pixel Count",
+                            about=gettext(
+                                "Number of pixels whose wave energy values fall into this"
+                                " percentile bin."
+                            )
+                        ),
+                        spec.NumberOutput(
+                            id="Value Range (megawatt hours per year, MWh/yr)",
+                            about=gettext(
+                                "Range of wave energy values within this percentile bin."
+                            ),
+                            units=u.megawatt_hour / u.year
+                        )
+                    ],
+                    index_col="Percentile Group"
+                ),
+                spec.VectorOutput(
+                    id="GridPt_prj.shp",
+                    about=gettext("Vector map of the provided grid points"),
+                    created_if="valuation_container",
+                    geometry_types={"POINT"},
+                    fields=[
+                        spec.IntegerOutput(
+                            id="id", about=gettext("Unique identifier for each point.")
+                        ),
+                        spec.OptionStringOutput(
+                            id="type",
+                            about=gettext("The type of connection at this point."),
+                            options={
+                                "LAND": {
+                                    "description": "This is a land connection point"
+                                },
+                                "GRID": {
+                                    "description": "This is a grid connection point"
+                                },
+                            }
+                        ),
+                        spec.NumberOutput(
+                            id="lat",
+                            about=gettext("Latitude of the connection point."),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="long",
+                            about=gettext("Longitude of the connection point."),
+                            units=u.degree
+                        ),
+                        spec.StringOutput(
+                            id="location",
+                            about=gettext("Name for the connection point location.")
+                        )
+                    ]
+                ),
+                spec.VectorOutput(
+                    id="LandPts_prj.shp",
+                    about=gettext("Vector map of the provided land points"),
+                    created_if="valuation_container",
+                    geometry_types={"POINT"},
+                    fields=[
+                        spec.IntegerOutput(
+                            id="id", about=gettext("Unique identifier for each point.")
+                        ),
+                        spec.OptionStringOutput(
+                            id="type",
+                            about=gettext("The type of connection at this point."),
+                            options={
+                                "LAND": {
+                                    "description": "This is a land connection point"
+                                },
+                                "GRID": {
+                                    "description": "This is a grid connection point"
+                                },
+                            }
+                        ),
+                        spec.NumberOutput(
+                            id="lat",
+                            about=gettext("Latitude of the connection point."),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="long",
+                            about=gettext("Longitude of the connection point."),
+                            units=u.degree
+                        ),
+                        spec.StringOutput(
+                            id="location",
+                            about=gettext("Name for the connection point location.")
+                        )
+                    ]
+                ),
+                spec.SingleBandRasterOutput(
+                    id="npv_rc.tif",
+                    about=gettext(
+                        "Map of positive values of net present value over the 25-year"
+                        " lifespan of a wave energy facility, reclassified by quantiles"
+                        " (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%)."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.CSVOutput(
+                    id="npv_rc.csv",
+                    about=gettext(
+                        "Table of value ranges for each net present value quantile group"
+                        " as well as the number of pixels for each group."
+                    ),
+                    columns=[
+                        spec.IntegerOutput(
+                            id="Percentile Group",
+                            about=gettext("Index of this percentile bin.")
+                        ),
+                        spec.StringOutput(
+                            id="Percentile Range",
+                            about=gettext("Percentile range within this bin.")
+                        ),
+                        spec.IntegerOutput(
+                            id="Pixel Count",
+                            about=gettext(
+                                "Number of pixels whose wave energy values fall into this"
+                                " percentile bin."
+                            )
+                        ),
+                        spec.NumberOutput(
+                            id="Value Range (thousands of currency units, currency)",
+                            about=gettext(
+                                "Range of net present values within this percentile bin."
+                            ),
+                            units=u.currency
+                        )
+                    ],
+                    index_col="Percentile Group"
+                ),
+                spec.SingleBandRasterOutput(
+                    id="npv_usd.tif",
+                    about=gettext(
+                        "Map of net present value over the 25-year lifespan of a wave"
+                        " energy facility."
+                    ),
+                    data_type=float,
+                    units=u.kilocurrency
+                ),
+                spec.SingleBandRasterOutput(
+                    id="wp_kw.tif",
+                    about=gettext("Map of potential wave power."),
+                    data_type=float,
+                    units=u.kilowatt / u.meter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="wp_rc.tif",
+                    about=gettext(
+                        "Map of potential wave power classified into quantiles (1 = <"
+                        " 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%)."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.CSVOutput(
+                    id="wp_rc.csv",
+                    about=gettext(
+                        "Table of value ranges for each wave power quantile group as well"
+                        " as the number of pixels for each group."
+                    ),
+                    columns=[
+                        spec.IntegerOutput(
+                            id="Percentile Group",
+                            about=gettext("Index of this percentile bin.")
+                        ),
+                        spec.StringOutput(
+                            id="Percentile Range",
+                            about=gettext("Percentile range within this bin.")
+                        ),
+                        spec.IntegerOutput(
+                            id="Pixel Count",
+                            about=gettext(
+                                "Number of pixels whose wave energy values fall into this"
+                                " percentile bin."
+                            )
+                        ),
+                        spec.NumberOutput(
+                            id=(
+                                "Value Range (wave power per unit width of wave crest"
+                                " length, kW/m)"
+                            ),
+                            about=gettext(
+                                "Range of potential wave power values within this"
+                                " percentile bin."
+                            ),
+                            units=u.kilowatt / u.meter
+                        )
+                    ],
+                    index_col="Percentile Group"
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="intermediate",
+            about=None,
+            contents=[
+                spec.VectorOutput(
+                    id="aoi_clipped_to_extract_path.shp",
+                    about=gettext("AOI clipped to the analysis area"),
+                    geometry_types={"POLYGON"},
+                    fields=[]
+                ),
+                spec.VectorOutput(
+                    id="Captured_WEM_InputOutput_Pts.shp",
+                    about=gettext("Map of wave data points."),
+                    geometry_types={"POINT"},
+                    fields=[
+                        spec.NumberOutput(
+                            id="I",
+                            about=gettext("index value for the wave input grid points"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="J",
+                            about=gettext("index value for the wave input grid points"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="LONG",
+                            about=gettext("longitude of the grid points"),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="LATI",
+                            about=gettext("latitude of the grid points"),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="HSAVG_M",
+                            about=gettext("wave height average"),
+                            units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="TPAVG_S",
+                            about=gettext("wave period average"),
+                            units=u.second
+                        ),
+                        spec.NumberOutput(
+                            id="DEPTH_M", about=gettext("depth"), units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="CAPWE_MWHY",
+                            about=gettext("captured wave energy per device"),
+                            units=u.megawatt_hour / u.year
+                        ),
+                        spec.NumberOutput(
+                            id="WE_KWM",
+                            about=gettext("potential wave power"),
+                            units=u.kilowatt / u.meter
+                        )
+                    ]
+                ),
+                spec.VectorOutput(
+                    id="Final_WEM_InputOutput_Pts.shp",
+                    about=gettext("Map of wave data points."),
+                    geometry_types={"POINT"},
+                    fields=[
+                        spec.NumberOutput(
+                            id="I",
+                            about=gettext("index value for the wave input grid points"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="J",
+                            about=gettext("index value for the wave input grid points"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="LONG",
+                            about=gettext("longitude of the grid points"),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="LATI",
+                            about=gettext("latitude of the grid points"),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="HSAVG_M",
+                            about=gettext("wave height average"),
+                            units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="TPAVG_S",
+                            about=gettext("wave period average"),
+                            units=u.second
+                        ),
+                        spec.NumberOutput(
+                            id="DEPTH_M", about=gettext("depth"), units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="CAPWE_MWHY",
+                            about=gettext("captured wave energy per device"),
+                            units=u.megawatt_hour / u.year
+                        ),
+                        spec.NumberOutput(
+                            id="WE_KWM",
+                            about=gettext("potential wave power"),
+                            units=u.kilowatt / u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="W2L_MDIST",
+                            about=gettext(
+                                "Euclidean distance to the nearest landing connection"
+                                " point"
+                            ),
+                            units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="L2G_MDIST",
+                            about=gettext(
+                                "Euclidean distance from LAND_ID to the nearest power"
+                                " grid connection"
+                            ),
+                            units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="LAND_ID",
+                            about=gettext("ID of the closest landing connection point"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="NPV_25Y",
+                            about=gettext("net present value of 25 year period"),
+                            units=u.kilocurrency
+                        ),
+                        spec.NumberOutput(
+                            id="CAPWE_ALL",
+                            about=gettext(
+                                "total captured wave energy for all machines at site"
+                            ),
+                            units=u.megawatt_hour / u.year
+                        ),
+                        spec.NumberOutput(
+                            id="UNITS",
+                            about=gettext(
+                                "number of WEC devices assumed to be at this WEC facility"
+                                " site"
+                            ),
+                            units=u.none
+                        )
+                    ]
+                ),
+                spec.VectorOutput(
+                    id="Indexed_WEM_InputOutput_Pts.shp",
+                    about=gettext("Map of wave data points."),
+                    geometry_types={"POINT"},
+                    fields=[
+                        spec.NumberOutput(
+                            id="I",
+                            about=gettext("index value for the wave input grid points"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="J",
+                            about=gettext("index value for the wave input grid points"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="LONG",
+                            about=gettext("longitude of the grid points"),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="LATI",
+                            about=gettext("latitude of the grid points"),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="HSAVG_M",
+                            about=gettext("wave height average"),
+                            units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="TPAVG_S",
+                            about=gettext("wave period average"),
+                            units=u.second
+                        ),
+                        spec.NumberOutput(
+                            id="DEPTH_M", about=gettext("depth"), units=u.meter
+                        )
+                    ]
+                ),
+                spec.SingleBandRasterOutput(
+                    id="interpolated_capwe_mwh.tif",
+                    about=gettext("Interpolated wave energy"),
+                    data_type=float,
+                    units=u.megawatt_hour / u.year
+                ),
+                spec.SingleBandRasterOutput(
+                    id="interpolated_wp_kw.tif",
+                    about=gettext("Interpolated wave power"),
+                    data_type=float,
+                    units=u.kilowatt / u.meter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="npv_not_clipped.tif",
+                    about=gettext("Interpolated net present value"),
+                    data_type=float,
+                    units=u.kilocurrency
+                ),
+                spec.SingleBandRasterOutput(
+                    id="unclipped_capwe_mwh.tif",
+                    about=gettext("Blank raster showing the extent of the AOI"),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="unclipped_wp_kw.tif",
+                    about=gettext("Blank raster showing the extent of the AOI"),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.VectorOutput(
+                    id="WEM_InputOutput_Pts.shp",
+                    about=gettext("Map of wave data points."),
+                    geometry_types={"POINT"},
+                    fields=[
+                        spec.NumberOutput(
+                            id="I",
+                            about=gettext("index value for the wave input grid points"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="J",
+                            about=gettext("index value for the wave input grid points"),
+                            units=u.none
+                        ),
+                        spec.NumberOutput(
+                            id="LONG",
+                            about=gettext("longitude of the grid points"),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="LATI",
+                            about=gettext("latitude of the grid points"),
+                            units=u.degree
+                        ),
+                        spec.NumberOutput(
+                            id="HSAVG_M",
+                            about=gettext("wave height average"),
+                            units=u.meter
+                        ),
+                        spec.NumberOutput(
+                            id="TPAVG_S",
+                            about=gettext("wave period average"),
+                            units=u.second
+                        )
+                    ]
+                ),
+                spec.FileOutput(
+                    id="GridPt.txt",
+                    about=gettext(
+                        "This text file logs records of the grid point coordinates."
+                    ),
+                    created_if="valuation_container"
+                ),
+                spec.FileOutput(
+                    id="LandPts.txt",
+                    about=gettext(
+                        "This text file logs records of the landing point coordinates."
+                    ),
+                    created_if="valuation_container"
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="taskgraph_cache",
+            about=gettext(
+                "Cache that stores data between model runs. This directory contains no"
+                " human-readable data and you may ignore it."
+            ),
+            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        )
+    ],
+)
 
 
 # Set nodata value and target_pixel_type for new rasters
