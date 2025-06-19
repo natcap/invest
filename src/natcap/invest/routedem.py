@@ -1,4 +1,5 @@
 """RouteDEM for exposing the natcap.invest's routing package to UI."""
+import dataclasses
 import logging
 import os
 
@@ -35,49 +36,12 @@ MODEL_SPEC = spec.ModelSpec(
          "calculate_subwatersheds"]
     ],
     inputs=[
-        spec.DirectoryInput(
-            id="workspace_dir",
-            name=gettext("workspace"),
-            about=(
-                "The folder where all the model's output files will be written. If this"
-                " folder does not exist, it will be created. If data already exists in"
-                " the folder, it will be overwritten."
-            ),
-            contents=[],
-            permissions="rwx",
-            must_exist=False
-        ),
-        spec.StringInput(
-            id="results_suffix",
-            name=gettext("file suffix"),
-            about=gettext(
-                "Suffix that will be appended to all output file names. Useful to"
-                " differentiate between model runs."
-            ),
-            required=False,
-            regexp="[a-zA-Z0-9_-]*"
-        ),
-        spec.NumberInput(
-            id="n_workers",
-            name=gettext("taskgraph n_workers parameter"),
-            about=gettext(
-                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
-                " to run synchronously. 0 will run all jobs in the same process, but"
-                " scheduling will take place asynchronously. Any other positive integer"
-                " will cause that many processes to be spawned to execute tasks."
-            ),
-            required=False,
-            hidden=True,
-            units=u.none,
-            expression="value >= -1"
-        ),
-        spec.SingleBandRasterInput(
-            id="dem_path",
-            name=gettext("digital elevation model"),
-            about=gettext("Map of elevation above sea level."),
-            data_type=float,
-            units=u.meter,
-            projected=None
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        dataclasses.replace(
+            spec.DEM,
+            id="dem_path"
         ),
         spec.NumberInput(
             id="dem_band_index",
@@ -128,17 +92,13 @@ MODEL_SPEC = spec.ModelSpec(
             required=False,
             allowed="calculate_flow_accumulation"
         ),
-        spec.NumberInput(
-            id="threshold_flow_accumulation",
-            name=gettext("threshold flow accumulation"),
-            about=gettext(
-                "The number of upslope pixels that must flow into a pixel before it is"
-                " classified as a stream. Required if Calculate Streams is selected."
-            ),
+        dataclasses.replace(
+            spec.THRESHOLD_FLOW_ACCUMULATION,
             required="calculate_stream_threshold",
             allowed="calculate_stream_threshold",
-            units=u.pixel,
-            expression="value >= 0"
+            about=(
+                spec.THRESHOLD_FLOW_ACCUMULATION.about + " " +
+                gettext("Required if Calculate Streams is selected."))
         ),
         spec.BooleanInput(
             id="calculate_downslope_distance",
@@ -172,55 +132,23 @@ MODEL_SPEC = spec.ModelSpec(
         )
     ],
     outputs=[
-        spec.DirectoryOutput(
-            id="taskgraph_cache",
-            about=gettext(
-                "Cache that stores data between model runs. This directory contains no"
-                " human-readable data and you may ignore it."
-            ),
-            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
+        spec.TASKGRAPH_DIR,
+        dataclasses.replace(
+            spec.FILLED_DEM,
+            id="filled.tif"
         ),
-        spec.SingleBandRasterOutput(
-            id="filled.tif",
-            about=gettext("Map of elevation after any pits are filled"),
-            data_type=float,
-            units=u.meter
+        dataclasses.replace(
+            spec.FLOW_ACCUMULATION,
+            id="flow_accumulation.tif"
         ),
-        spec.SingleBandRasterOutput(
-            id="flow_accumulation.tif",
-            about=gettext("Map of flow accumulation"),
-            data_type=float,
-            units=u.none
+        dataclasses.replace(
+            spec.FLOW_DIRECTION,
+            id="flow_direction.tif"
         ),
-        spec.SingleBandRasterOutput(
-            id="flow_direction.tif",
-            about=gettext(
-                "MFD flow direction. Note: the pixel values should not be interpreted"
-                " directly. Each 32-bit number consists of 8 4-bit numbers. Each 4-bit"
-                " number represents the proportion of flow into one of the eight"
-                " neighboring pixels."
-            ),
-            data_type=int,
-            units=None
-        ),
-        spec.SingleBandRasterOutput(
-            id="slope.tif",
-            about=gettext(
-                "Percent slope, calculated from the pit-filled DEM. 100 is equivalent to"
-                " a 45 degree slope."
-            ),
-            data_type=float,
-            units=None
-        ),
-        spec.SingleBandRasterOutput(
-            id="stream_mask.tif",
-            about=gettext(
-                "Stream network, created using flow direction and flow accumulation"
-                " derived from the DEM and Threshold Flow Accumulation. Values of 1"
-                " represent streams, values of 0 are non-stream pixels."
-            ),
-            data_type=int,
-            units=None
+        spec.SLOPE,
+        dataclasses.replace(
+            spec.STREAM,
+            id="stream_mask.tif"
         ),
         spec.VectorOutput(
             id="strahler_stream_order.gpkg",

@@ -290,8 +290,7 @@ class ValidatorTest(unittest.TestCase):
         """Validation: validation error returned on invalid n_workers."""
         from natcap.invest import validation
 
-        args_spec = model_spec_with_defaults(inputs=[
-            spec.build_input_spec('n_workers', spec.N_WORKERS)])
+        args_spec = model_spec_with_defaults(inputs=[spec.N_WORKERS])
 
         @validation.invest_validator
         def validate(args, limit_to=None):
@@ -722,9 +721,9 @@ class FreestyleStringValidation(unittest.TestCase):
         self.assertEqual(
             error_msg, validation.MESSAGES['REGEXP_MISMATCH'].format(regexp=regexp))
 
-        error_msg = StringInput(regexp=SUFFIX['regexp']).validate('4/20')
+        error_msg = StringInput(regexp=SUFFIX.regexp).validate('4/20')
         self.assertEqual(
-            error_msg, validation.MESSAGES['REGEXP_MISMATCH'].format(regexp=SUFFIX['regexp']))
+            error_msg, validation.MESSAGES['REGEXP_MISMATCH'].format(regexp=SUFFIX.regexp))
 
 
 class OptionStringValidation(unittest.TestCase):

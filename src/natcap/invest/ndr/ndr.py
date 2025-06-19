@@ -1,5 +1,6 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
 import copy
+import dataclasses
 import logging
 import os
 import pickle
@@ -41,50 +42,10 @@ MODEL_SPEC = spec.ModelSpec(
          "k_param", "runoff_proxy_av"]
     ],
     inputs=[
-        spec.DirectoryInput(
-            id="workspace_dir",
-            name=gettext("workspace"),
-            about=(
-                "The folder where all the model's output files will be written. If this"
-                " folder does not exist, it will be created. If data already exists in"
-                " the folder, it will be overwritten."
-            ),
-            contents=[],
-            permissions="rwx",
-            must_exist=False
-        ),
-        spec.StringInput(
-            id="results_suffix",
-            name=gettext("file suffix"),
-            about=gettext(
-                "Suffix that will be appended to all output file names. Useful to"
-                " differentiate between model runs."
-            ),
-            required=False,
-            regexp="[a-zA-Z0-9_-]*"
-        ),
-        spec.NumberInput(
-            id="n_workers",
-            name=gettext("taskgraph n_workers parameter"),
-            about=gettext(
-                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
-                " to run synchronously. 0 will run all jobs in the same process, but"
-                " scheduling will take place asynchronously. Any other positive integer"
-                " will cause that many processes to be spawned to execute tasks."
-            ),
-            required=False,
-            hidden=True,
-            units=u.none,
-            expression="value >= -1"
-        ),
-        spec.SingleBandRasterInput(
-            id="dem_path",
-            name=gettext("digital elevation model"),
-            about=gettext("Map of elevation above sea level."),
-            data_type=float,
-            units=u.meter,
-            projected=True
-        ),
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        spec.PROJECTED_DEM,
         spec.SingleBandRasterInput(
             id="lulc_path",
             name=gettext("land use/land cover"),
@@ -131,13 +92,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " must have corresponding entries in this table."
             ),
             columns=[
-                spec.IntegerInput(
-                    id="lucode",
-                    about=gettext(
-                        "LULC codes from the LULC raster. Each code must be a unique"
-                        " integer."
-                    )
-                ),
+                spec.LULC_TABLE_COLUMN,
                 spec.OptionStringInput(
                     id="load_type_p",
                     about=(
@@ -259,16 +214,7 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("calculate nitrogen"),
             about=gettext("Calculate nitrogen retention and export.")
         ),
-        spec.NumberInput(
-            id="threshold_flow_accumulation",
-            name=gettext("threshold flow accumulation"),
-            about=gettext(
-                "The number of upslope pixels that must flow into a pixel before it is"
-                " classified as a stream."
-            ),
-            units=u.pixel,
-            expression="value >= 0"
-        ),
+        spec.THRESHOLD_FLOW_ACCUMULATION,
         spec.NumberInput(
             id="k_param",
             name=gettext("Borselli k parameter"),
@@ -319,15 +265,7 @@ MODEL_SPEC = spec.ModelSpec(
             allowed="calc_n",
             units=None
         ),
-        spec.OptionStringInput(
-            id="flow_dir_algorithm",
-            name=gettext("flow direction algorithm"),
-            about=gettext("Flow direction algorithm to use."),
-            options={
-                "D8": {"display_name": "D8", "description": "D8 flow direction"},
-                "MFD": {"display_name": "MFD", "description": "Multiple flow direction"},
-            }
-        )
+        spec.FLOW_DIR_ALGORITHM
     ],
     outputs=[
         spec.VectorOutput(
@@ -425,15 +363,9 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=u.kilogram / u.hectare
         ),
-        spec.SingleBandRasterOutput(
-            id="stream.tif",
-            about=gettext(
-                "Stream network, created using flow direction and flow accumulation"
-                " derived from the DEM and Threshold Flow Accumulation. Values of 1"
-                " represent streams, values of 0 are non-stream pixels."
-            ),
-            data_type=int,
-            units=None
+        dataclasses.replace(
+            spec.STREAM,
+            id="stream.tif"
         ),
         spec.DirectoryOutput(
             id="intermediate_outputs",
@@ -509,22 +441,13 @@ MODEL_SPEC = spec.ModelSpec(
                     data_type=float,
                     units=None
                 ),
-                spec.SingleBandRasterOutput(
-                    id="flow_accumulation.tif",
-                    about=gettext("Map of flow accumulation"),
-                    data_type=float,
-                    units=u.none
+                dataclasses.replace(
+                    spec.FLOW_ACCUMULATION,
+                    id="flow_accumulation.tif"
                 ),
-                spec.SingleBandRasterOutput(
-                    id="flow_direction.tif",
-                    about=gettext(
-                        "MFD flow direction. Note: the pixel values should not be"
-                        " interpreted directly. Each 32-bit number consists of 8 4-bit"
-                        " numbers. Each 4-bit number represents the proportion of flow"
-                        " into one of the eight neighboring pixels."
-                    ),
-                    data_type=int,
-                    units=None
+                dataclasses.replace(
+                    spec.FLOW_DIRECTION,
+                    id="flow_direction.tif"
                 ),
                 spec.SingleBandRasterOutput(
                     id="ic_factor.tif",
@@ -692,21 +615,11 @@ MODEL_SPEC = spec.ModelSpec(
                     data_type=float,
                     units=u.none
                 ),
-                spec.SingleBandRasterOutput(
-                    id="filled_dem.tif",
-                    about=gettext("Map of elevation after any pits are filled"),
-                    data_type=float,
-                    units=u.meter
+                dataclasses.replace(
+                    spec.FILLED_DEM,
+                    id="filled_dem.tif"
                 ),
-                spec.SingleBandRasterOutput(
-                    id="slope.tif",
-                    about=gettext(
-                        "Percent slope, calculated from the pit-filled DEM. 100 is"
-                        " equivalent to a 45 degree slope."
-                    ),
-                    data_type=float,
-                    units=None
-                ),
+                spec.SLOPE,
                 spec.FileOutput(
                     id="subsurface_export_n.pickle",
                     about=gettext(
@@ -741,15 +654,8 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ]
         ),
-        spec.DirectoryOutput(
-            id="taskgraph_cache",
-            about=gettext(
-                "Cache that stores data between model runs. This directory contains no"
-                " human-readable data and you may ignore it."
-            ),
-            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
-        )
-    ],
+        spec.TASKGRAPH_DIR
+    ]
 )
 
 _OUTPUT_BASE_FILES = {

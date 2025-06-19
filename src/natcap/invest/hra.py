@@ -1,6 +1,7 @@
 """Habitat risk assessment (HRA) model for InVEST."""
 # -*- coding: UTF-8 -*-
 import collections
+import dataclasses
 import itertools
 import logging
 import math
@@ -65,42 +66,9 @@ MODEL_SPEC = spec.ModelSpec(
         ["visualize_outputs"]
     ],
     inputs=[
-        spec.DirectoryInput(
-            id="workspace_dir",
-            name=gettext("workspace"),
-            about=(
-                "The folder where all the model's output files will be written. If this"
-                " folder does not exist, it will be created. If data already exists in"
-                " the folder, it will be overwritten."
-            ),
-            contents=[],
-            permissions="rwx",
-            must_exist=False
-        ),
-        spec.StringInput(
-            id="results_suffix",
-            name=gettext("file suffix"),
-            about=gettext(
-                "Suffix that will be appended to all output file names. Useful to"
-                " differentiate between model runs."
-            ),
-            required=False,
-            regexp="[a-zA-Z0-9_-]*"
-        ),
-        spec.NumberInput(
-            id="n_workers",
-            name=gettext("taskgraph n_workers parameter"),
-            about=gettext(
-                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
-                " to run synchronously. 0 will run all jobs in the same process, but"
-                " scheduling will take place asynchronously. Any other positive integer"
-                " will cause that many processes to be spawned to execute tasks."
-            ),
-            required=False,
-            hidden=True,
-            units=u.none,
-            expression="value >= -1"
-        ),
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
         spec.CSVInput(
             id="info_table_path",
             name=gettext("habitat stressor table"),
@@ -223,14 +191,13 @@ MODEL_SPEC = spec.ModelSpec(
                 },
             }
         ),
-        spec.VectorInput(
+        dataclasses.replace(
+            spec.AOI,
             id="aoi_vector_path",
-            name=gettext("area of interest"),
             about=gettext(
                 "A GDAL-supported vector file containing features representing one or"
                 " more planning regions or subregions."
             ),
-            geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
                 spec.StringInput(
                     id="name",
@@ -580,15 +547,8 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ]
         ),
-        spec.DirectoryOutput(
-            id="taskgraph_cache",
-            about=gettext(
-                "Cache that stores data between model runs. This directory contains no"
-                " human-readable data and you may ignore it."
-            ),
-            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
-        )
-    ],
+        spec.TASKGRAPH_DIR
+    ]
 )
 
 _VALID_RISK_EQS = set(MODEL_SPEC.get_input('risk_eq').options.keys())

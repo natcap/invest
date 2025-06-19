@@ -1,4 +1,5 @@
 """Stormwater Retention."""
+import dataclasses
 import logging
 import math
 import os
@@ -39,42 +40,9 @@ MODEL_SPEC = spec.ModelSpec(
         ["aggregate_areas_path", "replacement_cost"]
     ],
     inputs=[
-        spec.DirectoryInput(
-            id="workspace_dir",
-            name=gettext("workspace"),
-            about=(
-                "The folder where all the model's output files will be written. If this"
-                " folder does not exist, it will be created. If data already exists in"
-                " the folder, it will be overwritten."
-            ),
-            contents=[],
-            permissions="rwx",
-            must_exist=False
-        ),
-        spec.StringInput(
-            id="results_suffix",
-            name=gettext("file suffix"),
-            about=gettext(
-                "Suffix that will be appended to all output file names. Useful to"
-                " differentiate between model runs."
-            ),
-            required=False,
-            regexp="[a-zA-Z0-9_-]*"
-        ),
-        spec.NumberInput(
-            id="n_workers",
-            name=gettext("taskgraph n_workers parameter"),
-            about=gettext(
-                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
-                " to run synchronously. 0 will run all jobs in the same process, but"
-                " scheduling will take place asynchronously. Any other positive integer"
-                " will cause that many processes to be spawned to execute tasks."
-            ),
-            required=False,
-            hidden=True,
-            units=u.none,
-            expression="value >= -1"
-        ),
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
         spec.SingleBandRasterInput(
             id="lulc_path",
             name=gettext("land use/land cover"),
@@ -86,17 +54,7 @@ MODEL_SPEC = spec.ModelSpec(
             units=None,
             projected=True
         ),
-        spec.SingleBandRasterInput(
-            id="soil_group_path",
-            name=gettext("soil hydrologic group"),
-            about=gettext(
-                "Map of soil hydrologic groups. Pixels may have values 1, 2, 3, or 4,"
-                " corresponding to soil hydrologic groups A, B, C, or D, respectively."
-            ),
-            data_type=int,
-            units=None,
-            projected=None
-        ),
+        spec.SOIL_GROUP,
         spec.SingleBandRasterInput(
             id="precipitation_path",
             name=gettext("precipitation"),
@@ -115,13 +73,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " soil groups."
             ),
             columns=[
-                spec.IntegerInput(
-                    id="lucode",
-                    about=gettext(
-                        "LULC codes from the LULC raster. Each code must be a unique"
-                        " integer."
-                    )
-                ),
+                spec.LULC_TABLE_COLUMN,
                 spec.NumberInput(
                     id="emc_[POLLUTANT]",
                     about=gettext(
@@ -225,9 +177,9 @@ MODEL_SPEC = spec.ModelSpec(
             fields=[],
             projected=None
         ),
-        spec.VectorInput(
+        dataclasses.replace(
+            spec.AOI,
             id="aggregate_areas_path",
-            name=gettext("area of interest"),
             about=gettext(
                 "Areas over which to aggregate results (typically watersheds or"
                 " sewersheds). The aggregated data are: average retention ratio and total"
@@ -236,10 +188,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " replacement cost was provided; and total avoided pollutant load for"
                 " each pollutant provided."
             ),
-            required=False,
-            geometry_types={"POLYGON", "MULTIPOLYGON"},
-            fields=[],
-            projected=None
+            required=False
         ),
         spec.NumberInput(
             id="replacement_cost",
@@ -506,15 +455,8 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ]
         ),
-        spec.DirectoryOutput(
-            id="taskgraph_cache",
-            about=gettext(
-                "Cache that stores data between model runs. This directory contains no"
-                " human-readable data and you may ignore it."
-            ),
-            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
-        )
-    ],
+        spec.TASKGRAPH_DIR
+    ]
 )
 
 

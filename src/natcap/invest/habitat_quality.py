@@ -46,42 +46,9 @@ MODEL_SPEC = spec.ModelSpec(
          "sensitivity_table_path", "half_saturation_constant"]
     ],
     inputs=[
-        spec.DirectoryInput(
-            id="workspace_dir",
-            name=gettext("workspace"),
-            about=(
-                "The folder where all the model's output files will be written. If this"
-                " folder does not exist, it will be created. If data already exists in"
-                " the folder, it will be overwritten."
-            ),
-            contents=[],
-            permissions="rwx",
-            must_exist=False
-        ),
-        spec.StringInput(
-            id="results_suffix",
-            name=gettext("file suffix"),
-            about=gettext(
-                "Suffix that will be appended to all output file names. Useful to"
-                " differentiate between model runs."
-            ),
-            required=False,
-            regexp="[a-zA-Z0-9_-]*"
-        ),
-        spec.NumberInput(
-            id="n_workers",
-            name=gettext("taskgraph n_workers parameter"),
-            about=gettext(
-                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
-                " to run synchronously. 0 will run all jobs in the same process, but"
-                " scheduling will take place asynchronously. Any other positive integer"
-                " will cause that many processes to be spawned to execute tasks."
-            ),
-            required=False,
-            hidden=True,
-            units=u.none,
-            expression="value >= -1"
-        ),
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
         spec.SingleBandRasterInput(
             id="lulc_cur_path",
             name=gettext("current land cover"),
@@ -244,13 +211,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " preference and threat sensitivity in areas with that LULC."
             ),
             columns=[
-                spec.IntegerInput(
-                    id="lucode",
-                    about=gettext(
-                        "LULC codes from the LULC raster. Each code must be a unique"
-                        " integer."
-                    )
-                ),
+                spec.LULC_TABLE_COLUMN,
                 spec.StringInput(id="name", about=None, required=False, regexp=None),
                 spec.RatioInput(
                     id="habitat",
@@ -464,15 +425,8 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ]
         ),
-        spec.DirectoryOutput(
-            id="taskgraph_cache",
-            about=gettext(
-                "Cache that stores data between model runs. This directory contains no"
-                " human-readable data and you may ignore it."
-            ),
-            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
-        )
-    ],
+        spec.TASKGRAPH_DIR
+    ]
 )
 
 # All out rasters besides rarity should be gte to 0. Set nodata accordingly.

@@ -1,4 +1,5 @@
 """DelineateIt wrapper for pygeoprocessing's watershed delineation routine."""
+import dataclasses
 import logging
 import os
 import time
@@ -36,50 +37,10 @@ MODEL_SPEC = spec.ModelSpec(
         ["snap_points", "flow_threshold", "snap_distance"]
     ],
     inputs=[
-        spec.DirectoryInput(
-            id="workspace_dir",
-            name=gettext("workspace"),
-            about=(
-                "The folder where all the model's output files will be written. If this"
-                " folder does not exist, it will be created. If data already exists in"
-                " the folder, it will be overwritten."
-            ),
-            contents=[],
-            permissions="rwx",
-            must_exist=False
-        ),
-        spec.StringInput(
-            id="results_suffix",
-            name=gettext("file suffix"),
-            about=gettext(
-                "Suffix that will be appended to all output file names. Useful to"
-                " differentiate between model runs."
-            ),
-            required=False,
-            regexp="[a-zA-Z0-9_-]*"
-        ),
-        spec.NumberInput(
-            id="n_workers",
-            name=gettext("taskgraph n_workers parameter"),
-            about=gettext(
-                "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
-                " to run synchronously. 0 will run all jobs in the same process, but"
-                " scheduling will take place asynchronously. Any other positive integer"
-                " will cause that many processes to be spawned to execute tasks."
-            ),
-            required=False,
-            hidden=True,
-            units=u.none,
-            expression="value >= -1"
-        ),
-        spec.SingleBandRasterInput(
-            id="dem_path",
-            name=gettext("digital elevation model"),
-            about=gettext("Map of elevation above sea level."),
-            data_type=float,
-            units=u.meter,
-            projected=True
-        ),
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        spec.PROJECTED_DEM,
         spec.BooleanInput(
             id="detect_pour_points",
             name=gettext("detect pour points"),
@@ -122,17 +83,14 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required=False
         ),
-        spec.NumberInput(
+        dataclasses.replace(
+            spec.THRESHOLD_FLOW_ACCUMULATION,
             id="flow_threshold",
-            name=gettext("threshold flow accumulation"),
-            about=gettext(
-                "The number of upslope pixels that must flow into a pixel before it is"
-                " classified as a stream. Required if Snap Points is selected."
-            ),
             required="snap_points",
             allowed="snap_points",
-            units=u.pixel,
-            expression="value >= 0"
+            about=(
+                spec.THRESHOLD_FLOW_ACCUMULATION.about + " " +
+                gettext("Required if Snap Points is selected."))
         ),
         spec.NumberInput(
             id="snap_distance",
@@ -158,11 +116,9 @@ MODEL_SPEC = spec.ModelSpec(
         )
     ],
     outputs=[
-        spec.SingleBandRasterOutput(
-            id="filled_dem.tif",
-            about=gettext("Map of elevation after any pits are filled"),
-            data_type=float,
-            units=u.meter
+        dataclasses.replace(
+            spec.FILLED_DEM,
+            id="filled_dem.tif"
         ),
         spec.SingleBandRasterOutput(
             id="flow_direction.tif",
@@ -170,11 +126,9 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=int,
             units=None
         ),
-        spec.SingleBandRasterOutput(
-            id="flow_accumulation.tif",
-            about=gettext("Map of flow accumulation"),
-            data_type=float,
-            units=u.none
+        dataclasses.replace(
+            spec.FLOW_ACCUMULATION,
+            id="flow_accumulation.tif"
         ),
         spec.VectorOutput(
             id="preprocessed_geometries.gpkg",
@@ -193,15 +147,9 @@ MODEL_SPEC = spec.ModelSpec(
             },
             fields=[]
         ),
-        spec.SingleBandRasterOutput(
-            id="streams.tif",
-            about=gettext(
-                "Stream network, created using flow direction and flow accumulation"
-                " derived from the DEM and Threshold Flow Accumulation. Values of 1"
-                " represent streams, values of 0 are non-stream pixels."
-            ),
-            data_type=int,
-            units=None
+        dataclasses.replace(
+            spec.STREAM,
+            id="streams.tif"
         ),
         spec.VectorOutput(
             id="snapped_outlets.gpkg",
@@ -230,14 +178,7 @@ MODEL_SPEC = spec.ModelSpec(
             geometry_types={"POINT"},
             fields=[]
         ),
-        spec.DirectoryOutput(
-            id="taskgraph_cache",
-            about=gettext(
-                "Cache that stores data between model runs. This directory contains no"
-                " human-readable data and you may ignore it."
-            ),
-            contents=[spec.FileOutput(id="taskgraph.db", about=None)]
-        )
+        spec.TASKGRAPH_DIR
     ]
 
 )
