@@ -343,9 +343,7 @@ class TestMetadataFromSpec(unittest.TestCase):
             ),
             spec.DirectoryOutput(
                 id='intermediate',
-                contents=[
-                    spec.build_output_spec('taskgraph_cache', spec.TASKGRAPH_DIR)
-                ]
+                contents=[spec.TASKGRAPH_DIR]
             )
         ]
         # Generate an output workspace with real files, without

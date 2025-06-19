@@ -177,6 +177,9 @@ class IterableWithDotAccess():
         """
         return self.inputs_dict
 
+    def __repr__(self):
+        return list(self.args).__repr__()
+
 
 @dataclasses.dataclass
 class Input:
@@ -1373,407 +1376,163 @@ class ModelSpec:
         return json.dumps(spec_dict, default=fallback_serializer, ensure_ascii=False)
 
 
-def build_model_spec(model_spec):
-    """Convert an old-style MODEL_SPEC dictionary to the new class-based style."""
-    inputs = [
-        build_input_spec(argkey, argspec)
-        for argkey, argspec in model_spec['args'].items()]
-    outputs = [
-        build_output_spec(argkey, argspec) for argkey, argspec in model_spec['outputs'].items()]
-    different_projections_ok = False
-
-    spatial_keys = set()
-    for i in inputs:
-        if i.type in['raster', 'vector']:
-            spatial_keys.add(i.id)
-
-    # validate_spatial_overlap is True if all top-level spatial inputs should overlap,
-    # or a list of keys, if only a subset of the inputs must overlap
-    validate_spatial_overlap = True
-    if 'args_with_spatial_overlap' in model_spec:
-        different_projections_ok = model_spec['args_with_spatial_overlap'].get('different_projections_ok', False)
-        if set(spatial_keys) != set(model_spec['args_with_spatial_overlap']['spatial_keys']):
-            validate_spatial_overlap = model_spec['args_with_spatial_overlap']['spatial_keys']
-
-    return ModelSpec(
-        model_id=model_spec['model_id'],
-        model_title=model_spec['model_title'],
-        userguide=model_spec['userguide'],
-        aliases=model_spec['aliases'],
-        inputs=inputs,
-        outputs=outputs,
-        input_field_order=model_spec['ui_spec']['order'],
-        validate_spatial_overlap=validate_spatial_overlap,
-        different_projections_ok=different_projections_ok)
-
-
-def build_input_spec(argkey, arg):
-    """Convert an old-style input spec dictionary to the new class-based style."""
-    base_attrs = {
-        'id': argkey,
-        'name': arg.get('name', None),
-        'about': arg.get('about', None),
-        'required': arg.get('required', True),
-        'allowed': arg.get('allowed', True),
-        'hidden': arg.get('hidden', False)
-    }
-
-    t = arg['type']
-
-    if t == 'option_string':
-        return OptionStringInput(
-            **base_attrs,
-            options=arg['options'],
-            dropdown_function=arg.get('dropdown_function', None))
-
-    elif t == 'freestyle_string':
-        return StringInput(
-            **base_attrs,
-            regexp=arg.get('regexp', None))
-
-    elif t == 'number':
-        return NumberInput(
-            **base_attrs,
-            units=arg['units'],
-            expression=arg.get('expression', None))
-
-    elif t == 'integer':
-        return IntegerInput(**base_attrs)
-
-    elif t == 'ratio':
-        return RatioInput(**base_attrs)
-
-    elif t == 'percent':
-        return PercentInput(**base_attrs)
-
-    elif t == 'boolean':
-        return BooleanInput(**base_attrs)
-
-    elif t == 'raster':
-        return SingleBandRasterInput(
-            **base_attrs,
-            data_type=int if arg['bands'][1]['type'] == 'integer' else float,
-            units=arg['bands'][1].get('units', None),
-            projected=arg.get('projected', None),
-            projection_units=arg.get('projection_units', None))
-
-    elif t == 'vector':
-        return VectorInput(
-            **base_attrs,
-            geometry_types=arg['geometries'],
-            fields=[build_input_spec(key, field_spec)
-                    for key, field_spec in arg['fields'].items()],
-            projected=arg.get('projected', None),
-            projection_units=arg.get('projection_units', None))
-
-    elif t == 'csv':
-        columns = None
-        rows = None
-        if 'columns' in arg:
-            columns = [build_input_spec(col_name, col_spec)
-                for col_name, col_spec in arg['columns'].items()]
-        elif 'rows' in arg:
-            rows = [build_input_spec(row_name, row_spec)
-                    for row_name, row_spec in arg['rows'].items()]
-
-        return CSVInput(
-            **base_attrs,
-            columns=columns,
-            rows=rows,
-            index_col=arg.get('index_col', None))
-
-    elif t == 'directory':
-        return DirectoryInput(
-            contents=[
-                build_input_spec(k, v) for k, v in arg['contents'].items()],
-            permissions=arg.get('permissions', 'rx'),
-            must_exist=arg.get('must_exist', None),
-            **base_attrs)
-
-    elif t == 'file':
-        return FileInput(**base_attrs)
-
-    elif t == {'raster', 'vector'}:
-        return RasterOrVectorInput(
-            **base_attrs,
-            geometry_types=arg['geometries'],
-            fields=[build_input_spec(key, field_spec)
-                    for key, field_spec in arg['fields'].items()],
-            data_type=int if arg['bands'][1]['type'] == 'integer' else float,
-            units=arg['bands'][1].get('units', None),
-            projected=arg.get('projected', None),
-            projection_units=arg.get('projection_units', None))
-
-    else:
-        raise ValueError
-
-
-def build_output_spec(key, spec):
-    """Convert an old-style output spec dictionary to the new class-based style."""
-    base_attrs = {
-        'id': key,
-        'about': spec.get('about', None),
-        'created_if': spec.get('created_if', None)
-    }
-
-    if 'type' in spec:
-        t = spec['type']
-    else:
-        file_extension = key.split('.')[-1]
-        if file_extension == 'tif':
-            t = 'raster'
-        elif file_extension in {'shp', 'gpkg', 'geojson'}:
-            t = 'vector'
-        elif file_extension == 'csv':
-            t = 'csv'
-        elif file_extension in {'json', 'txt', 'pickle', 'db', 'zip',
-                                'dat', 'idx', 'html'}:
-            t = 'file'
-        else:
-            raise Warning(
-                f'output {key} has no recognized file extension and '
-                'no "type" property')
-
-    if t == 'number':
-        return NumberOutput(
-            **base_attrs,
-            units=spec['units'])
-
-    elif t == 'integer':
-        return IntegerOutput(**base_attrs)
-
-    elif t == 'ratio':
-        return RatioOutput(**base_attrs)
-
-    elif t == 'percent':
-        return PercentOutput(**base_attrs)
-
-    elif t == 'raster':
-        return SingleBandRasterOutput(
-            **base_attrs,
-            data_type=int if spec['bands'][1]['type'] == 'integer' else float,
-            units=spec['bands'][1].get('units', None))
-
-    elif t == 'vector':
-        return VectorOutput(
-            **base_attrs,
-            geometry_types=spec['geometries'],
-            fields=[build_output_spec(key, field_spec)
-                    for key, field_spec in spec['fields'].items()])
-
-    elif t == 'csv':
-        return CSVOutput(
-            **base_attrs,
-            columns=[
-                build_output_spec(key, col_spec) for key, col_spec in spec['columns'].items()],
-            index_col=spec.get('index_col', None))
-
-    elif t == 'directory':
-        return DirectoryOutput(
-            contents=[
-                build_output_spec(k, v) for k, v in spec['contents'].items()],
-            **base_attrs)
-
-    elif t == 'freestyle_string':
-        return StringOutput(**base_attrs)
-
-    elif t == 'option_string':
-        return OptionStringOutput(options=spec['options'])
-
-    elif t == 'file':
-        return FileOutput(**base_attrs)
-
-    else:
-        raise ValueError()
-
-
 # Specs for common arg types ##################################################
-WORKSPACE = {
-    "name": gettext("workspace"),
-    "about": gettext(
-        "The folder where all the model's output files will be written. If "
-        "this folder does not exist, it will be created. If data already "
-        "exists in the folder, it will be overwritten."),
-    "type": "directory",
-    "contents": {},
-    "must_exist": False,
-    "permissions": "rwx",
-}
-
-SUFFIX = {
-    "name": gettext("file suffix"),
-    "about": gettext(
-        "Suffix that will be appended to all output file names. Useful to "
-        "differentiate between model runs."),
-    "type": "freestyle_string",
-    "required": False,
-    "regexp": "[a-zA-Z0-9_-]*"
-}
-
-N_WORKERS = {
-    "name": gettext("taskgraph n_workers parameter"),
-    "about": gettext(
-        "The n_workers parameter to provide to taskgraph. "
-        "-1 will cause all jobs to run synchronously. "
-        "0 will run all jobs in the same process, but scheduling will take "
-        "place asynchronously. Any other positive integer will cause that "
-        "many processes to be spawned to execute tasks."),
-    "type": "number",
-    "units": u.none,
-    "required": False,
-    "expression": "value >= -1",
-    "hidden": True
-}
-
-METER_RASTER = {
-    "type": "raster",
-    "bands": {
-        1: {
-            "type": "number",
-            "units": u.meter
-        }
+WORKSPACE = DirectoryInput(
+    id="workspace_dir",
+    name="workspace",
+    about=(
+        "The folder where all the model's output files will be written."
+        " If this folder does not exist, it will be created. If data"
+        " already exists in the folder, it will be overwritten."
+    ),
+    contents=[],
+    permissions="rwx",
+    must_exist=False,
+)
+SUFFIX = StringInput(
+    id="results_suffix",
+    name=gettext("file suffix"),
+    about=gettext(
+        "Suffix that will be appended to all output file names. Useful to"
+        " differentiate between model runs."
+    ),
+    required=False,
+    regexp="[a-zA-Z0-9_-]*"
+)
+N_WORKERS = NumberInput(
+    id="n_workers",
+    name=gettext("taskgraph n_workers parameter"),
+    about=gettext(
+        "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+        " to run synchronously. 0 will run all jobs in the same process, but"
+        " scheduling will take place asynchronously. Any other positive integer"
+        " will cause that many processes to be spawned to execute tasks."
+    ),
+    required=False,
+    hidden=True,
+    units=u.none,
+    expression="value >= -1"
+)
+DEM = SingleBandRasterInput(
+    id="dem_path",
+    name=gettext("digital elevation model"),
+    about=gettext("Map of elevation above sea level."),
+    data_type=float,
+    units=u.meter
+)
+PROJECTED_DEM = dataclasses.replace(
+    DEM,
+    projected=True
+)
+THRESHOLD_FLOW_ACCUMULATION = NumberInput(
+    id="threshold_flow_accumulation",
+    name=gettext("threshold flow accumulation"),
+    about=gettext(
+        "The number of upslope pixels that must flow into a pixel before it is"
+        " classified as a stream."
+    ),
+    units=u.pixel,
+    expression="value >= 0"
+)
+SOIL_GROUP = SingleBandRasterInput(
+    id="soil_group_path",
+    name=gettext("soil hydrologic group"),
+    about=gettext(
+        "Map of soil hydrologic groups. Pixels may have values 1, 2, 3, or 4,"
+        " corresponding to soil hydrologic groups A, B, C, or D, respectively."
+    ),
+    data_type=int,
+    units=None
+)
+ET0 = SingleBandRasterInput(
+    name=gettext("reference evapotranspiration"),
+    about=gettext("Map of reference evapotranspiration values."),
+    data_type="float",
+    units=u.millimeter
+)
+LULC_TABLE_COLUMN = IntegerInput(
+    id="lucode",
+    about=gettext(
+        "LULC codes from the LULC raster. Each code must be a unique"
+        " integer."
+    )
+)
+AOI = VectorInput(
+    name=gettext("area of interest"),
+    about=gettext(
+        "A map of areas over which to aggregate and summarize the final results."
+    ),
+    geometry_types={"POLYGON", "MULTIPOLYGON"},
+    fields=[]
+)
+LULC = SingleBandRasterInput(
+    id="lulc_bas_path",
+    name=gettext("baseline LULC"),
+    about=gettext(
+        "A map of LULC for the baseline scenario, which must occur prior to the"
+        " alternate scenario. All values in this raster must have corresponding"
+        " entries in the Carbon Pools table."
+    ),
+    data_type=int,
+    units=None
+)
+FLOW_DIR_ALGORITHM = OptionStringInput(
+    id="flow_dir_algorithm",
+    name=gettext("flow direction algorithm"),
+    about=gettext("Flow direction algorithm to use."),
+    options={
+        "D8": {"display_name": "D8", "description": "D8 flow direction"},
+        "MFD": {"display_name": "MFD", "description": "Multiple flow direction"},
     }
-}
-AOI = {
-    "type": "vector",
-    "fields": {},
-    "geometries": {"POLYGON", "MULTIPOLYGON"},
-    "name": gettext("area of interest"),
-    "about": gettext(
-        "A map of areas over which to aggregate and "
-        "summarize the final results."),
-}
-LULC = {
-    "type": "raster",
-    "bands": {1: {"type": "integer"}},
-    "about": gettext(
-        "Map of land use/land cover codes. Each land use/land cover type "
-        "must be assigned a unique integer code."),
-    "name": gettext("land use/land cover")
-}
-DEM = {
-    "type": "raster",
-    "bands": {
-        1: {
-            "type": "number",
-            "units": u.meter
-        }
-    },
-    "about": gettext("Map of elevation above sea level."),
-    "name": gettext("digital elevation model")
-}
-PRECIP = {
-    "type": "raster",
-    "bands": {
-        1: {
-            "type": "number",
-            "units": u.millimeter/u.year
-        }
-    },
-    "about": gettext("Map of average annual precipitation."),
-    "name": gettext("precipitation")
-}
-ET0 = {
-    "name": gettext("reference evapotranspiration"),
-    "type": "raster",
-    "bands": {
-        1: {
-            "type": "number",
-            "units": u.millimeter
-        }
-    },
-    "about": gettext("Map of reference evapotranspiration values.")
-}
-SOIL_GROUP = {
-    "type": "raster",
-    "bands": {1: {"type": "integer"}},
-    "about": gettext(
-        "Map of soil hydrologic groups. Pixels may have values 1, 2, 3, or 4, "
-        "corresponding to soil hydrologic groups A, B, C, or D, respectively."),
-    "name": gettext("soil hydrologic group")
-}
-THRESHOLD_FLOW_ACCUMULATION = {
-    "expression": "value >= 0",
-    "type": "number",
-    "units": u.pixel,
-    "about": gettext(
-        "The number of upslope pixels that must flow into a pixel "
-        "before it is classified as a stream."),
-    "name": gettext("threshold flow accumulation")
-}
-LULC_TABLE_COLUMN = {
-    "type": "integer",
-    "about": gettext(
-        "LULC codes from the LULC raster. Each code must be a unique "
-        "integer.")
-}
+)
 
 # Specs for common outputs ####################################################
-TASKGRAPH_DIR = {
-    "type": "directory",
-    "about": (
-        "Cache that stores data between model runs. This directory contains no "
-        "human-readable data and you may ignore it."),
-    "contents": {
-        "taskgraph.db": {}
-    }
-}
-FILLED_DEM = {
-    "about": gettext("Map of elevation after any pits are filled"),
-    "bands": {1: {
-        "type": "number",
-        "units": u.meter
-    }}
-}
-FLOW_ACCUMULATION = {
-    "about": gettext("Map of flow accumulation"),
-    "bands": {1: {
-        "type": "number",
-        "units": u.none
-    }}
-}
-FLOW_DIRECTION = {
-    "about": gettext(
-        "MFD flow direction. Note: the pixel values should not "
-        "be interpreted directly. Each 32-bit number consists "
-        "of 8 4-bit numbers. Each 4-bit number represents the "
-        "proportion of flow into one of the eight neighboring "
-        "pixels."),
-    "bands": {1: {"type": "integer"}}
-}
-FLOW_DIRECTION_D8 = {
-    "about": gettext(
-        "D8 flow direction."),
-    "bands": {1: {"type": "integer"}}
-}
-SLOPE = {
-    "about": gettext(
-        "Percent slope, calculated from the pit-filled "
-        "DEM. 100 is equivalent to a 45 degree slope."),
-    "bands": {1: {"type": "percent"}}
-}
-STREAM = {
-    "about": "Stream network, created using flow direction and flow accumulation derived from the DEM and Threshold Flow Accumulation. Values of 1 represent streams, values of 0 are non-stream pixels.",
-    "bands": {1: {"type": "integer"}}
-}
-
-FLOW_DIR_ALGORITHM = {
-    "flow_dir_algorithm": {
-        "type": "option_string",
-        "options": {
-            "D8": {
-                "display_name": gettext("D8"),
-                "description": "D8 flow direction"
-            },
-            "MFD": {
-                "display_name": gettext("MFD"),
-                "description": "Multiple flow direction"
-            }
-        },
-        "about": gettext("Flow direction algorithm to use."),
-        "name": gettext("flow direction algorithm")
-    }
-}
+TASKGRAPH_DIR = DirectoryOutput(
+    id="taskgraph_cache",
+    about=gettext(
+        "Cache that stores data between model runs. This directory contains no"
+        " human-readable data and you may ignore it."
+    ),
+    contents=[FileOutput(id="taskgraph.db", about=None)]
+)
+FILLED_DEM = SingleBandRasterOutput(
+    about=gettext("Map of elevation after any pits are filled"),
+    data_type=float,
+    units=u.meter
+)
+FLOW_ACCUMULATION = SingleBandRasterOutput(
+    about=gettext("Map of flow accumulation"),
+    data_type=float,
+    units=u.none
+)
+FLOW_DIRECTION = SingleBandRasterOutput(
+    about=gettext(
+        "MFD flow direction. Note: the pixel values should not be interpreted"
+        " directly. Each 32-bit number consists of 8 4-bit numbers. Each 4-bit"
+        " number represents the proportion of flow into one of the eight"
+        " neighboring pixels."
+    ),
+    data_type=int,
+    units=None
+)
+SLOPE = SingleBandRasterOutput(
+    id="slope.tif",
+    about=gettext(
+        "Percent slope, calculated from the pit-filled DEM. 100 is equivalent to"
+        " a 45 degree slope."
+    ),
+    data_type=float,
+    units=None
+)
+STREAM = SingleBandRasterOutput(
+    about=gettext(
+        "Stream network, created using flow direction and flow accumulation"
+        " derived from the DEM and Threshold Flow Accumulation. Values of 1"
+        " represent streams, values of 0 are non-stream pixels."
+    ),
+    data_type=int,
+    units=None
+)
 
 # geometry types ##############################################################
 # the full list of ogr geometry types is in an enum in
