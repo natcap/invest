@@ -92,6 +92,13 @@ Plugins
 * Plugin environments are now created using the conda-forge channel only.
   The default channel is excluded (`#1802 <https://github.com/natcap/invest/issues/1802>`_).
 
+Pollination
+===========
+* Fixed a bug where pollination in multiple seasons would not
+  use the appropriate pollinator abundance for each season when
+  calculating farm results.
+  (`#2038 <https://github.com/natcap/invest/issues/2038>`_).
+
 Visitation: Recreation and Tourism
 ==================================
 * Fixed a bug which caused the recreation model to error when using
