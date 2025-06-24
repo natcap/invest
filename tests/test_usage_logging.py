@@ -66,7 +66,7 @@ class UsageLoggingTests(unittest.TestCase):
         }
 
         model_spec = spec.ModelSpec(
-            model_id='', model_title='', userguide=None, aliases=None,
+            model_id='', model_title='', userguide='', aliases=set(),
             inputs=[
                 spec.SingleBandRasterInput(id='raster'),
                 spec.VectorInput(id='vector', geometry_types={}, fields={}),
@@ -74,7 +74,7 @@ class UsageLoggingTests(unittest.TestCase):
                 spec.SingleBandRasterInput(id='blank_raster_path'),
                 spec.VectorInput(id='blank_vector_path', geometry_types={}, fields={})
             ],
-            outputs={},
+            outputs=[],
             input_field_order=[])
 
         output_logfile = os.path.join(self.workspace_dir, 'logfile.txt')

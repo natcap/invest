@@ -39,8 +39,8 @@ from natcap.invest.spec import (
 
 gdal.UseExceptions()
 
-def model_spec_with_defaults(model_id='', model_title='', userguide='', aliases=None,
-                 inputs={}, outputs={}, input_field_order=[]):
+def model_spec_with_defaults(model_id='', model_title='', userguide='', aliases=set(),
+                 inputs=[], outputs=[], input_field_order=[]):
     return ModelSpec(model_id=model_id, model_title=model_title, userguide=userguide,
             aliases=aliases, inputs=inputs, outputs=outputs,
             input_field_order=input_field_order)

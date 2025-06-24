@@ -19,7 +19,7 @@ import natcap.invest
 import pandas
 import pint
 import pygeoprocessing
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from natcap.invest import utils
 from natcap.invest.validation import get_message, _evaluate_expression
@@ -1249,8 +1249,7 @@ class OptionStringOutput(Output):
     """A list of the values that this input may take"""
 
 
-@dataclasses.dataclass
-class ModelSpec:
+class ModelSpec(BaseModel):
     """Specification of an invest model describing metadata, inputs, and outputs."""
 
     model_id: str
@@ -1296,13 +1295,13 @@ class ModelSpec:
     Example: ``[['workspace_dir', 'results_suffix'], ['foo'], ['bar', baz']]``
     """
 
-    inputs: typing.Iterable[Input]
-    """An iterable of the data inputs, or parameters, to the model."""
+    inputs: list[Input]
+    """A list of the data inputs, or parameters, to the model."""
 
-    outputs: typing.Iterable[Output]
-    """An iterable of the data outputs, or results, of the model."""
+    outputs: list[Output]
+    """A list of the data outputs, or results, of the model."""
 
-    validate_spatial_overlap: bool = True
+    validate_spatial_overlap: typing.Union[bool, list[str]] = True
     """If True, validation will check that the bounding boxes of all
     top-level spatial inputs overlap (after reprojecting all to the same
     coordinate reference system)."""
@@ -1317,13 +1316,9 @@ class ModelSpec:
     """Optional. A set of alternative names by which the model can be called
     from the invest command line interface, in addition to the ``model_id``."""
 
-    def __post_init__(self):
-        self.inputs_dict = {_input.id: _input for _input in self.inputs}
-        self.outputs_dict = {_output.id: _output for _output in self.outputs}
-
-    def get_input(self, key):
+    def get_input(self, key: str) -> Input:
         """Get an Input of this model by its key."""
-        return self.inputs_dict[key]
+        return {_input.id: _input for _input in self.inputs}[key]
 
     def to_json(self):
         """Serialize an MODEL_SPEC dict to a JSON string.
@@ -1366,10 +1361,8 @@ class ModelSpec:
         spec_dict = self.__dict__.copy()
         # rename 'inputs' to 'args' to stay consistent with the old api
         spec_dict.pop('inputs')
-        spec_dict.pop('inputs_dict')
-        spec_dict.pop('outputs_dict')
-        spec_dict['args'] = self.inputs_dict
-        spec_dict['outputs'] = self.outputs_dict
+        spec_dict['args'] = {_input.id: _input for _input in self.inputs}
+        spec_dict['outputs'] = {_output.id: _output for _output in self.outputs}
         return json.dumps(spec_dict, default=fallback_serializer, ensure_ascii=False)
 
 

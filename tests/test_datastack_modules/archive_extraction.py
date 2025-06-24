@@ -22,7 +22,7 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
             )
         ]
     )],
-    outputs={},
+    outputs=[],
     model_id='archive_extraction_model',
     model_title='',
     userguide='',

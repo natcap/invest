@@ -361,7 +361,7 @@ class TestMetadataFromSpec(unittest.TestCase):
                 userguide='',
                 aliases=[],
                 input_field_order=[],
-                inputs={},
+                inputs=[],
                 outputs=output_spec
             )
         )

@@ -5,7 +5,7 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     spec.DirectoryInput(
         id='data_dir',
         contents=[])],
-    outputs={},
+    outputs=[],
     model_id='nonspatial_model',
     model_title='',
     userguide='',

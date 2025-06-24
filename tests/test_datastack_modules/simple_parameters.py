@@ -9,7 +9,7 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
         id='workspace_dir',
         contents=[]
     )],
-    outputs={},
+    outputs=[],
     model_id='simple_model',
     model_title='',
     userguide='',

@@ -27,3 +27,4 @@ Flask
 flask_cors
 requests
 geometamaker
+pydantic
