@@ -9,5 +9,5 @@ MODEL_SPEC = spec.ModelSpec(
     model_id='duplicate_filepaths_model',
     model_title='',
     userguide='',
-    input_field_order=[]
+    input_field_order=[['foo', 'bar']]
 )

@@ -26,5 +26,7 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     model_id='archive_extraction_model',
     model_title='',
     userguide='',
-    input_field_order=[]
+    input_field_order=[
+        ['blank', 'a', 'b', 'c', 'foo', 'bar', 'data_dir',
+         'raster', 'vector', 'simple_table', 'spatial_table']]
 )

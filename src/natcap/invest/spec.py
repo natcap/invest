@@ -19,7 +19,8 @@ import natcap.invest
 import pandas
 import pint
 import pygeoprocessing
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import AfterValidator, BaseModel, ConfigDict, \
+    field_validator, model_validator, ValidationError
 
 from natcap.invest import utils
 from natcap.invest.validation import get_message, _evaluate_expression
@@ -178,6 +179,32 @@ class IterableWithDotAccess():
         return self.inputs_dict
 
 
+def check_permissions(permissions):
+    """
+    Validate an rwx-style permissions string.
+
+    Args:
+        permissions (str): a string to validate as permissions
+
+    Returns:
+        None
+
+    Raises:
+        AssertionError if `permissions` isn't a string, if it's
+        an empty string, if it has any letters besides 'r', 'w', 'x',
+        or if it has any of those letters more than once
+    """
+    valid_letters = {'r', 'w', 'x'}
+    used_letters = set()
+    for letter in permissions:
+        if letter not in valid_letters:
+            raise ValueError('permissions contains a letter other than r,w,x')
+        if letter in used_letters:
+            raise ValueError('permissions contains a duplicate letter')
+        used_letters.add(letter)
+    return permissions
+
+
 class Input(BaseModel):
     """A data input, or parameter, of an invest model.
 
@@ -254,7 +281,7 @@ class FileInput(Input):
     This represents a not-otherwise-specified file input type. Use this only if
     a more specific type, such as `CSVInput` or `VectorInput`, does not apply.
     """
-    permissions: str = 'r'
+    permissions: typing.Annotated[str, AfterValidator(check_permissions)] = 'r'
     """A string that includes the lowercase characters ``r``, ``w`` and/or
     ``x``, indicating read, write, and execute permissions (respectively)
     required for this file."""
@@ -339,6 +366,13 @@ class RasterInput(FileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
+    @model_validator(mode='after')
+    def check_projected_projection_units(self):
+        if self.projection_units and not self.projected:
+            raise ValueError(
+                'Cannot specify projection_units when projected is None')
+        return self
+
     @timeout
     def validate(self, filepath: str):
         """Validate a raster file against the requirements for this input.
@@ -393,6 +427,13 @@ class SingleBandRasterInput(FileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
+    @model_validator(mode='after')
+    def check_projected_projection_units(self):
+        if self.projection_units and not self.projected:
+            raise ValueError(
+                'Cannot specify projection_units when projected is None')
+        return self
+
     @timeout
     def validate(self, filepath: str):
         """Validate a raster file against the requirements for this input.
@@ -446,6 +487,21 @@ class VectorInput(FileInput):
     projection (such as meters) is required, indicate it here."""
 
     type: typing.ClassVar[str] = 'vector'
+
+    @model_validator(mode='after')
+    def check_projected_projection_units(self):
+        if self.projection_units and not self.projected:
+            raise ValueError(
+                'Cannot specify projection_units when projected is None')
+        return self
+
+    @model_validator(mode='after')
+    def check_field_types(self):
+        for field in (self.fields or []):
+            if type(field) not in {IntegerInput, NumberInput, OptionStringInput,
+                                   PercentInput, RatioInput, StringInput}:
+                raise ValueError(f'Field {field} is not an allowed type')
+        return self
 
     def model_post_init(self, context):
         if self.fields:
@@ -550,6 +606,13 @@ class RasterOrVectorInput(FileInput):
     single_band_raster_input: typing.Union[SingleBandRasterInput, None] = None
     vector_input: typing.Union[VectorInput, None] = None
 
+    @model_validator(mode='after')
+    def check_projected_projection_units(self):
+        if self.projection_units and not self.projected:
+            raise ValueError(
+                'Cannot specify projection_units when projected is None')
+        return self
+
     def model_post_init(self, context):
         self.single_band_raster_input = SingleBandRasterInput(
             id=self.id,
@@ -614,6 +677,33 @@ class CSVInput(FileInput):
             self.rows = IterableWithDotAccess(*self.rows)
         if self.columns:
             self.columns = IterableWithDotAccess(*self.columns)
+
+    @model_validator(mode='after')
+    def check_not_both_rows_and_columns(self):
+        if self.rows is not None and self.columns is not None:
+            raise ValueError('Cannot have both rows and columns')
+        return self
+
+    @model_validator(mode='after')
+    def check_index_col_in_columns(self):
+        if (self.index_col is not None and
+                self.index_col not in [s.id for s in self.columns]):
+            raise ValueError(f'index_col {self.index_col} not found in columns')
+        return self
+
+    @model_validator(mode='after')
+    def check_row_and_column_types(self):
+        allowed_types = {
+            BooleanInput, IntegerInput, NumberInput, OptionStringInput,
+            PercentInput, RasterOrVectorInput, RatioInput, FileInput,
+            SingleBandRasterInput, StringInput, VectorInput}
+        for row in (self.rows or []):
+            if type(row) not in allowed_types:
+                raise ValueError(f'Row {row} is not an allowed type')
+        for col in (self.columns or []):
+            if type(col) not in allowed_types:
+                raise ValueError(f'Column {col} is not an allowed type')
+        return self
 
     @timeout
     def validate(self, filepath: str):
@@ -760,7 +850,7 @@ class DirectoryInput(Input):
     """An iterable of `Input`s representing the contents of this directory. The
     `key` of each input must be the file name or pattern."""
 
-    permissions: str = ''
+    permissions: typing.Annotated[str, AfterValidator(check_permissions)] = ''
     """A string that includes the lowercase characters ``r``, ``w`` and/or ``x``,
     indicating read, write, and execute permissions (respectively) required for
     this directory."""
@@ -774,6 +864,17 @@ class DirectoryInput(Input):
     def model_post_init(self, context):
         if self.contents:
             self.contents = IterableWithDotAccess(*self.contents)
+
+    @model_validator(mode='after')
+    def check_contents_types(self):
+        allowed_types = {
+            CSVInput, DirectoryInput, FileInput, RasterOrVectorInput,
+            SingleBandRasterInput, VectorInput}
+        for content in (self.contents or []):
+            if type(content) not in allowed_types:
+                raise ValueError(
+                    f'Directory contents {content} is not an allowed type')
+        return self
 
     @timeout
     def validate(self, dirpath: str):
@@ -1026,6 +1127,16 @@ class StringInput(Input):
 
     type: typing.ClassVar[str] = 'string'
 
+    @field_validator('regexp', mode='after')
+    @classmethod
+    def check_regexp(cls, regexp: typing.Union[str, None]) -> typing.Union[str, None]:
+        if regexp is not None:
+            try:
+                re.compile(regexp)
+            except Exception:
+                raise ValueError(f'Failed to compile regexp {regexp}')
+        return regexp
+
     def validate(self, value):
         """Validate a value against the requirements for this input.
 
@@ -1064,7 +1175,7 @@ class OptionStringInput(Input):
     This corresponds to a dropdown menu in the workbench, where the user
     is limited to a set of pre-defined options.
     """
-    options: typing.Union[list, dict, None] = None
+    options: typing.Union[list[str], dict[typing.Union[str, int], typing.Union[str,dict]], None] = None
     """A list of the values that this input may take. Use this if the set of
     options is predetermined."""
 
@@ -1143,6 +1254,14 @@ class VectorOutput(Output):
     """An iterable of `Output`s representing the fields created in this vector.
     The `key` of each input must match the corresponding field name."""
 
+    @model_validator(mode='after')
+    def check_field_types(self):
+        for field in (self.fields or []):
+            if type(field) not in {IntegerOutput, NumberOutput, OptionStringOutput,
+                                   PercentOutput, RatioOutput, StringOutput}:
+                raise ValueError(f'Field {field} is not an allowed type')
+        return self
+
 
 class CSVOutput(Output):
     """A CSV table output, or result, of an invest model.
@@ -1164,6 +1283,27 @@ class CSVOutput(Output):
     index_col: typing.Union[str, None] = None
     """The header name of the column that is the index of the table."""
 
+    @model_validator(mode='after')
+    def validate_index_col_in_columns(self):
+        if (self.index_col is not None and
+                self.index_col not in [s.id for s in self.columns]):
+            raise ValueError(f'index_col {self.index_col} not found in columns')
+        return self
+
+    @model_validator(mode='after')
+    def check_row_and_column_types(self):
+        allowed_types = {
+            IntegerOutput, NumberOutput, OptionStringOutput, PercentOutput,
+            FileOutput, RatioOutput, SingleBandRasterOutput, StringOutput,
+            VectorOutput}
+        for row in (self.rows or []):
+            if type(row) not in allowed_types:
+                raise ValueError(f'Row {row} is not an allowed type')
+        for col in (self.columns or []):
+            if type(col) not in allowed_types:
+                raise ValueError(f'Column {col} is not an allowed type')
+        return self
+
 
 class DirectoryOutput(Output):
     """A directory output, or result, of an invest model.
@@ -1175,6 +1315,17 @@ class DirectoryOutput(Output):
     contents: typing.Union[list[Output], None] = None
     """An iterable of `Output`s representing the contents of this directory.
     The `key` of each output must be the file name or pattern."""
+
+    @model_validator(mode='after')
+    def check_contents_types(self):
+        allowed_types = {
+            CSVOutput, DirectoryOutput, FileOutput,
+            SingleBandRasterOutput, VectorOutput}
+        for content in (self.contents or []):
+            if type(content) not in allowed_types:
+                raise ValueError(
+                    f'Directory contents {content} is not an allowed type')
+        return self
 
 
 class FileOutput(Output):
@@ -1231,7 +1382,7 @@ class StringOutput(Output):
 class OptionStringOutput(Output):
     """A string output, or result, which is limited to a set of options."""
 
-    options: typing.Union[list, dict, None] = None
+    options: typing.Union[dict[typing.Union[str, int], typing.Union[str, dict]], None] = None
     """A list of the values that this input may take"""
 
 
@@ -1301,6 +1452,29 @@ class ModelSpec(BaseModel):
     aliases: set = dataclasses.field(default_factory=set)
     """Optional. A set of alternative names by which the model can be called
     from the invest command line interface, in addition to the ``model_id``."""
+
+    @model_validator(mode='after')
+    def check_inputs_in_field_order(self):
+        """Check that all inputs either appear in `input_field_order,
+        or are marked as hidden."""
+
+        found_keys = set()
+        for group in self.input_field_order:
+            for key in group:
+                if key in found_keys:
+                    raise ValueError(
+                        f'Key {key} appears more than once in input_field_order')
+                found_keys.add(key)
+        for _input in self.inputs:
+            if _input.hidden is True:
+                if _input.id in found_keys:
+                    raise ValueError(
+                        f'Input {_input.id} is hidden but appears in input_field_order')
+                found_keys.add(_input.id)
+        if found_keys != set([s.id for s in self.inputs]):
+            raise ValueError(
+                f'Mismatch between keys in inputs and input_field_order')
+        return self
 
     def get_input(self, key: str) -> Input:
         """Get an Input of this model by its key."""
