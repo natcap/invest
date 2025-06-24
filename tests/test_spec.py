@@ -40,6 +40,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_number_spec(self):
         number_spec = spec.NumberInput(
+            id="bar",
             name="Bar",
             about="Description",
             units=u.meter**3/u.month,
@@ -53,6 +54,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_ratio_spec(self):
         ratio_spec = spec.RatioInput(
+            id="bar",
             name="Bar",
             about="Description"
         )
@@ -63,6 +65,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_percent_spec(self):
         percent_spec = spec.PercentInput(
+            id="bar",
             name="Bar",
             about="Description",
             required=False
@@ -74,6 +77,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_integer_spec(self):
         integer_spec = spec.IntegerInput(
+            id="bar",
             name="Bar",
             about="Description",
             required=True
@@ -85,6 +89,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_boolean_spec(self):
         boolean_spec = spec.BooleanInput(
+            id="bar",
             name="Bar",
             about="Description"
         )
@@ -95,6 +100,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_freestyle_string_spec(self):
         string_spec = spec.StringInput(
+            id="bar",
             name="Bar",
             about="Description"
         )
@@ -105,6 +111,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_option_string_spec_dictionary(self):
         option_spec = spec.OptionStringInput(
+            id="bar",
             name="Bar",
             about="Description",
             options={
@@ -134,6 +141,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_option_string_spec_list(self):
         option_spec = spec.OptionStringInput(
+            id="bar",
             name="Bar",
             about="Description",
             options=["option_a", "Option_b"]
@@ -147,6 +155,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_raster_spec(self):
         raster_spec = spec.SingleBandRasterInput(
+            id="bar",
             data_type=int,
             about="Description",
             name="Bar"
@@ -158,6 +167,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
         raster_spec = spec.SingleBandRasterInput(
+            id="bar",
             data_type=float,
             units=u.millimeter/u.year,
             about="Description",
@@ -171,7 +181,8 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_vector_spec(self):
         vector_spec = spec.VectorInput(
-            fields={},
+            id="bar",
+            fields=[],
             geometry_types={"LINESTRING"},
             about="Description",
             name="Bar"
@@ -183,6 +194,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
         vector_spec = spec.VectorInput(
+            id="bar",
             fields=[
                 spec.IntegerInput(
                     id="id",
@@ -206,6 +218,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_csv_spec(self):
         csv_spec = spec.CSVInput(
+            id="bar",
             about="Description.",
             name="Bar"
         )
@@ -219,6 +232,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         # Test every type that can be nested in a CSV column:
         # number, ratio, percent, code,
         csv_spec = spec.CSVInput(
+            id="bar",
             about="Description",
             name="Bar",
             columns=[
@@ -237,9 +251,10 @@ class TestDescribeArgFromSpec(unittest.TestCase):
     def test_directory_spec(self):
         self.maxDiff = None
         dir_spec = spec.DirectoryInput(
+            id="bar",
             about="Description",
             name="Bar",
-            contents={}
+            contents=[]
         )
         out = spec.describe_arg_from_spec(dir_spec.name, dir_spec)
         expected_rst = ([
@@ -249,11 +264,12 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 
     def test_multi_type_spec(self):
         multi_spec = spec.RasterOrVectorInput(
+            id="bar",
             about="Description",
             name="Bar",
             data_type=int,
             geometry_types={"POLYGON"},
-            fields={}
+            fields=[]
         )
         out = spec.describe_arg_from_spec(multi_spec.name, multi_spec)
         expected_rst = ([

@@ -19,7 +19,7 @@ import natcap.invest
 import pandas
 import pint
 import pygeoprocessing
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from natcap.invest import utils
 from natcap.invest.validation import get_message, _evaluate_expression
@@ -178,18 +178,21 @@ class IterableWithDotAccess():
         return self.inputs_dict
 
 
-@dataclasses.dataclass
-class Input:
+class Input(BaseModel):
     """A data input, or parameter, of an invest model.
 
     This represents an abstract input or parameter, which is rendered as an
     input field in the InVEST workbench. This does not store the value of the
     parameter for a specific run of the model.
     """
-    id: str = ''
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
+    Needed for pint.Unit."""
+
+    id: str
     """Input identifier that should be unique within a model"""
 
-    name: str = ''
+    name: typing.Union[str, None] = None
     """The user-facing name of the input. The workbench UI displays this
     property as a label for each input. The name should be as short as
     possible. Any extra description should go in ``about``. The name should
@@ -201,7 +204,7 @@ class Input:
     Bad examples: ``PRECIPITATION``, ``kc_factor``, ``table of valuation parameters``
     """
 
-    about: str = ''
+    about: typing.Union[str, None] = None
     """User-facing description of the input"""
 
     required: typing.Union[bool, str] = True
@@ -242,7 +245,6 @@ class Output:
     expression that evaluates to a boolean to describe this condition."""
 
 
-@dataclasses.dataclass
 class FileInput(Input):
     """A generic file input, or parameter, of an invest model.
 
@@ -313,14 +315,13 @@ class RasterBand():
     """units of measurement of the raster band values"""
 
 
-@dataclasses.dataclass
 class RasterInput(FileInput):
     """A raster input, or parameter, of an invest model.
 
     This represents a raster file input (all GDAL-supported raster file types
     are allowed), which may have multiple bands.
     """
-    bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=list)
+    bands: list[RasterBand] = dataclasses.field(default_factory=list)
     """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
@@ -364,7 +365,6 @@ class RasterInput(FileInput):
             return projection_warning
 
 
-@dataclasses.dataclass
 class SingleBandRasterInput(FileInput):
     """A single-band raster input, or parameter, of an invest model.
 
@@ -419,7 +419,6 @@ class SingleBandRasterInput(FileInput):
             return projection_warning
 
 
-@dataclasses.dataclass
 class VectorInput(FileInput):
     """A vector input, or parameter, of an invest model.
 
@@ -429,7 +428,7 @@ class VectorInput(FileInput):
     geometry_types: set = dataclasses.field(default_factory=dict)
     """A set of geometry type(s) that are allowed for this vector"""
 
-    fields: typing.Union[typing.Iterable[Input], None] = None
+    fields: typing.Union[list[Input], IterableWithDotAccess, None] = None
     """An iterable of `Input`s representing the fields that this vector is
     expected to have. The `key` of each input must match the corresponding
     field name."""
@@ -445,7 +444,7 @@ class VectorInput(FileInput):
 
     type: typing.ClassVar[str] = 'vector'
 
-    def __post_init__(self):
+    def model_post_init(self, context):
         if self.fields:
             self.fields = IterableWithDotAccess(*self.fields)
 
@@ -517,7 +516,6 @@ class VectorInput(FileInput):
         return projection_warning
 
 
-@dataclasses.dataclass
 class RasterOrVectorInput(FileInput):
     """An invest model input that can be either a single-band raster or a vector."""
 
@@ -530,7 +528,7 @@ class RasterOrVectorInput(FileInput):
     geometry_types: set = dataclasses.field(default_factory=dict)
     """A set of geometry type(s) that are allowed for this vector"""
 
-    fields: typing.Union[typing.Iterable[Input], None] = None
+    fields: typing.Union[list[Input], None] = None
     """An iterable of `Input`s representing the fields that this vector is
     expected to have. The `key` of each input must match the corresponding
     field name."""
@@ -546,13 +544,18 @@ class RasterOrVectorInput(FileInput):
 
     type: typing.ClassVar[str] = 'raster_or_vector'
 
-    def __post_init__(self):
+    single_band_raster_input: typing.Union[SingleBandRasterInput, None] = None
+    vector_input: typing.Union[VectorInput, None] = None
+
+    def model_post_init(self, context):
         self.single_band_raster_input = SingleBandRasterInput(
+            id=self.id,
             data_type=self.data_type,
             units=self.units,
             projected=self.projected,
             projection_units=self.projection_units)
         self.vector_input = VectorInput(
+            id=self.id,
             geometry_types=self.geometry_types,
             fields=self.fields,
             projected=self.projected,
@@ -578,7 +581,6 @@ class RasterOrVectorInput(FileInput):
             return self.vector_input.validate(filepath)
 
 
-@dataclasses.dataclass
 class CSVInput(FileInput):
     """A CSV table input, or parameter, of an invest model.
 
@@ -588,14 +590,14 @@ class CSVInput(FileInput):
     table structures are often more difficult to use; consider dividing them
     into multiple, simpler tabular inputs.
     """
-    columns: typing.Union[typing.Iterable[Input], None] = None
+    columns: typing.Union[list[Input], IterableWithDotAccess, None] = None
     """An iterable of `Input`s representing the columns that this CSV is
-    expected to have. The `key` of each input must match the corresponding
+    expected to have. The `id` of each input must match the corresponding
     column header."""
 
-    rows: typing.Union[typing.Iterable[Input], None] = None
+    rows: typing.Union[list[Input], IterableWithDotAccess, None] = None
     """An iterable of `Input`s representing the rows that this CSV is
-    expected to have. The `key` of each input must match the corresponding
+    expected to have. The `id` of each input must match the corresponding
     row header."""
 
     index_col: typing.Union[str, None] = None
@@ -604,7 +606,7 @@ class CSVInput(FileInput):
 
     type: typing.ClassVar[str] = 'csv'
 
-    def __post_init__(self):
+    def model_post_init(self, context):
         if self.rows:
             self.rows = IterableWithDotAccess(*self.rows)
         if self.columns:
@@ -690,6 +692,7 @@ class CSVInput(FileInput):
         # drop any empty rows
         df = df.dropna(how="all").reset_index(drop=True)
 
+
         available_cols = set(df.columns)
 
         for col_spec, pattern in zip(columns, patterns):
@@ -742,7 +745,6 @@ class CSVInput(FileInput):
         return df
 
 
-@dataclasses.dataclass
 class DirectoryInput(Input):
     """A directory input, or parameter, of an invest model.
 
@@ -751,7 +753,7 @@ class DirectoryInput(Input):
     directory. This may also be used to describe an empty directory where model
     outputs will be written to.
     """
-    contents: typing.Union[typing.Iterable[Input], None] = None
+    contents: typing.Union[list[Input], IterableWithDotAccess, None] = None
     """An iterable of `Input`s representing the contents of this directory. The
     `key` of each input must be the file name or pattern."""
 
@@ -766,7 +768,7 @@ class DirectoryInput(Input):
 
     type: typing.ClassVar[str] = 'directory'
 
-    def __post_init__(self):
+    def model_post_init(self, context):
         if self.contents:
             self.contents = IterableWithDotAccess(*self.contents)
 
@@ -828,7 +830,6 @@ class DirectoryInput(Input):
                 return get_message(MESSAGE_KEY).format(permission='write')
 
 
-@dataclasses.dataclass
 class NumberInput(Input):
     """A floating-point number input, or parameter, of an invest model.
 
@@ -889,7 +890,6 @@ class NumberInput(Input):
         return col.astype(float)
 
 
-@dataclasses.dataclass
 class IntegerInput(Input):
     """An integer input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'integer'
@@ -926,7 +926,6 @@ class IntegerInput(Input):
         return col.astype(pandas.Int64Dtype())
 
 
-@dataclasses.dataclass
 class RatioInput(NumberInput):
     """A ratio input, or parameter, of an invest model.
 
@@ -955,7 +954,6 @@ class RatioInput(NumberInput):
                 range='[0, 1]')
 
 
-@dataclasses.dataclass
 class PercentInput(NumberInput):
     """A percent input, or parameter, of an invest model.
 
@@ -983,7 +981,6 @@ class PercentInput(NumberInput):
                 range='[0, 100]')
 
 
-@dataclasses.dataclass
 class BooleanInput(Input):
     """A boolean input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'boolean'
@@ -1015,7 +1012,6 @@ class BooleanInput(Input):
         return col.astype('boolean')
 
 
-@dataclasses.dataclass
 class StringInput(Input):
     """A string input, or parameter, of an invest model.
 
@@ -1059,14 +1055,13 @@ class StringInput(Input):
         ).astype(pandas.StringDtype())
 
 
-@dataclasses.dataclass
 class OptionStringInput(Input):
     """A string input, or parameter, which is limited to a set of options.
 
     This corresponds to a dropdown menu in the workbench, where the user
     is limited to a set of pre-defined options.
     """
-    options: typing.Union[list, None] = None
+    options: typing.Union[list, dict, None] = None
     """A list of the values that this input may take. Use this if the set of
     options is predetermined."""
 
@@ -1129,7 +1124,7 @@ class RasterOutput(Output):
     This represents a raster file output (all GDAL-supported raster file types
     are allowed), which may have multiple bands.
     """
-    bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=list)
+    bands: list[RasterBand] = dataclasses.field(default_factory=list)
     """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
@@ -1144,7 +1139,7 @@ class VectorOutput(Output):
     geometry_types: set = dataclasses.field(default_factory=set)
     """A set of geometry type(s) that are produced in this vector"""
 
-    fields: typing.Union[typing.Iterable[Output], None] = None
+    fields: typing.Union[list[Output], None] = None
     """An iterable of `Output`s representing the fields created in this vector.
     The `key` of each input must match the corresponding field name."""
 
@@ -1159,11 +1154,11 @@ class CSVOutput(Output):
     table structures are often more difficult to use; consider dividing them
     into multiple, simpler tabular outputs.
     """
-    columns: typing.Union[typing.Iterable[Output], None] = None
+    columns: typing.Union[list[Output], None] = None
     """An iterable of `Output`s representing the table's columns. The `key` of
     each input must match the corresponding column header."""
 
-    rows: typing.Union[typing.Iterable[Output], None] = None
+    rows: typing.Union[list[Output], None] = None
     """An iterable of `Output`s representing the table's rows. The `key` of
     each input must match the corresponding row header."""
 
@@ -1179,7 +1174,7 @@ class DirectoryOutput(Output):
     or an unknown number of file-based outputs, by grouping them together in a
     directory.
     """
-    contents: typing.Union[typing.Iterable[Output], None] = None
+    contents: typing.Union[list[Output], None] = None
     """An iterable of `Output`s representing the contents of this directory.
     The `key` of each output must be the file name or pattern."""
 
@@ -1356,6 +1351,8 @@ class ModelSpec(BaseModel):
                 return 'integer'
             elif obj is float:
                 return 'number'
+            elif isinstance(obj, BaseModel):
+                return obj.model_dump(fallback=fallback_serializer)
             raise TypeError(f'fallback serializer is missing for {type(obj)}')
 
         spec_dict = self.__dict__.copy()
@@ -1477,11 +1474,11 @@ def build_input_spec(argkey, arg):
 
     elif t == 'directory':
         return DirectoryInput(
+            **base_attrs,
             contents=[
                 build_input_spec(k, v) for k, v in arg['contents'].items()],
             permissions=arg.get('permissions', 'rx'),
-            must_exist=arg.get('must_exist', None),
-            **base_attrs)
+            must_exist=arg.get('must_exist', True))
 
     elif t == 'file':
         return FileInput(**base_attrs)

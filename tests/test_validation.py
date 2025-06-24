@@ -350,14 +350,14 @@ class DirectoryValidation(unittest.TestCase):
         """Validation: when a folder must exist and does."""
         from natcap.invest import validation
 
-        self.assertIsNone(DirectoryInput().validate(self.workspace_dir))
+        self.assertIsNone(DirectoryInput(id='foo').validate(self.workspace_dir))
 
     def test_not_exists(self):
         """Validation: when a folder must exist but does not."""
         from natcap.invest import validation
 
         dirpath = os.path.join(self.workspace_dir, 'nonexistent_dir')
-        validation_warning = DirectoryInput().validate(dirpath)
+        validation_warning = DirectoryInput(id='foo').validate(dirpath)
         self.assertEqual(validation_warning, validation.MESSAGES['DIR_NOT_FOUND'])
 
     def test_file(self):
@@ -368,14 +368,14 @@ class DirectoryValidation(unittest.TestCase):
         with open(filepath, 'w') as opened_file:
             opened_file.write('the text itself does not matter.')
 
-        validation_warning = DirectoryInput().validate(filepath)
+        validation_warning = DirectoryInput(id='foo').validate(filepath)
         self.assertEqual(validation_warning, validation.MESSAGES['NOT_A_DIR'])
 
     def test_valid_permissions(self):
         """Validation: folder permissions."""
         from natcap.invest import validation
         self.assertIsNone(DirectoryInput(
-            permissions='rwx').validate(self.workspace_dir))
+            id='foo', permissions='rwx').validate(self.workspace_dir))
 
     def test_workspace_not_exists(self):
         """Validation: when a folder's parent must exist with permissions."""
@@ -384,7 +384,7 @@ class DirectoryValidation(unittest.TestCase):
         dirpath = 'foo'
         new_dir = os.path.join(self.workspace_dir, dirpath)
         self.assertIsNone(DirectoryInput(
-            must_exist=False, permissions='rwx').validate(new_dir))
+            id='foo', must_exist=False, permissions='rwx').validate(new_dir))
 
 
 @unittest.skipIf(
@@ -400,7 +400,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IREAD)
-            validation_warning = DirectoryInput(permissions='rwx').validate(tempdir)
+            validation_warning = DirectoryInput(id='foo', permissions='rwx').validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='execute'))
@@ -412,7 +412,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IWRITE)
-            validation_warning = DirectoryInput(permissions='rwx').validate(tempdir)
+            validation_warning = DirectoryInput(id='foo', permissions='rwx').validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='read'))
@@ -424,7 +424,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IEXEC)
-            validation_warning = DirectoryInput(permissions='rwx').validate(tempdir)
+            validation_warning = DirectoryInput(id='foo', permissions='rwx').validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='read'))
@@ -436,7 +436,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IREAD | stat.S_IWRITE)
-            validation_warning = DirectoryInput(permissions='rwx').validate(tempdir)
+            validation_warning = DirectoryInput(id='foo', permissions='rwx').validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='execute'))
@@ -448,7 +448,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IREAD | stat.S_IEXEC)
-            validation_warning = DirectoryInput(permissions='rwx').validate(tempdir)
+            validation_warning = DirectoryInput(id='foo', permissions='rwx').validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='write'))
@@ -460,7 +460,7 @@ class DirectoryValidationMacOnly(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             os.chmod(tempdir, stat.S_IWRITE | stat.S_IEXEC)
-            validation_warning = DirectoryInput(permissions='rwx').validate(tempdir)
+            validation_warning = DirectoryInput(id='foo', permissions='rwx').validate(tempdir)
             self.assertEqual(
                 validation_warning,
                 validation.MESSAGES['NEED_PERMISSION_DIRECTORY'].format(permission='read'))
@@ -484,14 +484,14 @@ class FileValidation(unittest.TestCase):
         with open(filepath, 'w') as new_file:
             new_file.write("Here's some text.")
 
-        self.assertIsNone(FileInput().validate(filepath))
+        self.assertIsNone(FileInput(id='foo').validate(filepath))
 
     def test_file_not_found(self):
         """Validation: test when a file is not found."""
         from natcap.invest import validation
         filepath = os.path.join(self.workspace_dir, 'file.txt')
 
-        error_msg = FileInput().validate(filepath)
+        error_msg = FileInput(id='foo').validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['FILE_NOT_FOUND'])
 
 
@@ -511,7 +511,7 @@ class RasterValidation(unittest.TestCase):
         from natcap.invest import validation
 
         filepath = os.path.join(self.workspace_dir, 'file.txt')
-        error_msg = SingleBandRasterInput().validate(filepath)
+        error_msg = SingleBandRasterInput(id='foo').validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['FILE_NOT_FOUND'])
 
     def test_invalid_raster(self):
@@ -522,7 +522,7 @@ class RasterValidation(unittest.TestCase):
         with open(filepath, 'w') as bad_raster:
             bad_raster.write('not a raster')
 
-        error_msg = SingleBandRasterInput().validate(filepath)
+        error_msg = SingleBandRasterInput(id='foo').validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['NOT_GDAL_RASTER'])
 
     def test_invalid_ovr_raster(self):
@@ -546,7 +546,7 @@ class RasterValidation(unittest.TestCase):
         raster = None
 
         filepath_ovr = os.path.join(self.workspace_dir, 'raster.tif.ovr')
-        error_msg = SingleBandRasterInput().validate(filepath_ovr)
+        error_msg = SingleBandRasterInput(id='foo').validate(filepath_ovr)
         self.assertEqual(error_msg, validation.MESSAGES['OVR_FILE'])
 
     def test_raster_not_projected(self):
@@ -562,7 +562,7 @@ class RasterValidation(unittest.TestCase):
         raster.SetProjection(wgs84_srs.ExportToWkt())
         raster = None
 
-        error_msg = SingleBandRasterInput(projected=True).validate(filepath)
+        error_msg = SingleBandRasterInput(id='foo', projected=True).validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['NOT_PROJECTED'])
 
     def test_raster_incorrect_units(self):
@@ -579,7 +579,7 @@ class RasterValidation(unittest.TestCase):
         raster = None
 
         error_msg = SingleBandRasterInput(
-            projected=True, projection_units=spec.u.meter
+            id='foo', projected=True, projection_units=spec.u.meter
         ).validate(filepath)
         expected_msg = validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
             unit_a='meter', unit_b='us_survey_foot')
@@ -602,8 +602,8 @@ class VectorValidation(unittest.TestCase):
         from natcap.invest import validation
 
         filepath = os.path.join(self.workspace_dir, 'file.txt')
-        error_msg = VectorInput(
-            geometry_types={'POINT'}, fields={}).validate(filepath)
+        error_msg = VectorInput(id='foo',
+            geometry_types={'POINT'}, fields=[]).validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['FILE_NOT_FOUND'])
 
     def test_invalid_vector(self):
@@ -614,8 +614,8 @@ class VectorValidation(unittest.TestCase):
         with open(filepath, 'w') as bad_vector:
             bad_vector.write('not a vector')
 
-        error_msg = VectorInput(
-            geometry_types={'POINT'}, fields={}).validate(filepath)
+        error_msg = VectorInput(id='foo',
+            geometry_types={'POINT'}, fields=[]).validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['NOT_GDAL_VECTOR'])
 
     def test_missing_fieldnames(self):
@@ -643,6 +643,7 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = VectorInput(
+            id='foo',
             geometry_types={'POINT'},
             fields=[
                 Input(id='col_a'),
@@ -668,15 +669,15 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = VectorInput(
-            fields={}, geometry_types={'POINT'}, projected=True, projection_units=spec.u.foot
-        ).validate(filepath)
+            id='foo', fields=[], geometry_types={'POINT'}, projected=True,
+            projection_units=spec.u.foot).validate(filepath)
         expected_msg = validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
             unit_a='foot', unit_b='metre')
         self.assertEqual(error_msg, expected_msg)
 
         self.assertIsNone(VectorInput(
-            fields={}, geometry_types={'POINT'}, projected=True, projection_units=spec.u.meter
-        ).validate(filepath))
+            id='foo', fields=[], geometry_types={'POINT'}, projected=True,
+            projection_units=spec.u.meter).validate(filepath))
 
     def test_wrong_geom_type(self):
         """Validation: checks that the vector's geometry type is correct."""
@@ -690,9 +691,9 @@ class VectorValidation(unittest.TestCase):
         layer = None
         vector = None
         self.assertIsNone(VectorInput(
-            geometry_types={'POLYGON', 'POINT'}, fields=None).validate(filepath))
+            id='foo', geometry_types={'POLYGON', 'POINT'}, fields=None).validate(filepath))
         self.assertEqual(
-            VectorInput(fields=None, geometry_types={'MULTIPOINT'}).validate(filepath),
+            VectorInput(id='foo', fields=None, geometry_types={'MULTIPOINT'}).validate(filepath),
             validation.MESSAGES['WRONG_GEOM_TYPE'].format(allowed={'MULTIPOINT'}))
 
 
@@ -702,12 +703,12 @@ class FreestyleStringValidation(unittest.TestCase):
     def test_int(self):
         """Validation: test that an int can be a valid string."""
         from natcap.invest import validation
-        self.assertIsNone(StringInput().validate(1234))
+        self.assertIsNone(StringInput(id='foo').validate(1234))
 
     def test_float(self):
         """Validation: test that a float can be a valid string."""
         from natcap.invest import validation
-        self.assertIsNone(StringInput().validate(1.234))
+        self.assertIsNone(StringInput(id='foo').validate(1.234))
 
     def test_regexp(self):
         """Validation: test that we can check regex patterns on strings."""
@@ -715,14 +716,14 @@ class FreestyleStringValidation(unittest.TestCase):
         from natcap.invest.spec import SUFFIX
 
         self.assertEqual(
-            None, StringInput(regexp='^1.[0-9]+$').validate(1.234))
+            None, StringInput(id='foo', regexp='^1.[0-9]+$').validate(1.234))
 
         regexp = '^[a-zA-Z]+$'
-        error_msg = StringInput(regexp=regexp).validate('foobar12')
+        error_msg = StringInput(id='foo', regexp=regexp).validate('foobar12')
         self.assertEqual(
             error_msg, validation.MESSAGES['REGEXP_MISMATCH'].format(regexp=regexp))
 
-        error_msg = StringInput(regexp=SUFFIX['regexp']).validate('4/20')
+        error_msg = StringInput(id='foo', regexp=SUFFIX['regexp']).validate('4/20')
         self.assertEqual(
             error_msg, validation.MESSAGES['REGEXP_MISMATCH'].format(regexp=SUFFIX['regexp']))
 
@@ -733,14 +734,14 @@ class OptionStringValidation(unittest.TestCase):
     def test_valid_option_set(self):
         """Validation: test that a string is a valid option in a set."""
         from natcap.invest import validation
-        self.assertIsNone(OptionStringInput(
+        self.assertIsNone(OptionStringInput(id='foo',
             options={'foo', 'bar', 'Baz'}).validate('foo'))
 
     def test_invalid_option_set(self):
         """Validation: test when a string is not a valid option in a set."""
         from natcap.invest import validation
         options = ['foo', 'bar', 'Baz']
-        error_msg = OptionStringInput(options=options).validate('FOO')
+        error_msg = OptionStringInput(id='foo', options=options).validate('FOO')
         self.assertEqual(
             error_msg,
             validation.MESSAGES['INVALID_OPTION'].format(
@@ -749,14 +750,14 @@ class OptionStringValidation(unittest.TestCase):
     def test_valid_option_dict(self):
         """Validation: test that a string is a valid option in a dict."""
         from natcap.invest import validation
-        self.assertIsNone(OptionStringInput(
+        self.assertIsNone(OptionStringInput(id='foo',
             options={'foo': 'desc', 'bar': 'desc', 'Baz': 'desc'}).validate('foo'))
 
     def test_invalid_option_dict(self):
         """Validation: test when a string is not a valid option in a dict."""
         from natcap.invest import validation
         options = {'foo': 'desc', 'bar': 'desc', 'Baz': 'desc'}
-        error_msg = OptionStringInput(options=options).validate('FOO')
+        error_msg = OptionStringInput(id='foo', options=options).validate('FOO')
         self.assertEqual(
             error_msg,
             validation.MESSAGES['INVALID_OPTION'].format(
@@ -770,28 +771,28 @@ class NumberValidation(unittest.TestCase):
         """Validation: test when a string is not a number."""
         from natcap.invest import validation
         value = 'this is a string'
-        error_msg = NumberInput().validate(value)
+        error_msg = NumberInput(id='foo').validate(value)
         self.assertEqual(
             error_msg, validation.MESSAGES['NOT_A_NUMBER'].format(value=value))
 
     def test_expression(self):
         """Validation: test that we can use numeric expressions."""
         from natcap.invest import validation
-        self.assertIsNone(NumberInput(
+        self.assertIsNone(NumberInput(id='foo',
             expression='(value < 100) & (value > 4)').validate(35))
 
     def test_expression_missing_value(self):
         """Validation: test the expression string for the 'value' term."""
         from natcap.invest import validation
         with self.assertRaises(AssertionError):
-            error_msg = NumberInput(expression='foo < 5').validate(35)
+            error_msg = NumberInput(id='foo', expression='foo < 5').validate(35)
 
     def test_expression_failure(self):
         """Validation: test when a number does not meet the expression."""
         from natcap.invest import validation
         value = 35
         condition = 'float(value) < 0'
-        error_msg = NumberInput(expression=condition).validate(value)
+        error_msg = NumberInput(id='foo', expression=condition).validate(value)
         self.assertEqual(error_msg, validation.MESSAGES['INVALID_VALUE'].format(
             value=value, condition=condition))
 
@@ -800,7 +801,7 @@ class NumberValidation(unittest.TestCase):
         from natcap.invest import validation
         value = '35'
         condition = 'int(value) < 0'
-        error_msg = NumberInput(expression=condition).validate(value)
+        error_msg = NumberInput(id='foo', expression=condition).validate(value)
         self.assertEqual(error_msg, validation.MESSAGES['INVALID_VALUE'].format(
             value=value, condition=condition))
 
@@ -811,21 +812,21 @@ class BooleanValidation(unittest.TestCase):
     def test_actual_bool(self):
         """Validation: test when boolean type objects are passed."""
         from natcap.invest import validation
-        self.assertIsNone(BooleanInput().validate(True))
-        self.assertIsNone(BooleanInput().validate(False))
+        self.assertIsNone(BooleanInput(id='foo').validate(True))
+        self.assertIsNone(BooleanInput(id='foo').validate(False))
 
     def test_string_boolean(self):
         """Validation: an error should be raised when the type is wrong."""
         from natcap.invest import validation
         for non_boolean_value in ('true', 1, [], set()):
             self.assertIsInstance(
-                BooleanInput().validate(non_boolean_value), str)
+                BooleanInput(id='foo').validate(non_boolean_value), str)
 
     def test_invalid_string(self):
         """Validation: test when invalid strings are passed."""
         from natcap.invest import validation
         value = 'not clear'
-        error_msg = BooleanInput().validate(value)
+        error_msg = BooleanInput(id='foo').validate(value)
         self.assertEqual(
             error_msg, validation.MESSAGES['NOT_BOOLEAN'].format(value=value))
 
@@ -846,7 +847,7 @@ class CSVValidation(unittest.TestCase):
         from natcap.invest import validation
 
         nonexistent_file = os.path.join(self.workspace_dir, 'nope.txt')
-        error_msg = CSVInput().validate(nonexistent_file)
+        error_msg = CSVInput(id='foo').validate(nonexistent_file)
         self.assertEqual(error_msg, validation.MESSAGES['FILE_NOT_FOUND'])
 
     def test_csv_fieldnames(self):
@@ -862,7 +863,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file)
 
         self.assertIsNone(
-            CSVInput(columns=[
+            CSVInput(id='foo', columns=[
                 IntegerInput(id='foo'),
                 IntegerInput(id='bar')]
             ).validate(target_file))
@@ -880,7 +881,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file, encoding='utf-8-sig')
 
         self.assertIsNone(
-            CSVInput(columns=[
+            CSVInput(id='foo', columns=[
                 IntegerInput(id='foo'),
                 IntegerInput(id='bar')]
             ).validate(target_file))
@@ -898,7 +899,7 @@ class CSVValidation(unittest.TestCase):
         df.to_csv(target_file)
 
         error_msg = CSVInput(
-            columns=[Input(id='field_a')]).validate(target_file)
+            id='foo', columns=[Input(id='field_a')]).validate(target_file)
         expected_msg = validation.MESSAGES['MATCHED_NO_HEADERS'].format(
             header='column', header_name='field_a')
         self.assertEqual(error_msg, expected_msg)
@@ -916,7 +917,7 @@ class CSVValidation(unittest.TestCase):
         df.to_pickle(target_file)
 
         error_msg = CSVInput(
-            columns=[Input(id='field_a')]).validate(target_file)
+            id='foo', columns=[Input(id='field_a')]).validate(target_file)
         self.assertIn('must be encoded as UTF-8', error_msg)
 
     def test_slow_to_open(self):
@@ -1001,7 +1002,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 b,c
                 """
             ))
-        input_spec = CSVInput(columns=[StringInput(id='header')])
+        input_spec = CSVInput(id='foo', columns=[StringInput(id='header')])
         df = input_spec.get_validated_dataframe(csv_file)
         # header and table values should be lowercased
         self.assertEqual(df.columns[0], 'header')
@@ -1021,6 +1022,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             table_file.write(csv_text)
 
         input_spec = CSVInput(
+            id='foo',
             index_col='lucode',
             columns=[
                 StringInput(id='desc'),
@@ -1047,6 +1049,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             table_file.write(csv_text)
 
         input_spec = CSVInput(
+            id='foo',
             index_col='lucode',
             columns=[
                 StringInput(id='desc'),
@@ -1069,6 +1072,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             table_file.write(csv_text)
 
         input_spec = CSVInput(
+            id='foo',
             index_col='lucode',
             columns=[
                 StringInput(id='desc'),
@@ -1089,7 +1093,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 "2,bread,1,4\n"
                 "3,beans,0.5,4\n"
                 "4,butter,9,1")
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
             IntegerInput(id='lucode'),
             NumberInput(id='val1'),
             NumberInput(id='val2')
@@ -1108,7 +1112,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 "2,1,4\n"
                 "3,0.5,4\n"
                 "4,9,1")
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
             IntegerInput(id='lucode'),
             NumberInput(id='[HABITAT]_value')
         ])
@@ -1128,6 +1132,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 "3,beans,0.5,4\n"
                 "4,butter,9,1")
         input_spec = CSVInput(
+            id='foo',
             columns=[
                 StringInput(id='desc'),
                 IntegerInput(id='lucode'),
@@ -1150,6 +1155,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             table_file.write(csv_text)
 
         input_spec = CSVInput(
+            id='foo',
             index_col='lucode',
             columns=[
                 StringInput(id='desc'),
@@ -1180,7 +1186,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 b
                 """
             ))
-        input_spec = CSVInput(columns=[StringInput(id='header')])
+        input_spec = CSVInput(id='foo', columns=[StringInput(id='header')])
         df = input_spec.get_validated_dataframe(csv_file)
         self.assertEqual(df['header'][0], 'a')
 
@@ -1198,7 +1204,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 b
                 """
             ))
-        input_spec = CSVInput(columns=[StringInput(id='header')])
+        input_spec = CSVInput(id='foo', columns=[StringInput(id='header')])
         df = input_spec.get_validated_dataframe(csv_file)
         self.assertEqual(df.columns[0], 'header')
 
@@ -1215,7 +1221,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 3,
                 """
             ))
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
                 IntegerInput(id='id'),
                 IntegerInput(id='header')])
         df = input_spec.get_validated_dataframe(csv_file)
@@ -1236,7 +1242,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 -1,.3,
                 """
             ))
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
             NumberInput(id='h1'),
             RatioInput(id='h2'),
             PercentInput(id='h3')
@@ -1260,7 +1266,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 2,b,
                 """
             ))
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
             StringInput(id='h1'),
             OptionStringInput(id='h2', options=['a', 'b']),
             StringInput(id='h3')
@@ -1284,7 +1290,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 c,
                 """
             ))
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
             StringInput(id='index'),
             BooleanInput(id='h1')])
         df = input_spec.get_validated_dataframe(csv_file)
@@ -1311,7 +1317,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 4,
                 """
             ))
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
             IntegerInput(id='bar'),
             FileInput(id='path')
         ])
@@ -1345,7 +1351,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         # using sep=None with the default engine='python',
         # it should infer what the separator is
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
                 StringInput(id='h1'),
                 StringInput(id='h2'),
                 StringInput(id='h3')])
@@ -1375,7 +1381,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
                 d,e,f
                 """
             ))
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
             StringInput(id='1'),
             StringInput(id='2'),
             StringInput(id='3')
@@ -1396,7 +1402,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write(" Col1, Col2 ,Col3 \n")
             file_obj.write(" val1, val2 ,val3 \n")
             file_obj.write(" , 2 1 ,  ")
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
             StringInput(id='col1'),
             StringInput(id='col2'),
             StringInput(id='col3')
@@ -1427,6 +1433,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             table_file.write(csv_text)
 
         input_spec = CSVInput(
+            id='foo',
             index_col='lucode',
             columns=[
                 StringInput(id='desc'),
@@ -1451,7 +1458,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with open(csv_file, 'w') as file_obj:
             file_obj.write("row1, a ,b\n")
             file_obj.write("row2,1,3\n")
-        input_spec = CSVInput(rows=[
+        input_spec = CSVInput(id='foo', rows=[
             StringInput(id='row1'),
             NumberInput(id='row2')
         ])
@@ -1476,7 +1483,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write('col1,col2\n')
             file_obj.write(f'1,{raster_path}\n')
 
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
             NumberInput(id='col1'),
             SingleBandRasterInput(id='col2')
         ])
@@ -1501,7 +1508,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write('col1,col2\n')
             file_obj.write(f'1,{raster_path}\n')
 
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
             NumberInput(id='col1'),
             SingleBandRasterInput(id='col2', projected=True)
         ])
@@ -1529,7 +1536,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with open(csv_path, 'w') as file_obj:
             file_obj.write('col1,col2\n')
             file_obj.write(f'1,{vector_path}\n')
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
             NumberInput(id='col1'),
             VectorInput(
                 id='col2',
@@ -1566,11 +1573,11 @@ class TestGetValidatedDataframe(unittest.TestCase):
             file_obj.write('col1,col2\n')
             file_obj.write(f'1,{vector_path}\n')
 
-        input_spec = CSVInput(columns=[
+        input_spec = CSVInput(id='foo', columns=[
             NumberInput(id='col1'),
             RasterOrVectorInput(
                 id='col2',
-                fields={},
+                fields=[],
                 geometry_types=['POLYGON']
             )
         ])
@@ -1578,7 +1585,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             input_spec.get_validated_dataframe(csv_path)
 
         self.assertIn(
-            "Geometry type must be one of ['POLYGON']",
+            "Geometry type must be one of {'POLYGON'}",
             str(cm.exception))
 
 
@@ -1999,7 +2006,7 @@ class TestValidationFromSpec(unittest.TestCase):
         from natcap.invest import validation
 
         specs = []
-        previous_key = None
+        previous_key = True
         args = {}
         for letter in string.ascii_uppercase[:10]:
             key = f'arg_{letter}'
@@ -2035,7 +2042,7 @@ class TestValidationFromSpec(unittest.TestCase):
                 ),
                 VectorInput(
                     id='vector_a',
-                    fields={},
+                    fields=[],
                     geometry_types={'POINT'}
                 )
             ]

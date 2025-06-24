@@ -7,9 +7,9 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     spec.StringInput(id='c'),
     spec.FileInput(id='foo'),
     spec.FileInput(id='bar'),
-    spec.DirectoryInput(id='data_dir', contents={}),
+    spec.DirectoryInput(id='data_dir', contents=[]),
     spec.SingleBandRasterInput(id='raster'),
-    spec.VectorInput(id='vector', fields={}, geometry_types={}),
+    spec.VectorInput(id='vector', fields=[], geometry_types=set()),
     spec.CSVInput(id='simple_table'),
     spec.CSVInput(
         id='spatial_table',
@@ -17,7 +17,7 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
             spec.IntegerInput(id='ID'),
             spec.RasterOrVectorInput(
                 id='path',
-                fields={},
+                fields=[],
                 geometry_types={'POINT', 'POLYGON'}
             )
         ]
