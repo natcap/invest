@@ -348,7 +348,7 @@ class TestMetadataFromSpec(unittest.TestCase):
                                "vector with a single layer."),
                         geometry_types=spec.POLYGONS,
                         fields=[
-                            spec.NumberInput(
+                            spec.NumberOutput(
                                 id="SUP_DEMadm_cap",
                                 units=u.m**2/u.person,
                                 about="The average urban nature supply/demand"

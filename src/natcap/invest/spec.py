@@ -225,18 +225,21 @@ class Input(BaseModel):
     as if it's pulled in from another source. Defaults to False."""
 
 
-@dataclasses.dataclass
-class Output:
+class Output(BaseModel):
     """A data output, or result, of an invest model.
 
     This represents an abstract output which is produced as a result of running
     an invest model. This does not store the value of the output for a specific
     run of the model.
     """
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
+    Needed for pint.Unit."""
+
     id: str = ''
     """Output identifier that should be unique within a model"""
 
-    about: str = ''
+    about: typing.Union[str, None] = None
     """User-facing description of the output"""
 
     created_if: typing.Union[bool, str] = True
@@ -1103,7 +1106,6 @@ class OptionStringInput(Input):
         ).astype(pandas.StringDtype())
 
 
-@dataclasses.dataclass
 class SingleBandRasterOutput(Output):
     """A single-band raster output, or result, of an invest model.
 
@@ -1117,7 +1119,6 @@ class SingleBandRasterOutput(Output):
     """units of measurement of the raster values"""
 
 
-@dataclasses.dataclass
 class RasterOutput(Output):
     """A raster output, or result, of an invest model.
 
@@ -1129,7 +1130,6 @@ class RasterOutput(Output):
     the raster."""
 
 
-@dataclasses.dataclass
 class VectorOutput(Output):
     """A vector output, or result, of an invest model.
 
@@ -1144,7 +1144,6 @@ class VectorOutput(Output):
     The `key` of each input must match the corresponding field name."""
 
 
-@dataclasses.dataclass
 class CSVOutput(Output):
     """A CSV table output, or result, of an invest model.
 
@@ -1166,7 +1165,6 @@ class CSVOutput(Output):
     """The header name of the column that is the index of the table."""
 
 
-@dataclasses.dataclass
 class DirectoryOutput(Output):
     """A directory output, or result, of an invest model.
 
@@ -1179,7 +1177,6 @@ class DirectoryOutput(Output):
     The `key` of each output must be the file name or pattern."""
 
 
-@dataclasses.dataclass
 class FileOutput(Output):
     """A generic file output, or result, of an invest model.
 
@@ -1189,7 +1186,6 @@ class FileOutput(Output):
     pass
 
 
-@dataclasses.dataclass
 class NumberOutput(Output):
     """A floating-point number output, or result, of an invest model.
 
@@ -1200,13 +1196,11 @@ class NumberOutput(Output):
     """The units of measurement for this numeric value"""
 
 
-@dataclasses.dataclass
 class IntegerOutput(Output):
     """An integer output, or result, of an invest model."""
     pass
 
 
-@dataclasses.dataclass
 class RatioOutput(Output):
     """A ratio output, or result, of an invest model.
 
@@ -1216,7 +1210,6 @@ class RatioOutput(Output):
     pass
 
 
-@dataclasses.dataclass
 class PercentOutput(Output):
     """A percent output, or result, of an invest model.
 
@@ -1226,7 +1219,6 @@ class PercentOutput(Output):
     pass
 
 
-@dataclasses.dataclass
 class StringOutput(Output):
     """A string output, or result, of an invest model.
 
@@ -1236,11 +1228,10 @@ class StringOutput(Output):
     pass
 
 
-@dataclasses.dataclass
 class OptionStringOutput(Output):
     """A string output, or result, which is limited to a set of options."""
 
-    options: typing.Union[list, None] = None
+    options: typing.Union[list, dict, None] = None
     """A list of the values that this input may take"""
 
 
@@ -1503,7 +1494,7 @@ def build_output_spec(key, spec):
     base_attrs = {
         'id': key,
         'about': spec.get('about', None),
-        'created_if': spec.get('created_if', None)
+        'created_if': spec.get('created_if', True)
     }
 
     if 'type' in spec:
