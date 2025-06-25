@@ -744,7 +744,7 @@ class OptionStringValidation(unittest.TestCase):
         opt = OptionStringInput(id='foo',
             options=[Option(key='foo'), Option(key='bar'), Option(key='baz')])
         self.assertEqual(
-            opt.validate('FOO'),
+            opt.validate('abc'),
             validation.MESSAGES['INVALID_OPTION'].format(
                 option_list=opt.list_options()))
 

@@ -1217,7 +1217,7 @@ class OptionStringInput(Input):
 
         if self.options:
             option_keys = self.list_options()
-            if str(value) not in option_keys:
+            if str(value).lower() not in option_keys:
                 return get_message('INVALID_OPTION').format(option_list=option_keys)
 
     @staticmethod
@@ -1240,7 +1240,7 @@ class OptionStringInput(Input):
     def list_options(self):
         """Return a sorted list of the option keys."""
         if self.options:
-            return sorted([option.key for option in self.options])
+            return sorted([option.key.lower() for option in self.options])
 
 
 class SingleBandRasterOutput(Output):
@@ -2115,42 +2115,27 @@ def format_permissions_string(permissions):
     return ', '.join(permissions_strings)
 
 
-def format_options_string_from_dict(options):
-    """Represent a dictionary of option: description pairs as a bulleted list.
+def format_options_string(options: list[Option]):
+    """Represent a list of `Option`s as a bulleted list.
 
     Args:
-        options (dict): the dictionary of options to document, where keys are
-            options and values are dictionaries describing the options.
-            They may have either or both 'display_name' and 'description' keys,
-            for example:
-            {'option1': {'display_name': 'Option 1', 'description': 'the first option'}}
+        options: list of `Option`s to format
 
     Returns:
         list of RST-formatted strings, where each is a line in a bullet list
     """
     lines = []
-    for key, info in options.items():
-        display_name = info['display_name'] if 'display_name' in info else key
-        if 'description' in info:
-            lines.append(f'- {display_name}: {info["description"]}')
+    for option in options:
+        display_name = option.display_name if option.display_name else option.key
+        if option.about:
+            lines.append(f'- {display_name}: {option.about}')
         else:
             lines.append(f'- {display_name}')
+
     # sort the options alphabetically
     # casefold() is a more aggressive version of lower() that may work better
     # for some languages to remove all case distinctions
     return sorted(lines, key=lambda line: line.casefold())
-
-
-def format_options_string_from_list(options):
-    """Represent options as a comma-separated list.
-
-    Args:
-        options (list[str]): the set of options to document
-
-    Returns:
-        string of comma-separated options
-    """
-    return ', '.join(options)
 
 
 def capitalize(title):
@@ -2283,12 +2268,8 @@ def describe_arg_from_spec(name, spec):
         # may be either a dict or set. if it's empty, the options are
         # dynamically generated. don't try to document them.
         if spec.options:
-            if isinstance(spec.options, dict):
-                indented_block.append(gettext('Options:'))
-                indented_block += format_options_string_from_dict(spec.options)
-            else:
-                formatted_options = format_options_string_from_list(spec.options)
-                indented_block.append(gettext('Options:') + f' {formatted_options}')
+            indented_block.append(gettext('Options:'))
+            indented_block += format_options_string(spec.options)
 
     elif type(spec) is CSVInput:
         if not spec.columns and not spec.rows:

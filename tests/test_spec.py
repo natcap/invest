@@ -109,24 +109,18 @@ class TestDescribeArgFromSpec(unittest.TestCase):
                          '*required*): Description'])
         self.assertEqual(repr(out), repr(expected_rst))
 
-    def test_option_string_spec_dictionary(self):
+    def test_option_string_spec(self):
         option_spec = spec.OptionStringInput(
             id="bar",
             name="Bar",
             about="Description",
-            options={
-                "option_a": {
-                    "display_name": "A"
-                },
-                "Option_b": {
-                    "description": "do something"
-                },
-                "option_c": {
-                    "display_name": "c",
-                    "description": "do something else"
-                }
-            }
-        )
+            options=[
+                spec.Option(key="option_a", display_name="A"),
+                spec.Option(key="Option_b", about="do something"),
+                spec.Option(
+                    key="option_c",
+                    display_name="c",
+                    about="do something else")])
         # expect that option case is ignored
         # otherwise, c would sort before A
         out = spec.describe_arg_from_spec(option_spec.name, option_spec)
@@ -136,20 +130,6 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             '\t- A',
             '\t- c: do something else',
             '\t- Option_b: do something'
-        ])
-        self.assertEqual(repr(out), repr(expected_rst))
-
-    def test_option_string_spec_list(self):
-        option_spec = spec.OptionStringInput(
-            id="bar",
-            name="Bar",
-            about="Description",
-            options=["option_a", "Option_b"]
-        )
-        out = spec.describe_arg_from_spec(option_spec.name, option_spec)
-        expected_rst = ([
-            '**Bar** (`option <input_types.html#option>`__, *required*): Description',
-            '\tOptions: option_a, Option_b'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
