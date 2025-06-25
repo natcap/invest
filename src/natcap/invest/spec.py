@@ -250,6 +250,35 @@ class Input(BaseModel):
     Use this if the value should not be configurable from the input form, such
     as if it's pulled in from another source. Defaults to False."""
 
+    def format_required_string(self) -> str:
+        """Represent this input's required status as a user-friendly string."""
+        if self.required is True:
+            return gettext('required')
+        elif self.required is False:
+            return gettext('optional')
+        else:
+            # assume that the about text will describe the conditional
+            return gettext('conditionally required')
+
+
+    def capitalize_name(self) -> str:
+        """Capitalize a self.name into title case.
+
+        Returns:
+            capitalized string (each word capitalized except linking words)
+        """
+
+        def capitalize_word(word):
+            """Capitalize a word, if appropriate."""
+            if word in {'of', 'the'}:
+                return word
+            else:
+                return word[0].upper() + word[1:]
+
+        title = ' '.join([capitalize_word(word) for word in title.split(' ')])
+        title = '/'.join([capitalize_word(word) for word in title.split('/')])
+        return title
+
 
 class Output(BaseModel):
     """A data output, or result, of an invest model.
@@ -575,6 +604,22 @@ class VectorInput(FileInput):
         srs = layer.GetSpatialRef()
         projection_warning = _check_projection(srs, self.projected, self.projection_units)
         return projection_warning
+
+
+    def format_geometry_types_rst(self):
+        """Represent self.geometry_types in RST text.
+
+        Args:
+            geometry_types (set(str)): set of geometry names
+
+        Returns:
+            string
+        """
+        # sort the geometry types so they always display in a consistent order
+        sorted_geoms = sorted(
+            self.geometry_types,
+            key=lambda g: GEOMETRY_ORDER.index(g))
+        return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
 
 
 class RasterOrVectorInput(FileInput):
@@ -1242,6 +1287,28 @@ class OptionStringInput(Input):
         """Return a sorted list of the option keys."""
         if self.options:
             return sorted([option.key.lower() for option in self.options])
+
+    def format_rst(self):
+        """Represent `self.options` as a RST-formatted bulleted list.
+
+        Args:
+            options: list of `Option`s to format
+
+        Returns:
+            list of RST-formatted strings, where each is a line in a bullet list
+        """
+        lines = []
+        for option in self.options:
+            display_name = option.display_name if option.display_name else option.key
+            if option.about:
+                lines.append(f'- {display_name}: {option.about}')
+            else:
+                lines.append(f'- {display_name}')
+
+        # sort the options alphabetically
+        # casefold() is a more aggressive version of lower() that may work better
+        # for some languages to remove all case distinctions
+        return sorted(lines, key=lambda line: line.casefold())
 
 
 class SingleBandRasterOutput(Output):
@@ -2057,105 +2124,6 @@ GEOMETRY_ORDER = [
 INPUT_TYPES_HTML_FILE = 'input_types.html'
 
 
-def format_required_string(required):
-    """Represent an arg's required status as a user-friendly string.
-
-    Args:
-        required (bool | str | None): required property of an arg. May be
-            `True`, `False`, `None`, or a conditional string.
-
-    Returns:
-        string
-    """
-    if required is None or required is True:
-        return gettext('required')
-    elif required is False:
-        return gettext('optional')
-    else:
-        # assume that the about text will describe the conditional
-        return gettext('conditionally required')
-
-
-def format_geometry_types_string(geometry_types):
-    """Represent a set of allowed vector geometry types as user-friendly text.
-
-    Args:
-        geometry_types (set(str)): set of geometry names
-
-    Returns:
-        string
-    """
-    # sort the geometry types so they always display in a consistent order
-    sorted_geoms = sorted(
-        geometry_types,
-        key=lambda g: GEOMETRY_ORDER.index(g))
-    return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
-
-
-def format_permissions_string(permissions):
-    """Represent a rwx-style permissions string as user-friendly text.
-
-    Args:
-        permissions (str): rwx-style permissions string
-
-    Returns:
-        string
-    """
-    permissions_strings = []
-    if 'r' in permissions:
-        permissions_strings.append(gettext('read'))
-    if 'w' in permissions:
-        permissions_strings.append(gettext('write'))
-    if 'x' in permissions:
-        permissions_strings.append(gettext('execute'))
-    return ', '.join(permissions_strings)
-
-
-def format_options_string(options: list[Option]):
-    """Represent a list of `Option`s as a bulleted list.
-
-    Args:
-        options: list of `Option`s to format
-
-    Returns:
-        list of RST-formatted strings, where each is a line in a bullet list
-    """
-    lines = []
-    for option in options:
-        display_name = option.display_name if option.display_name else option.key
-        if option.about:
-            lines.append(f'- {display_name}: {option.about}')
-        else:
-            lines.append(f'- {display_name}')
-
-    # sort the options alphabetically
-    # casefold() is a more aggressive version of lower() that may work better
-    # for some languages to remove all case distinctions
-    return sorted(lines, key=lambda line: line.casefold())
-
-
-def capitalize(title):
-    """Capitalize a string into title case.
-
-    Args:
-        title (str): string to capitalize
-
-    Returns:
-        capitalized string (each word capitalized except linking words)
-    """
-
-    def capitalize_word(word):
-        """Capitalize a word, if appropriate."""
-        if word in {'of', 'the'}:
-            return word
-        else:
-            return word[0].upper() + word[1:]
-
-    title = ' '.join([capitalize_word(word) for word in title.split(' ')])
-    title = '/'.join([capitalize_word(word) for word in title.split('/')])
-    return title
-
-
 def format_type_string(arg_type):
     """Represent an arg type as a user-friendly string.
 
@@ -2241,12 +2209,12 @@ def describe_arg_from_spec(name, spec):
             in_parentheses.append(f'{translated_units}: **{units_string}**')
 
     if type(spec) is VectorInput:
-        in_parentheses.append(format_geometry_types_string(spec.geometry_types))
+        in_parentheses.append((spec.format_geometry_types_rst()))
 
     # Represent the required state as a string, defaulting to required
     # It doesn't make sense to include this for boolean checkboxes
     if type(spec) is not BooleanInput:
-        required_string = format_required_string(spec.required)
+        required_string = spec.format_required_string()
         in_parentheses.append(f'*{required_string}*')
 
     # Nested args may not have an about section
@@ -2265,7 +2233,7 @@ def describe_arg_from_spec(name, spec):
         # dynamically generated. don't try to document them.
         if spec.options:
             indented_block.append(gettext('Options:'))
-            indented_block += format_options_string(spec.options)
+            indented_block += spec.format_rst()
 
     elif type(spec) is CSVInput:
         if not spec.columns and not spec.rows:
@@ -2310,7 +2278,7 @@ def describe_arg_from_name(module_name, *arg_keys):
 
     # format spec into an RST formatted description string
     if spec.name:
-        arg_name = capitalize(spec.name)
+        arg_name = spec.capitalize_name()
     else:
         arg_name = arg_keys[-1]
 
