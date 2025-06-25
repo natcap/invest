@@ -1169,13 +1169,31 @@ class StringInput(Input):
         ).astype(pandas.StringDtype())
 
 
+class Option(BaseModel):
+    """An option in an OptionStringInput or OptionStringOutput."""
+
+    key: str
+    """The unique key that identifies this option. If the OptionStringInput is
+    represented by a dropdown menu, and `display_name` is `None`, this key will
+    be displayed in the menu. For options in CSV columns etc, this is the value
+    that should be entered in the column."""
+
+    display_name: typing.Union[str, None] = None
+    """For OptionStringInputs that are represented by a dropdown menu, this
+    optional attribute will be displayed in the menu instead of the `key`."""
+
+    about: typing.Union[str, None] = None
+    """Optional description of this option. Only needed for keys that are
+    not self-explanatory."""
+
+
 class OptionStringInput(Input):
     """A string input, or parameter, which is limited to a set of options.
 
     This corresponds to a dropdown menu in the workbench, where the user
     is limited to a set of pre-defined options.
     """
-    options: typing.Union[list[str], dict[typing.Union[str, int], typing.Union[str,dict]], None] = None
+    options: typing.Union[list[Option], None]
     """A list of the values that this input may take. Use this if the set of
     options is predetermined."""
 
@@ -1196,8 +1214,11 @@ class OptionStringInput(Input):
         """
         # if options is empty, that means it's dynamically populated
         # so validation should be left to the model's validate function.
-        if self.options and str(value) not in self.options:
-            return get_message('INVALID_OPTION').format(option_list=sorted(self.options))
+
+        if self.options:
+            option_keys = self.list_options()
+            if str(value) not in option_keys:
+                return get_message('INVALID_OPTION').format(option_list=option_keys)
 
     @staticmethod
     def format_column(col, *args):
@@ -1215,6 +1236,11 @@ class OptionStringInput(Input):
         return col.apply(
             lambda s: s if pandas.isna(s) else str(s).strip().lower()
         ).astype(pandas.StringDtype())
+
+    def list_options(self):
+        """Return a sorted list of the option keys."""
+        if self.options:
+            return sorted([option.key for option in self.options])
 
 
 class SingleBandRasterOutput(Output):
@@ -1576,9 +1602,23 @@ def build_input_spec(argkey, arg):
     t = arg['type']
 
     if t == 'option_string':
+        options = []
+        if isinstance(arg['options'], dict):
+            for k, v in arg['options'].items():
+                if isinstance(v, dict):
+                    options.append(Option(
+                        key=k,
+                        display_name=v.get('display_name', None),
+                        about=v.get('description', None)))
+                else:
+                    raise ValueError(str(arg))
+        else:
+            raise ValueError(str(arg))
+
+
         return OptionStringInput(
             **base_attrs,
-            options=arg['options'],
+            options=options,
             dropdown_function=arg.get('dropdown_function', None))
 
     elif t == 'freestyle_string':

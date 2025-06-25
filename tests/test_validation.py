@@ -35,7 +35,8 @@ from natcap.invest.spec import (
     RatioInput,
     SingleBandRasterInput,
     StringInput,
-    VectorInput)
+    VectorInput,
+    Option)
 
 gdal.UseExceptions()
 
@@ -731,37 +732,21 @@ class FreestyleStringValidation(unittest.TestCase):
 class OptionStringValidation(unittest.TestCase):
     """Test Option String Validation."""
 
-    def test_valid_option_set(self):
-        """Validation: test that a string is a valid option in a set."""
+    def test_valid_option(self):
+        """Validation: test that a string is a valid option."""
         from natcap.invest import validation
         self.assertIsNone(OptionStringInput(id='foo',
-            options={'foo', 'bar', 'Baz'}).validate('foo'))
+            options=[Option(key='foo'), Option(key='bar'), Option(key='baz')]).validate('foo'))
 
-    def test_invalid_option_set(self):
-        """Validation: test when a string is not a valid option in a set."""
+    def test_invalid_option(self):
+        """Validation: test when a string is not a valid option."""
         from natcap.invest import validation
-        options = ['foo', 'bar', 'Baz']
-        error_msg = OptionStringInput(id='foo', options=options).validate('FOO')
+        opt = OptionStringInput(id='foo',
+            options=[Option(key='foo'), Option(key='bar'), Option(key='baz')])
         self.assertEqual(
-            error_msg,
+            opt.validate('FOO'),
             validation.MESSAGES['INVALID_OPTION'].format(
-                option_list=sorted(options)))
-
-    def test_valid_option_dict(self):
-        """Validation: test that a string is a valid option in a dict."""
-        from natcap.invest import validation
-        self.assertIsNone(OptionStringInput(id='foo',
-            options={'foo': 'desc', 'bar': 'desc', 'Baz': 'desc'}).validate('foo'))
-
-    def test_invalid_option_dict(self):
-        """Validation: test when a string is not a valid option in a dict."""
-        from natcap.invest import validation
-        options = {'foo': 'desc', 'bar': 'desc', 'Baz': 'desc'}
-        error_msg = OptionStringInput(id='foo', options=options).validate('FOO')
-        self.assertEqual(
-            error_msg,
-            validation.MESSAGES['INVALID_OPTION'].format(
-                option_list=sorted(options.keys())))
+                option_list=opt.list_options()))
 
 
 class NumberValidation(unittest.TestCase):
@@ -1268,7 +1253,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         input_spec = CSVInput(id='foo', columns=[
             StringInput(id='h1'),
-            OptionStringInput(id='h2', options=['a', 'b']),
+            OptionStringInput(id='h2', options=[Option(key='a'), Option(key='b')]),
             StringInput(id='h3')
         ])
         df = input_spec.get_validated_dataframe(csv_file)
@@ -1746,7 +1731,7 @@ class TestValidationFromSpec(unittest.TestCase):
             OptionStringInput(
                 id="string_a",
                 required="number_a",
-                options=['AAA', 'BBB']
+                options=[Option(key='AAA'), Option(key='BBB')]
             )
         ])
 
@@ -1754,7 +1739,7 @@ class TestValidationFromSpec(unittest.TestCase):
 
         self.assertEqual(
             [(['string_a'], validation.MESSAGES['INVALID_OPTION'].format(
-                option_list=model_spec.get_input('string_a').options))],
+                option_list=model_spec.get_input('string_a').list_options()))],
             validation.validate(args, model_spec))
 
     def test_conditionally_required_vector_fields(self):
