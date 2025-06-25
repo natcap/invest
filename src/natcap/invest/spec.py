@@ -1,4 +1,3 @@
-import dataclasses
 import importlib
 import json
 import logging
@@ -328,13 +327,16 @@ class FileInput(Input):
         ).astype(pandas.StringDtype())
 
 
-@dataclasses.dataclass
-class RasterBand():
+class RasterBand(BaseModel):
     """A single-band raster input, or parameter, of an invest model.
 
     This represents a raster file input (all GDAL-supported raster file types
     are allowed), where only the first band is needed.
     """
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
+    Needed for pint.Unit."""
+
     band_id: typing.Union[int, str] = 1
     """band index used to access the raster band"""
 
@@ -351,7 +353,7 @@ class RasterInput(FileInput):
     This represents a raster file input (all GDAL-supported raster file types
     are allowed), which may have multiple bands.
     """
-    bands: list[RasterBand] = dataclasses.field(default_factory=list)
+    bands: list[RasterBand] = []
     """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
@@ -469,7 +471,7 @@ class VectorInput(FileInput):
     This represents a vector file input (all GDAL-supported vector file types
     are allowed). It is assumed that only the first layer is used.
     """
-    geometry_types: set = dataclasses.field(default_factory=dict)
+    geometry_types: set = set()
     """A set of geometry type(s) that are allowed for this vector"""
 
     fields: typing.Union[list[Input], IterableWithDotAccess, None] = None
@@ -584,7 +586,7 @@ class RasterOrVectorInput(FileInput):
     units: typing.Union[pint.Unit, None] = None
     """Units of measurement of the raster values"""
 
-    geometry_types: set = dataclasses.field(default_factory=dict)
+    geometry_types: set = set()
     """A set of geometry type(s) that are allowed for this vector"""
 
     fields: typing.Union[list[Input], None] = None
@@ -784,7 +786,6 @@ class CSVInput(FileInput):
 
         # drop any empty rows
         df = df.dropna(how="all").reset_index(drop=True)
-
 
         available_cols = set(df.columns)
 
@@ -1262,7 +1263,7 @@ class RasterOutput(Output):
     This represents a raster file output (all GDAL-supported raster file types
     are allowed), which may have multiple bands.
     """
-    bands: list[RasterBand] = dataclasses.field(default_factory=list)
+    bands: list[RasterBand] = []
     """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
@@ -1273,7 +1274,7 @@ class VectorOutput(Output):
     This represents a vector file output (all GDAL-supported vector file types
     are allowed). It is assumed that only the first layer is used.
     """
-    geometry_types: set = dataclasses.field(default_factory=set)
+    geometry_types: set = set()
     """A set of geometry type(s) that are produced in this vector"""
 
     fields: typing.Union[list[Output], None] = None
@@ -1475,7 +1476,7 @@ class ModelSpec(BaseModel):
     same projection. This is only considered if ``validate_spatial_overlap``
     is ``True``."""
 
-    aliases: set = dataclasses.field(default_factory=set)
+    aliases: set = set()
     """Optional. A set of alternative names by which the model can be called
     from the invest command line interface, in addition to the ``model_id``."""
 
@@ -1531,11 +1532,6 @@ class ModelSpec(BaseModel):
                 return str(obj)
             elif isinstance(obj, types.FunctionType):
                 return str(obj)
-            elif dataclasses.is_dataclass(obj):
-                as_dict = dataclasses.asdict(obj)
-                if hasattr(obj, 'type'):
-                    as_dict['type'] = obj.type
-                return as_dict
             elif isinstance(obj, IterableWithDotAccess):
                 return obj.to_json()
             elif obj is int:
