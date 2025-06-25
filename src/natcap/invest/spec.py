@@ -275,7 +275,7 @@ class Input(BaseModel):
             else:
                 return word[0].upper() + word[1:]
 
-        title = ' '.join([capitalize_word(word) for word in title.split(' ')])
+        title = ' '.join([capitalize_word(word) for word in self.name.split(' ')])
         title = '/'.join([capitalize_word(word) for word in title.split('/')])
         return title
 
