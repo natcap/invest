@@ -291,7 +291,7 @@ class Output(BaseModel):
     """Allow fields to have arbitrary types (that don't inherit from BaseModel).
     Needed for pint.Unit."""
 
-    id: str = ''
+    id: str
     """Output identifier that should be unique within a model"""
 
     about: typing.Union[str, None] = None
@@ -372,7 +372,7 @@ class RasterBand(BaseModel):
     data_type: typing.Type = float
     """float or int"""
 
-    units: typing.Union[pint.Unit, None] = None
+    units: typing.Union[pint.Unit, None]
     """units of measurement of the raster band values"""
 
 
@@ -382,7 +382,7 @@ class RasterInput(FileInput):
     This represents a raster file input (all GDAL-supported raster file types
     are allowed), which may have multiple bands.
     """
-    bands: list[RasterBand] = []
+    bands: list[RasterBand]
     """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
@@ -444,7 +444,7 @@ class SingleBandRasterInput(FileInput):
     data_type: typing.Type = float
     """float or int"""
 
-    units: typing.Union[pint.Unit, None] = None
+    units: typing.Union[pint.Unit, None]
     """units of measurement of the raster values"""
 
     projected: typing.Union[bool, None] = None
@@ -500,10 +500,10 @@ class VectorInput(FileInput):
     This represents a vector file input (all GDAL-supported vector file types
     are allowed). It is assumed that only the first layer is used.
     """
-    geometry_types: set = set()
+    geometry_types: set
     """A set of geometry type(s) that are allowed for this vector"""
 
-    fields: typing.Union[list[Input], IterableWithDotAccess, None] = None
+    fields: typing.Union[list[Input], IterableWithDotAccess]
     """An iterable of `Input`s representing the fields that this vector is
     expected to have. The `key` of each input must match the corresponding
     field name."""
@@ -628,13 +628,13 @@ class RasterOrVectorInput(FileInput):
     data_type: typing.Type = float
     """Data type for the raster values (float or int)"""
 
-    units: typing.Union[pint.Unit, None] = None
+    units: typing.Union[pint.Unit, None]
     """Units of measurement of the raster values"""
 
-    geometry_types: set = set()
+    geometry_types: set
     """A set of geometry type(s) that are allowed for this vector"""
 
-    fields: typing.Union[list[Input], None] = None
+    fields: typing.Union[list[Input]]
     """An iterable of `Input`s representing the fields that this vector is
     expected to have. The `key` of each input must match the corresponding
     field name."""
@@ -892,7 +892,7 @@ class DirectoryInput(Input):
     directory. This may also be used to describe an empty directory where model
     outputs will be written to.
     """
-    contents: typing.Union[list[Input], IterableWithDotAccess, None] = None
+    contents: typing.Union[list[Input], IterableWithDotAccess]
     """An iterable of `Input`s representing the contents of this directory. The
     `key` of each input must be the file name or pattern."""
 
@@ -986,7 +986,7 @@ class NumberInput(Input):
     Use a more specific type (such as `IntegerInput`, `RatioInput`, or
     `PercentInput`) where applicable.
     """
-    units: typing.Union[pint.Unit, None] = None
+    units: typing.Union[pint.Unit, None]
     """The units of measurement for this numeric value"""
 
     expression: typing.Union[str, None] = None
@@ -1085,6 +1085,8 @@ class RatioInput(NumberInput):
     """
     type: typing.ClassVar[str] = 'ratio'
 
+    units: typing.ClassVar[None] = None
+
     def validate(self, value):
         """Validate a value against the requirements for this input.
 
@@ -1111,6 +1113,8 @@ class PercentInput(NumberInput):
     a ratio, which ranges from 0 to 1). Values are restricted to the range [0, 100].
     """
     type: typing.ClassVar[str] = 'percent'
+
+    units: typing.ClassVar[None] = None
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1239,15 +1243,22 @@ class OptionStringInput(Input):
     This corresponds to a dropdown menu in the workbench, where the user
     is limited to a set of pre-defined options.
     """
-    options: typing.Union[list[Option], None]
+    options: typing.Union[list[Option]]
     """A list of the values that this input may take. Use this if the set of
-    options is predetermined."""
+    options is predetermined. If using `dropdown_function` instead, this
+    should be an empty list."""
 
     dropdown_function: typing.Union[typing.Callable, None] = None
     """A function that returns a list of the values that this input may take.
     Use this if the set of options must be dynamically generated."""
 
     type: typing.ClassVar[str] = 'option_string'
+
+    @model_validator(mode='after')
+    def check_options(self):
+        if self.dropdown_function and self.options:
+            raise ValueError(f'Cannot have both dropdown_function and options')
+        return self
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1330,7 +1341,7 @@ class RasterOutput(Output):
     This represents a raster file output (all GDAL-supported raster file types
     are allowed), which may have multiple bands.
     """
-    bands: list[RasterBand] = []
+    bands: list[RasterBand]
     """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
@@ -1344,7 +1355,7 @@ class VectorOutput(Output):
     geometry_types: set = set()
     """A set of geometry type(s) that are produced in this vector"""
 
-    fields: typing.Union[list[Output], None] = None
+    fields: list[Output]
     """An iterable of `Output`s representing the fields created in this vector.
     The `key` of each input must match the corresponding field name."""
 
@@ -1406,7 +1417,7 @@ class DirectoryOutput(Output):
     or an unknown number of file-based outputs, by grouping them together in a
     directory.
     """
-    contents: typing.Union[list[Output], None] = None
+    contents: list[Output]
     """An iterable of `Output`s representing the contents of this directory.
     The `key` of each output must be the file name or pattern."""
 
@@ -1836,7 +1847,7 @@ def build_output_spec(key, spec):
         return StringOutput(**base_attrs)
 
     elif t == 'option_string':
-        return OptionStringOutput(options=spec['options'])
+        return OptionStringOutput(**base_attrs, options=spec['options'])
 
     elif t == 'file':
         return FileOutput(**base_attrs)

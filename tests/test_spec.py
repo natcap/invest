@@ -137,6 +137,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         raster_spec = spec.SingleBandRasterInput(
             id="bar",
             data_type=int,
+            units=None,
             about="Description",
             name="Bar"
         )
@@ -248,6 +249,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             about="Description",
             name="Bar",
             data_type=int,
+            units=None,
             geometry_types={"POLYGON"},
             fields=[]
         )
