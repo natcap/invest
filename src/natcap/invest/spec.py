@@ -1294,7 +1294,7 @@ class OptionStringInput(Input):
         """Represent `self.options` as a RST-formatted bulleted list.
 
         Args:
-            options: list of `Option`s to format
+            options: list of Options to format
 
         Returns:
             list of RST-formatted strings, where each is a line in a bullet list
@@ -1551,7 +1551,7 @@ class ModelSpec(BaseModel):
 
     @model_validator(mode='after')
     def check_inputs_in_field_order(self):
-        """Check that all inputs either appear in `input_field_order,
+        """Check that all inputs either appear in `input_field_order`,
         or are marked as hidden."""
 
         found_keys = set()
