@@ -1606,7 +1606,11 @@ class ModelSpec(BaseModel):
             elif obj is float:
                 return 'number'
             elif isinstance(obj, BaseModel):
-                return obj.model_dump(fallback=fallback_serializer)
+                as_dict = obj.model_dump()
+                # type is a ClassVar, so it won't be included in the default dump
+                if hasattr(obj, 'type'):
+                    as_dict['type'] = obj.type
+                return as_dict
             raise TypeError(f'fallback serializer is missing for {type(obj)}')
 
         spec_dict = self.__dict__.copy()
