@@ -59,11 +59,7 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
       if (argsDict[argkey]) {
         value = argsDict[argkey];
       } else { // default to first
-        if (Array.isArray(argsSpec[argkey].options)) {
-          value = argsSpec[argkey].options[0];
-        } else {
-          value = Object.keys(argsSpec[argkey].options)[0];
-        }
+        value = argsSpec[argkey].options[0].key;
       }
       argsDropdownOptions[argkey] = argsSpec[argkey].options;
     } else {
