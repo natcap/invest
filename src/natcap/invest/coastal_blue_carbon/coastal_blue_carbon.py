@@ -2211,7 +2211,7 @@ def validate(args, limit_to=None):
     if ("landcover_transitions_table" not in invalid_keys and
             "landcover_transitions_table" in sufficient_keys):
         transitions_spec = MODEL_SPEC.get_input('landcover_transitions_table')
-        transition_options = transitions_spec.columns.get(
+        transition_options = transitions_spec.get_column(
             '[LULC CODE]').list_options()
         transitions_df = transitions_spec.get_validated_dataframe(
             args['landcover_transitions_table'])

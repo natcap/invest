@@ -1147,7 +1147,7 @@ def validate(args, limit_to=None):
     """
     model_spec = copy.deepcopy(MODEL_SPEC)
     if 'pools_to_calculate' in args and args['pools_to_calculate'] == 'all':
-        model_spec.get_input('biophysical_table_path').columns.get('c_below').required = True
-        model_spec.get_input('biophysical_table_path').columns.get('c_soil').required = True
-        model_spec.get_input('biophysical_table_path').columns.get('c_dead').required = True
+        model_spec.get_input('biophysical_table_path').get_column('c_below').required = True
+        model_spec.get_input('biophysical_table_path').get_column('c_soil').required = True
+        model_spec.get_input('biophysical_table_path').get_column('c_dead').required = True
     return validation.validate(args, model_spec)

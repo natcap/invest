@@ -266,7 +266,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         expected_rst = (
             '.. _carbon-pools-path-columns-lucode:\n\n' +
             '**lucode** (`integer <input_types.html#integer>`__, *required*): ' +
-            carbon.MODEL_SPEC.get_input('carbon_pools_path').columns.get('lucode').about
+            carbon.MODEL_SPEC.get_input('carbon_pools_path').get_column('lucode').about
         )
         self.assertEqual(repr(out), repr(expected_rst))
 

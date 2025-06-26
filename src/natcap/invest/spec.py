@@ -147,37 +147,6 @@ def _check_projection(srs, projected, projection_units):
                 unit_a=projection_units, unit_b=layer_units_name)
 
 
-class IterableWithDotAccess():
-    """Iterable that supports dot notation access by id attribute."""
-
-    def __init__(self, *args):
-        self.args = args
-        self.inputs_dict = {i.id: i for i in args}
-        self.iter_index = 0
-
-    def __iter__(self):
-        return iter(self.args)
-
-    def get(self, key):
-        """Get an item by its id.
-
-        Args:
-            key: the item id
-
-        Returns:
-            the corresponding item
-        """
-        return self.inputs_dict[key]
-
-    def to_json(self):
-        """Return a JSON serializable representation of self.
-
-        Returns:
-            dict mapping item IDs to items
-        """
-        return self.inputs_dict
-
-
 def check_permissions(permissions):
     """
     Validate an rwx-style permissions string.
@@ -503,7 +472,7 @@ class VectorInput(FileInput):
     geometry_types: set
     """A set of geometry type(s) that are allowed for this vector"""
 
-    fields: typing.Union[list[Input], IterableWithDotAccess]
+    fields: list[Input]
     """An iterable of `Input`s representing the fields that this vector is
     expected to have. The `key` of each input must match the corresponding
     field name."""
@@ -518,6 +487,8 @@ class VectorInput(FileInput):
     projection (such as meters) is required, indicate it here."""
 
     type: typing.ClassVar[str] = 'vector'
+
+    _fields_dict: dict[str, Input] = {}
 
     @model_validator(mode='after')
     def check_projected_projection_units(self):
@@ -535,8 +506,10 @@ class VectorInput(FileInput):
         return self
 
     def model_post_init(self, context):
-        if self.fields:
-            self.fields = IterableWithDotAccess(*self.fields)
+        self._fields_dict = {field.id: field for field in self.fields}
+
+    def get_field(self, key: str) -> Input:
+        return self._fields_dict[key]
 
     @timeout
     def validate(self, filepath: str):
@@ -650,8 +623,9 @@ class RasterOrVectorInput(FileInput):
 
     type: typing.ClassVar[str] = 'raster_or_vector'
 
-    single_band_raster_input: typing.Union[SingleBandRasterInput, None] = None
-    vector_input: typing.Union[VectorInput, None] = None
+    _single_band_raster_input: SingleBandRasterInput
+    _vector_input: VectorInput
+    _fields_dict: dict[str, Input] = {}
 
     @model_validator(mode='after')
     def check_projected_projection_units(self):
@@ -661,18 +635,22 @@ class RasterOrVectorInput(FileInput):
         return self
 
     def model_post_init(self, context):
-        self.single_band_raster_input = SingleBandRasterInput(
+        self._single_band_raster_input = SingleBandRasterInput(
             id=self.id,
             data_type=self.data_type,
             units=self.units,
             projected=self.projected,
             projection_units=self.projection_units)
-        self.vector_input = VectorInput(
+        self._vector_input = VectorInput(
             id=self.id,
             geometry_types=self.geometry_types,
             fields=self.fields,
             projected=self.projected,
             projection_units=self.projection_units)
+        self._fields_dict = {field.id: field for field in self.fields}
+
+    def get_field(self, key: str) -> Input:
+        return self.fields_dict[key]
 
     @timeout
     def validate(self, filepath: str):
@@ -689,9 +667,9 @@ class RasterOrVectorInput(FileInput):
         except ValueError as err:
             return str(err)
         if gis_type == pygeoprocessing.RASTER_TYPE:
-            return self.single_band_raster_input.validate(filepath)
+            return self._single_band_raster_input.validate(filepath)
         else:
-            return self.vector_input.validate(filepath)
+            return self._vector_input.validate(filepath)
 
 
 class CSVInput(FileInput):
@@ -703,12 +681,12 @@ class CSVInput(FileInput):
     table structures are often more difficult to use; consider dividing them
     into multiple, simpler tabular inputs.
     """
-    columns: typing.Union[list[Input], IterableWithDotAccess, None] = None
+    columns: typing.Union[list[Input], None] = None
     """An iterable of `Input`s representing the columns that this CSV is
     expected to have. The `id` of each input must match the corresponding
     column header."""
 
-    rows: typing.Union[list[Input], IterableWithDotAccess, None] = None
+    rows: typing.Union[list[Input], None] = None
     """An iterable of `Input`s representing the rows that this CSV is
     expected to have. The `id` of each input must match the corresponding
     row header."""
@@ -719,11 +697,8 @@ class CSVInput(FileInput):
 
     type: typing.ClassVar[str] = 'csv'
 
-    def model_post_init(self, context):
-        if self.rows:
-            self.rows = IterableWithDotAccess(*self.rows)
-        if self.columns:
-            self.columns = IterableWithDotAccess(*self.columns)
+    _columns_dict: dict[str, Input] = {}
+    _fields_dict: dict[str, Input] = {}
 
     @model_validator(mode='after')
     def check_not_both_rows_and_columns(self):
@@ -751,6 +726,18 @@ class CSVInput(FileInput):
             if type(col) not in allowed_types:
                 raise ValueError(f'Column {col} is not an allowed type')
         return self
+
+    def model_post_init(self, context):
+        if self.columns:
+            self._columns_dict = {col.id: col for col in self.columns}
+        if self.rows:
+            self._rows_dict = {row.id: row for row in self.rows}
+
+    def get_column(self, key: str) -> Input:
+        return self._columns_dict[key]
+
+    def get_row(self, key: str) -> Input:
+        return self._rows_dict[key]
 
     @timeout
     def validate(self, filepath: str):
@@ -892,7 +879,7 @@ class DirectoryInput(Input):
     directory. This may also be used to describe an empty directory where model
     outputs will be written to.
     """
-    contents: typing.Union[list[Input], IterableWithDotAccess]
+    contents: list[Input]
     """An iterable of `Input`s representing the contents of this directory. The
     `key` of each input must be the file name or pattern."""
 
@@ -907,9 +894,7 @@ class DirectoryInput(Input):
 
     type: typing.ClassVar[str] = 'directory'
 
-    def model_post_init(self, context):
-        if self.contents:
-            self.contents = IterableWithDotAccess(*self.contents)
+    _contents_dict: dict[str, Input] = {}
 
     @model_validator(mode='after')
     def check_contents_types(self):
@@ -921,6 +906,12 @@ class DirectoryInput(Input):
                 raise ValueError(
                     f'Directory contents {content} is not an allowed type')
         return self
+
+    def model_post_init(self, context):
+        self._contents_dict = {x.id: x for x in self.contents}
+
+    def get_contents(self, key: str) -> Input:
+        return self._contents_dict[key]
 
     @timeout
     def validate(self, dirpath: str):
@@ -1610,8 +1601,6 @@ class ModelSpec(BaseModel):
                 return str(obj)
             elif isinstance(obj, types.FunctionType):
                 return str(obj)
-            elif isinstance(obj, IterableWithDotAccess):
-                return obj.to_json()
             elif obj is int:
                 return 'integer'
             elif obj is float:
@@ -2269,15 +2258,29 @@ def describe_arg_from_name(module_name, *arg_keys):
     """
     # import the specified module (that should have an MODEL_SPEC attribute)
     module = importlib.import_module(module_name)
+
+    # anchor names cannot contain underscores. sphinx will replace them
+    # automatically, but lets explicitly replace them here
+    anchor_name = '-'.join(arg_keys).replace('_', '-')
+
     # start with the spec for all args
     # narrow down to the nested spec indicated by the sequence of arg keys
     spec = module.MODEL_SPEC.get_input(arg_keys[0])
-    for i, key in enumerate(arg_keys[1:]):
+    arg_keys = arg_keys[1:]
+    for i, key in enumerate(arg_keys):
         # convert raster band numbers to ints
-        if arg_keys[i - 1] == 'bands':
+        if i > 0 and arg_keys[i - 1] == 'bands':
             key = int(key)
-        if key in {'bands', 'fields', 'contents', 'columns', 'rows'}:
-            spec = getattr(spec, key)
+        elif i > 0 and arg_keys[i - 1] == 'fields':
+            spec = spec.get_field(key)
+        elif i > 0 and arg_keys[i - 1] == 'contents':
+            spec = spec.get_contents(key)
+        elif i > 0 and arg_keys[i - 1] == 'columns':
+            spec = spec.get_column(key)
+        elif i > 0 and arg_keys[i - 1] == 'rows':
+            spec = spec.get_row(key)
+        elif key in {'bands', 'fields', 'contents', 'columns', 'rows'}:
+            continue
         else:
             try:
                 spec = spec.get(key)
@@ -2293,9 +2296,6 @@ def describe_arg_from_name(module_name, *arg_keys):
     else:
         arg_name = arg_keys[-1]
 
-    # anchor names cannot contain underscores. sphinx will replace them
-    # automatically, but lets explicitly replace them here
-    anchor_name = '-'.join(arg_keys).replace('_', '-')
     rst_description = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
     return f'.. _{anchor_name}:\n\n{rst_description}'
 

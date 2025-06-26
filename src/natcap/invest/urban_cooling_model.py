@@ -1542,15 +1542,15 @@ def validate(args, limit_to=None):
             'cc_method' not in invalid_keys):
         spec = copy.deepcopy(MODEL_SPEC.get_input('biophysical_table_path'))
         if args['cc_method'] == 'factors':
-            spec.columns.get('shade').required = True
-            spec.columns.get('albedo').required = True
+            spec.get_column('shade').required = True
+            spec.get_column('albedo').required = True
         else:
             # args['cc_method'] must be 'intensity'.
             # If args['cc_method'] isn't one of these two allowed values
             # ('intensity' or 'factors'), it'll be caught by
             # validation.validate due to the allowed values stated in
             # MODEL_SPEC.
-            spec.columns.get('building_intensity').required = True
+            spec.get_column('building_intensity').required = True
 
         error_msg = spec.validate(args['biophysical_table_path'])
         if error_msg:
