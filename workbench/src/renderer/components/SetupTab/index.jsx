@@ -58,8 +58,10 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
     } else if (argsSpec[argkey].type === 'option_string') {
       if (argsDict[argkey]) {
         value = argsDict[argkey];
-      } else { // default to first
+      } else if (argsSpec[argkey].options.length > 0) { // default to first
         value = argsSpec[argkey].options[0].key;
+      } else {
+        value = undefined; // for dynamic dropdowns before the values are initialized
       }
       argsDropdownOptions[argkey] = argsSpec[argkey].options;
     } else {
