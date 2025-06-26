@@ -153,24 +153,15 @@ describe('Arguments form input types', () => {
     expect(input).toBeChecked();
   });
 
-  test('render a select input for an option_string dict', async () => {
+  test('render a select input for an option_string', async () => {
     const spec = baseArgsSpec('option_string');
-    spec.args.arg.options = {
-      a: { display_name: 'Option A' },
-      b: { display_name: 'Option B' },
-    };
+    spec.args.arg.options = [
+      { key: 'a', display_name: 'Option A' },
+      { key: 'b', display_name: 'Option B' },
+    ];
     const { findByLabelText } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveDisplayValue('Option A');
-    expect(input).toHaveValue('a');
-    expect(input).not.toHaveValue('b');
-  });
-
-  test('render a select input for an option_string list', async () => {
-    const spec = baseArgsSpec('option_string');
-    spec.args.arg.options = ['a', 'b'];
-    const { findByLabelText } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
-    const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
