@@ -1,5 +1,4 @@
 """InVEST Wave Energy Model Core Code"""
-import dataclasses
 import math
 import os
 import logging
@@ -42,36 +41,6 @@ PERCENTILE_TABLE_FIELDS = {
         "about": gettext(
             "Number of pixels whose wave energy values "
             "fall into this percentile bin.")
-    }
-}
-
-LAND_GRID_POINT_FIELDS = {
-    "id": {
-        "type": "integer",
-        "about": gettext("Unique identifier for each point.")},
-    "type": {
-        "type": "option_string",
-        "options": {
-            "LAND": {"description": gettext(
-                "This is a land connection point")},
-            "GRID": {"description": gettext(
-                "This is a grid connection point")}
-        },
-        "about": gettext("The type of connection at this point.")
-    },
-    "lat": {
-        "type": "number",
-        "units": u.degree,
-        "about": gettext("Latitude of the connection point.")
-    },
-    "long": {
-        "type": "number",
-        "units": u.degree,
-        "about": gettext("Longitude of the connection point.")
-    },
-    "location": {
-        "type": "freestyle_string",
-        "about": gettext("Name for the connection point location.")
     }
 }
 
@@ -286,32 +255,27 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.FileInput(
                     id="Global_WW3.txt.bin", about=gettext("Global WaveWatchIII data.")
                 )
-            ],
-            permissions="rx",
-            must_exist=None
+            ]
         ),
         spec.OptionStringInput(
             id="analysis_area",
             name=gettext("analysis area"),
             about=gettext("The analysis area over which to run the model."),
-            options={
-                "westcoast": {"display_name": "West Coast of North America and Hawaii"},
-                "eastcoast": {
-                    "display_name": "East Coast of North America and Puerto Rico"
-                },
-                "northsea4": {"display_name": "North Sea 4 meter resolution"},
-                "northsea10": {"display_name": "North Sea 10 meter resolution"},
-                "australia": {"display_name": "Australia"},
-                "global": {"display_name": "Global"},
-            }
+            options=[
+                spec.Option(key="westcoast", display_name="West Coast of North America and Hawaii"),
+                spec.Option(key="eastcoast", display_name="East Coast of North America and Puerto Rico"),
+                spec.Option(key="northsea4", display_name="North Sea 4 meter resolution"),
+                spec.Option(key="northsea10", display_name="North Sea 10 meter resolution"),
+                spec.Option(key="australia", display_name="Australia"),
+                spec.Option(key="global", display_name="Global")
+            ]
         ),
-        dataclasses.replace(
-            spec.AOI,
+        spec.AOI.model_copy(update=dict(
             id="aoi_path",
             required=False,
             projected=True,
             projection_units=u.meter
-        ),
+        )),
         spec.CSVInput(
             id="machine_perf_path",
             name=gettext("machine performance table"),
@@ -383,10 +347,10 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.OptionStringInput(
                     id="type",
                     about=gettext("The type of connection at this point."),
-                    options={
-                        "LAND": {"description": "This is a land connection point"},
-                        "GRID": {"description": "This is a grid connection point"},
-                    }
+                    options=[
+                        spec.Option(key="LAND", about="This is a land connection point"),
+                        spec.Option(key="GRID", about="This is a grid connection point")
+                    ]
                 ),
                 spec.NumberInput(
                     id="lat",
@@ -516,14 +480,10 @@ MODEL_SPEC = spec.ModelSpec(
                         spec.OptionStringOutput(
                             id="type",
                             about=gettext("The type of connection at this point."),
-                            options={
-                                "LAND": {
-                                    "description": "This is a land connection point"
-                                },
-                                "GRID": {
-                                    "description": "This is a grid connection point"
-                                },
-                            }
+                            options=[
+                                spec.Option(key="LAND", about="This is a land connection point"),
+                                spec.Option(key="GRID", about="This is a grid connection point")
+                            ]
                         ),
                         spec.NumberOutput(
                             id="lat",
@@ -537,7 +497,8 @@ MODEL_SPEC = spec.ModelSpec(
                         ),
                         spec.StringOutput(
                             id="location",
-                            about=gettext("Name for the connection point location.")
+                            about=gettext("Name for the connection point location."),
+                            regexp=None
                         )
                     ]
                 ),
@@ -553,14 +514,10 @@ MODEL_SPEC = spec.ModelSpec(
                         spec.OptionStringOutput(
                             id="type",
                             about=gettext("The type of connection at this point."),
-                            options={
-                                "LAND": {
-                                    "description": "This is a land connection point"
-                                },
-                                "GRID": {
-                                    "description": "This is a grid connection point"
-                                },
-                            }
+                            options=[
+                                spec.Option(key="LAND", about="This is a land connection point"),
+                                spec.Option(key="GRID", about="This is a grid connection point")
+                            ]
                         ),
                         spec.NumberOutput(
                             id="lat",
@@ -574,7 +531,8 @@ MODEL_SPEC = spec.ModelSpec(
                         ),
                         spec.StringOutput(
                             id="location",
-                            about=gettext("Name for the connection point location.")
+                            about=gettext("Name for the connection point location."),
+                            regexp=None
                         )
                     ]
                 ),

@@ -1,5 +1,4 @@
 """DelineateIt wrapper for pygeoprocessing's watershed delineation routine."""
-import dataclasses
 import logging
 import os
 import time
@@ -83,15 +82,14 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required=False
         ),
-        dataclasses.replace(
-            spec.THRESHOLD_FLOW_ACCUMULATION,
+        spec.THRESHOLD_FLOW_ACCUMULATION.model_copy(update=dict(
             id="flow_threshold",
             required="snap_points",
             allowed="snap_points",
             about=(
                 spec.THRESHOLD_FLOW_ACCUMULATION.about + " " +
                 gettext("Required if Snap Points is selected."))
-        ),
+        )),
         spec.NumberInput(
             id="snap_distance",
             name=gettext("snap distance"),
@@ -116,20 +114,14 @@ MODEL_SPEC = spec.ModelSpec(
         )
     ],
     outputs=[
-        dataclasses.replace(
-            spec.FILLED_DEM,
-            id="filled_dem.tif"
-        ),
+        spec.FILLED_DEM.model_copy(update=dict(id="filled_dem.tif")),
         spec.SingleBandRasterOutput(
             id="flow_direction.tif",
             about=gettext("D8 flow direction."),
             data_type=int,
             units=None
         ),
-        dataclasses.replace(
-            spec.FLOW_ACCUMULATION,
-            id="flow_accumulation.tif"
-        ),
+        spec.FLOW_ACCUMULATION.model_copy(update=dict(id="flow_accumulation.tif")),
         spec.VectorOutput(
             id="preprocessed_geometries.gpkg",
             about=gettext(
@@ -147,10 +139,7 @@ MODEL_SPEC = spec.ModelSpec(
             },
             fields=[]
         ),
-        dataclasses.replace(
-            spec.STREAM,
-            id="streams.tif"
-        ),
+        spec.STREAM.model_copy(update=dict(id="streams.tif")),
         spec.VectorOutput(
             id="snapped_outlets.gpkg",
             about=gettext(

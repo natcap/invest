@@ -7,7 +7,6 @@ The SDR method in this model is based on:
     large watersheds." Journal of Soil and Water Conservation 63.3 (2008):
     105-111.
 """
-import dataclasses
 import logging
 import os
 
@@ -209,10 +208,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=u.metric_ton / u.hectare
         ),
-        dataclasses.replace(
-            spec.STREAM,
-            id="stream.tif"
-        ),
+        spec.STREAM.model_copy(update=dict(id="stream.tif")),
         spec.SingleBandRasterOutput(
             id="stream_and_drainage.tif",
             about=gettext(
@@ -322,14 +318,8 @@ MODEL_SPEC = spec.ModelSpec(
                     data_type=float,
                     units=u.metric_ton / u.hectare / u.year
                 ),
-                dataclasses.replace(
-                    spec.FLOW_ACCUMULATION,
-                    id="flow_accumulation.tif"
-                ),
-                dataclasses.replace(
-                    spec.FLOW_DIRECTION,
-                    id="flow_direction.tif"
-                ),
+                spec.FLOW_ACCUMULATION.model_copy(update=dict(id="flow_accumulation.tif")),
+                spec.FLOW_DIRECTION.model_copy(update=dict(id="flow_direction.tif")),
                 spec.SingleBandRasterOutput(
                     id="ic.tif",
                     about=gettext("Index of connectivity (Eq. (70))"),
@@ -342,10 +332,7 @@ MODEL_SPEC = spec.ModelSpec(
                     data_type=float,
                     units=u.none
                 ),
-                dataclasses.replace(
-                    spec.FILLED_DEM,
-                    id="pit_filled_dem.tif"
-                ),
+                spec.FILLED_DEM.model_copy(update=dict(id="pit_filled_dem.tif")),
                 spec.SingleBandRasterOutput(
                     id="s_accumulation.tif",
                     about=gettext(

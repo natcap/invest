@@ -1,6 +1,5 @@
 """InVEST Recreation Client."""
 import concurrent.futures
-import dataclasses
 import json
 import logging
 import math
@@ -118,10 +117,7 @@ MODEL_SPEC = spec.ModelSpec(
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        dataclasses.replace(
-            spec.AOI,
-            id="aoi_path"
-        ),
+        spec.AOI.model_copy(update=dict(id="aoi_path")),
         spec.StringInput(
             id="hostname",
             name=gettext("hostname"),
@@ -183,10 +179,10 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required="grid_aoi",
             allowed="grid_aoi",
-            options={
-                "square": {"display_name": "square"},
-                "hexagon": {"display_name": "hexagon"},
-            }
+            options=[
+                spec.Option(key="square"),
+                spec.Option(key="hexagon")
+            ]
         ),
         spec.NumberInput(
             id="cell_size",
@@ -245,52 +241,45 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.OptionStringInput(
                     id="type",
                     about="The type of predictor file provided in the 'path' column.",
-                    options={
-                        "raster_mean": {
-                            "description": (
+                    options=[
+                        spec.Option(
+                            key="raster_mean",
+                            about=(
                                 "Predictor is a raster. Metric is the mean of values"
-                                " within the AOI grid cell or polygon."
-                            )
-                        },
-                        "raster_sum": {
-                            "description": (
+                                " within the AOI grid cell or polygon.")),
+                        spec.Option(
+                            key="raster_sum",
+                            about=(
                                 "Predictor is a raster. Metric is the sum of values"
-                                " within the AOI grid cell or polygon."
-                            )
-                        },
-                        "point_count": {
-                            "description": (
+                                " within the AOI grid cell or polygon.")),
+                        spec.Option(
+                            key="point_count",
+                            about=(
                                 "Predictor is a point vector. Metric is the number of"
-                                " points within each AOI grid cell or polygon."
-                            )
-                        },
-                        "point_nearest_distance": {
-                            "description": (
+                                " points within each AOI grid cell or polygon.")),
+                        spec.Option(
+                            key="point_nearest_distance",
+                            about=(
                                 "Predictor is a point vector. Metric is the Euclidean"
                                 " distance between the centroid of each AOI grid cell and"
-                                " the nearest point in this layer."
-                            )
-                        },
-                        "line_intersect_length": {
-                            "description": (
+                                " the nearest point in this layer.")),
+                        spec.Option(
+                            key="line_intersect_length",
+                            about=(
                                 "Predictor is a line vector. Metric is the total length"
-                                " of the lines that fall within each AOI grid cell."
-                            )
-                        },
-                        "polygon_area_coverage": {
-                            "description": (
+                                " of the lines that fall within each AOI grid cell.")),
+                        spec.Option(
+                            key="polygon_area_coverage",
+                            about=(
                                 "Predictor is a polygon vector. Metric is the area of"
-                                " overlap between the polygon and each AOI grid cell."
-                            )
-                        },
-                        "polygon_percent_coverage": {
-                            "description": (
+                                " overlap between the polygon and each AOI grid cell.")),
+                        spec.Option(
+                            key="polygon_percent_coverage",
+                            about=(
                                 "Predictor is a polygon vector. Metric is the percentage"
                                 " (0-100) of overlapping area between the polygon and"
-                                " each AOI grid cell."
-                            )
-                        },
-                    }
+                                " each AOI grid cell."))
+                    ]
                 )
             ],
             index_col="id"
@@ -330,52 +319,45 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.OptionStringInput(
                     id="type",
                     about="The type of predictor file provided in the 'path' column.",
-                    options={
-                        "raster_mean": {
-                            "description": (
+                    options=[
+                        spec.Option(
+                            key="raster_mean",
+                            about=(
                                 "Predictor is a raster. Metric is the mean of values"
-                                " within the AOI grid cell or polygon."
-                            )
-                        },
-                        "raster_sum": {
-                            "description": (
+                                " within the AOI grid cell or polygon.")),
+                        spec.Option(
+                            key="raster_sum",
+                            about=(
                                 "Predictor is a raster. Metric is the sum of values"
-                                " within the AOI grid cell or polygon."
-                            )
-                        },
-                        "point_count": {
-                            "description": (
+                                " within the AOI grid cell or polygon.")),
+                        spec.Option(
+                            key="point_count",
+                            about=(
                                 "Predictor is a point vector. Metric is the number of"
-                                " points within each AOI grid cell or polygon."
-                            )
-                        },
-                        "point_nearest_distance": {
-                            "description": (
+                                " points within each AOI grid cell or polygon.")),
+                        spec.Option(
+                            key="point_nearest_distance",
+                            about=(
                                 "Predictor is a point vector. Metric is the Euclidean"
                                 " distance between the centroid of each AOI grid cell and"
-                                " the nearest point in this layer."
-                            )
-                        },
-                        "line_intersect_length": {
-                            "description": (
+                                " the nearest point in this layer.")),
+                        spec.Option(
+                            key="line_intersect_length",
+                            about=(
                                 "Predictor is a line vector. Metric is the total length"
-                                " of the lines that fall within each AOI grid cell."
-                            )
-                        },
-                        "polygon_area_coverage": {
-                            "description": (
+                                " of the lines that fall within each AOI grid cell.")),
+                        spec.Option(
+                            key="polygon_area_coverage",
+                            about=(
                                 "Predictor is a polygon vector. Metric is the area of"
-                                " overlap between the polygon and each AOI grid cell."
-                            )
-                        },
-                        "polygon_percent_coverage": {
-                            "description": (
+                                " overlap between the polygon and each AOI grid cell.")),
+                        spec.Option(
+                            key="polygon_percent_coverage",
+                            about=(
                                 "Predictor is a polygon vector. Metric is the percentage"
                                 " (0-100) of overlapping area between the polygon and"
-                                " each AOI grid cell."
-                            )
-                        },
-                    }
+                                " each AOI grid cell."))
+                    ]
                 )
             ],
             index_col="id"

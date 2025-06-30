@@ -1,5 +1,4 @@
 """InVEST Scenic Quality Model."""
-import dataclasses
 import logging
 import math
 import os
@@ -64,10 +63,7 @@ MODEL_SPEC = spec.ModelSpec(
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        dataclasses.replace(
-            spec.AOI,
-            id="aoi_path"
-        ),
+        spec.AOI.model_copy(update=dict(id="aoi_path")),
         spec.VectorInput(
             id="structure_path",
             name=gettext("features impacting scenic quality"),
@@ -114,11 +110,10 @@ MODEL_SPEC = spec.ModelSpec(
             ],
             projected=None
         ),
-        dataclasses.replace(
-            spec.PROJECTED_DEM,
+        spec.PROJECTED_DEM.model_copy(update=dict(
             id="dem_path",
             projection_units=u.meter
-        ),
+        )),
         spec.RatioInput(
             id="refraction",
             name=gettext("refractivity coefficient"),
@@ -143,11 +138,11 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required="do_valuation",
             allowed="do_valuation",
-            options={
-                "linear": {"display_name": "linear: a + bx"},
-                "logarithmic": {"display_name": "logarithmic: a + b log(x+1)"},
-                "exponential": {"display_name": "exponential: a * e^(-bx)"},
-            }
+            options=[
+                spec.Option(key="linear", display_name="linear: a + bx"),
+                spec.Option(key="logarithmic", display_name="logarithmic: a + b log(x+1)"),
+                spec.Option(key="exponential", display_name="exponential: a * e^(-bx)"),
+            ]
         ),
         spec.NumberInput(
             id="a_coef",
@@ -333,10 +328,6 @@ def execute(args):
             'a': float(args['a_coef']),
             'b': float(args['b_coef']),
         }
-        if (args['valuation_function'] not in
-                MODEL_SPEC.get_input('valuation_function').options):
-            raise ValueError('Valuation function type %s not recognized' %
-                             args['valuation_function'])
         max_valuation_radius = float(args['max_valuation_radius'])
 
     # Create output and intermediate directory

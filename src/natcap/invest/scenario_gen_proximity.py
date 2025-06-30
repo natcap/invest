@@ -1,6 +1,5 @@
 """Scenario Generation: Proximity Based."""
 import collections
-import dataclasses
 import heapq
 import logging
 import math
@@ -101,15 +100,14 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none,
             expression="value > 0"
         ),
-        dataclasses.replace(
-            spec.AOI,
+        spec.AOI.model_copy(update=dict(
             id="aoi_path",
             about=gettext(
                 "Area over which to run the conversion. Provide this input if change is"
                 " only desired in a subregion of the Base LULC map."
             ),
             required=False
-        ),
+        )),
         spec.BooleanInput(
             id="convert_farthest_from_edge",
             name=gettext("convert farthest from edge"),

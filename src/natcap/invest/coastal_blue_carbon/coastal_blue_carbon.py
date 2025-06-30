@@ -465,27 +465,25 @@ MODEL_SPEC = spec.ModelSpec(
                         " Table 'lulc-class' column. A cell may be left empty if the"
                         " transition never occurs."
                     ),
-                    options={
-                        "accum": {"description": "a state of carbon accumulation"},
-                        "high-impact-disturb": {
-                            "description": "high carbon disturbance rate"
-                        },
-                        "med-impact-disturb": {
-                            "description": "medium carbon disturbance rate"
-                        },
-                        "low-impact-disturb": {
-                            "description": "low carbon disturbance rate"
-                        },
-                        "NCC": {
-                            "description": (
+                    options=[
+                        spec.Option(key="accum", about="a state of carbon accumulation"),
+                        spec.Option(key="high-impact-disturb",
+                                    about="high carbon disturbance rate"),
+                        spec.Option(key="med-impact-disturb",
+                                    about="medium carbon disturbance rate"),
+                        spec.Option(key="low-impact-disturb",
+                                    about="low carbon disturbance rate"),
+                        spec.Option(
+                            key="NCC",
+                            about=(
                                 "no change in carbon. Defining 'NCC' for a transition"
                                 " will halt any in-progress carbon accumulation or"
                                 " emissions at the year of transition, until the class"
                                 " transitions again to a state of accumulation or"
                                 " disturbance."
                             )
-                        },
-                    }
+                        )
+                    ]
                 )
             ],
             index_col="lulc-class"
@@ -2374,10 +2372,8 @@ def validate(args, limit_to=None):
     if ("landcover_transitions_table" not in invalid_keys and
             "landcover_transitions_table" in sufficient_keys):
         transitions_spec = MODEL_SPEC.get_input('landcover_transitions_table')
-        transition_options = list(
-            transitions_spec.columns.get('[LULC CODE]').options.keys())
-        # lowercase options since utils call will lowercase table values
-        transition_options = [x.lower() for x in transition_options]
+        transition_options = transitions_spec.get_column(
+            '[LULC CODE]').list_options()
         transitions_df = transitions_spec.get_validated_dataframe(
             args['landcover_transitions_table'])
         transitions_mask = ~transitions_df.isin(transition_options) & ~transitions_df.isna()

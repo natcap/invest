@@ -1,6 +1,5 @@
 """Urban Cooling Model."""
 import copy
-import dataclasses
 import logging
 import math
 import os
@@ -63,14 +62,14 @@ MODEL_SPEC = spec.ModelSpec(
             projected=True,
             projection_units=u.meter
         ),
-        dataclasses.replace(
-            spec.ET0,
-            id="ref_eto_raster_path"
+        spec.SingleBandRasterInput(
+            id="ref_eto_raster_path",
+            name=gettext("reference evapotranspiration"),
+            about=gettext("Map of reference evapotranspiration values."),
+            data_type=float,
+            units=u.millimeter
         ),
-        dataclasses.replace(
-            spec.AOI,
-            id="aoi_vector_path"
-        ),
+        spec.AOI.model_copy(update=dict(id="aoi_vector_path")),
         spec.CSVInput(
             id="biophysical_table_path",
             name=gettext("biophysical table"),
@@ -248,22 +247,18 @@ MODEL_SPEC = spec.ModelSpec(
             id="cc_method",
             name=gettext("cooling capacity calculation method"),
             about=gettext("The air temperature predictor method to use."),
-            options={
-                "factors": {
-                    "display_name": "factors",
-                    "description": (
+            options=[
+                spec.Option(
+                    key="factors",
+                    about=(
                         "Use the weighted shade, albedo, and ETI factors as a temperature"
-                        " predictor (for daytime temperatures)."
-                    ),
-                },
-                "intensity": {
-                    "display_name": "intensity",
-                    "description": (
+                        " predictor (for daytime temperatures).")),
+                spec.Option(
+                    key="intensity",
+                    about=(
                         "Use building intensity as a temperature predictor (for nighttime"
-                        " temperatures)."
-                    ),
-                },
-            }
+                        " temperatures)."))
+            ]
         ),
         spec.RatioInput(
             id="cc_weight_shade",
@@ -1623,15 +1618,15 @@ def validate(args, limit_to=None):
             'cc_method' not in invalid_keys):
         spec = copy.deepcopy(MODEL_SPEC.get_input('biophysical_table_path'))
         if args['cc_method'] == 'factors':
-            spec.columns.get('shade').required = True
-            spec.columns.get('albedo').required = True
+            spec.get_column('shade').required = True
+            spec.get_column('albedo').required = True
         else:
             # args['cc_method'] must be 'intensity'.
             # If args['cc_method'] isn't one of these two allowed values
             # ('intensity' or 'factors'), it'll be caught by
             # validation.validate due to the allowed values stated in
             # MODEL_SPEC.
-            spec.columns.get('building_intensity').required = True
+            spec.get_column('building_intensity').required = True
 
         error_msg = spec.validate(args['biophysical_table_path'])
         if error_msg:

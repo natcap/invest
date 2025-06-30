@@ -1,5 +1,4 @@
 """Urban Flood Risk Mitigation model."""
-import dataclasses
 import logging
 import os
 
@@ -39,10 +38,7 @@ MODEL_SPEC = spec.ModelSpec(
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        dataclasses.replace(
-            spec.AOI,
-            id="aoi_watersheds_path"
-        ),
+        spec.AOI.model_copy(update=dict(id="aoi_watersheds_path")),
         spec.NumberInput(
             id="rainfall_depth",
             name=gettext("rainfall depth"),
@@ -61,11 +57,10 @@ MODEL_SPEC = spec.ModelSpec(
             units=None,
             projected=True
         ),
-        dataclasses.replace(
-            spec.SOIL_GROUP,
+        spec.SOIL_GROUP.model_copy(update=dict(
             id="soils_hydrological_group_raster_path",
             projected=True
-        ),
+        )),
         spec.CSVInput(
             id="curve_number_table_path",
             name=gettext("biophysical table"),

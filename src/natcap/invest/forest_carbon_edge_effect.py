@@ -4,7 +4,6 @@ An implementation of the model described in 'Degradation in carbon stocks
 near tropical forest edges', by Chaplin-Kramer et. al (2015).
 """
 import copy
-import dataclasses
 import logging
 import os
 import pickle
@@ -73,12 +72,11 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none,
             expression="value > 0 and value.is_integer()"
         ),
-        dataclasses.replace(
-            spec.AOI,
+        spec.AOI.model_copy(update=dict(
             id="aoi_vector_path",
             required=False,
             projected=True
-        ),
+        )),
         spec.CSVInput(
             id="biophysical_table_path",
             name=gettext("biophysical table"),
@@ -149,21 +147,20 @@ MODEL_SPEC = spec.ModelSpec(
             id="pools_to_calculate",
             name=gettext("carbon pools to calculate"),
             about=gettext("Which carbon pools to consider."),
-            options={
-                "all": {
-                    "display_name": "all",
-                    "description": (
+            options=[
+                spec.Option(
+                    key="all",
+                    about=(
                         "Use all pools (aboveground, belowground, soil, and dead matter)"
-                        " in the carbon pool calculation."
-                    ),
-                },
-                "above_ground": {
-                    "display_name": "aboveground only",
-                    "description": (
+                        " in the carbon pool calculation.")),
+                spec.Option(
+                    key="above_ground",
+                    display_name="aboveground only",
+                    about=(
                         "Only use the aboveground pool in the carbon pool calculation."
-                    ),
-                },
-            }
+                    )
+                )
+            ]
         ),
         spec.BooleanInput(
             id="compute_forest_edge_effects",
@@ -186,11 +183,11 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.OptionStringInput(
                     id="method",
                     about=gettext("Optimal regression model for the area."),
-                    options={
-                        "1": {"description": "asymptotic"},
-                        "2": {"description": "logarithmic"},
-                        "3": {"description": "linear"},
-                    }
+                    options=[
+                        spec.Option(key="1", about="asymptotic"),
+                        spec.Option(key="2", about="logarithmic"),
+                        spec.Option(key="3", about="linear"),
+                    ]
                 ),
                 spec.NumberInput(
                     id="theta1",
@@ -1192,7 +1189,7 @@ def validate(args, limit_to=None):
     """
     model_spec = copy.deepcopy(MODEL_SPEC)
     if 'pools_to_calculate' in args and args['pools_to_calculate'] == 'all':
-        model_spec.get_input('biophysical_table_path').columns.get('c_below').required = True
-        model_spec.get_input('biophysical_table_path').columns.get('c_soil').required = True
-        model_spec.get_input('biophysical_table_path').columns.get('c_dead').required = True
+        model_spec.get_input('biophysical_table_path').get_column('c_below').required = True
+        model_spec.get_input('biophysical_table_path').get_column('c_soil').required = True
+        model_spec.get_input('biophysical_table_path').get_column('c_dead').required = True
     return validation.validate(args, model_spec)

@@ -102,18 +102,19 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.OptionStringOutput(
                     id="[LULC]",
                     about=None,
-                    options={
-                        "accum": {"description": "a state of carbon accumulation"},
-                        "disturb": {
-                            "description": (
+                    options=[
+                        spec.Option(key="accum", about="a state of carbon accumulation"),
+                        spec.Option(
+                            key="disturb",
+                            about=(
                                 "Carbon disturbance occurred. Replace this with one of"
                                 " ‘low-impact-disturb’, ‘med-impact-disturb’, or"
                                 " ‘high-impact-disturb’ to indicate the degree of"
                                 " disturbance."
                             )
-                        },
-                        "NCC": {"description": "no change in carbon"},
-                    }
+                        ),
+                        spec.Option(key="NCC", about="no change in carbon"),
+                    ]
                 )
             ],
             index_col="lulc-class"

@@ -5,9 +5,9 @@ MODEL_SPEC = spec.ModelSpec(
         spec.FileInput(id='foo'),
         spec.FileInput(id='bar')
     ],
-    outputs={},
+    outputs=[],
     model_id='duplicate_filepaths_model',
     model_title='',
     userguide='',
-    input_field_order=[]
+    input_field_order=[['foo', 'bar']]
 )

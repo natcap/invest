@@ -1,6 +1,5 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
 import copy
-import dataclasses
 import logging
 import os
 import pickle
@@ -101,21 +100,18 @@ MODEL_SPEC = spec.ModelSpec(
                         " 'application-rate' | 'measured-runoff'"
                     ),
                     required="calc_p",
-                    options={
-                        "application-rate": {
-                            "description": (
+                    options=[
+                        spec.Option(
+                            key="application-rate",
+                            about=(
                                 "Treat the load values as nutrient application rates"
                                 " (e.g. fertilizer, livestock waste, ...).The model will"
                                 " adjust the load using the application rate and"
-                                " retention efficiency: load_p * (1 - eff_p)."
-                            )
-                        },
-                        "measured-runoff": {
-                            "description": (
-                                "Treat the load values as measured contaminant runoff."
-                            )
-                        },
-                    }
+                                " retention efficiency: load_p * (1 - eff_p).")),
+                        spec.Option(
+                            key="measured-runoff",
+                            about="Treat the load values as measured contaminant runoff.")
+                    ]
                 ),
                 spec.OptionStringInput(
                     id="load_type_n",
@@ -125,21 +121,18 @@ MODEL_SPEC = spec.ModelSpec(
                         " 'application-rate' | 'measured-runoff'"
                     ),
                     required="calc_n",
-                    options={
-                        "application-rate": {
-                            "description": (
+                    options=[
+                        spec.Option(
+                            key="application-rate",
+                            about=(
                                 "Treat the load values as nutrient application rates"
                                 " (e.g. fertilizer, livestock waste, ...).The model will"
                                 " adjust the load using the application rate and"
-                                " retention efficiency: load_n * (1 - eff_n)."
-                            )
-                        },
-                        "measured-runoff": {
-                            "description": (
-                                "Treat the load values as measured contaminant runoff."
-                            )
-                        },
-                    }
+                                " retention efficiency: load_n * (1 - eff_n).")),
+                        spec.Option(
+                            key="measured-runoff",
+                            about="Treat the load values as measured contaminant runoff.")
+                    ]
                 ),
                 spec.NumberInput(
                     id="load_n",
@@ -363,10 +356,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=u.kilogram / u.hectare
         ),
-        dataclasses.replace(
-            spec.STREAM,
-            id="stream.tif"
-        ),
+        spec.STREAM.model_copy(update=dict(id="stream.tif")),
         spec.DirectoryOutput(
             id="intermediate_outputs",
             about=None,
@@ -441,14 +431,8 @@ MODEL_SPEC = spec.ModelSpec(
                     data_type=float,
                     units=None
                 ),
-                dataclasses.replace(
-                    spec.FLOW_ACCUMULATION,
-                    id="flow_accumulation.tif"
-                ),
-                dataclasses.replace(
-                    spec.FLOW_DIRECTION,
-                    id="flow_direction.tif"
-                ),
+                spec.FLOW_ACCUMULATION.model_copy(update=dict(id="flow_accumulation.tif")),
+                spec.FLOW_DIRECTION.model_copy(update=dict(id="flow_direction.tif")),
                 spec.SingleBandRasterOutput(
                     id="ic_factor.tif",
                     about=gettext("Index of connectivity"),
@@ -615,10 +599,7 @@ MODEL_SPEC = spec.ModelSpec(
                     data_type=float,
                     units=u.none
                 ),
-                dataclasses.replace(
-                    spec.FILLED_DEM,
-                    id="filled_dem.tif"
-                ),
+                spec.FILLED_DEM.model_copy(update=dict(id="filled_dem.tif")),
                 spec.SLOPE,
                 spec.FileOutput(
                     id="subsurface_export_n.pickle",
@@ -1479,11 +1460,11 @@ def validate(args, limit_to=None):
 
     for param in ['load', 'eff', 'crit_len']:
         for nutrient in nutrients_selected:
-            spec_copy.get_input('biophysical_table_path').columns.get(
+            spec_copy.get_input('biophysical_table_path').get_column(
                 f'{param}_{nutrient}').required = True
 
     if 'n' in nutrients_selected:
-        spec_copy.get_input('biophysical_table_path').columns.get(
+        spec_copy.get_input('biophysical_table_path').get_column(
             'proportion_subsurface_n').required = True
 
     validation_warnings = validation.validate(args, spec_copy)

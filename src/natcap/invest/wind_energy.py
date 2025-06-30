@@ -1,5 +1,4 @@
 """InVEST Wind Energy model."""
-import dataclasses
 import logging
 import math
 import os
@@ -179,8 +178,7 @@ MODEL_SPEC = spec.ModelSpec(
             ],
             index_col=None
         ),
-        dataclasses.replace(
-            spec.AOI,
+        spec.AOI.model_copy(update=dict(
             id="aoi_vector_path",
             about=gettext(
                 "Map of the area(s) of interest over which to run the model and aggregate"
@@ -189,7 +187,7 @@ MODEL_SPEC = spec.ModelSpec(
             required="valuation_container",
             projected=True,
             projection_units=u.meter
-        ),
+        )),
         spec.SingleBandRasterInput(
             id="bathymetry_path",
             name=gettext("bathymetry"),
@@ -450,10 +448,10 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.OptionStringInput(
                     id="type",
                     about=gettext("The type of connection at this point."),
-                    options={
-                        "LAND": {"description": "This is a land connection point"},
-                        "GRID": {"description": "This is a grid connection point"},
-                    }
+                    options=[
+                        spec.Option(key="LAND", about="This is a land connection point"),
+                        spec.Option(key="GRID", about="This is a grid connection point")
+                    ]
                 ),
                 spec.NumberInput(
                     id="lati",

@@ -168,63 +168,51 @@ MODEL_SPEC = spec.ModelSpec(
                 " distance-weighted contribution to an urban nature pixel according to"
                 " the selected distance-weighting function."
             ),
-            options={
-                "density": {
-                    "description": (
+            options=[
+                spec.Option(
+                    key="density",
+                    about=(
                         "Contributions to an urban nature pixel decrease faster as"
                         " distances approach the search radius. Weights are calculated by"
-                        ' "weight = 0.75 * (1-(pixel_dist / search_radius)^2)"'
-                    ),
-                    "display_name": "Density",
-                },
-                "dichotomy": {
-                    "description": (
+                        ' "weight = 0.75 * (1-(pixel_dist / search_radius)^2)"')),
+                spec.Option(
+                    key="dichotomy",
+                    about=(
                         "All pixels within the search radius contribute equally to an"
-                        " urban nature pixel."
-                    ),
-                    "display_name": "Dichotomy",
-                },
-                "exponential": {
-                    "description": (
+                        " urban nature pixel.")),
+                spec.Option(
+                    key="exponential",
+                    about=(
                         "Contributions to an urban nature pixel decrease exponentially,"
-                        ' where "weight = e^(-pixel_dist / search_radius)"'
-                    ),
-                    "display_name": "Exponential",
-                },
-                "gaussian": {
-                    "description": (
+                        ' where "weight = e^(-pixel_dist / search_radius)"')),
+                spec.Option(
+                    key="gaussian",
+                    about=(
                         "Contributions to an urban nature pixel decrease according to a"
-                        ' normal ("gaussian") distribution with a sigma of 3.'
-                    ),
-                    "display_name": "Gaussian",
-                },
-            }
+                        ' normal ("gaussian") distribution with a sigma of 3.'),
+                    display_name="Gaussian")
+            ]
         ),
         spec.OptionStringInput(
             id="search_radius_mode",
             name=gettext("search radius mode"),
             about=gettext("The type of search radius to use."),
-            options={
-                "uniform radius": {
-                    "display_name": "Uniform radius",
-                    "description": (
-                        "The search radius is the same for all types of urban nature."
-                    ),
-                },
-                "radius per urban nature class": {
-                    "display_name": "Radius defined per urban nature class",
-                    "description": (
+            options=[
+                spec.Option(
+                    key="uniform radius",
+                    display_name="Uniform radius",
+                    about="The search radius is the same for all types of urban nature."),
+                spec.Option(
+                    key="radius per urban nature class",
+                    display_name="Radius defined per urban nature class",
+                    about=(
                         "The search radius is defined for each distinct urban nature LULC"
-                        " classification."
-                    ),
-                },
-                "radius per population group": {
-                    "display_name": "Radius defined per population group",
-                    "description": (
-                        "The search radius is defined for each distinct population group."
-                    ),
-                },
-            }
+                        " classification.")),
+                spec.Option(
+                    key="radius per population group",
+                    display_name="Radius defined per population group",
+                    about="The search radius is defined for each distinct population group."),
+            ]
         ),
         spec.BooleanInput(
             id="aggregate_by_pop_group",

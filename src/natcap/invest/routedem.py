@@ -1,5 +1,4 @@
 """RouteDEM for exposing the natcap.invest's routing package to UI."""
-import dataclasses
 import logging
 import os
 
@@ -39,10 +38,7 @@ MODEL_SPEC = spec.ModelSpec(
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        dataclasses.replace(
-            spec.DEM,
-            id="dem_path"
-        ),
+        spec.DEM.model_copy(update=dict(id="dem_path")),
         spec.NumberInput(
             id="dem_band_index",
             name=gettext("band index"),
@@ -55,22 +51,18 @@ MODEL_SPEC = spec.ModelSpec(
             id="algorithm",
             name=gettext("routing algorithm"),
             about=gettext("The routing algorithm to use."),
-            options={
-                "D8": {
-                    "display_name": "D8",
-                    "description": (
+            options=[
+                spec.Option(
+                    key="D8",
+                    about=(
                         "All water on a pixel flows into the most downhill of its 8"
-                        " surrounding pixels"
-                    ),
-                },
-                "MFD": {
-                    "display_name": "MFD",
-                    "description": (
+                        " surrounding pixels")),
+                spec.Option(
+                    key="MFD",
+                    about=(
                         "Flow off a pixel is modeled fractionally so that water is split"
-                        " among multiple downslope pixels"
-                    ),
-                },
-            }
+                        " among multiple downslope pixels"))
+            ]
         ),
         spec.BooleanInput(
             id="calculate_flow_direction",
@@ -92,14 +84,13 @@ MODEL_SPEC = spec.ModelSpec(
             required=False,
             allowed="calculate_flow_accumulation"
         ),
-        dataclasses.replace(
-            spec.THRESHOLD_FLOW_ACCUMULATION,
+        spec.THRESHOLD_FLOW_ACCUMULATION.model_copy(update=dict(
             required="calculate_stream_threshold",
             allowed="calculate_stream_threshold",
             about=(
                 spec.THRESHOLD_FLOW_ACCUMULATION.about + " " +
                 gettext("Required if Calculate Streams is selected."))
-        ),
+        )),
         spec.BooleanInput(
             id="calculate_downslope_distance",
             name=gettext("calculate distance to stream"),
@@ -133,23 +124,11 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.TASKGRAPH_DIR,
-        dataclasses.replace(
-            spec.FILLED_DEM,
-            id="filled.tif"
-        ),
-        dataclasses.replace(
-            spec.FLOW_ACCUMULATION,
-            id="flow_accumulation.tif"
-        ),
-        dataclasses.replace(
-            spec.FLOW_DIRECTION,
-            id="flow_direction.tif"
-        ),
+        spec.FILLED_DEM.model_copy(update=dict(id="filled.tif")),
+        spec.FLOW_ACCUMULATION.model_copy(update=dict(id="flow_accumulation.tif")),
+        spec.FLOW_DIRECTION.model_copy(update=dict(id="flow_direction.tif")),
         spec.SLOPE,
-        dataclasses.replace(
-            spec.STREAM,
-            id="stream_mask.tif"
-        ),
+        spec.STREAM.model_copy(update=dict(id="stream_mask.tif")),
         spec.VectorOutput(
             id="strahler_stream_order.gpkg",
             about=gettext(

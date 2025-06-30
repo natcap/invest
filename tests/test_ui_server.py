@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
-from natcap.invest import ui_server
+from natcap.invest import ui_server, models
 from osgeo import gdal
 
 gdal.UseExceptions()
@@ -291,3 +291,8 @@ class EndpointFunctionTests(unittest.TestCase):
         self.assertEqual(
             response.json,
             {'message': 'Metadata profile saved', 'error': False})
+
+    def test_model_specs_serialize(self):
+        """MODEL_SPEC: test each arg spec can serialize to JSON."""
+        for module in models.pyname_to_module.values():
+            module.MODEL_SPEC.to_json()

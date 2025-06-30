@@ -1,5 +1,4 @@
 """Stormwater Retention."""
-import dataclasses
 import logging
 import math
 import os
@@ -177,8 +176,7 @@ MODEL_SPEC = spec.ModelSpec(
             fields=[],
             projected=None
         ),
-        dataclasses.replace(
-            spec.AOI,
+        spec.AOI.model_copy(update=dict(
             id="aggregate_areas_path",
             about=gettext(
                 "Areas over which to aggregate results (typically watersheds or"
@@ -189,7 +187,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " each pollutant provided."
             ),
             required=False
-        ),
+        )),
         spec.NumberInput(
             id="replacement_cost",
             name=gettext("Replacement cost"),

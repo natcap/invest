@@ -1,7 +1,6 @@
 """Habitat risk assessment (HRA) model for InVEST."""
 # -*- coding: UTF-8 -*-
 import collections
-import dataclasses
 import itertools
 import logging
 import math
@@ -108,10 +107,10 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.OptionStringInput(
                     id="type",
                     about=gettext("Whether this row is for a habitat or a stressor."),
-                    options={
-                        "habitat": {"description": "habitat"},
-                        "stressor": {"description": "stressor"},
-                    }
+                    options=[
+                        spec.Option(key="habitat"),
+                        spec.Option(key="stressor")
+                    ]
                 ),
                 spec.NumberInput(
                     id="stressor buffer (meters)",
@@ -159,40 +158,32 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext(
                 "The equation to use to calculate risk from exposure and consequence."
             ),
-            options={
-                "multiplicative": {"display_name": "Multiplicative"},
-                "euclidean": {"display_name": "Euclidean"},
-            }
+            options=[
+                spec.Option(key="multiplicative", display_name="Multiplicative"),
+                spec.Option(key="euclidean", display_name="Euclidean")
+            ]
         ),
         spec.OptionStringInput(
             id="decay_eq",
             name=gettext("decay equation"),
             about=gettext("The equation to model effects of stressors in buffer areas."),
-            options={
-                "none": {
-                    "display_name": "None",
-                    "description": (
-                        "No decay. Stressor has full effect in the buffer area."
-                    ),
-                },
-                "linear": {
-                    "display_name": "Linear",
-                    "description": (
+            options=[
+                spec.Option(
+                    key="none",
+                    about="No decay. Stressor has full effect in the buffer area."),
+                spec.Option(
+                    key="linear",
+                    about=(
                         "Stressor effects in the buffer area decay linearly with distance"
-                        " from the stressor."
-                    ),
-                },
-                "exponential": {
-                    "display_name": "Exponential",
-                    "description": (
+                        " from the stressor.")),
+                spec.Option(
+                    key="exponential",
+                    about=(
                         "Stressor effects in the buffer area decay exponentially with"
-                        " distance from the stressor."
-                    ),
-                },
-            }
+                        " distance from the stressor."))
+            ]
         ),
-        dataclasses.replace(
-            spec.AOI,
+        spec.AOI.model_copy(update=dict(
             id="aoi_vector_path",
             about=gettext(
                 "A GDAL-supported vector file containing features representing one or"
@@ -211,7 +202,7 @@ MODEL_SPEC = spec.ModelSpec(
             ],
             projected=True,
             projection_units=u.meter
-        ),
+        )),
         spec.NumberInput(
             id="n_overlapping_stressors",
             name=gettext("Number of Overlapping Stressors"),
@@ -550,9 +541,6 @@ MODEL_SPEC = spec.ModelSpec(
         spec.TASKGRAPH_DIR
     ]
 )
-
-_VALID_RISK_EQS = set(MODEL_SPEC.get_input('risk_eq').options.keys())
-_VALID_DECAY_TYPES = set(MODEL_SPEC.get_input('decay_eq').options.keys())
 
 
 def execute(args):
@@ -2112,7 +2100,7 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
         ``AssertionError``: When an invalid ``decay_type`` is provided.
     """
     decay_type = decay_type.lower()
-    if decay_type not in _VALID_DECAY_TYPES:
+    if decay_type not in MODEL_SPEC.get_input('decay_eq').list_options():
         raise AssertionError(f'Invalid decay type {decay_type} provided.')
 
     if buffer_distance == 0:
@@ -2345,7 +2333,7 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
         ``AssertionError`` when an invalid risk equation is provided.
     """
     risk_equation = risk_equation.lower()
-    if risk_equation not in _VALID_RISK_EQS:
+    if risk_equation not in MODEL_SPEC.get_input('risk_eq').list_options():
         raise AssertionError(
             f'Invalid risk equation {risk_equation} provided')
 

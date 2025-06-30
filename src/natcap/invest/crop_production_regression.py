@@ -1,6 +1,5 @@
 """InVEST Crop Production Regression Model."""
 import collections
-import dataclasses
 import logging
 import os
 
@@ -18,18 +17,18 @@ from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-CROPS = {
-    "barley": {"description": gettext("Barley")},
-    "maize": {"description": gettext("Maize")},
-    "oilpalm": {"description": gettext("Oil palm fruit")},
-    "potato": {"description": gettext("Potatoes")},
-    "rice": {"description": gettext("Rice")},
-    "soybean": {"description": gettext("Soybeans")},
-    "sugarbeet": {"description": gettext("Sugar beets")},
-    "sugarcane": {"description": gettext("Sugar cane")},
-    "sunflower": {"description": gettext("Sunflower seed")},
-    "wheat": {"description": gettext("Wheat")}
-}
+CROPS = [
+    spec.Option(key="barley", about=gettext("Barley")),
+    spec.Option(key="maize", about=gettext("Maize")),
+    spec.Option(key="oilpalm", about=gettext("Oil palm fruit")),
+    spec.Option(key="potato", about=gettext("Potatoes")),
+    spec.Option(key="rice", about=gettext("Rice")),
+    spec.Option(key="soybean", about=gettext("Soybeans")),
+    spec.Option(key="sugarbeet", about=gettext("Sugar beets")),
+    spec.Option(key="sugarcane", about=gettext("Sugar cane")),
+    spec.Option(key="sunflower", about=gettext("Sunflower seed")),
+    spec.Option(key="wheat", about=gettext("Wheat"))
+]
 
 NUTRIENTS = [
     ("protein", "protein", u.gram/u.hectogram),
@@ -137,11 +136,10 @@ MODEL_SPEC = spec.ModelSpec(
             ],
             index_col="crop_name"
         ),
-        dataclasses.replace(
-            spec.AOI,
+        spec.AOI.model_copy(update=dict(
             id="aggregate_polygon_path",
             required=False
-        ),
+        )),
         spec.DirectoryInput(
             id="model_data_path",
             name=gettext("model data"),
@@ -169,9 +167,7 @@ MODEL_SPEC = spec.ModelSpec(
                             ],
                             index_col="climate_bin"
                         )
-                    ],
-                    permissions="rx",
-                    must_exist=None
+                    ]
                 ),
                 spec.CSVInput(
                     id="crop_nutrient.csv",
@@ -201,9 +197,7 @@ MODEL_SPEC = spec.ModelSpec(
                             units=None,
                             projected=None
                         )
-                    ],
-                    permissions="rx",
-                    must_exist=None
+                    ]
                 ),
                 spec.DirectoryInput(
                     id="observed_yield",
@@ -216,13 +210,9 @@ MODEL_SPEC = spec.ModelSpec(
                             units=u.metric_ton / u.hectare,
                             projected=None
                         )
-                    ],
-                    permissions="rx",
-                    must_exist=None
+                    ]
                 )
-            ],
-            permissions="rx",
-            must_exist=None
+            ]
         )
     ],
     outputs=[
@@ -638,8 +628,8 @@ def execute(args):
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
-        crop_regression_df = MODEL_SPEC.get_input('model_data_path').contents.get(
-                'climate_regression_yield_tables').contents.get(
+        crop_regression_df = MODEL_SPEC.get_input('model_data_path').get_contents(
+                'climate_regression_yield_tables').get_contents(
                 '[CROP]_regression_yield_table.csv').get_validated_dataframe(
                     os.path.join(args['model_data_path'],
                          _REGRESSION_TABLE_PATTERN % crop_name))
@@ -861,7 +851,7 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_df = MODEL_SPEC.get_input('model_data_path').contents.get(
+    nutrient_df = MODEL_SPEC.get_input('model_data_path').get_contents(
         'crop_nutrient.csv').get_validated_dataframe(
             os.path.join(args['model_data_path'], 'crop_nutrient.csv'))
 

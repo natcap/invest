@@ -1,5 +1,4 @@
 """InVEST Annual Water Yield model."""
-import dataclasses
 import logging
 import math
 import os
@@ -132,7 +131,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " this raster must have corresponding entries in the"
                 " Biophysical Table."
             ),
-            data_type="int",
+            data_type=int,
             units=None,
             projected=True
         ),
@@ -144,7 +143,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " root penetration is strongly inhibited because of physical or"
                 " chemical characteristics."
             ),
-            data_type="float",
+            data_type=float,
             units=u.millimeter,
             projected=True
         ),
@@ -152,7 +151,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="precipitation_path",
             name=gettext("precipitation"),
             about=gettext("Map of average annual precipitation."),
-            data_type="float",
+            data_type=float,
             units=u.millimeter / u.year,
             projected=True
         ),
@@ -164,14 +163,17 @@ MODEL_SPEC = spec.ModelSpec(
                 " that can be stored in the soil profile that is available to"
                 " plants."
             ),
-            data_type="float",
+            data_type=float,
             units=None,
             projected=True
         ),
-        dataclasses.replace(
-            spec.ET0,
+        spec.SingleBandRasterInput(
             id="eto_path",
-            projected=True
+            projected=True,
+            name=gettext("reference evapotranspiration"),
+            about=gettext("Map of reference evapotranspiration values."),
+            data_type=float,
+            units=u.millimeter
         ),
         spec.VectorInput(
             id="watersheds_path",
@@ -798,7 +800,7 @@ MODEL_SPEC = spec.ModelSpec(
                                 "The fraction of precipitation that actually"
                                 " evapotranspires at the pixel level."
                             ),
-                            data_type="float",
+                            data_type=float,
                             units=None
                         ),
                         spec.SingleBandRasterOutput(
@@ -806,13 +808,13 @@ MODEL_SPEC = spec.ModelSpec(
                             about=gettext(
                                 "Estimated actual evapotranspiration per pixel."
                             ),
-                            data_type="float",
+                            data_type=float,
                             units=u.millimeter
                         ),
                         spec.SingleBandRasterOutput(
                             id="wyield.tif",
                             about=gettext("Estimated water yield per pixel."),
-                            data_type="float",
+                            data_type=float,
                             units=u.millimeter
                         )
                     ]
@@ -826,7 +828,7 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.SingleBandRasterOutput(
                     id="clipped_lulc.tif",
                     about=gettext("Aligned and clipped copy of LULC input."),
-                    data_type="int",
+                    data_type=int,
                     units=None
                 ),
                 spec.SingleBandRasterOutput(
@@ -835,31 +837,31 @@ MODEL_SPEC = spec.ModelSpec(
                         "Aligned and clipped copy of root restricting layer"
                         " depth input."
                     ),
-                    data_type="float",
+                    data_type=float,
                     units=u.millimeter
                 ),
                 spec.SingleBandRasterOutput(
                     id="eto.tif",
                     about=gettext("Aligned and clipped copy of ET0 input."),
-                    data_type="float",
+                    data_type=float,
                     units=u.millimeter
                 ),
                 spec.SingleBandRasterOutput(
                     id="kc_raster.tif",
                     about=gettext("Map of KC values."),
-                    data_type="float",
+                    data_type=float,
                     units=None
                 ),
                 spec.SingleBandRasterOutput(
                     id="pawc.tif",
                     about=gettext("Aligned and clipped copy of PAWC input."),
-                    data_type="float",
+                    data_type=float,
                     units=None
                 ),
                 spec.SingleBandRasterOutput(
                     id="pet.tif",
                     about=gettext("Map of potential evapotranspiration."),
-                    data_type="float",
+                    data_type=float,
                     units=u.millimeter
                 ),
                 spec.SingleBandRasterOutput(
@@ -867,27 +869,26 @@ MODEL_SPEC = spec.ModelSpec(
                     about=gettext(
                         "Aligned and clipped copy of precipitation input."
                     ),
-                    data_type="float",
+                    data_type=float,
                     units=u.millimeter
                 ),
                 spec.SingleBandRasterOutput(
                     id="root_depth.tif",
                     about=gettext("Map of root depth."),
-                    data_type="float",
+                    data_type=float,
                     units=u.millimeter
                 ),
                 spec.SingleBandRasterOutput(
                     id="veg.tif",
                     about=gettext("Map of vegetated state."),
-                    data_type="int",
+                    data_type=int,
                     units=None
                 )
             ]
         ),
-        dataclasses.replace(
-            spec.TASKGRAPH_DIR,
+        spec.TASKGRAPH_DIR.model_copy(update=dict(
             id="taskgraph_dir"
-        )
+        ))
     ]
 )
 

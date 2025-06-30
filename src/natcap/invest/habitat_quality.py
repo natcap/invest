@@ -124,20 +124,18 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.OptionStringInput(
                     id="decay",
                     about=gettext("The type of decay over space for each threat."),
-                    options={
-                        "linear": {
-                            "description": (
+                    options=[
+                        spec.Option(
+                            key="linear",
+                            about=(
                                 "Effects of the threat decay linearly with distance from"
-                                " the threat."
-                            )
-                        },
-                        "exponential": {
-                            "description": (
+                                " the threat.")),
+                        spec.Option(
+                            key="exponential",
+                            about=(
                                 "Effects of the threat decay exponentially with distance"
-                                " from the threat."
-                            )
-                        },
-                    }
+                                " from the threat."))
+                    ]
                 ),
                 spec.SingleBandRasterInput(
                     id="cur_path",

@@ -1,5 +1,4 @@
 """InVEST Seasonal Water Yield Model."""
-import dataclasses
 import fractions
 import logging
 import os
@@ -76,9 +75,7 @@ MODEL_SPEC = spec.ModelSpec(
                     units=u.millimeter / u.month,
                     projected=None
                 )
-            ],
-            permissions="rx",
-            must_exist=None
+            ]
         ),
         spec.DirectoryInput(
             id="precip_dir",
@@ -104,14 +101,9 @@ MODEL_SPEC = spec.ModelSpec(
                     units=u.millimeter / u.month,
                     projected=None
                 )
-            ],
-            permissions="rx",
-            must_exist=None
+            ]
         ),
-        dataclasses.replace(
-            spec.DEM,
-            id="dem_raster_path"
-        ),
+        spec.DEM.model_copy(update=dict(id="dem_raster_path")),
         spec.SingleBandRasterInput(
             id="lulc_raster_path",
             name=gettext("land use/land cover"),
@@ -124,17 +116,15 @@ MODEL_SPEC = spec.ModelSpec(
             units=None,
             projected=True
         ),
-        dataclasses.replace(
-            spec.SOIL_GROUP,
+        spec.SOIL_GROUP.model_copy(update=dict(
             projected=True,
             required="not user_defined_local_recharge",
             allowed="not user_defined_local_recharge"
-        ),
-        dataclasses.replace(
-            spec.AOI,
+        )),
+        spec.AOI.model_copy(update=dict(
             id="aoi_path",
             projected=True
-        ),
+        )),
         spec.CSVInput(
             id="biophysical_table_path",
             name=gettext("biophysical table"),
@@ -395,10 +385,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=u.millimeter / u.year
         ),
-        dataclasses.replace(
-            spec.STREAM,
-            id="stream.tif"
-        ),
+        spec.STREAM.model_copy(update=dict(id="stream.tif")),
         spec.SingleBandRasterOutput(
             id="P.tif",
             about=gettext("The total precipitation across all months on this pixel."),
@@ -500,10 +487,7 @@ MODEL_SPEC = spec.ModelSpec(
                     data_type=int,
                     units=None
                 ),
-                dataclasses.replace(
-                    spec.FLOW_ACCUMULATION,
-                    id="flow_accum.tif"
-                ),
+                spec.FLOW_ACCUMULATION.model_copy(update=dict(id="flow_accum.tif")),
                 spec.SingleBandRasterOutput(
                     id="prcp_a[MONTH].tif",
                     about=gettext(
