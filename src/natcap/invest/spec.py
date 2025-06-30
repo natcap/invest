@@ -147,7 +147,7 @@ def _check_projection(srs, projected, projection_units):
                 unit_a=projection_units, unit_b=layer_units_name)
 
 
-def check_permissions(permissions):
+def validate_permissions_string(permissions):
     """
     Validate an rwx-style permissions string.
 
@@ -278,7 +278,8 @@ class FileInput(Input):
     This represents a not-otherwise-specified file input type. Use this only if
     a more specific type, such as `CSVInput` or `VectorInput`, does not apply.
     """
-    permissions: typing.Annotated[str, AfterValidator(check_permissions)] = 'r'
+    permissions: typing.Annotated[str, AfterValidator(
+        validate_permissions_string)] = 'r'
     """A string that includes the lowercase characters ``r``, ``w`` and/or
     ``x``, indicating read, write, and execute permissions (respectively)
     required for this file."""
@@ -883,7 +884,8 @@ class DirectoryInput(Input):
     """An iterable of `Input`s representing the contents of this directory. The
     `key` of each input must be the file name or pattern."""
 
-    permissions: typing.Annotated[str, AfterValidator(check_permissions)] = ''
+    permissions: typing.Annotated[str, AfterValidator(
+        validate_permissions_string)] = ''
     """A string that includes the lowercase characters ``r``, ``w`` and/or ``x``,
     indicating read, write, and execute permissions (respectively) required for
     this directory."""
