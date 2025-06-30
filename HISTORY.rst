@@ -92,6 +92,11 @@ Plugins
 * Plugin environments are now created using the conda-forge channel only.
   The default channel is excluded (`#1802 <https://github.com/natcap/invest/issues/1802>`_).
 
+NDR
+===
+* Fixed a bug where model outputs in D8 mode had some nodata holes resulting
+  from an incorrect nodata check (`#2055 <https://github.com/natcap/invest/issues/2055>`_).
+
 Pollination
 ===========
 * Fixed a bug where pollination in multiple seasons would not
