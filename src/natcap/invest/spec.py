@@ -172,9 +172,6 @@ def validate_permissions_string(permissions):
         used_letters.add(letter)
     return permissions
 
-    def __repr__(self):
-        return list(self.args).__repr__()
-
 
 class Input(BaseModel):
     """A data input, or parameter, of an invest model.
