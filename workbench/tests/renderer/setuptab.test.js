@@ -153,24 +153,15 @@ describe('Arguments form input types', () => {
     expect(input).toBeChecked();
   });
 
-  test('render a select input for an option_string dict', async () => {
+  test('render a select input for an option_string', async () => {
     const spec = baseArgsSpec('option_string');
-    spec.args.arg.options = {
-      a: { display_name: 'Option A' },
-      b: { display_name: 'Option B' },
-    };
+    spec.args.arg.options = [
+      { key: 'a', display_name: 'Option A' },
+      { key: 'b', display_name: 'Option B' },
+    ];
     const { findByLabelText } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveDisplayValue('Option A');
-    expect(input).toHaveValue('a');
-    expect(input).not.toHaveValue('b');
-  });
-
-  test('render a select input for an option_string list', async () => {
-    const spec = baseArgsSpec('option_string');
-    spec.args.arg.options = ['a', 'b'];
-    const { findByLabelText } = renderSetupFromSpec(spec, INPUT_FIELD_ORDER);
-    const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
@@ -413,7 +404,7 @@ describe('UI spec functionality', () => {
   });
 
   test('expect dropdown options can be dynamic', async () => {
-    getDynamicDropdowns.mockResolvedValue({ arg2: ['Field1'] });
+    getDynamicDropdowns.mockResolvedValue({ arg2: [{ key: 'Field1' }] });
     fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
     const spec = {
       args: {
@@ -424,7 +415,7 @@ describe('UI spec functionality', () => {
         arg2: {
           name: 'bfoo',
           type: 'option_string',
-          options: {},
+          options: [],
           dropdown_function: 'function to retrieve arg1 column names',
         },
       },

@@ -909,8 +909,8 @@ class TestCBC2(unittest.TestCase):
             transition_table.write('Forest,accum,disturb,low-impact-disturb\n')
             transition_table.write('Water,disturb,med-impact-disturb,high-impact-disturb\n')
         transition_options = [
-                'accum', 'high-impact-disturb', 'med-impact-disturb',
-                'low-impact-disturb', 'ncc']
+                'accum', 'high-impact-disturb', 'low-impact-disturb',
+                'med-impact-disturb', 'ncc']
         validation_warnings = coastal_blue_carbon.validate(args)
         self.assertEqual(len(validation_warnings), 2)
         self.assertIn(

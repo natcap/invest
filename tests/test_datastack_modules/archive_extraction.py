@@ -7,9 +7,9 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     spec.StringInput(id='c'),
     spec.FileInput(id='foo'),
     spec.FileInput(id='bar'),
-    spec.DirectoryInput(id='data_dir', contents={}),
-    spec.SingleBandRasterInput(id='raster'),
-    spec.VectorInput(id='vector', fields={}, geometry_types={}),
+    spec.DirectoryInput(id='data_dir', contents=[]),
+    spec.SingleBandRasterInput(id='raster', units=None),
+    spec.VectorInput(id='vector', fields=[], geometry_types=set()),
     spec.CSVInput(id='simple_table'),
     spec.CSVInput(
         id='spatial_table',
@@ -17,14 +17,17 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
             spec.IntegerInput(id='ID'),
             spec.RasterOrVectorInput(
                 id='path',
-                fields={},
-                geometry_types={'POINT', 'POLYGON'}
+                fields=[],
+                geometry_types={'POINT', 'POLYGON'},
+                units=None
             )
         ]
     )],
-    outputs={},
+    outputs=[],
     model_id='archive_extraction_model',
     model_title='',
     userguide='',
-    input_field_order=[]
+    input_field_order=[
+        ['blank', 'a', 'b', 'c', 'foo', 'bar', 'data_dir',
+         'raster', 'vector', 'simple_table', 'spatial_table']]
 )

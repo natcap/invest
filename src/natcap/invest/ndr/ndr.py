@@ -1345,11 +1345,11 @@ def validate(args, limit_to=None):
 
     for param in ['load', 'eff', 'crit_len']:
         for nutrient in nutrients_selected:
-            spec_copy.get_input('biophysical_table_path').columns.get(
+            spec_copy.get_input('biophysical_table_path').get_column(
                 f'{param}_{nutrient}').required = True
 
     if 'n' in nutrients_selected:
-        spec_copy.get_input('biophysical_table_path').columns.get(
+        spec_copy.get_input('biophysical_table_path').get_column(
             'proportion_subsurface_n').required = True
 
     validation_warnings = validation.validate(args, spec_copy)

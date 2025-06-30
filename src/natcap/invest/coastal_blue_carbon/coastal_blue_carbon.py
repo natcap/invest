@@ -2211,10 +2211,8 @@ def validate(args, limit_to=None):
     if ("landcover_transitions_table" not in invalid_keys and
             "landcover_transitions_table" in sufficient_keys):
         transitions_spec = MODEL_SPEC.get_input('landcover_transitions_table')
-        transition_options = list(
-            transitions_spec.columns.get('[LULC CODE]').options.keys())
-        # lowercase options since utils call will lowercase table values
-        transition_options = [x.lower() for x in transition_options]
+        transition_options = transitions_spec.get_column(
+            '[LULC CODE]').list_options()
         transitions_df = transitions_spec.get_validated_dataframe(
             args['landcover_transitions_table'])
         transitions_mask = ~transitions_df.isin(transition_options) & ~transitions_df.isna()

@@ -593,8 +593,8 @@ def execute(args):
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
-        crop_regression_df = MODEL_SPEC.get_input('model_data_path').contents.get(
-                'climate_regression_yield_tables').contents.get(
+        crop_regression_df = MODEL_SPEC.get_input('model_data_path').get_contents(
+                'climate_regression_yield_tables').get_contents(
                 '[CROP]_regression_yield_table.csv').get_validated_dataframe(
                     os.path.join(args['model_data_path'],
                          _REGRESSION_TABLE_PATTERN % crop_name))
@@ -816,7 +816,7 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_df = MODEL_SPEC.get_input('model_data_path').contents.get(
+    nutrient_df = MODEL_SPEC.get_input('model_data_path').get_contents(
         'crop_nutrient.csv').get_validated_dataframe(
             os.path.join(args['model_data_path'], 'crop_nutrient.csv'))
 

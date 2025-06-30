@@ -465,6 +465,7 @@ class DatastackArchiveTests(unittest.TestCase):
                 filecmp.cmp(archive_params[key], params[key], shallow=False))
 
         spatial_csv_dict = spec.CSVInput(
+            id='',
             index_col='id',
             columns=[
                 spec.IntegerInput(id='id'),

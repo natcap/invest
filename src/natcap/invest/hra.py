@@ -446,9 +446,6 @@ MODEL_SPEC = spec.build_model_spec({
     }
 })
 
-_VALID_RISK_EQS = set(MODEL_SPEC.get_input('risk_eq').options.keys())
-_VALID_DECAY_TYPES = set(MODEL_SPEC.get_input('decay_eq').options.keys())
-
 
 def execute(args):
     """Habitat Risk Assessment.
@@ -2007,7 +2004,7 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
         ``AssertionError``: When an invalid ``decay_type`` is provided.
     """
     decay_type = decay_type.lower()
-    if decay_type not in _VALID_DECAY_TYPES:
+    if decay_type not in MODEL_SPEC.get_input('decay_eq').list_options():
         raise AssertionError(f'Invalid decay type {decay_type} provided.')
 
     if buffer_distance == 0:
@@ -2240,7 +2237,7 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
         ``AssertionError`` when an invalid risk equation is provided.
     """
     risk_equation = risk_equation.lower()
-    if risk_equation not in _VALID_RISK_EQS:
+    if risk_equation not in MODEL_SPEC.get_input('risk_eq').list_options():
         raise AssertionError(
             f'Invalid risk equation {risk_equation} provided')
 
