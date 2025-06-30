@@ -18,91 +18,130 @@ from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-BASE_OUTPUT_FIELDS = {
-    "precip_mn": {
-        "type": "number",
-        "units": u.mm,
-        "about": "Mean precipitation per pixel in the subwatershed.",
-    },
-    "PET_mn": {
-        "type": "number",
-        "units": u.mm,
-        "about": "Mean potential evapotranspiration per pixel in the subwatershed.",
-    },
-    "AET_mn": {
-        "type": "number",
-        "units": u.mm,
-        "about": "Mean actual evapotranspiration per pixel in the subwatershed.",
-    },
-    "wyield_mn": {
-        "type": "number",
-        "units": u.mm,
-        "about": "Mean water yield per pixel in the subwatershed.",
-    },
-    "wyield_vol": {
-        "type": "number",
-        "units": u.m**3,
-        "about": "Total volume of water yield in the subwatershed.",
-    }
-}
-SCARCITY_OUTPUT_FIELDS = {
-    "consum_vol": {
-        "type": "number",
-        "units": u.m**3,
-        "about": "Total water consumption for each watershed.",
-        "created_if": "demand_table_path"
-    },
-    "consum_mn": {
-        "type": "number",
-        "units": u.meter**3/u.hectare,
-        "about": "Mean water consumptive volume per pixel per watershed.",
-        "created_if": "demand_table_path"
-    },
-    "rsupply_vl": {
-        "type": "number",
-        "units": u.m**3,
-        "about": "Total realized water supply (water yield – consumption) volume for each watershed.",
-        "created_if": "demand_table_path"
-    },
-    "rsupply_mn": {
-        "type": "number",
-        "units": u.m**3/u.hectare,
-        "about": "Mean realized water supply (water yield – consumption) volume per pixel per watershed.",
-        "created_if": "demand_table_path"
-    }
-}
-VALUATION_OUTPUT_FIELDS = {
-    "hp_energy": {
-        "type": "number",
-        "units": u.kilowatt_hour,
-        "created_if": "valuation_table_path",
-        "about": "The amount of ecosystem service in energy production terms. This is the amount of energy produced annually by the hydropower station that can be attributed to each watershed based on the watershed’s water yield contribution.",
-    },
-    "hp_val": {
-        "type": "number",
-        "units": u.currency,
-        "created_if": "valuation_table_path",
-        "about": "The amount of ecosystem service in economic terms. This shows the value of the landscape per watershed according to its ability to yield water for hydropower production over the specified timespan, and with respect to the discount rate.",
-    }
-}
-SUBWATERSHED_OUTPUT_FIELDS = {
-    "subws_id": {
-        "type": "integer",
-        "about": gettext("Unique identifier for each subwatershed.")
-    },
-    **BASE_OUTPUT_FIELDS,
-    **SCARCITY_OUTPUT_FIELDS,
+BASE_OUTPUT_FIELDS = [
+    spec.NumberOutput(
+        id="precip_mn",
+        about=gettext(
+            "Mean precipitation per pixel in the"
+            " subwatershed."
+        ),
+        units=u.millimeter
+    ),
+    spec.NumberOutput(
+        id="PET_mn",
+        about=gettext(
+            "Mean potential evapotranspiration per pixel in"
+            " the subwatershed."
+        ),
+        units=u.millimeter
+    ),
+    spec.NumberOutput(
+        id="AET_mn",
+        about=gettext(
+            "Mean actual evapotranspiration per pixel in"
+            " the subwatershed."
+        ),
+        units=u.millimeter
+    ),
+    spec.NumberOutput(
+        id="wyield_mn",
+        about=gettext(
+            "Mean water yield per pixel in the"
+            " subwatershed."
+        ),
+        units=u.millimeter
+    ),
+    spec.NumberOutput(
+        id="wyield_vol",
+        about=gettext(
+            "Total volume of water yield in the"
+            " subwatershed."
+        ),
+        units=u.meter ** 3
+    )
+]
 
-}
-WATERSHED_OUTPUT_FIELDS = {
-    "ws_id": {
-        "type": "integer",
-        "about": gettext("Unique identifier for each watershed.")
-    },
-    **BASE_OUTPUT_FIELDS,
-    **SCARCITY_OUTPUT_FIELDS,
-    **VALUATION_OUTPUT_FIELDS
-}
+SCARCITY_OUTPUT_FIELDS = [
+    spec.NumberOutput(
+        id="consum_vol",
+        about=gettext(
+            "Total water consumption for each watershed."
+        ),
+        created_if="demand_table_path",
+        units=u.meter ** 3
+    ),
+    spec.NumberOutput(
+        id="consum_mn",
+        about=gettext(
+            "Mean water consumptive volume per pixel per"
+            " watershed."
+        ),
+        created_if="demand_table_path",
+        units=u.meter ** 3 / u.hectare
+    ),
+    spec.NumberOutput(
+        id="rsupply_vl",
+        about=gettext(
+            "Total realized water supply (water yield –"
+            " consumption) volume for each watershed."
+        ),
+        created_if="demand_table_path",
+        units=u.meter ** 3
+    ),
+    spec.NumberOutput(
+        id="rsupply_mn",
+        about=gettext(
+            "Mean realized water supply (water yield –"
+            " consumption) volume per pixel per watershed."
+        ),
+        created_if="demand_table_path",
+        units=u.meter ** 3 / u.hectare
+    )
+]
+
+SUBWATERSHED_OUTPUT_FIELDS = [
+    spec.IntegerOutput(
+        id="subws_id",
+        about=gettext("Unique identifier for each subwatershed.")
+    ),
+    *BASE_OUTPUT_FIELDS,
+    *SCARCITY_OUTPUT_FIELDS
+]
+
+WATERSHED_OUTPUT_FIELDS = [
+    spec.IntegerOutput(
+        id="ws_id",
+        about=gettext("Unique identifier for each watershed.")
+    ),
+    *BASE_OUTPUT_FIELDS,
+    *SCARCITY_OUTPUT_FIELDS,
+    spec.NumberOutput(
+        id="hp_energy",
+        about=gettext(
+            "The amount of ecosystem service in energy"
+            " production terms. This is the amount of"
+            " energy produced annually by the hydropower"
+            " station that can be attributed to each"
+            " watershed based on the watershed’s water"
+            " yield contribution."
+        ),
+        created_if="valuation_table_path",
+        units=u.kilowatt_hour
+    ),
+    spec.NumberOutput(
+        id="hp_val",
+        about=gettext(
+            "The amount of ecosystem service in economic"
+            " terms. This shows the value of the landscape"
+            " per watershed according to its ability to"
+            " yield water for hydropower production over"
+            " the specified timespan, and with respect to"
+            " the discount rate."
+        ),
+        created_if="valuation_table_path",
+        units=u.currency
+    )
+]
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="annual_water_yield",
@@ -375,115 +414,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " watershed."
                     ),
                     geometry_types={"POLYGON"},
-                    fields=[
-                        spec.IntegerOutput(
-                            id="ws_id",
-                            about=gettext(
-                                "Unique identifier for each watershed."
-                            )
-                        ),
-                        spec.NumberOutput(
-                            id="precip_mn",
-                            about=gettext(
-                                "Mean precipitation per pixel in the"
-                                " subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="PET_mn",
-                            about=gettext(
-                                "Mean potential evapotranspiration per pixel in"
-                                " the subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="AET_mn",
-                            about=gettext(
-                                "Mean actual evapotranspiration per pixel in"
-                                " the subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="wyield_mn",
-                            about=gettext(
-                                "Mean water yield per pixel in the"
-                                " subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="wyield_vol",
-                            about=gettext(
-                                "Total volume of water yield in the"
-                                " subwatershed."
-                            ),
-                            units=u.meter ** 3
-                        ),
-                        spec.NumberOutput(
-                            id="consum_vol",
-                            about=gettext(
-                                "Total water consumption for each watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3
-                        ),
-                        spec.NumberOutput(
-                            id="consum_mn",
-                            about=gettext(
-                                "Mean water consumptive volume per pixel per"
-                                " watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3 / u.hectare
-                        ),
-                        spec.NumberOutput(
-                            id="rsupply_vl",
-                            about=gettext(
-                                "Total realized water supply (water yield –"
-                                " consumption) volume for each watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3
-                        ),
-                        spec.NumberOutput(
-                            id="rsupply_mn",
-                            about=gettext(
-                                "Mean realized water supply (water yield –"
-                                " consumption) volume per pixel per watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3 / u.hectare
-                        ),
-                        spec.NumberOutput(
-                            id="hp_energy",
-                            about=gettext(
-                                "The amount of ecosystem service in energy"
-                                " production terms. This is the amount of"
-                                " energy produced annually by the hydropower"
-                                " station that can be attributed to each"
-                                " watershed based on the watershed’s water"
-                                " yield contribution."
-                            ),
-                            created_if="valuation_table_path",
-                            units=u.kilowatt_hour
-                        ),
-                        spec.NumberOutput(
-                            id="hp_val",
-                            about=gettext(
-                                "The amount of ecosystem service in economic"
-                                " terms. This shows the value of the landscape"
-                                " per watershed according to its ability to"
-                                " yield water for hydropower production over"
-                                " the specified timespan, and with respect to"
-                                " the discount rate."
-                            ),
-                            created_if="valuation_table_path",
-                            units=u.currency
-                        )
-                    ]
+                    fields=WATERSHED_OUTPUT_FIELDS
                 ),
                 spec.CSVOutput(
                     id="watershed_results_wyield.csv",
@@ -491,115 +422,7 @@ MODEL_SPEC = spec.ModelSpec(
                         "Table containing biophysical output values per"
                         " watershed."
                     ),
-                    columns=[
-                        spec.IntegerOutput(
-                            id="ws_id",
-                            about=gettext(
-                                "Unique identifier for each watershed."
-                            )
-                        ),
-                        spec.NumberOutput(
-                            id="precip_mn",
-                            about=gettext(
-                                "Mean precipitation per pixel in the"
-                                " subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="PET_mn",
-                            about=gettext(
-                                "Mean potential evapotranspiration per pixel in"
-                                " the subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="AET_mn",
-                            about=gettext(
-                                "Mean actual evapotranspiration per pixel in"
-                                " the subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="wyield_mn",
-                            about=gettext(
-                                "Mean water yield per pixel in the"
-                                " subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="wyield_vol",
-                            about=gettext(
-                                "Total volume of water yield in the"
-                                " subwatershed."
-                            ),
-                            units=u.meter ** 3
-                        ),
-                        spec.NumberOutput(
-                            id="consum_vol",
-                            about=gettext(
-                                "Total water consumption for each watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3
-                        ),
-                        spec.NumberOutput(
-                            id="consum_mn",
-                            about=gettext(
-                                "Mean water consumptive volume per pixel per"
-                                " watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3 / u.hectare
-                        ),
-                        spec.NumberOutput(
-                            id="rsupply_vl",
-                            about=gettext(
-                                "Total realized water supply (water yield –"
-                                " consumption) volume for each watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3
-                        ),
-                        spec.NumberOutput(
-                            id="rsupply_mn",
-                            about=gettext(
-                                "Mean realized water supply (water yield –"
-                                " consumption) volume per pixel per watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3 / u.hectare
-                        ),
-                        spec.NumberOutput(
-                            id="hp_energy",
-                            about=gettext(
-                                "The amount of ecosystem service in energy"
-                                " production terms. This is the amount of"
-                                " energy produced annually by the hydropower"
-                                " station that can be attributed to each"
-                                " watershed based on the watershed’s water"
-                                " yield contribution."
-                            ),
-                            created_if="valuation_table_path",
-                            units=u.kilowatt_hour
-                        ),
-                        spec.NumberOutput(
-                            id="hp_val",
-                            about=gettext(
-                                "The amount of ecosystem service in economic"
-                                " terms. This shows the value of the landscape"
-                                " per watershed according to its ability to"
-                                " yield water for hydropower production over"
-                                " the specified timespan, and with respect to"
-                                " the discount rate."
-                            ),
-                            created_if="valuation_table_path",
-                            units=u.currency
-                        )
-                    ],
+                    columns=WATERSHED_OUTPUT_FIELDS,
                     index_col="ws_id"
                 ),
                 spec.VectorOutput(
@@ -609,89 +432,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " subwatershed."
                     ),
                     geometry_types={"POLYGON"},
-                    fields=[
-                        spec.IntegerOutput(
-                            id="subws_id",
-                            about=gettext(
-                                "Unique identifier for each subwatershed."
-                            )
-                        ),
-                        spec.NumberOutput(
-                            id="precip_mn",
-                            about=gettext(
-                                "Mean precipitation per pixel in the"
-                                " subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="PET_mn",
-                            about=gettext(
-                                "Mean potential evapotranspiration per pixel in"
-                                " the subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="AET_mn",
-                            about=gettext(
-                                "Mean actual evapotranspiration per pixel in"
-                                " the subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="wyield_mn",
-                            about=gettext(
-                                "Mean water yield per pixel in the"
-                                " subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="wyield_vol",
-                            about=gettext(
-                                "Total volume of water yield in the"
-                                " subwatershed."
-                            ),
-                            units=u.meter ** 3
-                        ),
-                        spec.NumberOutput(
-                            id="consum_vol",
-                            about=gettext(
-                                "Total water consumption for each watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3
-                        ),
-                        spec.NumberOutput(
-                            id="consum_mn",
-                            about=gettext(
-                                "Mean water consumptive volume per pixel per"
-                                " watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3 / u.hectare
-                        ),
-                        spec.NumberOutput(
-                            id="rsupply_vl",
-                            about=gettext(
-                                "Total realized water supply (water yield –"
-                                " consumption) volume for each watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3
-                        ),
-                        spec.NumberOutput(
-                            id="rsupply_mn",
-                            about=gettext(
-                                "Mean realized water supply (water yield –"
-                                " consumption) volume per pixel per watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3 / u.hectare
-                        )
-                    ]
+                    fields=SUBWATERSHED_OUTPUT_FIELDS
                 ),
                 spec.CSVOutput(
                     id="subwatershed_results_wyield.csv",
@@ -699,89 +440,7 @@ MODEL_SPEC = spec.ModelSpec(
                         "Table containing biophysical output values per"
                         " subwatershed."
                     ),
-                    columns=[
-                        spec.IntegerOutput(
-                            id="subws_id",
-                            about=gettext(
-                                "Unique identifier for each subwatershed."
-                            )
-                        ),
-                        spec.NumberOutput(
-                            id="precip_mn",
-                            about=gettext(
-                                "Mean precipitation per pixel in the"
-                                " subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="PET_mn",
-                            about=gettext(
-                                "Mean potential evapotranspiration per pixel in"
-                                " the subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="AET_mn",
-                            about=gettext(
-                                "Mean actual evapotranspiration per pixel in"
-                                " the subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="wyield_mn",
-                            about=gettext(
-                                "Mean water yield per pixel in the"
-                                " subwatershed."
-                            ),
-                            units=u.millimeter
-                        ),
-                        spec.NumberOutput(
-                            id="wyield_vol",
-                            about=gettext(
-                                "Total volume of water yield in the"
-                                " subwatershed."
-                            ),
-                            units=u.meter ** 3
-                        ),
-                        spec.NumberOutput(
-                            id="consum_vol",
-                            about=gettext(
-                                "Total water consumption for each watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3
-                        ),
-                        spec.NumberOutput(
-                            id="consum_mn",
-                            about=gettext(
-                                "Mean water consumptive volume per pixel per"
-                                " watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3 / u.hectare
-                        ),
-                        spec.NumberOutput(
-                            id="rsupply_vl",
-                            about=gettext(
-                                "Total realized water supply (water yield –"
-                                " consumption) volume for each watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3
-                        ),
-                        spec.NumberOutput(
-                            id="rsupply_mn",
-                            about=gettext(
-                                "Mean realized water supply (water yield –"
-                                " consumption) volume per pixel per watershed."
-                            ),
-                            created_if="demand_table_path",
-                            units=u.meter ** 3 / u.hectare
-                        )
-                    ],
+                    columns=SUBWATERSHED_OUTPUT_FIELDS,
                     index_col="subws_id"
                 ),
                 spec.DirectoryOutput(

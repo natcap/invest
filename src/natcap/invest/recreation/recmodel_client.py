@@ -48,56 +48,72 @@ MIN_YEAR = 2012
 MAX_YEAR = 2017
 POLYGON_ID_FIELD = 'poly_id'
 
-predictor_table_columns = {
-    "id": {
-        "type": "freestyle_string",
-        "about": gettext("A unique identifier for the predictor.")
-    },
-    "path": {
-        "type": {"raster", "vector"},
-        "about": gettext("A spatial file to use as a predictor."),
-        "bands": {1: {"type": "number", "units": u.none}},
-        "fields": {},
-        "geometries": spec.ALL_GEOMS
-    },
-    "type": {
-        "type": "option_string",
-        "about": gettext("The type of predictor file provided in the 'path' column."),
-        "options": {
-            "raster_mean": {
-                "description": gettext(
-                    "Predictor is a raster. Metric is the mean of values "
-                    "within the AOI grid cell or polygon.")},
-            "raster_sum": {
-                "description": gettext(
-                    "Predictor is a raster. Metric is the sum of values "
-                    "within the AOI grid cell or polygon.")},
-            "point_count": {
-                "description": gettext(
-                    "Predictor is a point vector. Metric is the number of "
-                    "points within each AOI grid cell or polygon.")},
-            "point_nearest_distance": {
-                "description": gettext(
-                    "Predictor is a point vector. Metric is the Euclidean "
-                    "distance between the centroid of each AOI grid cell and "
-                    "the nearest point in this layer.")},
-            "line_intersect_length": {
-                "description": gettext(
-                    "Predictor is a line vector. Metric is the total length "
-                    "of the lines that fall within each AOI grid cell.")},
-            "polygon_area_coverage": {
-                "description": gettext(
-                    "Predictor is a polygon vector. Metric is the area of "
-                    "overlap between the polygon and each AOI grid cell.")},
-            "polygon_percent_coverage": {
-                "description": gettext(
-                    "Predictor is a polygon vector. Metric is the percentage "
-                    "(0-100) of overlapping area between the polygon and each "
-                    "AOI grid cell.")}
-        }
-    }
-}
-
+PREDICTOR_TABLE_COLUMNS = [
+    spec.StringInput(
+        id="id",
+        about=gettext("A unique identifier for the predictor."),
+        regexp=None
+    ),
+    spec.RasterOrVectorInput(
+        id="path",
+        about=gettext("A spatial file to use as a predictor."),
+        data_type=float,
+        units=u.none,
+        geometry_types={
+            "MULTIPOINT",
+            "MULTIPOLYGON",
+            "LINESTRING",
+            "POINT",
+            "MULTILINESTRING",
+            "POLYGON",
+        },
+        fields=[],
+        projected=None
+    ),
+    spec.OptionStringInput(
+        id="type",
+        about="The type of predictor file provided in the 'path' column.",
+        options=[
+            spec.Option(
+                key="raster_mean",
+                about=(
+                    "Predictor is a raster. Metric is the mean of values"
+                    " within the AOI grid cell or polygon.")),
+            spec.Option(
+                key="raster_sum",
+                about=(
+                    "Predictor is a raster. Metric is the sum of values"
+                    " within the AOI grid cell or polygon.")),
+            spec.Option(
+                key="point_count",
+                about=(
+                    "Predictor is a point vector. Metric is the number of"
+                    " points within each AOI grid cell or polygon.")),
+            spec.Option(
+                key="point_nearest_distance",
+                about=(
+                    "Predictor is a point vector. Metric is the Euclidean"
+                    " distance between the centroid of each AOI grid cell and"
+                    " the nearest point in this layer.")),
+            spec.Option(
+                key="line_intersect_length",
+                about=(
+                    "Predictor is a line vector. Metric is the total length"
+                    " of the lines that fall within each AOI grid cell.")),
+            spec.Option(
+                key="polygon_area_coverage",
+                about=(
+                    "Predictor is a polygon vector. Metric is the area of"
+                    " overlap between the polygon and each AOI grid cell.")),
+            spec.Option(
+                key="polygon_percent_coverage",
+                about=(
+                    "Predictor is a polygon vector. Metric is the percentage"
+                    " (0-100) of overlapping area between the polygon and"
+                    " each AOI grid cell."))
+        ]
+    )
+]
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="recreation",
@@ -216,72 +232,7 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required="compute_regression",
             allowed="compute_regression",
-            columns=[
-                spec.StringInput(
-                    id="id",
-                    about=gettext("A unique identifier for the predictor."),
-                    regexp=None
-                ),
-                spec.RasterOrVectorInput(
-                    id="path",
-                    about=gettext("A spatial file to use as a predictor."),
-                    data_type=float,
-                    units=u.none,
-                    geometry_types={
-                        "MULTIPOINT",
-                        "MULTIPOLYGON",
-                        "LINESTRING",
-                        "POINT",
-                        "MULTILINESTRING",
-                        "POLYGON",
-                    },
-                    fields=[],
-                    projected=None
-                ),
-                spec.OptionStringInput(
-                    id="type",
-                    about="The type of predictor file provided in the 'path' column.",
-                    options=[
-                        spec.Option(
-                            key="raster_mean",
-                            about=(
-                                "Predictor is a raster. Metric is the mean of values"
-                                " within the AOI grid cell or polygon.")),
-                        spec.Option(
-                            key="raster_sum",
-                            about=(
-                                "Predictor is a raster. Metric is the sum of values"
-                                " within the AOI grid cell or polygon.")),
-                        spec.Option(
-                            key="point_count",
-                            about=(
-                                "Predictor is a point vector. Metric is the number of"
-                                " points within each AOI grid cell or polygon.")),
-                        spec.Option(
-                            key="point_nearest_distance",
-                            about=(
-                                "Predictor is a point vector. Metric is the Euclidean"
-                                " distance between the centroid of each AOI grid cell and"
-                                " the nearest point in this layer.")),
-                        spec.Option(
-                            key="line_intersect_length",
-                            about=(
-                                "Predictor is a line vector. Metric is the total length"
-                                " of the lines that fall within each AOI grid cell.")),
-                        spec.Option(
-                            key="polygon_area_coverage",
-                            about=(
-                                "Predictor is a polygon vector. Metric is the area of"
-                                " overlap between the polygon and each AOI grid cell.")),
-                        spec.Option(
-                            key="polygon_percent_coverage",
-                            about=(
-                                "Predictor is a polygon vector. Metric is the percentage"
-                                " (0-100) of overlapping area between the polygon and"
-                                " each AOI grid cell."))
-                    ]
-                )
-            ],
+            columns=PREDICTOR_TABLE_COLUMNS,
             index_col="id"
         ),
         spec.CSVInput(
@@ -294,72 +245,7 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required=False,
             allowed="compute_regression",
-            columns=[
-                spec.StringInput(
-                    id="id",
-                    about=gettext("A unique identifier for the predictor."),
-                    regexp=None
-                ),
-                spec.RasterOrVectorInput(
-                    id="path",
-                    about=gettext("A spatial file to use as a predictor."),
-                    data_type=float,
-                    units=u.none,
-                    geometry_types={
-                        "MULTIPOINT",
-                        "MULTIPOLYGON",
-                        "LINESTRING",
-                        "POINT",
-                        "MULTILINESTRING",
-                        "POLYGON",
-                    },
-                    fields=[],
-                    projected=None
-                ),
-                spec.OptionStringInput(
-                    id="type",
-                    about="The type of predictor file provided in the 'path' column.",
-                    options=[
-                        spec.Option(
-                            key="raster_mean",
-                            about=(
-                                "Predictor is a raster. Metric is the mean of values"
-                                " within the AOI grid cell or polygon.")),
-                        spec.Option(
-                            key="raster_sum",
-                            about=(
-                                "Predictor is a raster. Metric is the sum of values"
-                                " within the AOI grid cell or polygon.")),
-                        spec.Option(
-                            key="point_count",
-                            about=(
-                                "Predictor is a point vector. Metric is the number of"
-                                " points within each AOI grid cell or polygon.")),
-                        spec.Option(
-                            key="point_nearest_distance",
-                            about=(
-                                "Predictor is a point vector. Metric is the Euclidean"
-                                " distance between the centroid of each AOI grid cell and"
-                                " the nearest point in this layer.")),
-                        spec.Option(
-                            key="line_intersect_length",
-                            about=(
-                                "Predictor is a line vector. Metric is the total length"
-                                " of the lines that fall within each AOI grid cell.")),
-                        spec.Option(
-                            key="polygon_area_coverage",
-                            about=(
-                                "Predictor is a polygon vector. Metric is the area of"
-                                " overlap between the polygon and each AOI grid cell.")),
-                        spec.Option(
-                            key="polygon_percent_coverage",
-                            about=(
-                                "Predictor is a polygon vector. Metric is the percentage"
-                                " (0-100) of overlapping area between the polygon and"
-                                " each AOI grid cell."))
-                    ]
-                )
-            ],
+            columns=PREDICTOR_TABLE_COLUMNS,
             index_col="id"
         )
     ],

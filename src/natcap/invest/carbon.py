@@ -18,26 +18,6 @@ from . import gettext
 
 LOGGER = logging.getLogger(__name__)
 
-CARBON_OUTPUTS = {
-    f"c_{pool}_{scenario}.tif": {
-        "about": (
-            f"Raster of {pool_name} carbon values in the {scenario_name} "
-            "scenario, mapped from the Carbon Pools table to the LULC."),
-        "bands": {1: {
-            "type": "number",
-            "units": u.metric_ton/u.hectare
-        }}
-    } for pool, pool_name in [
-        ('above', 'aboveground'),
-        ('below', 'belowground'),
-        ('soil', 'soil'),
-        ('dead', 'dead matter')
-    ] for scenario, scenario_name in [
-        ('bas', 'baseline'),
-        ('alt', 'alternate')
-    ]
-}
-
 MODEL_SPEC = spec.ModelSpec(
     model_id="carbon",
     model_title=gettext("Carbon Storage and Sequestration"),

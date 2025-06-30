@@ -27,78 +27,82 @@ from . import gettext
 LOGGER = logging.getLogger(__name__)
 
 
-PERCENTILE_TABLE_FIELDS = {
-    "Percentile Group": {
-        "type": "integer",
-        "about": gettext("Index of this percentile bin.")
-    },
-    "Percentile Range": {
-        "type": "freestyle_string",
-        "about": gettext("Percentile range within this bin.")
-    },
-    "Pixel Count": {
-        "type": "integer",
-        "about": gettext(
-            "Number of pixels whose wave energy values "
-            "fall into this percentile bin.")
-    }
-}
+PERCENTILE_TABLE_FIELDS = [
+    spec.IntegerOutput(
+        id="Percentile Group",
+        about=gettext("Index of this percentile bin.")
+    ),
+    spec.StringOutput(
+        id="Percentile Range",
+        about=gettext("Percentile range within this bin.")
+    ),
+    spec.IntegerOutput(
+        id="Pixel Count",
+        about=gettext(
+            "Number of pixels whose wave energy values fall into this"
+            " percentile bin."
+        )
+    ),
+    spec.NumberOutput(
+        id="Value Range (megawatt hours per year, MWh/yr)",
+        about=gettext(
+            "Range of wave energy values within this percentile bin."
+        ),
+        units=u.megawatt_hour / u.year
+    )
+]
 
-WEM_FIELDS = {
-    "I": {
-        "type": "number",
-        "units": u.none,
-        "about": "index value for the wave input grid points"
-    },
-    "J": {
-        "type": "number",
-        "units": u.none,
-        "about": "index value for the wave input grid points"
-    },
-    "LONG": {
-        "type": "number",
-        "units": u.degree,
-        "about": "longitude of the grid points"
-    },
-    "LATI": {
-        "type": "number",
-        "units": u.degree,
-        "about": "latitude of the grid points"
-    },
-    "HSAVG_M": {
-        "about": "wave height average",
-        "type": "number",
-        "units": u.meter
-    },
-    "TPAVG_S": {
-        "about": "wave period average",
-        "type": "number",
-        "units": u.second
-    }
-}
+WEM_FIELDS = [
+    spec.NumberOutput(
+        id="I",
+        about=gettext("index value for the wave input grid points"),
+        units=u.none
+    ),
+    spec.NumberOutput(
+        id="J",
+        about=gettext("index value for the wave input grid points"),
+        units=u.none
+    ),
+    spec.NumberOutput(
+        id="LONG",
+        about=gettext("longitude of the grid points"),
+        units=u.degree
+    ),
+    spec.NumberOutput(
+        id="LATI",
+        about=gettext("latitude of the grid points"),
+        units=u.degree
+    ),
+    spec.NumberOutput(
+        id="HSAVG_M",
+        about=gettext("wave height average"),
+        units=u.meter
+    ),
+    spec.NumberOutput(
+        id="TPAVG_S",
+        about=gettext("wave period average"),
+        units=u.second
+    )
+]
 
-INDEXED_WEM_FIELDS = {
-    **WEM_FIELDS,
-    "DEPTH_M": {
-        "about": "depth",
-        "type": "number",
-        "units": u.meter
-    }
-}
+INDEXED_WEM_FIELDS = [
+    *WEM_FIELDS,
+    spec.NumberOutput(id="DEPTH_M", about=gettext("depth"), units=u.meter)
+]
 
-CAPTURED_WEM_FIELDS = {
-    **INDEXED_WEM_FIELDS,
-    "CAPWE_MWHY": {
-        "about": "captured wave energy per device",
-        "type": "number",
-        "units": u.megawatt_hour/u.year
-    },
-    "WE_KWM": {
-        "about": "potential wave power",
-        "type": "number",
-        "units": u.kilowatt/u.meter
-    }
-}
+CAPTURED_WEM_FIELDS = [
+    *INDEXED_WEM_FIELDS,
+    spec.NumberOutput(
+        id="CAPWE_MWHY",
+        about=gettext("captured wave energy per device"),
+        units=u.megawatt_hour / u.year
+    ),
+    spec.NumberOutput(
+        id="WE_KWM",
+        about=gettext("potential wave power"),
+        units=u.kilowatt / u.meter
+    )
+]
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="wave_energy",
@@ -443,21 +447,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " group as well as the number of pixels for each group."
                     ),
                     columns=[
-                        spec.IntegerOutput(
-                            id="Percentile Group",
-                            about=gettext("Index of this percentile bin.")
-                        ),
-                        spec.StringOutput(
-                            id="Percentile Range",
-                            about=gettext("Percentile range within this bin.")
-                        ),
-                        spec.IntegerOutput(
-                            id="Pixel Count",
-                            about=gettext(
-                                "Number of pixels whose wave energy values fall into this"
-                                " percentile bin."
-                            )
-                        ),
+                        *PERCENTILE_TABLE_FIELDS,
                         spec.NumberOutput(
                             id="Value Range (megawatt hours per year, MWh/yr)",
                             about=gettext(
@@ -553,21 +543,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " as well as the number of pixels for each group."
                     ),
                     columns=[
-                        spec.IntegerOutput(
-                            id="Percentile Group",
-                            about=gettext("Index of this percentile bin.")
-                        ),
-                        spec.StringOutput(
-                            id="Percentile Range",
-                            about=gettext("Percentile range within this bin.")
-                        ),
-                        spec.IntegerOutput(
-                            id="Pixel Count",
-                            about=gettext(
-                                "Number of pixels whose wave energy values fall into this"
-                                " percentile bin."
-                            )
-                        ),
+                        *PERCENTILE_TABLE_FIELDS,
                         spec.NumberOutput(
                             id="Value Range (thousands of currency units, currency)",
                             about=gettext(
@@ -609,21 +585,7 @@ MODEL_SPEC = spec.ModelSpec(
                         " as the number of pixels for each group."
                     ),
                     columns=[
-                        spec.IntegerOutput(
-                            id="Percentile Group",
-                            about=gettext("Index of this percentile bin.")
-                        ),
-                        spec.StringOutput(
-                            id="Percentile Range",
-                            about=gettext("Percentile range within this bin.")
-                        ),
-                        spec.IntegerOutput(
-                            id="Pixel Count",
-                            about=gettext(
-                                "Number of pixels whose wave energy values fall into this"
-                                " percentile bin."
-                            )
-                        ),
+                        *PERCENTILE_TABLE_FIELDS,
                         spec.NumberOutput(
                             id=(
                                 "Value Range (wave power per unit width of wave crest"
@@ -654,100 +616,14 @@ MODEL_SPEC = spec.ModelSpec(
                     id="Captured_WEM_InputOutput_Pts.shp",
                     about=gettext("Map of wave data points."),
                     geometry_types={"POINT"},
-                    fields=[
-                        spec.NumberOutput(
-                            id="I",
-                            about=gettext("index value for the wave input grid points"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="J",
-                            about=gettext("index value for the wave input grid points"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="LONG",
-                            about=gettext("longitude of the grid points"),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="LATI",
-                            about=gettext("latitude of the grid points"),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="HSAVG_M",
-                            about=gettext("wave height average"),
-                            units=u.meter
-                        ),
-                        spec.NumberOutput(
-                            id="TPAVG_S",
-                            about=gettext("wave period average"),
-                            units=u.second
-                        ),
-                        spec.NumberOutput(
-                            id="DEPTH_M", about=gettext("depth"), units=u.meter
-                        ),
-                        spec.NumberOutput(
-                            id="CAPWE_MWHY",
-                            about=gettext("captured wave energy per device"),
-                            units=u.megawatt_hour / u.year
-                        ),
-                        spec.NumberOutput(
-                            id="WE_KWM",
-                            about=gettext("potential wave power"),
-                            units=u.kilowatt / u.meter
-                        )
-                    ]
+                    fields=CAPTURED_WEM_FIELDS
                 ),
                 spec.VectorOutput(
                     id="Final_WEM_InputOutput_Pts.shp",
                     about=gettext("Map of wave data points."),
                     geometry_types={"POINT"},
                     fields=[
-                        spec.NumberOutput(
-                            id="I",
-                            about=gettext("index value for the wave input grid points"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="J",
-                            about=gettext("index value for the wave input grid points"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="LONG",
-                            about=gettext("longitude of the grid points"),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="LATI",
-                            about=gettext("latitude of the grid points"),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="HSAVG_M",
-                            about=gettext("wave height average"),
-                            units=u.meter
-                        ),
-                        spec.NumberOutput(
-                            id="TPAVG_S",
-                            about=gettext("wave period average"),
-                            units=u.second
-                        ),
-                        spec.NumberOutput(
-                            id="DEPTH_M", about=gettext("depth"), units=u.meter
-                        ),
-                        spec.NumberOutput(
-                            id="CAPWE_MWHY",
-                            about=gettext("captured wave energy per device"),
-                            units=u.megawatt_hour / u.year
-                        ),
-                        spec.NumberOutput(
-                            id="WE_KWM",
-                            about=gettext("potential wave power"),
-                            units=u.kilowatt / u.meter
-                        ),
+                        *CAPTURED_WEM_FIELDS,
                         spec.NumberOutput(
                             id="W2L_MDIST",
                             about=gettext(
@@ -795,41 +671,7 @@ MODEL_SPEC = spec.ModelSpec(
                     id="Indexed_WEM_InputOutput_Pts.shp",
                     about=gettext("Map of wave data points."),
                     geometry_types={"POINT"},
-                    fields=[
-                        spec.NumberOutput(
-                            id="I",
-                            about=gettext("index value for the wave input grid points"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="J",
-                            about=gettext("index value for the wave input grid points"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="LONG",
-                            about=gettext("longitude of the grid points"),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="LATI",
-                            about=gettext("latitude of the grid points"),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="HSAVG_M",
-                            about=gettext("wave height average"),
-                            units=u.meter
-                        ),
-                        spec.NumberOutput(
-                            id="TPAVG_S",
-                            about=gettext("wave period average"),
-                            units=u.second
-                        ),
-                        spec.NumberOutput(
-                            id="DEPTH_M", about=gettext("depth"), units=u.meter
-                        )
-                    ]
+                    fields=INDEXED_WEM_FIELDS
                 ),
                 spec.SingleBandRasterOutput(
                     id="interpolated_capwe_mwh.tif",
@@ -865,38 +707,7 @@ MODEL_SPEC = spec.ModelSpec(
                     id="WEM_InputOutput_Pts.shp",
                     about=gettext("Map of wave data points."),
                     geometry_types={"POINT"},
-                    fields=[
-                        spec.NumberOutput(
-                            id="I",
-                            about=gettext("index value for the wave input grid points"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="J",
-                            about=gettext("index value for the wave input grid points"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="LONG",
-                            about=gettext("longitude of the grid points"),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="LATI",
-                            about=gettext("latitude of the grid points"),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="HSAVG_M",
-                            about=gettext("wave height average"),
-                            units=u.meter
-                        ),
-                        spec.NumberOutput(
-                            id="TPAVG_S",
-                            about=gettext("wave period average"),
-                            units=u.second
-                        )
-                    ]
+                    fields=WEM_FIELDS
                 ),
                 spec.FileOutput(
                     id="GridPt.txt",

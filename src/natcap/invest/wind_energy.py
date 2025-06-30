@@ -29,95 +29,98 @@ from .unit_registry import u
 LOGGER = logging.getLogger(__name__)
 speedups.enable()
 
-INPUT_WIND_DATA_FIELDS = {
-    "long": {
-        "type": "number",
-        "units": u.degree,
-        "about": gettext("Longitude of the data point.")
-    },
-    "lati": {
-        "type": "number",
-        "units": u.degree,
-        "about": gettext("Latitude of the data point.")
-    },
-    "lam": {
-        "type": "number",
-        "units": u.none,
-        "about": gettext(
-            "Weibull scale factor at the reference hub height at "
-            "this point.")
-    },
-    "k": {
-        "type": "number",
-        "units": u.none,
-        "about": gettext("Weibull shape factor at this point.")
-    },
-    "ref": {
-        "type": "number",
-        "units": u.meter,
-        "about": gettext(
-            "The reference hub height at this point, at which "
-            "wind speed data was collected and LAM was estimated.")
-    }
-}
-
-OUTPUT_WIND_DATA_FIELDS = {
-    **INPUT_WIND_DATA_FIELDS,
-    "ref_lam": {
-        "type": "number",
-        "units": u.degree,
-        "about": gettext(
-            "Weibull scale factor at the reference hub height at "
-            "this point.")
-    },
-    "Dens_W/m2": {
-        "type": "number",
-        "units": u.watt/u.meter**2,
-        "about": gettext("Power density at this point.")
-    },
-    "Harv_MWhr": {
-        "type": "number",
-        "units": u.megawatt_hour/u.year,
-        "about": gettext(
-            "Predicted energy harvested from a wind "
-            "farm centered on this point.")
-    },
-    "DepthVal": {
-        "type": "number",
-        "units": u.meter,
-        "about": gettext(
-            "Ocean depth at this point.")
-    },
-    "DistVal": {
-        "type": "number",
-        "units": u.meter,
-        "about": gettext(
-            "Distance to shore from this point. Included only "
-            "if distance parameters were provided.")
-    },
-    "CO2_Tons": {
-        "type": "number",
-        "units": u.metric_ton/u.year,
-        "about": gettext(
-            "Offset carbon emissions for a farm centered "
-            "on this point. Included only if Valuation is run.")
-    },
-    "Level_Cost": {
-        "type": "number",
-        "units": u.currency/u.kilowatt_hour,
-        "about": gettext(
-            "Energy price that would be required to set the "
-            "present value of a farm centered on this point "
-            "equal to zero. Included only if Valuation is run.")
-    },
-    "NPV": {
-        "type": "number",
-        "units": u.currency,
-        "about": gettext(
-            "The net present value of a farm centered on "
-            "this point. Included only if Valuation is run.")
-    }
-}
+OUTPUT_WIND_DATA_FIELDS = [
+    spec.NumberOutput(
+        id="long",
+        about=gettext("Longitude of the data point."),
+        units=u.degree
+    ),
+    spec.NumberOutput(
+        id="lati",
+        about=gettext("Latitude of the data point."),
+        units=u.degree
+    ),
+    spec.NumberOutput(
+        id="lam",
+        about=gettext(
+            "Weibull scale factor at the reference hub height at this"
+            " point."
+        ),
+        units=u.none
+    ),
+    spec.NumberOutput(
+        id="k",
+        about=gettext("Weibull shape factor at this point."),
+        units=u.none
+    ),
+    spec.NumberOutput(
+        id="ref",
+        about=gettext(
+            "The reference hub height at this point, at which wind"
+            " speed data was collected and LAM was estimated."
+        ),
+        units=u.meter
+    ),
+    spec.NumberOutput(
+        id="ref_lam",
+        about=gettext(
+            "Weibull scale factor at the reference hub height at this"
+            " point."
+        ),
+        units=u.degree
+    ),
+    spec.NumberOutput(
+        id="Dens_W/m2",
+        about=gettext("Power density at this point."),
+        units=u.watt / u.meter**2
+    ),
+    spec.NumberOutput(
+        id="Harv_MWhr",
+        about=gettext(
+            "Predicted energy harvested from a wind farm centered on"
+            " this point."
+        ),
+        units=u.megawatt_hour / u.year
+    ),
+    spec.NumberOutput(
+        id="DepthVal",
+        about=gettext("Ocean depth at this point."),
+        units=u.meter
+    ),
+    spec.NumberOutput(
+        id="DistVal",
+        about=gettext(
+            "Distance to shore from this point. Included only if"
+            " distance parameters were provided."
+        ),
+        units=u.meter
+    ),
+    spec.NumberOutput(
+        id="CO2_Tons",
+        about=gettext(
+            "Offset carbon emissions for a farm centered on this"
+            " point. Included only if Valuation is run."
+        ),
+        units=u.metric_ton / u.year
+    ),
+    spec.NumberOutput(
+        id="Level_Cost",
+        about=gettext(
+            "Energy price that would be required to set the present"
+            " value of a farm centered on this point equal to zero."
+            " Included only if Valuation is run."
+        ),
+        units=u.currency / u.kilowatt_hour
+    ),
+    spec.NumberOutput(
+        id="NPV",
+        about=gettext(
+            "The net present value of a farm centered on this point."
+            " Included only if Valuation is run."
+        ),
+        units=u.currency
+    )
+]
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="wind_energy",
@@ -551,98 +554,7 @@ MODEL_SPEC = spec.ModelSpec(
                     id="wind_energy_points.shp",
                     about=gettext("Map of summarized data at each point."),
                     geometry_types={"POINT"},
-                    fields=[
-                        spec.NumberOutput(
-                            id="long",
-                            about=gettext("Longitude of the data point."),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="lati",
-                            about=gettext("Latitude of the data point."),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="lam",
-                            about=gettext(
-                                "Weibull scale factor at the reference hub height at this"
-                                " point."
-                            ),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="k",
-                            about=gettext("Weibull shape factor at this point."),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="ref",
-                            about=gettext(
-                                "The reference hub height at this point, at which wind"
-                                " speed data was collected and LAM was estimated."
-                            ),
-                            units=u.meter
-                        ),
-                        spec.NumberOutput(
-                            id="ref_lam",
-                            about=gettext(
-                                "Weibull scale factor at the reference hub height at this"
-                                " point."
-                            ),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="Dens_W/m2",
-                            about=gettext("Power density at this point."),
-                            units=u.watt / u.meter**2
-                        ),
-                        spec.NumberOutput(
-                            id="Harv_MWhr",
-                            about=gettext(
-                                "Predicted energy harvested from a wind farm centered on"
-                                " this point."
-                            ),
-                            units=u.megawatt_hour / u.year
-                        ),
-                        spec.NumberOutput(
-                            id="DepthVal",
-                            about=gettext("Ocean depth at this point."),
-                            units=u.meter
-                        ),
-                        spec.NumberOutput(
-                            id="DistVal",
-                            about=gettext(
-                                "Distance to shore from this point. Included only if"
-                                " distance parameters were provided."
-                            ),
-                            units=u.meter
-                        ),
-                        spec.NumberOutput(
-                            id="CO2_Tons",
-                            about=gettext(
-                                "Offset carbon emissions for a farm centered on this"
-                                " point. Included only if Valuation is run."
-                            ),
-                            units=u.metric_ton / u.year
-                        ),
-                        spec.NumberOutput(
-                            id="Level_Cost",
-                            about=gettext(
-                                "Energy price that would be required to set the present"
-                                " value of a farm centered on this point equal to zero."
-                                " Included only if Valuation is run."
-                            ),
-                            units=u.currency / u.kilowatt_hour
-                        ),
-                        spec.NumberOutput(
-                            id="NPV",
-                            about=gettext(
-                                "The net present value of a farm centered on this point."
-                                " Included only if Valuation is run."
-                            ),
-                            units=u.currency
-                        )
-                    ]
+                    fields=OUTPUT_WIND_DATA_FIELDS
                 )
             ]
         ),
@@ -736,99 +648,7 @@ MODEL_SPEC = spec.ModelSpec(
                     id="wind_energy_points_from_data.shp",
                     about=gettext("Wind data"),
                     geometry_types={"POINT"},
-                    fields=[
-                        spec.NumberOutput(
-                            id="long",
-                            about=gettext("Longitude of the data point."),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="lati",
-                            about=gettext("Latitude of the data point."),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="lam",
-                            about=gettext(
-                                "Weibull scale factor at the reference hub height at this"
-                                " point."
-                            ),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="k",
-                            about=gettext("Weibull shape factor at this point."),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="ref",
-                            about=gettext(
-                                "The reference hub height at this point, at which wind"
-                                " speed data was collected and LAM was estimated."
-                            ),
-                            units=u.meter
-                        ),
-                        spec.NumberOutput(
-                            id="ref_lam",
-                            about=gettext(
-                                "Weibull scale factor at the reference hub height at this"
-                                " point."
-                            ),
-                            units=u.degree
-                        ),
-                        spec.NumberOutput(
-                            id="Dens_W/m2",
-                            about=gettext("Power density at this point."),
-                            units=u.watt / u.meter**2
-                        ),
-                        spec.NumberOutput(
-                            id="Harv_MWhr",
-                            about=gettext(
-                                "Predicted energy harvested from a wind farm centered on"
-                                " this point."
-                            ),
-                            units=u.megawatt_hour / u.year
-                        ),
-                        spec.NumberOutput(
-                            id="DepthVal",
-                            about=gettext("Ocean depth at this point."),
-                            units=u.meter
-                        ),
-                        spec.NumberOutput(
-                            id="DistVal",
-                            about=gettext(
-                                "Distance to shore from this point. Included only if"
-                                " distance parameters were provided."
-                            ),
-                            units=u.meter
-                        ),
-                        spec.NumberOutput(
-                            id="CO2_Tons",
-                            about=gettext(
-                                "Offset carbon emissions for a farm centered on this"
-                                " point. Included only if Valuation is run."
-                            ),
-                            units=u.metric_ton / u.year
-                        ),
-                        spec.NumberOutput(
-                            id="Level_Cost",
-                            about=gettext(
-                                "Energy price that would be required to set the present"
-                                " value of a farm centered on this point equal to zero."
-                                " Included only if Valuation is run."
-                            ),
-                            units=u.currency / u.kilowatt_hour
-                        ),
-                        spec.NumberOutput(
-                            id="NPV",
-                            about=gettext(
-                                "The net present value of a farm centered on this point."
-                                " Included only if Valuation is run."
-                            ),
-                            units=u.currency
-                        )
-                    ]
-                )
+                    fields=OUTPUT_WIND_DATA_FIELDS)
             ]
         ),
         spec.TASKGRAPH_DIR
