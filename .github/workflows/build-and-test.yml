@@ -399,7 +399,11 @@ jobs:
         run: make userguide
 
       - name: Build binaries
-        run: make CONDA="$MAMBA_EXE" binaries
+        run: |
+          mamba info
+          echo $MAMBA_EXE
+          $MAMBA_EXE info
+          make CONDA="$MAMBA_EXE" binaries
 
       - name: Install Node.js
         uses: actions/setup-node@v3
