@@ -141,6 +141,20 @@ def contributors_to_pr(pr_num, github_org='natcap', github_repo='invest'):
 
         commits_data = resp.json()
         for c in commits_data:
+            # When a commit is made by github actions, it doesn't have any
+            # github login or author information, so we can just look for a
+            # similar signature and skip it if it matches.
+            if ((c['author'] == c['committer'] == {})
+                    and (c['commit']['author'] == c['commit']['committer'])
+                    and (c['commit']['author']['name']
+                         == c['commit']['committer']['name']
+                         == 'GitHub Actions')):
+                LOGGER.info(f"Commit {c['sha']} was created by github "
+                            "actions. This is a special case, as actions "
+                            "would have been written by an author who signed "
+                            "the CLA. Skipping.")
+                continue
+
             # git tracks the author and committer separately.  These will often
             # be the same person, particularly for smaller projects like ours.
             #
