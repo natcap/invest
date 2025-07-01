@@ -23,6 +23,10 @@ def update_citation_file(citation_filepath, version, date):
     with codecs.open(citation_filepath, encoding='utf-8') as citation_file:
         citation_data = citation_file.readlines()
 
+    # This approach allows us to only change the lines we need to change and
+    # not worry about PyYAML changing all of the lines in the file because they
+    # have a different idea of how the file should be formatted.
+    # Plus, this way the script only depends on the standard library.
     lines = []
     for line in citation_data:
         if line.startswith('version'):
