@@ -17,18 +17,18 @@ from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-CROPS = {
-    "barley": {"description": gettext("Barley")},
-    "maize": {"description": gettext("Maize")},
-    "oilpalm": {"description": gettext("Oil palm fruit")},
-    "potato": {"description": gettext("Potatoes")},
-    "rice": {"description": gettext("Rice")},
-    "soybean": {"description": gettext("Soybeans")},
-    "sugarbeet": {"description": gettext("Sugar beets")},
-    "sugarcane": {"description": gettext("Sugar cane")},
-    "sunflower": {"description": gettext("Sunflower seed")},
-    "wheat": {"description": gettext("Wheat")}
-}
+CROPS = [
+    spec.Option(key="barley", about=gettext("Barley")),
+    spec.Option(key="maize", about=gettext("Maize")),
+    spec.Option(key="oilpalm", about=gettext("Oil palm fruit")),
+    spec.Option(key="potato", about=gettext("Potatoes")),
+    spec.Option(key="rice", about=gettext("Rice")),
+    spec.Option(key="soybean", about=gettext("Soybeans")),
+    spec.Option(key="sugarbeet", about=gettext("Sugar beets")),
+    spec.Option(key="sugarcane", about=gettext("Sugar cane")),
+    spec.Option(key="sunflower", about=gettext("Sunflower seed")),
+    spec.Option(key="wheat", about=gettext("Wheat"))
+]
 
 NUTRIENTS = [
     ("protein", "protein", u.gram/u.hectogram),
@@ -66,271 +66,306 @@ NUTRIENTS = [
     ("vitk", "vitamin K", u.microgram/u.hectogram)
 ]
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "crop_production_regression",
-    "model_title": gettext("Crop Production: Regression"),
-    "userguide": "crop_production.html",
-    "aliases": ("cpr",),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['model_data_path', 'landcover_raster_path', 'landcover_to_crop_table_path', 'fertilization_rate_table_path', 'aggregate_polygon_path'],
-        ]
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["landcover_raster_path", "aggregate_polygon_path"],
-        "different_projections_ok": True,
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "landcover_raster_path": {
-            **spec.LULC,
-            "projected": True,
-            "projection_units": u.meter
-        },
-        "landcover_to_crop_table_path": {
-            "type": "csv",
-            "index_col": "crop_name",
-            "columns": {
-                "lucode": {"type": "integer"},
-                "crop_name": {
-                    "type": "option_string",
-                    "options": CROPS
-                }
-            },
-            "about": gettext(
-                "A table that maps each LULC code from the LULC map to one of "
-                "the 10 canonical crop names representing the crop grown in "
-                "that LULC class."),
-            "name": gettext("LULC to crop table")
-        },
-        "fertilization_rate_table_path": {
-            "type": "csv",
-            "index_col": "crop_name",
-            "columns": {
-                "crop_name": {
-                    "type": "option_string",
-                    "options": CROPS,
-                    "about": gettext("One of the supported crop types.")
-                },
-                **{f"{nutrient}_rate": {
-                    "type": "number",
-                    "units": u.kilogram/u.hectare,
-                    "about": f"Rate of {nutrient} application for the crop."
-                } for nutrient in ["nitrogen", "phosphorus", "potassium"]}
-            },
-            "about": gettext(
-                "A table that maps crops to fertilizer application rates."),
-            "name": gettext("fertilization rate table")
-        },
-        "aggregate_polygon_path": {
-            **spec.AOI,
-            "required": False
-        },
-        "model_data_path": {
-            "type": "directory",
-            "contents": {
-                "climate_regression_yield_tables": {
-                    "type": "directory",
-                    "contents": {
-                        "[CROP]_regression_yield_table.csv": {
-                            "type": "csv",
-                            "index_col": "climate_bin",
-                            "columns": {
-                                "climate_bin": {"type": "integer"},
-                                "yield_ceiling": {
-                                    "type": "number",
-                                    "units": u.metric_ton/u.hectare
-                                },
-                                "b_nut":  {"type": "number", "units": u.none},
-                                "b_k2o":  {"type": "number", "units": u.none},
-                                "c_n":    {"type": "number", "units": u.none},
-                                "c_p2o5": {"type": "number", "units": u.none},
-                                "c_k2o":  {"type": "number", "units": u.none}
-                            }
-                        }
-                    }
-                },
-                "crop_nutrient.csv": {
-                    "type": "csv",
-                    "index_col": "crop",
-                    "columns": {
-                        "crop": {
-                            "type": "option_string",
-                            "options": CROPS
-                        },
-                        "percentrefuse": {
-                            "type": "percent"
-                        },
-                        **{nutrient: {
-                            "about": about,
-                            "type": "number",
-                            "units": units
-                        } for nutrient, about, units in NUTRIENTS}
-                    }
-                },
-                "extended_climate_bin_maps": {
-                    "type": "directory",
-                    "about": gettext("Maps of climate bins for each crop."),
-                    "contents": {
-                        "extendedclimatebins[CROP]": {
-                            "type": "raster",
-                            "bands": {1: {"type": "integer"}},
-                        }
-                    }
-                },
-                "observed_yield": {
-                    "type": "directory",
-                    "about": gettext("Maps of actual observed yield for each crop."),
-                    "contents": {
-                        "[CROP]_observed_yield.tif": {
-                            "type": "raster",
-                            "bands": {1: {
-                                "type": "number",
-                                "units": u.metric_ton/u.hectare
-                            }}
-                        }
-                    }
-                }
-            },
-            "about": gettext("The Crop Production datasets provided with the model."),
-            "name": gettext("model data")
-        }
-    },
-    "outputs": {
-        "aggregate_results.csv": {
-            "created_if": "aggregate_polygon_path",
-            "about": "Table of results aggregated by ",
-            "index_col": "FID",
-            "columns": {
-                "FID": {
-                    "type": "integer",
-                    "about": "FID of the AOI polygon"
-                },
-                "[CROP]_modeled": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": "Modeled production of the given crop within the polygon"
-                },
-                "[CROP]_observed": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": "Observed production of the given crop within the polygon"
-                },
-                **{
-                    f"{nutrient}_{x}": {
-                        "about": f"{x} {name} production within the polygon",
-                        "type": "number",
-                        "units": units
-                    } for (nutrient, name, units) in NUTRIENTS
+MODEL_SPEC = spec.ModelSpec(
+    model_id="crop_production_regression",
+    model_title=gettext("Crop Production: Regression"),
+    userguide="crop_production.html",
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["model_data_path", "landcover_raster_path", "landcover_to_crop_table_path",
+         "fertilization_rate_table_path", "aggregate_polygon_path"]
+    ],
+    inputs=[
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        spec.SingleBandRasterInput(
+            id="landcover_raster_path",
+            name=gettext("land use/land cover"),
+            about=gettext(
+                "Map of land use/land cover codes. Each land use/land cover type must be"
+                " assigned a unique integer code."
+            ),
+            data_type=int,
+            units=None,
+            projected=True,
+            projection_units=u.meter
+        ),
+        spec.CSVInput(
+            id="landcover_to_crop_table_path",
+            name=gettext("LULC to crop table"),
+            about=gettext(
+                "A table that maps each LULC code from the LULC map to one of the 10"
+                " canonical crop names representing the crop grown in that LULC class."
+            ),
+            columns=[
+                spec.IntegerInput(id="lucode", about=None),
+                spec.OptionStringInput(
+                    id="crop_name",
+                    about=None,
+                    options=CROPS
+                )
+            ],
+            index_col="crop_name"
+        ),
+        spec.CSVInput(
+            id="fertilization_rate_table_path",
+            name=gettext("fertilization rate table"),
+            about=gettext("A table that maps crops to fertilizer application rates."),
+            columns=[
+                spec.OptionStringInput(
+                    id="crop_name",
+                    about=gettext("One of the supported crop types."),
+                    options=CROPS
+                ),
+                spec.NumberInput(
+                    id="nitrogen_rate",
+                    about=gettext("Rate of nitrogen application for the crop."),
+                    units=u.kilogram / u.hectare
+                ),
+                spec.NumberInput(
+                    id="phosphorus_rate",
+                    about=gettext("Rate of phosphorus application for the crop."),
+                    units=u.kilogram / u.hectare
+                ),
+                spec.NumberInput(
+                    id="potassium_rate",
+                    about=gettext("Rate of potassium application for the crop."),
+                    units=u.kilogram / u.hectare
+                )
+            ],
+            index_col="crop_name"
+        ),
+        spec.AOI.model_copy(update=dict(
+            id="aggregate_polygon_path",
+            required=False
+        )),
+        spec.DirectoryInput(
+            id="model_data_path",
+            name=gettext("model data"),
+            about=gettext("The Crop Production datasets provided with the model."),
+            contents=[
+                spec.DirectoryInput(
+                    id="climate_regression_yield_tables",
+                    about=None,
+                    contents=[
+                        spec.CSVInput(
+                            id="[CROP]_regression_yield_table.csv",
+                            about=None,
+                            columns=[
+                                spec.IntegerInput(id="climate_bin", about=None),
+                                spec.NumberInput(
+                                    id="yield_ceiling",
+                                    about=None,
+                                    units=u.metric_ton / u.hectare
+                                ),
+                                spec.NumberInput(id="b_nut", about=None, units=u.none),
+                                spec.NumberInput(id="b_k2o", about=None, units=u.none),
+                                spec.NumberInput(id="c_n", about=None, units=u.none),
+                                spec.NumberInput(id="c_p2o5", about=None, units=u.none),
+                                spec.NumberInput(id="c_k2o", about=None, units=u.none)
+                            ],
+                            index_col="climate_bin"
+                        )
+                    ]
+                ),
+                spec.CSVInput(
+                    id="crop_nutrient.csv",
+                    about=None,
+                    columns=[
+                        spec.OptionStringInput(
+                            id="crop",
+                            about=None,
+                            options=CROPS
+                        ),
+                        spec.PercentInput(id="percentrefuse", about=None, units=None),
+                        *[
+                            spec.NumberInput(id=nutrient, about=about, units=units)
+                            for nutrient, about, units in NUTRIENTS
+                        ]
+                    ],
+                    index_col="crop"
+                ),
+                spec.DirectoryInput(
+                    id="extended_climate_bin_maps",
+                    about=gettext("Maps of climate bins for each crop."),
+                    contents=[
+                        spec.SingleBandRasterInput(
+                            id="extendedclimatebins[CROP]",
+                            about=None,
+                            data_type=int,
+                            units=None,
+                            projected=None
+                        )
+                    ]
+                ),
+                spec.DirectoryInput(
+                    id="observed_yield",
+                    about=gettext("Maps of actual observed yield for each crop."),
+                    contents=[
+                        spec.SingleBandRasterInput(
+                            id="[CROP]_observed_yield.tif",
+                            about=None,
+                            data_type=float,
+                            units=u.metric_ton / u.hectare,
+                            projected=None
+                        )
+                    ]
+                )
+            ]
+        )
+    ],
+    outputs=[
+        spec.CSVOutput(
+            id="aggregate_results.csv",
+            about=gettext("Table of results aggregated by "),
+            created_if="aggregate_polygon_path",
+            columns=[
+                spec.IntegerOutput(id="FID", about=gettext("FID of the AOI polygon")),
+                spec.NumberOutput(
+                    id="[CROP]_modeled",
+                    about=gettext(
+                        "Modeled production of the given crop within the polygon"
+                    ),
+                    units=u.metric_ton
+                ),
+                spec.NumberOutput(
+                    id="[CROP]_observed",
+                    about=gettext(
+                        "Observed production of the given crop within the polygon"
+                    ),
+                    units=u.metric_ton
+                ),
+                *[
+                    spec.NumberOutput(
+                        id=f"{nutrient}_{x}",
+                        about=f"{x} {name} production within the polygon",
+                        units=units)
+                    for (nutrient, name, units) in NUTRIENTS for x in ["modeled", "observed"]
+                ]
+            ],
+            index_col="FID"
+        ),
+        spec.CSVOutput(
+            id="result_table.csv",
+            about=gettext("Table of results aggregated by crop"),
+            columns=[
+                spec.StringOutput(id="crop", about=gettext("Name of the crop")),
+                spec.NumberOutput(
+                    id="area (ha)",
+                    about=gettext("Area covered by the crop"),
+                    units=u.hectare
+                ),
+                spec.NumberOutput(
+                    id="production_modeled",
+                    about=gettext("Modeled crop production"),
+                    units=u.metric_ton
+                ),
+                spec.NumberOutput(
+                    id="production_observed",
+                    about=gettext("Observed crop production"),
+                    units=u.metric_ton
+                ),
+                *[
+                    spec.NumberOutput(
+                        id=f"{nutrient}_{x}",
+                        about=f"{x} {name} production from the crop",
+                        units=units
+                    ) for (nutrient, name, units) in NUTRIENTS
                     for x in ["modeled", "observed"]
-                }
-            }
-        },
-        "result_table.csv": {
-            "about": "Table of results aggregated by crop",
-            "index_col": "crop",
-            "columns": {
-                "crop": {
-                    "type": "freestyle_string",
-                    "about": "Name of the crop"
-                },
-                "area (ha)": {
-                    "type": "number",
-                    "units": u.hectare,
-                    "about": "Area covered by the crop"
-                },
-                "production_modeled": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": "Modeled crop production"
-                },
-                "production_observed": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": "Observed crop production"
-                },
-                **{
-                    f"{nutrient}_{x}": {
-                        "about": f"{x} {name} production from the crop",
-                        "type": "number",
-                        "units": units
-                    } for (nutrient, name, units) in NUTRIENTS
-                    for x in ["modeled", "observed"]
-                }
-            }
-        },
-        "[CROP]_observed_production.tif": {
-            "about": "Observed yield for the given crop",
-            "bands": {1: {"type": "number", "units": u.metric_ton/u.hectare}}
-        },
-        "[CROP]_regression_production.tif": {
-            "about": "Modeled yield for the given crop",
-            "bands": {1: {"type": "number", "units": u.metric_ton/u.hectare}}
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "aggregate_vector.shp": {
-                    "about": "Copy of input AOI vector",
-                    "geometries": spec.POLYGONS,
-                    "fields": {}
-                },
-                "clipped_[CROP]_climate_bin_map.tif": {
-                    "about": (
-                        "Climate bin map for the given crop, clipped to the "
-                        "LULC extent"),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "[CROP]_[PARAMETER]_coarse_regression_parameter.tif": {
-                    "about": (
-                        "Regression parameter for the given crop at the "
-                        "coarse resolution of the climate bin map"),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "[CROP]_[PARAMETER]_interpolated_regression_parameter.tif": {
-                    "about": (
-                        "Regression parameter for the given crop, "
-                        "interpolated to the resolution of the landcover map"),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                "[CROP]_clipped_observed_yield.tif": {
-                    "about": (
-                        "Observed yield for the given crop, clipped to the "
-                        "extend of the landcover map"),
-                    "bands": {1: {
-                        "type": "number", "units": u.metric_ton/u.hectare
-                    }}
-                },
-                "[CROP]_interpolated_observed_yield.tif": {
-                    "about": (
-                        "Observed yield for the given crop, interpolated to "
-                        "the resolution of the landcover map"),
-                    "bands": {1: {
-                        "type": "number", "units": u.metric_ton/u.hectare
-                    }}
-                },
-                "[CROP]_[NUTRIENT]_yield.tif": {
-                    "about": "Nutrient-dependent crop yield",
-                    "bands": {1: {
-                        "type": "number", "units": u.metric_ton/u.hectare
-                    }}
-                },
-                "[CROP]_zeroed_observed_yield.tif": {
-                    "about": (
-                        "Observed yield for the given crop, with nodata "
-                        "converted to 0"),
-                    "bands": {1: {
-                        "type": "number", "units": u.metric_ton/u.hectare
-                    }}
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+                ]
+            ],
+            index_col="crop"
+        ),
+        spec.SingleBandRasterOutput(
+            id="[CROP]_observed_production.tif",
+            about=gettext("Observed yield for the given crop"),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="[CROP]_regression_production.tif",
+            about=gettext("Modeled yield for the given crop"),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.DirectoryOutput(
+            id="intermediate",
+            about=None,
+            contents=[
+                spec.VectorOutput(
+                    id="aggregate_vector.shp",
+                    about=gettext("Copy of input AOI vector"),
+                    geometry_types={"MULTIPOLYGON", "POLYGON"},
+                    fields=[]
+                ),
+                spec.SingleBandRasterOutput(
+                    id="clipped_[CROP]_climate_bin_map.tif",
+                    about=gettext(
+                        "Climate bin map for the given crop, clipped to the LULC extent"
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="[CROP]_[PARAMETER]_coarse_regression_parameter.tif",
+                    about=gettext(
+                        "Regression parameter for the given crop at the coarse resolution"
+                        " of the climate bin map"
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="[CROP]_[PARAMETER]_interpolated_regression_parameter.tif",
+                    about=gettext(
+                        "Regression parameter for the given crop, interpolated to the"
+                        " resolution of the landcover map"
+                    ),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="[CROP]_clipped_observed_yield.tif",
+                    about=gettext(
+                        "Observed yield for the given crop, clipped to the extend of the"
+                        " landcover map"
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="[CROP]_interpolated_observed_yield.tif",
+                    about=gettext(
+                        "Observed yield for the given crop, interpolated to the"
+                        " resolution of the landcover map"
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="[CROP]_[NUTRIENT]_yield.tif",
+                    about=gettext("Nutrient-dependent crop yield"),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="[CROP]_zeroed_observed_yield.tif",
+                    about=gettext(
+                        "Observed yield for the given crop, with nodata converted to 0"
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                )
+            ]
+        ),
+        spec.TASKGRAPH_DIR
+    ],
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=("cpr",),
+)
+
 
 _INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
 

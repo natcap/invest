@@ -1,4 +1,3 @@
-
 """InVEST Crop Production Percentile Model."""
 import collections
 import logging
@@ -20,7 +19,7 @@ from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-CROP_OPTIONS = {
+CROP_OPTIONS = [
     # Human-readable/translatable crop names come from three sources:
     # (1) Monfreda et. al. Table 1
     # (2) "EarthStat and FAO crop names and crop groups" table
@@ -30,179 +29,179 @@ CROP_OPTIONS = {
     # names, qualifiers, and other disambiguations).
     # Where discrepancies remain, consult (3) for additional context.
     # See #614 for more details and links to sources.
-    "abaca": {"description": gettext("Abaca (manila hemp)")},
-    "agave": {"description": gettext("Agave fibers, other")},
-    "alfalfa": {"description": gettext("Alfalfa")},
-    "almond": {"description": gettext("Almonds, with shell")},
-    "aniseetc": {"description": gettext("Anise, badian, fennel, coriander")},
-    "apple": {"description": gettext("Apples")},
-    "apricot": {"description": gettext("Apricots")},
-    "areca": {"description": gettext("Areca nuts (betel)")},
-    "artichoke": {"description": gettext("Artichokes")},
-    "asparagus": {"description": gettext("Asparagus")},
-    "avocado": {"description": gettext("Avocados")},
-    "bambara": {"description": gettext("Bambara beans")},
-    "banana": {"description": gettext("Bananas")},
-    "barley": {"description": gettext("Barley")},
-    "bean": {"description": gettext("Beans, dry")},
-    "beetfor": {"description": gettext("Beets for fodder")},
-    "berrynes": {"description": gettext("Berries, other")},
-    "blueberry": {"description": gettext("Blueberries")},
-    "brazil": {"description": gettext("Brazil nuts, with shell")},
-    "broadbean": {"description": gettext("Broad beans, horse beans, dry")},
-    "buckwheat": {"description": gettext("Buckwheat")},
-    "cabbage": {"description": gettext("Cabbages and other brassicas")},
-    "cabbagefor": {"description": gettext("Cabbage for fodder")},
-    "canaryseed": {"description": gettext("Canary seed")},
-    "carob": {"description": gettext("Carobs")},
-    "carrot": {"description": gettext("Carrots and turnips")},
-    "carrotfor": {"description": gettext("Carrots for fodder")},
-    "cashew": {"description": gettext("Cashew nuts, with shell")},
-    "cashewapple": {"description": gettext("Cashew apple")},
-    "cassava": {"description": gettext("Cassava")},
-    "castor": {"description": gettext("Castor beans")},
-    "cauliflower": {"description": gettext("Cauliflower and broccoli")},
-    "cerealnes": {"description": gettext("Cereals, other")},
-    "cherry": {"description": gettext("Cherries")},
-    "chestnut": {"description": gettext("Chestnuts")},
-    "chickpea": {"description": gettext("Chick peas")},
-    "chicory": {"description": gettext("Chicory roots")},
-    "chilleetc": {"description": gettext("Chilies and peppers, green")},
-    "cinnamon": {"description": gettext("Cinnamon (canella)")},
-    "citrusnes": {"description": gettext("Citrus fruit, other")},
-    "clove": {"description": gettext("Cloves")},
-    "clover": {"description": gettext("Clover")},
-    "cocoa": {"description": gettext("Cocoa beans")},
-    "coconut": {"description": gettext("Coconuts")},
-    "coffee": {"description": gettext("Coffee, green")},
-    "cotton": {"description": gettext("Cotton")},
-    "cowpea": {"description": gettext("Cow peas, dry")},
-    "cranberry": {"description": gettext("Cranberries")},
-    "cucumberetc": {"description": gettext("Cucumbers and gherkins")},
-    "currant": {"description": gettext("Currants")},
-    "date": {"description": gettext("Dates")},
-    "eggplant": {"description": gettext("Eggplants (aubergines)")},
-    "fibrenes": {"description": gettext("Fiber crops, other")},
-    "fig": {"description": gettext("Figs")},
-    "flax": {"description": gettext("Flax fiber and tow")},
-    "fonio": {"description": gettext("Fonio")},
-    "fornes": {"description": gettext("Forage products, other")},
-    "fruitnes": {"description": gettext("Fresh fruit, other")},
-    "garlic": {"description": gettext("Garlic")},
-    "ginger": {"description": gettext("Ginger")},
-    "gooseberry": {"description": gettext("Gooseberries")},
-    "grape": {"description": gettext("Grapes")},
-    "grapefruitetc": {"description": gettext("Grapefruit and pomelos")},
-    "grassnes": {"description": gettext("Grasses, other")},
-    "greenbean": {"description": gettext("Beans, green")},
-    "greenbroadbean": {"description": gettext("Broad beans, green")},
-    "greencorn": {"description": gettext("Green corn (maize)")},
-    "greenonion": {"description": gettext("Onions and shallots, green")},
-    "greenpea": {"description": gettext("Peas, green")},
-    "groundnut": {"description": gettext("Groundnuts, with shell")},
-    "hazelnut": {"description": gettext("Hazelnuts (filberts), with shell")},
-    "hemp": {"description": gettext("Hemp fiber and tow")},
-    "hempseed": {"description": gettext("Hempseed")},
-    "hop": {"description": gettext("Hops")},
-    "jute": {"description": gettext("Jute")},
-    "jutelikefiber": {"description": gettext("Jute-like fibers")},
-    "kapokfiber": {"description": gettext("Kapok fiber")},
-    "kapokseed": {"description": gettext("Kapok seed in shell")},
-    "karite": {"description": gettext("Karite nuts (shea nuts)")},
-    "kiwi": {"description": gettext("Kiwi fruit")},
-    "kolanut": {"description": gettext("Kola nuts")},
-    "legumenes": {"description": gettext("Legumes, other")},
-    "lemonlime": {"description": gettext("Lemons and limes")},
-    "lentil": {"description": gettext("Lentils")},
-    "lettuce": {"description": gettext("Lettuce and chicory")},
-    "linseed": {"description": gettext("Linseed")},
-    "lupin": {"description": gettext("Lupins")},
-    "maize": {"description": gettext("Maize")},
-    "maizefor": {"description": gettext("Maize for forage and silage")},
-    "mango": {"description": gettext("Mangoes, mangosteens, guavas")},
-    "mate": {"description": gettext("Mate")},
-    "melonetc": {"description": gettext("Cantaloupes and other melons")},
-    "melonseed": {"description": gettext("Melon seed")},
-    "millet": {"description": gettext("Millet")},
-    "mixedgrain": {"description": gettext("Mixed grain")},
-    "mixedgrass": {"description": gettext("Mixed grasses and legumes")},
-    "mushroom": {"description": gettext("Mushrooms and truffles")},
-    "mustard": {"description": gettext("Mustard seed")},
-    "nutmeg": {"description": gettext("Nutmeg, mace, and cardamoms")},
-    "nutnes": {"description": gettext("Nuts, other")},
-    "oats": {"description": gettext("Oats")},
-    "oilpalm": {"description": gettext("Oil palm fruit")},
-    "oilseedfor": {"description": gettext("Green oilseeds for fodder")},
-    "oilseednes": {"description": gettext("Oilseeds, other")},
-    "okra": {"description": gettext("Okra")},
-    "olive": {"description": gettext("Olives")},
-    "onion": {"description": gettext("Onions, dry")},
-    "orange": {"description": gettext("Oranges")},
-    "papaya": {"description": gettext("Papayas")},
-    "pea": {"description": gettext("Peas, dry")},
-    "peachetc": {"description": gettext("Peaches and nectarines")},
-    "pear": {"description": gettext("Pears")},
-    "pepper": {"description": gettext("Pepper (Piper spp.)")},
-    "peppermint": {"description": gettext("Peppermint")},
-    "persimmon": {"description": gettext("Persimmons")},
-    "pigeonpea": {"description": gettext("Pigeon peas")},
-    "pimento": {"description": gettext("Chilies and peppers, dry")},
-    "pineapple": {"description": gettext("Pineapples")},
-    "pistachio": {"description": gettext("Pistachios")},
-    "plantain": {"description": gettext("Plantains")},
-    "plum": {"description": gettext("Plums and sloes")},
-    "poppy": {"description": gettext("Poppy seed")},
-    "potato": {"description": gettext("Potatoes")},
-    "pulsenes": {"description": gettext("Pulses, other")},
-    "pumpkinetc": {"description": gettext("Pumpkins, squash, gourds")},
-    "pyrethrum": {"description": gettext("Pyrethrum, dried flowers")},
-    "quince": {"description": gettext("Quinces")},
-    "quinoa": {"description": gettext("Quinoa")},
-    "ramie": {"description": gettext("Ramie")},
-    "rapeseed": {"description": gettext("Rapeseed")},
-    "rasberry": {"description": gettext("Raspberries")},
-    "rice": {"description": gettext("Rice")},
-    "rootnes": {"description": gettext("Roots and tubers, other")},
-    "rubber": {"description": gettext("Natural rubber")},
-    "rye": {"description": gettext("Rye")},
-    "ryefor": {"description": gettext("Rye grass for forage and silage")},
-    "safflower": {"description": gettext("Safflower seed")},
-    "sesame": {"description": gettext("Sesame seed")},
-    "sisal": {"description": gettext("Sisal")},
-    "sorghum": {"description": gettext("Sorghum")},
-    "sorghumfor": {"description": gettext("Sorghum for forage and silage")},
-    "sourcherry": {"description": gettext("Sour cherries")},
-    "soybean": {"description": gettext("Soybeans")},
-    "spicenes": {"description": gettext("Spices, other")},
-    "spinach": {"description": gettext("Spinach")},
-    "stonefruitnes": {"description": gettext("Stone fruit, other")},
-    "strawberry": {"description": gettext("Strawberries")},
-    "stringbean": {"description": gettext("String beans")},
-    "sugarbeet": {"description": gettext("Sugar beets")},
-    "sugarcane": {"description": gettext("Sugar cane")},
-    "sugarnes": {"description": gettext("Sugar crops, other")},
-    "sunflower": {"description": gettext("Sunflower seed")},
-    "swedefor": {"description": gettext("Swedes for fodder")},
-    "sweetpotato": {"description": gettext("Sweet potatoes")},
-    "tangetc": {"description": gettext("Tangerines, mandarins, clementines")},
-    "taro": {"description": gettext("Taro")},
-    "tea": {"description": gettext("Tea")},
-    "tobacco": {"description": gettext("Tobacco leaves")},
-    "tomato": {"description": gettext("Tomatoes")},
-    "triticale": {"description": gettext("Triticale")},
-    "tropicalnes": {"description": gettext("Fresh tropical fruit, other")},
-    "tung": {"description": gettext("Tung nuts")},
-    "turnipfor": {"description": gettext("Turnips for fodder")},
-    "vanilla": {"description": gettext("Vanilla")},
-    "vegetablenes": {"description": gettext("Fresh vegetables, other")},
-    "vegfor": {"description": gettext("Vegetables and roots for fodder")},
-    "vetch": {"description": gettext("Vetches")},
-    "walnut": {"description": gettext("Walnuts, with shell")},
-    "watermelon": {"description": gettext("Watermelons")},
-    "wheat": {"description": gettext("Wheat")},
-    "yam": {"description": gettext("Yams")},
-    "yautia": {"description": gettext("Yautia")},
-}
+    spec.Option(key="abaca", about=gettext("Abaca (manila hemp)")),
+    spec.Option(key="agave", about=gettext("Agave fibers, other")),
+    spec.Option(key="alfalfa", about=gettext("Alfalfa")),
+    spec.Option(key="almond", about=gettext("Almonds, with shell")),
+    spec.Option(key="aniseetc", about=gettext("Anise, badian, fennel, coriander")),
+    spec.Option(key="apple", about=gettext("Apples")),
+    spec.Option(key="apricot", about=gettext("Apricots")),
+    spec.Option(key="areca", about=gettext("Areca nuts (betel)")),
+    spec.Option(key="artichoke", about=gettext("Artichokes")),
+    spec.Option(key="asparagus", about=gettext("Asparagus")),
+    spec.Option(key="avocado", about=gettext("Avocados")),
+    spec.Option(key="bambara", about=gettext("Bambara beans")),
+    spec.Option(key="banana", about=gettext("Bananas")),
+    spec.Option(key="barley", about=gettext("Barley")),
+    spec.Option(key="bean", about=gettext("Beans, dry")),
+    spec.Option(key="beetfor", about=gettext("Beets for fodder")),
+    spec.Option(key="berrynes", about=gettext("Berries, other")),
+    spec.Option(key="blueberry", about=gettext("Blueberries")),
+    spec.Option(key="brazil", about=gettext("Brazil nuts, with shell")),
+    spec.Option(key="broadbean", about=gettext("Broad beans, horse beans, dry")),
+    spec.Option(key="buckwheat", about=gettext("Buckwheat")),
+    spec.Option(key="cabbage", about=gettext("Cabbages and other brassicas")),
+    spec.Option(key="cabbagefor", about=gettext("Cabbage for fodder")),
+    spec.Option(key="canaryseed", about=gettext("Canary seed")),
+    spec.Option(key="carob", about=gettext("Carobs")),
+    spec.Option(key="carrot", about=gettext("Carrots and turnips")),
+    spec.Option(key="carrotfor", about=gettext("Carrots for fodder")),
+    spec.Option(key="cashew", about=gettext("Cashew nuts, with shell")),
+    spec.Option(key="cashewapple", about=gettext("Cashew apple")),
+    spec.Option(key="cassava", about=gettext("Cassava")),
+    spec.Option(key="castor", about=gettext("Castor beans")),
+    spec.Option(key="cauliflower", about=gettext("Cauliflower and broccoli")),
+    spec.Option(key="cerealnes", about=gettext("Cereals, other")),
+    spec.Option(key="cherry", about=gettext("Cherries")),
+    spec.Option(key="chestnut", about=gettext("Chestnuts")),
+    spec.Option(key="chickpea", about=gettext("Chick peas")),
+    spec.Option(key="chicory", about=gettext("Chicory roots")),
+    spec.Option(key="chilleetc", about=gettext("Chilies and peppers, green")),
+    spec.Option(key="cinnamon", about=gettext("Cinnamon (canella)")),
+    spec.Option(key="citrusnes", about=gettext("Citrus fruit, other")),
+    spec.Option(key="clove", about=gettext("Cloves")),
+    spec.Option(key="clover", about=gettext("Clover")),
+    spec.Option(key="cocoa", about=gettext("Cocoa beans")),
+    spec.Option(key="coconut", about=gettext("Coconuts")),
+    spec.Option(key="coffee", about=gettext("Coffee, green")),
+    spec.Option(key="cotton", about=gettext("Cotton")),
+    spec.Option(key="cowpea", about=gettext("Cow peas, dry")),
+    spec.Option(key="cranberry", about=gettext("Cranberries")),
+    spec.Option(key="cucumberetc", about=gettext("Cucumbers and gherkins")),
+    spec.Option(key="currant", about=gettext("Currants")),
+    spec.Option(key="date", about=gettext("Dates")),
+    spec.Option(key="eggplant", about=gettext("Eggplants (aubergines)")),
+    spec.Option(key="fibrenes", about=gettext("Fiber crops, other")),
+    spec.Option(key="fig", about=gettext("Figs")),
+    spec.Option(key="flax", about=gettext("Flax fiber and tow")),
+    spec.Option(key="fonio", about=gettext("Fonio")),
+    spec.Option(key="fornes", about=gettext("Forage products, other")),
+    spec.Option(key="fruitnes", about=gettext("Fresh fruit, other")),
+    spec.Option(key="garlic", about=gettext("Garlic")),
+    spec.Option(key="ginger", about=gettext("Ginger")),
+    spec.Option(key="gooseberry", about=gettext("Gooseberries")),
+    spec.Option(key="grape", about=gettext("Grapes")),
+    spec.Option(key="grapefruitetc", about=gettext("Grapefruit and pomelos")),
+    spec.Option(key="grassnes", about=gettext("Grasses, other")),
+    spec.Option(key="greenbean", about=gettext("Beans, green")),
+    spec.Option(key="greenbroadbean", about=gettext("Broad beans, green")),
+    spec.Option(key="greencorn", about=gettext("Green corn (maize)")),
+    spec.Option(key="greenonion", about=gettext("Onions and shallots, green")),
+    spec.Option(key="greenpea", about=gettext("Peas, green")),
+    spec.Option(key="groundnut", about=gettext("Groundnuts, with shell")),
+    spec.Option(key="hazelnut", about=gettext("Hazelnuts (filberts), with shell")),
+    spec.Option(key="hemp", about=gettext("Hemp fiber and tow")),
+    spec.Option(key="hempseed", about=gettext("Hempseed")),
+    spec.Option(key="hop", about=gettext("Hops")),
+    spec.Option(key="jute", about=gettext("Jute")),
+    spec.Option(key="jutelikefiber", about=gettext("Jute-like fibers")),
+    spec.Option(key="kapokfiber", about=gettext("Kapok fiber")),
+    spec.Option(key="kapokseed", about=gettext("Kapok seed in shell")),
+    spec.Option(key="karite", about=gettext("Karite nuts (shea nuts)")),
+    spec.Option(key="kiwi", about=gettext("Kiwi fruit")),
+    spec.Option(key="kolanut", about=gettext("Kola nuts")),
+    spec.Option(key="legumenes", about=gettext("Legumes, other")),
+    spec.Option(key="lemonlime", about=gettext("Lemons and limes")),
+    spec.Option(key="lentil", about=gettext("Lentils")),
+    spec.Option(key="lettuce", about=gettext("Lettuce and chicory")),
+    spec.Option(key="linseed", about=gettext("Linseed")),
+    spec.Option(key="lupin", about=gettext("Lupins")),
+    spec.Option(key="maize", about=gettext("Maize")),
+    spec.Option(key="maizefor", about=gettext("Maize for forage and silage")),
+    spec.Option(key="mango", about=gettext("Mangoes, mangosteens, guavas")),
+    spec.Option(key="mate", about=gettext("Mate")),
+    spec.Option(key="melonetc", about=gettext("Cantaloupes and other melons")),
+    spec.Option(key="melonseed", about=gettext("Melon seed")),
+    spec.Option(key="millet", about=gettext("Millet")),
+    spec.Option(key="mixedgrain", about=gettext("Mixed grain")),
+    spec.Option(key="mixedgrass", about=gettext("Mixed grasses and legumes")),
+    spec.Option(key="mushroom", about=gettext("Mushrooms and truffles")),
+    spec.Option(key="mustard", about=gettext("Mustard seed")),
+    spec.Option(key="nutmeg", about=gettext("Nutmeg, mace, and cardamoms")),
+    spec.Option(key="nutnes", about=gettext("Nuts, other")),
+    spec.Option(key="oats", about=gettext("Oats")),
+    spec.Option(key="oilpalm", about=gettext("Oil palm fruit")),
+    spec.Option(key="oilseedfor", about=gettext("Green oilseeds for fodder")),
+    spec.Option(key="oilseednes", about=gettext("Oilseeds, other")),
+    spec.Option(key="okra", about=gettext("Okra")),
+    spec.Option(key="olive", about=gettext("Olives")),
+    spec.Option(key="onion", about=gettext("Onions, dry")),
+    spec.Option(key="orange", about=gettext("Oranges")),
+    spec.Option(key="papaya", about=gettext("Papayas")),
+    spec.Option(key="pea", about=gettext("Peas, dry")),
+    spec.Option(key="peachetc", about=gettext("Peaches and nectarines")),
+    spec.Option(key="pear", about=gettext("Pears")),
+    spec.Option(key="pepper", about=gettext("Pepper (Piper spp.)")),
+    spec.Option(key="peppermint", about=gettext("Peppermint")),
+    spec.Option(key="persimmon", about=gettext("Persimmons")),
+    spec.Option(key="pigeonpea", about=gettext("Pigeon peas")),
+    spec.Option(key="pimento", about=gettext("Chilies and peppers, dry")),
+    spec.Option(key="pineapple", about=gettext("Pineapples")),
+    spec.Option(key="pistachio", about=gettext("Pistachios")),
+    spec.Option(key="plantain", about=gettext("Plantains")),
+    spec.Option(key="plum", about=gettext("Plums and sloes")),
+    spec.Option(key="poppy", about=gettext("Poppy seed")),
+    spec.Option(key="potato", about=gettext("Potatoes")),
+    spec.Option(key="pulsenes", about=gettext("Pulses, other")),
+    spec.Option(key="pumpkinetc", about=gettext("Pumpkins, squash, gourds")),
+    spec.Option(key="pyrethrum", about=gettext("Pyrethrum, dried flowers")),
+    spec.Option(key="quince", about=gettext("Quinces")),
+    spec.Option(key="quinoa", about=gettext("Quinoa")),
+    spec.Option(key="ramie", about=gettext("Ramie")),
+    spec.Option(key="rapeseed", about=gettext("Rapeseed")),
+    spec.Option(key="rasberry", about=gettext("Raspberries")),
+    spec.Option(key="rice", about=gettext("Rice")),
+    spec.Option(key="rootnes", about=gettext("Roots and tubers, other")),
+    spec.Option(key="rubber", about=gettext("Natural rubber")),
+    spec.Option(key="rye", about=gettext("Rye")),
+    spec.Option(key="ryefor", about=gettext("Rye grass for forage and silage")),
+    spec.Option(key="safflower", about=gettext("Safflower seed")),
+    spec.Option(key="sesame", about=gettext("Sesame seed")),
+    spec.Option(key="sisal", about=gettext("Sisal")),
+    spec.Option(key="sorghum", about=gettext("Sorghum")),
+    spec.Option(key="sorghumfor", about=gettext("Sorghum for forage and silage")),
+    spec.Option(key="sourcherry", about=gettext("Sour cherries")),
+    spec.Option(key="soybean", about=gettext("Soybeans")),
+    spec.Option(key="spicenes", about=gettext("Spices, other")),
+    spec.Option(key="spinach", about=gettext("Spinach")),
+    spec.Option(key="stonefruitnes", about=gettext("Stone fruit, other")),
+    spec.Option(key="strawberry", about=gettext("Strawberries")),
+    spec.Option(key="stringbean", about=gettext("String beans")),
+    spec.Option(key="sugarbeet", about=gettext("Sugar beets")),
+    spec.Option(key="sugarcane", about=gettext("Sugar cane")),
+    spec.Option(key="sugarnes", about=gettext("Sugar crops, other")),
+    spec.Option(key="sunflower", about=gettext("Sunflower seed")),
+    spec.Option(key="swedefor", about=gettext("Swedes for fodder")),
+    spec.Option(key="sweetpotato", about=gettext("Sweet potatoes")),
+    spec.Option(key="tangetc", about=gettext("Tangerines, mandarins, clementines")),
+    spec.Option(key="taro", about=gettext("Taro")),
+    spec.Option(key="tea", about=gettext("Tea")),
+    spec.Option(key="tobacco", about=gettext("Tobacco leaves")),
+    spec.Option(key="tomato", about=gettext("Tomatoes")),
+    spec.Option(key="triticale", about=gettext("Triticale")),
+    spec.Option(key="tropicalnes", about=gettext("Fresh tropical fruit, other")),
+    spec.Option(key="tung", about=gettext("Tung nuts")),
+    spec.Option(key="turnipfor", about=gettext("Turnips for fodder")),
+    spec.Option(key="vanilla", about=gettext("Vanilla")),
+    spec.Option(key="vegetablenes", about=gettext("Fresh vegetables, other")),
+    spec.Option(key="vegfor", about=gettext("Vegetables and roots for fodder")),
+    spec.Option(key="vetch", about=gettext("Vetches")),
+    spec.Option(key="walnut", about=gettext("Walnuts, with shell")),
+    spec.Option(key="watermelon", about=gettext("Watermelons")),
+    spec.Option(key="wheat", about=gettext("Wheat")),
+    spec.Option(key="yam", about=gettext("Yams")),
+    spec.Option(key="yautia", about=gettext("Yautia"))
+]
 
 nutrient_units = {
     "protein":     u.gram/u.hectogram,
@@ -240,278 +239,296 @@ nutrient_units = {
     "vitk":        u.microgram/u.hectogram,  # vitamin K
 }
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "crop_production_percentile",
-    "model_title": gettext("Crop Production: Percentile"),
-    "userguide": "crop_production.html",
-    "aliases": ("cpp",),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['model_data_path', 'landcover_raster_path', 'landcover_to_crop_table_path', 'aggregate_polygon_path']
-        ]
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": [
-            "landcover_raster_path",
-            "aggregate_polygon_path",
-        ],
-        "different_projections_ok": True,
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "landcover_raster_path": {
-            **spec.LULC,
-            "projected": True,
-            "projection_units": u.meter
-        },
-        "landcover_to_crop_table_path": {
-            "type": "csv",
-            "index_col": "crop_name",
-            "columns": {
-                "lucode": {"type": "integer"},
-                "crop_name": {
-                    "type": "option_string",
-                    "options": CROP_OPTIONS
-                }
-            },
-            "about": gettext(
-                "A table that maps each LULC code from the LULC map to one of "
-                "the 175 canonical crop names representing the crop grown in "
-                "that LULC class."),
-            "name": gettext("LULC to Crop Table")
-        },
-        "aggregate_polygon_path": {
-            **spec.AOI,
-            "projected": True,
-            "required": False
-        },
-        "model_data_path": {
-            "type": "directory",
-            "contents": {
-                "climate_percentile_yield_tables": {
-                    "type": "directory",
-                    "about": gettext(
-                        "Table mapping each climate bin to yield percentiles "
-                        "for each crop."),
-                    "contents": {
-                        "[CROP]_percentile_yield_table.csv": {
-                            "type": "csv",
-                            "index_col": "climate_bin",
-                            "columns": {
-                                "climate_bin": {"type": "integer"},
-                                "yield_25th": {
-                                    "type": "number",
-                                    "units": u.metric_ton/u.hectare
-                                },
-                                "yield_50th": {
-                                    "type": "number",
-                                    "units": u.metric_ton/u.hectare
-                                },
-                                "yield_75th": {
-                                    "type": "number",
-                                    "units": u.metric_ton/u.hectare
-                                },
-                                "yield_95th": {
-                                    "type": "number",
-                                    "units": u.metric_ton/u.hectare
-                                }
-                            }
-                        },
-                    }
-                },
-                "extended_climate_bin_maps": {
-                    "type": "directory",
-                    "about": gettext("Maps of climate bins for each crop."),
-                    "contents": {
-                        "extendedclimatebins[CROP]": {
-                            "type": "raster",
-                            "bands": {1: {"type": "integer"}},
-                        }
-                    }
-                },
-                "observed_yield": {
-                    "type": "directory",
-                    "about": gettext("Maps of actual observed yield for each crop."),
-                    "contents": {
-                        "[CROP]_observed_yield.tif": {
-                            "type": "raster",
-                            "bands": {1: {
-                                "type": "number",
-                                "units": u.metric_ton/u.hectare
-                            }}
-                        }
-                    }
-                },
-                "crop_nutrient.csv": {
-                    "type": "csv",
-                    "index_col": "crop",
-                    "columns": {
-                        "crop": {
-                            "type": "option_string",
-                            "options": CROP_OPTIONS
-                        },
-                        "percentrefuse": {
-                            "type": "percent"
-                        },
-                        **{nutrient: {
-                            "type": "number",
-                            "units": units
-                        } for nutrient, units in nutrient_units.items()}
-                    }
-                }
-            },
-            "about": gettext("Path to the InVEST Crop Production Data directory."),
-            "name": gettext("model data directory")
-        }
-    },
-    "outputs": {
-        "aggregate_results.csv": {
-            "created_if": "aggregate_polygon_path",
-            "about": "Model results aggregated to AOI polygons",
-            "index_col": "FID",
-            "columns": {
-                "FID": {
-                    "type": "integer",
-                    "about": "FID of the AOI polygon"
-                },
-                "[CROP]_observed": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": (
-                        "Observed production of the given crop within the polygon")
-                },
-                "[CROP]_yield_[PERCENTILE]": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": (
-                        "Modeled production of the given crop within the "
-                        "polygon at the given percentile")
-                },
-                **{
-                    f"{nutrient_code}_observed": {
-                        "about": f"Observed {nutrient} production within the polygon",
-                        "type": "number",
-                        "units": units
-                    } for nutrient_code, nutrient, units in NUTRIENTS
-                },
-                **{
-                    f"{nutrient_code}_[PERCENTILE]": {
-                        "about": (
+MODEL_SPEC = spec.ModelSpec(
+    model_id="crop_production_percentile",
+    model_title=gettext("Crop Production: Percentile"),
+    userguide="crop_production.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=("cpp",),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["model_data_path", "landcover_raster_path", "landcover_to_crop_table_path",
+         "aggregate_polygon_path"]
+    ],
+    inputs=[
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        spec.SingleBandRasterInput(
+            id="landcover_raster_path",
+            name=gettext("land use/land cover"),
+            about=gettext(
+                "Map of land use/land cover codes. Each land use/land cover type must be"
+                " assigned a unique integer code."
+            ),
+            data_type=int,
+            units=None,
+            projected=True,
+            projection_units=u.meter
+        ),
+        spec.CSVInput(
+            id="landcover_to_crop_table_path",
+            name=gettext("LULC to Crop Table"),
+            about=gettext(
+                "A table that maps each LULC code from the LULC map to one of the 175"
+                " canonical crop names representing the crop grown in that LULC class."
+            ),
+            columns=[
+                spec.IntegerInput(id="lucode", about=None),
+                spec.OptionStringInput(
+                    id="crop_name",
+                    about=None,
+                    options=CROP_OPTIONS
+                )
+            ],
+            index_col="crop_name"
+        ),
+        spec.AOI.model_copy(update=dict(
+            id="aggregate_polygon_path",
+            required=False,
+            projected=True
+        )),
+        spec.DirectoryInput(
+            id="model_data_path",
+            name=gettext("model data directory"),
+            about=gettext("Path to the InVEST Crop Production Data directory."),
+            contents=[
+                spec.DirectoryInput(
+                    id="climate_percentile_yield_tables",
+                    about=gettext(
+                        "Table mapping each climate bin to yield percentiles for each"
+                        " crop."
+                    ),
+                    contents=[
+                        spec.CSVInput(
+                            id="[CROP]_percentile_yield_table.csv",
+                            about=None,
+                            columns=[
+                                spec.IntegerInput(id="climate_bin", about=None),
+                                spec.NumberInput(
+                                    id="yield_25th",
+                                    about=None,
+                                    units=u.metric_ton / u.hectare
+                                ),
+                                spec.NumberInput(
+                                    id="yield_50th",
+                                    about=None,
+                                    units=u.metric_ton / u.hectare
+                                ),
+                                spec.NumberInput(
+                                    id="yield_75th",
+                                    about=None,
+                                    units=u.metric_ton / u.hectare
+                                ),
+                                spec.NumberInput(
+                                    id="yield_95th",
+                                    about=None,
+                                    units=u.metric_ton / u.hectare
+                                )
+                            ],
+                            index_col="climate_bin"
+                        )
+                    ]
+                ),
+                spec.DirectoryInput(
+                    id="extended_climate_bin_maps",
+                    about=gettext("Maps of climate bins for each crop."),
+                    contents=[
+                        spec.SingleBandRasterInput(
+                            id="extendedclimatebins[CROP]",
+                            about=None,
+                            data_type=int,
+                            units=None,
+                            projected=None
+                        )
+                    ]
+                ),
+                spec.DirectoryInput(
+                    id="observed_yield",
+                    about=gettext("Maps of actual observed yield for each crop."),
+                    contents=[
+                        spec.SingleBandRasterInput(
+                            id="[CROP]_observed_yield.tif",
+                            about=None,
+                            data_type=float,
+                            units=u.metric_ton / u.hectare,
+                            projected=None
+                        )
+                    ]
+                ),
+                spec.CSVInput(
+                    id="crop_nutrient.csv",
+                    about=None,
+                    columns=[
+                        spec.OptionStringInput(
+                            id="crop",
+                            about=None,
+                            options=CROP_OPTIONS
+                        ),
+                        spec.PercentInput(id="percentrefuse", about=None, units=None),
+                        *[spec.NumberInput(id=nutrient, units=units)
+                            for nutrient, units in nutrient_units.items()]
+                    ],
+                    index_col="crop"
+                )
+            ]
+        )
+    ],
+    outputs=[
+        spec.CSVOutput(
+            id="aggregate_results.csv",
+            about=gettext("Model results aggregated to AOI polygons"),
+            created_if="aggregate_polygon_path",
+            columns=[
+                spec.IntegerOutput(id="FID", about=gettext("FID of the AOI polygon")),
+                spec.NumberOutput(
+                    id="[CROP]_observed",
+                    about=gettext(
+                        "Observed production of the given crop within the polygon"
+                    ),
+                    units=u.metric_ton
+                ),
+                spec.NumberOutput(
+                    id="[CROP]_yield_[PERCENTILE]",
+                    about=gettext(
+                        "Modeled production of the given crop within the polygon at the"
+                        " given percentile"
+                    ),
+                    units=u.metric_ton
+                ),
+                *[
+                    spec.NumberOutput(
+                        id=f"{nutrient_code}_observed",
+                        about=f"Observed {nutrient} production within the polygon",
+                        units=units
+                    ) for nutrient_code, nutrient, units in NUTRIENTS
+                ],
+                *[
+                    spec.NumberOutput(
+                        id=f"{nutrient_code}_[PERCENTILE]",
+                        about=(
                             f"Modeled {nutrient} production within the polygon at"
                             "the given percentile"),
-                        "type": "number",
-                        "units": units
-                    } for nutrient_code, nutrient, units in NUTRIENTS
-                }
-            }
-        },
-        "result_table.csv": {
-            "about": "Model results aggregated by crop",
-            "index_col": "crop",
-            "columns": {
-                "crop": {
-                    "type": "freestyle_string",
-                    "about": "Name of the crop"
-                },
-                "area (ha)": {
-                    "type": "number",
-                    "units": u.hectare,
-                    "about": "Area covered by the crop"
-                },
-                "production_observed": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": "Observed crop production"
-                },
-                "production_[PERCENTILE]": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": "Modeled crop production at the given percentile"
-                },
-                **{
-                    f"{nutrient_code}_observed": {
-                        "about": f"Observed {nutrient} production from the crop",
-                        "type": "number",
-                        "units": units
-                    } for nutrient_code, nutrient, units in NUTRIENTS
-                },
-                **{
-                    f"{nutrient_code}_[PERCENTILE]": {
-                        "about": (
+                        units=units
+                    ) for nutrient_code, nutrient, units in NUTRIENTS
+                ]
+            ],
+            index_col="FID"
+        ),
+        spec.CSVOutput(
+            id="result_table.csv",
+            about=gettext("Model results aggregated by crop"),
+            columns=[
+                spec.StringOutput(id="crop", about=gettext("Name of the crop")),
+                spec.NumberOutput(
+                    id="area (ha)",
+                    about=gettext("Area covered by the crop"),
+                    units=u.hectare
+                ),
+                spec.NumberOutput(
+                    id="production_observed",
+                    about=gettext("Observed crop production"),
+                    units=u.metric_ton
+                ),
+                spec.NumberOutput(
+                    id="production_[PERCENTILE]",
+                    about=gettext("Modeled crop production at the given percentile"),
+                    units=u.metric_ton
+                ),
+                *[
+                    spec.NumberOutput(
+                        id=f"{nutrient_code}_observed",
+                        about=f"Observed {nutrient} production from the crop",
+                        units=units
+                    ) for nutrient_code, nutrient, units in NUTRIENTS
+                ],
+                *[
+                    spec.NumberOutput(
+                        id=f"{nutrient_code}_[PERCENTILE]",
+                        about=(
                             f"Modeled {nutrient} production from the crop at"
                             "the given percentile"),
-                        "type": "number",
-                        "units": units
-                    } for nutrient_code, nutrient, units in NUTRIENTS
-                }
-            }
-        },
-        "[CROP]_observed_production.tif": {
-            "about": "Observed yield for the given crop",
-            "bands": {1: {"type": "number", "units": u.metric_ton/u.hectare}}
-        },
-        "[CROP]_yield_[PERCENTILE]_production.tif": {
-            "about": (
-                "Modeled yield for the given crop at the given percentile"),
-            "bands": {1: {"type": "number", "units": u.metric_ton/u.hectare}}
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "clipped_[CROP]_climate_bin_map.tif": {
-                    "about": (
-                        "Climate bin map for the given crop, clipped to the "
-                        "LULC extent"),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "[CROP]_clipped_observed_yield.tif": {
-                    "about": (
-                        "Observed yield for the given crop, clipped to the "
-                        "extend of the landcover map"),
-                    "bands": {1: {
-                        "type": "number", "units": u.metric_ton/u.hectare
-                    }}
-                },
-                "[CROP]_interpolated_observed_yield.tif": {
-                    "about": (
-                        "Observed yield for the given crop, interpolated to "
-                        "the resolution of the landcover map"),
-                    "bands": {1: {
-                        "type": "number", "units": u.metric_ton/u.hectare
-                    }}
-                },
-                "[CROP]_yield_[PERCENTILE]_coarse_yield.tif": {
-                    "about": (
-                        "Percentile yield of the given crop, at the coarse "
-                        "resolution of the climate bin map"),
-                    "bands": {1: {
-                        "type": "number", "units": u.metric_ton/u.hectare
-                    }}
-                },
-                "[CROP]_yield_[PERCENTILE]_interpolated_yield.tif": {
-                    "about": (
-                        "Percentile yield of the given crop, interpolated to "
-                        "the resolution of the landcover map"),
-                    "bands": {1: {
-                        "type": "number", "units": u.metric_ton/u.hectare
-                    }}
-                },
-                "[CROP]_zeroed_observed_yield.tif": {
-                    "about": (
-                        "Observed yield for the given crop, with nodata "
-                        "converted to 0"),
-                    "bands": {1: {
-                        "type": "number", "units": u.metric_ton/u.hectare
-                    }}
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+                        units=units
+                    ) for nutrient_code, nutrient, units in NUTRIENTS
+                ]
+            ],
+            index_col="crop"
+        ),
+        spec.SingleBandRasterOutput(
+            id="[CROP]_observed_production.tif",
+            about=gettext("Observed yield for the given crop"),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="[CROP]_yield_[PERCENTILE]_production.tif",
+            about=gettext("Modeled yield for the given crop at the given percentile"),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.DirectoryOutput(
+            id="intermediate",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="clipped_[CROP]_climate_bin_map.tif",
+                    about=gettext(
+                        "Climate bin map for the given crop, clipped to the LULC extent"
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="[CROP]_clipped_observed_yield.tif",
+                    about=gettext(
+                        "Observed yield for the given crop, clipped to the extend of the"
+                        " landcover map"
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="[CROP]_interpolated_observed_yield.tif",
+                    about=gettext(
+                        "Observed yield for the given crop, interpolated to the"
+                        " resolution of the landcover map"
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="[CROP]_yield_[PERCENTILE]_coarse_yield.tif",
+                    about=gettext(
+                        "Percentile yield of the given crop, at the coarse resolution of"
+                        " the climate bin map"
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="[CROP]_yield_[PERCENTILE]_interpolated_yield.tif",
+                    about=gettext(
+                        "Percentile yield of the given crop, interpolated to the"
+                        " resolution of the landcover map"
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.SingleBandRasterOutput(
+                    id="[CROP]_zeroed_observed_yield.tif",
+                    about=gettext(
+                        "Observed yield for the given crop, with nodata converted to 0"
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                )
+            ]
+        ),
+        spec.TASKGRAPH_DIR
+    ]
+)
+
 
 _INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
 

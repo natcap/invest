@@ -35,253 +35,295 @@ DISTANCE_UPPER_BOUND = 500e3
 # helpful to have a global nodata defined for the whole model
 NODATA_VALUE = -1
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "forest_carbon_edge_effect",
-    "model_title": gettext("Forest Carbon Edge Effect"),
-    "userguide": "carbon_edge.html",
-    "aliases": ("fc",),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['lulc_raster_path', 'biophysical_table_path', 'pools_to_calculate'],
-            ['compute_forest_edge_effects', 'tropical_forest_edge_carbon_model_vector_path', 'n_nearest_model_points', 'biomass_to_carbon_conversion_factor'],
-            ['aoi_vector_path']
-        ]
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "n_nearest_model_points": {
-            "expression": "value > 0 and value.is_integer()",
-            "type": "number",
-            "units": u.none,
-            "required": "compute_forest_edge_effects",
-            "allowed": "compute_forest_edge_effects",
-            "about": gettext(
-                "Number of closest regression models that are used when "
-                "calculating the total biomass. Each local model is linearly "
-                "weighted by distance such that the pixel's biomass is a "
-                "function of each of these points with the closest point "
-                "having the largest effect. Must be an integer greater than "
-                "0. Required if Compute Forest Edge Effects is selected."
+MODEL_SPEC = spec.ModelSpec(
+    model_id="forest_carbon_edge_effect",
+    model_title=gettext("Forest Carbon Edge Effect"),
+    userguide="carbon_edge.html",
+    validate_spatial_overlap=["aoi_vector_path", "lulc_raster_path"],
+    different_projections_ok=False,
+    aliases=("fc",),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["lulc_raster_path", "biophysical_table_path", "pools_to_calculate"],
+        [
+            "compute_forest_edge_effects",
+            "tropical_forest_edge_carbon_model_vector_path",
+            "n_nearest_model_points",
+            "biomass_to_carbon_conversion_factor"
+        ],
+        ["aoi_vector_path"]
+    ],
+    inputs=[
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        spec.NumberInput(
+            id="n_nearest_model_points",
+            name=gettext("number of points to average"),
+            about=(
+                "Number of closest regression models that are used when calculating the"
+                " total biomass. Each local model is linearly weighted by distance such"
+                " that the pixel's biomass is a function of each of these points with the"
+                " closest point having the largest effect. Must be an integer greater"
+                " than 0. Required if Compute Forest Edge Effects is selected."
             ),
-            "name": gettext("number of points to average")
-        },
-        "aoi_vector_path": {
-            **spec.AOI,
-            "projected": True,
-            "required": False
-        },
-        "biophysical_table_path": {
-            "type": "csv",
-            "index_col": "lucode",
-            "columns": {
-                "lucode": spec.LULC_TABLE_COLUMN,
-                "is_tropical_forest": {
-                    "type": "boolean",
-                    "about": gettext(
-                        "Enter 1 if the LULC class is tropical forest, 0 if "
-                        "it is not tropical forest.")},
-                "c_above": {
-                    "type": "number",
-                    "units": u.metric_ton/u.hectare,
-                    "about": gettext(
-                        "Carbon density value for the aboveground carbon "
-                        "pool.")
-                },
-                "c_below": {
-                    "type": "number",
-                    "units": u.metric_ton/u.hectare,
-                    "required": "pools_to_calculate == 'all'",
-                    "about": gettext(
-                        "Carbon density value for the belowground carbon "
-                        "pool. Required if calculating all pools.")
-                },
-                "c_soil": {
-                    "type": "number",
-                    "units": u.metric_ton/u.hectare,
-                    "required": "pools_to_calculate == 'all'",
-                    "about": gettext(
-                        "Carbon density value for the soil carbon pool. "
-                        "Required if calculating all pools.")
-                },
-                "c_dead": {
-                    "type": "number",
-                    "units": u.metric_ton/u.hectare,
-                    "required": "pools_to_calculate == 'all'",
-                    "about": gettext(
-                        "Carbon density value for the dead matter carbon "
-                        "pool. Required if calculating all pools.")
-                },
-            },
-            "about": gettext(
-                "A table mapping each LULC code from the LULC map to "
-                "biophysical data for that LULC class."),
-            "name": gettext("biophysical table")
-        },
-        "lulc_raster_path": {
-            **spec.LULC,
-            "about": spec.LULC['about'] + " " + gettext(
-                "All values in this raster must "
-                "have corresponding entries in the Biophysical Table."),
-            "projected": True,
-            "projection_units": u.meter
-        },
-        "pools_to_calculate": {
-            "type": "option_string",
-            "options": {
-                "all": {
-                    "display_name": gettext("all"),
-                    "description": gettext(
-                        "Use all pools (aboveground, belowground, soil, and "
-                        "dead matter) in the carbon pool calculation.")},
-                "above_ground": {
-                    "display_name": gettext("aboveground only"),
-                    "description": gettext(
-                        "Only use the aboveground pool in the carbon pool "
-                        "calculation.")}
-            },
-            "about": gettext("Which carbon pools to consider."),
-            "name": gettext("carbon pools to calculate")
-        },
-        "compute_forest_edge_effects": {
-            "type": "boolean",
-            "about": gettext("Account for forest edge effects on aboveground carbon."),
-            "name": gettext("compute forest edge effects")
-        },
-        "tropical_forest_edge_carbon_model_vector_path": {
-            "type": "vector",
-            "fields": {
-                "method": {
-                    "type": "option_string",
-                    "options": {
-                        "1": {"description": gettext("asymptotic")},
-                        "2": {"description": gettext("logarithmic")},
-                        "3": {"description": gettext("linear")}
-                    },
-                    "about": gettext("Optimal regression model for the area.")
-                },
-                "theta1": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext("θ₁ parameter for the regression equation.")},
-                "theta2": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext("θ₂ parameter for the regression equation.")},
-                "theta3": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "θ₃ parameter for the regression equation. "
-                        "Used only for the asymptotic model.")}
-            },
-            "geometries": spec.POLYGONS,
-            "projected": True,
-            "projection_units": u.meter,
-            "required": "compute_forest_edge_effects",
-            "allowed": "compute_forest_edge_effects",
-            "about": gettext(
-                "Map storing the optimal regression model for each tropical "
-                "subregion and the corresponding theta parameters for that "
-                "regression equation. Default data is provided. Required if "
-                "Compute Forest Edge Effects is selected."),
-            "name": gettext("global regression models")
-        },
-        "biomass_to_carbon_conversion_factor": {
-            "type": "ratio",
-            "required": "compute_forest_edge_effects",
-            "allowed": "compute_forest_edge_effects",
-            "about": gettext(
-                "Proportion of forest edge biomass that is elemental carbon. "
-                "Required if Compute Forest Edge Effects is selected."),
-            "name": gettext("forest edge biomass to carbon conversion factor")
-        }
-    },
-    "outputs": {
-        "carbon_map.tif": {
-            "about": (
-                "A map of carbon stock per hectare, with the amount in forest "
-                "derived from the regression based on distance to forest "
-                "edge, and the amount in non-forest classes according to the "
-                "biophysical table. "),
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.hectare
-            }}
-        },
-        "aggregated_carbon_stocks.shp": {
-            "about": "AOI map with aggregated carbon statistics.",
-            "geometries": spec.POLYGONS,
-            "fields": {
-                "c_sum": {
-                    "type": "number",
-                    "units": u.metric_ton,
-                    "about": "Total carbon in the area."
-                },
-                "c_ha_mean": {
-                    "type": "number",
-                    "units": u.metric_ton/u.hectare,
-                    "about": "Mean carbon density in the area."
-                }
-            }
-        },
-        "intermediate_outputs": {
-            "type": "directory",
-            "contents": {
-                "c_above_carbon_stocks.tif": {
-                    "about": "Carbon stored in the aboveground biomass carbon pool.",
-                    "bands": {1: {"type": "number", "units": u.metric_ton}}
-                },
-                "c_below_carbon_stocks.tif": {
-                    "about": "Carbon stored in the belowground biomass carbon pool.",
-                    "bands": {1: {"type": "number", "units": u.metric_ton}}
-                },
-                "c_dead_carbon_stocks.tif": {
-                    "about": "Carbon stored in the dead matter biomass carbon pool.",
-                    "bands": {1: {"type": "number", "units": u.metric_ton}}
-                },
-                "c_soil_carbon_stocks.tif": {
-                    "about": "Carbon stored in the soil biomass carbon pool.",
-                    "bands": {1: {"type": "number", "units": u.metric_ton}}
-                },
-                "local_carbon_shape.shp": {
-                    "about": (
-                        "The regression parameters reprojected to match your "
-                        "study area."),
-                    "geometries": spec.POLYGONS,
-                    "fields": {}
-                },
-                "edge_distance.tif": {
-                    "about": (
-                        "The distance of each forest pixel to the nearest "
-                        "forest edge"),
-                    "bands": {1: {"type": "number", "units": u.pixel}}
-                },
-                "tropical_forest_edge_carbon_stocks.tif": {
-                    "about": (
-                        "A map of carbon in the forest only, according to the "
-                        "regression method."),
-                    "bands": {1: {
-                        "type": "number", "units": u.metric_ton/u.hectare
-                    }}
-                },
-                "regression_model_params_clipped.shp": {
-                    "about": (
-                        "The Global Regression Models shapefile clipped "
-                        "to the study area."),
-                    "geometries": spec.POLYGONS,
-                    "fields": {}
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+            required="compute_forest_edge_effects",
+            allowed="compute_forest_edge_effects",
+            units=u.none,
+            expression="value > 0 and value.is_integer()"
+        ),
+        spec.AOI.model_copy(update=dict(
+            id="aoi_vector_path",
+            required=False,
+            projected=True
+        )),
+        spec.CSVInput(
+            id="biophysical_table_path",
+            name=gettext("biophysical table"),
+            about=gettext(
+                "A table mapping each LULC code from the LULC map to biophysical data for"
+                " that LULC class."
+            ),
+            columns=[
+                spec.LULC_TABLE_COLUMN,
+                spec.BooleanInput(
+                    id="is_tropical_forest",
+                    about=gettext(
+                        "Enter 1 if the LULC class is tropical forest, 0 if it is not"
+                        " tropical forest."
+                    )
+                ),
+                spec.NumberInput(
+                    id="c_above",
+                    about=gettext(
+                        "Carbon density value for the aboveground carbon pool."
+                    ),
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.NumberInput(
+                    id="c_below",
+                    about=gettext(
+                        "Carbon density value for the belowground carbon pool. Required"
+                        " if calculating all pools."
+                    ),
+                    required="pools_to_calculate == 'all'",
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.NumberInput(
+                    id="c_soil",
+                    about=gettext(
+                        "Carbon density value for the soil carbon pool. Required if"
+                        " calculating all pools."
+                    ),
+                    required="pools_to_calculate == 'all'",
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.NumberInput(
+                    id="c_dead",
+                    about=gettext(
+                        "Carbon density value for the dead matter carbon pool. Required"
+                        " if calculating all pools."
+                    ),
+                    required="pools_to_calculate == 'all'",
+                    units=u.metric_ton / u.hectare
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.SingleBandRasterInput(
+            id="lulc_raster_path",
+            name=gettext("land use/land cover"),
+            about=gettext(
+                "Map of land use/land cover codes. Each land use/land cover type must be"
+                " assigned a unique integer code. All values in this raster must have"
+                " corresponding entries in the Biophysical Table."
+            ),
+            data_type=int,
+            units=None,
+            projected=True,
+            projection_units=u.meter
+        ),
+        spec.OptionStringInput(
+            id="pools_to_calculate",
+            name=gettext("carbon pools to calculate"),
+            about=gettext("Which carbon pools to consider."),
+            options=[
+                spec.Option(
+                    key="all",
+                    about=(
+                        "Use all pools (aboveground, belowground, soil, and dead matter)"
+                        " in the carbon pool calculation.")),
+                spec.Option(
+                    key="above_ground",
+                    display_name="aboveground only",
+                    about=(
+                        "Only use the aboveground pool in the carbon pool calculation."
+                    )
+                )
+            ]
+        ),
+        spec.BooleanInput(
+            id="compute_forest_edge_effects",
+            name=gettext("compute forest edge effects"),
+            about=gettext("Account for forest edge effects on aboveground carbon.")
+        ),
+        spec.VectorInput(
+            id="tropical_forest_edge_carbon_model_vector_path",
+            name=gettext("global regression models"),
+            about=gettext(
+                "Map storing the optimal regression model for each tropical subregion and"
+                " the corresponding theta parameters for that regression equation."
+                " Default data is provided. Required if Compute Forest Edge Effects is"
+                " selected."
+            ),
+            required="compute_forest_edge_effects",
+            allowed="compute_forest_edge_effects",
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.OptionStringInput(
+                    id="method",
+                    about=gettext("Optimal regression model for the area."),
+                    options=[
+                        spec.Option(key="1", about="asymptotic"),
+                        spec.Option(key="2", about="logarithmic"),
+                        spec.Option(key="3", about="linear"),
+                    ]
+                ),
+                spec.NumberInput(
+                    id="theta1",
+                    about=gettext("θ₁ parameter for the regression equation."),
+                    units=u.none
+                ),
+                spec.NumberInput(
+                    id="theta2",
+                    about=gettext("θ₂ parameter for the regression equation."),
+                    units=u.none
+                ),
+                spec.NumberInput(
+                    id="theta3",
+                    about=gettext(
+                        "θ₃ parameter for the regression equation. Used only for the"
+                        " asymptotic model."
+                    ),
+                    units=u.none
+                )
+            ],
+            projected=True,
+            projection_units=u.meter
+        ),
+        spec.RatioInput(
+            id="biomass_to_carbon_conversion_factor",
+            name=gettext("forest edge biomass to carbon conversion factor"),
+            about=gettext(
+                "Proportion of forest edge biomass that is elemental carbon. Required if"
+                " Compute Forest Edge Effects is selected."
+            ),
+            required="compute_forest_edge_effects",
+            allowed="compute_forest_edge_effects",
+            units=None
+        )
+    ],
+    outputs=[
+        spec.SingleBandRasterOutput(
+            id="carbon_map.tif",
+            about=gettext(
+                "A map of carbon stock per hectare, with the amount in forest derived"
+                " from the regression based on distance to forest edge, and the amount in"
+                " non-forest classes according to the biophysical table. "
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.VectorOutput(
+            id="aggregated_carbon_stocks.shp",
+            about=gettext("AOI map with aggregated carbon statistics."),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="c_sum",
+                    about=gettext("Total carbon in the area."),
+                    units=u.metric_ton
+                ),
+                spec.NumberOutput(
+                    id="c_ha_mean",
+                    about=gettext("Mean carbon density in the area."),
+                    units=u.metric_ton / u.hectare
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="intermediate_outputs",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="c_above_carbon_stocks.tif",
+                    about=gettext(
+                        "Carbon stored in the aboveground biomass carbon pool."
+                    ),
+                    data_type=float,
+                    units=u.metric_ton
+                ),
+                spec.SingleBandRasterOutput(
+                    id="c_below_carbon_stocks.tif",
+                    about=gettext(
+                        "Carbon stored in the belowground biomass carbon pool."
+                    ),
+                    data_type=float,
+                    units=u.metric_ton
+                ),
+                spec.SingleBandRasterOutput(
+                    id="c_dead_carbon_stocks.tif",
+                    about=gettext(
+                        "Carbon stored in the dead matter biomass carbon pool."
+                    ),
+                    data_type=float,
+                    units=u.metric_ton
+                ),
+                spec.SingleBandRasterOutput(
+                    id="c_soil_carbon_stocks.tif",
+                    about=gettext("Carbon stored in the soil biomass carbon pool."),
+                    data_type=float,
+                    units=u.metric_ton
+                ),
+                spec.VectorOutput(
+                    id="local_carbon_shape.shp",
+                    about=gettext(
+                        "The regression parameters reprojected to match your study area."
+                    ),
+                    geometry_types={"POLYGON", "MULTIPOLYGON"},
+                    fields=[]
+                ),
+                spec.SingleBandRasterOutput(
+                    id="edge_distance.tif",
+                    about=gettext(
+                        "The distance of each forest pixel to the nearest forest edge"
+                    ),
+                    data_type=float,
+                    units=u.pixel
+                ),
+                spec.SingleBandRasterOutput(
+                    id="tropical_forest_edge_carbon_stocks.tif",
+                    about=gettext(
+                        "A map of carbon in the forest only, according to the regression"
+                        " method."
+                    ),
+                    data_type=float,
+                    units=u.metric_ton / u.hectare
+                ),
+                spec.VectorOutput(
+                    id="regression_model_params_clipped.shp",
+                    about=gettext(
+                        "The Global Regression Models shapefile clipped to the study"
+                        " area."
+                    ),
+                    geometry_types={"POLYGON", "MULTIPOLYGON"},
+                    fields=[]
+                )
+            ]
+        ),
+        spec.TASKGRAPH_DIR
+    ]
+)
 
 
 def execute(args):
@@ -801,7 +843,7 @@ def _clip_global_regression_models_vector(
         bbox_minx - DISTANCE_UPPER_BOUND,
         bbox_miny - DISTANCE_UPPER_BOUND,
         bbox_maxx + DISTANCE_UPPER_BOUND,
-        bbox_maxy + DISTANCE_UPPER_BOUND,
+        bbox_maxy + DISTANCE_UPPER_BOUND
     ]
 
     # Reproject the LULC bounding box to the vector's projection for clipping

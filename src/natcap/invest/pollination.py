@@ -20,309 +20,393 @@ from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "pollination",
-    "model_title": gettext("Crop Pollination"),
-    "userguide": "croppollination.html",
-    "aliases": (),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['landcover_raster_path', 'landcover_biophysical_table_path'],
-            ['guild_table_path', 'farm_vector_path']
-        ]
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "landcover_raster_path": {
-            **spec.LULC,
-            "projected": True,
-            "about": gettext(
-                "Map of LULC codes. All values in this raster must have "
-                "corresponding entries in the Biophysical Table.")
-        },
-        "guild_table_path": {
-            "type": "csv",
-            "index_col": "species",
-            "columns": {
-                "species": {
-                    "type": "freestyle_string",
-                    "about": gettext(
-                        "Unique name or identifier for each pollinator "
-                        "species or guild of interest.")
-                },
-                "nesting_suitability_[SUBSTRATE]_index": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "Utilization of the substrate by this species, where "
-                        "1 indicates the nesting substrate is fully utilized "
-                        "and 0 indicates it is not utilized at all. Replace "
-                        "[SUBSTRATE] with substrate names matching those in "
-                        "the Biophysical Table, so that there is a column for "
-                        "each substrate.")
-                },
-                "foraging_activity_[SEASON]_index": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "Pollinator activity for this species/guild in each "
-                        "season. 1 indicates maximum activity for the "
-                        "species/guild, and 0 indicates no activity. Replace "
-                        "[SEASON] with season names matching those in the "
-                        "biophysical table, so that there is a column for "
-                        "each season.")
-                },
-                "alpha": {
-                    "type": "number",
-                    "units": u.meters,
-                    "about": gettext(
-                        "Average distance that this species or guild travels "
-                        "to forage on flowers.")
-                },
-                "relative_abundance": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "The proportion of total pollinator abundance that "
-                        "consists of this species/guild.")
-                }
-            },
-            "about": gettext(
-                "A table mapping each pollinator species or guild of interest "
-                "to its pollination-related parameters."),
-            "name": gettext("Guild Table")
-        },
-        "landcover_biophysical_table_path": {
-            "type": "csv",
-            "index_col": "lucode",
-            "columns": {
-                "lucode": spec.LULC_TABLE_COLUMN,
-                "nesting_[SUBSTRATE]_availability_index": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "Index of availability of the given substrate in this "
-                        "LULC class. Replace [SUBSTRATE] with substrate names "
-                        "matching those in the Guild Table, so that there is "
-                        "a column for each substrate.")},
-                "floral_resources_[SEASON]_index": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "Abundance of flowers during the given season in this "
-                        "LULC class. This is the proportion of land area "
-                        "covered by flowers, multiplied by the proportion of "
-                        "the season for which there is that coverage. Replace "
-                        "[SEASON] with season names matching those in the "
-                        "Guild Table, so that there is a column for each "
-                        "season.")}
-            },
-            "about": gettext(
-                "A table mapping each LULC class to nesting availability and "
-                "floral abundance data for each substrate and season in that "
-                "LULC class. All values in the LULC raster must have "
-                "corresponding entries in this table."),
-            "name": gettext("biophysical table")
-        },
-        "farm_vector_path": {
-            "type": "vector",
-            "fields": {
-                "crop_type": {
-                    "type": "freestyle_string",
-                    "about": gettext(
-                        "Name of the crop grown on each polygon, e.g. "
-                        "'blueberries', 'almonds', etc.")},
-                "half_sat": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "The half saturation coefficient for the crop grown "
-                        "in this area. This is the wild pollinator abundance "
-                        "(i.e. the proportion of all pollinators that are "
-                        "wild) needed to reach half of the total potential "
-                        "pollinator-dependent yield.")},
-                "season": {
-                    "type": "freestyle_string",
-                    "about": gettext(
-                        "The season in which the crop is pollinated. Season "
-                        "names must match those in the Guild Table and "
-                        "Biophysical Table.")},
-                "fr_[SEASON]": {  # floral resources for each season
-                    "type": "ratio",
-                    "about": gettext(
-                        "The floral resources available at this farm for the "
-                        "given season. Replace [SEASON] with season names "
-                        "matching those in the Guild Table and Biophysical "
-                        "Table, so that there is one field for each season.")
-                },
-                "n_[SUBSTRATE]": {  # nesting availabilities for each substrate
-                    "type": "ratio",
-                    "about": gettext(
-                        "The nesting suitability for the given substrate at "
-                        "this farm. given substrate. Replace [SUBSTRATE] with "
-                        "substrate names matching those in the Guild Table "
-                        "and Biophysical Table, so that there is one field "
-                        "for each substrate.")},
-                "p_dep": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "The proportion of crop dependent on pollinators.")
-                },
-                "p_managed": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "The proportion of pollination required on the farm "
-                        "that is provided by managed pollinators.")}
-            },
-            "geometries": spec.POLYGONS,
-            "required": False,
-            "about": gettext(
-                "Map of farm sites to be analyzed, with pollination data "
-                "specific to each farm."),
-            "name": gettext("farms map")
-        }
-    },
-    "outputs": {
-        "farm_results.shp": {
-            "created_if": "farm_vector_path",
-            "about": gettext(
-                "A copy of the input farm polygon vector file with additional fields"),
-            "geometries": spec.POLYGONS,
-            "fields": {
-                "p_abund": {
-                    "about": (
-                        "Average pollinator abundance on the farm for the "
-                        "active season"),
-                    "type": "ratio"
-                },
-                "y_tot": {
-                    "about": (
-                        "Total yield index, including wild and managed "
-                        "pollinators and pollinator independent yield."),
-                    "type": "ratio"
-                },
-                "pdep_y_w": {
-                    "about": (
-                        "Proportion of potential pollination-dependent yield "
-                        "attributable to wild pollinators."),
-                    "type": "ratio"
-                },
-                "y_wild": {
-                    "about": (
-                        "Proportion of the total yield attributable to wild "
-                        "pollinators."),
-                    "type": "ratio"
-                }
-            }
-        },
-        "farm_pollinators.tif": {
-            "created_if": "farm_vector_path",
-            "about": gettext(
-                "Total pollinator abundance across all species per season, "
-                "clipped to the geometry of the farm vector’s polygons."),
-            "bands": {1: {"type": "ratio"}}
-        },
-        "pollinator_abundance_[SPECIES]_[SEASON].tif": {
-            "about": gettext("Abundance of pollinator SPECIES in season SEASON."),
-            "bands": {1: {"type": "ratio"}}
-        },
-        "pollinator_supply_[SPECIES].tif": {
-            "about": gettext(
-                "Index of pollinator SPECIES that could be on a pixel given "
-                "its arbitrary abundance factor from the table, multiplied by "
-                "the habitat suitability for that species at that pixel, "
-                "multiplied by the available floral resources that a "
-                "pollinator could fly to from that pixel."),
-            "bands": {1: {"type": "ratio"}}
-        },
-        "total_pollinator_abundance_[SEASON].tif": {
-            "created_if": "farm_vector_path",
-            "about": gettext(
-                "Total pollinator abundance across all species per season."),
-            "bands": {1: {"type": "ratio"}}
-        },
-        "total_pollinator_yield.tif": {
-            "created_if": "farm_vector_path",
-            "about": gettext(
-                "Total pollinator yield index for pixels that overlap farms, "
-                "including wild and managed pollinators."),
-            "bands": {1: {"type": "ratio"}}
-        },
-        "wild_pollinator_yield.tif": {
-            "created_if": "farm_vector_path",
-            "about": gettext(
-                "Pollinator yield index for pixels that overlap farms, for "
-                "wild pollinators only."),
-            "bands": {1: {"type": "ratio"}}
-        },
-        "intermediate_outputs": {
-            "type": "directory",
-            "contents": {
-                "blank_raster.tif": {
-                    "about": (
-                        "Blank raster used for rasterizing all the farm parameters/fields later"),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "convolve_ps_[SPECIES].tif": {
-                    "about": "Convolved pollinator supply",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "farm_nesting_substrate_index_[SUBSTRATE].tif": {
-                    "about": "Rasterized substrate availability",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "farm_pollinator_[SEASON].tif": {
-                    "about": "On-farm pollinator abundance",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "farm_relative_floral_abundance_index_[SEASON].tif": {
-                    "about": "On-farm relative floral abundance",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "floral_resources_[SPECIES].tif": {
-                    "about": "Floral resources available to the species",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "foraged_flowers_index_[SPECIES]_[SEASON].tif": {
-                    "about": (
-                        "Foraged flowers index for the given species and season"),
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "habitat_nesting_index_[SPECIES].tif": {
-                    "about": "Habitat nesting index for the given species",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "half_saturation_[SEASON].tif": {
-                    "about": "Half saturation constant for the given season",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "kernel_[ALPHA].tif": {
-                    "about": "Exponential decay kernel for the given radius",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "local_foraging_effectiveness_[SPECIES].tif": {
-                    "about": "Foraging effectiveness for the given species",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "managed_pollinators.tif": {
-                    "about": "Managed pollinators rasterized from the farm vector",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "nesting_substrate_index_[SUBSTRATE].tif": {
-                    "about": "Nesting substrate index for the given substrate",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "relative_floral_abundance_index_[SEASON].tif": {
-                    "about": "Floral abundance index in the given season",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "reprojected_farm_vector.shp": {
-                    "about": "Farm vector reprojected to the LULC projection",
-                    "fields": {},
-                    "geometries": spec.POLYGONS
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+MODEL_SPEC = spec.ModelSpec(
+    model_id="pollination",
+    model_title=gettext("Crop Pollination"),
+    userguide="croppollination.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=False,
+    aliases=(),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["landcover_raster_path", "landcover_biophysical_table_path"],
+        ["guild_table_path", "farm_vector_path"]
+    ],
+    inputs=[
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        spec.SingleBandRasterInput(
+            id="landcover_raster_path",
+            name=gettext("land use/land cover"),
+            about=gettext(
+                "Map of LULC codes. All values in this raster must have corresponding"
+                " entries in the Biophysical Table."
+            ),
+            data_type=int,
+            units=None,
+            projected=True
+        ),
+        spec.CSVInput(
+            id="guild_table_path",
+            name=gettext("Guild Table"),
+            about=gettext(
+                "A table mapping each pollinator species or guild of interest to its"
+                " pollination-related parameters."
+            ),
+            columns=[
+                spec.StringInput(
+                    id="species",
+                    about=gettext(
+                        "Unique name or identifier for each pollinator species or guild"
+                        " of interest."
+                    ),
+                    regexp=None
+                ),
+                spec.RatioInput(
+                    id="nesting_suitability_[SUBSTRATE]_index",
+                    about=gettext(
+                        "Utilization of the substrate by this species, where 1 indicates"
+                        " the nesting substrate is fully utilized and 0 indicates it is"
+                        " not utilized at all. Replace [SUBSTRATE] with substrate names"
+                        " matching those in the Biophysical Table, so that there is a"
+                        " column for each substrate."
+                    ),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="foraging_activity_[SEASON]_index",
+                    about=gettext(
+                        "Pollinator activity for this species/guild in each season. 1"
+                        " indicates maximum activity for the species/guild, and 0"
+                        " indicates no activity. Replace [SEASON] with season names"
+                        " matching those in the biophysical table, so that there is a"
+                        " column for each season."
+                    ),
+                    units=None
+                ),
+                spec.NumberInput(
+                    id="alpha",
+                    about=gettext(
+                        "Average distance that this species or guild travels to forage on"
+                        " flowers."
+                    ),
+                    units=u.meter
+                ),
+                spec.RatioInput(
+                    id="relative_abundance",
+                    about=gettext(
+                        "The proportion of total pollinator abundance that consists of"
+                        " this species/guild."
+                    ),
+                    units=None
+                )
+            ],
+            index_col="species"
+        ),
+        spec.CSVInput(
+            id="landcover_biophysical_table_path",
+            name=gettext("biophysical table"),
+            about=gettext(
+                "A table mapping each LULC class to nesting availability and floral"
+                " abundance data for each substrate and season in that LULC class. All"
+                " values in the LULC raster must have corresponding entries in this"
+                " table."
+            ),
+            columns=[
+                spec.LULC_TABLE_COLUMN,
+                spec.RatioInput(
+                    id="nesting_[SUBSTRATE]_availability_index",
+                    about=gettext(
+                        "Index of availability of the given substrate in this LULC class."
+                        " Replace [SUBSTRATE] with substrate names matching those in the"
+                        " Guild Table, so that there is a column for each substrate."
+                    ),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="floral_resources_[SEASON]_index",
+                    about=gettext(
+                        "Abundance of flowers during the given season in this LULC class."
+                        " This is the proportion of land area covered by flowers,"
+                        " multiplied by the proportion of the season for which there is"
+                        " that coverage. Replace [SEASON] with season names matching"
+                        " those in the Guild Table, so that there is a column for each"
+                        " season."
+                    ),
+                    units=None
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.VectorInput(
+            id="farm_vector_path",
+            name=gettext("farms map"),
+            about=gettext(
+                "Map of farm sites to be analyzed, with pollination data specific to each"
+                " farm."
+            ),
+            required=False,
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.StringInput(
+                    id="crop_type",
+                    about=(
+                        "Name of the crop grown on each polygon, e.g. 'blueberries',"
+                        " 'almonds', etc."
+                    ),
+                    regexp=None
+                ),
+                spec.RatioInput(
+                    id="half_sat",
+                    about=gettext(
+                        "The half saturation coefficient for the crop grown in this area."
+                        " This is the wild pollinator abundance (i.e. the proportion of"
+                        " all pollinators that are wild) needed to reach half of the"
+                        " total potential pollinator-dependent yield."
+                    ),
+                    units=None
+                ),
+                spec.StringInput(
+                    id="season",
+                    about=gettext(
+                        "The season in which the crop is pollinated. Season names must"
+                        " match those in the Guild Table and Biophysical Table."
+                    ),
+                    regexp=None
+                ),
+                spec.RatioInput(
+                    id="fr_[SEASON]",
+                    about=gettext(
+                        "The floral resources available at this farm for the given"
+                        " season. Replace [SEASON] with season names matching those in"
+                        " the Guild Table and Biophysical Table, so that there is one"
+                        " field for each season."
+                    ),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="n_[SUBSTRATE]",
+                    about=gettext(
+                        "The nesting suitability for the given substrate at this farm."
+                        " given substrate. Replace [SUBSTRATE] with substrate names"
+                        " matching those in the Guild Table and Biophysical Table, so"
+                        " that there is one field for each substrate."
+                    ),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="p_dep",
+                    about=gettext("The proportion of crop dependent on pollinators."),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="p_managed",
+                    about=gettext(
+                        "The proportion of pollination required on the farm that is"
+                        " provided by managed pollinators."
+                    ),
+                    units=None
+                )
+            ],
+            projected=None
+        )
+    ],
+    outputs=[
+        spec.VectorOutput(
+            id="farm_results.shp",
+            about=gettext(
+                "A copy of the input farm polygon vector file with additional fields"
+            ),
+            created_if="farm_vector_path",
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.RatioOutput(
+                    id="p_abund",
+                    about=gettext(
+                        "Average pollinator abundance on the farm for the active season"
+                    )
+                ),
+                spec.RatioOutput(
+                    id="y_tot",
+                    about=gettext(
+                        "Total yield index, including wild and managed pollinators and"
+                        " pollinator independent yield."
+                    )
+                ),
+                spec.RatioOutput(
+                    id="pdep_y_w",
+                    about=gettext(
+                        "Proportion of potential pollination-dependent yield attributable"
+                        " to wild pollinators."
+                    )
+                ),
+                spec.RatioOutput(
+                    id="y_wild",
+                    about=gettext(
+                        "Proportion of the total yield attributable to wild pollinators."
+                    )
+                )
+            ]
+        ),
+        spec.SingleBandRasterOutput(
+            id="farm_pollinators.tif",
+            about=gettext(
+                "Total pollinator abundance across all species per season, clipped to the"
+                " geometry of the farm vector’s polygons."
+            ),
+            created_if="farm_vector_path",
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="pollinator_abundance_[SPECIES]_[SEASON].tif",
+            about=gettext("Abundance of pollinator SPECIES in season SEASON."),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="pollinator_supply_[SPECIES].tif",
+            about=gettext(
+                "Index of pollinator SPECIES that could be on a pixel given its arbitrary"
+                " abundance factor from the table, multiplied by the habitat suitability"
+                " for that species at that pixel, multiplied by the available floral"
+                " resources that a pollinator could fly to from that pixel."
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="total_pollinator_abundance_[SEASON].tif",
+            about=gettext("Total pollinator abundance across all species per season."),
+            created_if="farm_vector_path",
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="total_pollinator_yield.tif",
+            about=gettext(
+                "Total pollinator yield index for pixels that overlap farms, including"
+                " wild and managed pollinators."
+            ),
+            created_if="farm_vector_path",
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="wild_pollinator_yield.tif",
+            about=gettext(
+                "Pollinator yield index for pixels that overlap farms, for wild"
+                " pollinators only."
+            ),
+            created_if="farm_vector_path",
+            data_type=float,
+            units=None
+        ),
+        spec.DirectoryOutput(
+            id="intermediate_outputs",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="blank_raster.tif",
+                    about=gettext(
+                        "Blank raster used for rasterizing all the farm parameters/fields"
+                        " later"
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="convolve_ps_[SPECIES].tif",
+                    about=gettext("Convolved pollinator supply"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="farm_nesting_substrate_index_[SUBSTRATE].tif",
+                    about=gettext("Rasterized substrate availability"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="farm_pollinator_[SEASON].tif",
+                    about=gettext("On-farm pollinator abundance"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="farm_relative_floral_abundance_index_[SEASON].tif",
+                    about=gettext("On-farm relative floral abundance"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="floral_resources_[SPECIES].tif",
+                    about=gettext("Floral resources available to the species"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="foraged_flowers_index_[SPECIES]_[SEASON].tif",
+                    about=gettext(
+                        "Foraged flowers index for the given species and season"
+                    ),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="habitat_nesting_index_[SPECIES].tif",
+                    about=gettext("Habitat nesting index for the given species"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="half_saturation_[SEASON].tif",
+                    about=gettext("Half saturation constant for the given season"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="kernel_[ALPHA].tif",
+                    about=gettext("Exponential decay kernel for the given radius"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="local_foraging_effectiveness_[SPECIES].tif",
+                    about=gettext("Foraging effectiveness for the given species"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="managed_pollinators.tif",
+                    about=gettext("Managed pollinators rasterized from the farm vector"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="nesting_substrate_index_[SUBSTRATE].tif",
+                    about=gettext("Nesting substrate index for the given substrate"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="relative_floral_abundance_index_[SEASON].tif",
+                    about=gettext("Floral abundance index in the given season"),
+                    data_type=float,
+                    units=None
+                ),
+                spec.VectorOutput(
+                    id="reprojected_farm_vector.shp",
+                    about=gettext("Farm vector reprojected to the LULC projection"),
+                    geometry_types={"POLYGON", "MULTIPOLYGON"},
+                    fields=[]
+                )
+            ]
+        ),
+        spec.TASKGRAPH_DIR
+    ]
+)
 
 _INDEX_NODATA = -1
 
@@ -1444,7 +1528,7 @@ def _multiply_by_scalar(raster_path, scalar, target_path):
         rasters=[raster_path],
         target_path=target_path,
         target_dtype=numpy.float32,
-        target_nodata=_INDEX_NODATA,
+        target_nodata=_INDEX_NODATA
     )
 
 

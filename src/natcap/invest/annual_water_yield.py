@@ -18,434 +18,539 @@ from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-BASE_OUTPUT_FIELDS = {
-    "precip_mn": {
-        "type": "number",
-        "units": u.mm,
-        "about": "Mean precipitation per pixel in the subwatershed.",
-    },
-    "PET_mn": {
-        "type": "number",
-        "units": u.mm,
-        "about": "Mean potential evapotranspiration per pixel in the subwatershed.",
-    },
-    "AET_mn": {
-        "type": "number",
-        "units": u.mm,
-        "about": "Mean actual evapotranspiration per pixel in the subwatershed.",
-    },
-    "wyield_mn": {
-        "type": "number",
-        "units": u.mm,
-        "about": "Mean water yield per pixel in the subwatershed.",
-    },
-    "wyield_vol": {
-        "type": "number",
-        "units": u.m**3,
-        "about": "Total volume of water yield in the subwatershed.",
-    }
-}
-SCARCITY_OUTPUT_FIELDS = {
-    "consum_vol": {
-        "type": "number",
-        "units": u.m**3,
-        "about": "Total water consumption for each watershed.",
-        "created_if": "demand_table_path"
-    },
-    "consum_mn": {
-        "type": "number",
-        "units": u.meter**3/u.hectare,
-        "about": "Mean water consumptive volume per pixel per watershed.",
-        "created_if": "demand_table_path"
-    },
-    "rsupply_vl": {
-        "type": "number",
-        "units": u.m**3,
-        "about": "Total realized water supply (water yield – consumption) volume for each watershed.",
-        "created_if": "demand_table_path"
-    },
-    "rsupply_mn": {
-        "type": "number",
-        "units": u.m**3/u.hectare,
-        "about": "Mean realized water supply (water yield – consumption) volume per pixel per watershed.",
-        "created_if": "demand_table_path"
-    }
-}
-VALUATION_OUTPUT_FIELDS = {
-    "hp_energy": {
-        "type": "number",
-        "units": u.kilowatt_hour,
-        "created_if": "valuation_table_path",
-        "about": "The amount of ecosystem service in energy production terms. This is the amount of energy produced annually by the hydropower station that can be attributed to each watershed based on the watershed’s water yield contribution.",
-    },
-    "hp_val": {
-        "type": "number",
-        "units": u.currency,
-        "created_if": "valuation_table_path",
-        "about": "The amount of ecosystem service in economic terms. This shows the value of the landscape per watershed according to its ability to yield water for hydropower production over the specified timespan, and with respect to the discount rate.",
-    }
-}
-SUBWATERSHED_OUTPUT_FIELDS = {
-    "subws_id": {
-        "type": "integer",
-        "about": gettext("Unique identifier for each subwatershed.")
-    },
-    **BASE_OUTPUT_FIELDS,
-    **SCARCITY_OUTPUT_FIELDS,
+BASE_OUTPUT_FIELDS = [
+    spec.NumberOutput(
+        id="precip_mn",
+        about=gettext(
+            "Mean precipitation per pixel in the"
+            " subwatershed."
+        ),
+        units=u.millimeter
+    ),
+    spec.NumberOutput(
+        id="PET_mn",
+        about=gettext(
+            "Mean potential evapotranspiration per pixel in"
+            " the subwatershed."
+        ),
+        units=u.millimeter
+    ),
+    spec.NumberOutput(
+        id="AET_mn",
+        about=gettext(
+            "Mean actual evapotranspiration per pixel in"
+            " the subwatershed."
+        ),
+        units=u.millimeter
+    ),
+    spec.NumberOutput(
+        id="wyield_mn",
+        about=gettext(
+            "Mean water yield per pixel in the"
+            " subwatershed."
+        ),
+        units=u.millimeter
+    ),
+    spec.NumberOutput(
+        id="wyield_vol",
+        about=gettext(
+            "Total volume of water yield in the"
+            " subwatershed."
+        ),
+        units=u.meter ** 3
+    )
+]
 
-}
-WATERSHED_OUTPUT_FIELDS = {
-    "ws_id": {
-        "type": "integer",
-        "about": gettext("Unique identifier for each watershed.")
-    },
-    **BASE_OUTPUT_FIELDS,
-    **SCARCITY_OUTPUT_FIELDS,
-    **VALUATION_OUTPUT_FIELDS
-}
+SCARCITY_OUTPUT_FIELDS = [
+    spec.NumberOutput(
+        id="consum_vol",
+        about=gettext(
+            "Total water consumption for each watershed."
+        ),
+        created_if="demand_table_path",
+        units=u.meter ** 3
+    ),
+    spec.NumberOutput(
+        id="consum_mn",
+        about=gettext(
+            "Mean water consumptive volume per pixel per"
+            " watershed."
+        ),
+        created_if="demand_table_path",
+        units=u.meter ** 3 / u.hectare
+    ),
+    spec.NumberOutput(
+        id="rsupply_vl",
+        about=gettext(
+            "Total realized water supply (water yield –"
+            " consumption) volume for each watershed."
+        ),
+        created_if="demand_table_path",
+        units=u.meter ** 3
+    ),
+    spec.NumberOutput(
+        id="rsupply_mn",
+        about=gettext(
+            "Mean realized water supply (water yield –"
+            " consumption) volume per pixel per watershed."
+        ),
+        created_if="demand_table_path",
+        units=u.meter ** 3 / u.hectare
+    )
+]
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "annual_water_yield",
-    "model_title": gettext("Annual Water Yield"),
-    "userguide": "annual_water_yield.html",
-    "aliases": ("hwy", "awy"),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['precipitation_path', 'eto_path', 'depth_to_root_rest_layer_path', 'pawc_path'],
-            ['lulc_path', 'biophysical_table_path', 'seasonality_constant'],
-            ['watersheds_path', 'sub_watersheds_path'],
-            ['demand_table_path', 'valuation_table_path']
-        ]
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["lulc_path",
-                         "depth_to_root_rest_layer_path",
-                         "precipitation_path",
-                         "pawc_path",
-                         "eto_path",
-                         "watersheds_path",
-                         "sub_watersheds_path"],
-        "different_projections_ok": False,
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "lulc_path": {
-            **spec.LULC,
-            "projected": True,
-            "about": spec.LULC['about'] + " " + gettext(
-                "All values in this raster must have corresponding entries "
-                "in the Biophysical Table.")
-        },
-        "depth_to_root_rest_layer_path": {
-            "type": "raster",
-            "bands": {1: {
-                "type": "number",
-                "units": u.millimeter
-            }},
-            "projected": True,
-            "about": gettext(
-                "Map of root restricting layer depth, the soil depth at "
-                "which root penetration is strongly inhibited because of "
-                "physical or chemical characteristics."),
-            "name": gettext("root restricting layer depth")
-        },
-        "precipitation_path": {
-            **spec.PRECIP,
-            "projected": True
-        },
-        "pawc_path": {
-            "type": "raster",
-            "bands": {1: {"type": "ratio"}},
-            "projected": True,
-            "about": gettext(
-                "Map of plant available water content, the fraction of "
-                "water that can be stored in the soil profile that is "
-                "available to plants."),
-            "name": gettext("plant available water content")
-        },
-        "eto_path": {
-            **spec.ET0,
-            "projected": True
-        },
-        "watersheds_path": {
-            "projected": True,
-            "type": "vector",
-            "fields": {
-                "ws_id": {
-                    "type": "integer",
-                    "about": gettext("Unique identifier for each watershed.")
-                }
-            },
-            "geometries": spec.POLYGON,
-            "about": gettext(
-                "Map of watershed boundaries, such that each watershed drains "
-                "to a point of interest where hydropower production will be "
-                "analyzed."),
-            "name": gettext("watersheds")
-        },
-        "sub_watersheds_path": {
-            "projected": True,
-            "type": "vector",
-            "fields": {
-                "subws_id": {
-                    "type": "integer",
-                    "about": gettext("Unique identifier for each subwatershed.")
-                }
-            },
-            "geometries": spec.POLYGONS,
-            "required": False,
-            "about": gettext(
-                "Map of subwatershed boundaries within each watershed in "
-                "the Watersheds map."),
-            "name": gettext("sub-watersheds")
-        },
-        "biophysical_table_path": {
-            "type": "csv",
-            "columns": {
-                "lucode": spec.LULC_TABLE_COLUMN,
-                "lulc_veg": {
-                    "type": "integer",
-                    "about": gettext(
-                        "Code indicating whether the the LULC class is "
-                        "vegetated for the purpose of AET. Enter 1 for all "
-                        "vegetated classes except wetlands, and 0 for all "
-                        "other classes, including wetlands, urban areas, "
-                        "water bodies, etc.")
-                },
-                "root_depth": {
-                    "type": "number",
-                    "units": u.millimeter,
-                    "about": gettext(
-                        "Maximum root depth for plants in this LULC class. "
-                        "Only used for classes with a 'lulc_veg' value of 1.")
-                },
-                "kc": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext("Crop coefficient for this LULC class.")}
-            },
-            "index_col": "lucode",
-            "about": gettext(
-                "Table of biophysical parameters for each LULC class. All "
-                "values in the LULC raster must have corresponding entries "
-                "in this table."),
-            "name": gettext("biophysical table")
-        },
-        "seasonality_constant": {
-            "expression": "value > 0",
-            "type": "number",
-            "units": u.none,
-            "about": gettext(
-                "The seasonality factor, representing hydrogeological "
-                "characterisitics and the seasonal distribution of "
-                "precipitation. Values typically range from 1 - 30."),
-            "name": gettext("z parameter")
-        },
-        "demand_table_path": {
-            "type": "csv",
-            "columns": {
-                "lucode": {
-                    "about": gettext("LULC code corresponding to the LULC raster"),
-                    "type": "integer"
-                },
-                "demand": {
-                    "about": gettext(
-                        "Average consumptive water use in this LULC class."),
-                    "type": "number",
-                    "units": u.meter**3/u.year/u.pixel
-                }
-            },
-            "index_col": "lucode",
-            "required": "valuation_table_path",
-            "about": gettext(
-                "A table of water demand for each LULC class. Each LULC code "
-                "in the LULC raster must have a corresponding row in this "
-                "table.  Required if 'valuation_table_path' is provided."),
-            "name": gettext("water demand table")
-        },
-        "valuation_table_path": {
-            "type": "csv",
-            "columns": {
-                "ws_id": {
-                    "type": "integer",
-                    "about": gettext(
-                        "Unique identifier for the hydropower station. This "
-                        "must match the 'ws_id' value for the corresponding "
-                        "watershed in the Watersheds vector. Each watershed "
-                        "in the Watersheds vector must have its 'ws_id' "
-                        "entered in this column.")
-                },
-                "efficiency": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "Turbine efficiency, the proportion of potential "
-                        "energy captured and converted to electricity by the "
-                        "turbine.")
-                },
-                "fraction": {
-                    "type": "ratio",
-                    "about": gettext(
-                        "The proportion of inflow water volume that is used "
-                        "to generate energy.")
-                },
-                "height": {
-                    "type": "number",
-                    "units": u.meter,
-                    "about": gettext(
-                        "The head, measured as the average annual effective "
-                        "height of water behind each dam at the turbine "
-                        "intake.")
-                },
-                "kw_price": {
-                    "type": "number",
-                    "units": u.currency/u.kilowatt_hour,
-                    "about": gettext(
-                        "The price of power produced by the station. Must be "
-                        "in the same currency used in the 'cost' column.")
-                },
-                "cost": {
-                    "type": "number",
-                    "units": u.currency/u.year,
-                    "about": gettext(
-                        "Annual maintenance and operations cost of running "
-                        "the hydropower station. Must be in the same currency "
-                        "used in the 'kw_price' column.")
-                },
-                "time_span": {
-                    "type": "number",
-                    "units": u.year,
-                    "about": gettext(
-                        "Number of years over which to value the "
-                        "hydropower station. This is either the station's "
-                        "expected lifespan or the duration of the land use "
-                        "scenario of interest.")
-                },
-                "discount": {
-                    "type": "percent",
-                    "about": gettext(
-                        "The annual discount rate, applied for each year in "
-                        "the time span.")
-                }
-            },
-            "index_col": "ws_id",
-            "required": False,
-            "about": gettext(
-                "A table mapping each watershed to the associated valuation "
-                "parameters for its hydropower station."),
-            "name": gettext("hydropower valuation table")
-        }
-    },
-    "outputs": {
-        "output": {
-            "type": "directory",
-            "contents": {
-                "watershed_results_wyield.shp": {
-                    "fields": {**WATERSHED_OUTPUT_FIELDS},
-                    "geometries": spec.POLYGON,
-                    "about": "Shapefile containing biophysical output values per watershed."
-                },
-                "watershed_results_wyield.csv": {
-                    "columns": {**WATERSHED_OUTPUT_FIELDS},
-                    "index_col": "ws_id",
-                    "about": "Table containing biophysical output values per watershed."
-                },
-                "subwatershed_results_wyield.shp": {
-                    "fields": {**SUBWATERSHED_OUTPUT_FIELDS},
-                    "geometries": spec.POLYGON,
-                    "about": "Shapefile containing biophysical output values per subwatershed."
-                },
-                "subwatershed_results_wyield.csv": {
-                    "columns": {**SUBWATERSHED_OUTPUT_FIELDS},
-                    "index_col": "subws_id",
-                    "about": "Table containing biophysical output values per subwatershed."
-                },
-                "per_pixel": {
-                    "type": "directory",
-                    "about": "Outputs in the per_pixel folder can be useful for intermediate calculations but should NOT be interpreted at the pixel level, as model assumptions are based on processes understood at the subwatershed scale.",
-                    "contents": {
-                        "fractp.tif": {
-                            "about": (
-                                "The fraction of precipitation that actually "
-                                "evapotranspires at the pixel level."),
-                            "bands": {1: {"type": "ratio"}}
-                        },
-                        "aet.tif": {
-                            "about": "Estimated actual evapotranspiration per pixel.",
-                            "bands": {
-                                1: {"type": "number", "units": u.millimeter}
-                            }
-                        },
-                        "wyield.tif": {
-                            "about": "Estimated water yield per pixel.",
-                            "bands": {
-                                1: {"type": "number", "units": u.millimeter}
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "intermediate": {
-            "type": "directory",
-            "contents": {
-                "clipped_lulc.tif": {
-                    "about": "Aligned and clipped copy of LULC input.",
-                    "bands": {1: {"type": "integer"}}
-                },
-                "depth_to_root_rest_layer.tif": {
-                    "about": (
-                        "Aligned and clipped copy of root restricting "
-                        "layer depth input."),
-                    "bands": {
-                        1: {"type": "number", "units": u.millimeter}
-                    }
-                },
-                "eto.tif": {
-                    "about": "Aligned and clipped copy of ET0 input.",
-                    "bands": {
-                        1: {"type": "number", "units": u.millimeter}
-                    }
-                },
-                "kc_raster.tif": {
-                    "about": "Map of KC values.",
-                    "bands": {
-                        1: {"type": "number", "units": u.none}
-                    }
-                },
-                "pawc.tif": {
-                    "about": "Aligned and clipped copy of PAWC input.",
-                    "bands": {1: {"type": "ratio"}},
-                },
-                "pet.tif": {
-                    "about": "Map of potential evapotranspiration.",
-                    "bands": {
-                        1: {"type": "number", "units": u.millimeter}
-                    }
-                },
-                "precip.tif": {
-                    "about": "Aligned and clipped copy of precipitation input.",
-                    "bands": {
-                        1: {"type": "number", "units": u.millimeter}
-                    }
-                },
-                "root_depth.tif": {
-                    "about": "Map of root depth.",
-                    "bands": {
-                        1: {"type": "number", "units": u.millimeter}
-                    }
-                },
-                "veg.tif": {
-                    "about": "Map of vegetated state.",
-                    "bands": {1: {"type": "integer"}},
-                }
-            }
-        },
-        "taskgraph_dir": spec.TASKGRAPH_DIR
-    }
-})
+SUBWATERSHED_OUTPUT_FIELDS = [
+    spec.IntegerOutput(
+        id="subws_id",
+        about=gettext("Unique identifier for each subwatershed.")
+    ),
+    *BASE_OUTPUT_FIELDS,
+    *SCARCITY_OUTPUT_FIELDS
+]
+
+WATERSHED_OUTPUT_FIELDS = [
+    spec.IntegerOutput(
+        id="ws_id",
+        about=gettext("Unique identifier for each watershed.")
+    ),
+    *BASE_OUTPUT_FIELDS,
+    *SCARCITY_OUTPUT_FIELDS,
+    spec.NumberOutput(
+        id="hp_energy",
+        about=gettext(
+            "The amount of ecosystem service in energy"
+            " production terms. This is the amount of"
+            " energy produced annually by the hydropower"
+            " station that can be attributed to each"
+            " watershed based on the watershed’s water"
+            " yield contribution."
+        ),
+        created_if="valuation_table_path",
+        units=u.kilowatt_hour
+    ),
+    spec.NumberOutput(
+        id="hp_val",
+        about=gettext(
+            "The amount of ecosystem service in economic"
+            " terms. This shows the value of the landscape"
+            " per watershed according to its ability to"
+            " yield water for hydropower production over"
+            " the specified timespan, and with respect to"
+            " the discount rate."
+        ),
+        created_if="valuation_table_path",
+        units=u.currency
+    )
+]
+
+MODEL_SPEC = spec.ModelSpec(
+    model_id="annual_water_yield",
+    model_title=gettext("Annual Water Yield"),
+    userguide="annual_water_yield.html",
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["precipitation_path", "eto_path", "depth_to_root_rest_layer_path", "pawc_path"],
+        ["lulc_path", "biophysical_table_path", "seasonality_constant"],
+        ["watersheds_path", "sub_watersheds_path"],
+        ["demand_table_path", "valuation_table_path"]
+    ],
+    validate_spatial_overlap=True,
+    different_projections_ok=False,
+    aliases=("hwy", "awy"),
+    inputs=[
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        spec.SingleBandRasterInput(
+            id="lulc_path",
+            name=gettext("land use/land cover"),
+            about=gettext(
+                "Map of land use/land cover codes. Each land use/land cover"
+                " type must be assigned a unique integer code. All values in"
+                " this raster must have corresponding entries in the"
+                " Biophysical Table."
+            ),
+            data_type=int,
+            units=None,
+            projected=True
+        ),
+        spec.SingleBandRasterInput(
+            id="depth_to_root_rest_layer_path",
+            name=gettext("root restricting layer depth"),
+            about=gettext(
+                "Map of root restricting layer depth, the soil depth at which"
+                " root penetration is strongly inhibited because of physical or"
+                " chemical characteristics."
+            ),
+            data_type=float,
+            units=u.millimeter,
+            projected=True
+        ),
+        spec.SingleBandRasterInput(
+            id="precipitation_path",
+            name=gettext("precipitation"),
+            about=gettext("Map of average annual precipitation."),
+            data_type=float,
+            units=u.millimeter / u.year,
+            projected=True
+        ),
+        spec.SingleBandRasterInput(
+            id="pawc_path",
+            name=gettext("plant available water content"),
+            about=gettext(
+                "Map of plant available water content, the fraction of water"
+                " that can be stored in the soil profile that is available to"
+                " plants."
+            ),
+            data_type=float,
+            units=None,
+            projected=True
+        ),
+        spec.SingleBandRasterInput(
+            id="eto_path",
+            projected=True,
+            name=gettext("reference evapotranspiration"),
+            about=gettext("Map of reference evapotranspiration values."),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.VectorInput(
+            id="watersheds_path",
+            name=gettext("watersheds"),
+            about=gettext(
+                "Map of watershed boundaries, such that each watershed drains"
+                " to a point of interest where hydropower production will be"
+                " analyzed."
+            ),
+            geometry_types={"POLYGON"},
+            fields=[
+                spec.IntegerInput(
+                    id="ws_id",
+                    about=gettext("Unique identifier for each watershed.")
+                )
+            ],
+            projected=True
+        ),
+        spec.VectorInput(
+            id="sub_watersheds_path",
+            name=gettext("sub-watersheds"),
+            about=gettext(
+                "Map of subwatershed boundaries within each watershed in the"
+                " Watersheds map."
+            ),
+            required=False,
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[
+                spec.IntegerInput(
+                    id="subws_id",
+                    about=gettext("Unique identifier for each subwatershed.")
+                )
+            ],
+            projected=True
+        ),
+        spec.CSVInput(
+            id="biophysical_table_path",
+            name=gettext("biophysical table"),
+            about=gettext(
+                "Table of biophysical parameters for each LULC class. All"
+                " values in the LULC raster must have corresponding entries in"
+                " this table."
+            ),
+            columns=[
+                spec.LULC_TABLE_COLUMN,
+                spec.IntegerInput(
+                    id="lulc_veg",
+                    about=gettext(
+                        "Code indicating whether the the LULC class is"
+                        " vegetated for the purpose of AET. Enter 1 for all"
+                        " vegetated classes except wetlands, and 0 for all"
+                        " other classes, including wetlands, urban areas, water"
+                        " bodies, etc."
+                    )
+                ),
+                spec.NumberInput(
+                    id="root_depth",
+                    about=gettext(
+                        "Maximum root depth for plants in this LULC class. Only"
+                        " used for classes with a 'lulc_veg' value of 1."
+                    ),
+                    units=u.millimeter
+                ),
+                spec.NumberInput(
+                    id="kc",
+                    about=gettext("Crop coefficient for this LULC class."),
+                    units=u.none
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.NumberInput(
+            id="seasonality_constant",
+            name=gettext("z parameter"),
+            about=gettext(
+                "The seasonality factor, representing hydrogeological"
+                " characterisitics and the seasonal distribution of"
+                " precipitation. Values typically range from 1 - 30."
+            ),
+            units=u.none,
+            expression="value > 0"
+        ),
+        spec.CSVInput(
+            id="demand_table_path",
+            name=gettext("water demand table"),
+            about=gettext(
+                "A table of water demand for each LULC class. Each LULC code in"
+                " the LULC raster must have a corresponding row in this table. "
+                " Required if 'valuation_table_path' is provided."
+            ),
+            required="valuation_table_path",
+            columns=[
+                spec.IntegerInput(
+                    id="lucode",
+                    about=gettext("LULC code corresponding to the LULC raster")
+                ),
+                spec.NumberInput(
+                    id="demand",
+                    about=gettext(
+                        "Average consumptive water use in this LULC class."
+                    ),
+                    units=u.meter ** 3 / u.year / u.pixel
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.CSVInput(
+            id="valuation_table_path",
+            name=gettext("hydropower valuation table"),
+            about=gettext(
+                "A table mapping each watershed to the associated valuation"
+                " parameters for its hydropower station."
+            ),
+            required=False,
+            columns=[
+                spec.IntegerInput(
+                    id="ws_id",
+                    about=gettext(
+                        "Unique identifier for the hydropower station. This"
+                        " must match the 'ws_id' value for the corresponding"
+                        " watershed in the Watersheds vector. Each watershed in"
+                        " the Watersheds vector must have its 'ws_id' entered"
+                        " in this column."
+                    )
+                ),
+                spec.RatioInput(
+                    id="efficiency",
+                    about=gettext(
+                        "Turbine efficiency, the proportion of potential energy"
+                        " captured and converted to electricity by the turbine."
+                    ),
+                    units=None
+                ),
+                spec.RatioInput(
+                    id="fraction",
+                    about=gettext(
+                        "The proportion of inflow water volume that is used to"
+                        " generate energy."
+                    ),
+                    units=None
+                ),
+                spec.NumberInput(
+                    id="height",
+                    about=gettext(
+                        "The head, measured as the average annual effective"
+                        " height of water behind each dam at the turbine"
+                        " intake."
+                    ),
+                    units=u.meter
+                ),
+                spec.NumberInput(
+                    id="kw_price",
+                    about=gettext(
+                        "The price of power produced by the station. Must be in"
+                        " the same currency used in the 'cost' column."
+                    ),
+                    units=u.currency / u.kilowatt_hour
+                ),
+                spec.NumberInput(
+                    id="cost",
+                    about=gettext(
+                        "Annual maintenance and operations cost of running the"
+                        " hydropower station. Must be in the same currency used"
+                        " in the 'kw_price' column."
+                    ),
+                    units=u.currency / u.year
+                ),
+                spec.NumberInput(
+                    id="time_span",
+                    about=gettext(
+                        "Number of years over which to value the hydropower"
+                        " station. This is either the station's expected"
+                        " lifespan or the duration of the land use scenario of"
+                        " interest."
+                    ),
+                    units=u.year
+                ),
+                spec.PercentInput(
+                    id="discount",
+                    about=gettext(
+                        "The annual discount rate, applied for each year in the"
+                        " time span."
+                    ),
+                    units=None
+                )
+            ],
+            index_col="ws_id"
+        )
+    ],
+    outputs=[
+        spec.DirectoryOutput(
+            id="output",
+            about=None,
+            contents=[
+                spec.VectorOutput(
+                    id="watershed_results_wyield.shp",
+                    about=gettext(
+                        "Shapefile containing biophysical output values per"
+                        " watershed."
+                    ),
+                    geometry_types={"POLYGON"},
+                    fields=WATERSHED_OUTPUT_FIELDS
+                ),
+                spec.CSVOutput(
+                    id="watershed_results_wyield.csv",
+                    about=gettext(
+                        "Table containing biophysical output values per"
+                        " watershed."
+                    ),
+                    columns=WATERSHED_OUTPUT_FIELDS,
+                    index_col="ws_id"
+                ),
+                spec.VectorOutput(
+                    id="subwatershed_results_wyield.shp",
+                    about=gettext(
+                        "Shapefile containing biophysical output values per"
+                        " subwatershed."
+                    ),
+                    geometry_types={"POLYGON"},
+                    fields=SUBWATERSHED_OUTPUT_FIELDS
+                ),
+                spec.CSVOutput(
+                    id="subwatershed_results_wyield.csv",
+                    about=gettext(
+                        "Table containing biophysical output values per"
+                        " subwatershed."
+                    ),
+                    columns=SUBWATERSHED_OUTPUT_FIELDS,
+                    index_col="subws_id"
+                ),
+                spec.DirectoryOutput(
+                    id="per_pixel",
+                    about=gettext(
+                        "Outputs in the per_pixel folder can be useful for"
+                        " intermediate calculations but should NOT be"
+                        " interpreted at the pixel level, as model assumptions"
+                        " are based on processes understood at the subwatershed"
+                        " scale."
+                    ),
+                    contents=[
+                        spec.SingleBandRasterOutput(
+                            id="fractp.tif",
+                            about=gettext(
+                                "The fraction of precipitation that actually"
+                                " evapotranspires at the pixel level."
+                            ),
+                            data_type=float,
+                            units=None
+                        ),
+                        spec.SingleBandRasterOutput(
+                            id="aet.tif",
+                            about=gettext(
+                                "Estimated actual evapotranspiration per pixel."
+                            ),
+                            data_type=float,
+                            units=u.millimeter
+                        ),
+                        spec.SingleBandRasterOutput(
+                            id="wyield.tif",
+                            about=gettext("Estimated water yield per pixel."),
+                            data_type=float,
+                            units=u.millimeter
+                        )
+                    ]
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="intermediate",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="clipped_lulc.tif",
+                    about=gettext("Aligned and clipped copy of LULC input."),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="depth_to_root_rest_layer.tif",
+                    about=gettext(
+                        "Aligned and clipped copy of root restricting layer"
+                        " depth input."
+                    ),
+                    data_type=float,
+                    units=u.millimeter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="eto.tif",
+                    about=gettext("Aligned and clipped copy of ET0 input."),
+                    data_type=float,
+                    units=u.millimeter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="kc_raster.tif",
+                    about=gettext("Map of KC values."),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="pawc.tif",
+                    about=gettext("Aligned and clipped copy of PAWC input."),
+                    data_type=float,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="pet.tif",
+                    about=gettext("Map of potential evapotranspiration."),
+                    data_type=float,
+                    units=u.millimeter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="precip.tif",
+                    about=gettext(
+                        "Aligned and clipped copy of precipitation input."
+                    ),
+                    data_type=float,
+                    units=u.millimeter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="root_depth.tif",
+                    about=gettext("Map of root depth."),
+                    data_type=float,
+                    units=u.millimeter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="veg.tif",
+                    about=gettext("Map of vegetated state."),
+                    data_type=int,
+                    units=None
+                )
+            ]
+        ),
+        spec.TASKGRAPH_DIR.model_copy(update=dict(
+            id="taskgraph_dir"
+        ))
+    ]
+)
+
 
 
 def execute(args):
