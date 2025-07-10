@@ -1,7 +1,7 @@
 # ADR-0001: Update the InVEST SDR LS Factor
 
-Author: James
-Science Lead: Rafa
+* Author: James
+* Science Lead: Rafa
 
 ## Changelog
 

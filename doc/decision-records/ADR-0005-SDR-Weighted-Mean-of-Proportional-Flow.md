@@ -1,7 +1,7 @@
 # ADR-0005: Findings around Weighted Mean of Proportional Flow
 
-Author: James
-Science Lead: Rafa
+* Author: James
+* Science Lead: Rafa
 
 ## Changelog
 
