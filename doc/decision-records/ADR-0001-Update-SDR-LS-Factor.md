@@ -1,8 +1,14 @@
 # ADR-0001: Update the InVEST SDR LS Factor
 
 Author: James
-
 Science Lead: Rafa
+
+## Changelog
+
+* 2025-07-09: Updating ADR to include a note about weighted mean of
+  proportional flow, described in
+  [ADR-0005](ADR-0005-SDR-Weighted-Mean-of-Proportional-Flow.md)
+* 2023-08-01: Initial release of this ADR.
 
 ## Context
 
@@ -77,6 +83,15 @@ the LS Factor calculation:
 
 ## Status
 
+The above changes were implemented and released in InVEST 3.14.0 (2023-09-08).
+
+### Update 2025-07-09
+
+After implementing the changes described in this document, there remained some
+question about the "weighted mean of proportional flow" described above. The
+findings and decision related to this have been summarised in
+[ADR-0005-SDR-Weighted-Mean-of-Proportional-Flow.md](ADR-0005-SDR-Weighted-Mean-of-Proportional-Flow.md).
+
 ## Consequences
 
 Once implemented and released, the LS factor outputs of SDR will be
@@ -87,8 +102,8 @@ released.
 
 ## References
 
-Zevenbergen & Thorne (1987): https://searchworks.stanford.edu/articles/edb__89861226
+Zevenbergen & Thorne (1987): Zevenbergen, L.W. and Thorne, C.R. (1987), Quantitative analysis of land surface topography. Earth Surf. Process. Landforms, 12: 47-56. https://doi-org.stanford.idm.oclc.org/10.1002/esp.3290120107
 
-Desmet & Govers (1996): https://searchworks.stanford.edu/articles/edsgac__edsgac.A18832564
+Desmet & Govers (1996): 1. Desmet PJJ, Govers G. A GIS procedure for automatically calculating the USLE LS factor on topographically complex landscape units. J Soil Water Conserv. 1996;51(5):427. https://www.proquest.com/scholarly-journals/gis-procedure-automatically-calculating-usle-ls/docview/220970105/se-2.
 
 Oliveira et al (2013): http://dx.doi.org/10.5772/54439
