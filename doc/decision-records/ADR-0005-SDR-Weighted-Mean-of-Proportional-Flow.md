@@ -1,4 +1,4 @@
-# ADR-0005: Findings around Weighted Mean of Proportional Flow
+# ADR-0005: Findings around Weighted Mean of Proportional Flow in SDR
 
 * Author: James
 * Science Lead: Rafa
