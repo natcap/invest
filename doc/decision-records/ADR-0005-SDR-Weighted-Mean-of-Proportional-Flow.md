@@ -30,10 +30,10 @@ they were using both a WMPF calculation and also dot-product of the slope
 vector in order to calculate the LS Factor, which made James doubt that we had
 adhered to the methodology described in the paper.
 
-#### What is represented in Desmet & Govers (1996)
+## What is represented in Desmet & Govers (1996)
 
 Desmet & Govers (1996) does indeed use a WMPF claculation in the calculation of
-the unit contributing area.  The forumulation here is described in equations 2,
+the unit contributing area.  The formulation here is described in equations 2,
 3 and 4:
 
 Equation 2 is provided in the context of the Quinn et al. (1991) multiple flow
@@ -94,7 +94,7 @@ L_{i,j} = \frac{(A_{i,j-in} + D^2)^{m+1} - A_{i,j-in}^{m+1}}{D^{m+2}\cdot x_{i,j
 And this is reproduced in the [SDR User's Guide chapter](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/sdr.html#equation-ls).
 
 
-#### What SAGA Does
+## What SAGA Does
 
 SAGA offers the user a choice of methods with which to calculate the "unit contributing area".
 In reading Desmet & Govers (1996) and the SAGA source code, we are interpreting the term
@@ -139,7 +139,7 @@ calculations into the MFD version of SDR if we wanted to.  Further
 work would be needed to adapt Desmet & Govers' unit contributing area to
 work with D8 flow direction and to document these changes in the InVEST User's Guide.
 
-### Conclusions
+## Conclusions
 
 If we are using Desmet & Govers (1996) as our point of reference for the LS Factor,
 then no, we are not (as of InVEST 3.14.0) following Desmet & Govers in the WMPF
