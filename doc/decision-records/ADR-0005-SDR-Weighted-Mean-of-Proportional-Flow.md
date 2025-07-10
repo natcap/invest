@@ -129,15 +129,15 @@ It's also worth noting that Desmet & Govers (1996) specifically call out their
 use of the Quinn et al. (1991) Multiple Flow Direction algorithm in order to
 calculate the unit contributing area. Since SAGA uses D8 for their LS Factor
 calculations it does not make sense to directly adopt Desmet & Govers' formulation
-and instead give users a choice of how they would like to estimate the unit
-contributing area.
+in that context.  It does make sense to instead give users a choice of how they
+would like to estimate the unit contributing area.
 
-Functionally, our MFD formulation appears to be conceptually similar, if not
-identical, to that of Quinn et al. (1991) (more careful comparison required),
-so we very likely could include Desmet & Govers' unit contributing area
-calculations into the MFD version of SDR if we wanted to.  Further
-work would be needed to adapt Desmet & Govers' unit contributing area to
-work with D8 flow direction and to document these changes in the InVEST User's Guide.
+Our MFD formulation appears to be conceptually similar, if not identical, to
+that of Quinn et al. (1991) although a more careful comparison is required.  As
+a result, we very likely could include Desmet & Govers' unit contributing area
+calculations into the MFD version of SDR if we wanted to.  Further work would
+be needed to adapt Desmet & Govers' unit contributing area to work with D8 flow
+direction and to document these changes in the InVEST User's Guide.
 
 ## Conclusions
 
