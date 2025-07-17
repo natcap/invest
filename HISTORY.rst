@@ -61,9 +61,14 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+
+Workbench
+=========
+* Fixed a bug where the Workbench showed the incorrect status of a recently
+  completed model run. (`#2072 <https://github.com/natcap/invest/issues/2072>`_)
 
 3.16.1 (2025-07-01)
 -------------------
