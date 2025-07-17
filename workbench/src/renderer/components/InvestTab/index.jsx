@@ -113,16 +113,15 @@ class InvestTab extends React.Component {
     const {
       tabID,
       updateJobProperties,
-      saveJob,
     } = this.props;
     let status = (data.code === 0) ? 'success' : 'error';
     if (this.state.userTerminated) {
       status = 'canceled';
     }
+    const saveJob = true;
     updateJobProperties(tabID, {
       status: status,
-    });
-    saveJob(tabID);
+    }, saveJob);
     this.setState({
       executeClicked: false,
       userTerminated: false,
@@ -357,7 +356,6 @@ InvestTab.propTypes = {
     type: PropTypes.string,
   }).isRequired,
   tabID: PropTypes.string.isRequired,
-  saveJob: PropTypes.func.isRequired,
   updateJobProperties: PropTypes.func.isRequired,
   investList: PropTypes.shape({
     modelTitle: PropTypes.string,

@@ -38,7 +38,6 @@ function renderInvestTab(job = DEFAULT_JOB) {
     <InvestTab
       job={job}
       tabID={tabID}
-      saveJob={() => {}}
       updateJobProperties={() => {}}
       investList={{
         carbon: { modelTitle: 'Carbon Model', type: 'core' },
