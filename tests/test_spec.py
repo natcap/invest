@@ -295,6 +295,10 @@ def _generate_files_from_spec(output_spec, workspace):
                     layer_name, geom_type=ogr.wkbPolygon)
                 for field_spec in spec_data.fields:
                     target_layer.CreateField(ogr.FieldDefn(field_spec.id, ogr.OFTInteger))
+            elif isinstance(spec_data, spec.CSVOutput):
+                columns = [field_spec.id for field_spec in spec_data.columns]
+                with open(filepath, 'w') as file:
+                    file.write(','.join(columns))
             else:
                 # Such as taskgraph.db, just create the file.
                 with open(filepath, 'w') as file:
@@ -338,6 +342,17 @@ class TestMetadataFromSpec(unittest.TestCase):
                                 about="The average urban nature supply/demand"
                             )
                         ]
+                    ),
+                    spec.CSVOutput(
+                        id="table.csv",
+                        about=("A biophysical table."),
+                        columns=[
+                            spec.NumberInput(
+                                id="foo",
+                                units=u.m**2/u.person,
+                                about="bar"
+                            )
+                        ]
                     )
                 ]
             ),
@@ -368,9 +383,8 @@ class TestMetadataFromSpec(unittest.TestCase):
         args_dict = {'workspace_dir': self.workspace_dir}
         spec.generate_metadata_for_outputs(model_module, args_dict)
 
-        files, messages = geometamaker.validate_dir(
-            self.workspace_dir, recursive=True)
-        self.assertEqual(len(files), 2)
+        files, messages = geometamaker.validate_dir(self.workspace_dir)
+        self.assertEqual(len(files), 3)
         self.assertFalse(any(messages))
 
         resource = geometamaker.describe(
