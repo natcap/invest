@@ -156,7 +156,7 @@ void calculate_retention(
         } else if (
             is_close(critical_length_i, critical_length_raster.nodata) or
             is_close(retention_efficiency_i, retention_efficiency_raster.nodata) or
-            flow_dir_i == 0  // "nodata" for flow direction
+            is_close(flow_dir_i, flow_dir_raster.nodata)
           ) {
           // if inputs are nodata, retention is undefined.
           retention_raster.set(x_i, y_i, retention_nodata);

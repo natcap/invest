@@ -40,6 +40,7 @@ kwargs = {
         'scipy.special._cdflib',
         'scipy.special._special_ufuncs',
         'scipy._lib.array_api_compat.numpy.fft',
+        'scipy._cyutility'
     ],
     'datas': [proj_datas, frictionless_datas],
     'cipher': block_cipher,

@@ -90,8 +90,9 @@ def get_dynamic_dropdown_options():
     for arg_spec in model_module.MODEL_SPEC.inputs:
         if (isinstance(arg_spec, spec.OptionStringInput) and
                 arg_spec.dropdown_function):
-            results[arg_spec.id] = arg_spec.dropdown_function(
-                json.loads(payload['args']))
+            results[arg_spec.id] = [
+                option.model_dump() for option in
+                arg_spec.dropdown_function(json.loads(payload['args']))]
     LOGGER.debug(results)
     return json.dumps(results)
 

@@ -61,20 +61,57 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.16.1 (2025-07-01)
+-------------------
 
 General
 =======
 * Fixed a bug where the ``invest`` CLI could raise a circular
   ``ImportError`` while trying to discover available plugins.
   (`#2012 <https://github.com/natcap/invest/issues/2012>`_).
+* Pull requests into the InVEST repository now verify that committers to
+  the PR have signed the InVEST Contributor License Agreement, with the results
+  viewable as a check alongside the tests that normally execute on GitHub
+  Actions. To review and sign the CLA, please visit https://natcap.github.io/invest-cla/.
+  (`#1593 <https://github.com/natcap/invest/issues/1593>`_)
+
+Workbench
+=========
+* Fixed a bug where recent jobs from models that no longer exist, or from
+  plugins that are no longer installed, could appear in the Recent Jobs list
+  (`#2028 <https://github.com/natcap/invest/issues/2028>`_).
+* Fixed a bug where recent jobs from a plugin would remain in the Recent Jobs
+  list after the plugin was uninstalled
+  (`#1977 <https://github.com/natcap/invest/issues/1977>`_).
 
 Plugins
 =======
 * The plugin package version is now queried programatically using
   ``importlib`` rather than being read directly from the ``pyproject.toml``
   (`#2025 <https://github.com/natcap/invest/issues/2025>`_).
+* Plugin environments are now created using the conda-forge channel only.
+  The default channel is excluded (`#1802 <https://github.com/natcap/invest/issues/1802>`_).
+
+NDR
+===
+* Fixed a bug where model outputs in D8 mode had some nodata holes resulting
+  from an incorrect nodata check (`#2055 <https://github.com/natcap/invest/issues/2055>`_).
+
+Pollination
+===========
+* Fixed a bug where pollination in multiple seasons would not
+  use the appropriate pollinator abundance for each season when
+  calculating farm results.
+  (`#2038 <https://github.com/natcap/invest/issues/2038>`_).
+
+Visitation: Recreation and Tourism
+==================================
+* Fixed a bug which caused the recreation model to error when using
+  numpy>=2.3.0 (`#2032 <https://github.com/natcap/invest/issues/2032>`_).
 
 3.16.0 (2025-06-04)
 -------------------

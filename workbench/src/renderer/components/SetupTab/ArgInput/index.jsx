@@ -255,6 +255,11 @@ export default function ArgInput(props) {
       />
     );
   } else if (argSpec.type === 'option_string') {
+    const options = dropdownOptions.map((opt) => (
+      <option value={opt.key} key={opt.key}>
+        {opt.display_name ? opt.display_name : opt.key}
+      </option>
+    ));
     form = (
       <Form.Control
         id={inputId}
@@ -267,15 +272,7 @@ export default function ArgInput(props) {
         isValid={enabled && isValid}
         custom
       >
-        {
-          Array.isArray(dropdownOptions) ?
-          dropdownOptions.map(
-            (opt) => <option value={opt} key={opt}>{opt}</option>
-          ) :
-          Object.entries(dropdownOptions).map(
-            ([opt, info]) => <option value={opt} key={opt}>{info.display_name}</option>
-          )
-        }
+        {options}
       </Form.Control>
     );
   } else {
@@ -349,7 +346,8 @@ ArgInput.propTypes = {
   userguide: PropTypes.string.isRequired,
   isCoreModel: PropTypes.bool.isRequired,
   value: PropTypes.oneOfType(
-    [PropTypes.string, PropTypes.bool, PropTypes.number]),
+    [PropTypes.string, PropTypes.bool, PropTypes.number]
+  ),
   touched: PropTypes.bool,
   isValid: PropTypes.bool,
   validationMessage: PropTypes.string,
@@ -357,7 +355,10 @@ ArgInput.propTypes = {
   handleFocus: PropTypes.func.isRequired,
   selectFile: PropTypes.func.isRequired,
   enabled: PropTypes.bool.isRequired,
-  dropdownOptions: PropTypes.oneOfType([PropTypes.arrayOf(PropTypes.string), PropTypes.object]),
+  dropdownOptions: PropTypes.arrayOf(PropTypes.shape({
+    key: PropTypes.string.isRequired,
+    display_name: PropTypes.string,
+  })),
   inputDropHandler: PropTypes.func.isRequired,
   scrollEventCount: PropTypes.number,
 };

@@ -28,478 +28,519 @@ MONTH_ID_TO_LABEL = [
     'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct',
     'nov', 'dec']
 
-MODEL_SPEC = spec.build_model_spec({
-    "model_id": "seasonal_water_yield",
-    "model_title": gettext("Seasonal Water Yield"),
-    "userguide": "seasonal_water_yield.html",
-    "aliases": ("swy",),
-    "ui_spec": {
-        "order": [
-            ['workspace_dir', 'results_suffix'],
-            ['lulc_raster_path', 'biophysical_table_path'],
-            ['dem_raster_path', 'aoi_path'],
-            ['flow_dir_algorithm', 'threshold_flow_accumulation', 'beta_i', 'gamma'],
-            ['user_defined_local_recharge', 'l_path', 'et0_dir', 'precip_dir', 'soil_group_path'],
-            ['monthly_alpha', 'alpha_m', 'monthly_alpha_path'],
-            ['user_defined_climate_zones', 'rain_events_table_path', 'climate_zone_table_path', 'climate_zone_raster_path'],
-        ]
-    },
-    "args_with_spatial_overlap": {
-        "spatial_keys": ["dem_raster_path", "lulc_raster_path",
-                         "soil_group_path", "aoi_path", "l_path",
-                         "climate_zone_raster_path"],
-        "different_projections_ok": True,
-    },
-    "args": {
-        "workspace_dir": spec.WORKSPACE,
-        "results_suffix": spec.SUFFIX,
-        "n_workers": spec.N_WORKERS,
-        "threshold_flow_accumulation": spec.THRESHOLD_FLOW_ACCUMULATION,
-        "et0_dir": {
-            "type": "directory",
-            "contents": {
-                # monthly et0 maps, each file ending in a number 1-12
-                "[MONTH]": {
-                    "name": gettext("reference evapotranspiration"),
-                    "type": "raster",
-                    "bands": {
-                        1: {
-                            "type": "number",
-                            "units": u.millimeter/u.month
-                        }
-                    },
-                    "about": gettext(
-                        "Twelve files, one for each month. File names must "
-                        "end with the month number (1-12). For example, "
-                        "the filenames 'et0_1.tif' "
-                        "'evapotranspiration1.tif' are both valid for the "
-                        "month of January."),
-                },
-            },
-            "required": "not user_defined_local_recharge",
-            "allowed": "not user_defined_local_recharge",
-            "about": gettext(
-                "Directory containing maps of reference evapotranspiration "
-                "for each month. Only .tif files should be in this folder "
-                "(no .tfw, .xml, etc files). Required if User-Defined Local "
-                "Recharge is not selected."),
-            "name": gettext("ET0 directory")
-        },
-        "precip_dir": {
-            "type": "directory",
-            "contents": {
-                # monthly precipitation maps, each file ending in a number 1-12
-                "[MONTH]": {
-                    "type": "raster",
-                    "bands": {
-                        1: {
-                            "type": "number",
-                            "units": u.millimeter/u.month,
-                        },
-                    },
-                    "name": gettext("precipitation"),
-                    "about": gettext(
-                        "Twelve files, one for each month. File names must "
-                        "end with the month number (1-12). For example, "
-                        "the filenames 'precip_1.tif' and 'precip1.tif' are "
-                        "both valid names for the month of January."),
-                },
-            },
-            "required": "not user_defined_local_recharge",
-            "allowed": "not user_defined_local_recharge",
-            "about": gettext(
-                "Directory containing maps of monthly precipitation for each "
-                "month. Only .tif files should be in this folder (no .tfw, "
-                ".xml, etc files). Required if User-Defined Local Recharge is "
-                "not selected."),
-            "name": gettext("precipitation directory")
-        },
-        "dem_raster_path": {
-            **spec.DEM,
-            "projected": True
-        },
-        "lulc_raster_path": {
-            **spec.LULC,
-            "projected": True,
-            "about": spec.LULC['about'] + " " + gettext(
-                "All values in this raster MUST "
-                "have corresponding entries in the Biophysical Table.")
-        },
-        "soil_group_path": {
-            **spec.SOIL_GROUP,
-            "projected": True,
-            "required": "not user_defined_local_recharge",
-            "allowed": "not user_defined_local_recharge"
-        },
-        "aoi_path": {
-            **spec.AOI,
-            "projected": True
-        },
-        "biophysical_table_path": {
-            "type": "csv",
-            "index_col": "lucode",
-            "columns": {
-                "lucode": spec.LULC_TABLE_COLUMN,
-                "cn_[SOIL_GROUP]": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "Curve number values for each combination of soil "
-                        "group and LULC class. Replace [SOIL_GROUP] with each "
-                        "soil group code A, B, C, D so that there is one "
-                        "column for each soil group. Curve number values must "
-                        "be greater than 0.")
-                },
-                "kc_[MONTH]": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "Crop/vegetation coefficient (Kc) values for this "
-                        "LULC class in each month. Replace [MONTH] with the "
-                        "numbers 1 to 12 so that there is one column for each "
-                        "month.")
-                }
-            },
-            "about": gettext(
-                "A table mapping each LULC code to biophysical properties of "
-                "the corresponding LULC class. All values in the LULC raster "
-                "must have corresponding entries in this table."),
-            "name": gettext("biophysical table")
-        },
-        "rain_events_table_path": {
-            "type": "csv",
-            "index_col": "month",
-            "columns": {
-                "month": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "Values are the numbers 1-12 corresponding to each "
-                        "month, January (1) through December (12).")
-                },
-                "events": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext("The number of rain events in that month.")
-                }
-            },
-            "required": (
-                "(not user_defined_local_recharge) & (not "
-                "user_defined_climate_zones)"),
-            "allowed": "not user_defined_climate_zones",
-            "about": gettext(
-                "A table containing the number of rain events for each month. "
-                "Required if neither User-Defined Local Recharge nor User-"
-                "Defined Climate Zones is selected."),
-            "name": gettext("rain events table")
-        },
-        "alpha_m": {
-            "type": "freestyle_string",
-            "required": "not monthly_alpha",
-            "allowed": "not monthly_alpha",
-            "about": gettext(
-                "The proportion of upslope annual available local recharge "
-                "that is available in each month. Required if Use Monthly "
-                "Alpha Table is not selected."),
-            "name": gettext("alpha_m parameter")
-        },
-        "beta_i": {
-            "type": "ratio",
-            "about": gettext(
-                "The proportion of the upgradient subsidy that is available "
-                "for downgradient evapotranspiration."),
-            "name": gettext("beta_i parameter")
-        },
-        "gamma": {
-            "type": "ratio",
-            "about": gettext(
-                "The proportion of pixel local recharge that is available to "
-                "downgradient pixels."),
-            "name": gettext("gamma parameter")
-        },
-        "user_defined_local_recharge": {
-            "type": "boolean",
-            "about": gettext(
-                "Use user-defined local recharge data instead of calculating "
-                "local recharge from the other provided data."),
-            "name": gettext("user-defined recharge layer (advanced)")
-        },
-        "l_path": {
-            "type": "raster",
-            "bands": {1: {
-                "type": "number",
-                "units": u.millimeter
-            }},
-            "required": "user_defined_local_recharge",
-            "allowed": "user_defined_local_recharge",
-            "projected": True,
-            "about": gettext(
-                "Map of local recharge data. Required if User-Defined Local "
-                "Recharge is selected."),
-            "name": gettext("local recharge")
-        },
-        "user_defined_climate_zones": {
-            "type": "boolean",
-            "about": gettext(
-                "Use user-defined climate zone data in lieu of a global rain "
-                "events table."),
-            "name": gettext("climate zones (advanced)")
-        },
-        "climate_zone_table_path": {
-            "type": "csv",
-            "index_col": "cz_id",
-            "columns": {
-                "cz_id": {
-                    "type": "integer",
-                    "about": gettext(
-                        "Climate zone ID numbers, corresponding to the values "
-                        "in the Climate Zones map.")},
-                "[MONTH]": {  # jan, feb, mar, etc.
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "The number of rain events that occur in each month "
-                        "in this climate zone. Replace [MONTH] with the month "
-                        "abbreviations: jan, feb, mar, apr, may, jun, jul, "
-                        "aug, sep, oct, nov, dec, so that there is a column "
-                        "for each month.")}
-            },
-            "required": "user_defined_climate_zones",
-            "allowed": "user_defined_climate_zones",
-            "about": gettext(
-                "Table of monthly precipitation events for each climate zone. "
-                "Required if User-Defined Climate Zones is selected."),
-            "name": gettext("climate zone table")
-        },
-        "climate_zone_raster_path": {
-            "type": "raster",
-            "bands": {1: {"type": "integer"}},
-            "required": "user_defined_climate_zones",
-            "allowed": "user_defined_climate_zones",
-            "projected": True,
-            "about": gettext(
-                "Map of climate zones. All values in this raster must have "
-                "corresponding entries in the Climate Zone Table."),
-            "name": gettext("climate zone map")
-        },
-        "monthly_alpha": {
-            "type": "boolean",
-            "about": gettext(
-                "Use montly alpha values instead of a single value for the "
-                "whole year."),
-            "name": gettext("use monthly alpha table (advanced)")
-        },
-        "monthly_alpha_path": {
-            "type": "csv",
-            "index_col": "month",
-            "columns": {
-                "month": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "Values are the numbers 1-12 corresponding to each "
-                        "month.")
-                },
-                "alpha": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext("The alpha value for that month.")
-                }
-            },
-            "required": "monthly_alpha",
-            "allowed": "monthly_alpha",
-            "about": gettext(
-                "Table of alpha values for each month. "
-                "Required if Use Monthly Alpha Table is selected."),
-            "name": gettext("monthly alpha table")
-        },
-        **spec.FLOW_DIR_ALGORITHM
-    },
-    "outputs": {
-        "B.tif": {
-            "about": gettext(
-                "Map of baseflow values, the contribution of a pixel to slow "
-                "release flow (which is not evapotranspired before it reaches "
-                "the stream)."),
-            "bands": {1: {
-                "type": "number",
-                "units": u.millimeter
-            }}
-        },
-        "B_sum.tif": {
-            "about": gettext(
-                "Map of B_sum values, the flow through a pixel, contributed "
-                "by all upslope pixels, that is not evapotranspirated before "
-                "it reaches the stream."),
-            "bands": {1: {
-                "type": "number",
-                "units": u.millimeter
-            }}
-        },
-        "CN.tif": {
-            "about": gettext("Map of curve number values."),
-            "bands": {1: {
-                "type": "number",
-                "units": u.none
-            }}
-        },
-        "L_avail.tif": {
-            "about": gettext("Map of available local recharge"),
-            "bands": {1: {
-                "type": "number",
-                "units": u.millimeter
-            }}
-        },
-        "L.tif": {
-            "about": gettext("Map of local recharge values"),
-            "bands": {1: {
-                "type": "number",
-                "units": u.millimeter
-            }}
-        },
-        "L_sum_avail.tif": {
-            "about": gettext(
-                "Map of total available water, contributed by all upslope "
-                "pixels, that is available for evapotranspiration by this pixel."),
-            "bands": {1: {
-                "type": "number",
-                "units": u.millimeter
-            }}
-        },
-        "L_sum.tif": {
-            "about": gettext(
-                "Map of cumulative upstream recharge: the flow through a "
-                "pixel, contributed by all upslope pixels, that is available "
-                "for evapotranspiration to downslope pixels."),
-            "bands": {1: {
-                "type": "number",
-                "units": u.millimeter
-            }}
-        },
-        "QF.tif": {
-            "about": gettext("Map of quickflow"),
-            "bands": {1: {
-                "type": "number",
-                "units": u.millimeter/u.year
-            }}
-        },
-        "stream.tif": spec.STREAM,
-        "P.tif": {
-            "about": gettext("The total precipitation across all months on this pixel."),
-            "bands": {1: {
-                "type": "number",
-                "units": u.millimeter/u.year
-            }}
-        },
-        "Vri.tif": {
-            "about": gettext(
-                "Map of the values of recharge (contribution, positive or "
-                "negative), to the total recharge."),
-            "bands": {1: {
-                "type": "number",
-                "units": u.millimeter
-            }}
-        },
-        "aggregated_results_swy.shp": {
-            "about": gettext("Table of biophysical values for each watershed"),
-            "geometries": spec.POLYGONS,
-            "fields": {
-                "qb": {
-                    "about": gettext(
-                        "Mean local recharge value within the watershed"),
-                    "type": "number",
-                    "units": u.millimeter
-                },
-                "vri_sum": {
-                    "about": gettext(
-                        "Total recharge contribution, (positive or negative) "
-                        "within the watershed."),
-                    "type": "number",
-                    "units": u.millimeter
-                }
-            }
-        },
-        "intermediate_outputs": {
-            "type": "directory",
-            "contents": {
-                "aet.tif": {
-                    "about": gettext("Map of actual evapotranspiration"),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.millimeter
-                    }}
-                },
-                "flow_dir.tif": {
-                    "about": gettext(
-                        "Map of flow direction, in either D8 or MFD format "
-                        "according to the option selected."),
-                    "bands": {1: {"type": "integer"}}
-                },
-                "qf_[MONTH].tif": {
-                    "about": gettext(
-                        "Maps of monthly quickflow (1 = January… 12 = December)"),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.millimeter
-                    }}
-                },
-                'Si.tif': {
-                    "about": gettext("Map of the S_i factor derived from CN"),
-                    "bands": {1: {"type": "number", "units": u.inch}}
-                },
-                'lulc_aligned.tif': {
-                    "about": gettext("Copy of LULC input, aligned and clipped "
-                                     "to match the other spatial inputs"),
-                    "bands": {1: {"type": "integer"}}
-                },
-                'dem_aligned.tif': {
-                    "about": gettext("Copy of DEM input, aligned and clipped "
-                                     "to match the other spatial inputs"),
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                'pit_filled_dem.tif': {
-                    "about": gettext("Pit filled DEM"),
-                    "bands": {1: {"type": "number", "units": u.meter}}
-                },
-                'soil_group_aligned.tif': {
-                    "about": gettext("Copy of soil groups input, aligned and "
-                                     "clipped to match the other spatial inputs"),
-                    "bands": {1: {"type": "integer"}}
-                },
-                'flow_accum.tif': spec.FLOW_ACCUMULATION,
-                'prcp_a[MONTH].tif': {
-                    "bands": {1: {"type": "number", "units": u.millimeter/u.year}},
-                    "about": gettext("Monthly precipitation rasters, aligned and "
-                                     "clipped to match the other spatial inputs")
-                },
-                'n_events[MONTH].tif': {
-                    "about": gettext("Map of monthly rain events"),
-                    "bands": {1: {"type": "integer"}}
-                },
-                'et0_a[MONTH].tif': {
-                    "bands": {1: {"type": "number", "units": u.millimeter}},
-                    "about": gettext("Monthly ET0 rasters, aligned and "
-                                     "clipped to match the other spatial inputs")
-                },
-                'kc_[MONTH].tif': {
-                    "about": gettext("Map of monthly KC values"),
-                    "bands": {1: {"type": "number", "units": u.none}}
-                },
-                'l_aligned.tif': {
-                    "about": gettext("Copy of user-defined local recharge input, "
-                                     "aligned and clipped to match the other spatial inputs"),
-                    "bands": {1: {"type": "number", "units": u.millimeter}}
-                },
-                'cz_aligned.tif': {
-                    "about": gettext("Copy of user-defined climate zones raster, "
-                                     "aligned and clipped to match the other spatial inputs"),
-                    "bands": {1: {"type": "integer"}}
-                }
-            }
-        },
-        "taskgraph_cache": spec.TASKGRAPH_DIR
-    }
-})
+MODEL_SPEC = spec.ModelSpec(
+    model_id="seasonal_water_yield",
+    model_title=gettext("Seasonal Water Yield"),
+    userguide="seasonal_water_yield.html",
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=("swy",),
+    input_field_order=[
+        ["workspace_dir", "results_suffix"],
+        ["lulc_raster_path", "biophysical_table_path"],
+        ["dem_raster_path", "aoi_path"],
+        ["flow_dir_algorithm", "threshold_flow_accumulation", "beta_i", "gamma"],
+        ["user_defined_local_recharge", "l_path", "et0_dir", "precip_dir",
+         "soil_group_path"],
+        ["monthly_alpha", "alpha_m", "monthly_alpha_path"],
+        ["user_defined_climate_zones", "rain_events_table_path",
+         "climate_zone_table_path", "climate_zone_raster_path"]
+    ],
+    inputs=[
+        spec.WORKSPACE,
+        spec.SUFFIX,
+        spec.N_WORKERS,
+        spec.THRESHOLD_FLOW_ACCUMULATION,
+        spec.DirectoryInput(
+            id="et0_dir",
+            name=gettext("ET0 directory"),
+            about=gettext(
+                "Directory containing maps of reference evapotranspiration for each"
+                " month. Only .tif files should be in this folder (no .tfw, .xml, etc"
+                " files). Required if User-Defined Local Recharge is not selected."
+            ),
+            required="not user_defined_local_recharge",
+            allowed="not user_defined_local_recharge",
+            contents=[
+                spec.SingleBandRasterInput(
+                    id="[MONTH]",
+                    name=gettext("reference evapotranspiration"),
+                    about=(
+                        "Twelve files, one for each month. File names must end with the"
+                        " month number (1-12). For example, the filenames 'et0_1.tif'"
+                        " 'evapotranspiration1.tif' are both valid for the month of"
+                        " January."
+                    ),
+                    data_type=float,
+                    units=u.millimeter / u.month,
+                    projected=None
+                )
+            ]
+        ),
+        spec.DirectoryInput(
+            id="precip_dir",
+            name=gettext("precipitation directory"),
+            about=gettext(
+                "Directory containing maps of monthly precipitation for each month. Only"
+                " .tif files should be in this folder (no .tfw, .xml, etc files)."
+                " Required if User-Defined Local Recharge is not selected."
+            ),
+            required="not user_defined_local_recharge",
+            allowed="not user_defined_local_recharge",
+            contents=[
+                spec.SingleBandRasterInput(
+                    id="[MONTH]",
+                    name=gettext("precipitation"),
+                    about=(
+                        "Twelve files, one for each month. File names must end with the"
+                        " month number (1-12). For example, the filenames 'precip_1.tif'"
+                        " and 'precip1.tif' are both valid names for the month of"
+                        " January."
+                    ),
+                    data_type=float,
+                    units=u.millimeter / u.month,
+                    projected=None
+                )
+            ]
+        ),
+        spec.DEM.model_copy(update=dict(id="dem_raster_path")),
+        spec.SingleBandRasterInput(
+            id="lulc_raster_path",
+            name=gettext("land use/land cover"),
+            about=gettext(
+                "Map of land use/land cover codes. Each land use/land cover type must be"
+                " assigned a unique integer code. All values in this raster MUST have"
+                " corresponding entries in the Biophysical Table."
+            ),
+            data_type=int,
+            units=None,
+            projected=True
+        ),
+        spec.SOIL_GROUP.model_copy(update=dict(
+            projected=True,
+            required="not user_defined_local_recharge",
+            allowed="not user_defined_local_recharge"
+        )),
+        spec.AOI.model_copy(update=dict(
+            id="aoi_path",
+            projected=True
+        )),
+        spec.CSVInput(
+            id="biophysical_table_path",
+            name=gettext("biophysical table"),
+            about=gettext(
+                "A table mapping each LULC code to biophysical properties of the"
+                " corresponding LULC class. All values in the LULC raster must have"
+                " corresponding entries in this table."
+            ),
+            columns=[
+                spec.LULC_TABLE_COLUMN,
+                spec.NumberInput(
+                    id="cn_[SOIL_GROUP]",
+                    about=gettext(
+                        "Curve number values for each combination of soil group and LULC"
+                        " class. Replace [SOIL_GROUP] with each soil group code A, B, C,"
+                        " D so that there is one column for each soil group. Curve number"
+                        " values must be greater than 0."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberInput(
+                    id="kc_[MONTH]",
+                    about=gettext(
+                        "Crop/vegetation coefficient (Kc) values for this LULC class in"
+                        " each month. Replace [MONTH] with the numbers 1 to 12 so that"
+                        " there is one column for each month."
+                    ),
+                    units=u.none
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.CSVInput(
+            id="rain_events_table_path",
+            name=gettext("rain events table"),
+            about=gettext(
+                "A table containing the number of rain events for each month. Required if"
+                " neither User-Defined Local Recharge nor User-Defined Climate Zones is"
+                " selected."
+            ),
+            required=(
+                "(not user_defined_local_recharge) & (not user_defined_climate_zones)"
+            ),
+            allowed="not user_defined_climate_zones",
+            columns=[
+                spec.NumberInput(
+                    id="month",
+                    about=gettext(
+                        "Values are the numbers 1-12 corresponding to each month, January"
+                        " (1) through December (12)."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberInput(
+                    id="events",
+                    about=gettext("The number of rain events in that month."),
+                    units=u.none
+                )
+            ],
+            index_col="month"
+        ),
+        spec.StringInput(
+            id="alpha_m",
+            name=gettext("alpha_m parameter"),
+            about=gettext(
+                "The proportion of upslope annual available local recharge that is"
+                " available in each month. Required if Use Monthly Alpha Table is not"
+                " selected."
+            ),
+            required="not monthly_alpha",
+            allowed="not monthly_alpha",
+            regexp=None
+        ),
+        spec.RatioInput(
+            id="beta_i",
+            name=gettext("beta_i parameter"),
+            about=gettext(
+                "The proportion of the upgradient subsidy that is available for"
+                " downgradient evapotranspiration."
+            ),
+            units=None
+        ),
+        spec.RatioInput(
+            id="gamma",
+            name=gettext("gamma parameter"),
+            about=gettext(
+                "The proportion of pixel local recharge that is available to downgradient"
+                " pixels."
+            ),
+            units=None
+        ),
+        spec.BooleanInput(
+            id="user_defined_local_recharge",
+            name=gettext("user-defined recharge layer (advanced)"),
+            about=gettext(
+                "Use user-defined local recharge data instead of calculating local"
+                " recharge from the other provided data."
+            )
+        ),
+        spec.SingleBandRasterInput(
+            id="l_path",
+            name=gettext("local recharge"),
+            about=gettext(
+                "Map of local recharge data. Required if User-Defined Local Recharge is"
+                " selected."
+            ),
+            required="user_defined_local_recharge",
+            allowed="user_defined_local_recharge",
+            data_type=float,
+            units=u.millimeter,
+            projected=True
+        ),
+        spec.BooleanInput(
+            id="user_defined_climate_zones",
+            name=gettext("climate zones (advanced)"),
+            about=gettext(
+                "Use user-defined climate zone data in lieu of a global rain events"
+                " table."
+            )
+        ),
+        spec.CSVInput(
+            id="climate_zone_table_path",
+            name=gettext("climate zone table"),
+            about=gettext(
+                "Table of monthly precipitation events for each climate zone. Required if"
+                " User-Defined Climate Zones is selected."
+            ),
+            required="user_defined_climate_zones",
+            allowed="user_defined_climate_zones",
+            columns=[
+                spec.IntegerInput(
+                    id="cz_id",
+                    about=gettext(
+                        "Climate zone ID numbers, corresponding to the values in the"
+                        " Climate Zones map."
+                    )
+                ),
+                spec.NumberInput(
+                    id="[MONTH]",
+                    about=gettext(
+                        "The number of rain events that occur in each month in this"
+                        " climate zone. Replace [MONTH] with the month abbreviations:"
+                        " jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec, so"
+                        " that there is a column for each month."
+                    ),
+                    units=u.none
+                )
+            ],
+            index_col="cz_id"
+        ),
+        spec.SingleBandRasterInput(
+            id="climate_zone_raster_path",
+            name=gettext("climate zone map"),
+            about=gettext(
+                "Map of climate zones. All values in this raster must have corresponding"
+                " entries in the Climate Zone Table."
+            ),
+            required="user_defined_climate_zones",
+            allowed="user_defined_climate_zones",
+            data_type=int,
+            units=None,
+            projected=True
+        ),
+        spec.BooleanInput(
+            id="monthly_alpha",
+            name=gettext("use monthly alpha table (advanced)"),
+            about=gettext(
+                "Use montly alpha values instead of a single value for the whole year."
+            )
+        ),
+        spec.CSVInput(
+            id="monthly_alpha_path",
+            name=gettext("monthly alpha table"),
+            about=gettext(
+                "Table of alpha values for each month. Required if Use Monthly Alpha"
+                " Table is selected."
+            ),
+            required="monthly_alpha",
+            allowed="monthly_alpha",
+            columns=[
+                spec.NumberInput(
+                    id="month",
+                    about=gettext(
+                        "Values are the numbers 1-12 corresponding to each month."
+                    ),
+                    units=u.none
+                ),
+                spec.NumberInput(
+                    id="alpha",
+                    about=gettext("The alpha value for that month."),
+                    units=u.none
+                )
+            ],
+            index_col="month"
+        ),
+        spec.FLOW_DIR_ALGORITHM
+    ],
+    outputs=[
+        spec.SingleBandRasterOutput(
+            id="B.tif",
+            about=gettext(
+                "Map of baseflow values, the contribution of a pixel to slow release flow"
+                " (which is not evapotranspired before it reaches the stream)."
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="B_sum.tif",
+            about=gettext(
+                "Map of B_sum values, the flow through a pixel, contributed by all"
+                " upslope pixels, that is not evapotranspirated before it reaches the"
+                " stream."
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="CN.tif",
+            about=gettext("Map of curve number values."),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="L_avail.tif",
+            about=gettext("Map of available local recharge"),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="L.tif",
+            about=gettext("Map of local recharge values"),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="L_sum_avail.tif",
+            about=gettext(
+                "Map of total available water, contributed by all upslope pixels, that is"
+                " available for evapotranspiration by this pixel."
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="L_sum.tif",
+            about=gettext(
+                "Map of cumulative upstream recharge: the flow through a pixel,"
+                " contributed by all upslope pixels, that is available for"
+                " evapotranspiration to downslope pixels."
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="QF.tif",
+            about=gettext("Map of quickflow"),
+            data_type=float,
+            units=u.millimeter / u.year
+        ),
+        spec.STREAM.model_copy(update=dict(id="stream.tif")),
+        spec.SingleBandRasterOutput(
+            id="P.tif",
+            about=gettext("The total precipitation across all months on this pixel."),
+            data_type=float,
+            units=u.millimeter / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="Vri.tif",
+            about=gettext(
+                "Map of the values of recharge (contribution, positive or negative), to"
+                " the total recharge."
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.VectorOutput(
+            id="aggregated_results_swy.shp",
+            about=gettext("Table of biophysical values for each watershed"),
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="qb",
+                    about=gettext("Mean local recharge value within the watershed"),
+                    units=u.millimeter
+                ),
+                spec.NumberOutput(
+                    id="vri_sum",
+                    about=gettext(
+                        "Total recharge contribution, (positive or negative) within the"
+                        " watershed."
+                    ),
+                    units=u.millimeter
+                )
+            ]
+        ),
+        spec.DirectoryOutput(
+            id="intermediate_outputs",
+            about=None,
+            contents=[
+                spec.SingleBandRasterOutput(
+                    id="aet.tif",
+                    about=gettext("Map of actual evapotranspiration"),
+                    data_type=float,
+                    units=u.millimeter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="flow_dir.tif",
+                    about=gettext(
+                        "Map of flow direction, in either D8 or MFD format according to"
+                        " the option selected."
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="qf_[MONTH].tif",
+                    about=gettext(
+                        "Maps of monthly quickflow (1 = January… 12 = December)"
+                    ),
+                    data_type=float,
+                    units=u.millimeter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="Si.tif",
+                    about=gettext("Map of the S_i factor derived from CN"),
+                    data_type=float,
+                    units=u.inch
+                ),
+                spec.SingleBandRasterOutput(
+                    id="lulc_aligned.tif",
+                    about=gettext(
+                        "Copy of LULC input, aligned and clipped to match the other"
+                        " spatial inputs"
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="dem_aligned.tif",
+                    about=gettext(
+                        "Copy of DEM input, aligned and clipped to match the other"
+                        " spatial inputs"
+                    ),
+                    data_type=float,
+                    units=u.meter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="pit_filled_dem.tif",
+                    about=gettext("Pit filled DEM"),
+                    data_type=float,
+                    units=u.meter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="soil_group_aligned.tif",
+                    about=gettext(
+                        "Copy of soil groups input, aligned and clipped to match the"
+                        " other spatial inputs"
+                    ),
+                    data_type=int,
+                    units=None
+                ),
+                spec.FLOW_ACCUMULATION.model_copy(update=dict(id="flow_accum.tif")),
+                spec.SingleBandRasterOutput(
+                    id="prcp_a[MONTH].tif",
+                    about=gettext(
+                        "Monthly precipitation rasters, aligned and clipped to match the"
+                        " other spatial inputs"
+                    ),
+                    data_type=float,
+                    units=u.millimeter / u.year
+                ),
+                spec.SingleBandRasterOutput(
+                    id="n_events[MONTH].tif",
+                    about=gettext("Map of monthly rain events"),
+                    data_type=int,
+                    units=None
+                ),
+                spec.SingleBandRasterOutput(
+                    id="et0_a[MONTH].tif",
+                    about=gettext(
+                        "Monthly ET0 rasters, aligned and clipped to match the other"
+                        " spatial inputs"
+                    ),
+                    data_type=float,
+                    units=u.millimeter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="kc_[MONTH].tif",
+                    about=gettext("Map of monthly KC values"),
+                    data_type=float,
+                    units=u.none
+                ),
+                spec.SingleBandRasterOutput(
+                    id="l_aligned.tif",
+                    about=gettext(
+                        "Copy of user-defined local recharge input, aligned and clipped"
+                        " to match the other spatial inputs"
+                    ),
+                    data_type=float,
+                    units=u.millimeter
+                ),
+                spec.SingleBandRasterOutput(
+                    id="cz_aligned.tif",
+                    about=gettext(
+                        "Copy of user-defined climate zones raster, aligned and clipped"
+                        " to match the other spatial inputs"
+                    ),
+                    data_type=int,
+                    units=None
+                )
+            ]
+        ),
+        spec.TASKGRAPH_DIR
+    ]
+)
 
 
 _OUTPUT_BASE_FILES = {
@@ -930,7 +971,7 @@ def execute(args):
                 file_registry['l_avail_path'],
                 file_registry['l_sum_avail_path'],
                 file_registry['aet_path'],
-                file_registry['annual_precip_path'],
+                file_registry['annual_precip_path']
             ],
             dependent_task_list=[
                 align_task, flow_dir_task, stream_threshold_task,

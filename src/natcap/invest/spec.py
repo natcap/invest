@@ -1,4 +1,3 @@
-import dataclasses
 import importlib
 import json
 import logging
@@ -19,7 +18,8 @@ import natcap.invest
 import pandas
 import pint
 import pygeoprocessing
-from pydantic import ValidationError
+from pydantic import AfterValidator, BaseModel, ConfigDict, \
+    field_validator, model_validator, ValidationError
 
 from natcap.invest import utils
 from natcap.invest.validation import get_message, _evaluate_expression
@@ -147,49 +147,47 @@ def _check_projection(srs, projected, projection_units):
                 unit_a=projection_units, unit_b=layer_units_name)
 
 
-class IterableWithDotAccess():
-    """Iterable that supports dot notation access by id attribute."""
+def validate_permissions_string(permissions):
+    """
+    Validate an rwx-style permissions string.
 
-    def __init__(self, *args):
-        self.args = args
-        self.inputs_dict = {i.id: i for i in args}
-        self.iter_index = 0
+    Args:
+        permissions (str): a string to validate as permissions
 
-    def __iter__(self):
-        return iter(self.args)
+    Returns:
+        None
 
-    def get(self, key):
-        """Get an item by its id.
-
-        Args:
-            key: the item id
-
-        Returns:
-            the corresponding item
-        """
-        return self.inputs_dict[key]
-
-    def to_json(self):
-        """Return a JSON serializable representation of self.
-
-        Returns:
-            dict mapping item IDs to items
-        """
-        return self.inputs_dict
+    Raises:
+        AssertionError if `permissions` isn't a string, if it's
+        an empty string, if it has any letters besides 'r', 'w', 'x',
+        or if it has any of those letters more than once
+    """
+    valid_letters = {'r', 'w', 'x'}
+    used_letters = set()
+    for letter in permissions:
+        if letter not in valid_letters:
+            raise ValueError('permissions contains a letter other than r,w,x')
+        if letter in used_letters:
+            raise ValueError('permissions contains a duplicate letter')
+        used_letters.add(letter)
+    return permissions
 
 
-@dataclasses.dataclass
-class Input:
+class Input(BaseModel):
     """A data input, or parameter, of an invest model.
 
     This represents an abstract input or parameter, which is rendered as an
     input field in the InVEST workbench. This does not store the value of the
     parameter for a specific run of the model.
     """
-    id: str = ''
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
+    Needed for pint.Unit."""
+
+    id: str
     """Input identifier that should be unique within a model"""
 
-    name: str = ''
+    name: typing.Union[str, None] = None
     """The user-facing name of the input. The workbench UI displays this
     property as a label for each input. The name should be as short as
     possible. Any extra description should go in ``about``. The name should
@@ -201,7 +199,7 @@ class Input:
     Bad examples: ``PRECIPITATION``, ``kc_factor``, ``table of valuation parameters``
     """
 
-    about: str = ''
+    about: typing.Union[str, None] = None
     """User-facing description of the input"""
 
     required: typing.Union[bool, str] = True
@@ -221,19 +219,51 @@ class Input:
     Use this if the value should not be configurable from the input form, such
     as if it's pulled in from another source. Defaults to False."""
 
+    def format_required_string(self) -> str:
+        """Represent this input's required status as a user-friendly string."""
+        if self.required is True:
+            return gettext('required')
+        elif self.required is False:
+            return gettext('optional')
+        else:
+            # assume that the about text will describe the conditional
+            return gettext('conditionally required')
 
-@dataclasses.dataclass
-class Output:
+
+    def capitalize_name(self) -> str:
+        """Capitalize a self.name into title case.
+
+        Returns:
+            capitalized string (each word capitalized except linking words)
+        """
+
+        def capitalize_word(word):
+            """Capitalize a word, if appropriate."""
+            if word in {'of', 'the'}:
+                return word
+            else:
+                return word[0].upper() + word[1:]
+
+        title = ' '.join([capitalize_word(word) for word in self.name.split(' ')])
+        title = '/'.join([capitalize_word(word) for word in title.split('/')])
+        return title
+
+
+class Output(BaseModel):
     """A data output, or result, of an invest model.
 
     This represents an abstract output which is produced as a result of running
     an invest model. This does not store the value of the output for a specific
     run of the model.
     """
-    id: str = ''
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
+    Needed for pint.Unit."""
+
+    id: str
     """Output identifier that should be unique within a model"""
 
-    about: str = ''
+    about: typing.Union[str, None] = None
     """User-facing description of the output"""
 
     created_if: typing.Union[bool, str] = True
@@ -242,14 +272,14 @@ class Output:
     expression that evaluates to a boolean to describe this condition."""
 
 
-@dataclasses.dataclass
 class FileInput(Input):
     """A generic file input, or parameter, of an invest model.
 
     This represents a not-otherwise-specified file input type. Use this only if
     a more specific type, such as `CSVInput` or `VectorInput`, does not apply.
     """
-    permissions: str = 'r'
+    permissions: typing.Annotated[str, AfterValidator(
+        validate_permissions_string)] = 'r'
     """A string that includes the lowercase characters ``r``, ``w`` and/or
     ``x``, indicating read, write, and execute permissions (respectively)
     required for this file."""
@@ -296,31 +326,33 @@ class FileInput(Input):
         ).astype(pandas.StringDtype())
 
 
-@dataclasses.dataclass
-class RasterBand():
+class RasterBand(BaseModel):
     """A single-band raster input, or parameter, of an invest model.
 
     This represents a raster file input (all GDAL-supported raster file types
     are allowed), where only the first band is needed.
     """
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """Allow fields to have arbitrary types (that don't inherit from BaseModel).
+    Needed for pint.Unit."""
+
     band_id: typing.Union[int, str] = 1
     """band index used to access the raster band"""
 
     data_type: typing.Type = float
     """float or int"""
 
-    units: typing.Union[pint.Unit, None] = None
+    units: typing.Union[pint.Unit, None]
     """units of measurement of the raster band values"""
 
 
-@dataclasses.dataclass
 class RasterInput(FileInput):
     """A raster input, or parameter, of an invest model.
 
     This represents a raster file input (all GDAL-supported raster file types
     are allowed), which may have multiple bands.
     """
-    bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=list)
+    bands: list[RasterBand]
     """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
@@ -335,6 +367,13 @@ class RasterInput(FileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
+    @model_validator(mode='after')
+    def check_projected_projection_units(self):
+        if self.projection_units and not self.projected:
+            raise ValueError(
+                'Cannot specify projection_units when projected is None')
+        return self
+
     @timeout
     def validate(self, filepath: str):
         """Validate a raster file against the requirements for this input.
@@ -364,7 +403,6 @@ class RasterInput(FileInput):
             return projection_warning
 
 
-@dataclasses.dataclass
 class SingleBandRasterInput(FileInput):
     """A single-band raster input, or parameter, of an invest model.
 
@@ -376,7 +414,7 @@ class SingleBandRasterInput(FileInput):
     data_type: typing.Type = float
     """float or int"""
 
-    units: typing.Union[pint.Unit, None] = None
+    units: typing.Union[pint.Unit, None]
     """units of measurement of the raster values"""
 
     projected: typing.Union[bool, None] = None
@@ -390,6 +428,13 @@ class SingleBandRasterInput(FileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
+    @model_validator(mode='after')
+    def check_projected_projection_units(self):
+        if self.projection_units and not self.projected:
+            raise ValueError(
+                'Cannot specify projection_units when projected is None')
+        return self
+
     @timeout
     def validate(self, filepath: str):
         """Validate a raster file against the requirements for this input.
@@ -419,17 +464,16 @@ class SingleBandRasterInput(FileInput):
             return projection_warning
 
 
-@dataclasses.dataclass
 class VectorInput(FileInput):
     """A vector input, or parameter, of an invest model.
 
     This represents a vector file input (all GDAL-supported vector file types
     are allowed). It is assumed that only the first layer is used.
     """
-    geometry_types: set = dataclasses.field(default_factory=dict)
+    geometry_types: set
     """A set of geometry type(s) that are allowed for this vector"""
 
-    fields: typing.Union[typing.Iterable[Input], None] = None
+    fields: list[Input]
     """An iterable of `Input`s representing the fields that this vector is
     expected to have. The `key` of each input must match the corresponding
     field name."""
@@ -445,9 +489,28 @@ class VectorInput(FileInput):
 
     type: typing.ClassVar[str] = 'vector'
 
-    def __post_init__(self):
-        if self.fields:
-            self.fields = IterableWithDotAccess(*self.fields)
+    _fields_dict: dict[str, Input] = {}
+
+    @model_validator(mode='after')
+    def check_projected_projection_units(self):
+        if self.projection_units and not self.projected:
+            raise ValueError(
+                'Cannot specify projection_units when projected is None')
+        return self
+
+    @model_validator(mode='after')
+    def check_field_types(self):
+        for field in (self.fields or []):
+            if type(field) not in {IntegerInput, NumberInput, OptionStringInput,
+                                   PercentInput, RatioInput, StringInput}:
+                raise ValueError(f'Field {field} is not an allowed type')
+        return self
+
+    def model_post_init(self, context):
+        self._fields_dict = {field.id: field for field in self.fields}
+
+    def get_field(self, key: str) -> Input:
+        return self._fields_dict[key]
 
     @timeout
     def validate(self, filepath: str):
@@ -517,20 +580,35 @@ class VectorInput(FileInput):
         return projection_warning
 
 
-@dataclasses.dataclass
+    def format_geometry_types_rst(self):
+        """Represent self.geometry_types in RST text.
+
+        Args:
+            geometry_types (set(str)): set of geometry names
+
+        Returns:
+            string
+        """
+        # sort the geometry types so they always display in a consistent order
+        sorted_geoms = sorted(
+            self.geometry_types,
+            key=lambda g: GEOMETRY_ORDER.index(g))
+        return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
+
+
 class RasterOrVectorInput(FileInput):
     """An invest model input that can be either a single-band raster or a vector."""
 
     data_type: typing.Type = float
     """Data type for the raster values (float or int)"""
 
-    units: typing.Union[pint.Unit, None] = None
+    units: typing.Union[pint.Unit, None]
     """Units of measurement of the raster values"""
 
-    geometry_types: set = dataclasses.field(default_factory=dict)
+    geometry_types: set
     """A set of geometry type(s) that are allowed for this vector"""
 
-    fields: typing.Union[typing.Iterable[Input], None] = None
+    fields: typing.Union[list[Input]]
     """An iterable of `Input`s representing the fields that this vector is
     expected to have. The `key` of each input must match the corresponding
     field name."""
@@ -546,17 +624,34 @@ class RasterOrVectorInput(FileInput):
 
     type: typing.ClassVar[str] = 'raster_or_vector'
 
-    def __post_init__(self):
-        self.single_band_raster_input = SingleBandRasterInput(
+    _single_band_raster_input: SingleBandRasterInput
+    _vector_input: VectorInput
+    _fields_dict: dict[str, Input] = {}
+
+    @model_validator(mode='after')
+    def check_projected_projection_units(self):
+        if self.projection_units and not self.projected:
+            raise ValueError(
+                'Cannot specify projection_units when projected is None')
+        return self
+
+    def model_post_init(self, context):
+        self._single_band_raster_input = SingleBandRasterInput(
+            id=self.id,
             data_type=self.data_type,
             units=self.units,
             projected=self.projected,
             projection_units=self.projection_units)
-        self.vector_input = VectorInput(
+        self._vector_input = VectorInput(
+            id=self.id,
             geometry_types=self.geometry_types,
             fields=self.fields,
             projected=self.projected,
             projection_units=self.projection_units)
+        self._fields_dict = {field.id: field for field in self.fields}
+
+    def get_field(self, key: str) -> Input:
+        return self.fields_dict[key]
 
     @timeout
     def validate(self, filepath: str):
@@ -573,12 +668,11 @@ class RasterOrVectorInput(FileInput):
         except ValueError as err:
             return str(err)
         if gis_type == pygeoprocessing.RASTER_TYPE:
-            return self.single_band_raster_input.validate(filepath)
+            return self._single_band_raster_input.validate(filepath)
         else:
-            return self.vector_input.validate(filepath)
+            return self._vector_input.validate(filepath)
 
 
-@dataclasses.dataclass
 class CSVInput(FileInput):
     """A CSV table input, or parameter, of an invest model.
 
@@ -588,14 +682,14 @@ class CSVInput(FileInput):
     table structures are often more difficult to use; consider dividing them
     into multiple, simpler tabular inputs.
     """
-    columns: typing.Union[typing.Iterable[Input], None] = None
+    columns: typing.Union[list[Input], None] = None
     """An iterable of `Input`s representing the columns that this CSV is
-    expected to have. The `key` of each input must match the corresponding
+    expected to have. The `id` of each input must match the corresponding
     column header."""
 
-    rows: typing.Union[typing.Iterable[Input], None] = None
+    rows: typing.Union[list[Input], None] = None
     """An iterable of `Input`s representing the rows that this CSV is
-    expected to have. The `key` of each input must match the corresponding
+    expected to have. The `id` of each input must match the corresponding
     row header."""
 
     index_col: typing.Union[str, None] = None
@@ -604,11 +698,47 @@ class CSVInput(FileInput):
 
     type: typing.ClassVar[str] = 'csv'
 
-    def __post_init__(self):
-        if self.rows:
-            self.rows = IterableWithDotAccess(*self.rows)
+    _columns_dict: dict[str, Input] = {}
+    _fields_dict: dict[str, Input] = {}
+
+    @model_validator(mode='after')
+    def check_not_both_rows_and_columns(self):
+        if self.rows is not None and self.columns is not None:
+            raise ValueError('Cannot have both rows and columns')
+        return self
+
+    @model_validator(mode='after')
+    def check_index_col_in_columns(self):
+        if (self.index_col is not None and
+                self.index_col not in [s.id for s in self.columns]):
+            raise ValueError(f'index_col {self.index_col} not found in columns')
+        return self
+
+    @model_validator(mode='after')
+    def check_row_and_column_types(self):
+        allowed_types = {
+            BooleanInput, IntegerInput, NumberInput, OptionStringInput,
+            PercentInput, RasterOrVectorInput, RatioInput, FileInput,
+            SingleBandRasterInput, StringInput, VectorInput}
+        for row in (self.rows or []):
+            if type(row) not in allowed_types:
+                raise ValueError(f'Row {row} is not an allowed type')
+        for col in (self.columns or []):
+            if type(col) not in allowed_types:
+                raise ValueError(f'Column {col} is not an allowed type')
+        return self
+
+    def model_post_init(self, context):
         if self.columns:
-            self.columns = IterableWithDotAccess(*self.columns)
+            self._columns_dict = {col.id: col for col in self.columns}
+        if self.rows:
+            self._rows_dict = {row.id: row for row in self.rows}
+
+    def get_column(self, key: str) -> Input:
+        return self._columns_dict[key]
+
+    def get_row(self, key: str) -> Input:
+        return self._rows_dict[key]
 
     @timeout
     def validate(self, filepath: str):
@@ -742,7 +872,6 @@ class CSVInput(FileInput):
         return df
 
 
-@dataclasses.dataclass
 class DirectoryInput(Input):
     """A directory input, or parameter, of an invest model.
 
@@ -751,11 +880,12 @@ class DirectoryInput(Input):
     directory. This may also be used to describe an empty directory where model
     outputs will be written to.
     """
-    contents: typing.Union[typing.Iterable[Input], None] = None
+    contents: list[Input]
     """An iterable of `Input`s representing the contents of this directory. The
     `key` of each input must be the file name or pattern."""
 
-    permissions: str = ''
+    permissions: typing.Annotated[str, AfterValidator(
+        validate_permissions_string)] = ''
     """A string that includes the lowercase characters ``r``, ``w`` and/or ``x``,
     indicating read, write, and execute permissions (respectively) required for
     this directory."""
@@ -766,9 +896,24 @@ class DirectoryInput(Input):
 
     type: typing.ClassVar[str] = 'directory'
 
-    def __post_init__(self):
-        if self.contents:
-            self.contents = IterableWithDotAccess(*self.contents)
+    _contents_dict: dict[str, Input] = {}
+
+    @model_validator(mode='after')
+    def check_contents_types(self):
+        allowed_types = {
+            CSVInput, DirectoryInput, FileInput, RasterOrVectorInput,
+            SingleBandRasterInput, VectorInput}
+        for content in (self.contents or []):
+            if type(content) not in allowed_types:
+                raise ValueError(
+                    f'Directory contents {content} is not an allowed type')
+        return self
+
+    def model_post_init(self, context):
+        self._contents_dict = {x.id: x for x in self.contents}
+
+    def get_contents(self, key: str) -> Input:
+        return self._contents_dict[key]
 
     @timeout
     def validate(self, dirpath: str):
@@ -828,14 +973,13 @@ class DirectoryInput(Input):
                 return get_message(MESSAGE_KEY).format(permission='write')
 
 
-@dataclasses.dataclass
 class NumberInput(Input):
     """A floating-point number input, or parameter, of an invest model.
 
     Use a more specific type (such as `IntegerInput`, `RatioInput`, or
     `PercentInput`) where applicable.
     """
-    units: typing.Union[pint.Unit, None] = None
+    units: typing.Union[pint.Unit, None]
     """The units of measurement for this numeric value"""
 
     expression: typing.Union[str, None] = None
@@ -889,7 +1033,6 @@ class NumberInput(Input):
         return col.astype(float)
 
 
-@dataclasses.dataclass
 class IntegerInput(Input):
     """An integer input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'integer'
@@ -926,7 +1069,6 @@ class IntegerInput(Input):
         return col.astype(pandas.Int64Dtype())
 
 
-@dataclasses.dataclass
 class RatioInput(NumberInput):
     """A ratio input, or parameter, of an invest model.
 
@@ -935,6 +1077,8 @@ class RatioInput(NumberInput):
     range [0, 1].
     """
     type: typing.ClassVar[str] = 'ratio'
+
+    units: typing.ClassVar[None] = None
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -955,7 +1099,6 @@ class RatioInput(NumberInput):
                 range='[0, 1]')
 
 
-@dataclasses.dataclass
 class PercentInput(NumberInput):
     """A percent input, or parameter, of an invest model.
 
@@ -963,6 +1106,8 @@ class PercentInput(NumberInput):
     a ratio, which ranges from 0 to 1). Values are restricted to the range [0, 100].
     """
     type: typing.ClassVar[str] = 'percent'
+
+    units: typing.ClassVar[None] = None
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -983,7 +1128,6 @@ class PercentInput(NumberInput):
                 range='[0, 100]')
 
 
-@dataclasses.dataclass
 class BooleanInput(Input):
     """A boolean input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'boolean'
@@ -1015,7 +1159,6 @@ class BooleanInput(Input):
         return col.astype('boolean')
 
 
-@dataclasses.dataclass
 class StringInput(Input):
     """A string input, or parameter, of an invest model.
 
@@ -1026,6 +1169,16 @@ class StringInput(Input):
     """An optional regex pattern which the text value must match"""
 
     type: typing.ClassVar[str] = 'string'
+
+    @field_validator('regexp', mode='after')
+    @classmethod
+    def check_regexp(cls, regexp: typing.Union[str, None]) -> typing.Union[str, None]:
+        if regexp is not None:
+            try:
+                re.compile(regexp)
+            except Exception:
+                raise ValueError(f'Failed to compile regexp {regexp}')
+        return regexp
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1059,22 +1212,46 @@ class StringInput(Input):
         ).astype(pandas.StringDtype())
 
 
-@dataclasses.dataclass
+class Option(BaseModel):
+    """An option in an OptionStringInput or OptionStringOutput."""
+
+    key: str
+    """The unique key that identifies this option. If the OptionStringInput is
+    represented by a dropdown menu, and `display_name` is `None`, this key will
+    be displayed in the menu. For options in CSV columns etc, this is the value
+    that should be entered in the column."""
+
+    display_name: typing.Union[str, None] = None
+    """For OptionStringInputs that are represented by a dropdown menu, this
+    optional attribute will be displayed in the menu instead of the `key`."""
+
+    about: typing.Union[str, None] = None
+    """Optional description of this option. Only needed for keys that are
+    not self-explanatory."""
+
+
 class OptionStringInput(Input):
     """A string input, or parameter, which is limited to a set of options.
 
     This corresponds to a dropdown menu in the workbench, where the user
     is limited to a set of pre-defined options.
     """
-    options: typing.Union[list, None] = None
+    options: list[Option]
     """A list of the values that this input may take. Use this if the set of
-    options is predetermined."""
+    options is predetermined. If using `dropdown_function` instead, this
+    should be an empty list."""
 
     dropdown_function: typing.Union[typing.Callable, None] = None
     """A function that returns a list of the values that this input may take.
     Use this if the set of options must be dynamically generated."""
 
     type: typing.ClassVar[str] = 'option_string'
+
+    @model_validator(mode='after')
+    def check_options(self):
+        if self.dropdown_function and self.options:
+            raise ValueError(f'Cannot have both dropdown_function and options')
+        return self
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1087,8 +1264,11 @@ class OptionStringInput(Input):
         """
         # if options is empty, that means it's dynamically populated
         # so validation should be left to the model's validate function.
-        if self.options and str(value) not in self.options:
-            return get_message('INVALID_OPTION').format(option_list=sorted(self.options))
+
+        if self.options:
+            option_keys = self.list_options()
+            if str(value).lower() not in option_keys:
+                return get_message('INVALID_OPTION').format(option_list=option_keys)
 
     @staticmethod
     def format_column(col, *args):
@@ -1107,8 +1287,34 @@ class OptionStringInput(Input):
             lambda s: s if pandas.isna(s) else str(s).strip().lower()
         ).astype(pandas.StringDtype())
 
+    def list_options(self):
+        """Return a sorted list of the option keys."""
+        if self.options:
+            return sorted([option.key.lower() for option in self.options])
 
-@dataclasses.dataclass
+    def format_rst(self):
+        """Represent `self.options` as a RST-formatted bulleted list.
+
+        Args:
+            options: list of Options to format
+
+        Returns:
+            list of RST-formatted strings, where each is a line in a bullet list
+        """
+        lines = []
+        for option in self.options:
+            display_name = option.display_name if option.display_name else option.key
+            if option.about:
+                lines.append(f'- {display_name}: {option.about}')
+            else:
+                lines.append(f'- {display_name}')
+
+        # sort the options alphabetically
+        # casefold() is a more aggressive version of lower() that may work better
+        # for some languages to remove all case distinctions
+        return sorted(lines, key=lambda line: line.casefold())
+
+
 class SingleBandRasterOutput(Output):
     """A single-band raster output, or result, of an invest model.
 
@@ -1122,34 +1328,39 @@ class SingleBandRasterOutput(Output):
     """units of measurement of the raster values"""
 
 
-@dataclasses.dataclass
 class RasterOutput(Output):
     """A raster output, or result, of an invest model.
 
     This represents a raster file output (all GDAL-supported raster file types
     are allowed), which may have multiple bands.
     """
-    bands: typing.Iterable[RasterBand] = dataclasses.field(default_factory=list)
+    bands: list[RasterBand]
     """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
 
-@dataclasses.dataclass
 class VectorOutput(Output):
     """A vector output, or result, of an invest model.
 
     This represents a vector file output (all GDAL-supported vector file types
     are allowed). It is assumed that only the first layer is used.
     """
-    geometry_types: set = dataclasses.field(default_factory=set)
+    geometry_types: set = set()
     """A set of geometry type(s) that are produced in this vector"""
 
-    fields: typing.Union[typing.Iterable[Output], None] = None
+    fields: list[Output]
     """An iterable of `Output`s representing the fields created in this vector.
     The `key` of each input must match the corresponding field name."""
 
+    @model_validator(mode='after')
+    def check_field_types(self):
+        for field in (self.fields or []):
+            if type(field) not in {IntegerOutput, NumberOutput, OptionStringOutput,
+                                   PercentOutput, RatioOutput, StringOutput}:
+                raise ValueError(f'Field {field} is not an allowed type')
+        return self
 
-@dataclasses.dataclass
+
 class CSVOutput(Output):
     """A CSV table output, or result, of an invest model.
 
@@ -1159,19 +1370,39 @@ class CSVOutput(Output):
     table structures are often more difficult to use; consider dividing them
     into multiple, simpler tabular outputs.
     """
-    columns: typing.Union[typing.Iterable[Output], None] = None
+    columns: typing.Union[list[Output], None] = None
     """An iterable of `Output`s representing the table's columns. The `key` of
     each input must match the corresponding column header."""
 
-    rows: typing.Union[typing.Iterable[Output], None] = None
+    rows: typing.Union[list[Output], None] = None
     """An iterable of `Output`s representing the table's rows. The `key` of
     each input must match the corresponding row header."""
 
     index_col: typing.Union[str, None] = None
     """The header name of the column that is the index of the table."""
 
+    @model_validator(mode='after')
+    def validate_index_col_in_columns(self):
+        if (self.index_col is not None and
+                self.index_col not in [s.id for s in self.columns]):
+            raise ValueError(f'index_col {self.index_col} not found in columns')
+        return self
 
-@dataclasses.dataclass
+    @model_validator(mode='after')
+    def check_row_and_column_types(self):
+        allowed_types = {
+            IntegerOutput, NumberOutput, OptionStringOutput, PercentOutput,
+            FileOutput, RatioOutput, SingleBandRasterOutput, StringOutput,
+            VectorOutput}
+        for row in (self.rows or []):
+            if type(row) not in allowed_types:
+                raise ValueError(f'Row {row} is not an allowed type')
+        for col in (self.columns or []):
+            if type(col) not in allowed_types:
+                raise ValueError(f'Column {col} is not an allowed type')
+        return self
+
+
 class DirectoryOutput(Output):
     """A directory output, or result, of an invest model.
 
@@ -1179,12 +1410,22 @@ class DirectoryOutput(Output):
     or an unknown number of file-based outputs, by grouping them together in a
     directory.
     """
-    contents: typing.Union[typing.Iterable[Output], None] = None
+    contents: list[Output]
     """An iterable of `Output`s representing the contents of this directory.
     The `key` of each output must be the file name or pattern."""
 
+    @model_validator(mode='after')
+    def check_contents_types(self):
+        allowed_types = {
+            CSVOutput, DirectoryOutput, FileOutput,
+            SingleBandRasterOutput, VectorOutput}
+        for content in (self.contents or []):
+            if type(content) not in allowed_types:
+                raise ValueError(
+                    f'Directory contents {content} is not an allowed type')
+        return self
 
-@dataclasses.dataclass
+
 class FileOutput(Output):
     """A generic file output, or result, of an invest model.
 
@@ -1194,7 +1435,6 @@ class FileOutput(Output):
     pass
 
 
-@dataclasses.dataclass
 class NumberOutput(Output):
     """A floating-point number output, or result, of an invest model.
 
@@ -1205,13 +1445,11 @@ class NumberOutput(Output):
     """The units of measurement for this numeric value"""
 
 
-@dataclasses.dataclass
 class IntegerOutput(Output):
     """An integer output, or result, of an invest model."""
     pass
 
 
-@dataclasses.dataclass
 class RatioOutput(Output):
     """A ratio output, or result, of an invest model.
 
@@ -1221,7 +1459,6 @@ class RatioOutput(Output):
     pass
 
 
-@dataclasses.dataclass
 class PercentOutput(Output):
     """A percent output, or result, of an invest model.
 
@@ -1231,7 +1468,6 @@ class PercentOutput(Output):
     pass
 
 
-@dataclasses.dataclass
 class StringOutput(Output):
     """A string output, or result, of an invest model.
 
@@ -1241,16 +1477,14 @@ class StringOutput(Output):
     pass
 
 
-@dataclasses.dataclass
 class OptionStringOutput(Output):
     """A string output, or result, which is limited to a set of options."""
 
-    options: typing.Union[list, None] = None
+    options: list[Option]
     """A list of the values that this input may take"""
 
 
-@dataclasses.dataclass
-class ModelSpec:
+class ModelSpec(BaseModel):
     """Specification of an invest model describing metadata, inputs, and outputs."""
 
     model_id: str
@@ -1296,13 +1530,13 @@ class ModelSpec:
     Example: ``[['workspace_dir', 'results_suffix'], ['foo'], ['bar', baz']]``
     """
 
-    inputs: typing.Iterable[Input]
-    """An iterable of the data inputs, or parameters, to the model."""
+    inputs: list[Input]
+    """A list of the data inputs, or parameters, to the model."""
 
-    outputs: typing.Iterable[Output]
-    """An iterable of the data outputs, or results, of the model."""
+    outputs: list[Output]
+    """A list of the data outputs, or results, of the model."""
 
-    validate_spatial_overlap: bool = True
+    validate_spatial_overlap: typing.Union[bool, list[str]] = True
     """If True, validation will check that the bounding boxes of all
     top-level spatial inputs overlap (after reprojecting all to the same
     coordinate reference system)."""
@@ -1313,17 +1547,36 @@ class ModelSpec:
     same projection. This is only considered if ``validate_spatial_overlap``
     is ``True``."""
 
-    aliases: set = dataclasses.field(default_factory=set)
+    aliases: set = set()
     """Optional. A set of alternative names by which the model can be called
     from the invest command line interface, in addition to the ``model_id``."""
 
-    def __post_init__(self):
-        self.inputs_dict = {_input.id: _input for _input in self.inputs}
-        self.outputs_dict = {_output.id: _output for _output in self.outputs}
+    @model_validator(mode='after')
+    def check_inputs_in_field_order(self):
+        """Check that all inputs either appear in `input_field_order`,
+        or are marked as hidden."""
 
-    def get_input(self, key):
+        found_keys = set()
+        for group in self.input_field_order:
+            for key in group:
+                if key in found_keys:
+                    raise ValueError(
+                        f'Key {key} appears more than once in input_field_order')
+                found_keys.add(key)
+        for _input in self.inputs:
+            if _input.hidden is True:
+                if _input.id in found_keys:
+                    raise ValueError(
+                        f'Input {_input.id} is hidden but appears in input_field_order')
+                found_keys.add(_input.id)
+        if found_keys != set([s.id for s in self.inputs]):
+            raise ValueError(
+                f'Mismatch between keys in inputs and input_field_order')
+        return self
+
+    def get_input(self, key: str) -> Input:
         """Get an Input of this model by its key."""
-        return self.inputs_dict[key]
+        return {_input.id: _input for _input in self.inputs}[key]
 
     def to_json(self):
         """Serialize an MODEL_SPEC dict to a JSON string.
@@ -1350,430 +1603,179 @@ class ModelSpec:
                 return str(obj)
             elif isinstance(obj, types.FunctionType):
                 return str(obj)
-            elif dataclasses.is_dataclass(obj):
-                as_dict = dataclasses.asdict(obj)
-                if hasattr(obj, 'type'):
-                    as_dict['type'] = obj.type
-                return as_dict
-            elif isinstance(obj, IterableWithDotAccess):
-                return obj.to_json()
             elif obj is int:
                 return 'integer'
             elif obj is float:
                 return 'number'
+            elif isinstance(obj, BaseModel):
+                as_dict = obj.model_dump()
+                # type is a ClassVar, so it won't be included in the default dump
+                if hasattr(obj, 'type'):
+                    as_dict['type'] = obj.type
+                return as_dict
             raise TypeError(f'fallback serializer is missing for {type(obj)}')
 
         spec_dict = self.__dict__.copy()
         # rename 'inputs' to 'args' to stay consistent with the old api
         spec_dict.pop('inputs')
-        spec_dict.pop('inputs_dict')
-        spec_dict.pop('outputs_dict')
-        spec_dict['args'] = self.inputs_dict
-        spec_dict['outputs'] = self.outputs_dict
+        spec_dict['args'] = {_input.id: _input for _input in self.inputs}
+        spec_dict['outputs'] = {_output.id: _output for _output in self.outputs}
         return json.dumps(spec_dict, default=fallback_serializer, ensure_ascii=False)
 
 
-def build_model_spec(model_spec):
-    """Convert an old-style MODEL_SPEC dictionary to the new class-based style."""
-    inputs = [
-        build_input_spec(argkey, argspec)
-        for argkey, argspec in model_spec['args'].items()]
-    outputs = [
-        build_output_spec(argkey, argspec) for argkey, argspec in model_spec['outputs'].items()]
-    different_projections_ok = False
-
-    spatial_keys = set()
-    for i in inputs:
-        if i.type in['raster', 'vector']:
-            spatial_keys.add(i.id)
-
-    # validate_spatial_overlap is True if all top-level spatial inputs should overlap,
-    # or a list of keys, if only a subset of the inputs must overlap
-    validate_spatial_overlap = True
-    if 'args_with_spatial_overlap' in model_spec:
-        different_projections_ok = model_spec['args_with_spatial_overlap'].get('different_projections_ok', False)
-        if set(spatial_keys) != set(model_spec['args_with_spatial_overlap']['spatial_keys']):
-            validate_spatial_overlap = model_spec['args_with_spatial_overlap']['spatial_keys']
-
-    return ModelSpec(
-        model_id=model_spec['model_id'],
-        model_title=model_spec['model_title'],
-        userguide=model_spec['userguide'],
-        aliases=model_spec['aliases'],
-        inputs=inputs,
-        outputs=outputs,
-        input_field_order=model_spec['ui_spec']['order'],
-        validate_spatial_overlap=validate_spatial_overlap,
-        different_projections_ok=different_projections_ok)
-
-
-def build_input_spec(argkey, arg):
-    """Convert an old-style input spec dictionary to the new class-based style."""
-    base_attrs = {
-        'id': argkey,
-        'name': arg.get('name', None),
-        'about': arg.get('about', None),
-        'required': arg.get('required', True),
-        'allowed': arg.get('allowed', True),
-        'hidden': arg.get('hidden', False)
-    }
-
-    t = arg['type']
-
-    if t == 'option_string':
-        return OptionStringInput(
-            **base_attrs,
-            options=arg['options'],
-            dropdown_function=arg.get('dropdown_function', None))
-
-    elif t == 'freestyle_string':
-        return StringInput(
-            **base_attrs,
-            regexp=arg.get('regexp', None))
-
-    elif t == 'number':
-        return NumberInput(
-            **base_attrs,
-            units=arg['units'],
-            expression=arg.get('expression', None))
-
-    elif t == 'integer':
-        return IntegerInput(**base_attrs)
-
-    elif t == 'ratio':
-        return RatioInput(**base_attrs)
-
-    elif t == 'percent':
-        return PercentInput(**base_attrs)
-
-    elif t == 'boolean':
-        return BooleanInput(**base_attrs)
-
-    elif t == 'raster':
-        return SingleBandRasterInput(
-            **base_attrs,
-            data_type=int if arg['bands'][1]['type'] == 'integer' else float,
-            units=arg['bands'][1].get('units', None),
-            projected=arg.get('projected', None),
-            projection_units=arg.get('projection_units', None))
-
-    elif t == 'vector':
-        return VectorInput(
-            **base_attrs,
-            geometry_types=arg['geometries'],
-            fields=[build_input_spec(key, field_spec)
-                    for key, field_spec in arg['fields'].items()],
-            projected=arg.get('projected', None),
-            projection_units=arg.get('projection_units', None))
-
-    elif t == 'csv':
-        columns = None
-        rows = None
-        if 'columns' in arg:
-            columns = [build_input_spec(col_name, col_spec)
-                for col_name, col_spec in arg['columns'].items()]
-        elif 'rows' in arg:
-            rows = [build_input_spec(row_name, row_spec)
-                    for row_name, row_spec in arg['rows'].items()]
-
-        return CSVInput(
-            **base_attrs,
-            columns=columns,
-            rows=rows,
-            index_col=arg.get('index_col', None))
-
-    elif t == 'directory':
-        return DirectoryInput(
-            contents=[
-                build_input_spec(k, v) for k, v in arg['contents'].items()],
-            permissions=arg.get('permissions', 'rx'),
-            must_exist=arg.get('must_exist', None),
-            **base_attrs)
-
-    elif t == 'file':
-        return FileInput(**base_attrs)
-
-    elif t == {'raster', 'vector'}:
-        return RasterOrVectorInput(
-            **base_attrs,
-            geometry_types=arg['geometries'],
-            fields=[build_input_spec(key, field_spec)
-                    for key, field_spec in arg['fields'].items()],
-            data_type=int if arg['bands'][1]['type'] == 'integer' else float,
-            units=arg['bands'][1].get('units', None),
-            projected=arg.get('projected', None),
-            projection_units=arg.get('projection_units', None))
-
-    else:
-        raise ValueError
-
-
-def build_output_spec(key, spec):
-    """Convert an old-style output spec dictionary to the new class-based style."""
-    base_attrs = {
-        'id': key,
-        'about': spec.get('about', None),
-        'created_if': spec.get('created_if', None)
-    }
-
-    if 'type' in spec:
-        t = spec['type']
-    else:
-        file_extension = key.split('.')[-1]
-        if file_extension == 'tif':
-            t = 'raster'
-        elif file_extension in {'shp', 'gpkg', 'geojson'}:
-            t = 'vector'
-        elif file_extension == 'csv':
-            t = 'csv'
-        elif file_extension in {'json', 'txt', 'pickle', 'db', 'zip',
-                                'dat', 'idx', 'html'}:
-            t = 'file'
-        else:
-            raise Warning(
-                f'output {key} has no recognized file extension and '
-                'no "type" property')
-
-    if t == 'number':
-        return NumberOutput(
-            **base_attrs,
-            units=spec['units'])
-
-    elif t == 'integer':
-        return IntegerOutput(**base_attrs)
-
-    elif t == 'ratio':
-        return RatioOutput(**base_attrs)
-
-    elif t == 'percent':
-        return PercentOutput(**base_attrs)
-
-    elif t == 'raster':
-        return SingleBandRasterOutput(
-            **base_attrs,
-            data_type=int if spec['bands'][1]['type'] == 'integer' else float,
-            units=spec['bands'][1].get('units', None))
-
-    elif t == 'vector':
-        return VectorOutput(
-            **base_attrs,
-            geometry_types=spec['geometries'],
-            fields=[build_output_spec(key, field_spec)
-                    for key, field_spec in spec['fields'].items()])
-
-    elif t == 'csv':
-        return CSVOutput(
-            **base_attrs,
-            columns=[
-                build_output_spec(key, col_spec) for key, col_spec in spec['columns'].items()],
-            index_col=spec.get('index_col', None))
-
-    elif t == 'directory':
-        return DirectoryOutput(
-            contents=[
-                build_output_spec(k, v) for k, v in spec['contents'].items()],
-            **base_attrs)
-
-    elif t == 'freestyle_string':
-        return StringOutput(**base_attrs)
-
-    elif t == 'option_string':
-        return OptionStringOutput(options=spec['options'])
-
-    elif t == 'file':
-        return FileOutput(**base_attrs)
-
-    else:
-        raise ValueError()
-
-
 # Specs for common arg types ##################################################
-WORKSPACE = {
-    "name": gettext("workspace"),
-    "about": gettext(
-        "The folder where all the model's output files will be written. If "
-        "this folder does not exist, it will be created. If data already "
-        "exists in the folder, it will be overwritten."),
-    "type": "directory",
-    "contents": {},
-    "must_exist": False,
-    "permissions": "rwx",
-}
-
-SUFFIX = {
-    "name": gettext("file suffix"),
-    "about": gettext(
-        "Suffix that will be appended to all output file names. Useful to "
-        "differentiate between model runs."),
-    "type": "freestyle_string",
-    "required": False,
-    "regexp": "[a-zA-Z0-9_-]*"
-}
-
-N_WORKERS = {
-    "name": gettext("taskgraph n_workers parameter"),
-    "about": gettext(
-        "The n_workers parameter to provide to taskgraph. "
-        "-1 will cause all jobs to run synchronously. "
-        "0 will run all jobs in the same process, but scheduling will take "
-        "place asynchronously. Any other positive integer will cause that "
-        "many processes to be spawned to execute tasks."),
-    "type": "number",
-    "units": u.none,
-    "required": False,
-    "expression": "value >= -1",
-    "hidden": True
-}
-
-METER_RASTER = {
-    "type": "raster",
-    "bands": {
-        1: {
-            "type": "number",
-            "units": u.meter
-        }
-    }
-}
-AOI = {
-    "type": "vector",
-    "fields": {},
-    "geometries": {"POLYGON", "MULTIPOLYGON"},
-    "name": gettext("area of interest"),
-    "about": gettext(
-        "A map of areas over which to aggregate and "
-        "summarize the final results."),
-}
-LULC = {
-    "type": "raster",
-    "bands": {1: {"type": "integer"}},
-    "about": gettext(
-        "Map of land use/land cover codes. Each land use/land cover type "
-        "must be assigned a unique integer code."),
-    "name": gettext("land use/land cover")
-}
-DEM = {
-    "type": "raster",
-    "bands": {
-        1: {
-            "type": "number",
-            "units": u.meter
-        }
-    },
-    "about": gettext("Map of elevation above sea level."),
-    "name": gettext("digital elevation model")
-}
-PRECIP = {
-    "type": "raster",
-    "bands": {
-        1: {
-            "type": "number",
-            "units": u.millimeter/u.year
-        }
-    },
-    "about": gettext("Map of average annual precipitation."),
-    "name": gettext("precipitation")
-}
-ET0 = {
-    "name": gettext("reference evapotranspiration"),
-    "type": "raster",
-    "bands": {
-        1: {
-            "type": "number",
-            "units": u.millimeter
-        }
-    },
-    "about": gettext("Map of reference evapotranspiration values.")
-}
-SOIL_GROUP = {
-    "type": "raster",
-    "bands": {1: {"type": "integer"}},
-    "about": gettext(
-        "Map of soil hydrologic groups. Pixels may have values 1, 2, 3, or 4, "
-        "corresponding to soil hydrologic groups A, B, C, or D, respectively."),
-    "name": gettext("soil hydrologic group")
-}
-THRESHOLD_FLOW_ACCUMULATION = {
-    "expression": "value >= 0",
-    "type": "number",
-    "units": u.pixel,
-    "about": gettext(
-        "The number of upslope pixels that must flow into a pixel "
-        "before it is classified as a stream."),
-    "name": gettext("threshold flow accumulation")
-}
-LULC_TABLE_COLUMN = {
-    "type": "integer",
-    "about": gettext(
-        "LULC codes from the LULC raster. Each code must be a unique "
-        "integer.")
-}
+WORKSPACE = DirectoryInput(
+    id="workspace_dir",
+    name="workspace",
+    about=(
+        "The folder where all the model's output files will be written."
+        " If this folder does not exist, it will be created. If data"
+        " already exists in the folder, it will be overwritten."
+    ),
+    contents=[],
+    permissions="rwx",
+    must_exist=False,
+)
+SUFFIX = StringInput(
+    id="results_suffix",
+    name=gettext("file suffix"),
+    about=gettext(
+        "Suffix that will be appended to all output file names. Useful to"
+        " differentiate between model runs."
+    ),
+    required=False,
+    regexp="[a-zA-Z0-9_-]*"
+)
+N_WORKERS = NumberInput(
+    id="n_workers",
+    name=gettext("taskgraph n_workers parameter"),
+    about=gettext(
+        "The n_workers parameter to provide to taskgraph. -1 will cause all jobs"
+        " to run synchronously. 0 will run all jobs in the same process, but"
+        " scheduling will take place asynchronously. Any other positive integer"
+        " will cause that many processes to be spawned to execute tasks."
+    ),
+    required=False,
+    hidden=True,
+    units=u.none,
+    expression="value >= -1"
+)
+DEM = SingleBandRasterInput(
+    id="dem_path",
+    name=gettext("digital elevation model"),
+    about=gettext("Map of elevation above sea level."),
+    data_type=float,
+    units=u.meter
+)
+PROJECTED_DEM = DEM.model_copy(update=dict(projected=True))
+THRESHOLD_FLOW_ACCUMULATION = NumberInput(
+    id="threshold_flow_accumulation",
+    name=gettext("threshold flow accumulation"),
+    about=gettext(
+        "The number of upslope pixels that must flow into a pixel before it is"
+        " classified as a stream."
+    ),
+    units=u.pixel,
+    expression="value >= 0"
+)
+SOIL_GROUP = SingleBandRasterInput(
+    id="soil_group_path",
+    name=gettext("soil hydrologic group"),
+    about=gettext(
+        "Map of soil hydrologic groups. Pixels may have values 1, 2, 3, or 4,"
+        " corresponding to soil hydrologic groups A, B, C, or D, respectively."
+    ),
+    data_type=int,
+    units=None
+)
+LULC_TABLE_COLUMN = IntegerInput(
+    id="lucode",
+    about=gettext(
+        "LULC codes from the LULC raster. Each code must be a unique"
+        " integer."
+    )
+)
+AOI = VectorInput(
+    id="aoi_path",
+    name=gettext("area of interest"),
+    about=gettext(
+        "A map of areas over which to aggregate and summarize the final results."
+    ),
+    geometry_types={"POLYGON", "MULTIPOLYGON"},
+    fields=[]
+)
+LULC = SingleBandRasterInput(
+    id="lulc_bas_path",
+    name=gettext("baseline LULC"),
+    about=gettext(
+        "A map of LULC for the baseline scenario, which must occur prior to the"
+        " alternate scenario. All values in this raster must have corresponding"
+        " entries in the Carbon Pools table."
+    ),
+    data_type=int,
+    units=None
+)
+FLOW_DIR_ALGORITHM = OptionStringInput(
+    id="flow_dir_algorithm",
+    name=gettext("flow direction algorithm"),
+    about=gettext("Flow direction algorithm to use."),
+    options=[
+        Option(key="D8", description="D8 flow direction"),
+        Option(key="MFD", description="Multiple flow direction")
+    ]
+)
 
 # Specs for common outputs ####################################################
-TASKGRAPH_DIR = {
-    "type": "directory",
-    "about": (
-        "Cache that stores data between model runs. This directory contains no "
-        "human-readable data and you may ignore it."),
-    "contents": {
-        "taskgraph.db": {}
-    }
-}
-FILLED_DEM = {
-    "about": gettext("Map of elevation after any pits are filled"),
-    "bands": {1: {
-        "type": "number",
-        "units": u.meter
-    }}
-}
-FLOW_ACCUMULATION = {
-    "about": gettext("Map of flow accumulation"),
-    "bands": {1: {
-        "type": "number",
-        "units": u.none
-    }}
-}
-FLOW_DIRECTION = {
-    "about": gettext(
-        "MFD flow direction. Note: the pixel values should not "
-        "be interpreted directly. Each 32-bit number consists "
-        "of 8 4-bit numbers. Each 4-bit number represents the "
-        "proportion of flow into one of the eight neighboring "
-        "pixels."),
-    "bands": {1: {"type": "integer"}}
-}
-FLOW_DIRECTION_D8 = {
-    "about": gettext(
-        "D8 flow direction."),
-    "bands": {1: {"type": "integer"}}
-}
-SLOPE = {
-    "about": gettext(
-        "Percent slope, calculated from the pit-filled "
-        "DEM. 100 is equivalent to a 45 degree slope."),
-    "bands": {1: {"type": "percent"}}
-}
-STREAM = {
-    "about": "Stream network, created using flow direction and flow accumulation derived from the DEM and Threshold Flow Accumulation. Values of 1 represent streams, values of 0 are non-stream pixels.",
-    "bands": {1: {"type": "integer"}}
-}
-
-FLOW_DIR_ALGORITHM = {
-    "flow_dir_algorithm": {
-        "type": "option_string",
-        "options": {
-            "D8": {
-                "display_name": gettext("D8"),
-                "description": "D8 flow direction"
-            },
-            "MFD": {
-                "display_name": gettext("MFD"),
-                "description": "Multiple flow direction"
-            }
-        },
-        "about": gettext("Flow direction algorithm to use."),
-        "name": gettext("flow direction algorithm")
-    }
-}
+TASKGRAPH_DIR = DirectoryOutput(
+    id="taskgraph_cache",
+    about=gettext(
+        "Cache that stores data between model runs. This directory contains no"
+        " human-readable data and you may ignore it."
+    ),
+    contents=[FileOutput(id="taskgraph.db", about=None)]
+)
+FILLED_DEM = SingleBandRasterOutput(
+    id='',
+    about=gettext("Map of elevation after any pits are filled"),
+    data_type=float,
+    units=u.meter
+)
+FLOW_ACCUMULATION = SingleBandRasterOutput(
+    id='',
+    about=gettext("Map of flow accumulation"),
+    data_type=float,
+    units=u.none
+)
+FLOW_DIRECTION = SingleBandRasterOutput(
+    id='',
+    about=gettext(
+        "MFD flow direction. Note: the pixel values should not be interpreted"
+        " directly. Each 32-bit number consists of 8 4-bit numbers. Each 4-bit"
+        " number represents the proportion of flow into one of the eight"
+        " neighboring pixels."
+    ),
+    data_type=int,
+    units=None
+)
+SLOPE = SingleBandRasterOutput(
+    id="slope.tif",
+    about=gettext(
+        "Percent slope, calculated from the pit-filled DEM. 100 is equivalent to"
+        " a 45 degree slope."
+    ),
+    data_type=float,
+    units=None
+)
+STREAM = SingleBandRasterOutput(
+    id='',
+    about=gettext(
+        "Stream network, created using flow direction and flow accumulation"
+        " derived from the DEM and Threshold Flow Accumulation. Values of 1"
+        " represent streams, values of 0 are non-stream pixels."
+    ),
+    data_type=int,
+    units=None
+)
 
 # geometry types ##############################################################
 # the full list of ogr geometry types is in an enum in
@@ -1866,120 +1868,6 @@ GEOMETRY_ORDER = [
 INPUT_TYPES_HTML_FILE = 'input_types.html'
 
 
-def format_required_string(required):
-    """Represent an arg's required status as a user-friendly string.
-
-    Args:
-        required (bool | str | None): required property of an arg. May be
-            `True`, `False`, `None`, or a conditional string.
-
-    Returns:
-        string
-    """
-    if required is None or required is True:
-        return gettext('required')
-    elif required is False:
-        return gettext('optional')
-    else:
-        # assume that the about text will describe the conditional
-        return gettext('conditionally required')
-
-
-def format_geometry_types_string(geometry_types):
-    """Represent a set of allowed vector geometry types as user-friendly text.
-
-    Args:
-        geometry_types (set(str)): set of geometry names
-
-    Returns:
-        string
-    """
-    # sort the geometry types so they always display in a consistent order
-    sorted_geoms = sorted(
-        geometry_types,
-        key=lambda g: GEOMETRY_ORDER.index(g))
-    return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
-
-
-def format_permissions_string(permissions):
-    """Represent a rwx-style permissions string as user-friendly text.
-
-    Args:
-        permissions (str): rwx-style permissions string
-
-    Returns:
-        string
-    """
-    permissions_strings = []
-    if 'r' in permissions:
-        permissions_strings.append(gettext('read'))
-    if 'w' in permissions:
-        permissions_strings.append(gettext('write'))
-    if 'x' in permissions:
-        permissions_strings.append(gettext('execute'))
-    return ', '.join(permissions_strings)
-
-
-def format_options_string_from_dict(options):
-    """Represent a dictionary of option: description pairs as a bulleted list.
-
-    Args:
-        options (dict): the dictionary of options to document, where keys are
-            options and values are dictionaries describing the options.
-            They may have either or both 'display_name' and 'description' keys,
-            for example:
-            {'option1': {'display_name': 'Option 1', 'description': 'the first option'}}
-
-    Returns:
-        list of RST-formatted strings, where each is a line in a bullet list
-    """
-    lines = []
-    for key, info in options.items():
-        display_name = info['display_name'] if 'display_name' in info else key
-        if 'description' in info:
-            lines.append(f'- {display_name}: {info["description"]}')
-        else:
-            lines.append(f'- {display_name}')
-    # sort the options alphabetically
-    # casefold() is a more aggressive version of lower() that may work better
-    # for some languages to remove all case distinctions
-    return sorted(lines, key=lambda line: line.casefold())
-
-
-def format_options_string_from_list(options):
-    """Represent options as a comma-separated list.
-
-    Args:
-        options (list[str]): the set of options to document
-
-    Returns:
-        string of comma-separated options
-    """
-    return ', '.join(options)
-
-
-def capitalize(title):
-    """Capitalize a string into title case.
-
-    Args:
-        title (str): string to capitalize
-
-    Returns:
-        capitalized string (each word capitalized except linking words)
-    """
-
-    def capitalize_word(word):
-        """Capitalize a word, if appropriate."""
-        if word in {'of', 'the'}:
-            return word
-        else:
-            return word[0].upper() + word[1:]
-
-    title = ' '.join([capitalize_word(word) for word in title.split(' ')])
-    title = '/'.join([capitalize_word(word) for word in title.split('/')])
-    return title
-
-
 def format_type_string(arg_type):
     """Represent an arg type as a user-friendly string.
 
@@ -2065,12 +1953,12 @@ def describe_arg_from_spec(name, spec):
             in_parentheses.append(f'{translated_units}: **{units_string}**')
 
     if type(spec) is VectorInput:
-        in_parentheses.append(format_geometry_types_string(spec.geometry_types))
+        in_parentheses.append((spec.format_geometry_types_rst()))
 
     # Represent the required state as a string, defaulting to required
     # It doesn't make sense to include this for boolean checkboxes
     if type(spec) is not BooleanInput:
-        required_string = format_required_string(spec.required)
+        required_string = spec.format_required_string()
         in_parentheses.append(f'*{required_string}*')
 
     # Nested args may not have an about section
@@ -2088,12 +1976,8 @@ def describe_arg_from_spec(name, spec):
         # may be either a dict or set. if it's empty, the options are
         # dynamically generated. don't try to document them.
         if spec.options:
-            if isinstance(spec.options, dict):
-                indented_block.append(gettext('Options:'))
-                indented_block += format_options_string_from_dict(spec.options)
-            else:
-                formatted_options = format_options_string_from_list(spec.options)
-                indented_block.append(gettext('Options:') + f' {formatted_options}')
+            indented_block.append(gettext('Options:'))
+            indented_block += spec.format_rst()
 
     elif type(spec) is CSVInput:
         if not spec.columns and not spec.rows:
@@ -2118,15 +2002,29 @@ def describe_arg_from_name(module_name, *arg_keys):
     """
     # import the specified module (that should have an MODEL_SPEC attribute)
     module = importlib.import_module(module_name)
+
+    # anchor names cannot contain underscores. sphinx will replace them
+    # automatically, but lets explicitly replace them here
+    anchor_name = '-'.join(arg_keys).replace('_', '-')
+
     # start with the spec for all args
     # narrow down to the nested spec indicated by the sequence of arg keys
     spec = module.MODEL_SPEC.get_input(arg_keys[0])
-    for i, key in enumerate(arg_keys[1:]):
+    arg_keys = arg_keys[1:]
+    for i, key in enumerate(arg_keys):
         # convert raster band numbers to ints
-        if arg_keys[i - 1] == 'bands':
+        if i > 0 and arg_keys[i - 1] == 'bands':
             key = int(key)
-        if key in {'bands', 'fields', 'contents', 'columns', 'rows'}:
-            spec = getattr(spec, key)
+        elif i > 0 and arg_keys[i - 1] == 'fields':
+            spec = spec.get_field(key)
+        elif i > 0 and arg_keys[i - 1] == 'contents':
+            spec = spec.get_contents(key)
+        elif i > 0 and arg_keys[i - 1] == 'columns':
+            spec = spec.get_column(key)
+        elif i > 0 and arg_keys[i - 1] == 'rows':
+            spec = spec.get_row(key)
+        elif key in {'bands', 'fields', 'contents', 'columns', 'rows'}:
+            continue
         else:
             try:
                 spec = spec.get(key)
@@ -2138,13 +2036,10 @@ def describe_arg_from_name(module_name, *arg_keys):
 
     # format spec into an RST formatted description string
     if spec.name:
-        arg_name = capitalize(spec.name)
+        arg_name = spec.capitalize_name()
     else:
         arg_name = arg_keys[-1]
 
-    # anchor names cannot contain underscores. sphinx will replace them
-    # automatically, but lets explicitly replace them here
-    anchor_name = '-'.join(arg_keys).replace('_', '-')
     rst_description = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
     return f'.. _{anchor_name}:\n\n{rst_description}'
 
