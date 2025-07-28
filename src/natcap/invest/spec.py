@@ -321,9 +321,13 @@ class FileInput(Input):
         Returns:
             Transformed dataframe column
         """
-        return col.apply(
-            lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), base_path)
-        ).astype(pandas.StringDtype())
+        def format_path(p):
+            if pandas.isna(p):
+                return p
+            if '://' in p:  # don't expand remote paths
+                return str(p).strip()
+            return utils.expand_path(str(p).strip(), base_path)
+        return col.apply(format_path).astype(pandas.StringDtype())
 
 
 class RasterBand(BaseModel):
