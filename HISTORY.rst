@@ -65,6 +65,12 @@
   Unreleased Changes
   ------------------
 
+Urban Cooling
+=============
+* Fixed a bug where ``NoData`` in ``cc`` was not correctly set if the Cooling
+  Capacity Calculation Method was set to ``intensity``
+  (`#2079 <https://github.com/natcap/invest/issues/2079>`_).
+
 3.16.1 (2025-07-01)
 -------------------
 
