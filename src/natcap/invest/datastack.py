@@ -578,6 +578,10 @@ def extract_parameter_set(paramset_path):
                 # Probably not a boolean, so continue checking paths.
                 pass
 
+            # Don't expand or modify remote paths
+            if '://' in args_param:
+                return args_param
+
             # Convert paths to whatever makes sense for the current OS.
             expanded_param = os.path.expandvars(
                 os.path.expanduser(
