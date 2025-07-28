@@ -345,7 +345,7 @@ class TestMetadataFromSpec(unittest.TestCase):
                         id="table.csv",
                         about=("A biophysical table."),
                         columns=[
-                            spec.NumberInput(
+                            spec.NumberOutput(
                                 id="foo",
                                 units=u.m**2/u.person,
                                 about="bar"
