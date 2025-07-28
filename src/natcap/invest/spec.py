@@ -384,9 +384,10 @@ class RasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        file_warning = super().validate(filepath)
-        if file_warning:
-            return file_warning
+        if not filepath.startswith('/vsi'):
+            file_warning = super().validate(filepath)
+            if file_warning:
+                return file_warning
 
         try:
             gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
@@ -445,9 +446,10 @@ class SingleBandRasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        file_warning = super().validate(filepath)
-        if file_warning:
-            return file_warning
+        if not filepath.startswith('/vsi'):
+            file_warning = super().validate(filepath)
+            if file_warning:
+                return file_warning
 
         try:
             gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
@@ -522,9 +524,10 @@ class VectorInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        file_warning = super().validate(filepath)
-        if file_warning:
-            return file_warning
+        if not filepath.startswith('/vsi'):
+            file_warning = super().validate(filepath)
+            if file_warning:
+                return file_warning
 
         try:
             gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
