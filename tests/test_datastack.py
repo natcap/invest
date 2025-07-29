@@ -273,8 +273,7 @@ class DatastackArchiveTests(unittest.TestCase):
         datastack._tarfile_safe_extract(archive_path, out_directory)
 
         # validate metadata in directory to ensure 2 yamls exist
-        files, messages = geometamaker.validate_dir(out_directory,
-                                                    recursive=True)
+        files, messages = geometamaker.validate_dir(out_directory)
         self.assertEqual(len(files), 2)
         self.assertFalse(any(messages))
 
