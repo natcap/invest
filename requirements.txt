@@ -26,5 +26,5 @@ Babel
 Flask
 flask_cors
 requests
-geometamaker
+geometamaker>=0.2.0
 pydantic
