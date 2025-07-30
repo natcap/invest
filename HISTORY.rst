@@ -70,6 +70,13 @@ Workbench
 * Fixed a bug where the Workbench showed the incorrect status of a recently
   completed model run. (`#2072 <https://github.com/natcap/invest/issues/2072>`_)
 
+Urban Cooling
+=============
+* Model validation now requires that the "UHI effect" is >= 0 degrees Celsius,
+  meaning that the urban air temperature is greater than the rural reference
+  temperature. (`#2076 <https://github.com/natcap/invest/issues/2076>`_)
+
+
 3.16.1 (2025-07-01)
 -------------------
 
