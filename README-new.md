@@ -19,9 +19,7 @@ The InVEST desktop application can be downloaded from
 InVEST is also available as a python package.  See the [API
 documentation](https://invest.readthedocs.io) for installation instructions.
 
-## Older Versions of InVEST
-
-Downloads of InVEST binaries and sample data for all versions can be found:
+Downloads of InVEST binaries and sample data for older versions can be found:
 
 * For InVEST 1.0-3.7: http://data.naturalcapitalproject.org/invest-releases/index.html
 * For InVEST 3.7-present: http://releases.naturalcapitalproject.org/?prefix=invest/
@@ -38,12 +36,7 @@ Older versions of InVEST used a few different repositories over the years.
 These are archived on github:
 
 * InVEST python source code (InVEST 2.1.0 - 3.2.0): https://github.com/natcap/invest-natcap.invest-3
-  Covers the development of InVEST's fully open-source development stack, as we were migrating
-  existing ArcGIS models over and developing new models.
-
 * InVEST ArcGIS models (InVEST 2.1.0 - 3.2.0): https://github.com/natcap/invest.arcgis
-  Includes the python source code and ArcGIS Toolboxes of older InVEST models, before
-  migration to our open-source stack.
 
 
 ## Contributing
