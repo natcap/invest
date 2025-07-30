@@ -709,7 +709,8 @@ def execute(args):
             kwargs=dict(
                 op=calc_cc_op_intensity,
                 rasters=[task_path_prop_map['building_intensity'][1]],
-                target_path=cc_raster_path),
+                target_path=cc_raster_path,
+                target_nodata=TARGET_NODATA),
             target_path_list=[cc_raster_path],
             dependent_task_list=[
                 task_path_prop_map['building_intensity'][0]],
