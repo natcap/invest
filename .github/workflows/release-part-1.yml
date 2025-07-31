@@ -54,7 +54,7 @@ jobs:
         run: |
           import os
           major, minor, bugfix, *_ = os.environ['CURRENT_VERSION'].split('.')
-          with open(os.environ['GITHUB_ENV']) as env_file:
+          with open(os.environ['GITHUB_ENV'], "a") as env_file:
             env_file.write(f'VERSION={major}.{minor}.{int(bugfix) + 1}')
 
       - name: Configure git
