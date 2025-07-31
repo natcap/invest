@@ -69,6 +69,9 @@ Workbench
 =========
 * Fixed a bug where the Workbench showed the incorrect status of a recently
   completed model run. (`#2072 <https://github.com/natcap/invest/issues/2072>`_)
+* Fixed a bug where parameter sets containing an argument with a value of 0
+  weren't populating the model's UI for that argument.
+  (`#2075 <https://github.com/natcap/invest/issues/2075>`_)
 
 Urban Cooling
 =============

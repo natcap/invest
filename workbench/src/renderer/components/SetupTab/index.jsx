@@ -65,7 +65,7 @@ function initializeArgValues(argsSpec, inputFieldOrder, argsDict) {
       }
       argsDropdownOptions[argkey] = argsSpec[argkey].options;
     } else {
-      value = argsDict[argkey] || '';
+      value = argsDict[argkey] === 0 ? "0" : argsDict[argkey] || '';
     }
     argsValues[argkey] = {
       value: value,

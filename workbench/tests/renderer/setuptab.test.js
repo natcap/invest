@@ -911,3 +911,65 @@ describe('Form drag-and-drop', () => {
     expect(setupInput).toHaveValue('');
   });
 });
+
+describe('UI population from datastack', () => {
+  test('Loading datastack/logfile handles zeros', async () => {
+    const spec = {
+      model_id: MODULE,
+      args: {
+        arg1: {
+          name: 'Number 1',
+          type: 'number',
+        },
+        arg2: {
+          name: 'Number 2',
+          type: 'number',
+        },
+        arg3: {
+          name: 'Number 3',
+          type: 'number',
+        },
+      },
+    };
+    const inputFieldOrder = [Object.keys(spec.args)];
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), VALIDATION_MESSAGE]]
+    );
+    fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true, arg3: true });
+
+    const mockDatastack = {
+      model_id: spec.model_id,
+      args: {
+        arg1: 0,
+        arg2: '0',
+      },
+    };
+    fetchDatastackFromFile.mockResolvedValue(mockDatastack);
+
+    const {
+      findByLabelText, findByTestId,
+    } = renderSetupFromSpec(spec, inputFieldOrder);
+    const setupForm = await findByTestId('setup-form');
+
+    const fileDropEvent = createEvent.drop(setupForm);
+    // `dataTransfer.files` normally returns a `FileList` object. Since we are
+    // defining our own dataTransfer.files we are also creating an object
+    // with properties that mimic FileList object
+    const fileValue = {};
+    Object.defineProperties(fileValue, {
+      path: { value: 'foo.json' },
+      length: { value: 1 },
+    });
+    Object.defineProperty(fileDropEvent, 'dataTransfer', {
+      value: { files: [fileValue] },
+    });
+    await fireEvent(setupForm, fileDropEvent);
+
+    expect(await findByLabelText((content) => content.startsWith(spec.args.arg1.name)))
+      .toHaveValue(String(mockDatastack.args.arg1));
+    expect(await findByLabelText((content) => content.startsWith(spec.args.arg2.name)))
+      .toHaveValue(mockDatastack.args.arg2);
+    expect(await findByLabelText((content) => content.startsWith(spec.args.arg3.name)))
+      .toHaveValue('');
+  });
+});
