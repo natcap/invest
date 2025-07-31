@@ -165,9 +165,6 @@ def load_fields_from_vector(filepath, layer_id=0):
         A list of string fieldnames within the target layer.
 
     """
-    if not os.path.exists(filepath):
-        raise ValueError('File not found: %s' % filepath)
-
     vector = gdal.OpenEx(filepath, gdal.OF_VECTOR)
     layer = vector.GetLayer(layer_id)
     fieldnames = [defn.GetName() for defn in layer.schema]
