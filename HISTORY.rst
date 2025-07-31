@@ -65,6 +65,12 @@
 Unreleased Changes
 ------------------
 
+General
+=======
+* Updated readme to fix broken links, and also add links to repositories
+  containing older source code and downloads, for future reference.
+  (`#2029 <https://github.com/natcap/invest/issues/2029>`_)
+
 Workbench
 =========
 * Fixed a bug where the Workbench showed the incorrect status of a recently
