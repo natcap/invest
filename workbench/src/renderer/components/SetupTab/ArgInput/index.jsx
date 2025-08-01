@@ -209,7 +209,7 @@ export default function ArgInput(props) {
   const className = enabled ? null : 'arg-disable';
 
   let feedback = <React.Fragment />;
-  if (validationMessage && touched && argSpec.type !== 'boolean') {
+  if (validationMessage && touched) {
     feedback = (
       <Feedback
         argkey={argkey}
