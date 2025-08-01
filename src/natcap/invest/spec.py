@@ -321,9 +321,14 @@ class FileInput(Input):
         Returns:
             Transformed dataframe column
         """
-        return col.apply(
-            lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), base_path)
-        ).astype(pandas.StringDtype())
+        def format_path(p):
+            if pandas.isna(p):
+                return p
+            # don't expand remote paths
+            if not utils._GDALPath.from_uri(filepath).is_local:
+                return str(p).strip()
+            return utils.expand_path(str(p).strip(), base_path)
+        return col.apply(format_path).astype(pandas.StringDtype())
 
 
 class RasterBand(BaseModel):
@@ -384,12 +389,14 @@ class RasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        file_warning = super().validate(filepath)
-        if file_warning:
-            return file_warning
+        gdal_path = utils._GDALPath.from_uri(filepath)
+        if gdal_path.is_local:
+            file_warning = super().validate(filepath)
+            if file_warning:
+                return file_warning
 
         try:
-            gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
+            gdal_dataset = gdal.OpenEx(gdal_path, gdal.OF_RASTER)
         except RuntimeError:
             return get_message('NOT_GDAL_RASTER')
 
@@ -445,12 +452,14 @@ class SingleBandRasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        file_warning = super().validate(filepath)
-        if file_warning:
-            return file_warning
+        gdal_path = utils._GDALPath.from_uri(filepath)
+        if gdal_path.is_local:
+            file_warning = super().validate(filepath)
+            if file_warning:
+                return file_warning
 
         try:
-            gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
+            gdal_dataset = gdal.OpenEx(gdal_path.to_string(), gdal.OF_RASTER)
         except RuntimeError:
             return get_message('NOT_GDAL_RASTER')
 
@@ -522,12 +531,14 @@ class VectorInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        file_warning = super().validate(filepath)
-        if file_warning:
-            return file_warning
+        gdal_path = utils._GDALPath.from_uri(filepath)
+        if gdal_path.is_local:
+            file_warning = super().validate(filepath)
+            if file_warning:
+                return file_warning
 
         try:
-            gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
+            gdal_dataset = gdal.OpenEx(gdal_path, gdal.OF_VECTOR)
         except RuntimeError:
             return get_message('NOT_GDAL_VECTOR')
 
@@ -925,6 +936,9 @@ class DirectoryInput(Input):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
+        if not utils._GDALPath.from_uri(dirpath).is_local:
+            return  # Don't check paths and permissions for remote paths
+
         if self.must_exist:
             if not os.path.exists(dirpath):
                 return get_message('DIR_NOT_FOUND')

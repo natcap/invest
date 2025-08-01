@@ -465,6 +465,11 @@ def main(user_args=None):
             LOGGER.info('Imported target %s from %s',
                         model_module.__name__, model_module)
 
+            for arg_key, val in parsed_datastack.args.items():
+                if type(model_module.MODEL_SPEC.get_input(arg_key)) in {
+                        spec.RasterInput, spec.SingleBandRasterInput, spec.VectorInput}:
+                    parsed_datastack.args[arg_key] = utils._GDALPath.from_uri(val).to_string()
+
             with utils.prepare_workspace(parsed_datastack.args['workspace_dir'],
                                          model_id=parsed_datastack.model_id,
                                          logging_level=log_level):

@@ -2037,9 +2037,10 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                     float(attribute_value)
                 except ValueError:
                     # If we can't cast it to a float, assume it's a string path
-                    # to a raster or vector.
-                    attribute_value = utils.expand_path(
-                        attribute_value, criteria_table_path)
+                    # to a raster or vector. Don't expand remote paths.
+                    if '://' not in attribute_value:
+                        attribute_value = utils.expand_path(
+                            attribute_value, criteria_table_path)
 
                     try:
                         _ = pygeoprocessing.get_gis_type(attribute_value)
