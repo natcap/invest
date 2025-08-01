@@ -584,6 +584,57 @@ describe('Misc form validation stuff', () => {
         .toBeNull();
     });
   });
+  
+  test('A required boolean displays validation warning', async () => {
+    const spec = {
+      pyname: 'natcap.invest.dummy',
+      args: {
+        arg1: {
+          name: 'Afoo',
+          type: 'boolean',
+          required: true,
+        },
+        arg2: {
+          name: 'Bfoo',
+          type: 'boolean',
+          required: true,
+        },
+      },
+    };
+    //fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: false });
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), VALIDATION_MESSAGE]]
+    );
+
+    const inputFieldOrder = [Object.keys(spec.args)];
+
+    const { findByLabelText } = renderSetupFromSpec(
+                                  spec, inputFieldOrder, { arg1: true, arg2: false } );
+    const arg1 = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
+    const arg2 = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
+    const input = await findByLabelText(`${spec.args.arg1.name}`);
+    const input2 = await findByLabelText(`${spec.args.arg2.name}`);
+
+    await waitFor(() => {
+      expect(input).toBeChecked();
+    });
+    await waitFor(() => {
+      expect(input2).not.toBeChecked();
+    });
+
+    // A required input with no value is invalid (red outline for boolean
+    // switch), but feedback does not display until the input has been touched.
+    expect(input2).toHaveClass('is-invalid');
+    expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
+
+    // Click checked boolean to unchecked
+    await userEvent.click(arg1);
+    await waitFor(() => {
+      expect(input).toHaveClass('is-invalid');
+    });
+    expect(await findByText(RegExp(VALIDATION_MESSAGE)))
+      .toBeInTheDocument();
+  });
 });
 
 describe('Form drag-and-drop', () => {
