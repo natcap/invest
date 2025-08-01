@@ -6,8 +6,10 @@ import os
 import platform
 import re
 import shutil
+import sys
 import tempfile
 import time
+from urllib.parse import urlparse
 from datetime import datetime
 
 import natcap.invest
@@ -841,3 +843,128 @@ def copy_spatial_files(spatial_filepath, target_dir):
         return_filepath = target_filepath
 
     return return_filepath
+
+
+class _GDALPath:
+    """Result of parsing a dataset URI/Path
+
+    This class is largely copied from rasterio._path.
+
+    Attributes
+    ----------
+    path : str
+        Parsed path. Includes the hostname and query string in the case
+        of a URI.
+    archive : str
+        Parsed archive path.
+    scheme : str
+        URI scheme such as "https" or "zip+s3".
+    """
+    def __init__(self, path, archive, scheme):
+        self.path = path
+        self.archive = archive
+        self.scheme = scheme
+
+        # Supported URI schemes and their mapping to GDAL's VSI suffix.
+        # TODO: extend for other cloud platforms.
+        self.schemes = {
+            'ftp': 'curl',
+            'gzip': 'gzip',
+            'http': 'curl',
+            'https': 'curl',
+            's3': 's3',
+            'tar': 'tar',
+            'zip': 'zip',
+            'file': 'file',
+            'oss': 'oss',
+            'gs': 'gs',
+            'az': 'az',
+        }
+        self.curlschemes = {k for k, v in self.schemes.items() if v == "curl"}
+
+        # TODO: extend for other cloud platforms.
+        self.remoteschemes = {
+            k for k, v in self.schemes.items() if v in (
+                "curl",
+                "s3",
+                "oss",
+                "gs",
+                "az",
+            )
+        }
+
+    @classmethod
+    def from_uri(cls, uri):
+        parts = urlparse(uri)
+        if sys.platform == "win32" and re.match(r"^[a-zA-Z]\:", parts.netloc):
+            parsed_path = f"{parts.netloc}{parts.path}"
+            parsed_netloc = None
+        else:
+            parsed_path = parts.path
+            parsed_netloc = parts.netloc
+
+        path = parsed_path
+        scheme = parts.scheme or None
+
+        if parts.query:
+            path += "?" + parts.query
+
+        if scheme and scheme.startswith(("gzip", "tar", "zip")):
+            path_parts = path.split('!')
+            path = path_parts.pop() if path_parts else None
+            archive = path_parts.pop() if path_parts else None
+        else:
+            archive = None
+
+        if scheme and parsed_netloc:
+            if archive:
+                archive = parsed_netloc + archive
+            else:
+                path = parsed_netloc + path
+
+        return _GDALPath(path, archive, scheme)
+
+    def to_string(self):
+
+        if not self.scheme:
+            return self.path
+
+        else:
+            if self.scheme.split('+')[-1] in self.curlschemes:
+                suffix = f'{self.scheme.split('+')[-1]}://'
+            else:
+                suffix = ''
+
+            vsi_prefix = '/'.join(
+                f'vsi{self.schemes[p]}' for p in self.scheme.split('+') if p != 'file'
+            )
+
+            if vsi_prefix:
+                if self.archive:
+                    result = f'/{vsi_prefix}/{suffix}{self.archive}/{self.path.lstrip('/')}'
+                else:
+                    result = f'/{vsi_prefix}/{suffix}{self.path}'
+            else:
+                result = self.path
+            return result
+
+
+    @property
+    def name(self):
+        """The parsed path's original URI"""
+        if not self.scheme:
+            return self.path
+        elif self.archive:
+            return f"{self.scheme}://{self.archive}!{self.path}"
+        else:
+            return f"{self.scheme}://{self.path}"
+
+    @property
+    def is_remote(self):
+        """Test if the path is a remote, network URI"""
+        return bool(self.scheme) and self.scheme.split("+")[-1] in self.remoteschemes
+
+    @property
+    def is_local(self):
+        """Test if the path is a local URI"""
+        return not self.is_remote

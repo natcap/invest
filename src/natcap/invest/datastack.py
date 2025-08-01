@@ -36,7 +36,6 @@ from osgeo import gdal
 
 from . import spec
 from . import utils
-from . import validation
 from . import models
 
 try:
@@ -579,7 +578,8 @@ def extract_parameter_set(paramset_path):
                 pass
 
             # Don't expand or modify remote paths
-            if '://' in args_param:
+            gdal_path = utils._GDALPath.from_uri(args_param)
+            if not gdal_path.is_local:
                 return args_param
 
             # Convert paths to whatever makes sense for the current OS.
