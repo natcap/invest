@@ -275,11 +275,15 @@ def _generate_files_from_spec(output_spec, workspace):
     """A utility function to support the metadata test."""
     for spec_data in output_spec:
         if spec_data.__class__ is spec.DirectoryOutput:
-            os.mkdir(os.path.join(workspace, spec_data.id))
-            _generate_files_from_spec(
-                spec_data.contents, os.path.join(workspace, spec_data.id))
+            _generate_files_from_spec(spec_data.contents, workspace)
         else:
-            filepath = os.path.join(workspace, spec_data.id)
+            filepath = os.path.join(workspace, spec_data.path)
+            filedir = os.path.dirname(filepath)
+            try:
+                os.makedirs(filedir)
+            except OSError:
+                if not os.path.isdir(filedir):
+                    raise
             if isinstance(spec_data, spec.SingleBandRasterOutput):
                 driver = gdal.GetDriverByName('GTIFF')
                 raster = driver.Create(filepath, 2, 2, 1, gdal.GDT_Byte)
@@ -319,44 +323,53 @@ class TestMetadataFromSpec(unittest.TestCase):
 
         # An example invest output spec
         output_spec = [
-            spec.DirectoryOutput(
-                id='output',
-                contents=[
-                    spec.SingleBandRasterOutput(
-                        id="urban_nature_supply_percapita.tif",
-                        about="The calculated supply per capita of urban nature.",
-                        data_type=float,
-                        units=u.m**2
-                    ),
-                    spec.VectorOutput(
-                        id="admin_boundaries.gpkg",
-                        about=("A copy of the user's administrative boundaries "
-                               "vector with a single layer."),
-                        geometry_types=spec.POLYGONS,
-                        fields=[
-                            spec.NumberOutput(
-                                id="SUP_DEMadm_cap",
-                                units=u.m**2/u.person,
-                                about="The average urban nature supply/demand"
-                            )
-                        ]
-                    ),
-                    spec.CSVOutput(
-                        id="table.csv",
-                        about=("A biophysical table."),
-                        columns=[
-                            spec.NumberOutput(
-                                id="foo",
-                                units=u.m**2/u.person,
-                                about="bar"
-                            )
-                        ]
+            spec.SingleBandRasterOutput(
+                id="urban_nature_supply_percapita",
+                path="output/urban_nature_supply_percapita.tif",
+                about="The calculated supply per capita of urban nature.",
+                data_type=float,
+                units=u.m**2
+            ),
+            spec.VectorOutput(
+                id="admin_boundaries",
+                path="output/admin_boundaries.gpkg",
+                about=("A copy of the user's administrative boundaries "
+                       "vector with a single layer."),
+                geometry_types=spec.POLYGONS,
+                fields=[
+                    spec.NumberOutput(
+                        id="SUP_DEMadm_cap",
+                        units=u.m**2/u.person,
+                        about="The average urban nature supply/demand"
+                    )
+                ]
+            ),
+            spec.CSVOutput(
+                id="table",
+                path="output/table.csv",
+                about=("A biophysical table."),
+                columns=[
+                    spec.NumberOutput(
+                        id="foo",
+                        units=u.m**2/u.person,
+                        about="bar"
                     )
                 ]
             ),
             spec.DirectoryOutput(
                 id='intermediate',
-                contents=[spec.TASKGRAPH_DIR]
+                contents = [
+                    spec.SingleBandRasterOutput(
+                        id="mask",
+                        path="intermediate/mask.tif",
+                        about="A mask for the final raster output.",
+                        data_type=float,
+                        units=u.m**2
+                    ),
+                    spec.TASKGRAPH_DIR.model_copy(update=dict(
+                        path="intermediate/taskgraph_cache/taskgraph.db")
+                    )
+                ]
             )
         ]
         # Generate an output workspace with real files, without
@@ -380,7 +393,7 @@ class TestMetadataFromSpec(unittest.TestCase):
         spec.generate_metadata_for_outputs(model_module, args_dict)
 
         files, messages = geometamaker.validate_dir(self.workspace_dir)
-        self.assertEqual(len(files), 3)
+        self.assertEqual(len(files), 4)
         self.assertFalse(any(messages))
 
         resource = geometamaker.describe(
