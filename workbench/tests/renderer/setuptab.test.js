@@ -597,43 +597,62 @@ describe('Misc form validation stuff', () => {
         arg2: {
           name: 'Bfoo',
           type: 'boolean',
+          required: false,
+        },
+        arg3: {
+          name: 'Cfoo',
+          type: 'boolean',
           required: true,
         },
       },
     };
-    //fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: false });
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
+    fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true, arg3: true });
 
     const inputFieldOrder = [Object.keys(spec.args)];
 
-    const { findByLabelText } = renderSetupFromSpec(
-                                  spec, inputFieldOrder, { arg1: true, arg2: false } );
-    const arg1 = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
-    const arg2 = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
-    const input = await findByLabelText(`${spec.args.arg1.name}`);
-    const input2 = await findByLabelText(`${spec.args.arg2.name}`);
+    const { findByLabelText, queryByText } = renderSetupFromSpec(
+      spec, inputFieldOrder, { arg1: true, arg2: false, arg3: false } );
+    const input1 = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
+    const input2 = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
+    const input3 = await findByLabelText((content) => content.startsWith(spec.args.arg3.name));
 
     await waitFor(() => {
-      expect(input).toBeChecked();
-    });
-    await waitFor(() => {
+      expect(input1).toBeChecked();
       expect(input2).not.toBeChecked();
+      expect(input3).not.toBeChecked();
     });
 
-    // A required input with no value is invalid (red outline for boolean
-    // switch), but feedback does not display until the input has been touched.
-    expect(input2).toHaveClass('is-invalid');
-    expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
+    // invalid because of VALIDATION_MESSAGE
+    expect(input1).toHaveClass('is-invalid');
+    // An optional input with no value is valid, but green check
+    // does not display until the input has been touched.
+    expect(input2).not.toHaveClass('is-valid', 'is-invalid');
+    // Required boolean switch should be invalid
+    expect(input3).toHaveClass('is-invalid');
 
-    // Click checked boolean to unchecked
-    await userEvent.click(arg1);
+    // Click required checked boolean to unchecked
+    await userEvent.click(input1);
     await waitFor(() => {
-      expect(input).toHaveClass('is-invalid');
+      expect(input1).toHaveClass('is-invalid');
     });
-    expect(await findByText(RegExp(VALIDATION_MESSAGE)))
-      .toBeInTheDocument();
+    const input1Group = input1.closest('.input-group');
+    await waitFor(() => {
+      expect(within(input1Group).findByText(RegExp(VALIDATION_MESSAGE)))
+        .toBeInTheDocument();
+    });
+    fetchValidation.mockResolvedValue([]); // now make input valid
+    await userEvent.click(input3);
+    await waitFor(() => {
+      expect(input3).toHaveClass('is-valid');
+    });
+    const input3Group = input3.closest('.input-group');
+    await waitFor(() => {
+      expect(within(input3Group).findByText(RegExp(VALIDATION_MESSAGE)))
+        .toBeNull();
+    });
   });
 });
 
