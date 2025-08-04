@@ -1,9 +1,9 @@
 {
     "args": {
         "aoi_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/HabitatRiskAssess.zip/HabitatRiskAssess/Input/subregions.shp",
-        "criteria_table_path": "Input/vsi_exposure_consequence_criteria.csv",
+        "criteria_table_path": "vsi_exposure_consequence_criteria.csv",
         "decay_eq": "linear",
-        "info_table_path": "Input/vsi_habitat_stressor_info.csv",
+        "info_table_path": "vsi_habitat_stressor_info.csv",
         "max_rating": "3",
         "resolution": "500",
         "results_suffix": "",

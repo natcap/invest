@@ -3,7 +3,7 @@
     "args": { 
         "model_data_path": "model_data", 
         "results_suffix": "", 
-        "landcover_to_crop_table_path": "sample_user_data/landcover_to_crop_table.csv", 
+        "landcover_to_crop_table_path": "landcover_to_crop_table.csv",
         "landcover_raster_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/CropProduction.zip/CropProduction/sample_user_data/landcover.tif",
         "aggregate_polygon_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/CropProduction.zip/CropProduction/sample_user_data/aggregate_shape.shp"
     }, 

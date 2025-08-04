@@ -1,7 +1,7 @@
 {
     "args": {
-        "landcover_snapshot_csv": "inputs/vsi_snapshots.csv",
-        "lulc_lookup_table_path": "inputs/lulc_lookup.csv",
+        "landcover_snapshot_csv": "snapshots.csv",
+        "lulc_lookup_table_path": "lulc_lookup.csv",
         "results_suffix": ""
     },
     "invest_version": "3.8.7.post648+ga0875280.d20200922",

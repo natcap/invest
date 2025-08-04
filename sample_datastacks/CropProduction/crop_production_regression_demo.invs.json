@@ -3,9 +3,9 @@
     "args": {
         "model_data_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/CropProduction.zip/CropProduction/model_data",
         "results_suffix": "", 
-        "landcover_to_crop_table_path": "sample_user_data/landcover_to_crop_table.csv",
+        "landcover_to_crop_table_path": "landcover_to_crop_table.csv",
         "landcover_raster_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/CropProduction.zip/CropProduction/sample_user_data/landcover.tif",
-        "fertilization_rate_table_path": "sample_user_data/crop_fertilization_rates.csv", 
+        "fertilization_rate_table_path": "crop_fertilization_rates.csv",
         "aggregate_polygon_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/CropProduction.zip/CropProduction/sample_user_data/aggregate_shape.shp"
     }, 
     "model_name": "natcap.invest.crop_production_regression"
