@@ -2146,13 +2146,12 @@ def generate_metadata_for_outputs(model_module, args_dict):
     def _walk_spec(output_spec, workspace):
         for spec_data in output_spec:
             if type(spec_data) is DirectoryOutput:
-                if 'taskgraph.db' in [s.id for s in spec_data.contents]:
-                    continue
                 _walk_spec(
-                    spec_data.contents,
-                    os.path.join(workspace, spec_data.id))
+                    spec_data.contents, workspace)
             else:
-                pre, post = os.path.splitext(spec_data.id)
+                if 'taskgraph.db' in spec_data.path:
+                    continue
+                pre, post = os.path.splitext(spec_data.path)
                 full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
                 if os.path.exists(full_path):
                     try:
