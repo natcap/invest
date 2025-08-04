@@ -209,7 +209,7 @@ export default function ArgInput(props) {
   const className = enabled ? null : 'arg-disable';
 
   let feedback = <React.Fragment />;
-  if (validationMessage && touched) {
+  if (validationMessage && touched && argSpec.type !== 'boolean') {
     feedback = (
       <Feedback
         argkey={argkey}
@@ -218,6 +218,16 @@ export default function ArgInput(props) {
       />
     );
   }
+  else if (validationMessage && argSpec.type === 'boolean') {
+    feedback = (
+      <Feedback
+        argkey={argkey}
+        argtype={argSpec.type}
+        message={validationMessage}
+      />
+    );
+  }
+
 
   let fileSelector = <React.Fragment />;
   if (['csv', 'vector', 'raster', 'directory', 'file'].includes(argSpec.type)) {
@@ -250,8 +260,7 @@ export default function ArgInput(props) {
         name={argkey}
         checked={value}
         onChange={() => updateArgValues(argkey, !value)}
-        onFocus={handleFocus}  // to update the Touched property for validation
-	isValid={enabled && touched && isValid}
+	isValid={enabled && isValid}
 	isInvalid={enabled && validationMessage}
         disabled={!enabled}
         bsCustomPrefix="form-switch"
