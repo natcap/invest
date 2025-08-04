@@ -1,0 +1,16 @@
+{
+    "args": {
+        "a_coef": "1",
+        "aoi_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/ScenicQuality.zip/ScenicQuality/Input/AOI_WCVI.shp",
+        "b_coef": "0.1",
+        "dem_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/ScenicQuality.zip/ScenicQuality/Input/claybark_dem.tif",
+        "do_valuation": true,
+        "max_valuation_radius": "8000.0",
+        "refraction": "0.13",
+        "results_suffix": "",
+        "structure_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/ScenicQuality.zip/ScenicQuality/Input/AquaWEM_points.shp",
+        "valuation_function": "linear"
+    },
+    "invest_version": "3.6.0.post212+hf8bd6a95a3c5.d20190328",
+    "model_name": "natcap.invest.scenic_quality.scenic_quality"
+}

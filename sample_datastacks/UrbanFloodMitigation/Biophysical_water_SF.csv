@@ -1,0 +1,27 @@
+lucode,Description,NEH type (to define CN),CN_A,CN_B,CN_C,CN_D,SW_type,EMC
+0,Background,,1,1,1,1,7000,0
+1,"Unclassified (Cloud, Shadow, etc)",,1,1,1,1,7000,0
+2,High Intensity Developed,Urban districts,89,92,94,95,8000,0.107
+3,Medium Intensity Developed,Res districts,61,75,83,87,9000,0.077
+4,Low Intensity Developed,,51,68,79,84,10000,0.041
+5,Open Space Developed,Open space,49,69,79,84,11000,0.012
+6,Cultivated Land,Small grain,63,75,83,87,5000,0
+7,Pasture/Hay,,49,69,79,84,3000,0
+8,Grassland,,49,69,79,84,3000,0
+9,Deciduous Forest,Woods,36,60,73,79,5000,0
+10,Evergreen Forest,,36,60,73,79,5000,0
+11,Mixed Forest,,36,60,73,79,5000,0
+12,Scrub/Shrub,,35,56,70,77,3000,0
+13,Palustrine Forested Wetland,,1,1,1,1,6000,0
+14,Palustrine Scrub/Shrub Wetland,,1,1,1,1,6000,0
+15,Palustrine Emergent Wetland,,1,1,1,1,6000,0
+16,Estuarine Forested Wetland,,1,1,1,1,6000,0
+17,Estuarine Scrub/Shrub Wetland,,1,1,1,1,6000,0
+18,Estuarine Emergent Wetland,,1,1,1,1,6000,0
+19,Unconsolidated Shore,,1,1,1,1,7000,0
+20,Bare Land,,77,86,91,94,7000,0
+21,Water,,1,1,1,1,6000,0
+22,Palustrine Aquatic Bed,,1,1,1,1,6000,0
+23,Estuarine Aquatic Bed,,1,1,1,1,6000,0
+24,Tundra,,1,1,1,1,3000,0
+25,Snow/Ice,,1,1,1,1,7000,0

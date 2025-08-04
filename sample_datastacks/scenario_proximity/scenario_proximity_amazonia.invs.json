@@ -1,0 +1,16 @@
+{
+	"args": {
+		"base_lulc_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/scenario_proximity.zip/scenario_proximity/scenario_proximity_lulc.tif",
+	    "replacement_lucode": 12,
+	    "area_to_convert": "20000.0",
+	    "convertible_landcover_codes": "1 2 3 4 5",
+	    "results_suffix": "",
+	    "aoi_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/scenario_proximity.zip/scenario_proximity/scenario_proximity_aoi.shp",
+	    "convert_farthest_from_edge": true,
+	    "n_fragmentation_steps": 1,
+	    "convert_nearest_to_edge": true,
+	    "focal_landcover_codes": "1 2 3 4 5"
+	},
+	"invest_version": "3.5.0.post842+he0330f5be515",
+	"model_name": "natcap.invest.scenario_gen_proximity"
+}

@@ -1,0 +1,39 @@
+HABITAT NAME,eelgrass,,,hardbottom,,,kelp,,,softbottom,,,CRITERIA TYPE,
+HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C,Rating Instruction
+recruitment rate,2,2,2,2,2,2,2,2,2,2,2,2,C,"<enter (3) every 2+ yrs, (2) every 1-2 yrs, (1) every <1 yrs, or (0) no score>"
+natural mortality rate,1,2,2,1,2,2,1,2,2,1,2,2,C,"<enter (3) 0-20%, (2) 20-50%, (1) >80% mortality, or (0) no score>"
+connectivity rate,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/HabitatRiskAssess.zip/HabitatRiskAssess/Input/spatially_explicit_layers/eelgrass_connectivity_rate.tif,2,2,2,2,2,2,2,2,2,2,2,C,"<enter (3) <10km, (2) 10-100km, (1) >100km, or (0) no score>"
+recovery time,3,1,3,3,1,3,3,1,3,3,1,3,C,"<enter (3) >10 yrs, (2) 1-10 yrs, (1) <1 yr, or (0) no score>"
+,,,,,,,,,,,,,,
+HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,,,,,,,,
+Docks_Wharves_Marinas,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C,Rating Instruction
+frequency of disturbance,2,2,3,2,2,3,2,2,3,2,2,3,C,"<enter (3) Annually or less often, (2) Several times per year, (1) Weekly or more often, (0) no score>"
+change in area rating,2,3,2,2,3,2,2,3,2,2,3,2,C,"<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>"
+change in structure rating,3,2,2,3,2,2,3,2,2,3,2,2,C,"<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>"
+temporal overlap rating,2,3,1,2,3,1,2,3,1,2,3,1,E,"<enter (3) co-occur 8-12 mo/year, (2) 4-8 mo/yr, (1) 0-4 mo/yr, (0) no score>"
+management effectiveness,2,2,1,2,2,1,2,2,1,2,2,1,E,"<enter (3) not effective, (2) somewhat effective, (1) very effective, (0) no score>"
+intensity rating,1,1,1,1,1,1,1,1,1,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/HabitatRiskAssess.zip/HabitatRiskAssess/Input/spatially_explicit_layers/softbottom_DocksWharvesMarinas_intensity_rating.shp,1,1,E,"<enter (3) high, (2) medium, (1) low, (0) no score>"
+,,,,,,,,,,,,,,
+Finfish_Aquaculture_Comm,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C,Rating Instruction
+frequency of disturbance,1,2,3,1,2,3,1,2,3,1,2,3,C,"<enter (3) Annually or less often, (2) Several times per year, (1) Weekly or more often, (0) no score>"
+change in area rating,1,1,3,1,1,3,1,1,3,1,1,3,C,"<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>"
+change in structure rating,1,1,3,1,1,3,1,1,3,1,1,3,C,"<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>"
+temporal overlap rating,1,1,2,1,1,2,1,1,2,1,1,2,E,"<enter (3) co-occur 8-12 mo/year, (2) 4-8 mo/yr, (1) 0-4 mo/yr, (0) no score>"
+management effectiveness,3,2,2,3,2,2,3,2,2,3,2,2,E,"<enter (3) not effective, (2) somewhat effective, (1) very effective, (0) no score>"
+intensity rating,3,3,2,3,3,2,3,3,2,3,3,2,E,"<enter (3) high, (2) medium, (1) low, (0) no score>"
+,,,,,,,,,,,,,,
+Rec_Fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C,Rating Instruction
+frequency of disturbance,2,2,2,2,2,2,2,2,2,2,2,2,C,"<enter (3) Annually or less often, (2) Several times per year, (1) Weekly or more often, (0) no score>"
+change in area rating,2,2,1,2,2,1,2,2,1,2,2,1,C,"<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>"
+change in structure rating,1,3,2,1,3,2,1,3,2,1,3,2,C,"<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>"
+temporal overlap rating,1,3,3,1,3,3,1,3,3,1,3,3,E,"<enter (3) co-occur 8-12 mo/year, (2) 4-8 mo/yr, (1) 0-4 mo/yr, (0) no score>"
+management effectiveness,3,3,2,3,3,2,3,3,2,3,3,2,E,"<enter (3) not effective, (2) somewhat effective, (1) very effective, (0) no score>"
+intensity rating,3,3,1,3,3,1,3,3,1,3,3,1,E,"<enter (3) high, (2) medium, (1) low, (0) no score>"
+,,,,,,,,,,,,,,
+Shellfish_Aquaculture_Comm,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C,Rating Instruction
+frequency of disturbance,3,2,2,3,2,2,3,2,2,3,2,2,C,"<enter (3) Annually or less often, (2) Several times per year, (1) Weekly or more often, (0) no score>"
+change in area rating,2,3,1,2,3,1,2,3,1,2,3,1,C,"<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>"
+change in structure rating,2,3,1,2,3,1,2,3,1,2,3,1,C,"<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>"
+temporal overlap rating,3,2,1,3,2,1,3,2,1,3,2,1,E,"<enter (3) co-occur 8-12 mo/year, (2) 4-8 mo/yr, (1) 0-4 mo/yr, (0) no score>"
+management effectiveness,2,2,1,2,2,1,2,2,1,2,2,1,E,"<enter (3) not effective, (2) somewhat effective, (1) very effective, (0) no score>"
+intensity rating,1,1,1,1,1,1,1,1,1,1,1,1,E,"<enter (3) high, (2) medium, (1) low, (0) no score>"

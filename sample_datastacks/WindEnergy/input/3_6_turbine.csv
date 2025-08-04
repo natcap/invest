@@ -1,0 +1,8 @@
+hub_height,80
+cut_in_wspd,4.0
+rated_wspd,12.5
+cut_out_wspd,25.0
+turbine_rated_pwr,3.6
+turbine_cost,8000000
+turbines_per_circuit,8
+rotor_diameter,107

@@ -1,0 +1,7 @@
+id,path,type
+ports,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/recreation.zip/recreation/scenario/dredged_ports_dev.shp,point_count
+airdist,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/recreation.zip/recreation/scenario/airport_dev.shp,point_nearest_distance
+beaches,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/recreation.zip/recreation/scenario/beaches_dev.shp,line_intersect_length
+bonefish,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/recreation.zip/recreation/scenario/bonefish_dev.shp,polygon_percent_coverage
+roads,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/recreation.zip/recreation/scenario/roads_simple_buf_dev.shp,polygon_percent_coverage
+elevation,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/recreation.zip/recreation/dem90m.tif,raster_mean

@@ -1,0 +1,5 @@
+SPECIES,nesting_suitability_cavity_index,nesting_suitability_ground_index,foraging_activity_spring_index,foraging_activity_summer_index,alpha,relative_abundance
+Apis,1,1,1,1,500,0.75
+Bombus,1,0,0.8,1,1500,1
+Apis2,0,1,1,1,750,0.75
+Bombus2,0,1,0.8,1,750,1

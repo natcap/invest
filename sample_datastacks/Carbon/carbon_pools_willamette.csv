@@ -1,0 +1,67 @@
+lucode,LULC_Name,C_above,C_below,C_soil,C_dead
+1,Residential 0-4 units/acre,15,10,60,1
+2,Residential 4-9 units/acre,5,3,20,0
+3,Residential 9-16 units/acre,2,1,5,0
+4,Residential >16 units/acre,0,0,0,0
+5,Vacant,10,20,10,5
+6,Commercial,0,0,0,0
+7,Commercial/Industrial,0,0,0,0
+8,Industrial,0,0,0,0
+9,Industrial & Commercial,0,0,0,0
+10,Residential & Commercial,0,0,0,0
+11,Urban non-vegetated unknown,0,0,10,0
+16,Rural structures,0,0,50,0
+18,Railroad,0,0,25,0
+19,Primary roads,0,0,50,0
+20,Secondary roads,0,0,25,0
+21,Light duty roads,0,0,35,0
+24,Rural non-vegetated unknown,0,0,0,0
+29,Main channel non-vegetated,0,0,0,0
+32,Stream orders 5-7,0,0,0,0
+33,Permanent lentic water,0,0,0,0
+39,Topographic Shadow,100,5,65,50
+40,Snow,0,0,0,0
+42,Barren,0,0,0,0
+49,Urban tree overstory,135,50,75,1
+51,Upland Forest open,75,45,85,20
+52,Upland Forest Semi-closed mixed,90,60,110,30
+53,Forest Closed hardwood,180,120,120,55
+54,Forest Closed mixed,200,130,130,65
+55,Upland Forest Semi-closed conifer,90,60,95,29
+56,Conifers 0-20 yrs,10,7,76,2.5
+57,Forest closed conifer 21-40 yrs,88,59,96,29
+58,Forest closed conifer 41-60 yrs,165,110,115,50
+59,Forest closed conifer 61-80 yrs,225,150,124,65
+60,Forest closed conifer 81-200 yrs,300,200,135,85
+61,Forest closed conifer older than 200 yrs,375,250,150,100
+62,Upland Forest Semi-closed hardwood,80,50,100,25
+66,Hybrid poplar,75,25,90,2
+67,Grass seed rotation,1,1,10,0
+68,Irrigated annual crop rotation,2,1,10,0
+71,Grains,3,2,10,0
+72,Nursery,10,3,90,1
+73,Berries & Vineyards,8,5,20,0
+74,Double cropping,5,2,10,0
+75,Hops,5,4,20,0
+76,Mint,2,1,10,0
+77,Radish seed,2,1,10,0
+78,Sugar beet seed,2,1,10,0
+79,Row crop,3,2,10,0
+80,Grass,1,1,10,0
+81,Burned grass,0,1,10,0
+82,Field crop,3,2,8,1
+83,Hayfield,5,4,23,1
+84,Late field crop,5,3,15,0
+85,Pasture,5,4,25,1
+86,Natural grassland,6,6,20,2
+87,Natural shrub,8,8,25,3
+88,Bare/fallow,1,1,10,0
+89,Flooded/marsh,10,5,20,0
+90,Irrigated perennial,5,5,15,0
+91,Turfgrass,1,1,10,0
+92,Orchard,125,5,115,1
+93,Christmas trees,13,28,95,2
+95,Conifer Woodlot,275,30,95,10
+98,Oak savanna,100,20,115,50
+101,Wet shrub,7,3,25,0
+102,Unknown,0,0,0,0

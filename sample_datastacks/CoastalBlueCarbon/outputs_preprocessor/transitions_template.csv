@@ -1,0 +1,31 @@
+lulc-class,Open Ocean,Inland Open Water,Tidal Flat,Unnamed1,Unnamed2,Unnamed3,Developed Dry Land,Unnamed4,Estuarine Water,Transitional Salt Marsh,Ocean Beach,Cypress Swamp,Inland Fresh Marsh,Mangrove,Estuarine Beach,Tidal Fresh Marsh,Regularly Flooded Marsh,Rocky Intertidal,Inland Shore,Irregularly flooded marsh,Nontidal Swamp,Riverine Tidal Open Water,Undeveloped Dry Land,Tidal Swamp
+Open Ocean,NCC,,,,,,,,,,,,,,,,,,,,,,,
+Tidal Flat,,,,,,,,,NCC,,,,,,,,accum,,,,,,,
+Unnamed1,,,,NCC,,,,,,,,,,,,,,,,,,,,
+Unnamed2,,,,,,,,,,,,,,,,,,,,,,,,
+Unnamed3,,,,,,,,,,,,,,,,,,,,,,,,
+Developed Dry Land,,,,,,,NCC,,NCC,accum,NCC,,,,,,accum,,,,,,NCC,
+Unnamed4,,,,,,,,,,,,,,,,,,,,,,,,
+Ocean Beach,NCC,,,,,,,,NCC,,NCC,,,,,,,,,,,,,
+Transitional Salt Marsh,,,disturb,,,,,,disturb,accum,,,,,,,accum,,,,,,,
+Estuarine Water,,,,,,,,,NCC,,,,,,,,,,,,,,,
+Cypress Swamp,,,,,,,,,,,,,,,,,,,,,,,,
+Inland Open Water,,NCC,,,,,,,NCC,,,,accum,,,,,,,,,,,
+Nontidal Swamp,,,,,,,,,NCC,accum,,,,,,,accum,,,,NCC,,,NCC
+Estuarine Beach,,,,,,,,,NCC,,,,,,NCC,,,,,,,,,
+Inland Fresh Marsh,,,,,,,,,disturb,accum,,,accum,,,,accum,,,,,,,
+Tidal Fresh Marsh,,,,,,,,,,,,,,,,accum,,,,accum,,,,
+Regularly Flooded Marsh,,,disturb,,,,,,disturb,,,,,,,,accum,,,accum,,,,
+Rocky Intertidal,,,,,,,,,,,,,,,,,,,,,,,,
+Inland Shore,,,,,,,,,,,,,,,,,,,NCC,,,,,
+Irregularly flooded marsh,,,disturb,,,,,,disturb,,,,,,,,accum,,,accum,,,,
+Mangrove,,,,,,,,,,,,,,,,,,,,,,,,
+Riverine Tidal Open Water,,,,,,,,,NCC,,,,,,,,,,,,,NCC,,
+Undeveloped Dry Land,,,,,,,,,NCC,accum,NCC,,accum,,,,accum,,NCC,accum,NCC,,NCC,
+Tidal Swamp,,,,,,,,,NCC,,,,,,,accum,,,,accum,,,,NCC
+,
+,legend
+,empty cells indicate that no transitions occur of that type
+,disturb (disturbance): change to low- med- or high-impact-disturb
+,accum (accumulation)
+,NCC (no-carbon-change)

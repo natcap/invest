@@ -1,0 +1,57 @@
+lucode,descript,nesting_cavity_availability_index,nesting_ground_availability_index,floral_resources_spring_index,floral_resources_summer_index
+1,Residential 0-4 units/acre,0.3,0.2,0.7,0.5
+2,Residential 4-9 units/acre,0.3,0.2,0.7,0.5
+3,Residential 9-16 units/acre,0.3,0.2,0.7,0.5
+4,Residential >16 units/acre,0.3,0.2,0.7,0.5
+6,Commercial,0.3,0.2,0.7,0.5
+7,Commercial/Industrial,0.3,0.2,0.7,0.5
+8,Industrial,0.3,0.2,0.7,0.5
+11,Urban non-vegetated unknown,0.3,0.2,0.7,0.5
+16,Rural structures,0.3,0.2,0.7,0.5
+18,Railroad,0.3,0.2,0.7,0.5
+20,Secondary roads,0.3,0.2,0.7,0.5
+21,Light duty roads,0.3,0.2,0.7,0.5
+24,Rural non-vegetated unknown,0,0,0,0
+29,Main channel non-vegetated,0,0,0,0
+32,Stream orders 5-7,0,0,0,0
+33,Permanent lentic water,0,0,0,0
+39,Topographic Shadow,0,0,0,0
+49,Urban tree overstory,0.3,0.2,0.7,0.5
+51,Upland Forest open,0.6,0.3,0.3,0.3
+52,Upland Forest Semi-closed mixed,0.6,0.3,0.3,0.3
+53,Forest Closed hardwood,0.6,0.3,0.3,0.3
+54,Forest Closed mixed,0.6,0.3,0.3,0.3
+55,Upland Forest Semi-closed conifer,0.6,0.3,0.3,0.3
+56,Conifers 0-20 yrs,0.4,0.3,0.3,0.3
+57,Forest closed conifer 21-40 yrs,0.4,0.3,0.3,0.3
+58,Forest closed conifer 41-60 yrs,0.6,0.3,0.3,0.3
+59,Forest closed conifer 61-80 yrs,0.6,0.3,0.3,0.3
+60,Forest closed conifer 81-200 yrs,0.6,0.3,0.3,0.3
+61,Forest closed conifer older than 200 yrs,0.4,0.3,0.3,0.3
+62,Upland Forest Semi-closed hardwood,0.6,0.3,0.3,0.3
+66,Hybrid poplar,0.4,0.3,0.3,0.3
+67,Grass seed rotation,0.1,0.7,0.5,0.3
+68,Irrigated annual crop rotation,0.1,0.7,0.5,0.3
+71,Grains,0.1,0.7,0.5,0.3
+72,Nursery,0.1,0.7,0.5,0.3
+73,Berries & Vineyards,0.1,0.7,0.5,0.3
+74,Double cropping,0.1,0.7,0.5,0.3
+75,Hops,0.1,0.7,0.5,0.3
+76,Mint,0.1,0.7,0.5,0.3
+78,Sugar beet seed,0.1,0.7,0.5,0.3
+79,Row crop,0.1,0.7,0.5,0.3
+80,Grass,0.1,0.7,0.5,0.3
+81,Burned grass,0.1,0.7,0.5,0.3
+82,Field crop,0.1,0.7,0.5,0.3
+83,Hayfield,0.1,0.7,0.5,0.3
+84,Late field crop,0.1,0.7,0.5,0.3
+85,Pasture,0.1,0.7,0.5,0.3
+86,Natural grassland,0,0,0,0
+87,Natural shrub,0,0,0,0
+88,Bare/fallow,0.1,0.7,0.5,0.3
+89,Flooded/marsh,0,0,0,0
+90,Irrigated perennial,0.1,0.7,0.5,0.3
+91,Turfgrass,0.1,0.7,0.5,0.3
+92,Orchard,0.1,0.7,0.5,0.3
+93,Christmas trees,0.4,0.3,0.3,0.3
+95,Conifer Woodlot,0.4,0.3,0.3,0.3
