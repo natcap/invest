@@ -250,6 +250,7 @@ export default function ArgInput(props) {
         name={argkey}
         checked={value}
         onChange={() => updateArgValues(argkey, !value)}
+        onFocus={handleFocus}  // to update the Touched property for validation
 	isValid={enabled && touched && isValid}
 	isInvalid={enabled && validationMessage}
         disabled={!enabled}
