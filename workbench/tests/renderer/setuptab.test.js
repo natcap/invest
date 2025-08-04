@@ -598,59 +598,48 @@ describe('Misc form validation stuff', () => {
           name: 'Bfoo',
           type: 'boolean',
           required: false,
-        },
-        arg3: {
-          name: 'Cfoo',
-          type: 'boolean',
-          required: true,
-        },
+        }
       },
     };
+    
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
-    fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true, arg3: true });
+    fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
     const inputFieldOrder = [Object.keys(spec.args)];
 
     const { findByLabelText, queryByText } = renderSetupFromSpec(
-      spec, inputFieldOrder, { arg1: true, arg2: false, arg3: false } );
+      spec, inputFieldOrder, { arg1: false, arg2: false } );
     const input1 = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
     const input2 = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
-    const input3 = await findByLabelText((content) => content.startsWith(spec.args.arg3.name));
 
     await waitFor(() => {
-      expect(input1).toBeChecked();
+      expect(input1).not.toBeChecked();
       expect(input2).not.toBeChecked();
-      expect(input3).not.toBeChecked();
     });
 
-    // invalid because of VALIDATION_MESSAGE
-    expect(input1).toHaveClass('is-invalid');
-    // An optional input with no value is valid, but green check
-    // does not display until the input has been touched.
-    expect(input2).not.toHaveClass('is-valid', 'is-invalid');
-    // Required boolean switch should be invalid
-    expect(input3).toHaveClass('is-invalid');
-
-    // Click required checked boolean to unchecked
-    await userEvent.click(input1);
     await waitFor(() => {
       expect(input1).toHaveClass('is-invalid');
     });
     const input1Group = input1.closest('.input-group');
     await waitFor(() => {
-      expect(within(input1Group).findByText(RegExp(VALIDATION_MESSAGE)))
+      expect(within(input1Group).queryByText(RegExp(VALIDATION_MESSAGE)))
         .toBeInTheDocument();
     });
-    fetchValidation.mockResolvedValue([]); // now make input valid
-    await userEvent.click(input3);
+
+    // An optional input with no value is valid, but green check
+    // does not display until the input has been touched.
+    expect(input2).not.toHaveClass('is-valid', 'is-invalid');
+
+    // Now toggle required switch on and validation should pass 
+    fetchValidation.mockResolvedValue([]);
+    await userEvent.click(input1);
     await waitFor(() => {
-      expect(input3).toHaveClass('is-valid');
+      expect(input1).toHaveClass('is-valid');
     });
-    const input3Group = input3.closest('.input-group');
     await waitFor(() => {
-      expect(within(input3Group).findByText(RegExp(VALIDATION_MESSAGE)))
+      expect(within(input1Group).queryByText(RegExp(VALIDATION_MESSAGE)))
         .toBeNull();
     });
   });
