@@ -79,7 +79,7 @@ Workbench
   weren't populating the model's UI for that argument.
   (`#2075 <https://github.com/natcap/invest/issues/2075>`_)
 * Fixed a bug where there was no visual indication for an invalid switch
-  toggle state, which would prohibit running the model. NDR and 
+  toggle state, which would prohibit running the model. NDR and
   Scenario Generator were the only affected models.
   (`#2074 <https://github.com/natcap/invest/issues/2074>`_)
 
