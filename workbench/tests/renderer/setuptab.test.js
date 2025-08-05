@@ -628,9 +628,8 @@ describe('Misc form validation stuff', () => {
         .toBeInTheDocument();
     });
 
-    // An optional input with no value is valid, but green check
-    // does not display until the input has been touched.
-    expect(input2).not.toHaveClass('is-valid', 'is-invalid');
+    // An optional input with no value is valid
+    expect(input2).toHaveClass('is-valid');
 
     // Now toggle required switch on and validation should pass 
     fetchValidation.mockResolvedValue([]);
