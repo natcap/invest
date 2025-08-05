@@ -6,7 +6,7 @@
         "lulc_fut_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/HabitatQuality.zip/HabitatQuality/lulc_future_willamette.tif",
         "sensitivity_table_path": "sensitivity_willamette.csv", 
         "results_suffix": "willamette", 
-        "threats_table_path": "vsi_threats_willamette.csv"
+        "threats_table_path": "threats_willamette.csv"
     }, 
     "invest_version": "3.9.0", 
     "model_name": "natcap.invest.habitat_quality"
