@@ -9,6 +9,7 @@ import threading
 import types
 import typing
 import warnings
+from urllib.parse import urlparse
 
 from osgeo import gdal
 from osgeo import ogr
@@ -326,6 +327,7 @@ class FileInput(Input):
                 return p
             p = str(p).strip()
             # don't expand remote paths
+            print(p, utils._GDALPath.from_uri(p).is_local)
             if not utils._GDALPath.from_uri(p).is_local:
                 return p
             return utils.expand_path(p, base_path)
@@ -453,7 +455,9 @@ class SingleBandRasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
+        print(filepath)
         gdal_path = utils._GDALPath.from_uri(filepath)
+        print(gdal_path.to_string())
         if gdal_path.is_local:
             file_warning = super().validate(filepath)
             if file_warning:
@@ -763,9 +767,12 @@ class CSVInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        file_warning = super().validate(filepath)
-        if file_warning:
-            return file_warning
+        # don't check existence of remote paths
+        if not urlparse(filepath).scheme:
+            file_warning = super().validate(filepath)
+            if file_warning:
+                return file_warning
+
         if self.columns or self.rows:
             self.get_validated_dataframe(filepath)
             try:
@@ -807,6 +814,8 @@ class CSVInput(FileInput):
             read_csv_kwargs['header'] = None
 
         df = utils.read_csv_to_dataframe(csv_path, **read_csv_kwargs)
+
+        print(df)
 
         if self.rows:
             # swap rows and column
