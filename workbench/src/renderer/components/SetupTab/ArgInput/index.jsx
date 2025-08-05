@@ -218,6 +218,8 @@ export default function ArgInput(props) {
       />
     );
   }
+  // show validation message for boolean (switch) types regardless of touched
+  // because touching them necessarily changes their state.
   else if (validationMessage && argSpec.type === 'boolean') {
     feedback = (
       <Feedback
@@ -227,7 +229,6 @@ export default function ArgInput(props) {
       />
     );
   }
-
 
   let fileSelector = <React.Fragment />;
   if (['csv', 'vector', 'raster', 'directory', 'file'].includes(argSpec.type)) {
@@ -260,8 +261,8 @@ export default function ArgInput(props) {
         name={argkey}
         checked={value}
         onChange={() => updateArgValues(argkey, !value)}
-	isValid={enabled && isValid}
-	isInvalid={enabled && validationMessage}
+        isValid={enabled && isValid}
+        isInvalid={enabled && validationMessage}
         disabled={!enabled}
         bsCustomPrefix="form-switch"
       />
