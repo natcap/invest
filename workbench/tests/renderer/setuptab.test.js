@@ -584,6 +584,64 @@ describe('Misc form validation stuff', () => {
         .toBeNull();
     });
   });
+  
+  test('A required boolean displays validation warning', async () => {
+    const spec = {
+      pyname: 'natcap.invest.dummy',
+      args: {
+        arg1: {
+          name: 'Afoo',
+          type: 'boolean',
+          required: true,
+        },
+        arg2: {
+          name: 'Bfoo',
+          type: 'boolean',
+          required: false,
+        }
+      },
+    };
+    
+    fetchValidation.mockResolvedValue(
+      [[["arg1"], VALIDATION_MESSAGE]]
+    );
+    fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
+
+    const inputFieldOrder = [Object.keys(spec.args)];
+
+    const { findByLabelText, queryByText } = renderSetupFromSpec(
+      spec, inputFieldOrder, { arg1: false, arg2: false } );
+    const input1 = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
+    const input2 = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
+
+    expect(input1).not.toBeChecked();
+    expect(input2).not.toBeChecked();
+
+    // An optional input with no value is valid
+    await waitFor(() => {
+      expect(input2).toHaveClass('is-valid');
+    });
+
+    await waitFor(() => {
+      expect(input1).toHaveClass('is-invalid');
+    });
+    const input1Group = input1.closest('.input-group');
+    await waitFor(() => {
+      expect(within(input1Group).queryByText(RegExp(VALIDATION_MESSAGE)))
+        .toBeInTheDocument();
+    });
+
+    // Now toggle required switch on and validation should pass 
+    fetchValidation.mockResolvedValue([]);
+    await userEvent.click(input1);
+    await waitFor(() => {
+      expect(input1).toHaveClass('is-valid');
+    });
+    await waitFor(() => {
+      expect(within(input1Group).queryByText(RegExp(VALIDATION_MESSAGE)))
+        .toBeNull();
+    });
+  });
 });
 
 describe('Form drag-and-drop', () => {
