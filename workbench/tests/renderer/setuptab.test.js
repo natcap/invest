@@ -603,7 +603,7 @@ describe('Misc form validation stuff', () => {
     };
     
     fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), VALIDATION_MESSAGE]]
+      [[["arg1"], VALIDATION_MESSAGE]]
     );
     fetchArgsEnabled.mockResolvedValue({ arg1: true, arg2: true });
 
@@ -614,9 +614,12 @@ describe('Misc form validation stuff', () => {
     const input1 = await findByLabelText((content) => content.startsWith(spec.args.arg1.name));
     const input2 = await findByLabelText((content) => content.startsWith(spec.args.arg2.name));
 
+    expect(input1).not.toBeChecked();
+    expect(input2).not.toBeChecked();
+
+    // An optional input with no value is valid
     await waitFor(() => {
-      expect(input1).not.toBeChecked();
-      expect(input2).not.toBeChecked();
+      expect(input2).toHaveClass('is-valid');
     });
 
     await waitFor(() => {
@@ -638,9 +641,6 @@ describe('Misc form validation stuff', () => {
       expect(within(input1Group).queryByText(RegExp(VALIDATION_MESSAGE)))
         .toBeNull();
     });
-    
-    // An optional input with no value is valid
-    expect(input2).toHaveClass('is-valid');
   });
 });
 
