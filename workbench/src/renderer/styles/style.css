@@ -606,7 +606,6 @@ input[type=text]::placeholder {
 .form-switch {
   transform:scale(1.5);
   transform-origin:0%;
-  /*margin-left: 1rem;*/
   margin-top: 0.6rem;
 }
 
