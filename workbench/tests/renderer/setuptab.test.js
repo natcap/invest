@@ -628,9 +628,6 @@ describe('Misc form validation stuff', () => {
         .toBeInTheDocument();
     });
 
-    // An optional input with no value is valid
-    expect(input2).toHaveClass('is-valid');
-
     // Now toggle required switch on and validation should pass 
     fetchValidation.mockResolvedValue([]);
     await userEvent.click(input1);
@@ -641,6 +638,9 @@ describe('Misc form validation stuff', () => {
       expect(within(input1Group).queryByText(RegExp(VALIDATION_MESSAGE)))
         .toBeNull();
     });
+    
+    // An optional input with no value is valid
+    expect(input2).toHaveClass('is-valid');
   });
 });
 
