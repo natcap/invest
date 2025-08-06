@@ -6,7 +6,7 @@ on:
     # cron doesn't support "first tuesday of the month", so we will use github
     # actions syntax below to skip tuesdays that aren't in the first week.
     # it is recommended not to start on the hour to avoid peak traffic
-    - cron: "20 18 * * 2"
+    - cron: "20 18 * * 4"
   workflow_dispatch:
     inputs:
       version:
@@ -15,7 +15,6 @@ on:
 
 env:
   VERSION: ${{ inputs.version }}
-  AUTORELEASE_BRANCH: autorelease/${{ inputs.version }}
   # use a personal access token here which has permissions to trigger further actions
   # this is necessary for the pr checks
   GITHUB_TOKEN: ${{ secrets.AUTORELEASE_BOT_PAT }}
@@ -57,11 +56,12 @@ jobs:
           with open(os.environ['GITHUB_ENV'], "a") as env_file:
             env_file.write(f'VERSION={major}.{minor}.{int(bugfix) + 1}')
 
-      - name: Configure git
+      - name: Configure git and define branch name
         if: env.RUN == 'true'
         run: |
           git config user.name "GitHub Actions"
           git config user.email "<>"
+          echo "AUTORELEASE_BRANCH=autorelease/$VERSION" > $GITHUB_ENV
 
       # Members of the natcap software team can push to the autorelease branch on
       # natcap/invest; this branch is a special case for our release process.
