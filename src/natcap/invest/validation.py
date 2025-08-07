@@ -195,7 +195,7 @@ def check_spatial_overlap(spatial_filepaths_list,
     bounding_boxes = []
     checked_file_list = []
     for filepath in spatial_filepaths_list:
-        filepath = utils._GDALPath.from_uri(filepath).to_string()
+        filepath = utils._GDALPath.from_uri(filepath).to_normalized_path()
         try:
             info = pygeoprocessing.get_raster_info(filepath)
         except (ValueError, RuntimeError):

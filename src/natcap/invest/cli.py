@@ -468,7 +468,8 @@ def main(user_args=None):
             for arg_key, val in parsed_datastack.args.items():
                 if type(model_module.MODEL_SPEC.get_input(arg_key)) in {
                         spec.RasterInput, spec.SingleBandRasterInput, spec.VectorInput}:
-                    parsed_datastack.args[arg_key] = utils._GDALPath.from_uri(val).to_string()
+                    parsed_datastack.args[arg_key] = utils._GDALPath.from_uri(
+                        val).to_normalized_path()
 
             with utils.prepare_workspace(parsed_datastack.args['workspace_dir'],
                                          model_id=parsed_datastack.model_id,

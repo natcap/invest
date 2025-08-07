@@ -2041,7 +2041,7 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                         attribute_value = utils.expand_path(
                             attribute_value, criteria_table_path)
                     else:
-                        attribute_value = gdal_path.to_string()
+                        attribute_value = gdal_path.to_normalized_path()
                     try:
                         _ = pygeoprocessing.get_gis_type(attribute_value)
                     except ValueError:

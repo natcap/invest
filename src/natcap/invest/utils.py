@@ -866,7 +866,6 @@ class _GDALPath:
         self.scheme = scheme
 
         # Supported URI schemes and their mapping to GDAL's VSI suffix.
-        # TODO: extend for other cloud platforms.
         self.schemes = {
             'ftp': 'curl',
             'gzip': 'gzip',
@@ -882,7 +881,6 @@ class _GDALPath:
         }
         self.curlschemes = {k for k, v in self.schemes.items() if v == "curl"}
 
-        # TODO: extend for other cloud platforms.
         self.remoteschemes = {
             k for k, v in self.schemes.items() if v in (
                 "curl",
@@ -895,6 +893,14 @@ class _GDALPath:
 
     @classmethod
     def from_uri(cls, uri):
+        """Instantiate a _GDALPath for a given URI.
+
+        Args:
+            uri: URI string to parse
+
+        Returns:
+            _GDALPath object
+        """
         parts = urlparse(uri)
         if sys.platform == "win32" and re.match(r"^[a-zA-Z]\:", parts.netloc):
             parsed_path = f"{parts.netloc}{parts.path}"
@@ -924,29 +930,32 @@ class _GDALPath:
 
         return _GDALPath(path, archive, scheme)
 
-    def to_string(self):
+    def to_normalized_path(self):
+        """Return path represented as a string normalized to a gdal-ready scheme.
 
+        This means that URI schemes are converted to gdal /vsi prefixes,
+        for example "zip+https" -> "/vsizip/vsicurl/".
+        """
         if not self.scheme:
             return self.path
 
+        if self.scheme.split('+')[-1] in self.curlschemes:
+            suffix = f'{self.scheme.split('+')[-1]}://'
         else:
-            if self.scheme.split('+')[-1] in self.curlschemes:
-                suffix = f'{self.scheme.split('+')[-1]}://'
-            else:
-                suffix = ''
+            suffix = ''
 
-            vsi_prefix = '/'.join(
-                f'vsi{self.schemes[p]}' for p in self.scheme.split('+') if p != 'file'
-            )
+        vsi_prefix = '/'.join(
+            f'vsi{self.schemes[p]}' for p in self.scheme.split('+') if p != 'file'
+        )
 
-            if vsi_prefix:
-                if self.archive:
-                    result = f'/{vsi_prefix}/{suffix}{self.archive}/{self.path.lstrip('/')}'
-                else:
-                    result = f'/{vsi_prefix}/{suffix}{self.path}'
+        if vsi_prefix:
+            if self.archive:
+                result = f'/{vsi_prefix}/{suffix}{self.archive}/{self.path.lstrip('/')}'
             else:
-                result = self.path
-            return result
+                result = f'/{vsi_prefix}/{suffix}{self.path}'
+        else:
+            result = self.path
+        return result
 
     @property
     def is_remote(self):

@@ -401,7 +401,7 @@ class RasterInput(FileInput):
                 return file_warning
 
         try:
-            gdal_dataset = gdal.OpenEx(gdal_path.to_string(), gdal.OF_RASTER)
+            gdal_dataset = gdal.OpenEx(gdal_path.to_normalized_path(), gdal.OF_RASTER)
         except RuntimeError:
             return get_message('NOT_GDAL_RASTER')
 
@@ -464,7 +464,7 @@ class SingleBandRasterInput(FileInput):
                 return file_warning
 
         try:
-            gdal_dataset = gdal.OpenEx(gdal_path.to_string(), gdal.OF_RASTER)
+            gdal_dataset = gdal.OpenEx(gdal_path.to_normalized_path(), gdal.OF_RASTER)
         except RuntimeError:
             return get_message('NOT_GDAL_RASTER')
 
@@ -543,7 +543,7 @@ class VectorInput(FileInput):
                 return file_warning
 
         try:
-            gdal_dataset = gdal.OpenEx(gdal_path.to_string(), gdal.OF_VECTOR)
+            gdal_dataset = gdal.OpenEx(gdal_path.to_normalized_path(), gdal.OF_VECTOR)
         except RuntimeError:
             return get_message('NOT_GDAL_VECTOR')
 
@@ -681,7 +681,7 @@ class RasterOrVectorInput(FileInput):
         """
         try:
             gis_type = pygeoprocessing.get_gis_type(
-                utils._GDALPath.from_uri(filepath).to_string())
+                utils._GDALPath.from_uri(filepath).to_normalized_path())
         except ValueError as err:
             return str(err)
         if gis_type == pygeoprocessing.RASTER_TYPE:
@@ -872,7 +872,7 @@ class CSVInput(FileInput):
                     def normalize_path(value):
                         if pandas.isna(value):
                             return value
-                        return utils._GDALPath.from_uri(value).to_string()
+                        return utils._GDALPath.from_uri(value).to_normalized_path()
 
                     df[col].apply(check_value)
                     df[col] = df[col].apply(normalize_path)
