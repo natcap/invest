@@ -1878,8 +1878,6 @@ def _parse_info_table(info_table_path):
                   ``{stressor_name: {'path': path to spatial layer, 'buffer':
                       buffer distance}}``
     """
-    info_table_path = os.path.abspath(info_table_path)
-
     try:
         table = MODEL_SPEC.get_input(
             'info_table_path').get_validated_dataframe(info_table_path)
@@ -2036,12 +2034,14 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                     # It's OK if it stays an int.
                     float(attribute_value)
                 except ValueError:
+                    gdal_path = utils._GDALPath.from_uri(attribute_value)
                     # If we can't cast it to a float, assume it's a string path
                     # to a raster or vector. Don't expand remote paths.
-                    if '://' not in attribute_value:
+                    if gdal_path.is_local:
                         attribute_value = utils.expand_path(
                             attribute_value, criteria_table_path)
-
+                    else:
+                        attribute_value = gdal_path.to_string()
                     try:
                         _ = pygeoprocessing.get_gis_type(attribute_value)
                     except ValueError:
