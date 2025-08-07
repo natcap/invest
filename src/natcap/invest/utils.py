@@ -948,17 +948,6 @@ class _GDALPath:
                 result = self.path
             return result
 
-
-    @property
-    def name(self):
-        """The parsed path's original URI"""
-        if not self.scheme:
-            return self.path
-        elif self.archive:
-            return f"{self.scheme}://{self.archive}!{self.path}"
-        else:
-            return f"{self.scheme}://{self.path}"
-
     @property
     def is_remote(self):
         """Test if the path is a remote, network URI"""
