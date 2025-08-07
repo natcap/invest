@@ -327,10 +327,12 @@ class FileInput(Input):
                 return p
             p = str(p).strip()
             # don't expand remote paths
-            print(p, utils._GDALPath.from_uri(p).is_local)
-            if not utils._GDALPath.from_uri(p).is_local:
-                return p
-            return utils.expand_path(p, base_path)
+            if utils._GDALPath.from_uri(p).is_local:
+                if not utils._GDALPath.from_uri(base_path).is_local:
+                    raise ValueError('Remote CSVs cannot reference local file paths')
+                return utils.expand_path(p, base_path)
+            return p
+
         return col.apply(format_path).astype(pandas.StringDtype())
 
 
@@ -455,9 +457,7 @@ class SingleBandRasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        print(filepath)
         gdal_path = utils._GDALPath.from_uri(filepath)
-        print(gdal_path.to_string())
         if gdal_path.is_local:
             file_warning = super().validate(filepath)
             if file_warning:
@@ -774,7 +774,6 @@ class CSVInput(FileInput):
                 return file_warning
 
         if self.columns or self.rows:
-            self.get_validated_dataframe(filepath)
             try:
                 self.get_validated_dataframe(filepath)
             except Exception as e:
@@ -814,8 +813,6 @@ class CSVInput(FileInput):
             read_csv_kwargs['header'] = None
 
         df = utils.read_csv_to_dataframe(csv_path, **read_csv_kwargs)
-
-        print(df)
 
         if self.rows:
             # swap rows and column
