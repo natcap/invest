@@ -1,9 +1,0 @@
-NAME,PATH,TYPE,STRESSOR BUFFER (meters)
-eelgrass,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/HabitatRiskAssess.zip/HabitatRiskAssess/Input/habitat_layers/eelgrass.tif,habitat,
-hardbottom,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/HabitatRiskAssess.zip/HabitatRiskAssess/Input/habitat_layers/hardbottom.shp,habitat,
-kelp,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/HabitatRiskAssess.zip/HabitatRiskAssess/Input/habitat_layers/kelp.shp,habitat,
-softbottom,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/HabitatRiskAssess.zip/HabitatRiskAssess/Input/habitat_layers/softbottom.shp,habitat,
-Docks_Wharves_Marinas,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/HabitatRiskAssess.zip/HabitatRiskAssess/Input/stressor_layers/DocksWharvesMarinas.shp,stressor,1000
-Finfish_Aquaculture_Comm,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/HabitatRiskAssess.zip/HabitatRiskAssess/Input/stressor_layers/FinfishAquacultureComm.shp,stressor,1000
-Rec_Fishing,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/HabitatRiskAssess.zip/HabitatRiskAssess/Input/stressor_layers/RecFishing.shp,stressor,1000
-Shellfish_Aquaculture_Comm,zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/HabitatRiskAssess.zip/HabitatRiskAssess/Input/stressor_layers/ShellfishAquacultureComm.shp,stressor,1000

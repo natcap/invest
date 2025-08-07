@@ -1,6 +1,6 @@
 {
     "args": {
-        "landcover_snapshot_csv": "https://bitbucket.org/natcap/invest-sample-data/raw/master/CoastalBlueCarbon/inputs/snapshots.csv",
+        "landcover_snapshot_csv": "https://bitbucket.org/natcap/invest-sample-data/raw/vsi-data/CoastalBlueCarbon/inputs/snapshots_remote.csv",
         "lulc_lookup_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/CoastalBlueCarbon/inputs/lulc_lookup.csv",
         "results_suffix": ""
     },

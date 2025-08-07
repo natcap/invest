@@ -5,7 +5,7 @@
         "discount_rate": "6",
         "do_economic_analysis": true,
         "inflation_rate": "3",
-        "landcover_snapshot_csv": "https://bitbucket.org/natcap/invest-sample-data/raw/master/CoastalBlueCarbon/inputs/snapshots.csv",
+        "landcover_snapshot_csv": "https://bitbucket.org/natcap/invest-sample-data/raw/vsi-data/CoastalBlueCarbon/inputs/snapshots_remote.csv",
         "landcover_transitions_table": "https://bitbucket.org/natcap/invest-sample-data/raw/master/CoastalBlueCarbon/outputs_preprocessor/transitions_sample.csv",
         "price": "10",
         "price_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/CoastalBlueCarbon/inputs/Price_table_SCC_5.csv",
