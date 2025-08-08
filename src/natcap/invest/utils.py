@@ -940,7 +940,7 @@ class _GDALPath:
             return self.path
 
         if self.scheme.split('+')[-1] in self.curlschemes:
-            suffix = f'{self.scheme.split('+')[-1]}://'
+            suffix = f'{self.scheme.split("+")[-1]}://'
         else:
             suffix = ''
 
@@ -950,7 +950,7 @@ class _GDALPath:
 
         if vsi_prefix:
             if self.archive:
-                result = f'/{vsi_prefix}/{suffix}{self.archive}/{self.path.lstrip('/')}'
+                result = f'/{vsi_prefix}/{suffix}{self.archive}/{self.path.lstrip("/")}'
             else:
                 result = f'/{vsi_prefix}/{suffix}{self.path}'
         else:
