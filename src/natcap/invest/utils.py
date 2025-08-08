@@ -902,15 +902,16 @@ class _GDALPath:
             _GDALPath object
         """
         parts = urlparse(uri)
-        if sys.platform == "win32" and re.match(r"^[a-zA-Z]\:", parts.netloc):
-            parsed_path = f"{parts.netloc}{parts.path}"
+        if sys.platform == "win32" and re.match(r"^[a-zA-Z]\:", uri):
+            parsed_path = uri
             parsed_netloc = None
+            scheme = None
         else:
             parsed_path = parts.path
             parsed_netloc = parts.netloc
+            scheme = parts.scheme or None
 
         path = parsed_path
-        scheme = parts.scheme or None
 
         if parts.query:
             path += "?" + parts.query
