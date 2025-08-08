@@ -6,7 +6,7 @@ on:
     # cron doesn't support "first tuesday of the month", so we will use github
     # actions syntax below to skip tuesdays that aren't in the first week.
     # it is recommended not to start on the hour to avoid peak traffic
-    - cron: "20 18 * * 5"
+    - cron: "20 19 * * 5"
   workflow_dispatch:
     inputs:
       version:
@@ -25,13 +25,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # skip scheduled runs that aren't the first tuesday of the month
-      - name: Check day of month
-        run: |
-          if [[ $GITHUB_EVENT_NAME == "workflow_dispatch" || $(date +%d) -le 9 ]]; then
-            echo "RUN=true" >> $GITHUB_ENV
-          else
-            echo "RUN=false" >> $GITHUB_ENV
-          fi
+      # - name: Check day of month
+      #   run: |
+      #     if [[ $GITHUB_EVENT_NAME == "workflow_dispatch" || $(date +%d) -le 9 ]]; then
+      #       echo "RUN=true" >> $GITHUB_ENV
+      #     else
+      #       echo "RUN=false" >> $GITHUB_ENV
+      #     fi
 
       - uses: actions/checkout@v4
         if: env.RUN == 'true'
