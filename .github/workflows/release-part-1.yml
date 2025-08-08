@@ -24,14 +24,15 @@ jobs:
     if: github.repository_owner == 'natcap'
     runs-on: ubuntu-latest
     steps:
-      # skip scheduled runs that aren't the first tuesday of the month
-      # - name: Check day of month
-      #   run: |
-      #     if [[ $GITHUB_EVENT_NAME == "workflow_dispatch" || $(date +%d) -le 9 ]]; then
-      #       echo "RUN=true" >> $GITHUB_ENV
-      #     else
-      #       echo "RUN=false" >> $GITHUB_ENV
-      #     fi
+       skip scheduled runs that aren't the first tuesday of the month
+       - name: Check day of month
+         run: |
+           #if [[ $GITHUB_EVENT_NAME == "workflow_dispatch" || $(date +%d) -le 9 ]]; then
+           #  echo "RUN=true" >> $GITHUB_ENV
+           #else
+           #  echo "RUN=false" >> $GITHUB_ENV
+           #fi
+           echo "RUN=true" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
         if: env.RUN == 'true'
