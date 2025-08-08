@@ -1,0 +1,15 @@
+{
+    "args": {
+        "aoi_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/forest_carbon_edge_effect.zip/forest_carbon_edge_effect/forest_carbon_edge_demo_aoi.shp",
+        "biomass_to_carbon_conversion_factor": "0.47",
+        "biophysical_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/forest_carbon_edge_effect/forest_edge_carbon_lu_table.csv",
+        "compute_forest_edge_effects": true,
+        "lulc_raster_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/forest_carbon_edge_effect.zip/forest_carbon_edge_effect/forest_carbon_edge_lulc_demo.tif",
+        "n_nearest_model_points": "10",
+        "pools_to_calculate": "all",
+        "results_suffix": "",
+        "tropical_forest_edge_carbon_model_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/forest_carbon_edge_effect.zip/forest_carbon_edge_effect/core_data/forest_carbon_edge_regression_model_parameters.shp"
+    },
+    "invest_version": "3.5.0.post845+h60e09fe2815d",
+    "model_name": "natcap.invest.forest_carbon_edge_effect"
+}

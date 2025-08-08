@@ -1,0 +1,16 @@
+{
+    "args": {
+        "aoi_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/HabitatRiskAssess.zip/HabitatRiskAssess/Input/subregions.shp",
+        "criteria_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/vsi-data/HabitatRiskAssess/Input/exposure_consequence_criteria_remote.csv",
+        "decay_eq": "linear",
+        "info_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/vsi-data/HabitatRiskAssess/Input/habitat_stressor_info_remote.csv",
+        "max_rating": "3",
+        "resolution": "500",
+        "results_suffix": "",
+        "risk_eq": "euclidean",
+        "n_overlapping_stressors": 2,
+        "visualize_outputs": true
+    },
+    "invest_version": "3.6.0.post23+ha8467a843c74.d20190206",
+    "model_name": "natcap.invest.hra"
+}

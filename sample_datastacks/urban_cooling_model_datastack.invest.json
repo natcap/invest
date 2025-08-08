@@ -1,0 +1,24 @@
+{
+    "args": {
+        "aoi_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanCoolingModel.zip/UrbanCoolingModel/aoi.shp",
+        "avg_rel_humidity": "30", 
+        "biophysical_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/UrbanCoolingModel/Biophysical_UHI_fake.csv",
+        "building_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanCoolingModel.zip/UrbanCoolingModel/sample_buildings.shp",
+        "cc_method": "factors",
+        "cc_weight_albedo": "0.2", 
+        "cc_weight_eti": "0.2", 
+        "cc_weight_shade": "0.6", 
+        "do_energy_valuation": true, 
+        "do_productivity_valuation": true, 
+        "energy_consumption_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/UrbanCoolingModel/Fake_energy_savings.csv",
+        "green_area_cooling_distance": "1000", 
+        "lulc_raster_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanCoolingModel.zip/UrbanCoolingModel/lulc.tif",
+        "ref_eto_raster_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanCoolingModel.zip/UrbanCoolingModel/et0.tif",
+        "results_suffix": "", 
+        "t_air_average_radius": "2000", 
+        "t_ref": "21.5", 
+        "uhi_max": "3.5"
+    }, 
+    "invest_version": "3.7.0.post212+hdb012433cde0", 
+    "model_name": "natcap.invest.urban_cooling_model"
+}

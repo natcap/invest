@@ -1,0 +1,14 @@
+{
+    "args": {
+        "aoi_watersheds_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanFloodMitigation.zip/UrbanFloodMitigation/watersheds.gpkg",
+        "built_infrastructure_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanFloodMitigation.zip/UrbanFloodMitigation/infrastructure.gpkg",
+        "curve_number_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/UrbanFloodMitigation/Biophysical_water_SF.csv",
+        "infrastructure_damage_loss_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/UrbanFloodMitigation/Damage.csv",
+        "lulc_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanFloodMitigation.zip/UrbanFloodMitigation/lulc.tif",
+        "rainfall_depth": "40", 
+        "results_suffix": "", 
+        "soils_hydrological_group_raster_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanFloodMitigation.zip/UrbanFloodMitigation/soilgroup.tif"
+    }, 
+    "invest_version": "3.7.0.post39+hf7bd5d6eb824.d20190611", 
+    "model_name": "natcap.invest.urban_flood_risk_mitigation"
+}
