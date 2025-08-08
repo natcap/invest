@@ -6,7 +6,7 @@ on:
     # cron doesn't support "first tuesday of the month", so we will use github
     # actions syntax below to skip tuesdays that aren't in the first week.
     # it is recommended not to start on the hour to avoid peak traffic
-    - cron: "20 19 * * 5"
+    - cron: "20 20 * * 5"
   workflow_dispatch:
     inputs:
       version:
