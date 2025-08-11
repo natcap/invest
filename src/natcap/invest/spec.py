@@ -768,7 +768,7 @@ class CSVInput(FileInput):
             A string error message if an error was found.  ``None`` otherwise.
         """
         # don't check existence of remote paths
-        if not urlparse(filepath).scheme:
+        if utils._GDALPath.from_uri(filepath).is_local:
             file_warning = super().validate(filepath)
             if file_warning:
                 return file_warning
