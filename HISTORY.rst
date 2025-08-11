@@ -70,6 +70,10 @@ General
 * Updated readme to fix broken links, and also add links to repositories
   containing older source code and downloads, for future reference.
   (`#2029 <https://github.com/natcap/invest/issues/2029>`_)
+* Fixed a bug in ``build_datastack_archive`` where the raster filepath
+  included in a datastack JSON for an ArcGIS GRID would be unusable.
+  (`#2103 <https://github.com/natcap/invest/issues/2103>`_)
+
 
 Workbench
 =========
