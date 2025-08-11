@@ -500,6 +500,10 @@ class FileValidation(unittest.TestCase):
         """Validation: test when a file is not found."""
         from natcap.invest import validation
         filepath = os.path.join(self.workspace_dir, 'file.txt')
+        print('test file not found')
+        print(filepath)
+        print(os.path.exists(filepath))
+        print(os.listdir(self.workspace_dir))
 
         error_msg = FileInput(id='foo').validate(filepath)
         self.assertEqual(error_msg, validation.MESSAGES['FILE_NOT_FOUND'])
