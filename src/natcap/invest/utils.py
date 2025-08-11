@@ -829,6 +829,11 @@ def copy_spatial_files(spatial_filepath, target_dir):
         spatial_file = None
         return target_filepath
     for member_file in spatial_file.GetFileList():
+        # If the file is an ArcGIS Binary/Grid format but the given filepath
+        # was _not_ the parent directory -- it can be an '.adf' file --
+        # just skip the parent directory.
+        if os.path.isdir(member_file):
+            continue
         target_basename = os.path.basename(member_file)
         target_filepath = os.path.join(target_dir, target_basename)
         if source_basename == target_basename:
