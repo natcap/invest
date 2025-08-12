@@ -442,10 +442,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.FLOW_ACCUMULATION.model_copy(update=dict(
-            id="flow_accumulation",
             path="intermediate_outputs/flow_accumulation.tif")),
         spec.FLOW_DIRECTION.model_copy(update=dict(
-            id="flow_direction",
             path="intermediate_outputs/flow_direction.tif")),
         spec.SingleBandRasterOutput(
             id="ic_factor",
@@ -637,10 +635,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.FILLED_DEM.model_copy(update=dict(
-            id="filled_dem",
             path="intermediate_outputs/filled_dem.tif")),
         spec.SLOPE.model_copy(update=dict(
-            id="slope",
             path="intermediate_outputs/slope.tif")),
         spec.FileOutput(
             id="subsurface_export_n_pickle",
