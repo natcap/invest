@@ -274,37 +274,34 @@ class TestDescribeArgFromSpec(unittest.TestCase):
 def _generate_files_from_spec(output_spec, workspace):
     """A utility function to support the metadata test."""
     for spec_data in output_spec:
-        if spec_data.__class__ is spec.DirectoryOutput:
-            _generate_files_from_spec(spec_data.contents, workspace)
+        filepath = os.path.join(workspace, spec_data.path)
+        filedir = os.path.dirname(filepath)
+        try:
+            os.makedirs(filedir)
+        except OSError:
+            if not os.path.isdir(filedir):
+                raise
+        if isinstance(spec_data, spec.SingleBandRasterOutput):
+            driver = gdal.GetDriverByName('GTIFF')
+            raster = driver.Create(filepath, 2, 2, 1, gdal.GDT_Byte)
+            band = raster.GetRasterBand(1)
+            band.SetNoDataValue(2)
+        elif isinstance(spec_data, spec.VectorOutput):
+            driver = gdal.GetDriverByName('GPKG')
+            target_vector = driver.CreateDataSource(filepath)
+            layer_name = os.path.basename(os.path.splitext(filepath)[0])
+            target_layer = target_vector.CreateLayer(
+                layer_name, geom_type=ogr.wkbPolygon)
+            for field_spec in spec_data.fields:
+                target_layer.CreateField(ogr.FieldDefn(field_spec.id, ogr.OFTInteger))
+        elif isinstance(spec_data, spec.CSVOutput):
+            columns = [field_spec.id for field_spec in spec_data.columns]
+            with open(filepath, 'w') as file:
+                file.write(','.join(columns))
         else:
-            filepath = os.path.join(workspace, spec_data.path)
-            filedir = os.path.dirname(filepath)
-            try:
-                os.makedirs(filedir)
-            except OSError:
-                if not os.path.isdir(filedir):
-                    raise
-            if isinstance(spec_data, spec.SingleBandRasterOutput):
-                driver = gdal.GetDriverByName('GTIFF')
-                raster = driver.Create(filepath, 2, 2, 1, gdal.GDT_Byte)
-                band = raster.GetRasterBand(1)
-                band.SetNoDataValue(2)
-            elif isinstance(spec_data, spec.VectorOutput):
-                driver = gdal.GetDriverByName('GPKG')
-                target_vector = driver.CreateDataSource(filepath)
-                layer_name = os.path.basename(os.path.splitext(filepath)[0])
-                target_layer = target_vector.CreateLayer(
-                    layer_name, geom_type=ogr.wkbPolygon)
-                for field_spec in spec_data.fields:
-                    target_layer.CreateField(ogr.FieldDefn(field_spec.id, ogr.OFTInteger))
-            elif isinstance(spec_data, spec.CSVOutput):
-                columns = [field_spec.id for field_spec in spec_data.columns]
-                with open(filepath, 'w') as file:
-                    file.write(','.join(columns))
-            else:
-                # Such as taskgraph.db, just create the file.
-                with open(filepath, 'w') as file:
-                    pass
+            # Such as taskgraph.db, just create the file.
+            with open(filepath, 'w') as file:
+                pass
 
 
 class TestMetadataFromSpec(unittest.TestCase):
@@ -356,20 +353,15 @@ class TestMetadataFromSpec(unittest.TestCase):
                     )
                 ]
             ),
-            spec.DirectoryOutput(
-                id='intermediate',
-                contents = [
-                    spec.SingleBandRasterOutput(
-                        id="mask",
-                        path="intermediate/mask.tif",
-                        about="A mask for the final raster output.",
-                        data_type=float,
-                        units=u.m**2
-                    ),
-                    spec.TASKGRAPH_DIR.model_copy(update=dict(
-                        path="intermediate/taskgraph_cache/taskgraph.db")
-                    )
-                ]
+            spec.SingleBandRasterOutput(
+                id="mask",
+                path="intermediate/mask.tif",
+                about="A mask for the final raster output.",
+                data_type=float,
+                units=u.m**2
+            ),
+            spec.TASKGRAPH_CACHE.model_copy(update=dict(
+                path="intermediate/taskgraph_cache/taskgraph.db")
             )
         ]
         # Generate an output workspace with real files, without

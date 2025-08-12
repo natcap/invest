@@ -1413,29 +1413,6 @@ class CSVOutput(FileOutput):
         return self
 
 
-class DirectoryOutput(Output):
-    """A directory output, or result, of an invest model.
-
-    Use this type when you need to specify a group of many file-based outputs,
-    or an unknown number of file-based outputs, by grouping them together in a
-    directory.
-    """
-    contents: list[Output]
-    """An iterable of `Output`s representing the contents of this directory.
-    The `key` of each output must be the file name or pattern."""
-
-    @model_validator(mode='after')
-    def check_contents_types(self):
-        allowed_types = {
-            CSVOutput, DirectoryOutput, FileOutput,
-            SingleBandRasterOutput, VectorOutput}
-        for content in (self.contents or []):
-            if type(content) not in allowed_types:
-                raise ValueError(
-                    f'Directory contents {content} is not an allowed type')
-        return self
-
-
 class NumberOutput(Output):
     """A floating-point number output, or result, of an invest model.
 
@@ -2145,20 +2122,16 @@ def generate_metadata_for_outputs(model_module, args_dict):
 
     def _walk_spec(output_spec, workspace):
         for spec_data in output_spec:
-            if type(spec_data) is DirectoryOutput:
-                _walk_spec(
-                    spec_data.contents, workspace)
-            else:
-                if 'taskgraph.db' in spec_data.path:
-                    continue
-                pre, post = os.path.splitext(spec_data.path)
-                full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
-                if os.path.exists(full_path):
-                    try:
-                        write_metadata_file(
-                            full_path, spec_data, keywords, lineage_statement)
-                    except ValueError as error:
-                        # Some unsupported file formats, e.g. html
-                        LOGGER.debug(error)
+            if 'taskgraph.db' in spec_data.path:
+                continue
+            pre, post = os.path.splitext(spec_data.path)
+            full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
+            if os.path.exists(full_path):
+                try:
+                    write_metadata_file(
+                        full_path, spec_data, keywords, lineage_statement)
+                except ValueError as error:
+                    # Some unsupported file formats, e.g. html
+                    LOGGER.debug(error)
 
     _walk_spec(model_module.MODEL_SPEC.outputs, args_dict['workspace_dir'])
