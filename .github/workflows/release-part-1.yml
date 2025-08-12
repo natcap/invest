@@ -105,7 +105,7 @@ jobs:
         if: env.RUN == 'true'
         uses: BellCubeDev/update-package-version-by-release-tag@v2
         with:
-          version: $VERSION
+          version: ${{ env.VERSION }}
           ignore-semver-check: "true"  # allow PEP 440 alpha/beta/rc releases
           package-json-path: workbench/package.json
 
