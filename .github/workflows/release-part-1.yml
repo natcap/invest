@@ -44,18 +44,22 @@ jobs:
         if: env.RUN == 'true'
         run: pip install rst2html5 setuptools_scm
 
+      # Assuming there has been at least one commit since the last tag,
+      # the bugfix number in the setuptools_scm version will be one
+      # greater than that of the last tag.
+      # https://setuptools-scm.readthedocs.io/en/latest/usage/#default-versioning-scheme
       - name: Get current version number (scheduled runs only)
         if: env.RUN == 'true' && github.event_name == 'schedule'
-        run: echo "CURRENT_VERSION=$(python -m setuptools_scm)" > $GITHUB_ENV
+        run: echo "SETUPTOOLS_SCM_VERSION=$(python -m setuptools_scm)" > $GITHUB_ENV
 
       - name: Get next bugfix version number (scheduled runs only)
         if: env.RUN == 'true' && github.event_name == 'schedule'
         shell: python
         run: |
           import os
-          major, minor, bugfix, *_ = os.environ['CURRENT_VERSION'].split('.')
+          major, minor, bugfix, *_ = os.environ['SETUPTOOLS_SCM_VERSION'].split('.')
           with open(os.environ['GITHUB_ENV'], "a") as env_file:
-            env_file.write(f'VERSION={major}.{minor}.{int(bugfix) + 1}')
+            env_file.write(f'VERSION={major}.{minor}.{bugfix}')
 
       - name: Configure git and define branch name
         if: env.RUN == 'true'
