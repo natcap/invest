@@ -152,21 +152,21 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.SingleBandRasterOutput(
-            id="Runoff_retention_index",
+            id="runoff_retention_index",
             path="Runoff_retention_index.tif",
             about=gettext("Map of runoff retention index."),
             data_type=float,
             units=u.none
         ),
         spec.SingleBandRasterOutput(
-            id="Runoff_retention_m3",
+            id="runoff_retention_m3",
             path="Runoff_retention_m3.tif",
             about=gettext("Map of runoff retention volume."),
             data_type=float,
             units=u.meter**3
         ),
         spec.SingleBandRasterOutput(
-            id="Q_mm",
+            id="q_mm",
             path="Q_mm.tif",
             about=gettext("Map of runoff."),
             data_type=float,
@@ -206,7 +206,7 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.SingleBandRasterOutput(
-            id="Q_m3",
+            id="q_m3",
             path="intermediate_files/Q_m3.tif",
             about=gettext("Map of runoff volume."),
             data_type=float,
@@ -260,7 +260,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=u.millimeter
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

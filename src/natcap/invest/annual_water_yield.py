@@ -537,7 +537,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=int,
             units=None
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

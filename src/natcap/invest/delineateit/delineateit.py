@@ -174,7 +174,7 @@ MODEL_SPEC = spec.ModelSpec(
             geometry_types={"POINT"},
             fields=[]
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 
 )

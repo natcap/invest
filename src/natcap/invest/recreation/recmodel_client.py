@@ -251,7 +251,7 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.VectorOutput(
-            id="PUD_results",
+            id="pud_results",
             path="PUD_results.gpkg",
             about=gettext("Results of photo-user-days aggregations in the AOI."),
             geometry_types={"MULTIPOLYGON", "POLYGON"},
@@ -269,7 +269,7 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.VectorOutput(
-            id="TUD_results",
+            id="tud_results",
             path="TUD_results.gpkg",
             about=gettext("Results of twitter-user-days aggregations in the AOI."),
             geometry_types={"MULTIPOLYGON", "POLYGON"},
@@ -287,7 +287,7 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.CSVOutput(
-            id="PUD_monthly_table",
+            id="pud_monthly_table",
             path="PUD_monthly_table.csv",
             about=gettext("Table of monthly photo-user-days in each AOI polygon."),
             columns=[
@@ -303,7 +303,7 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="poly_id"
         ),
         spec.CSVOutput(
-            id="TUD_monthly_table",
+            id="tud_monthly_table",
             path="TUD_monthly_table.csv",
             about=gettext("Table of monthly twitter-user-days in each AOI polygon."),
             columns=[
@@ -397,7 +397,7 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.VectorOutput(
-            id="aoi.gpkg",
+            id="aoi",
             path="intermediate/aoi.gpkg",
             about=gettext("Copy of the input AOI, gridded if applicable."),
             geometry_types={"MULTIPOLYGON", "POLYGON"},
@@ -442,7 +442,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/server_version.pickle",
             about=gettext("Server version info")
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

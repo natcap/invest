@@ -1727,7 +1727,7 @@ FLOW_DIR_ALGORITHM = OptionStringInput(
 )
 
 # Specs for common outputs ####################################################
-TASKGRAPH_DIR = FileOutput(
+TASKGRAPH_CACHE = FileOutput(
     id="taskgraph_cache",
     path="taskgraph_cache/taskgraph.db",
     about=gettext(

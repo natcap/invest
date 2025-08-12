@@ -123,7 +123,7 @@ MODEL_SPEC = spec.ModelSpec(
         )
     ],
     outputs=[
-        spec.TASKGRAPH_DIR,
+        spec.TASKGRAPH_CACHE,
         spec.FILLED_DEM.model_copy(update=dict(
             id="filled",
             path="filled.tif")),

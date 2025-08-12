@@ -424,7 +424,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=None
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

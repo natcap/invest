@@ -227,7 +227,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=u.pixel
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

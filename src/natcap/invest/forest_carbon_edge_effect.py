@@ -325,7 +325,7 @@ MODEL_SPEC = spec.ModelSpec(
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[]
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

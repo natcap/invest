@@ -324,7 +324,7 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.SingleBandRasterOutput(
-            id="B",
+            id="b",
             path="B.tif",
             about=gettext(
                 "Map of baseflow values, the contribution of a pixel to slow release flow"
@@ -334,7 +334,7 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="B_sum",
+            id="b_sum",
             path="B_sum.tif",
             about=gettext(
                 "Map of B_sum values, the flow through a pixel, contributed by all"
@@ -345,28 +345,28 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="CN",
+            id="cn",
             path="CN.tif",
             about=gettext("Map of curve number values."),
             data_type=float,
             units=u.none
         ),
         spec.SingleBandRasterOutput(
-            id="L_avail",
+            id="l_avail",
             path="L_avail.tif",
             about=gettext("Map of available local recharge"),
             data_type=float,
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="L",
+            id="l",
             path="L.tif",
             about=gettext("Map of local recharge values"),
             data_type=float,
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="L_sum_avail",
+            id="l_sum_avail",
             path="L_sum_avail.tif",
             about=gettext(
                 "Map of total available water, contributed by all upslope pixels, that is"
@@ -376,7 +376,7 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="L_sum",
+            id="l_sum",
             path="L_sum.tif",
             about=gettext(
                 "Map of cumulative upstream recharge: the flow through a pixel,"
@@ -387,7 +387,7 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="QF",
+            id="qf",
             path="QF.tif",
             about=gettext("Map of quickflow"),
             data_type=float,
@@ -395,14 +395,14 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.STREAM,
         spec.SingleBandRasterOutput(
-            id="P",
+            id="p",
             path="P.tif",
             about=gettext("The total precipitation across all months on this pixel."),
             data_type=float,
             units=u.millimeter / u.year
         ),
         spec.SingleBandRasterOutput(
-            id="Vri",
+            id="vri",
             path="Vri.tif",
             about=gettext(
                 "Map of the values of recharge (contribution, positive or negative), to"
@@ -466,7 +466,7 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="Si",
+            id="si",
             path="intermediate_outputs/Si.tif",
             about=gettext("Map of the S_i factor derived from CN"),
             data_type=float,
@@ -566,7 +566,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=int,
             units=None
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

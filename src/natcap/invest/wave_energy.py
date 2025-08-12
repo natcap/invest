@@ -458,7 +458,7 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="Percentile Group"
         ),
         spec.VectorOutput(
-            id="GridPt_prj",
+            id="gridpt_prj",
             path="output/GridPt_prj.shp",
             about=gettext("Vector map of the provided grid points"),
             created_if="valuation_container",
@@ -493,7 +493,7 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.VectorOutput(
-            id="LandPts_prj",
+            id="landpts_prj",
             path="output/LandPts_prj.shp",
             about=gettext("Vector map of the provided land points"),
             created_if="valuation_container",
@@ -615,14 +615,14 @@ MODEL_SPEC = spec.ModelSpec(
             fields=[]
         ),
         spec.VectorOutput(
-            id="Captured_WEM_InputOutput_Pts",
+            id="captured_wem_inputoutput_pts",
             path="intermediate/Captured_WEM_InputOutput_Pts.shp",
             about=gettext("Map of wave data points."),
             geometry_types={"POINT"},
             fields=CAPTURED_WEM_FIELDS
         ),
         spec.VectorOutput(
-            id="Final_WEM_InputOutput_Pts",
+            id="final_wem_inputoutput_pts",
             path="intermediate/Final_WEM_InputOutput_Pts.shp",
             about=gettext("Map of wave data points."),
             geometry_types={"POINT"},
@@ -672,7 +672,7 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.VectorOutput(
-            id="Indexed_WEM_InputOutput_Pts",
+            id="indexed_wem_inputoutput_pts",
             path="intermediate/Indexed_WEM_InputOutput_Pts.shp",
             about=gettext("Map of wave data points."),
             geometry_types={"POINT"},
@@ -714,14 +714,14 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.VectorOutput(
-            id="WEM_InputOutput_Pts",
+            id="wem_inputoutput_pts",
             path="intermediate/WEM_InputOutput_Pts.shp",
             about=gettext("Map of wave data points."),
             geometry_types={"POINT"},
             fields=WEM_FIELDS
         ),
         spec.FileOutput(
-            id="GridPt",
+            id="gridpt",
             path="intermediate/GridPt.txt",
             about=gettext(
                 "This text file logs records of the grid point coordinates."
@@ -729,14 +729,14 @@ MODEL_SPEC = spec.ModelSpec(
             created_if="valuation_container"
         ),
         spec.FileOutput(
-            id="LandPts",
+            id="landpts",
             path="intermediate/LandPts.txt",
             about=gettext(
                 "This text file logs records of the landing point coordinates."
             ),
             created_if="valuation_container"
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

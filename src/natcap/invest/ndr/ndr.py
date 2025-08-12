@@ -681,7 +681,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/total_export_n.pickle",
             about=gettext("Pickled zonal statistics of total nitrogen export")
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

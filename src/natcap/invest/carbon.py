@@ -318,7 +318,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=u.metric_ton / u.hectare
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

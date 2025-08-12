@@ -622,7 +622,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=u.people
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

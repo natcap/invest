@@ -762,7 +762,7 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ]
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

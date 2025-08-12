@@ -223,7 +223,7 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.SingleBandRasterOutput(
-            id="TOTAL_RISK_[HABITAT]",
+            id="total_risk_[HABITAT]",
             path="outputs/TOTAL_RISK_[HABITAT].tif",
             about=gettext(
                 "Habitat-specific cumulative risk from all the stressors"
@@ -232,7 +232,7 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.SingleBandRasterOutput(
-            id="TOTAL_RISK_Ecosystem",
+            id="total_risk_ecosystem",
             path="outputs/TOTAL_RISK_Ecosystem.tif",
             about=gettext(
                 "Sum of habitat cumulative risk scores divided by the number of"
@@ -242,7 +242,7 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.SingleBandRasterOutput(
-            id="RECLASS_RISK_[HABITAT]",
+            id="reclass_risk_[HABITAT]",
             path="outputs/RECLASS_RISK_[HABITAT].tif",
             about=gettext(
                 "Reclassified habitat-specific risk from all the stressors in a"
@@ -253,14 +253,14 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="RECLASS_RISK_Ecosystem",
+            id="reclass_risk_ecosystem",
             path="outputs/RECLASS_RISK_Ecosystem.tif",
             about=gettext("Reclassified ecosystem risk in each cell."),
             data_type=int,
             units=None
         ),
         spec.CSVOutput(
-            id="SUMMARY_STATISTICS",
+            id="summary_statistics",
             path="outputs/SUMMARY_STATISTICS.csv",
             about=gettext(
                 "Table of summary statistics for each combination of habitat,"
@@ -327,7 +327,7 @@ MODEL_SPEC = spec.ModelSpec(
             index_col=None
         ),
         spec.VectorOutput(
-            id="RECLASS_RISK_[HABITAT]_viz",
+            id="reclass_risk_[HABITAT]_viz",
             path="visualization_outputs/RECLASS_RISK_[HABITAT].geojson",
             about=gettext(
                 "Map of habitat-specific risk visualized in gradient color from"
@@ -346,7 +346,7 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.VectorOutput(
-            id="RECLASS_RISK_Ecosystem_viz",
+            id="reclass_risk_ecosystem_viz",
             path="visualization_outputs/RECLASS_RISK_Ecosystem.geojson",
             about=gettext(
                 "Map of ecosystem risk visualized in gradient color from white to"
@@ -365,7 +365,7 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.VectorOutput(
-            id="STRESSOR_[STRESSOR]",
+            id="stressor_[STRESSOR]",
             path="visualization_outputs/STRESSOR_[STRESSOR].geojson",
             about=gettext("Map of stressor extent visualized in orange color."),
             created_if="visualize_outputs",
@@ -373,7 +373,7 @@ MODEL_SPEC = spec.ModelSpec(
             fields=[]
         ),
         spec.CSVOutput(
-            id="SUMMARY_STATISTICS_viz",
+            id="summary_statistics_viz",
             path="visualization_outputs/SUMMARY_STATISTICS.csv",
             about=gettext(
                 "This is the same file from one in the Output Folder. It is"
@@ -407,7 +407,7 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Subregion data")
         ),
         spec.SingleBandRasterOutput(
-            id="C_[HABITAT]_[STRESSOR]",
+            id="c_[HABITAT]_[STRESSOR]",
             path="intermediate_outputs/C_[HABITAT]_[STRESSOR].tif",
             about=gettext(
                 "Consequence score for a particular habitat/stressor combination."
@@ -448,7 +448,7 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="E_[HABITAT]_[STRESSOR]",
+            id="e_[HABITAT]_[STRESSOR]",
             path="intermediate_outputs/E_[HABITAT]_[STRESSOR].tif",
             about=gettext(
                 "Exposure score for a particular habitat/stressor combination."
@@ -495,7 +495,7 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="RECOVERY_[HABITAT]",
+            id="recovery_[HABITAT]",
             path="intermediate_outputs/RECOVERY_[HABITAT].tif",
             about=gettext(
                 "The resilience or recovery potential for the given habitat"
@@ -527,7 +527,7 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.SingleBandRasterOutput(
-            id="RISK_[HABITAT]_[STRESSOR]",
+            id="risk_[HABITAT]_[STRESSOR]",
             path="intermediate_outputs/RISK_[HABITAT]_[STRESSOR].tif",
             about=gettext("Risk score for the given habitat-stressor pair."),
             data_type=float,
@@ -544,7 +544,7 @@ MODEL_SPEC = spec.ModelSpec(
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[]
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

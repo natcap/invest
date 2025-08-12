@@ -388,14 +388,14 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="T_air",
+            id="t_air",
             path="intermediate/T_air.tif",
             about=gettext("Map of air temperature with air mixing."),
             data_type=float,
             units=u.degree_Celsius
         ),
         spec.SingleBandRasterOutput(
-            id="T_air_nomix",
+            id="t_air_nomix",
             path="intermediate/T_air_nomix.tif",
             about=gettext("Map of air temperature without air mixing."),
             data_type=float,
@@ -500,7 +500,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/t_air_aoi_stats.pickle",
             about=gettext("Air temperature zonal statistics for aoi.")
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 
