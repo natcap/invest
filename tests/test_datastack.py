@@ -156,7 +156,6 @@ class DatastackArchiveTests(unittest.TestCase):
 
     def test_collect_rasters(self):
         """Datastack: test collect GDAL rasters."""
-        import natcap.invest.models
         from natcap.invest import datastack
         for raster_filename in (
                 'dem',  # This is a multipart raster

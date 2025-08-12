@@ -70,6 +70,10 @@ General
 * Updated readme to fix broken links, and also add links to repositories
   containing older source code and downloads, for future reference.
   (`#2029 <https://github.com/natcap/invest/issues/2029>`_)
+* Fixed a bug in ``build_datastack_archive`` where the raster filepath
+  included in a datastack JSON for an ArcGIS GRID would be unusable.
+  (`#2103 <https://github.com/natcap/invest/issues/2103>`_)
+
 
 Workbench
 =========
@@ -78,6 +82,10 @@ Workbench
 * Fixed a bug where parameter sets containing an argument with a value of 0
   weren't populating the model's UI for that argument.
   (`#2075 <https://github.com/natcap/invest/issues/2075>`_)
+* Fixed a bug where there was no visual indication for an invalid switch
+  toggle state, which would prohibit running the model. NDR and
+  Scenario Generator were the only affected models.
+  (`#2074 <https://github.com/natcap/invest/issues/2074>`_)
 
 Urban Cooling
 =============

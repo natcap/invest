@@ -6,7 +6,7 @@ on:
     # cron doesn't support "first tuesday of the month", so we will use github
     # actions syntax below to skip tuesdays that aren't in the first week.
     # it is recommended not to start on the hour to avoid peak traffic
-    - cron: "20 18 * * 2"
+    - cron: "20 20 * * 2"
   workflow_dispatch:
     inputs:
       version:
@@ -15,7 +15,6 @@ on:
 
 env:
   VERSION: ${{ inputs.version }}
-  AUTORELEASE_BRANCH: autorelease/${{ inputs.version }}
   # use a personal access token here which has permissions to trigger further actions
   # this is necessary for the pr checks
   GITHUB_TOKEN: ${{ secrets.AUTORELEASE_BOT_PAT }}
@@ -28,11 +27,12 @@ jobs:
       # skip scheduled runs that aren't the first tuesday of the month
       - name: Check day of month
         run: |
-          if [[ $GITHUB_EVENT_NAME == "workflow_dispatch" || $(date +%d) -le 7 ]]; then
-            echo "RUN=true" >> $GITHUB_ENV
-          else
-            echo "RUN=false" >> $GITHUB_ENV
-          fi
+          #if [[ $GITHUB_EVENT_NAME == "workflow_dispatch" || $(date +%d) -le 9 ]]; then
+          #  echo "RUN=true" >> $GITHUB_ENV
+          #else
+          #  echo "RUN=false" >> $GITHUB_ENV
+          #fi
+          echo "RUN=true" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
         if: env.RUN == 'true'
@@ -44,24 +44,29 @@ jobs:
         if: env.RUN == 'true'
         run: pip install rst2html5 setuptools_scm
 
+      # Assuming there has been at least one commit since the last tag,
+      # the bugfix number in the setuptools_scm version will be one
+      # greater than that of the last tag.
+      # https://setuptools-scm.readthedocs.io/en/latest/usage/#default-versioning-scheme
       - name: Get current version number (scheduled runs only)
         if: env.RUN == 'true' && github.event_name == 'schedule'
-        run: echo "CURRENT_VERSION=$(python -m setuptools_scm)" > $GITHUB_ENV
+        run: echo "SETUPTOOLS_SCM_VERSION=$(python -m setuptools_scm)" > $GITHUB_ENV
 
       - name: Get next bugfix version number (scheduled runs only)
         if: env.RUN == 'true' && github.event_name == 'schedule'
         shell: python
         run: |
           import os
-          major, minor, bugfix, *_ = os.environ['CURRENT_VERSION'].split('.')
-          with open(os.environ['GITHUB_ENV']) as env_file:
-            env_file.write(f'VERSION={major}.{minor}.{int(bugfix) + 1}')
+          major, minor, bugfix, *_ = os.environ['SETUPTOOLS_SCM_VERSION'].split('.')
+          with open(os.environ['GITHUB_ENV'], "a") as env_file:
+            env_file.write(f'VERSION={major}.{minor}.{bugfix}')
 
-      - name: Configure git
+      - name: Configure git and define branch name
         if: env.RUN == 'true'
         run: |
           git config user.name "GitHub Actions"
           git config user.email "<>"
+          echo "AUTORELEASE_BRANCH=autorelease/$VERSION" > $GITHUB_ENV
 
       # Members of the natcap software team can push to the autorelease branch on
       # natcap/invest; this branch is a special case for our release process.
@@ -100,7 +105,7 @@ jobs:
         if: env.RUN == 'true'
         uses: BellCubeDev/update-package-version-by-release-tag@v2
         with:
-          version: ${{ inputs.version }}
+          version: $VERSION
           ignore-semver-check: "true"  # allow PEP 440 alpha/beta/rc releases
           package-json-path: workbench/package.json
 
