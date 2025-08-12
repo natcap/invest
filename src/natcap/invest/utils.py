@@ -819,13 +819,21 @@ def copy_spatial_files(spatial_filepath, target_dir):
     source_basename = os.path.basename(spatial_filepath)
     return_filepath = None
 
+    # For ArcGIS Binary/Grid format the filepath will likely be a directory.
+    # Even though we don't strictly need to, open the file to make
+    # sure it is a gdal dataset before copying an entire directory tree.
     spatial_file = gdal.OpenEx(spatial_filepath)
+    if os.path.isdir(spatial_filepath):
+        target_filepath = os.path.join(target_dir, source_basename)
+        shutil.copytree(spatial_filepath, target_filepath)
+        spatial_file = None
+        return target_filepath
     for member_file in spatial_file.GetFileList():
-        # ArcGIS Binary/Grid format includes the directory in the file listing.
-        # The parent directory isn't strictly needed, so we can just skip it.
+        # If the file is an ArcGIS Binary/Grid format but the given filepath
+        # was _not_ the parent directory -- it can be an '.adf' file --
+        # just skip the parent directory.
         if os.path.isdir(member_file):
             continue
-
         target_basename = os.path.basename(member_file)
         target_filepath = os.path.join(target_dir, target_basename)
         if source_basename == target_basename:
