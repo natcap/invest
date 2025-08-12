@@ -156,7 +156,6 @@ class DatastackArchiveTests(unittest.TestCase):
 
     def test_collect_rasters(self):
         """Datastack: test collect GDAL rasters."""
-        import natcap.invest.models
         from natcap.invest import datastack
         for raster_filename in (
                 'dem',  # This is a multipart raster
@@ -273,8 +272,7 @@ class DatastackArchiveTests(unittest.TestCase):
         datastack._tarfile_safe_extract(archive_path, out_directory)
 
         # validate metadata in directory to ensure 2 yamls exist
-        files, messages = geometamaker.validate_dir(out_directory,
-                                                    recursive=True)
+        files, messages = geometamaker.validate_dir(out_directory)
         self.assertEqual(len(files), 2)
         self.assertFalse(any(messages))
 

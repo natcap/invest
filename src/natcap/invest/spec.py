@@ -2067,21 +2067,10 @@ def write_metadata_file(datasource_path, spec, keywords_list,
         None
 
     """
-    def _get_key(key, resource):
-        """Map name of actual key in yml from model_spec key name."""
-        names = {field.name.lower(): field.name
-                 for field in resource.data_model.fields}
-        return names[key]
-
     try:
-        resource = geometamaker.describe(datasource_path)
-    except ValidationError:
-        LOGGER.debug(
-            f"Skipping metadata creation for {datasource_path}, as invalid "
-            "metadata exists.")
-        return None
-    # Don't want function to fail bc can't create metadata due to invalid filetype
+        resource = geometamaker.describe(datasource_path, compute_stats=True)
     except ValueError as e:
+        # Don't want function to fail bc can't create metadata due to invalid filetype
         LOGGER.debug(f"Skipping metadata creation for {datasource_path}: {e}")
         return None
     resource.set_lineage(lineage_statement)
@@ -2097,27 +2086,30 @@ def write_metadata_file(datasource_path, spec, keywords_list,
     if hasattr(spec, 'fields') and spec.fields:
         attr_specs = spec.fields
     if attr_specs:
+        # field names in attr_spec are always lowercase, but the
+        # actual fieldname in the data could be any case because
+        # invest does not require case-sensitive fieldnames
+        field_lookup = {
+            field.name.lower(): field for field in resource._get_fields()}
         for nested_spec in attr_specs:
             try:
-                # field names in attr_spec are always lowercase, but the
-                # actual fieldname in the data could be any case because
-                # invest does not require case-sensitive fieldnames
-                yaml_key = _get_key(nested_spec.id, resource)
+                field_metadata = field_lookup[nested_spec.id]
                 # Field description only gets set if its empty, i.e. ''
-                if len(resource.get_field_description(yaml_key)
-                       .description.strip()) < 1:
-                    about = nested_spec.about
-                    resource.set_field_description(yaml_key, description=about)
+                if len(field_metadata.description.strip()) < 1:
+                    resource.set_field_description(
+                        field_metadata.name, description=nested_spec.about)
                 # units only get set if empty
-                if len(resource.get_field_description(yaml_key)
-                       .units.strip()) < 1:
-                    units = format_unit(nested_spec.units) if hasattr(nested_spec, 'units') else ''
-                    resource.set_field_description(yaml_key, units=units)
+                if len(field_metadata.units.strip()) < 1:
+                    units = format_unit(nested_spec.units) if hasattr(
+                        nested_spec, 'units') else ''
+                    resource.set_field_description(
+                        field_metadata.name, units=units)
             except KeyError as error:
                 # fields that are in the spec but missing
                 # from model results because they are conditional.
                 LOGGER.debug(error)
-    if isinstance(spec, SingleBandRasterInput) or isinstance(spec, SingleBandRasterOutput):
+    if isinstance(spec, SingleBandRasterInput) or isinstance(
+            spec, SingleBandRasterOutput):
         if len(resource.get_band_description(1).units) < 1:
             units = format_unit(spec.units)
             resource.set_band_description(1, units=units)

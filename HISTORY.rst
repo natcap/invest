@@ -61,9 +61,40 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+
+General
+=======
+* Updated readme to fix broken links, and also add links to repositories
+  containing older source code and downloads, for future reference.
+  (`#2029 <https://github.com/natcap/invest/issues/2029>`_)
+* Fixed a bug in ``build_datastack_archive`` where the raster filepath
+  included in a datastack JSON for an ArcGIS GRID would be unusable.
+  (`#2103 <https://github.com/natcap/invest/issues/2103>`_)
+
+
+Workbench
+=========
+* Fixed a bug where the Workbench showed the incorrect status of a recently
+  completed model run. (`#2072 <https://github.com/natcap/invest/issues/2072>`_)
+* Fixed a bug where parameter sets containing an argument with a value of 0
+  weren't populating the model's UI for that argument.
+  (`#2075 <https://github.com/natcap/invest/issues/2075>`_)
+* Fixed a bug where there was no visual indication for an invalid switch
+  toggle state, which would prohibit running the model. NDR and
+  Scenario Generator were the only affected models.
+  (`#2074 <https://github.com/natcap/invest/issues/2074>`_)
+
+Urban Cooling
+=============
+* Model validation now requires that the "UHI effect" is >= 0 degrees Celsius,
+  meaning that the urban air temperature is greater than the rural reference
+  temperature. (`#2076 <https://github.com/natcap/invest/issues/2076>`_)
+* Fixed a bug where ``NoData`` in ``cc`` was not correctly set if the Cooling
+  Capacity Calculation Method was set to ``intensity``
+  (`#2079 <https://github.com/natcap/invest/issues/2079>`_).
 
 3.16.1 (2025-07-01)
 -------------------

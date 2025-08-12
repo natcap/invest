@@ -161,9 +161,12 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext(
                 "The magnitude of the urban heat island effect, i.e., the difference"
                 " between the rural reference temperature and the maximum temperature"
-                " observed in the city."
+                " observed in the city. This model is designed for cases where"
+                " UHI is positive, meaning the urban air temperature is greater"
+                " than the rural reference temperature."
             ),
-            units=u.degree_Celsius
+            units=u.degree_Celsius,
+            expression="value >= 0"
         ),
         spec.BooleanInput(
             id="do_energy_valuation",
@@ -706,7 +709,8 @@ def execute(args):
             kwargs=dict(
                 op=calc_cc_op_intensity,
                 rasters=[task_path_prop_map['building_intensity'][1]],
-                target_path=cc_raster_path),
+                target_path=cc_raster_path,
+                target_nodata=TARGET_NODATA),
             target_path_list=[cc_raster_path],
             dependent_task_list=[
                 task_path_prop_map['building_intensity'][0]],

@@ -605,7 +605,7 @@ input[type=text]::placeholder {
 /* Default sized toggle switch too small */
 .form-switch {
   transform:scale(1.5);
-  margin-left: 1rem;
+  transform-origin:0%;
   margin-top: 0.6rem;
 }
 

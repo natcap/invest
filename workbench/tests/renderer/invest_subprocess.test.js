@@ -133,6 +133,7 @@ describe('InVEST subprocess testing', () => {
       findByLabelText,
       findByRole,
       getByRole,
+      getByText,
       queryByText,
     } = render(<App />);
 
@@ -173,8 +174,11 @@ describe('InVEST subprocess testing', () => {
     // A recent job card should be rendered
     await userEvent.click(getByRole('button', { name: 'InVEST' }));
     const homeTab = getByRole('tabpanel', { name: 'home tab' });
-    const cardText = await within(homeTab).findByText(fakeWorkspace);
-    expect(cardText).toBeInTheDocument();
+    const workspaceText = await within(homeTab).findByText(fakeWorkspace)
+    const card = workspaceText.closest('button');
+    expect(card).toBeInTheDocument();
+    const status = await within(card).getByText(/model complete/i);
+    expect(status).toBeInTheDocument();
   });
 
   test('exit with error - expect log & alert display', async () => {
@@ -225,10 +229,12 @@ describe('InVEST subprocess testing', () => {
 
     // A recent job card should be rendered
     await userEvent.click(getByRole('button', { name: 'InVEST' }));
-    const homeTab = await getByRole('tabpanel', { name: 'home tab' });
-    const cardText = await within(homeTab)
-      .findByText(fakeWorkspace);
-    expect(cardText).toBeInTheDocument();
+    const homeTab = getByRole('tabpanel', { name: 'home tab' });
+    const workspaceText = await within(homeTab).findByText(fakeWorkspace)
+    const card = workspaceText.closest('button');
+    expect(card).toBeInTheDocument();
+    const status = await within(card).getByText(/error/i);
+    expect(status).toBeInTheDocument();
   });
 
   test('user terminates process - expect log & alert display', async () => {
@@ -278,10 +284,12 @@ describe('InVEST subprocess testing', () => {
 
     // A recent job card should be rendered
     await userEvent.click(getByRole('button', { name: 'InVEST' }));
-    const homeTab = await getByRole('tabpanel', { name: 'home tab' });
-    const cardText = await within(homeTab)
-      .findByText(fakeWorkspace);
-    expect(cardText).toBeInTheDocument();
+    const homeTab = getByRole('tabpanel', { name: 'home tab' });
+    const workspaceText = await within(homeTab).findByText(fakeWorkspace)
+    const card = workspaceText.closest('button');
+    expect(card).toBeInTheDocument();
+    const status = await within(card).getByText(/canceled/i);
+    expect(status).toBeInTheDocument();
   });
 
   test('Run & re-run a job - expect new log display', async () => {
