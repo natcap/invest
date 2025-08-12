@@ -110,7 +110,7 @@ jobs:
           package-json-path: workbench/package.json
 
       - name: Update CITATION.cff
-        if: env.RUN == 'true
+        if: env.RUN == 'true'
         run: python scripts/update-citation-cff.py CITATION.cff $VERSION $(date '+%Y-%m-%d')
 
       - name: Commit updated HISTORY.rst, changelog.html, package.json and CITATION.cff
