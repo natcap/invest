@@ -109,12 +109,17 @@ jobs:
           ignore-semver-check: "true"  # allow PEP 440 alpha/beta/rc releases
           package-json-path: workbench/package.json
 
-      - name: Commit updated HISTORY.rst, changelog.html, and package.json
+      - name: Update CITATION.cff
+        if: env.RUN == 'true'
+        run: python scripts/update-citation-cff.py CITATION.cff $VERSION $(date '+%Y-%m-%d')
+
+      - name: Commit updated HISTORY.rst, changelog.html, package.json and CITATION.cff
         if: env.RUN == 'true'
         run: |
           git add HISTORY.rst
           git add workbench/changelog.html
           git add workbench/package.json
+          git add CITATION.cff
           git commit -m "Committing the $VERSION release."
 
       - name: Tag and push
