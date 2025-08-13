@@ -296,13 +296,15 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.SingleBandRasterOutput(
-            id="hm.tif",
+            id="hm",
+            path="hm.tif",
             about=gettext("Map of heat mitigation index."),
             data_type=float,
             units=None
         ),
         spec.VectorOutput(
-            id="uhi_results.shp",
+            id="uhi_results",
+            path="uhi_results.shp",
             about=gettext(
                 "A copy of the input Area of Interest vector with additional fields."
             ),
@@ -343,7 +345,8 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.VectorOutput(
-            id="buildings_with_stats.shp",
+            id="buildings_with_stats",
+            path="buildings_with_stats.shp",
             about=gettext(
                 "A copy of the input vector “Building Footprints” with additional fields."
             ),
@@ -370,123 +373,134 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ]
         ),
-        spec.DirectoryOutput(
-            id="intermediate",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="cc.tif",
-                    about=gettext("Map of cooling capacity"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="cc_masked_green_areas.tif",
-                    about=gettext("Cooling capacity map masked by non-green areas"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="T_air.tif",
-                    about=gettext("Map of air temperature with air mixing."),
-                    data_type=float,
-                    units=u.degree_Celsius
-                ),
-                spec.SingleBandRasterOutput(
-                    id="T_air_nomix.tif",
-                    about=gettext("Map of air temperature without air mixing."),
-                    data_type=float,
-                    units=u.degree_Celsius
-                ),
-                spec.SingleBandRasterOutput(
-                    id="eti.tif",
-                    about=gettext("Map of the evapotranspiration index."),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="wbgt.tif",
-                    about=gettext("Map of wet bulb globe temperature."),
-                    data_type=float,
-                    units=u.degree_Celsius
-                ),
-                spec.VectorOutput(
-                    id="reprojected_aoi.shp",
-                    about=gettext(
-                        "The Area of Interest vector reprojected to the spatial reference"
-                        " of the LULC."
-                    ),
-                    geometry_types={"POLYGON", "MULTIPOLYGON"},
-                    fields=[]
-                ),
-                spec.VectorOutput(
-                    id="reprojected_buildings.shp",
-                    about=gettext(
-                        "The buildings vector reprojected to the spatial reference of the"
-                        " LULC."
-                    ),
-                    geometry_types={"POLYGON", "MULTIPOLYGON"},
-                    fields=[]
-                ),
-                spec.SingleBandRasterOutput(
-                    id="albedo.tif",
-                    about=gettext("Map of albedo."),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="area_kernel.tif",
-                    about=gettext("Area kernel for green area convolution."),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="green_area_sum.tif",
-                    about=gettext(
-                        "Map of green area pixels within a search distance around each"
-                        " pixel."
-                    ),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="kc.tif",
-                    about=gettext("Map of crop coefficient."),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="lulc.tif",
-                    about=gettext("Map of land use/land cover."),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="ref_eto.tif",
-                    about=gettext(
-                        "Map of reference evapotranspiration reprojected and aligned to"
-                        " the intersection of the AOI, ET0, and LULC."
-                    ),
-                    data_type=float,
-                    units=u.millimeter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="shade.tif",
-                    about=gettext("Map of shade."),
-                    data_type=float,
-                    units=None
-                ),
-                spec.FileOutput(
-                    id="cc_ref_aoi_stats.pickle",
-                    about=gettext("Cooling capacity zonal statistics for aoi.")
-                ),
-                spec.FileOutput(
-                    id="t_air_aoi_stats.pickle",
-                    about=gettext("Air temperature zonal statistics for aoi.")
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="cc",
+            path="intermediate/cc.tif",
+            about=gettext("Map of cooling capacity"),
+            data_type=float,
+            units=None
         ),
-        spec.TASKGRAPH_DIR
+        spec.SingleBandRasterOutput(
+            id="cc_masked_green_areas",
+            path="intermediate/cc_masked_green_areas.tif",
+            about=gettext("Cooling capacity map masked by non-green areas"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="t_air",
+            path="intermediate/T_air.tif",
+            about=gettext("Map of air temperature with air mixing."),
+            data_type=float,
+            units=u.degree_Celsius
+        ),
+        spec.SingleBandRasterOutput(
+            id="t_air_nomix",
+            path="intermediate/T_air_nomix.tif",
+            about=gettext("Map of air temperature without air mixing."),
+            data_type=float,
+            units=u.degree_Celsius
+        ),
+        spec.SingleBandRasterOutput(
+            id="eti",
+            path="intermediate/eti.tif",
+            about=gettext("Map of the evapotranspiration index."),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="wbgt",
+            path="intermediate/wbgt.tif",
+            about=gettext("Map of wet bulb globe temperature."),
+            data_type=float,
+            units=u.degree_Celsius
+        ),
+        spec.VectorOutput(
+            id="reprojected_aoi",
+            path="intermediate/reprojected_aoi.shp",
+            about=gettext(
+                "The Area of Interest vector reprojected to the spatial reference"
+                " of the LULC."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
+        ),
+        spec.VectorOutput(
+            id="reprojected_buildings",
+            path="intermediate/reprojected_buildings.shp",
+            about=gettext(
+                "The buildings vector reprojected to the spatial reference of the"
+                " LULC."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
+        ),
+        spec.SingleBandRasterOutput(
+            id="albedo",
+            path="intermediate/albedo.tif",
+            about=gettext("Map of albedo."),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="area_kernel",
+            path="intermediate/area_kernel.tif",
+            about=gettext("Area kernel for green area convolution."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="green_area_sum",
+            path="intermediate/green_area_sum.tif",
+            about=gettext(
+                "Map of green area pixels within a search distance around each"
+                " pixel."
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="kc",
+            path="intermediate/kc.tif",
+            about=gettext("Map of crop coefficient."),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="lulc",
+            path="intermediate/lulc.tif",
+            about=gettext("Map of land use/land cover."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="ref_eto",
+            path="intermediate/ref_eto.tif",
+            about=gettext(
+                "Map of reference evapotranspiration reprojected and aligned to"
+                " the intersection of the AOI, ET0, and LULC."
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="shade",
+            path="intermediate/shade.tif",
+            about=gettext("Map of shade."),
+            data_type=float,
+            units=None
+        ),
+        spec.FileOutput(
+            id="cc_ref_aoi_stats",
+            path="intermediate/cc_ref_aoi_stats.pickle",
+            about=gettext("Cooling capacity zonal statistics for aoi.")
+        ),
+        spec.FileOutput(
+            id="t_air_aoi_stats",
+            path="intermediate/t_air_aoi_stats.pickle",
+            about=gettext("Air temperature zonal statistics for aoi.")
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

@@ -214,7 +214,8 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.VectorOutput(
-            id="farm_results.shp",
+            id="farm_results",
+            path="farm_results.shp",
             about=gettext(
                 "A copy of the input farm polygon vector file with additional fields"
             ),
@@ -250,7 +251,8 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.SingleBandRasterOutput(
-            id="farm_pollinators.tif",
+            id="farm_pollinators",
+            path="farm_pollinators.tif",
             about=gettext(
                 "Total pollinator abundance across all species per season, clipped to the"
                 " geometry of the farm vector’s polygons."
@@ -260,13 +262,15 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="pollinator_abundance_[SPECIES]_[SEASON].tif",
+            id="pollinator_abundance_[SPECIES]_[SEASON]",
+            path="pollinator_abundance_[SPECIES]_[SEASON].tif",
             about=gettext("Abundance of pollinator SPECIES in season SEASON."),
             data_type=float,
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="pollinator_supply_[SPECIES].tif",
+            id="pollinator_supply_[SPECIES]",
+            path="pollinator_supply_[SPECIES].tif",
             about=gettext(
                 "Index of pollinator SPECIES that could be on a pixel given its arbitrary"
                 " abundance factor from the table, multiplied by the habitat suitability"
@@ -277,14 +281,16 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="total_pollinator_abundance_[SEASON].tif",
+            id="total_pollinator_abundance_[SEASON]",
+            path="total_pollinator_abundance_[SEASON].tif",
             about=gettext("Total pollinator abundance across all species per season."),
             created_if="farm_vector_path",
             data_type=float,
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="total_pollinator_yield.tif",
+            id="total_pollinator_yield",
+            path="total_pollinator_yield.tif",
             about=gettext(
                 "Total pollinator yield index for pixels that overlap farms, including"
                 " wild and managed pollinators."
@@ -294,7 +300,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="wild_pollinator_yield.tif",
+            id="wild_pollinator_yield",
+            path="wild_pollinator_yield.tif",
             about=gettext(
                 "Pollinator yield index for pixels that overlap farms, for wild"
                 " pollinators only."
@@ -303,108 +310,117 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=None
         ),
-        spec.DirectoryOutput(
-            id="intermediate_outputs",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="blank_raster.tif",
-                    about=gettext(
-                        "Blank raster used for rasterizing all the farm parameters/fields"
-                        " later"
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="convolve_ps_[SPECIES].tif",
-                    about=gettext("Convolved pollinator supply"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="farm_nesting_substrate_index_[SUBSTRATE].tif",
-                    about=gettext("Rasterized substrate availability"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="farm_pollinator_[SEASON].tif",
-                    about=gettext("On-farm pollinator abundance"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="farm_relative_floral_abundance_index_[SEASON].tif",
-                    about=gettext("On-farm relative floral abundance"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="floral_resources_[SPECIES].tif",
-                    about=gettext("Floral resources available to the species"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="foraged_flowers_index_[SPECIES]_[SEASON].tif",
-                    about=gettext(
-                        "Foraged flowers index for the given species and season"
-                    ),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="habitat_nesting_index_[SPECIES].tif",
-                    about=gettext("Habitat nesting index for the given species"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="half_saturation_[SEASON].tif",
-                    about=gettext("Half saturation constant for the given season"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="kernel_[ALPHA].tif",
-                    about=gettext("Exponential decay kernel for the given radius"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="local_foraging_effectiveness_[SPECIES].tif",
-                    about=gettext("Foraging effectiveness for the given species"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="managed_pollinators.tif",
-                    about=gettext("Managed pollinators rasterized from the farm vector"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="nesting_substrate_index_[SUBSTRATE].tif",
-                    about=gettext("Nesting substrate index for the given substrate"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="relative_floral_abundance_index_[SEASON].tif",
-                    about=gettext("Floral abundance index in the given season"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.VectorOutput(
-                    id="reprojected_farm_vector.shp",
-                    about=gettext("Farm vector reprojected to the LULC projection"),
-                    geometry_types={"POLYGON", "MULTIPOLYGON"},
-                    fields=[]
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="blank_raster",
+            path="intermediate_outputs/blank_raster.tif",
+            about=gettext(
+                "Blank raster used for rasterizing all the farm parameters/fields"
+                " later"
+            ),
+            data_type=int,
+            units=None
         ),
-        spec.TASKGRAPH_DIR
+        spec.SingleBandRasterOutput(
+            id="convolve_ps_[SPECIES]",
+            path="intermediate_outputs/convolve_ps_[SPECIES].tif",
+            about=gettext("Convolved pollinator supply"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="farm_nesting_substrate_index_[SUBSTRATE]",
+            path="intermediate_outputs/farm_nesting_substrate_index_[SUBSTRATE].tif",
+            about=gettext("Rasterized substrate availability"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="farm_pollinator_[SEASON]",
+            path="intermediate_outputs/farm_pollinator_[SEASON].tif",
+            about=gettext("On-farm pollinator abundance"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="farm_relative_floral_abundance_index_[SEASON]",
+            path="intermediate_outputs/farm_relative_floral_abundance_index_[SEASON].tif",
+            about=gettext("On-farm relative floral abundance"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="floral_resources_[SPECIES]",
+            path="intermediate_outputs/floral_resources_[SPECIES].tif",
+            about=gettext("Floral resources available to the species"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="foraged_flowers_index_[SPECIES]_[SEASON]",
+            path="intermediate_outputs/foraged_flowers_index_[SPECIES]_[SEASON].tif",
+            about=gettext(
+                "Foraged flowers index for the given species and season"
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="habitat_nesting_index_[SPECIES]",
+            path="intermediate_outputs/habitat_nesting_index_[SPECIES].tif",
+            about=gettext("Habitat nesting index for the given species"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="half_saturation_[SEASON]",
+            path="intermediate_outputs/half_saturation_[SEASON].tif",
+            about=gettext("Half saturation constant for the given season"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="kernel_[ALPHA]",
+            path="intermediate_outputs/kernel_[ALPHA].tif",
+            about=gettext("Exponential decay kernel for the given radius"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="local_foraging_effectiveness_[SPECIES]",
+            path="intermediate_outputs/local_foraging_effectiveness_[SPECIES].tif",
+            about=gettext("Foraging effectiveness for the given species"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="managed_pollinators",
+            path="intermediate_outputs/managed_pollinators.tif",
+            about=gettext("Managed pollinators rasterized from the farm vector"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="nesting_substrate_index_[SUBSTRATE]",
+            path="intermediate_outputs/nesting_substrate_index_[SUBSTRATE].tif",
+            about=gettext("Nesting substrate index for the given substrate"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="relative_floral_abundance_index_[SEASON]",
+            path="intermediate_outputs/relative_floral_abundance_index_[SEASON].tif",
+            about=gettext("Floral abundance index in the given season"),
+            data_type=float,
+            units=None
+        ),
+        spec.VectorOutput(
+            id="reprojected_farm_vector",
+            path="intermediate_outputs/reprojected_farm_vector.shp",
+            about=gettext("Farm vector reprojected to the LULC projection"),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

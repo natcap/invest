@@ -377,7 +377,8 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.CSVOutput(
-            id="aggregate_results.csv",
+            id="aggregate_results",
+            path="aggregate_results.csv",
             about=gettext("Model results aggregated to AOI polygons"),
             created_if="aggregate_polygon_path",
             columns=[
@@ -417,7 +418,8 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="FID"
         ),
         spec.CSVOutput(
-            id="result_table.csv",
+            id="result_table",
+            path="result_table.csv",
             about=gettext("Model results aggregated by crop"),
             columns=[
                 spec.StringOutput(id="crop", about=gettext("Name of the crop")),
@@ -456,76 +458,78 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="crop"
         ),
         spec.SingleBandRasterOutput(
-            id="[CROP]_observed_production.tif",
+            id="[CROP]_observed_production",
+            path="[CROP]_observed_production.tif",
             about=gettext("Observed yield for the given crop"),
             data_type=float,
             units=u.metric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="[CROP]_yield_[PERCENTILE]_production.tif",
+            id="[CROP]_yield_[PERCENTILE]_production",
+            path="[CROP]_yield_[PERCENTILE]_production.tif",
             about=gettext("Modeled yield for the given crop at the given percentile"),
             data_type=float,
             units=u.metric_ton / u.hectare
         ),
-        spec.DirectoryOutput(
-            id="intermediate",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="clipped_[CROP]_climate_bin_map.tif",
-                    about=gettext(
-                        "Climate bin map for the given crop, clipped to the LULC extent"
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="[CROP]_clipped_observed_yield.tif",
-                    about=gettext(
-                        "Observed yield for the given crop, clipped to the extend of the"
-                        " landcover map"
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="[CROP]_interpolated_observed_yield.tif",
-                    about=gettext(
-                        "Observed yield for the given crop, interpolated to the"
-                        " resolution of the landcover map"
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="[CROP]_yield_[PERCENTILE]_coarse_yield.tif",
-                    about=gettext(
-                        "Percentile yield of the given crop, at the coarse resolution of"
-                        " the climate bin map"
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="[CROP]_yield_[PERCENTILE]_interpolated_yield.tif",
-                    about=gettext(
-                        "Percentile yield of the given crop, interpolated to the"
-                        " resolution of the landcover map"
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="[CROP]_zeroed_observed_yield.tif",
-                    about=gettext(
-                        "Observed yield for the given crop, with nodata converted to 0"
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="clipped_[CROP]_climate_bin_map",
+            path="intermediate/clipped_[CROP]_climate_bin_map.tif",
+            about=gettext(
+                "Climate bin map for the given crop, clipped to the LULC extent"
+            ),
+            data_type=int,
+            units=None
         ),
-        spec.TASKGRAPH_DIR
+        spec.SingleBandRasterOutput(
+            id="[CROP]_clipped_observed_yield",
+            path="intermediate/[CROP]_clipped_observed_yield.tif",
+            about=gettext(
+                "Observed yield for the given crop, clipped to the extend of the"
+                " landcover map"
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="[CROP]_interpolated_observed_yield",
+            path="intermediate/[CROP]_interpolated_observed_yield.tif",
+            about=gettext(
+                "Observed yield for the given crop, interpolated to the"
+                " resolution of the landcover map"
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="[CROP]_yield_[PERCENTILE]_coarse_yield",
+            path="intermediate/[CROP]_yield_[PERCENTILE]_coarse_yield.tif",
+            about=gettext(
+                "Percentile yield of the given crop, at the coarse resolution of"
+                " the climate bin map"
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="[CROP]_yield_[PERCENTILE]_interpolated_yield",
+            path="intermediate/[CROP]_yield_[PERCENTILE]_interpolated_yield.tif",
+            about=gettext(
+                "Percentile yield of the given crop, interpolated to the"
+                " resolution of the landcover map"
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="[CROP]_zeroed_observed_yield",
+            path="intermediate/[CROP]_zeroed_observed_yield.tif",
+            about=gettext(
+                "Observed yield for the given crop, with nodata converted to 0"
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

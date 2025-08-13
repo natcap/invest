@@ -222,323 +222,329 @@ MODEL_SPEC = spec.ModelSpec(
         )
     ],
     outputs=[
-        spec.DirectoryOutput(
-            id="outputs",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="TOTAL_RISK_[HABITAT].tif",
-                    about=gettext(
-                        "Habitat-specific cumulative risk from all the stressors"
-                    ),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="TOTAL_RISK_Ecosystem.tif",
-                    about=gettext(
-                        "Sum of habitat cumulative risk scores divided by the number of"
-                        " habitats occurring in each cell."
-                    ),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="RECLASS_RISK_[HABITAT].tif",
-                    about=gettext(
-                        "Reclassified habitat-specific risk from all the stressors in a"
-                        " grid cell into four categories, where 0 = No Risk, 1 = Low"
-                        " Risk, 2 = Medium Risk, and 3 = High Risk."
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="RECLASS_RISK_Ecosystem.tif",
-                    about=gettext("Reclassified ecosystem risk in each cell."),
-                    data_type=int,
-                    units=None
-                ),
-                spec.CSVOutput(
-                    id="SUMMARY_STATISTICS.csv",
-                    about=gettext(
-                        "Table of summary statistics for each combination of habitat,"
-                        " stressor, and subregion"
-                    ),
-                    columns=[
-                        spec.StringOutput(id="HABITAT", about=gettext("Habitat name")),
-                        spec.StringOutput(id="STRESSOR", about=gettext("Stressor name")),
-                        spec.StringOutput(
-                            id="SUBREGION", about=gettext("Subregion name")
-                        ),
-                        spec.NumberOutput(
-                            id="E_MEAN",
-                            about=gettext("Mean exposure score"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="E_MIN",
-                            about=gettext("Minimum exposure score"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="E_MAX",
-                            about=gettext("Maximum exposure score"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="C_MEAN",
-                            about=gettext("Mean consequence score"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="C_MIN",
-                            about=gettext("Minimum consequence score"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="C_MAX",
-                            about=gettext("Maximum consequence score"),
-                            units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="R_MEAN", about=gettext("Mean risk score"), units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="R_MIN", about=gettext("Minimum risk score"), units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="R_MAX", about=gettext("Maximum risk score"), units=u.none
-                        ),
-                        spec.PercentOutput(
-                            id="R_%HIGH",
-                            about=gettext("the percentage of high risk areas.")
-                        ),
-                        spec.PercentOutput(
-                            id="R_%MEDIUM",
-                            about=gettext("the percentage of medium risk areas.")
-                        ),
-                        spec.PercentOutput(
-                            id="R_%LOW",
-                            about=gettext("the percentage of low risk areas.")
-                        )
-                    ],
-                    index_col=None
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="total_risk_[HABITAT]",
+            path="outputs/TOTAL_RISK_[HABITAT].tif",
+            about=gettext(
+                "Habitat-specific cumulative risk from all the stressors"
+            ),
+            data_type=float,
+            units=u.none
         ),
-        spec.DirectoryOutput(
-            id="visualization_outputs",
-            about=None,
+        spec.SingleBandRasterOutput(
+            id="total_risk_ecosystem",
+            path="outputs/TOTAL_RISK_Ecosystem.tif",
+            about=gettext(
+                "Sum of habitat cumulative risk scores divided by the number of"
+                " habitats occurring in each cell."
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="reclass_risk_[HABITAT]",
+            path="outputs/RECLASS_RISK_[HABITAT].tif",
+            about=gettext(
+                "Reclassified habitat-specific risk from all the stressors in a"
+                " grid cell into four categories, where 0 = No Risk, 1 = Low"
+                " Risk, 2 = Medium Risk, and 3 = High Risk."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="reclass_risk_ecosystem",
+            path="outputs/RECLASS_RISK_Ecosystem.tif",
+            about=gettext("Reclassified ecosystem risk in each cell."),
+            data_type=int,
+            units=None
+        ),
+        spec.CSVOutput(
+            id="summary_statistics",
+            path="outputs/SUMMARY_STATISTICS.csv",
+            about=gettext(
+                "Table of summary statistics for each combination of habitat,"
+                " stressor, and subregion"
+            ),
+            columns=[
+                spec.StringOutput(id="HABITAT", about=gettext("Habitat name")),
+                spec.StringOutput(id="STRESSOR", about=gettext("Stressor name")),
+                spec.StringOutput(
+                    id="SUBREGION", about=gettext("Subregion name")
+                ),
+                spec.NumberOutput(
+                    id="E_MEAN",
+                    about=gettext("Mean exposure score"),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="E_MIN",
+                    about=gettext("Minimum exposure score"),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="E_MAX",
+                    about=gettext("Maximum exposure score"),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="C_MEAN",
+                    about=gettext("Mean consequence score"),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="C_MIN",
+                    about=gettext("Minimum consequence score"),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="C_MAX",
+                    about=gettext("Maximum consequence score"),
+                    units=u.none
+                ),
+                spec.NumberOutput(
+                    id="R_MEAN", about=gettext("Mean risk score"), units=u.none
+                ),
+                spec.NumberOutput(
+                    id="R_MIN", about=gettext("Minimum risk score"), units=u.none
+                ),
+                spec.NumberOutput(
+                    id="R_MAX", about=gettext("Maximum risk score"), units=u.none
+                ),
+                spec.PercentOutput(
+                    id="R_%HIGH",
+                    about=gettext("the percentage of high risk areas.")
+                ),
+                spec.PercentOutput(
+                    id="R_%MEDIUM",
+                    about=gettext("the percentage of medium risk areas.")
+                ),
+                spec.PercentOutput(
+                    id="R_%LOW",
+                    about=gettext("the percentage of low risk areas.")
+                )
+            ],
+            index_col=None
+        ),
+        spec.VectorOutput(
+            id="reclass_risk_[HABITAT]_viz",
+            path="visualization_outputs/RECLASS_RISK_[HABITAT].geojson",
+            about=gettext(
+                "Map of habitat-specific risk visualized in gradient color from"
+                " white to red on a map."
+            ),
             created_if="visualize_outputs",
-            contents=[
-                spec.VectorOutput(
-                    id="RECLASS_RISK_[HABITAT].geojson",
+            geometry_types={"POLYGON"},
+            fields=[
+                spec.IntegerOutput(
+                    id="Risk Score",
                     about=gettext(
-                        "Map of habitat-specific risk visualized in gradient color from"
-                        " white to red on a map."
-                    ),
-                    geometry_types={"POLYGON"},
-                    fields=[
-                        spec.IntegerOutput(
-                            id="Risk Score",
-                            about=gettext(
-                                "Habitat risk from all stressors where 0 = No Risk, 1 ="
-                                " Low Risk, 2 = Medium Risk, and 3 = High Risk."
-                            )
-                        )
-                    ]
-                ),
-                spec.VectorOutput(
-                    id="RECLASS_RISK_Ecosystem.geojson",
-                    about=gettext(
-                        "Map of ecosystem risk visualized in gradient color from white to"
-                        " red on a map."
-                    ),
-                    geometry_types={"POLYGON"},
-                    fields=[
-                        spec.IntegerOutput(
-                            id="Risk Score",
-                            about=gettext(
-                                "Ecosystem risk from all stressors where 0 = No Risk, 1 ="
-                                " Low Risk, 2 = Medium Risk, and 3 = High Risk."
-                            )
-                        )
-                    ]
-                ),
-                spec.VectorOutput(
-                    id="STRESSOR_[STRESSOR].geojson",
-                    about=gettext("Map of stressor extent visualized in orange color."),
-                    geometry_types={"POLYGON"},
-                    fields=[]
-                ),
-                spec.CSVOutput(
-                    id="SUMMARY_STATISTICS.csv",
-                    about=gettext(
-                        "This is the same file from one in the Output Folder. It is"
-                        " copied here so users can just upload the visualization outputs"
-                        " folder to the HRA web application, with all the files in one"
-                        " place."
-                    ),
-                    columns=[],
-                    index_col=None
+                        "Habitat risk from all stressors where 0 = No Risk, 1 ="
+                        " Low Risk, 2 = Medium Risk, and 3 = High Risk."
+                    )
                 )
             ]
         ),
-        spec.DirectoryOutput(
-            id="intermediate_outputs",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="aligned_[HABITAT/STRESSOR/CRITERIA].tif",
+        spec.VectorOutput(
+            id="reclass_risk_ecosystem_viz",
+            path="visualization_outputs/RECLASS_RISK_Ecosystem.geojson",
+            about=gettext(
+                "Map of ecosystem risk visualized in gradient color from white to"
+                " red on a map."
+            ),
+            created_if="visualize_outputs",
+            geometry_types={"POLYGON"},
+            fields=[
+                spec.IntegerOutput(
+                    id="Risk Score",
                     about=gettext(
-                        "Copy of the input, aligned to the same projection and extent"
-                    ),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.DirectoryOutput(
-                    id="aoi_subregions",
-                    about=None,
-                    contents=[
-                        spec.SingleBandRasterOutput(
-                            id="subregion_set_[N].tif",
-                            about=gettext("The Nth non-intersecting set of subregions"),
-                            data_type=int,
-                            units=None
-                        ),
-                        spec.FileOutput(
-                            id="subregions.json", about=gettext("Subregion data")
-                        )
-                    ]
-                ),
-                spec.SingleBandRasterOutput(
-                    id="C_[HABITAT]_[STRESSOR].tif",
-                    about=gettext(
-                        "Consequence score for a particular habitat/stressor combination."
-                    ),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.CSVOutput(
-                    id="composite_criteria.csv",
-                    about=gettext(
-                        "Table tracking each combination of habitat, stressor, criterion,"
-                        " rating, data quality, weight and whether the score applies to"
-                        " exposure or consequence."
-                    ),
-                    columns=[
-                        spec.StringOutput(id="habitat", about=gettext("Habitat name")),
-                        spec.StringOutput(id="stressor", about=gettext("Stressor name")),
-                        spec.StringOutput(
-                            id="criterion", about=gettext("Criterion name")
-                        ),
-                        spec.StringOutput(
-                            id="rating", about=gettext("Rating value or path to raster")
-                        ),
-                        spec.IntegerOutput(id="dq", about=gettext("Data quality")),
-                        spec.IntegerOutput(id="weight", about=gettext("Weight")),
-                        spec.StringOutput(
-                            id="e/c", about=gettext("Exposure (E) or consequence (C)")
-                        )
-                    ],
-                    index_col=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="decayed_edt_[STRESSOR].tif",
-                    about=gettext("Distance-weighted influence of the given stressor."),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="E_[HABITAT]_[STRESSOR].tif",
-                    about=gettext(
-                        "Exposure score for a particular habitat/stressor combination."
-                    ),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="habitat_mask.tif",
-                    about=gettext("Presence of one or more habitats."),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="polygonize_mask_[HABITAT/STRESSOR].tif",
-                    about=gettext("Map of which pixels to polygonize."),
-                    data_type=int,
-                    units=None
-                ),
-                spec.VectorOutput(
-                    id="polygonized_[HABITAT/STRESSOR].gpkg",
-                    about=gettext("Polygonized habitat or stressor map"),
-                    geometry_types={"POLYGON"},
-                    fields=[]
-                ),
-                spec.SingleBandRasterOutput(
-                    id="reclass_[HABITAT]_[STRESSOR].tif",
-                    about=gettext(
-                        "The reclassified (high/medium/low) risk of the given stressor to"
-                        " the given habitat."
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="reclass_total_risk_[HABITAT].tif",
-                    about=gettext("The reclassified (high/medium/low) total risk"),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="RECOVERY_[HABITAT].tif",
-                    about=gettext(
-                        "The resilience or recovery potential for the given habitat"
-                    ),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.VectorOutput(
-                    id="reprojected_[HABITAT/STRESSOR/CRITERIA].shp",
-                    about=gettext(
-                        "If any habitat, stressor or spatial criteria layers were"
-                        " provided in a spatial vector format, it will be reprojected to"
-                        " the AOI projection."
-                    ),
-                    geometry_types={"POLYGON", "MULTIPOLYGON"},
-                    fields=[]
-                ),
-                spec.SingleBandRasterOutput(
-                    id="rewritten_[HABITAT/STRESSOR/CRITERIA].tif",
-                    about=gettext(
-                        "If any habitat, stressor or spatial criteria layers were"
-                        " provided in a spatial raster format, it will be reprojected to"
-                        " the projection of the user’s Area of Interest and written as"
-                        " GeoTiff at this filepath."
-                    ),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="RISK_[HABITAT]_[STRESSOR].tif",
-                    about=gettext("Risk score for the given habitat-stressor pair."),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.VectorOutput(
-                    id="simplified_[HABITAT/STRESSOR/CRITERIA].gpkg",
-                    about=gettext(
-                        "Any habitat, stressor or spatial criteria layers provided are"
-                        " simplified to 1/2 the user-defined raster resolution in order"
-                        " to speed up rasterization."
-                    ),
-                    geometry_types={"POLYGON", "MULTIPOLYGON"},
-                    fields=[]
+                        "Ecosystem risk from all stressors where 0 = No Risk, 1 ="
+                        " Low Risk, 2 = Medium Risk, and 3 = High Risk."
+                    )
                 )
             ]
         ),
-        spec.TASKGRAPH_DIR
+        spec.VectorOutput(
+            id="stressor_[STRESSOR]",
+            path="visualization_outputs/STRESSOR_[STRESSOR].geojson",
+            about=gettext("Map of stressor extent visualized in orange color."),
+            created_if="visualize_outputs",
+            geometry_types={"POLYGON"},
+            fields=[]
+        ),
+        spec.CSVOutput(
+            id="summary_statistics_viz",
+            path="visualization_outputs/SUMMARY_STATISTICS.csv",
+            about=gettext(
+                "This is the same file from one in the Output Folder. It is"
+                " copied here so users can just upload the visualization outputs"
+                " folder to the HRA web application, with all the files in one"
+                " place."
+            ),
+            created_if="visualize_outputs",
+            columns=[],
+            index_col=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_[HABITAT/STRESSOR/CRITERIA]",
+            path="intermediate_outputs/aligned_[HABITAT/STRESSOR/CRITERIA].tif",
+            about=gettext(
+                "Copy of the input, aligned to the same projection and extent"
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="subregion_set_[N]",
+            path="intermediate_outputs/aoi_subregions/subregion_set_[N].tif",
+            about=gettext("The Nth non-intersecting set of subregions"),
+            data_type=int,
+            units=None
+        ),
+        spec.FileOutput(
+            id="subregions",
+            path="intermediate_outputs/aoi_subregions/subregions.json",
+            about=gettext("Subregion data")
+        ),
+        spec.SingleBandRasterOutput(
+            id="c_[HABITAT]_[STRESSOR]",
+            path="intermediate_outputs/C_[HABITAT]_[STRESSOR].tif",
+            about=gettext(
+                "Consequence score for a particular habitat/stressor combination."
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.CSVOutput(
+            id="composite_criteria",
+            path="intermediate_outputs/composite_criteria.csv",
+            about=gettext(
+                "Table tracking each combination of habitat, stressor, criterion,"
+                " rating, data quality, weight and whether the score applies to"
+                " exposure or consequence."
+            ),
+            columns=[
+                spec.StringOutput(id="habitat", about=gettext("Habitat name")),
+                spec.StringOutput(id="stressor", about=gettext("Stressor name")),
+                spec.StringOutput(
+                    id="criterion", about=gettext("Criterion name")
+                ),
+                spec.StringOutput(
+                    id="rating", about=gettext("Rating value or path to raster")
+                ),
+                spec.IntegerOutput(id="dq", about=gettext("Data quality")),
+                spec.IntegerOutput(id="weight", about=gettext("Weight")),
+                spec.StringOutput(
+                    id="e/c", about=gettext("Exposure (E) or consequence (C)")
+                )
+            ],
+            index_col=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="decayed_edt_[STRESSOR]",
+            path="intermediate_outputs/decayed_edt_[STRESSOR].tif",
+            about=gettext("Distance-weighted influence of the given stressor."),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="e_[HABITAT]_[STRESSOR]",
+            path="intermediate_outputs/E_[HABITAT]_[STRESSOR].tif",
+            about=gettext(
+                "Exposure score for a particular habitat/stressor combination."
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="habitat_mask",
+            path="intermediate_outputs/habitat_mask.tif",
+            about=gettext("Presence of one or more habitats."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="polygonize_mask_[HABITAT/STRESSOR]",
+            path="intermediate_outputs/polygonize_mask_[HABITAT/STRESSOR].tif",
+            about=gettext("Map of which pixels to polygonize."),
+            data_type=int,
+            units=None
+        ),
+        spec.VectorOutput(
+            id="polygonized_[HABITAT/STRESSOR]",
+            path="intermediate_outputs/polygonized_[HABITAT/STRESSOR].gpkg",
+            about=gettext("Polygonized habitat or stressor map"),
+            geometry_types={"POLYGON"},
+            fields=[]
+        ),
+        spec.SingleBandRasterOutput(
+            id="reclass_[HABITAT]_[STRESSOR]",
+            path="intermediate_outputs/reclass_[HABITAT]_[STRESSOR].tif",
+            about=gettext(
+                "The reclassified (high/medium/low) risk of the given stressor to"
+                " the given habitat."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="reclass_total_risk_[HABITAT]",
+            path="intermediate_outputs/reclass_total_risk_[HABITAT].tif",
+            about=gettext("The reclassified (high/medium/low) total risk"),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="recovery_[HABITAT]",
+            path="intermediate_outputs/RECOVERY_[HABITAT].tif",
+            about=gettext(
+                "The resilience or recovery potential for the given habitat"
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.VectorOutput(
+            id="reprojected_[HABITAT/STRESSOR/CRITERIA]",
+            path="intermediate_outputs/reprojected_[HABITAT/STRESSOR/CRITERIA].shp",
+            about=gettext(
+                "If any habitat, stressor or spatial criteria layers were"
+                " provided in a spatial vector format, it will be reprojected to"
+                " the AOI projection."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
+        ),
+        spec.SingleBandRasterOutput(
+            id="rewritten_[HABITAT/STRESSOR/CRITERIA]",
+            path="intermediate_outputs/rewritten_[HABITAT/STRESSOR/CRITERIA].tif",
+            about=gettext(
+                "If any habitat, stressor or spatial criteria layers were"
+                " provided in a spatial raster format, it will be reprojected to"
+                " the projection of the user’s Area of Interest and written as"
+                " GeoTiff at this filepath."
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="risk_[HABITAT]_[STRESSOR]",
+            path="intermediate_outputs/RISK_[HABITAT]_[STRESSOR].tif",
+            about=gettext("Risk score for the given habitat-stressor pair."),
+            data_type=float,
+            units=u.none
+        ),
+        spec.VectorOutput(
+            id="simplified_[HABITAT/STRESSOR/CRITERIA]",
+            path="intermediate_outputs/simplified_[HABITAT/STRESSOR/CRITERIA].gpkg",
+            about=gettext(
+                "Any habitat, stressor or spatial criteria layers provided are"
+                " simplified to 1/2 the user-defined raster resolution in order"
+                " to speed up rasterization."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

@@ -324,7 +324,8 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.SingleBandRasterOutput(
-            id="B.tif",
+            id="b",
+            path="B.tif",
             about=gettext(
                 "Map of baseflow values, the contribution of a pixel to slow release flow"
                 " (which is not evapotranspired before it reaches the stream)."
@@ -333,7 +334,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="B_sum.tif",
+            id="b_sum",
+            path="B_sum.tif",
             about=gettext(
                 "Map of B_sum values, the flow through a pixel, contributed by all"
                 " upslope pixels, that is not evapotranspirated before it reaches the"
@@ -343,25 +345,29 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="CN.tif",
+            id="cn",
+            path="CN.tif",
             about=gettext("Map of curve number values."),
             data_type=float,
             units=u.none
         ),
         spec.SingleBandRasterOutput(
-            id="L_avail.tif",
+            id="l_avail",
+            path="L_avail.tif",
             about=gettext("Map of available local recharge"),
             data_type=float,
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="L.tif",
+            id="l",
+            path="L.tif",
             about=gettext("Map of local recharge values"),
             data_type=float,
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="L_sum_avail.tif",
+            id="l_sum_avail",
+            path="L_sum_avail.tif",
             about=gettext(
                 "Map of total available water, contributed by all upslope pixels, that is"
                 " available for evapotranspiration by this pixel."
@@ -370,7 +376,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="L_sum.tif",
+            id="l_sum",
+            path="L_sum.tif",
             about=gettext(
                 "Map of cumulative upstream recharge: the flow through a pixel,"
                 " contributed by all upslope pixels, that is available for"
@@ -380,20 +387,23 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="QF.tif",
+            id="qf",
+            path="QF.tif",
             about=gettext("Map of quickflow"),
             data_type=float,
             units=u.millimeter / u.year
         ),
-        spec.STREAM.model_copy(update=dict(id="stream.tif")),
+        spec.STREAM,
         spec.SingleBandRasterOutput(
-            id="P.tif",
+            id="p",
+            path="P.tif",
             about=gettext("The total precipitation across all months on this pixel."),
             data_type=float,
             units=u.millimeter / u.year
         ),
         spec.SingleBandRasterOutput(
-            id="Vri.tif",
+            id="vri",
+            path="Vri.tif",
             about=gettext(
                 "Map of the values of recharge (contribution, positive or negative), to"
                 " the total recharge."
@@ -402,7 +412,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.VectorOutput(
-            id="aggregated_results_swy.shp",
+            id="aggregated_results_swy",
+            path="aggregated_results_swy.shp",
             about=gettext("Table of biophysical values for each watershed"),
             geometry_types={"MULTIPOLYGON", "POLYGON"},
             fields=[
@@ -421,124 +432,141 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ]
         ),
-        spec.DirectoryOutput(
-            id="intermediate_outputs",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="aet.tif",
-                    about=gettext("Map of actual evapotranspiration"),
-                    data_type=float,
-                    units=u.millimeter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="flow_dir.tif",
-                    about=gettext(
-                        "Map of flow direction, in either D8 or MFD format according to"
-                        " the option selected."
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="qf_[MONTH].tif",
-                    about=gettext(
-                        "Maps of monthly quickflow (1 = January… 12 = December)"
-                    ),
-                    data_type=float,
-                    units=u.millimeter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="Si.tif",
-                    about=gettext("Map of the S_i factor derived from CN"),
-                    data_type=float,
-                    units=u.inch
-                ),
-                spec.SingleBandRasterOutput(
-                    id="lulc_aligned.tif",
-                    about=gettext(
-                        "Copy of LULC input, aligned and clipped to match the other"
-                        " spatial inputs"
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="dem_aligned.tif",
-                    about=gettext(
-                        "Copy of DEM input, aligned and clipped to match the other"
-                        " spatial inputs"
-                    ),
-                    data_type=float,
-                    units=u.meter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="pit_filled_dem.tif",
-                    about=gettext("Pit filled DEM"),
-                    data_type=float,
-                    units=u.meter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="soil_group_aligned.tif",
-                    about=gettext(
-                        "Copy of soil groups input, aligned and clipped to match the"
-                        " other spatial inputs"
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.FLOW_ACCUMULATION.model_copy(update=dict(id="flow_accum.tif")),
-                spec.SingleBandRasterOutput(
-                    id="prcp_a[MONTH].tif",
-                    about=gettext(
-                        "Monthly precipitation rasters, aligned and clipped to match the"
-                        " other spatial inputs"
-                    ),
-                    data_type=float,
-                    units=u.millimeter / u.year
-                ),
-                spec.SingleBandRasterOutput(
-                    id="n_events[MONTH].tif",
-                    about=gettext("Map of monthly rain events"),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="et0_a[MONTH].tif",
-                    about=gettext(
-                        "Monthly ET0 rasters, aligned and clipped to match the other"
-                        " spatial inputs"
-                    ),
-                    data_type=float,
-                    units=u.millimeter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="kc_[MONTH].tif",
-                    about=gettext("Map of monthly KC values"),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="l_aligned.tif",
-                    about=gettext(
-                        "Copy of user-defined local recharge input, aligned and clipped"
-                        " to match the other spatial inputs"
-                    ),
-                    data_type=float,
-                    units=u.millimeter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="cz_aligned.tif",
-                    about=gettext(
-                        "Copy of user-defined climate zones raster, aligned and clipped"
-                        " to match the other spatial inputs"
-                    ),
-                    data_type=int,
-                    units=None
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="aet",
+            path="intermediate_outputs/aet.tif",
+            about=gettext("Map of actual evapotranspiration"),
+            data_type=float,
+            units=u.millimeter
         ),
-        spec.TASKGRAPH_DIR
+        spec.SingleBandRasterOutput(
+            id="aetm_[MONTH]",
+            path="intermediate_outputs/aetm_[MONTH].tif",
+            about=gettext("Maps of monthly evapotranspiration"),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="flow_dir",
+            path="intermediate_outputs/flow_dir.tif",
+            about=gettext(
+                "Map of flow direction, in either D8 or MFD format according to"
+                " the option selected."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="qf_[MONTH]",
+            path="intermediate_outputs/qf_[MONTH].tif",
+            about=gettext(
+                "Maps of monthly quickflow (1 = January… 12 = December)"
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="si",
+            path="intermediate_outputs/Si.tif",
+            about=gettext("Map of the S_i factor derived from CN"),
+            data_type=float,
+            units=u.inch
+        ),
+        spec.SingleBandRasterOutput(
+            id="lulc_aligned",
+            path="intermediate_outputs/lulc_aligned.tif",
+            about=gettext(
+                "Copy of LULC input, aligned and clipped to match the other"
+                " spatial inputs"
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="dem_aligned",
+            path="intermediate_outputs/dem_aligned.tif",
+            about=gettext(
+                "Copy of DEM input, aligned and clipped to match the other"
+                " spatial inputs"
+            ),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="pit_filled_dem",
+            path="intermediate_outputs/pit_filled_dem.tif",
+            about=gettext("Pit filled DEM"),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="soil_group_aligned",
+            path="intermediate_outputs/soil_group_aligned.tif",
+            about=gettext(
+                "Copy of soil groups input, aligned and clipped to match the"
+                " other spatial inputs"
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.FLOW_ACCUMULATION.model_copy(update=dict(
+            id="flow_accum",
+            path="intermediate_outputs/flow_accum.tif")),
+        spec.SingleBandRasterOutput(
+            id="prcp_a[MONTH]",
+            path="intermediate_outputs/prcp_a[MONTH].tif",
+            about=gettext(
+                "Monthly precipitation rasters, aligned and clipped to match the"
+                " other spatial inputs"
+            ),
+            data_type=float,
+            units=u.millimeter / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="n_events[MONTH]",
+            path="intermediate_outputs/n_events[MONTH].tif",
+            about=gettext("Map of monthly rain events"),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="et0_a[MONTH]",
+            path="intermediate_outputs/et0_a[MONTH].tif",
+            about=gettext(
+                "Monthly ET0 rasters, aligned and clipped to match the other"
+                " spatial inputs"
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="kc_[MONTH]",
+            path="intermediate_outputs/kc_[MONTH].tif",
+            about=gettext("Map of monthly KC values"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="l_aligned",
+            path="intermediate_outputs/l_aligned.tif",
+            about=gettext(
+                "Copy of user-defined local recharge input, aligned and clipped"
+                " to match the other spatial inputs"
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="cz_aligned",
+            path="intermediate_outputs/cz_aligned.tif",
+            about=gettext(
+                "Copy of user-defined climate zones raster, aligned and clipped"
+                " to match the other spatial inputs"
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 
