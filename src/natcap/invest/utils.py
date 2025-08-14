@@ -850,6 +850,9 @@ class _GDALPath:
 
     This class is largely copied from rasterio._path.
 
+    In this context, "scheme" refers to the first part of a URL in the format
+    scheme://netloc/path;parameters?query#fragment
+
     Attributes
     ----------
     path : str
