@@ -1,0 +1,16 @@
+{
+    "args": {
+        "adjust_retention_ratios": true,
+        "aggregate_areas_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanStormwater.zip/UrbanStormwater/watershed.shp",
+        "biophysical_table": "https://bitbucket.org/natcap/invest-sample-data/raw/master/UrbanStormwater/biophysical_table.csv",
+        "lulc_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanStormwater.zip/UrbanStormwater/lulc.tif",
+        "precipitation_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanStormwater.zip/UrbanStormwater/precipitation.tif",
+        "replacement_cost": "1.59",
+        "results_suffix": "",
+        "retention_radius": "20",
+        "road_centerlines_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanStormwater.zip/UrbanStormwater/streets.shp",
+        "soil_group_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/UrbanStormwater.zip/UrbanStormwater/soil_groups.tif"
+    },
+    "invest_version": "3.9.2.post764+ga014b5938",
+    "model_name": "natcap.invest.stormwater"
+}
