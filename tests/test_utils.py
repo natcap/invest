@@ -1230,3 +1230,35 @@ class ExpandPathTests(unittest.TestCase):
         for value in ('', None, False, 0):
             self.assertEqual(
                 None, utils.expand_path(value, self.workspace_dir))
+
+class _GDALPathTests(unittest.TestCase):
+
+    def test_local_path(self):
+        from natcap.invest import utils
+        gdal_path = utils._GDALPath.from_uri('foo/bar.tif')
+        self.assertTrue(gdal_path.is_local)
+        self.assertIsNone(gdal_path.scheme)
+
+    @unittest.skipIf(platform.system() != 'Windows',
+                     'Drive prefixes only apply on Windows')
+    def test_windows_drive_path(self):
+        from natcap.invest import utils
+        gdal_path = utils._GDALPath.from_uri(r'C:\foo\bar.tif')
+        self.assertTrue(gdal_path.is_local)
+        self.assertIsNone(gdal_path.scheme)
+
+    def test_https_path(self):
+        from natcap.invest import utils
+        gdal_path = utils._GDALPath.from_uri('https://example.com/foo/bar.tif')
+        self.assertTrue(gdal_path.is_remote)
+        self.assertEqual(gdal_path.scheme, 'https')
+        self.assertEqual(gdal_path.to_normalized_path(),
+                         '/vsicurl/https://example.com/foo/bar.tif')
+
+    def test_https_zip_path(self):
+        from natcap.invest import utils
+        gdal_path = utils._GDALPath.from_uri('zip+https://example.com/foo.zip/foo/bar.tif')
+        self.assertTrue(gdal_path.is_remote)
+        self.assertEqual(gdal_path.scheme, 'zip+https')
+        self.assertEqual(gdal_path.to_normalized_path(),
+                         '/vsizip/vsicurl/https://example.com/foo.zip/foo/bar.tif')
