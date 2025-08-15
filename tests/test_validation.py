@@ -1007,6 +1007,22 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(df['header'][0], 'a')
         self.assertEqual(df['header'][1], 'b')
 
+    def test_remote_csv_with_local_path(self):
+        """validation: an error is raised if a remote csv reference local paths"""
+        from natcap.invest import validation
+
+        input_spec = CSVInput(id='foo', columns=[spec.VectorInput(
+            id='path', geometry_types=set(), fields=[])])
+
+        def read_csv(*args, **kwargs):
+            return pandas.DataFrame({'path': ['raster.tif']})
+
+        with unittest.mock.patch('pandas.read_csv', read_csv):
+            with self.assertRaises(ValueError) as cm:
+                input_spec.get_validated_dataframe('https://example.com/table.csv')
+        self.assertIn('Remote CSVs cannot reference local file paths',
+                      str(cm.exception))
+
     def test_unique_key_not_first_column(self):
         """validation: test success when key field is not first column."""
         from natcap.invest import validation
