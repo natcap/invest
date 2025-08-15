@@ -12,7 +12,6 @@ import tempfile
 import textwrap
 import threading
 import unittest
-import unittest.mock
 import warnings
 
 import numpy
