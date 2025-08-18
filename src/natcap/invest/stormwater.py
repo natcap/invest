@@ -198,7 +198,8 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.SingleBandRasterOutput(
-            id="retention_ratio.tif",
+            id="retention_ratio",
+            path="retention_ratio.tif",
             about=gettext(
                 "Map of the stormwater retention ratio, derived from the LULC raster and"
                 " biophysical table RC_x columns."
@@ -207,7 +208,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="adjusted_retention_ratio.tif",
+            id="adjusted_retention_ratio",
+            path="adjusted_retention_ratio.tif",
             about=gettext(
                 "Map of the adjusted retention ratio, calculated according to equation"
                 " (124) from the ‘retention_ratio, ratio_average, near_road’, and"
@@ -218,13 +220,15 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="retention_volume.tif",
+            id="retention_volume",
+            path="retention_volume.tif",
             about=gettext("Map of retention volume."),
             data_type=float,
             units=u.meter**3 / u.year
         ),
         spec.SingleBandRasterOutput(
-            id="percolation_ratio.tif",
+            id="percolation_ratio",
+            path="percolation_ratio.tif",
             about=gettext(
                 "Map of percolation ratio derived by cross-referencing the LULC and soil"
                 " group rasters with the biophysical table."
@@ -234,14 +238,16 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="percolation_volume.tif",
+            id="percolation_volume",
+            path="percolation_volume.tif",
             about=gettext("Map of percolation (potential aquifer recharge) volume."),
             created_if="percolation",
             data_type=float,
             units=u.meter**3 / u.year
         ),
         spec.SingleBandRasterOutput(
-            id="runoff_ratio.tif",
+            id="runoff_ratio",
+            path="runoff_ratio.tif",
             about=gettext(
                 "Map of the stormwater runoff ratio. This is the inverse of"
                 " ‘retention_ratio.tif’"
@@ -250,20 +256,23 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="runoff_volume.tif",
+            id="runoff_volume",
+            path="runoff_volume.tif",
             about=gettext("Map of runoff volume."),
             data_type=float,
             units=u.meter**3 / u.year
         ),
         spec.SingleBandRasterOutput(
-            id="retention_value.tif",
+            id="retention_value",
+            path="retention_value.tif",
             about=gettext("Map of the value of water retained."),
             created_if="replacement_cost",
             data_type=float,
             units=u.currency / u.year
         ),
         spec.VectorOutput(
-            id="aggregate.gpkg",
+            id="aggregate",
+            path="aggregate.gpkg",
             about=gettext(
                 "Map of aggregate data. This is identical to the aggregate areas input"
                 " vector, but each polygon is given additional fields with the aggregate"
@@ -329,131 +338,137 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ]
         ),
-        spec.DirectoryOutput(
-            id="intermediate",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="lulc_aligned.tif",
-                    about=gettext(
-                        "Copy of the soil group raster input, cropped to the intersection"
-                        " of the three raster inputs."
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="soil_group_aligned.tif",
-                    about=gettext(
-                        "Copy of the soil group raster input, aligned to the LULC raster"
-                        " and cropped to the intersection of the three raster inputs."
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="precipitation_aligned.tif",
-                    about=gettext(
-                        "Copy of the precipitation raster input, aligned to the LULC"
-                        " raster and cropped to the intersection of the three raster"
-                        " inputs."
-                    ),
-                    data_type=float,
-                    units=u.millimeter / u.year
-                ),
-                spec.VectorOutput(
-                    id="reprojected_centerlines.gpkg",
-                    about=gettext(
-                        "Copy of the road centerlines vector input, reprojected to the"
-                        " LULC raster projection."
-                    ),
-                    geometry_types={"LINESTRING", "MULTILINESTRING"},
-                    fields=[]
-                ),
-                spec.SingleBandRasterOutput(
-                    id="rasterized_centerlines.tif",
-                    about=gettext(
-                        "A rasterized version of the reprojected centerlines vector,"
-                        " where 1 means the pixel is a road and 0 means it isn’t."
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="is_connected_lulc.tif",
-                    about=gettext(
-                        "A binary raster derived from the LULC raster and biophysical"
-                        " table is_connected column, where 1 means the pixel has a"
-                        " directly-connected impervious LULC type, and 0 means it does"
-                        " not."
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="road_distance.tif",
-                    about=gettext(
-                        "A raster derived from the rasterized centerlines map, where each"
-                        " pixel’s value is its minimum distance to a road pixel (measured"
-                        " centerpoint-to-centerpoint)."
-                    ),
-                    data_type=float,
-                    units=u.pixel
-                ),
-                spec.SingleBandRasterOutput(
-                    id="connected_lulc_distance.tif",
-                    about=gettext(
-                        "A raster derived from the is_connected_lulc map, where each"
-                        " pixel’s value is its minimum distance to a connected impervious"
-                        " LULC pixel (measured centerpoint-to-centerpoint)."
-                    ),
-                    data_type=float,
-                    units=u.pixel
-                ),
-                spec.SingleBandRasterOutput(
-                    id="near_road.tif",
-                    about=gettext(
-                        "A binary raster derived from the road_distance map, where 1"
-                        " means the pixel is within the retention radius of a road pixel,"
-                        " and 0 means it isn’t."
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="near_connected_lulc.tif",
-                    about=gettext(
-                        "A binary raster derived from the connected_lulc_distance map,"
-                        " where 1 means the pixel is within the retention radius of a"
-                        " connected impervious LULC pixel, and 0 means it isn’t."
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="search_kernel.tif",
-                    about=gettext(
-                        "A binary raster representing the search kernel that is convolved"
-                        " with the retention_ratio raster to calculate the averaged"
-                        " retention ratio within the retention radius of each pixel."
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="ratio_average.tif",
-                    about=gettext(
-                        "A raster where each pixel’s value is the average of its"
-                        " neighborhood of pixels in the retention_ratio map, calculated"
-                        " by convolving the search kernel with the retention ratio"
-                        " raster."
-                    ),
-                    data_type=float,
-                    units=None
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="lulc_aligned",
+            path="intermediate/lulc_aligned.tif",
+            about=gettext(
+                "Copy of the soil group raster input, cropped to the intersection"
+                " of the three raster inputs."
+            ),
+            data_type=int,
+            units=None
         ),
-        spec.TASKGRAPH_DIR
+        spec.SingleBandRasterOutput(
+            id="soil_group_aligned",
+            path="intermediate/soil_group_aligned.tif",
+            about=gettext(
+                "Copy of the soil group raster input, aligned to the LULC raster"
+                " and cropped to the intersection of the three raster inputs."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="precipitation_aligned",
+            path="intermediate/precipitation_aligned.tif",
+            about=gettext(
+                "Copy of the precipitation raster input, aligned to the LULC"
+                " raster and cropped to the intersection of the three raster"
+                " inputs."
+            ),
+            data_type=float,
+            units=u.millimeter / u.year
+        ),
+        spec.VectorOutput(
+            id="reprojected_centerlines",
+            path="intermediate/reprojected_centerlines.gpkg",
+            about=gettext(
+                "Copy of the road centerlines vector input, reprojected to the"
+                " LULC raster projection."
+            ),
+            geometry_types={"LINESTRING", "MULTILINESTRING"},
+            fields=[]
+        ),
+        spec.SingleBandRasterOutput(
+            id="rasterized_centerlines",
+            path="intermediate/rasterized_centerlines.tif",
+            about=gettext(
+                "A rasterized version of the reprojected centerlines vector,"
+                " where 1 means the pixel is a road and 0 means it isn’t."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="is_connected_lulc",
+            path="intermediate/is_connected_lulc.tif",
+            about=gettext(
+                "A binary raster derived from the LULC raster and biophysical"
+                " table is_connected column, where 1 means the pixel has a"
+                " directly-connected impervious LULC type, and 0 means it does"
+                " not."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="road_distance",
+            path="intermediate/road_distance.tif",
+            about=gettext(
+                "A raster derived from the rasterized centerlines map, where each"
+                " pixel’s value is its minimum distance to a road pixel (measured"
+                " centerpoint-to-centerpoint)."
+            ),
+            data_type=float,
+            units=u.pixel
+        ),
+        spec.SingleBandRasterOutput(
+            id="connected_lulc_distance",
+            path="intermediate/connected_lulc_distance.tif",
+            about=gettext(
+                "A raster derived from the is_connected_lulc map, where each"
+                " pixel’s value is its minimum distance to a connected impervious"
+                " LULC pixel (measured centerpoint-to-centerpoint)."
+            ),
+            data_type=float,
+            units=u.pixel
+        ),
+        spec.SingleBandRasterOutput(
+            id="near_road",
+            path="intermediate/near_road.tif",
+            about=gettext(
+                "A binary raster derived from the road_distance map, where 1"
+                " means the pixel is within the retention radius of a road pixel,"
+                " and 0 means it isn’t."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="near_connected_lulc",
+            path="intermediate/near_connected_lulc.tif",
+            about=gettext(
+                "A binary raster derived from the connected_lulc_distance map,"
+                " where 1 means the pixel is within the retention radius of a"
+                " connected impervious LULC pixel, and 0 means it isn’t."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="search_kernel",
+            path="intermediate/search_kernel.tif",
+            about=gettext(
+                "A binary raster representing the search kernel that is convolved"
+                " with the retention_ratio raster to calculate the averaged"
+                " retention ratio within the retention radius of each pixel."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="ratio_average",
+            path="intermediate/ratio_average.tif",
+            about=gettext(
+                "A raster where each pixel’s value is the average of its"
+                " neighborhood of pixels in the retention_ratio map, calculated"
+                " by convolving the search kernel with the retention ratio"
+                " raster."
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

@@ -174,103 +174,100 @@ MODEL_SPEC = spec.ModelSpec(
         )
     ],
     outputs=[
-        spec.DirectoryOutput(
-            id="output",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="vshed_qual.tif",
-                    about=gettext("Map of visual quality classified into quartiles."),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="vshed.tif",
-                    about=gettext(
-                        "This raster layer contains the weighted sum of all visibility"
-                        " rasters. If no weight column is provided in the structures"
-                        " point vector, this raster will represent a count of the number"
-                        " of structure points that are visible from each pixel."
-                    ),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="vshed_value.tif",
-                    about=gettext(
-                        "This raster layer contains the weighted sum of the valuation"
-                        " rasters created for each point."
-                    ),
-                    data_type=float,
-                    units=u.none
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="vshed_qual",
+            path="output/vshed_qual.tif",
+            about=gettext("Map of visual quality classified into quartiles."),
+            data_type=int,
+            units=None
         ),
-        spec.DirectoryOutput(
-            id="intermediate",
-            about=None,
-            contents=[
-                spec.VectorOutput(
-                    id="aoi_reprojected.shp",
-                    about=gettext(
-                        "This vector is the AOI, reprojected to the DEM’s spatial"
-                        " reference and projection."
-                    ),
-                    geometry_types={"POLYGON", "MULTIPOLYGON"},
-                    fields=[]
-                ),
-                spec.SingleBandRasterOutput(
-                    id="dem_clipped.tif",
-                    about=gettext(
-                        "This raster layer is a version of the DEM that has been clipped"
-                        " and masked to the AOI and tiled. This is the DEM file that is"
-                        " used for the viewshed analysis."
-                    ),
-                    data_type=float,
-                    units=u.meter
-                ),
-                spec.VectorOutput(
-                    id="structures_clipped.shp",
-                    about=gettext(
-                        "Copy of the structures vector, clipped to the AOI extent."
-                    ),
-                    geometry_types={"POINT"},
-                    fields=[]
-                ),
-                spec.VectorOutput(
-                    id="structures_reprojected.shp",
-                    about=gettext(
-                        "Copy of the structures vector, reprojected to the DEM’s spatial"
-                        " reference and projection."
-                    ),
-                    geometry_types={"POINT"},
-                    fields=[]
-                ),
-                spec.SingleBandRasterOutput(
-                    id="value_[FEATURE_ID].tif",
-                    about=(
-                        "The calculated value of the viewshed amenity/disamenity given"
-                        " the distances of pixels from the structure's viewpoint, the"
-                        " weight of the viewpoint, the valuation function, and the a and"
-                        " b coefficients. The viewshed’s value is only evaluated for"
-                        " visible pixels."
-                    ),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="visibility_[FEATURE_ID].tif",
-                    about=(
-                        "Map of visibility for a given structure's viewpoint. This raster"
-                        " has pixel values of 0 (not visible), 1 (visible), or nodata"
-                        " (where the DEM is nodata)."
-                    ),
-                    data_type=int,
-                    units=None
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="vshed",
+            path="output/vshed.tif",
+            about=gettext(
+                "This raster layer contains the weighted sum of all visibility"
+                " rasters. If no weight column is provided in the structures"
+                " point vector, this raster will represent a count of the number"
+                " of structure points that are visible from each pixel."
+            ),
+            data_type=float,
+            units=u.none
         ),
-        spec.TASKGRAPH_DIR
+        spec.SingleBandRasterOutput(
+            id="vshed_value",
+            path="output/vshed_value.tif",
+            about=gettext(
+                "This raster layer contains the weighted sum of the valuation"
+                " rasters created for each point."
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.VectorOutput(
+            id="aoi_reprojected",
+            path="intermediate/aoi_reprojected.shp",
+            about=gettext(
+                "This vector is the AOI, reprojected to the DEM’s spatial"
+                " reference and projection."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
+        ),
+        spec.SingleBandRasterOutput(
+            id="dem_clipped",
+            path="intermediate/dem_clipped.tif",
+            about=gettext(
+                "This raster layer is a version of the DEM that has been clipped"
+                " and masked to the AOI and tiled. This is the DEM file that is"
+                " used for the viewshed analysis."
+            ),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.VectorOutput(
+            id="structures_clipped",
+            path="intermediate/structures_clipped.shp",
+            about=gettext(
+                "Copy of the structures vector, clipped to the AOI extent."
+            ),
+            geometry_types={"POINT"},
+            fields=[]
+        ),
+        spec.VectorOutput(
+            id="structures_reprojected",
+            path="intermediate/structures_reprojected.shp",
+            about=gettext(
+                "Copy of the structures vector, reprojected to the DEM’s spatial"
+                " reference and projection."
+            ),
+            geometry_types={"POINT"},
+            fields=[]
+        ),
+        spec.SingleBandRasterOutput(
+            id="value_[FEATURE_ID]",
+            path="intermediate/value_[FEATURE_ID].tif",
+            about=(
+                "The calculated value of the viewshed amenity/disamenity given"
+                " the distances of pixels from the structure's viewpoint, the"
+                " weight of the viewpoint, the valuation function, and the a and"
+                " b coefficients. The viewshed’s value is only evaluated for"
+                " visible pixels."
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="visibility_[FEATURE_ID]",
+            path="intermediate/visibility_[FEATURE_ID].tif",
+            about=(
+                "Map of visibility for a given structure's viewpoint. This raster"
+                " has pixel values of 0 (not visible), 1 (visible), or nodata"
+                " (where the DEM is nodata)."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

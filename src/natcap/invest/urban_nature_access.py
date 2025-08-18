@@ -273,343 +273,356 @@ MODEL_SPEC = spec.ModelSpec(
         )
     ],
     outputs=[
-        spec.DirectoryOutput(
-            id="output",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="urban_nature_supply_percapita.tif",
-                    about=gettext("The calculated supply per capita of urban nature."),
-                    data_type=float,
-                    units=u.meter**2
-                ),
-                spec.SingleBandRasterOutput(
-                    id="urban_nature_demand.tif",
-                    about=gettext(
-                        "The required area of urban nature needed by the population"
-                        " residing in each pixel in order to fully satisfy their urban"
-                        " nature needs. Higher values indicate a greater demand for"
-                        " accessible urban nature from the surrounding area."
-                    ),
-                    data_type=float,
-                    units=u.meter**2
-                ),
-                spec.SingleBandRasterOutput(
-                    id="urban_nature_balance_totalpop.tif",
-                    about=gettext(
-                        "The urban nature balance for the total population in a pixel."
-                        " Positive values indicate an oversupply of urban nature relative"
-                        " to the stated urban nature demand. Negative values indicate an"
-                        " undersupply of urban nature relative to the stated urban nature"
-                        " demand. This output is of particular relevance to understand"
-                        " the total amount of nature deficit for the population in a"
-                        " particular pixel."
-                    ),
-                    data_type=float,
-                    units=u.meter**2
-                ),
-                spec.VectorOutput(
-                    id="admin_boundaries.gpkg",
-                    about=(
-                        "A copy of the user's administrative boundaries vector with a"
-                        " single layer."
-                    ),
-                    geometry_types={"POLYGON", "MULTIPOLYGON"},
-                    fields=[
-                        spec.NumberOutput(
-                            id="SUP_DEMadm_cap",
-                            about=gettext(
-                                "The average urban nature supply/demand balance available"
-                                " per person within this administrative unit. If no"
-                                " people reside within this administrative unit, this"
-                                " field will have no value (NaN, NULL or None, depending"
-                                " on your GIS software)."
-                            ),
-                            units=u.meter**2 / u.person
-                        ),
-                        spec.NumberOutput(
-                            id="Pund_adm",
-                            about=gettext(
-                                "The total population within the administrative unit that"
-                                " is undersupplied with urban nature. If aggregating by"
-                                " population groups, this will be the sum of"
-                                " undersupplied populations across all population groups"
-                                " within this administrative unit."
-                            ),
-                            units=u.people
-                        ),
-                        spec.NumberOutput(
-                            id="Povr_adm",
-                            about=gettext(
-                                "The total population within the administrative unit that"
-                                " is oversupplied with urban nature. If aggregating by"
-                                " population groups, this will be the sum of oversupplied"
-                                " populations across all population groups within this"
-                                " administrative unit."
-                            ),
-                            units=u.people
-                        ),
-                        spec.NumberOutput(
-                            id="SUP_DEMadm_cap_[POP_GROUP]",
-                            about=gettext(
-                                "The mean urban nature supply/demand balance available"
-                                " per person in population group POP_GROUP within this"
-                                " administrative unit."
-                            ),
-                            created_if=(
-                                "(search_radius_mode == 'radius per population group') or"
-                                " aggregate_by_pop_group"
-                            ),
-                            units=u.meter**2 / u.person
-                        ),
-                        spec.NumberOutput(
-                            id="Pund_adm_[POP_GROUP]",
-                            about=gettext(
-                                "The total population belonging to the population group"
-                                " POP_GROUP within this administrative unit that are"
-                                " undersupplied with urban nature."
-                            ),
-                            created_if=(
-                                "(search_radius_mode == 'radius per population group') or"
-                                " aggregate_by_pop_group"
-                            ),
-                            units=u.people
-                        ),
-                        spec.NumberOutput(
-                            id="Povr_adm_[POP_GROUP]",
-                            about=gettext(
-                                "The total population belonging to the population group"
-                                " POP_GROUP within this administrative unit that is"
-                                " oversupplied with urban nature."
-                            ),
-                            created_if=(
-                                "(search_radius_mode == 'radius per population group') or"
-                                " aggregate_by_pop_group"
-                            ),
-                            units=u.people
-                        )
-                    ]
-                ),
-                spec.SingleBandRasterOutput(
-                    id="urban_nature_balance_[POP_GROUP].tif",
-                    about=gettext(
-                        "Positive pixel values indicate an oversupply of urban nature for"
-                        " the population group POP_GROUP relative to the stated urban"
-                        " nature demand. Negative values indicate an undersupply of urban"
-                        " nature for the population group POP_GROUP relative to the"
-                        " stated urban nature demand."
-                    ),
-                    created_if="search_radius_mode == 'radius per population group'",
-                    data_type=float,
-                    units=u.meter**2 / u.person
-                ),
-                spec.SingleBandRasterOutput(
-                    id="accessible_urban_nature.tif",
-                    about=gettext(
-                        "The area of greenspace available within the defined radius,"
-                        " weighted by the selected decay function."
-                    ),
-                    created_if="search_radius_mode == 'radius per urban nature class'",
-                    data_type=float,
-                    units=u.meter**2
-                ),
-                spec.SingleBandRasterOutput(
-                    id="accessible_urban_nature_lucode_[LUCODE].tif",
-                    about=gettext(
-                        "The area of greenspace available within the radius associated"
-                        " with urban nature class LUCODE, weighted by the selected decay"
-                        " function."
-                    ),
-                    created_if="search_radius_mode == 'radius per urban nature class'",
-                    data_type=float,
-                    units=u.meter**2
-                ),
-                spec.SingleBandRasterOutput(
-                    id="accessible_urban_nature_to_[POP_GROUP].tif",
-                    about=gettext(
-                        "The area of greenspace available within the radius associated"
-                        " with group POP_GROUP, weighted by the selected decay function."
-                    ),
-                    created_if="search_radius_mode == 'radius per population group'",
-                    data_type=float,
-                    units=u.meter**2
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="urban_nature_supply_percapita",
+            path="output/urban_nature_supply_percapita.tif",
+            about=gettext("The calculated supply per capita of urban nature."),
+            data_type=float,
+            units=u.meter**2
         ),
-        spec.DirectoryOutput(
-            id="intermediate",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="aligned_lulc.tif",
-                    about=(
-                        "A copy of the user's land use land cover raster. If the"
-                        " user-supplied LULC has non-square pixels, they will be"
-                        " resampled to square pixels in this raster."
+        spec.SingleBandRasterOutput(
+            id="urban_nature_demand",
+            path="output/urban_nature_demand.tif",
+            about=gettext(
+                "The required area of urban nature needed by the population"
+                " residing in each pixel in order to fully satisfy their urban"
+                " nature needs. Higher values indicate a greater demand for"
+                " accessible urban nature from the surrounding area."
+            ),
+            data_type=float,
+            units=u.meter**2
+        ),
+        spec.SingleBandRasterOutput(
+            id="urban_nature_balance_totalpop",
+            path="output/urban_nature_balance_totalpop.tif",
+            about=gettext(
+                "The urban nature balance for the total population in a pixel."
+                " Positive values indicate an oversupply of urban nature relative"
+                " to the stated urban nature demand. Negative values indicate an"
+                " undersupply of urban nature relative to the stated urban nature"
+                " demand. This output is of particular relevance to understand"
+                " the total amount of nature deficit for the population in a"
+                " particular pixel."
+            ),
+            data_type=float,
+            units=u.meter**2
+        ),
+        spec.VectorOutput(
+            id="admin_boundaries",
+            path="output/admin_boundaries.gpkg",
+            about=(
+                "A copy of the user's administrative boundaries vector with a"
+                " single layer."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[
+                spec.NumberOutput(
+                    id="SUP_DEMadm_cap",
+                    about=gettext(
+                        "The average urban nature supply/demand balance available"
+                        " per person within this administrative unit. If no"
+                        " people reside within this administrative unit, this"
+                        " field will have no value (NaN, NULL or None, depending"
+                        " on your GIS software)."
                     ),
-                    data_type=int,
-                    units=None
+                    units=u.meter**2 / u.person
                 ),
-                spec.SingleBandRasterOutput(
-                    id="aligned_population.tif",
-                    about=(
-                        "The user's population raster, aligned to the same resolution and"
-                        " dimensions as the aligned LULC."
+                spec.NumberOutput(
+                    id="Pund_adm",
+                    about=gettext(
+                        "The total population within the administrative unit that"
+                        " is undersupplied with urban nature. If aggregating by"
+                        " population groups, this will be the sum of"
+                        " undersupplied populations across all population groups"
+                        " within this administrative unit."
                     ),
-                    data_type=float,
-                    units=u.count
+                    units=u.people
                 ),
-                spec.SingleBandRasterOutput(
-                    id="undersupplied_population.tif",
-                    about=gettext("The population experiencing an urban nature deficit."),
-                    data_type=float,
-                    units=u.count
+                spec.NumberOutput(
+                    id="Povr_adm",
+                    about=gettext(
+                        "The total population within the administrative unit that"
+                        " is oversupplied with urban nature. If aggregating by"
+                        " population groups, this will be the sum of oversupplied"
+                        " populations across all population groups within this"
+                        " administrative unit."
+                    ),
+                    units=u.people
                 ),
-                spec.SingleBandRasterOutput(
-                    id="oversupplied_population.tif",
-                    about=gettext("The population experiencing an urban nature surplus."),
-                    data_type=float,
-                    units=u.count
-                ),
-                spec.SingleBandRasterOutput(
-                    id="distance_weighted_population_within_[SEARCH_RADIUS].tif",
-                    about=(
-                        "A sum of the population within the given search radius"
-                        " SEARCH_RADIUS, weighted by the user's decay function."
+                spec.NumberOutput(
+                    id="SUP_DEMadm_cap_[POP_GROUP]",
+                    about=gettext(
+                        "The mean urban nature supply/demand balance available"
+                        " per person in population group POP_GROUP within this"
+                        " administrative unit."
                     ),
                     created_if=(
-                        "search_radius_mode == 'uniform radius' or search_radius_mode =="
-                        " 'radius per urban nature class'"
+                        "(search_radius_mode == 'radius per population group') or"
+                        " aggregate_by_pop_group"
                     ),
-                    data_type=float,
-                    units=u.count
+                    units=u.meter**2 / u.person
                 ),
-                spec.SingleBandRasterOutput(
-                    id="urban_nature_area.tif",
+                spec.NumberOutput(
+                    id="Pund_adm_[POP_GROUP]",
                     about=gettext(
-                        "The area of urban nature (in square meters) represented in each"
-                        " pixel."
+                        "The total population belonging to the population group"
+                        " POP_GROUP within this administrative unit that are"
+                        " undersupplied with urban nature."
                     ),
                     created_if=(
-                        "search_radius_mode == 'uniform radius' or search_radius_mode =="
-                        " 'radius per population group'"
+                        "(search_radius_mode == 'radius per population group') or"
+                        " aggregate_by_pop_group"
                     ),
-                    data_type=float,
-                    units=u.meter**2
-                ),
-                spec.SingleBandRasterOutput(
-                    id="urban_nature_population_ratio.tif",
-                    about=gettext("The calculated urban nature/population ratio."),
-                    created_if="search_radius_mode == 'uniform radius'",
-                    data_type=float,
-                    units=u.meter**2 / u.person
-                ),
-                spec.SingleBandRasterOutput(
-                    id="urban_nature_area_[LUCODE].tif",
-                    about=gettext(
-                        "Pixel values represent the ares of urban nature (in square"
-                        " meters) represented in each pixel for the urban nature class"
-                        " represented by the land use land cover code LUCODE."
-                    ),
-                    created_if="search_radius_mode == 'radius per urban nature class'",
-                    data_type=float,
-                    units=u.meter**2
-                ),
-                spec.SingleBandRasterOutput(
-                    id="urban_nature_supply_percapita_lucode_[LUCODE].tif",
-                    about=gettext(
-                        "The urban nature supplied to populations due to the land use"
-                        " land cover code LUCODE"
-                    ),
-                    created_if="search_radius_mode == 'radius per urban nature class'",
-                    data_type=float,
-                    units=u.meter**2 / u.person
-                ),
-                spec.SingleBandRasterOutput(
-                    id="urban_nature_population_ratio_lucode_[LUCODE].tif",
-                    about=gettext(
-                        "The calculated urban nature/population ratio for the urban"
-                        " nature class represented by the land use land cover code"
-                        " LUCODE."
-                    ),
-                    created_if="search_radius_mode == 'radius per urban nature class'",
-                    data_type=float,
-                    units=u.meter**2 / u.person
-                ),
-                spec.SingleBandRasterOutput(
-                    id="population_in_[POP_GROUP].tif",
-                    about=gettext(
-                        "Each pixel represents the population of a pixel belonging to the"
-                        " population in the population group POP_GROUP."
-                    ),
-                    created_if="search_radius_mode == 'radius per population group'",
-                    data_type=float,
-                    units=u.count
-                ),
-                spec.SingleBandRasterOutput(
-                    id="proportion_of_population_in_[POP_GROUP].tif",
-                    about=gettext(
-                        "Each pixel represents the proportion of the total population"
-                        " that belongs to the population group POP_GROUP."
-                    ),
-                    created_if="search_radius_mode == 'radius per population group'",
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="distance_weighted_population_in_[POP_GROUP].tif",
-                    about=(
-                        "Each pixel represents the total number of people within the"
-                        " search radius for the population group POP_GROUP, weighted by"
-                        " the user's selection of decay function."
-                    ),
-                    created_if="search_radius_mode == 'radius per population group'",
-                    data_type=float,
                     units=u.people
                 ),
-                spec.SingleBandRasterOutput(
-                    id="distance_weighted_population_all_groups.tif",
+                spec.NumberOutput(
+                    id="Povr_adm_[POP_GROUP]",
                     about=gettext(
-                        "The total population, weighted by the appropriate decay"
-                        " function."
+                        "The total population belonging to the population group"
+                        " POP_GROUP within this administrative unit that is"
+                        " oversupplied with urban nature."
                     ),
-                    created_if="search_radius_mode == 'radius per population group'",
-                    data_type=float,
-                    units=u.people
-                ),
-                spec.SingleBandRasterOutput(
-                    id="urban_nature_supply_percapita_to_[POP_GROUP].tif",
-                    about=gettext(
-                        "The urban nature supply per capita to population group"
-                        " POP_GROUP."
+                    created_if=(
+                        "(search_radius_mode == 'radius per population group') or"
+                        " aggregate_by_pop_group"
                     ),
-                    created_if="search_radius_mode == 'radius per population group'",
-                    data_type=float,
-                    units=u.meter**2 / u.person
-                ),
-                spec.SingleBandRasterOutput(
-                    id="undersupplied_population_[POP_GROUP].tif",
-                    about=gettext(
-                        "The population in population group POP_GROUP that are"
-                        " experiencing an urban nature deficit."
-                    ),
-                    created_if="search_radius_mode == 'radius per population group'",
-                    data_type=float,
-                    units=u.people
-                ),
-                spec.SingleBandRasterOutput(
-                    id="oversupplied_population_[POP_GROUP].tif",
-                    about=gettext(
-                        "The population in population group POP_GROUP that are"
-                        " experiencing an urban nature surplus."
-                    ),
-                    created_if="search_radius_mode == 'radius per population group'",
-                    data_type=float,
                     units=u.people
                 )
             ]
         ),
-        spec.TASKGRAPH_DIR
+        spec.SingleBandRasterOutput(
+            id="urban_nature_balance_[POP_GROUP]",
+            path="output/urban_nature_balance_[POP_GROUP].tif",
+            about=gettext(
+                "Positive pixel values indicate an oversupply of urban nature for"
+                " the population group POP_GROUP relative to the stated urban"
+                " nature demand. Negative values indicate an undersupply of urban"
+                " nature for the population group POP_GROUP relative to the"
+                " stated urban nature demand."
+            ),
+            created_if="search_radius_mode == 'radius per population group'",
+            data_type=float,
+            units=u.meter**2 / u.person
+        ),
+        spec.SingleBandRasterOutput(
+            id="accessible_urban_nature",
+            path="output/accessible_urban_nature.tif",
+            about=gettext(
+                "The area of greenspace available within the defined radius,"
+                " weighted by the selected decay function."
+            ),
+            created_if="search_radius_mode == 'radius per urban nature class'",
+            data_type=float,
+            units=u.meter**2
+        ),
+        spec.SingleBandRasterOutput(
+            id="accessible_urban_nature_lucode_[LUCODE]",
+            path="output/accessible_urban_nature_lucode_[LUCODE].tif",
+            about=gettext(
+                "The area of greenspace available within the radius associated"
+                " with urban nature class LUCODE, weighted by the selected decay"
+                " function."
+            ),
+            created_if="search_radius_mode == 'radius per urban nature class'",
+            data_type=float,
+            units=u.meter**2
+        ),
+        spec.SingleBandRasterOutput(
+            id="accessible_urban_nature_to_[POP_GROUP]",
+            path="output/accessible_urban_nature_to_[POP_GROUP].tif",
+            about=gettext(
+                "The area of greenspace available within the radius associated"
+                " with group POP_GROUP, weighted by the selected decay function."
+            ),
+            created_if="search_radius_mode == 'radius per population group'",
+            data_type=float,
+            units=u.meter**2
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_lulc",
+            path="intermediate/aligned_lulc.tif",
+            about=(
+                "A copy of the user's land use land cover raster. If the"
+                " user-supplied LULC has non-square pixels, they will be"
+                " resampled to square pixels in this raster."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_population",
+            path="intermediate/aligned_population.tif",
+            about=(
+                "The user's population raster, aligned to the same resolution and"
+                " dimensions as the aligned LULC."
+            ),
+            data_type=float,
+            units=u.count
+        ),
+        spec.SingleBandRasterOutput(
+            id="undersupplied_population",
+            path="intermediate/undersupplied_population.tif",
+            about=gettext("The population experiencing an urban nature deficit."),
+            data_type=float,
+            units=u.count
+        ),
+        spec.SingleBandRasterOutput(
+            id="oversupplied_population",
+            path="intermediate/oversupplied_population.tif",
+            about=gettext("The population experiencing an urban nature surplus."),
+            data_type=float,
+            units=u.count
+        ),
+        spec.SingleBandRasterOutput(
+            id="distance_weighted_population_within_[SEARCH_RADIUS]",
+            path="intermediate/distance_weighted_population_within_[SEARCH_RADIUS].tif",
+            about=(
+                "A sum of the population within the given search radius"
+                " SEARCH_RADIUS, weighted by the user's decay function."
+            ),
+            created_if=(
+                "search_radius_mode == 'uniform radius' or search_radius_mode =="
+                " 'radius per urban nature class'"
+            ),
+            data_type=float,
+            units=u.count
+        ),
+        spec.SingleBandRasterOutput(
+            id="urban_nature_area",
+            path="intermediate/urban_nature_area.tif",
+            about=gettext(
+                "The area of urban nature (in square meters) represented in each"
+                " pixel."
+            ),
+            created_if=(
+                "search_radius_mode == 'uniform radius' or search_radius_mode =="
+                " 'radius per population group'"
+            ),
+            data_type=float,
+            units=u.meter**2
+        ),
+        spec.SingleBandRasterOutput(
+            id="urban_nature_population_ratio",
+            path="intermediate/urban_nature_population_ratio.tif",
+            about=gettext("The calculated urban nature/population ratio."),
+            created_if="search_radius_mode == 'uniform radius'",
+            data_type=float,
+            units=u.meter**2 / u.person
+        ),
+        spec.SingleBandRasterOutput(
+            id="urban_nature_area_[LUCODE]",
+            path="intermediate/urban_nature_area_[LUCODE].tif",
+            about=gettext(
+                "Pixel values represent the ares of urban nature (in square"
+                " meters) represented in each pixel for the urban nature class"
+                " represented by the land use land cover code LUCODE."
+            ),
+            created_if="search_radius_mode == 'radius per urban nature class'",
+            data_type=float,
+            units=u.meter**2
+        ),
+        spec.SingleBandRasterOutput(
+            id="urban_nature_supply_percapita_lucode_[LUCODE]",
+            path="intermediate/urban_nature_supply_percapita_lucode_[LUCODE].tif",
+            about=gettext(
+                "The urban nature supplied to populations due to the land use"
+                " land cover code LUCODE"
+            ),
+            created_if="search_radius_mode == 'radius per urban nature class'",
+            data_type=float,
+            units=u.meter**2 / u.person
+        ),
+        spec.SingleBandRasterOutput(
+            id="urban_nature_population_ratio_lucode_[LUCODE]",
+            path="intermediate/urban_nature_population_ratio_lucode_[LUCODE].tif",
+            about=gettext(
+                "The calculated urban nature/population ratio for the urban"
+                " nature class represented by the land use land cover code"
+                " LUCODE."
+            ),
+            created_if="search_radius_mode == 'radius per urban nature class'",
+            data_type=float,
+            units=u.meter**2 / u.person
+        ),
+        spec.SingleBandRasterOutput(
+            id="population_in_[POP_GROUP]",
+            path="intermediate/population_in_[POP_GROUP].tif",
+            about=gettext(
+                "Each pixel represents the population of a pixel belonging to the"
+                " population in the population group POP_GROUP."
+            ),
+            created_if="search_radius_mode == 'radius per population group'",
+            data_type=float,
+            units=u.count
+        ),
+        spec.SingleBandRasterOutput(
+            id="proportion_of_population_in_[POP_GROUP]",
+            path="intermediate/proportion_of_population_in_[POP_GROUP].tif",
+            about=gettext(
+                "Each pixel represents the proportion of the total population"
+                " that belongs to the population group POP_GROUP."
+            ),
+            created_if="search_radius_mode == 'radius per population group'",
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="distance_weighted_population_in_[POP_GROUP]",
+            path="intermediate/distance_weighted_population_in_[POP_GROUP].tif",
+            about=(
+                "Each pixel represents the total number of people within the"
+                " search radius for the population group POP_GROUP, weighted by"
+                " the user's selection of decay function."
+            ),
+            created_if="search_radius_mode == 'radius per population group'",
+            data_type=float,
+            units=u.people
+        ),
+        spec.SingleBandRasterOutput(
+            id="distance_weighted_population_all_groups",
+            path="intermediate/distance_weighted_population_all_groups.tif",
+            about=gettext(
+                "The total population, weighted by the appropriate decay"
+                " function."
+            ),
+            created_if="search_radius_mode == 'radius per population group'",
+            data_type=float,
+            units=u.people
+        ),
+        spec.SingleBandRasterOutput(
+            id="urban_nature_supply_percapita_to_[POP_GROUP]",
+            path="intermediate/urban_nature_supply_percapita_to_[POP_GROUP].tif",
+            about=gettext(
+                "The urban nature supply per capita to population group"
+                " POP_GROUP."
+            ),
+            created_if="search_radius_mode == 'radius per population group'",
+            data_type=float,
+            units=u.meter**2 / u.person
+        ),
+        spec.SingleBandRasterOutput(
+            id="undersupplied_population_[POP_GROUP]",
+            path="intermediate/undersupplied_population_[POP_GROUP].tif",
+            about=gettext(
+                "The population in population group POP_GROUP that are"
+                " experiencing an urban nature deficit."
+            ),
+            created_if="search_radius_mode == 'radius per population group'",
+            data_type=float,
+            units=u.people
+        ),
+        spec.SingleBandRasterOutput(
+            id="oversupplied_population_[POP_GROUP]",
+            path="intermediate/oversupplied_population_[POP_GROUP].tif",
+            about=gettext(
+                "The population in population group POP_GROUP that are"
+                " experiencing an urban nature surplus."
+            ),
+            created_if="search_radius_mode == 'radius per population group'",
+            data_type=float,
+            units=u.people
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

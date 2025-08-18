@@ -85,7 +85,8 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.CSVOutput(
-            id="transitions.csv",
+            id="transitions",
+            path="transitions.csv",
             about=gettext(
                 "LULC transition matrix. The first column represents the source LULC"
                 " class, and the first row represents the destination LULC classes. Cells"
@@ -120,7 +121,8 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="lulc-class"
         ),
         spec.CSVOutput(
-            id="carbon_pool_transient_template.csv",
+            id="carbon_pool_transient_template",
+            path="carbon_pool_transient_template.csv",
             about=gettext(
                 "Table mapping each LULC type to impact and accumulation information."
                 " This is a template that you will fill out to create the biophysical"
@@ -243,7 +245,8 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="lucode"
         ),
         spec.SingleBandRasterOutput(
-            id="aligned_lulc_[YEAR].tif",
+            id="aligned_lulc_[YEAR]",
+            path="aligned_lulc_[YEAR].tif",
             about=gettext(
                 "Copy of LULC map for the given year, aligned and resampled to match all"
                 " the other LULC maps."
@@ -251,7 +254,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=int,
             units=None
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 

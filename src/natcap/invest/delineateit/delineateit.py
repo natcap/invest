@@ -114,16 +114,18 @@ MODEL_SPEC = spec.ModelSpec(
         )
     ],
     outputs=[
-        spec.FILLED_DEM.model_copy(update=dict(id="filled_dem.tif")),
+        spec.FILLED_DEM,
         spec.SingleBandRasterOutput(
-            id="flow_direction.tif",
+            id="flow_direction",
+            path="flow_direction.tif",
             about=gettext("D8 flow direction."),
             data_type=int,
             units=None
         ),
-        spec.FLOW_ACCUMULATION.model_copy(update=dict(id="flow_accumulation.tif")),
+        spec.FLOW_ACCUMULATION,
         spec.VectorOutput(
-            id="preprocessed_geometries.gpkg",
+            id="preprocessed_geometries",
+            path="preprocessed_geometries.gpkg",
             about=gettext(
                 "A vector containing only those geometries that the model can verify are"
                 " valid. The geometries appearing in this vector will be the ones passed"
@@ -139,9 +141,12 @@ MODEL_SPEC = spec.ModelSpec(
             },
             fields=[]
         ),
-        spec.STREAM.model_copy(update=dict(id="streams.tif")),
+        spec.STREAM.model_copy(update=dict(
+            id="streams",
+            path="streams.tif")),
         spec.VectorOutput(
-            id="snapped_outlets.gpkg",
+            id="snapped_outlets",
+            path="snapped_outlets.gpkg",
             about=gettext(
                 "A vector that indicates where outlet points (point geometries only) were"
                 " snapped to based on the values of Threshold Flow Accumulation and Pixel"
@@ -152,7 +157,8 @@ MODEL_SPEC = spec.ModelSpec(
             fields=[]
         ),
         spec.VectorOutput(
-            id="watersheds.gpkg",
+            id="watersheds",
+            path="watersheds.gpkg",
             about=gettext(
                 "A vector defining the areas that are upstream from the snapped outlet"
                 " points, where upstream area is defined by the D8 flow algorithm"
@@ -162,12 +168,13 @@ MODEL_SPEC = spec.ModelSpec(
             fields=[]
         ),
         spec.VectorOutput(
-            id="pour_points.gpkg",
+            id="pour_points",
+            path="pour_points.gpkg",
             about=gettext("Points where water flows off the defined area of the map."),
             geometry_types={"POINT"},
             fields=[]
         ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 
 )

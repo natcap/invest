@@ -225,7 +225,8 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.SingleBandRasterOutput(
-            id="carbon_map.tif",
+            id="carbon_map",
+            path="carbon_map.tif",
             about=gettext(
                 "A map of carbon stock per hectare, with the amount in forest derived"
                 " from the regression based on distance to forest edge, and the amount in"
@@ -235,7 +236,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.metric_ton / u.hectare
         ),
         spec.VectorOutput(
-            id="aggregated_carbon_stocks.shp",
+            id="aggregated_carbon_stocks",
+            path="aggregated_carbon_stocks.shp",
             about=gettext("AOI map with aggregated carbon statistics."),
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
@@ -251,77 +253,79 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ]
         ),
-        spec.DirectoryOutput(
-            id="intermediate_outputs",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="c_above_carbon_stocks.tif",
-                    about=gettext(
-                        "Carbon stored in the aboveground biomass carbon pool."
-                    ),
-                    data_type=float,
-                    units=u.metric_ton
-                ),
-                spec.SingleBandRasterOutput(
-                    id="c_below_carbon_stocks.tif",
-                    about=gettext(
-                        "Carbon stored in the belowground biomass carbon pool."
-                    ),
-                    data_type=float,
-                    units=u.metric_ton
-                ),
-                spec.SingleBandRasterOutput(
-                    id="c_dead_carbon_stocks.tif",
-                    about=gettext(
-                        "Carbon stored in the dead matter biomass carbon pool."
-                    ),
-                    data_type=float,
-                    units=u.metric_ton
-                ),
-                spec.SingleBandRasterOutput(
-                    id="c_soil_carbon_stocks.tif",
-                    about=gettext("Carbon stored in the soil biomass carbon pool."),
-                    data_type=float,
-                    units=u.metric_ton
-                ),
-                spec.VectorOutput(
-                    id="local_carbon_shape.shp",
-                    about=gettext(
-                        "The regression parameters reprojected to match your study area."
-                    ),
-                    geometry_types={"POLYGON", "MULTIPOLYGON"},
-                    fields=[]
-                ),
-                spec.SingleBandRasterOutput(
-                    id="edge_distance.tif",
-                    about=gettext(
-                        "The distance of each forest pixel to the nearest forest edge"
-                    ),
-                    data_type=float,
-                    units=u.pixel
-                ),
-                spec.SingleBandRasterOutput(
-                    id="tropical_forest_edge_carbon_stocks.tif",
-                    about=gettext(
-                        "A map of carbon in the forest only, according to the regression"
-                        " method."
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                ),
-                spec.VectorOutput(
-                    id="regression_model_params_clipped.shp",
-                    about=gettext(
-                        "The Global Regression Models shapefile clipped to the study"
-                        " area."
-                    ),
-                    geometry_types={"POLYGON", "MULTIPOLYGON"},
-                    fields=[]
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="c_above_carbon_stocks",
+            path="intermediate_outputs/c_above_carbon_stocks.tif",
+            about=gettext(
+                "Carbon stored in the aboveground biomass carbon pool."
+            ),
+            data_type=float,
+            units=u.metric_ton
         ),
-        spec.TASKGRAPH_DIR
+        spec.SingleBandRasterOutput(
+            id="c_below_carbon_stocks",
+            path="intermediate_outputs/c_below_carbon_stocks.tif",
+            about=gettext(
+                "Carbon stored in the belowground biomass carbon pool."
+            ),
+            data_type=float,
+            units=u.metric_ton
+        ),
+        spec.SingleBandRasterOutput(
+            id="c_dead_carbon_stocks",
+            path="intermediate_outputs/c_dead_carbon_stocks.tif",
+            about=gettext(
+                "Carbon stored in the dead matter biomass carbon pool."
+            ),
+            data_type=float,
+            units=u.metric_ton
+        ),
+        spec.SingleBandRasterOutput(
+            id="c_soil_carbon_stocks",
+            path="intermediate_outputs/c_soil_carbon_stocks.tif",
+            about=gettext("Carbon stored in the soil biomass carbon pool."),
+            data_type=float,
+            units=u.metric_ton
+        ),
+        spec.VectorOutput(
+            id="local_carbon_shape",
+            path="intermediate_outputs/local_carbon_shape.shp",
+            about=gettext(
+                "The regression parameters reprojected to match your study area."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
+        ),
+        spec.SingleBandRasterOutput(
+            id="edge_distance",
+            path="intermediate_outputs/edge_distance.tif",
+            about=gettext(
+                "The distance of each forest pixel to the nearest forest edge"
+            ),
+            data_type=float,
+            units=u.pixel
+        ),
+        spec.SingleBandRasterOutput(
+            id="tropical_forest_edge_carbon_stocks",
+            path="intermediate_outputs/tropical_forest_edge_carbon_stocks.tif",
+            about=gettext(
+                "A map of carbon in the forest only, according to the regression"
+                " method."
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.VectorOutput(
+            id="regression_model_params_clipped",
+            path="intermediate_outputs/regression_model_params_clipped.shp",
+            about=gettext(
+                "The Global Regression Models shapefile clipped to the study"
+                " area."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

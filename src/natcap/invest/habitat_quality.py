@@ -241,189 +241,190 @@ MODEL_SPEC = spec.ModelSpec(
         )
     ],
     outputs=[
-        spec.DirectoryOutput(
-            id="output",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="deg_sum_c.tif",
-                    about=gettext(
-                        "Relative level of habitat degradation on the current landscape."
-                    ),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="deg_sum_f.tif",
-                    about=gettext(
-                        "Relative level of habitat degradation on the future landscape."
-                    ),
-                    created_if="lulc_fut_path",
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="quality_c.tif",
-                    about=gettext(
-                        "Relative level of habitat quality on the current landscape."
-                    ),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="quality_f.tif",
-                    about=gettext(
-                        "Relative level of habitat quality on the future landscape."
-                    ),
-                    created_if="lulc_fut_path",
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="rarity_c.tif",
-                    about=(
-                        "Relative habitat rarity on the current landscape vis-a-vis the"
-                        " baseline map. The grid cell's values are defined between a"
-                        " range of 0 and 1 where 0.5 indicates no abundance change"
-                        " between the baseline and current or projected map. Values"
-                        " between 0 and 0.5 indicate a habitat is more abundant and the"
-                        " closer the value is to 0 the lesser the likelihood that the"
-                        " preservation of that habitat type on the current or future"
-                        " landscape is important to biodiversity conservation. Values"
-                        " between 0.5 and 1 indicate a habitat is less abundant and the"
-                        " closer the value is to 1 the greater the likelihood that the"
-                        " preservation of that habitat type on the current or future"
-                        " landscape is important to biodiversity conservation."
-                    ),
-                    created_if="lulc_bas_path",
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="rarity_f.tif",
-                    about=(
-                        "Relative habitat rarity on the future landscape vis-a-vis the"
-                        " baseline map. The grid cell's values are defined between a"
-                        " range of 0 and 1 where 0.5 indicates no abundance change"
-                        " between the baseline and current or projected map. Values"
-                        " between 0 and 0.5 indicate a habitat is more abundant and the"
-                        " closer the value is to 0 the lesser the likelihood that the"
-                        " preservation of that habitat type on the current or future"
-                        " landscape is important to biodiversity conservation. Values"
-                        " between 0.5 and 1 indicate a habitat is less abundant and the"
-                        " closer the value is to 1 the greater the likelihood that the"
-                        " preservation of that habitat type on the current or future"
-                        " landscape is important to biodiversity conservation."
-                    ),
-                    created_if="lulc_bas_path and lulc_fut_path",
-                    data_type=float,
-                    units=None
-                ),
-                spec.CSVOutput(
-                    id="rarity_c.csv",
-                    about=gettext(
-                        "Table of rarity values by LULC code for the current landscape."
-                    ),
-                    created_if="lulc_bas_path",
-                    columns=[
-                        spec.NumberOutput(
-                            id="lucode", about=gettext("LULC class"), units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="rarity_value",
-                            about=gettext(
-                                "Relative habitat rarity on the current landscape"
-                                " vis-a-vis the baseline map. The rarity values are"
-                                " defined between a range of 0 and 1 where 0.5 indicates"
-                                " no abundance change between the baseline and current or"
-                                " projected map. Values between 0 and 0.5 indicate a"
-                                " habitat is more abundant and the closer the value is to"
-                                " 0 the lesser the likelihood that the preservation of"
-                                " that habitat type on the current or future landscape is"
-                                " important to biodiversity conservation. Values between"
-                                " 0.5 and 1 indicate a habitat is less abundant and the"
-                                " closer the value is to 1 the greater the likelihood"
-                                " that the preservation of that habitat type on the"
-                                " current or future landscape is important to"
-                                " biodiversity conservation."
-                            ),
-                            units=u.none
-                        )
-                    ],
-                    index_col="lucode"
-                ),
-                spec.CSVOutput(
-                    id="rarity_f.csv",
-                    about=gettext(
-                        "Table of rarity values by LULC code for the future landscape."
-                    ),
-                    created_if="lulc_bas_path and lulc_fut_path",
-                    columns=[
-                        spec.NumberOutput(
-                            id="lucode", about=gettext("LULC class"), units=u.none
-                        ),
-                        spec.NumberOutput(
-                            id="rarity_value",
-                            about=gettext(
-                                "Relative habitat rarity on the future landscape"
-                                " vis-a-vis the baseline map. The rarity values are"
-                                " defined between a range of 0 and 1 where 0.5 indicates"
-                                " no abundance change between the baseline and current or"
-                                " projected map. Values between 0 and 0.5 indicate a"
-                                " habitat is more abundant and the closer the value is to"
-                                " 0 the lesser the likelihood that the preservation of"
-                                " that habitat type on the current or future landscape is"
-                                " important to biodiversity conservation. Values between"
-                                " 0.5 and 1 indicate a habitat is less abundant and the"
-                                " closer the value is to 1 the greater the likelihood"
-                                " that the preservation of that habitat type on the"
-                                " current or future landscape is important to"
-                                " biodiversity conservation."
-                            ),
-                            units=u.none
-                        )
-                    ],
-                    index_col="lucode"
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="deg_sum_c",
+            path="output/deg_sum_c.tif",
+            about=gettext(
+                "Relative level of habitat degradation on the current landscape."
+            ),
+            data_type=float,
+            units=None
         ),
-        spec.DirectoryOutput(
-            id="intermediate",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="access_layer.tif",
-                    about=gettext("Rasterized access map"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="[LULC]_aligned.tif",
-                    about=gettext("Aligned copy of each LULC raster"),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="[THREAT]_aligned.tif",
-                    about=gettext("Aligned copy of each threat raster"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="filtered_[THREAT]_aligned.tif",
-                    about=gettext("Filtered threat raster"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="degradation_[THREAT].tif",
-                    about=gettext("Degradation raster for each threat"),
-                    data_type=float,
-                    units=None
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="deg_sum_f",
+            path="output/deg_sum_f.tif",
+            about=gettext(
+                "Relative level of habitat degradation on the future landscape."
+            ),
+            created_if="lulc_fut_path",
+            data_type=float,
+            units=None
         ),
-        spec.TASKGRAPH_DIR
+        spec.SingleBandRasterOutput(
+            id="quality_c",
+            path="output/quality_c.tif",
+            about=gettext(
+                "Relative level of habitat quality on the current landscape."
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="quality_f",
+            path="output/quality_f.tif",
+            about=gettext(
+                "Relative level of habitat quality on the future landscape."
+            ),
+            created_if="lulc_fut_path",
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="rarity_c",
+            path="output/rarity_c.tif",
+            about=(
+                "Relative habitat rarity on the current landscape vis-a-vis the"
+                " baseline map. The grid cell's values are defined between a"
+                " range of 0 and 1 where 0.5 indicates no abundance change"
+                " between the baseline and current or projected map. Values"
+                " between 0 and 0.5 indicate a habitat is more abundant and the"
+                " closer the value is to 0 the lesser the likelihood that the"
+                " preservation of that habitat type on the current or future"
+                " landscape is important to biodiversity conservation. Values"
+                " between 0.5 and 1 indicate a habitat is less abundant and the"
+                " closer the value is to 1 the greater the likelihood that the"
+                " preservation of that habitat type on the current or future"
+                " landscape is important to biodiversity conservation."
+            ),
+            created_if="lulc_bas_path",
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="rarity_f",
+            path="output/rarity_f.tif",
+            about=(
+                "Relative habitat rarity on the future landscape vis-a-vis the"
+                " baseline map. The grid cell's values are defined between a"
+                " range of 0 and 1 where 0.5 indicates no abundance change"
+                " between the baseline and current or projected map. Values"
+                " between 0 and 0.5 indicate a habitat is more abundant and the"
+                " closer the value is to 0 the lesser the likelihood that the"
+                " preservation of that habitat type on the current or future"
+                " landscape is important to biodiversity conservation. Values"
+                " between 0.5 and 1 indicate a habitat is less abundant and the"
+                " closer the value is to 1 the greater the likelihood that the"
+                " preservation of that habitat type on the current or future"
+                " landscape is important to biodiversity conservation."
+            ),
+            created_if="lulc_bas_path and lulc_fut_path",
+            data_type=float,
+            units=None
+        ),
+        spec.CSVOutput(
+            id="rarity_c_csv",
+            path="output/rarity_c.csv",
+            about=gettext(
+                "Table of rarity values by LULC code for the current landscape."
+            ),
+            created_if="lulc_bas_path",
+            columns=[
+                spec.NumberOutput(
+                    id="lucode", about=gettext("LULC class"), units=u.none
+                ),
+                spec.NumberOutput(
+                    id="rarity_value",
+                    about=gettext(
+                        "Relative habitat rarity on the current landscape"
+                        " vis-a-vis the baseline map. The rarity values are"
+                        " defined between a range of 0 and 1 where 0.5 indicates"
+                        " no abundance change between the baseline and current or"
+                        " projected map. Values between 0 and 0.5 indicate a"
+                        " habitat is more abundant and the closer the value is to"
+                        " 0 the lesser the likelihood that the preservation of"
+                        " that habitat type on the current or future landscape is"
+                        " important to biodiversity conservation. Values between"
+                        " 0.5 and 1 indicate a habitat is less abundant and the"
+                        " closer the value is to 1 the greater the likelihood"
+                        " that the preservation of that habitat type on the"
+                        " current or future landscape is important to"
+                        " biodiversity conservation."
+                    ),
+                    units=u.none
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.CSVOutput(
+            id="rarity_f_csv",
+            path="output/rarity_f.csv",
+            about=gettext(
+                "Table of rarity values by LULC code for the future landscape."
+            ),
+            created_if="lulc_bas_path and lulc_fut_path",
+            columns=[
+                spec.NumberOutput(
+                    id="lucode", about=gettext("LULC class"), units=u.none
+                ),
+                spec.NumberOutput(
+                    id="rarity_value",
+                    about=gettext(
+                        "Relative habitat rarity on the future landscape"
+                        " vis-a-vis the baseline map. The rarity values are"
+                        " defined between a range of 0 and 1 where 0.5 indicates"
+                        " no abundance change between the baseline and current or"
+                        " projected map. Values between 0 and 0.5 indicate a"
+                        " habitat is more abundant and the closer the value is to"
+                        " 0 the lesser the likelihood that the preservation of"
+                        " that habitat type on the current or future landscape is"
+                        " important to biodiversity conservation. Values between"
+                        " 0.5 and 1 indicate a habitat is less abundant and the"
+                        " closer the value is to 1 the greater the likelihood"
+                        " that the preservation of that habitat type on the"
+                        " current or future landscape is important to"
+                        " biodiversity conservation."
+                    ),
+                    units=u.none
+                )
+            ],
+            index_col="lucode"
+        ),
+        spec.SingleBandRasterOutput(
+            id="access_layer",
+            path="intermediate/access_layer.tif",
+            about=gettext("Rasterized access map"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="[LULC]_aligned",
+            path="intermediate/[LULC]_aligned.tif",
+            about=gettext("Aligned copy of each LULC raster"),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="[THREAT]_aligned",
+            path="intermediate/[THREAT]_aligned.tif",
+            about=gettext("Aligned copy of each threat raster"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="filtered_[THREAT]_aligned",
+            path="intermediate/filtered_[THREAT]_aligned.tif",
+            about=gettext("Filtered threat raster"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="degradation_[THREAT]",
+            path="intermediate/degradation_[THREAT].tif",
+            about=gettext("Degradation raster for each threat"),
+            data_type=float,
+            units=None
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

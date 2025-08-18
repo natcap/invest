@@ -475,13 +475,15 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.SingleBandRasterOutput(
-            id="carbon-accumulation-between-[YEAR1]-and-[YEAR2].tif",
+            id="carbon-accumulation-between-[YEAR1]-and-[YEAR2]",
+            path="carbon-accumulation-between-[YEAR1]-and-[YEAR2].tif",
             about=gettext("Amount of CO2E accumulated between the two specified years."),
             data_type=float,
             units=u.megametric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="carbon-emissions-between-[YEAR1]-and-[YEAR2].tif",
+            id="carbon-emissions-between-[YEAR1]-and-[YEAR2]",
+            path="carbon-emissions-between-[YEAR1]-and-[YEAR2].tif",
             about=gettext(
                 "Amount of CO2E lost to disturbance between the two specified years."
             ),
@@ -489,7 +491,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.megametric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="carbon-stock-at-[YEAR].tif",
+            id="carbon-stock-at-[YEAR]",
+            path="carbon-stock-at-[YEAR].tif",
             about=gettext(
                 "Sum of the 3 carbon pools for each LULC for the specified year"
             ),
@@ -497,7 +500,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.megametric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="total-net-carbon-sequestion-between-[YEAR1]-and-[YEAR2].tif",
+            id="total-net-carbon-sequestion-between-[YEAR1]-and-[YEAR2]",
+            path="total-net-carbon-sequestion-between-[YEAR1]-and-[YEAR2].tif",
             about=gettext(
                 "Total carbon sequestration between the two specified years, based on"
                 " accumulation minus emissions during that time period."
@@ -506,7 +510,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.megametric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="total-net-carbon-sequestration.tif",
+            id="total-net-carbon-sequestration",
+            path="total-net-carbon-sequestration.tif",
             about=gettext(
                 "Total carbon sequestration over the whole time period between the"
                 " Baseline and either the latest Snapshot Year or the Analysis Year,"
@@ -516,102 +521,106 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.megametric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="net-present-value.tif",
+            id="net-present-value",
+            path="net-present-value.tif",
             about=gettext("Monetary value of carbon sequestration."),
             data_type=float,
             units=u.currency / u.hectare
         ),
-        spec.DirectoryOutput(
-            id="intermediate",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="stocks-[POOL]-[YEAR].tif",
-                    about=gettext(
-                        "The carbon stocks available at the beginning of the year noted"
-                        " in the filename."
-                    ),
-                    data_type=float,
-                    units=u.megametric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="accumulation-[POOL]-[YEAR].tif",
-                    about=gettext(
-                        "The spatial distribution of rates of carbon accumulation in the"
-                        " given pool at the given year. Years will represent the snapshot"
-                        " years in which the accumulation raster takes effect."
-                    ),
-                    data_type=float,
-                    units=u.megametric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="halflife-[POOL]-[YEAR].tif",
-                    about=gettext(
-                        "A raster of the spatial distribution of the half-lives of carbon"
-                        " in the pool mentioned at the given snapshot year."
-                    ),
-                    data_type=float,
-                    units=u.year
-                ),
-                spec.SingleBandRasterOutput(
-                    id="disturbance-magnitude-[POOL]-[YEAR].tif",
-                    about=gettext(
-                        "The proportion of carbon disturbed in the given pool in the"
-                        " given snapshot year."
-                    ),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="disturbance-volume-[POOL]-[YEAR].tif",
-                    about=gettext(
-                        "the volume of the carbon disturbed in the snapshot year. This is"
-                        " a function of the carbon stocks at the year prior and the"
-                        " disturbance magnitude in the given snapshot year."
-                    ),
-                    data_type=float,
-                    units=u.megametric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="year-of-latest-disturbance-[POOL]-[YEAR].tif",
-                    about=gettext(
-                        "each cell indicates the most recent year in which the cell"
-                        " underwent a landcover transition."
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="aligned-lulc-[SNAPSHOT TYPE]-[YEAR].tif",
-                    about=gettext(
-                        "The snapshot landcover raster of the given year, aligned to the"
-                        " intersection of the bounding boxes of all snapshot rasters, and"
-                        " with consistent cell sizes. The cell size of the aligned"
-                        " landcover rasters is the minimum of the incoming cell sizes."
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="net-sequestration-[POOL]-[YEAR].tif",
-                    about=gettext(
-                        "the net sequestration in the given pool in the given year."
-                    ),
-                    data_type=float,
-                    units=u.megametric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="total-carbon-stocks-[YEAR].tif",
-                    about=gettext(
-                        "the sum of the stocks present across all three carbon pool at"
-                        " the given year."
-                    ),
-                    data_type=float,
-                    units=u.megametric_ton / u.hectare
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="stocks-[POOL]-[YEAR]",
+            path="intermediate/stocks-[POOL]-[YEAR].tif",
+            about=gettext(
+                "The carbon stocks available at the beginning of the year noted"
+                " in the filename."
+            ),
+            data_type=float,
+            units=u.megametric_ton / u.hectare
         ),
-        spec.TASKGRAPH_DIR
+        spec.SingleBandRasterOutput(
+            id="accumulation-[POOL]-[YEAR]",
+            path="intermediate/accumulation-[POOL]-[YEAR].tif",
+            about=gettext(
+                "The spatial distribution of rates of carbon accumulation in the"
+                " given pool at the given year. Years will represent the snapshot"
+                " years in which the accumulation raster takes effect."
+            ),
+            data_type=float,
+            units=u.megametric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="halflife-[POOL]-[YEAR]",
+            path="intermediate/halflife-[POOL]-[YEAR].tif",
+            about=gettext(
+                "A raster of the spatial distribution of the half-lives of carbon"
+                " in the pool mentioned at the given snapshot year."
+            ),
+            data_type=float,
+            units=u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="disturbance-magnitude-[POOL]-[YEAR]",
+            path="intermediate/disturbance-magnitude-[POOL]-[YEAR].tif",
+            about=gettext(
+                "The proportion of carbon disturbed in the given pool in the"
+                " given snapshot year."
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="disturbance-volume-[POOL]-[YEAR]",
+            path="intermediate/disturbance-volume-[POOL]-[YEAR].tif",
+            about=gettext(
+                "the volume of the carbon disturbed in the snapshot year. This is"
+                " a function of the carbon stocks at the year prior and the"
+                " disturbance magnitude in the given snapshot year."
+            ),
+            data_type=float,
+            units=u.megametric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="year-of-latest-disturbance-[POOL]-[YEAR]",
+            path="intermediate/year-of-latest-disturbance-[POOL]-[YEAR].tif",
+            about=gettext(
+                "each cell indicates the most recent year in which the cell"
+                " underwent a landcover transition."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned-lulc-[SNAPSHOT_TYPE]-[YEAR]",
+            path="intermediate/aligned-lulc-[SNAPSHOT_TYPE]-[YEAR].tif",
+            about=gettext(
+                "The snapshot landcover raster of the given year, aligned to the"
+                " intersection of the bounding boxes of all snapshot rasters, and"
+                " with consistent cell sizes. The cell size of the aligned"
+                " landcover rasters is the minimum of the incoming cell sizes."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="net-sequestration-[POOL]-[YEAR]",
+            path="intermediate/net-sequestration-[POOL]-[YEAR].tif",
+            about=gettext(
+                "the net sequestration in the given pool in the given year."
+            ),
+            data_type=float,
+            units=u.megametric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="total-carbon-stocks-[YEAR]",
+            path="intermediate/total-carbon-stocks-[YEAR].tif",
+            about=gettext(
+                "the sum of the stocks present across all three carbon pool at"
+                " the given year."
+            ),
+            data_type=float,
+            units=u.megametric_ton / u.hectare
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

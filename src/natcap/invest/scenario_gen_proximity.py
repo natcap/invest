@@ -127,19 +127,22 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.SingleBandRasterOutput(
-            id="nearest_to_edge.tif",
+            id="nearest_to_edge",
+            path="nearest_to_edge.tif",
             about=gettext("Map of the nearest-to-edge conversion scenario."),
             data_type=int,
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="farthest_from_edge.tif",
+            id="farthest_from_edge",
+            path="farthest_from_edge.tif",
             about=gettext("Map of the farthest-from-edge conversion scenario."),
             data_type=int,
             units=None
         ),
         spec.CSVOutput(
-            id="nearest_to_edge.csv",
+            id="nearest_to_edge_csv",
+            path="nearest_to_edge.csv",
             about=gettext(
                 "Table of land cover classes and the amount of each that was converted"
                 " for the nearest-to-edge conversion scenario."
@@ -168,7 +171,8 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="original lucode"
         ),
         spec.CSVOutput(
-            id="farthest_from_edge.csv",
+            id="farthest_from_edge_csv",
+            path="farthest_from_edge.csv",
             about=gettext(
                 "Table of land cover classes and the amount of each that was converted"
                 " for the farthest-from-edge conversion scenario."
@@ -196,37 +200,34 @@ MODEL_SPEC = spec.ModelSpec(
             ],
             index_col="original lucode"
         ),
-        spec.DirectoryOutput(
-            id="intermediate",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="aoi_masked_lulc.tif",
-                    about=gettext("Copy of the LULC raster masked to the AOI extent."),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="farthest_from_edge_distance.tif",
-                    about=gettext(
-                        "Map of the distance from each pixel to the farthest edge of the"
-                        " focal landcover."
-                    ),
-                    data_type=float,
-                    units=u.pixel
-                ),
-                spec.SingleBandRasterOutput(
-                    id="nearest_to_edge_distance.tif",
-                    about=gettext(
-                        "Map of the distance from each pixel to the nearest edge of the"
-                        " focal landcover."
-                    ),
-                    data_type=float,
-                    units=u.pixel
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="aoi_masked_lulc",
+            path="intermediate/aoi_masked_lulc.tif",
+            about=gettext("Copy of the LULC raster masked to the AOI extent."),
+            data_type=int,
+            units=None
         ),
-        spec.TASKGRAPH_DIR
+        spec.SingleBandRasterOutput(
+            id="farthest_from_edge_distance",
+            path="intermediate/farthest_from_edge_distance.tif",
+            about=gettext(
+                "Map of the distance from each pixel to the farthest edge of the"
+                " focal landcover."
+            ),
+            data_type=float,
+            units=u.pixel
+        ),
+        spec.SingleBandRasterOutput(
+            id="nearest_to_edge_distance",
+            path="intermediate/nearest_to_edge_distance.tif",
+            about=gettext(
+                "Map of the distance from each pixel to the nearest edge of the"
+                " focal landcover."
+            ),
+            data_type=float,
+            units=u.pixel
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

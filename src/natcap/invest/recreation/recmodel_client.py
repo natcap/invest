@@ -251,7 +251,8 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.VectorOutput(
-            id="PUD_results.gpkg",
+            id="pud_results",
+            path="PUD_results.gpkg",
             about=gettext("Results of photo-user-days aggregations in the AOI."),
             geometry_types={"MULTIPOLYGON", "POLYGON"},
             fields=[
@@ -268,7 +269,8 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.VectorOutput(
-            id="TUD_results.gpkg",
+            id="tud_results",
+            path="TUD_results.gpkg",
             about=gettext("Results of twitter-user-days aggregations in the AOI."),
             geometry_types={"MULTIPOLYGON", "POLYGON"},
             fields=[
@@ -285,7 +287,8 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.CSVOutput(
-            id="PUD_monthly_table.csv",
+            id="pud_monthly_table",
+            path="PUD_monthly_table.csv",
             about=gettext("Table of monthly photo-user-days in each AOI polygon."),
             columns=[
                 spec.IntegerOutput(id="poly_id", about=gettext("Polygon ID")),
@@ -300,7 +303,8 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="poly_id"
         ),
         spec.CSVOutput(
-            id="TUD_monthly_table.csv",
+            id="tud_monthly_table",
+            path="TUD_monthly_table.csv",
             about=gettext("Table of monthly twitter-user-days in each AOI polygon."),
             columns=[
                 spec.IntegerOutput(id="poly_id", about=gettext("Polygon ID")),
@@ -316,7 +320,8 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="poly_id"
         ),
         spec.VectorOutput(
-            id="regression_data.gpkg",
+            id="regression_data",
+            path="regression_data.gpkg",
             about=gettext(
                 "AOI polygons with all the variables needed to compute a regression,"
                 " including predictor attributes and the user-days response variable."
@@ -354,7 +359,8 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.FileOutput(
-            id="regression_summary.txt",
+            id="regression_summary",
+            path="regression_summary.txt",
             about=gettext(
                 "This is a text file output of the regression analysis. It includes"
                 " estimates for each predictor variable. It also contains a “server id"
@@ -365,7 +371,8 @@ MODEL_SPEC = spec.ModelSpec(
             created_if="compute_regression"
         ),
         spec.VectorOutput(
-            id="scenario_results.gpkg",
+            id="scenario_results",
+            path="scenario_results.gpkg",
             about=gettext(
                 "Results of scenario, including the predictor data used in the scenario"
                 " and the predicted visitation patterns for the scenario."
@@ -389,51 +396,53 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ]
         ),
-        spec.DirectoryOutput(
-            id="intermediate",
-            about=None,
-            contents=[
-                spec.VectorOutput(
-                    id="aoi.gpkg",
-                    about=gettext("Copy of the input AOI, gridded if applicable."),
-                    geometry_types={"MULTIPOLYGON", "POLYGON"},
-                    fields=[]
-                ),
-                spec.FileOutput(id="aoi.zip", about=gettext("Compressed AOI")),
-                spec.FileOutput(
-                    id="[PREDICTOR].json",
-                    about=gettext("aggregated predictor values within each polygon")
-                ),
-                spec.FileOutput(
-                    id="predictor_estimates.json", about=gettext("Predictor estimates")
-                ),
-                spec.FileOutput(
-                    id="pud.zip", about=gettext("Compressed photo-user-day data")
-                ),
-                spec.FileOutput(
-                    id="response_polygons_lookup.pickle",
-                    about=gettext(
-                        "Pickled dictionary mapping FIDs to shapely geometries"
-                    )
-                ),
-                spec.DirectoryOutput(
-                    id="scenario",
-                    about=None,
-                    contents=[
-                        spec.FileOutput(
-                            id="[PREDICTOR].json",
-                            about=gettext(
-                                "aggregated scenario predictor values within each polygon"
-                            )
-                        )
-                    ]
-                ),
-                spec.FileOutput(
-                    id="server_version.pickle", about=gettext("Server version info")
-                )
-            ]
+        spec.VectorOutput(
+            id="aoi",
+            path="intermediate/aoi.gpkg",
+            about=gettext("Copy of the input AOI, gridded if applicable."),
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[]
         ),
-        spec.TASKGRAPH_DIR
+        spec.FileOutput(
+            id="aoi_zip",
+            path="intermediate/aoi.zip",
+            about=gettext("Compressed AOI")
+        ),
+        spec.FileOutput(
+            id="[PREDICTOR]",
+            path="intermediate/[PREDICTOR].json",
+            about=gettext("aggregated predictor values within each polygon")
+        ),
+        spec.FileOutput(
+            id="predictor_estimates",
+            path="intermediate/predictor_estimates.json",
+            about=gettext("Predictor estimates")
+        ),
+        spec.FileOutput(
+            id="pud_zip",
+            path="intermediate/pud.zip",
+            about=gettext("Compressed photo-user-day data")
+        ),
+        spec.FileOutput(
+            id="response_polygons_lookup",
+            path="intermediate/response_polygons_lookup.pickle",
+            about=gettext(
+                "Pickled dictionary mapping FIDs to shapely geometries"
+            )
+        ),
+        spec.FileOutput(
+            id="scenario_[PREDICTOR]",
+            path="intermediate/scenario/[PREDICTOR].json",
+            about=gettext(
+                "aggregated scenario predictor values within each polygon"
+            )
+        ),
+        spec.FileOutput(
+            id="server_version",
+            path="intermediate/server_version.pickle",
+            about=gettext("Server version info")
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

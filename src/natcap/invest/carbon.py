@@ -181,7 +181,8 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.FileOutput(
-            id="report.html",
+            id="report",
+            path="report.html",
             about=gettext(
                 "This file presents a summary of all data computed by the model. It also"
                 " includes descriptions of all other output files produced by the model,"
@@ -191,7 +192,8 @@ MODEL_SPEC = spec.ModelSpec(
             )
         ),
         spec.SingleBandRasterOutput(
-            id="c_storage_bas.tif",
+            id="c_storage_bas",
+            path="c_storage_bas.tif",
             about=gettext(
                 "Raster showing the amount of carbon stored in each pixel for the"
                 " baseline scenario. It is a sum of all of the carbon pools provided by"
@@ -201,7 +203,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.metric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="c_storage_alt.tif",
+            id="c_storage_alt",
+            path="c_storage_alt.tif",
             about=gettext(
                 "Raster showing the amount of carbon stored in each pixel for the"
                 " alternate scenario. It is a sum of all of the carbon pools provided by"
@@ -212,7 +215,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.metric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="c_change_bas_alt.tif",
+            id="c_change_bas_alt",
+            path="c_change_bas_alt.tif",
             about=gettext(
                 "Raster showing the difference in carbon stored between the alternate"
                 " landscape and the baseline landscape. In this map some values may be"
@@ -224,7 +228,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.metric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="npv_alt.tif",
+            id="npv_alt",
+            path="npv_alt.tif",
             about=gettext(
                 "Rasters showing the economic value of carbon sequestered between the"
                 " baseline and the alternate landscape dates."
@@ -233,85 +238,87 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=u.currency / u.hectare
         ),
-        spec.DirectoryOutput(
-            id="intermediate_outputs",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="c_above_bas.tif",
-                    about=gettext(
-                        "Raster of aboveground carbon values in the baseline scenario,"
-                        " mapped from the Carbon Pools table to the LULC."
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="c_above_alt.tif",
-                    about=gettext(
-                        "Raster of aboveground carbon values in the alternate scenario,"
-                        " mapped from the Carbon Pools table to the LULC."
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="c_below_bas.tif",
-                    about=gettext(
-                        "Raster of belowground carbon values in the baseline scenario,"
-                        " mapped from the Carbon Pools table to the LULC."
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="c_below_alt.tif",
-                    about=gettext(
-                        "Raster of belowground carbon values in the alternate scenario,"
-                        " mapped from the Carbon Pools table to the LULC."
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="c_soil_bas.tif",
-                    about=gettext(
-                        "Raster of soil carbon values in the baseline scenario, mapped"
-                        " from the Carbon Pools table to the LULC."
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="c_soil_alt.tif",
-                    about=gettext(
-                        "Raster of soil carbon values in the alternate scenario, mapped"
-                        " from the Carbon Pools table to the LULC."
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="c_dead_bas.tif",
-                    about=gettext(
-                        "Raster of dead matter carbon values in the baseline scenario,"
-                        " mapped from the Carbon Pools table to the LULC."
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                ),
-                spec.SingleBandRasterOutput(
-                    id="c_dead_alt.tif",
-                    about=gettext(
-                        "Raster of dead matter carbon values in the alternate scenario,"
-                        " mapped from the Carbon Pools table to the LULC."
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.hectare
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="c_above_bas",
+            path="intermediate_outputs/c_above_bas.tif",
+            about=gettext(
+                "Raster of aboveground carbon values in the baseline scenario,"
+                " mapped from the Carbon Pools table to the LULC."
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
         ),
-        spec.TASKGRAPH_DIR
+        spec.SingleBandRasterOutput(
+            id="c_above_alt",
+            path="intermediate_outputs/c_above_alt.tif",
+            about=gettext(
+                "Raster of aboveground carbon values in the alternate scenario,"
+                " mapped from the Carbon Pools table to the LULC."
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="c_below_bas",
+            path="intermediate_outputs/c_below_bas.tif",
+            about=gettext(
+                "Raster of belowground carbon values in the baseline scenario,"
+                " mapped from the Carbon Pools table to the LULC."
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="c_below_alt",
+            path="intermediate_outputs/c_below_alt.tif",
+            about=gettext(
+                "Raster of belowground carbon values in the alternate scenario,"
+                " mapped from the Carbon Pools table to the LULC."
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="c_soil_bas",
+            path="intermediate_outputs/c_soil_bas.tif",
+            about=gettext(
+                "Raster of soil carbon values in the baseline scenario, mapped"
+                " from the Carbon Pools table to the LULC."
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="c_soil_alt",
+            path="intermediate_outputs/c_soil_alt.tif",
+            about=gettext(
+                "Raster of soil carbon values in the alternate scenario, mapped"
+                " from the Carbon Pools table to the LULC."
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="c_dead_bas",
+            path="intermediate_outputs/c_dead_bas.tif",
+            about=gettext(
+                "Raster of dead matter carbon values in the baseline scenario,"
+                " mapped from the Carbon Pools table to the LULC."
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="c_dead_alt",
+            path="intermediate_outputs/c_dead_alt.tif",
+            about=gettext(
+                "Raster of dead matter carbon values in the alternate scenario,"
+                " mapped from the Carbon Pools table to the LULC."
+            ),
+            data_type=float,
+            units=u.metric_ton / u.hectare
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

@@ -29,7 +29,7 @@ from .unit_registry import u
 LOGGER = logging.getLogger(__name__)
 speedups.enable()
 
-OUTPUT_WIND_DATA_FIELDS = [
+WIND_DATA_FIELDS_FROM_INPUT = [
     spec.NumberOutput(
         id="long",
         about=gettext("Longitude of the data point."),
@@ -81,7 +81,10 @@ OUTPUT_WIND_DATA_FIELDS = [
             " this point."
         ),
         units=u.megawatt_hour / u.year
-    ),
+    )
+]
+
+VALUATION_WIND_DATA_FIELDS = [
     spec.NumberOutput(
         id="DepthVal",
         about=gettext("Ocean depth at this point."),
@@ -93,7 +96,7 @@ OUTPUT_WIND_DATA_FIELDS = [
             "Distance to shore from this point. Included only if"
             " distance parameters were provided."
         ),
-        units=u.meter
+        units=u.meter,
     ),
     spec.NumberOutput(
         id="CO2_Tons",
@@ -101,7 +104,7 @@ OUTPUT_WIND_DATA_FIELDS = [
             "Offset carbon emissions for a farm centered on this"
             " point. Included only if Valuation is run."
         ),
-        units=u.metric_ton / u.year
+        units=u.metric_ton / u.year,
     ),
     spec.NumberOutput(
         id="Level_Cost",
@@ -110,7 +113,7 @@ OUTPUT_WIND_DATA_FIELDS = [
             " value of a farm centered on this point equal to zero."
             " Included only if Valuation is run."
         ),
-        units=u.currency / u.kilowatt_hour
+        units=u.currency / u.kilowatt_hour,
     ),
     spec.NumberOutput(
         id="NPV",
@@ -118,7 +121,7 @@ OUTPUT_WIND_DATA_FIELDS = [
             "The net present value of a farm centered on this point."
             " Included only if Valuation is run."
         ),
-        units=u.currency
+        units=u.currency,
     )
 ]
 
@@ -546,112 +549,220 @@ MODEL_SPEC = spec.ModelSpec(
         )
     ],
     outputs=[
-        spec.DirectoryOutput(
-            id="output",
-            about=None,
-            contents=[
-                spec.VectorOutput(
-                    id="wind_energy_points.shp",
-                    about=gettext("Map of summarized data at each point."),
-                    geometry_types={"POINT"},
-                    fields=OUTPUT_WIND_DATA_FIELDS
+        spec.VectorOutput(
+            id="final_wind_point_vector_path",
+            path="output/wind_energy_points.shp",
+            about=gettext("Map of summarized data at each point."),
+            geometry_types={"POINT"},
+            fields=WIND_DATA_FIELDS_FROM_INPUT + VALUATION_WIND_DATA_FIELDS
+        ),
+        spec.SingleBandRasterOutput(
+            id="bathymetry_path",
+            path="intermediate/bathymetry_resampled.tif",
+            about=gettext("Clipped and reprojected bathymetry map"),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="bathymetry_proj_raster_path",
+            path="intermediate/bathymetry_projected.tif",
+            about=gettext("Clipped and reprojected bathymetry map"),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="depth_mask_path",
+            path="intermediate/depth_mask.tif",
+            about=gettext(
+                "Bathymetry map masked to show only the pixels that fall within"
+                " the allowed depth range"
+            ),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.VectorOutput(
+            id="land_poly_proj_vector_path",
+            path="intermediate/projected_clipped_land_poly.shp",
+            about=gettext("Clipped and reprojected land polygon vector"),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[],
+        ),
+        spec.SingleBandRasterOutput(
+            id="dist_trans_path",
+            path="intermediate/distance_trans.tif",
+            about=gettext("Distance to shore from each pixel"),
+            data_type=float,
+            units=u.meter,
+        ),
+        spec.SingleBandRasterOutput(
+            id="dist_mask_path",
+            path="intermediate/distance_mask.tif",
+            about=gettext(
+                "Distance to shore, masked to show only the pixels that fall"
+                " within the allowed distance range"
+            ),
+            data_type=float,
+            units=u.meter,
+        ),
+        spec.SingleBandRasterOutput(
+            id="final_dist_raster_path",
+            path="intermediate/val_distance_trans.tif",
+            about=gettext(
+                "Distance to shore, masked to show only the pixels that fall"
+                " within the allowed distance range"
+            ),
+            data_type=float,
+            units=u.meter,
+        ),
+        spec.SingleBandRasterOutput(
+            id="initial_harvested_rater_path",
+            path="intermediate/harvested_unmasked.tif",
+            about=gettext(
+                "Rasterized harvested values from the wind data point vector,"
+                " not masked by depth or distance constraints"
+            ),
+            data_type=float,
+            units=u.megawatt_hour / u.year,
+        ),
+        spec.SingleBandRasterOutput(
+            id="harvested_masked_path",
+            path="intermediate/harvested_energy_MWhr_per_yr.tif",
+            about=gettext(
+                "Rasterized harvested values from the wind data point vector,"
+                " masked by depth and distance constraints"
+            ),
+            data_type=float,
+            units=u.megawatt_hour / u.year,
+        ),
+        spec.SingleBandRasterOutput(
+            id="carbon_raster_path",
+            path="intermediate/carbon_emissions_tons.tif",
+            about=gettext(
+                "Map of offset carbon emissions for a farm centered on each pixel"
+            ),
+            data_type=float,
+            units=u.metric_ton / u.year,
+        ),
+        spec.SingleBandRasterOutput(
+            id="levelized_raster_path",
+            path="intermediate/levelized_cost_price_per_kWh.tif",
+            about=gettext(
+                "Map of the energy price that would be required to set the"
+                " present value of a farm centered on each pixel equal to zero."
+            ),
+            data_type=float,
+            units=u.currency / u.kilowatt_hour,
+        ),
+        spec.SingleBandRasterOutput(
+            id="npv_raster_path",
+            path="intermediate/npv.tif",
+            about=gettext(
+                "Map of the net present value of a farm centered on each pixel."
+            ),
+            data_type=float,
+            units=u.currency,
+        ),
+        spec.VectorOutput(
+            id="grid_point_vector_path",
+            path="intermediate/val_grid_points.shp",
+            about=gettext("Point vector created from the grid point data provided"
+                " in the Grid Connection Points CSV. Contains all connection points"
+                " of type 'GRID.'"),
+            geometry_types={"POINT"},
+            fields=[],
+        ),
+        spec.VectorOutput(
+            id="grid_projected_vector_path",
+            path="intermediate/grid_point_projected_clipped.shp",
+            about=gettext("Point vector created from the grid point data provided"
+                " in the Grid Connection Points CSV, clipped to the AOI. Contains"
+                " all connection points of type 'GRID' that fall within the AOI"),
+            geometry_types={"POINT"},
+            fields=[],
+        ),
+        spec.VectorOutput(
+            id="land_point_vector_path",
+            path="intermediate/val_land_points.shp",
+            about=gettext("Point vector created from the grid point data provided"
+                " in the Grid Connection Points CSV. Contains all connection points"
+                " of type 'LAND.'"),
+            geometry_types={"POINT"},
+            fields=[],
+        ),
+        spec.VectorOutput(
+            id="land_projected_vector_path",
+            path="intermediate/land_point_projected_clipped.shp",
+            about=gettext("Point vector created from the grid point data provided"
+                " in the Grid Connection Points CSV, clipped to the AOI. Contains"
+                " all connection points of type 'LAND' that fall within the AOI"),
+            geometry_types={"POINT"},
+            fields=[],
+        ),
+        spec.VectorOutput(
+            id="land_to_grid_vector_path",
+            path="intermediate/land_point_to_grid.shp",
+            about=gettext("Point vector containing shortest distances from each"
+                " land point within the AOI to the grid points. Only created if"
+                " there are both LAND and GRID connection points within the AOI."),
+            geometry_types={"POINT"},
+            fields=[
+                spec.StringOutput(
+                    id="type",
+                    about=gettext("Value: 'land'"),
+                ),
+                spec.NumberOutput(
+                    id="lati",
+                    about=gettext("Latitude of the connection point."),
+                    units=u.degree
+                ),
+                spec.NumberOutput(
+                    id="long",
+                    about=gettext("Longitude of the connection point."),
+                    units=u.degree
+                ),
+                spec.NumberOutput(
+                    id="L2G",
+                    about=gettext("Distance to grid from this connection point."),
+                    units=u.kilometer
+                )
+            ],
+        ),
+        spec.SingleBandRasterOutput(
+            id="land_poly_dist_raster_path",
+            path="intermediate/land_poly_dist.tif",
+            about=gettext("Map of distance to shore, calculated using the land"
+                " polygon when no grid points are provided."),
+            data_type=float,
+            units=u.meter,
+        ),
+        spec.FileOutput(
+            id="wind_data_pickle_path",
+            path="intermediate/wind_data.pickle",
+            about=gettext("Pickled wind data dictionary")
+        ),
+        spec.VectorOutput(
+            id="wind_point_vector_path",
+            path="intermediate/wind_energy_points_from_data.shp",
+            about=gettext("Point vector created from input wind point data"),
+            geometry_types={"POINT"},
+            fields=WIND_DATA_FIELDS_FROM_INPUT
+        ),
+        spec.VectorOutput(
+            id="unmasked_wind_point_vector_path",
+            path="intermediate/unmasked_wind_energy_points.shp",
+            about=gettext("Input wind point data, clipped to the AOI if relevant"),
+            geometry_types={"POINT"},
+            fields=WIND_DATA_FIELDS_FROM_INPUT + [
+                spec.NumberOutput(
+                    id="Masked",
+                    about=gettext(
+                        "Indicates whether or not a point was masked out due to"
+                        " depth or distance constraints in the final output"
+                    )
                 )
             ]
         ),
-        spec.DirectoryOutput(
-            id="intermediate",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="aoi_raster.tif",
-                    about=gettext("Empty raster covering the extent of the AOI"),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="bathymetry_projected.tif",
-                    about=gettext("Clipped and reprojected bathymetry map"),
-                    data_type=float,
-                    units=u.meter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="carbon_emissions_tons.tif",
-                    about=gettext(
-                        "Map of offset carbon emissions for a farm centered on each pixel"
-                    ),
-                    data_type=float,
-                    units=u.metric_ton / u.year
-                ),
-                spec.SingleBandRasterOutput(
-                    id="depth_mask.tif",
-                    about=gettext(
-                        "Bathymetry map masked to show only the pixels that fall within"
-                        " the allowed depth range"
-                    ),
-                    data_type=float,
-                    units=u.meter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="distance_mask.tif",
-                    about=gettext(
-                        "Distance to shore, masked to show only the pixels that fall"
-                        " within the allowed distance range"
-                    ),
-                    data_type=float,
-                    units=u.meter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="distance_trans.tif",
-                    about=gettext("Distance to shore from each pixel"),
-                    data_type=float,
-                    units=u.meter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="harvested_energy_MWhr_per_yr.tif",
-                    about=gettext(
-                        "Map of energy harvested from a farm centered on each pixel."
-                    ),
-                    data_type=float,
-                    units=u.megawatt_hour / u.year
-                ),
-                spec.SingleBandRasterOutput(
-                    id="levelized_cost_price_per_kWh.tif",
-                    about=gettext(
-                        "Map of the energy price that would be required to set the"
-                        " present value of a farm centered on each pixel equal to zero."
-                    ),
-                    data_type=float,
-                    units=u.currency / u.kilowatt_hour
-                ),
-                spec.SingleBandRasterOutput(
-                    id="npv.tif",
-                    about=gettext(
-                        "Map of the net present value of a farm centered on each pixel."
-                    ),
-                    data_type=float,
-                    units=u.currency
-                ),
-                spec.VectorOutput(
-                    id="projected_clipped_land_poly.shp",
-                    about=gettext("Clipped and reprojected land polygon vector"),
-                    geometry_types={"POLYGON", "MULTIPOLYGON"},
-                    fields=[]
-                ),
-                spec.FileOutput(
-                    id="projection_params.pickle",
-                    about=gettext("Pickled bathymetry reprojection parameters")
-                ),
-                spec.FileOutput(
-                    id="wind_data.pickle", about=gettext("Pickled wind data dictionary")
-                ),
-                spec.VectorOutput(
-                    id="wind_energy_points_from_data.shp",
-                    about=gettext("Wind data"),
-                    geometry_types={"POINT"},
-                    fields=OUTPUT_WIND_DATA_FIELDS)
-            ]
-        ),
-        spec.TASKGRAPH_DIR
+        spec.TASKGRAPH_CACHE
     ]
 )
 
@@ -1151,7 +1262,7 @@ def execute(args):
         grid_dict = grid_land_df[grid_land_df['type'] == 'grid'].to_dict('index')
         land_dict = grid_land_df[grid_land_df['type'] == 'land'].to_dict('index')
 
-        grid_vector_path = os.path.join(
+        grid_point_vector_path = os.path.join(
             inter_dir, 'val_grid_points%s.shp' % suffix)
 
         # Create a point shapefile from the grid point dictionary.
@@ -1159,8 +1270,8 @@ def execute(args):
         # nice intermediate output for users
         grid_dict_to_vector_task = task_graph.add_task(
             func=_dictionary_to_point_vector,
-            args=(grid_dict, 'grid_points', grid_vector_path),
-            target_path_list=[grid_vector_path],
+            args=(grid_dict, 'grid_points', grid_point_vector_path),
+            target_path_list=[grid_point_vector_path],
             task_name='grid_dictionary_to_vector')
 
         # In case any of the above points lie outside the AOI, clip the
@@ -1169,7 +1280,7 @@ def execute(args):
             inter_dir, 'grid_point_projected_clipped%s.shp' % suffix)
         task_graph.add_task(
             func=_clip_and_reproject_vector,
-            args=(grid_vector_path, aoi_vector_path,
+            args=(grid_point_vector_path, aoi_vector_path,
                   grid_projected_vector_path, inter_dir),
             target_path_list=[grid_projected_vector_path],
             task_name='clip_and_reproject_grid_vector',

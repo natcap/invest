@@ -262,7 +262,8 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.VectorOutput(
-            id="watershed_results_ndr.gpkg",
+            id="watershed_results_ndr",
+            path="watershed_results_ndr.gpkg",
             about=gettext("Vector with aggregated nutrient model results per watershed."),
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
@@ -321,7 +322,8 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.SingleBandRasterOutput(
-            id="p_surface_export.tif",
+            id="p_surface_export",
+            path="p_surface_export.tif",
             about=gettext(
                 "A pixel level map showing how much phosphorus from each pixel eventually"
                 " reaches the stream by surface flow."
@@ -330,7 +332,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.kilogram / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="n_surface_export.tif",
+            id="n_surface_export",
+            path="n_surface_export.tif",
             about=gettext(
                 "A pixel level map showing how much nitrogen from each pixel eventually"
                 " reaches the stream by surface flow."
@@ -339,7 +342,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.kilogram / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="n_subsurface_export.tif",
+            id="n_subsurface_export",
+            path="n_subsurface_export.tif",
             about=gettext(
                 "A pixel level map showing how much nitrogen from each pixel eventually"
                 " reaches the stream by subsurface flow."
@@ -348,7 +352,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.kilogram / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="n_total_export.tif",
+            id="n_total_export",
+            path="n_total_export.tif",
             about=gettext(
                 "A pixel level map showing how much nitrogen from each pixel eventually"
                 " reaches the stream by either flow."
@@ -356,286 +361,323 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=u.kilogram / u.hectare
         ),
-        spec.STREAM.model_copy(update=dict(id="stream.tif")),
-        spec.DirectoryOutput(
-            id="intermediate_outputs",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="crit_len_n.tif",
-                    about=gettext(
-                        "Nitrogen retention length, found in the biophysical table"
-                    ),
-                    data_type=float,
-                    units=u.meter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="crit_len_p.tif",
-                    about=gettext(
-                        "Phosphorus retention length, found in the biophysical table"
-                    ),
-                    data_type=float,
-                    units=u.meter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="d_dn.tif",
-                    about=gettext("Downslope factor of the index of connectivity"),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="d_up.tif",
-                    about=gettext("Upslope factor of the index of connectivity"),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="dist_to_channel.tif",
-                    about=gettext(
-                        "Average downslope distance from a pixel to the stream"
-                    ),
-                    data_type=float,
-                    units=u.pixel
-                ),
-                spec.SingleBandRasterOutput(
-                    id="eff_n.tif",
-                    about=gettext(
-                        "Raw per-landscape cover retention efficiency for nitrogen."
-                    ),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="eff_p.tif",
-                    about=gettext(
-                        "Raw per-landscape cover retention efficiency for phosphorus"
-                    ),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="effective_retention_n.tif",
-                    about=gettext(
-                        "Effective nitrogen retention provided by the downslope flow path"
-                        " for each pixel"
-                    ),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="effective_retention_p.tif",
-                    about=gettext(
-                        "Effective phosphorus retention provided by the downslope flow"
-                        " path for each pixel"
-                    ),
-                    data_type=float,
-                    units=None
-                ),
-                spec.FLOW_ACCUMULATION.model_copy(update=dict(id="flow_accumulation.tif")),
-                spec.FLOW_DIRECTION.model_copy(update=dict(id="flow_direction.tif")),
-                spec.SingleBandRasterOutput(
-                    id="ic_factor.tif",
-                    about=gettext("Index of connectivity"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="load_n.tif",
-                    about=gettext("Nitrogen load (for surface transport) per pixel"),
-                    data_type=float,
-                    units=u.kilogram / u.year
-                ),
-                spec.SingleBandRasterOutput(
-                    id="load_p.tif",
-                    about=gettext("Phosphorus load (for surface transport) per pixel"),
-                    data_type=float,
-                    units=u.kilogram / u.year
-                ),
-                spec.SingleBandRasterOutput(
-                    id="modified_load_n.tif",
-                    about=gettext("Raw nitrogen load scaled by the runoff proxy index."),
-                    data_type=float,
-                    units=u.kilogram / u.year
-                ),
-                spec.SingleBandRasterOutput(
-                    id="modified_load_p.tif",
-                    about=gettext(
-                        "Raw phosphorus load scaled by the runoff proxy index."
-                    ),
-                    data_type=float,
-                    units=u.kilogram / u.year
-                ),
-                spec.SingleBandRasterOutput(
-                    id="ndr_n.tif",
-                    about=gettext("NDR values for nitrogen"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="ndr_p.tif",
-                    about=gettext("NDR values for phosphorus"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="runoff_proxy_index.tif",
-                    about=gettext(
-                        "Normalized values for the Runoff Proxy input to the model"
-                    ),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="s_accumulation.tif",
-                    about=gettext("Flow accumulation weighted by slope"),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="s_bar.tif",
-                    about=gettext(
-                        "Average slope gradient of the upslope contributing area"
-                    ),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="s_factor_inverse.tif",
-                    about=gettext("Inverse of slope"),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="sub_load_n.tif",
-                    about=gettext("Nitrogen loads for subsurface transport"),
-                    data_type=float,
-                    units=u.kilogram / u.year
-                ),
-                spec.SingleBandRasterOutput(
-                    id="sub_ndr_n.tif",
-                    about=gettext("Subsurface nitrogen NDR values"),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="surface_load_n.tif",
-                    about=gettext("Above ground nitrogen loads"),
-                    data_type=float,
-                    units=u.kilogram / u.hectare / u.year
-                ),
-                spec.SingleBandRasterOutput(
-                    id="surface_load_p.tif",
-                    about=gettext("Above ground phosphorus loads"),
-                    data_type=float,
-                    units=u.kilogram / u.hectare / u.year
-                ),
-                spec.SingleBandRasterOutput(
-                    id="thresholded_slope.tif",
-                    about=gettext(
-                        "Percent slope thresholded for correct calculation of IC."
-                    ),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="what_drains_to_stream.tif",
-                    about=gettext(
-                        "Map of which pixels drain to a stream. A value of 1 means that"
-                        " at least some of the runoff from that pixel drains to a stream"
-                        " in stream.tif. A value of 0 means that it does not drain at all"
-                        " to any stream in stream.tif."
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="aligned_dem.tif",
-                    about=gettext(
-                        "Copy of the DEM clipped to the extent of the other inputs"
-                    ),
-                    data_type=float,
-                    units=u.meter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="aligned_lulc.tif",
-                    about=gettext(
-                        "Copy of the LULC clipped to the extent of the other inputs and"
-                        " reprojected to the DEM projection"
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="aligned_runoff_proxy.tif",
-                    about=gettext(
-                        "Copy of the runoff proxy clipped to the extent of the other"
-                        " inputs and reprojected to the DEM projection"
-                    ),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="masked_dem.tif",
-                    about=gettext(
-                        "DEM input masked to exclude pixels outside the watershed"
-                    ),
-                    data_type=float,
-                    units=u.meter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="masked_lulc.tif",
-                    about=gettext(
-                        "LULC input masked to exclude pixels outside the watershed"
-                    ),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="masked_runoff_proxy.tif",
-                    about=gettext(
-                        "Runoff proxy input masked to exclude pixels outside the"
-                        " watershed"
-                    ),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.FILLED_DEM.model_copy(update=dict(id="filled_dem.tif")),
-                spec.SLOPE,
-                spec.FileOutput(
-                    id="subsurface_export_n.pickle",
-                    about=gettext(
-                        "Pickled zonal statistics of nitrogen subsurface export"
-                    )
-                ),
-                spec.FileOutput(
-                    id="subsurface_load_n.pickle",
-                    about=gettext("Pickled zonal statistics of nitrogen subsurface load")
-                ),
-                spec.FileOutput(
-                    id="surface_export_n.pickle",
-                    about=gettext("Pickled zonal statistics of nitrogen surface export")
-                ),
-                spec.FileOutput(
-                    id="surface_export_p.pickle",
-                    about=gettext(
-                        "Pickled zonal statistics of phosphorus surface export"
-                    )
-                ),
-                spec.FileOutput(
-                    id="surface_load_n.pickle",
-                    about=gettext("Pickled zonal statistics of nitrogen surface load")
-                ),
-                spec.FileOutput(
-                    id="surface_load_p.pickle",
-                    about=gettext("Pickled zonal statistics of phosphorus surface load")
-                ),
-                spec.FileOutput(
-                    id="total_export_n.pickle",
-                    about=gettext("Pickled zonal statistics of total nitrogen export")
-                )
-            ]
+        spec.STREAM,
+        spec.SingleBandRasterOutput(
+            id="crit_len_n",
+            path="intermediate_outputs/crit_len_n.tif",
+            about=gettext(
+                "Nitrogen retention length, found in the biophysical table"
+            ),
+            data_type=float,
+            units=u.meter
         ),
-        spec.TASKGRAPH_DIR
+        spec.SingleBandRasterOutput(
+            id="crit_len_p",
+            path="intermediate_outputs/crit_len_p.tif",
+            about=gettext(
+                "Phosphorus retention length, found in the biophysical table"
+            ),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="d_dn",
+            path="intermediate_outputs/d_dn.tif",
+            about=gettext("Downslope factor of the index of connectivity"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="d_up",
+            path="intermediate_outputs/d_up.tif",
+            about=gettext("Upslope factor of the index of connectivity"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="dist_to_channel",
+            path="intermediate_outputs/dist_to_channel.tif",
+            about=gettext(
+                "Average downslope distance from a pixel to the stream"
+            ),
+            data_type=float,
+            units=u.pixel
+        ),
+        spec.SingleBandRasterOutput(
+            id="eff_n",
+            path="intermediate_outputs/eff_n.tif",
+            about=gettext(
+                "Raw per-landscape cover retention efficiency for nitrogen."
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="eff_p",
+            path="intermediate_outputs/eff_p.tif",
+            about=gettext(
+                "Raw per-landscape cover retention efficiency for phosphorus"
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="effective_retention_n",
+            path="intermediate_outputs/effective_retention_n.tif",
+            about=gettext(
+                "Effective nitrogen retention provided by the downslope flow path"
+                " for each pixel"
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="effective_retention_p",
+            path="intermediate_outputs/effective_retention_p.tif",
+            about=gettext(
+                "Effective phosphorus retention provided by the downslope flow"
+                " path for each pixel"
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.FLOW_ACCUMULATION.model_copy(update=dict(
+            path="intermediate_outputs/flow_accumulation.tif")),
+        spec.FLOW_DIRECTION.model_copy(update=dict(
+            path="intermediate_outputs/flow_direction.tif")),
+        spec.SingleBandRasterOutput(
+            id="ic_factor",
+            path="intermediate_outputs/ic_factor.tif",
+            about=gettext("Index of connectivity"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="load_n",
+            path="intermediate_outputs/load_n.tif",
+            about=gettext("Nitrogen load (for surface transport) per pixel"),
+            data_type=float,
+            units=u.kilogram / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="load_p",
+            path="intermediate_outputs/load_p.tif",
+            about=gettext("Phosphorus load (for surface transport) per pixel"),
+            data_type=float,
+            units=u.kilogram / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="modified_load_n",
+            path="intermediate_outputs/modified_load_n.tif",
+            about=gettext("Raw nitrogen load scaled by the runoff proxy index."),
+            data_type=float,
+            units=u.kilogram / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="modified_load_p",
+            path="intermediate_outputs/modified_load_p.tif",
+            about=gettext(
+                "Raw phosphorus load scaled by the runoff proxy index."
+            ),
+            data_type=float,
+            units=u.kilogram / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="ndr_n",
+            path="intermediate_outputs/ndr_n.tif",
+            about=gettext("NDR values for nitrogen"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="ndr_p",
+            path="intermediate_outputs/ndr_p.tif",
+            about=gettext("NDR values for phosphorus"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="runoff_proxy_index",
+            path="intermediate_outputs/runoff_proxy_index.tif",
+            about=gettext(
+                "Normalized values for the Runoff Proxy input to the model"
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="s_accumulation",
+            path="intermediate_outputs/s_accumulation.tif",
+            about=gettext("Flow accumulation weighted by slope"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="s_bar",
+            path="intermediate_outputs/s_bar.tif",
+            about=gettext(
+                "Average slope gradient of the upslope contributing area"
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="s_factor_inverse",
+            path="intermediate_outputs/s_factor_inverse.tif",
+            about=gettext("Inverse of slope"),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="sub_load_n",
+            path="intermediate_outputs/sub_load_n.tif",
+            about=gettext("Nitrogen loads for subsurface transport"),
+            data_type=float,
+            units=u.kilogram / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="sub_ndr_n",
+            path="intermediate_outputs/sub_ndr_n.tif",
+            about=gettext("Subsurface nitrogen NDR values"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="surface_load_n",
+            path="intermediate_outputs/surface_load_n.tif",
+            about=gettext("Above ground nitrogen loads"),
+            data_type=float,
+            units=u.kilogram / u.hectare / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="surface_load_p",
+            path="intermediate_outputs/surface_load_p.tif",
+            about=gettext("Above ground phosphorus loads"),
+            data_type=float,
+            units=u.kilogram / u.hectare / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="thresholded_slope",
+            path="intermediate_outputs/thresholded_slope.tif",
+            about=gettext(
+                "Percent slope thresholded for correct calculation of IC."
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="what_drains_to_stream",
+            path="intermediate_outputs/what_drains_to_stream.tif",
+            about=gettext(
+                "Map of which pixels drain to a stream. A value of 1 means that"
+                " at least some of the runoff from that pixel drains to a stream"
+                " in stream.tif. A value of 0 means that it does not drain at all"
+                " to any stream in stream.tif."
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_dem",
+            path="intermediate_outputs/aligned_dem.tif",
+            about=gettext(
+                "Copy of the DEM clipped to the extent of the other inputs"
+            ),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_lulc",
+            path="intermediate_outputs/aligned_lulc.tif",
+            about=gettext(
+                "Copy of the LULC clipped to the extent of the other inputs and"
+                " reprojected to the DEM projection"
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_runoff_proxy",
+            path="intermediate_outputs/aligned_runoff_proxy.tif",
+            about=gettext(
+                "Copy of the runoff proxy clipped to the extent of the other"
+                " inputs and reprojected to the DEM projection"
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="masked_dem",
+            path="intermediate_outputs/masked_dem.tif",
+            about=gettext(
+                "DEM input masked to exclude pixels outside the watershed"
+            ),
+            data_type=float,
+            units=u.meter
+        ),
+        spec.SingleBandRasterOutput(
+            id="masked_lulc",
+            path="intermediate_outputs/masked_lulc.tif",
+            about=gettext(
+                "LULC input masked to exclude pixels outside the watershed"
+            ),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="masked_runoff_proxy",
+            path="intermediate_outputs/masked_runoff_proxy.tif",
+            about=gettext(
+                "Runoff proxy input masked to exclude pixels outside the"
+                " watershed"
+            ),
+            data_type=float,
+            units=u.none
+        ),
+        spec.FILLED_DEM.model_copy(update=dict(
+            path="intermediate_outputs/filled_dem.tif")),
+        spec.SLOPE.model_copy(update=dict(
+            path="intermediate_outputs/slope.tif")),
+        spec.FileOutput(
+            id="subsurface_export_n_pickle",
+            path="intermediate_outputs/subsurface_export_n.pickle",
+            about=gettext(
+                "Pickled zonal statistics of nitrogen subsurface export"
+            )
+        ),
+        spec.FileOutput(
+            id="subsurface_load_n_pickle",
+            path="intermediate_outputs/subsurface_load_n.pickle",
+            about=gettext("Pickled zonal statistics of nitrogen subsurface load")
+        ),
+        spec.FileOutput(
+            id="surface_export_n_pickle",
+            path="intermediate_outputs/surface_export_n.pickle",
+            about=gettext("Pickled zonal statistics of nitrogen surface export")
+        ),
+        spec.FileOutput(
+            id="surface_export_p_pickle",
+            path="intermediate_outputs/surface_export_p.pickle",
+            about=gettext(
+                "Pickled zonal statistics of phosphorus surface export"
+            )
+        ),
+        spec.FileOutput(
+            id="surface_load_n_pickle",
+            path="intermediate_outputs/surface_load_n.pickle",
+            about=gettext("Pickled zonal statistics of nitrogen surface load")
+        ),
+        spec.FileOutput(
+            id="surface_load_p_pickle",
+            path="intermediate_outputs/surface_load_p.pickle",
+            about=gettext("Pickled zonal statistics of phosphorus surface load")
+        ),
+        spec.FileOutput(
+            id="total_export_n_pickle",
+            path="intermediate_outputs/total_export_n.pickle",
+            about=gettext("Pickled zonal statistics of total nitrogen export")
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

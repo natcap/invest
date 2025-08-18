@@ -403,151 +403,141 @@ MODEL_SPEC = spec.ModelSpec(
         )
     ],
     outputs=[
-        spec.DirectoryOutput(
-            id="output",
-            about=None,
-            contents=[
-                spec.VectorOutput(
-                    id="watershed_results_wyield.shp",
-                    about=gettext(
-                        "Shapefile containing biophysical output values per"
-                        " watershed."
-                    ),
-                    geometry_types={"POLYGON"},
-                    fields=WATERSHED_OUTPUT_FIELDS
-                ),
-                spec.CSVOutput(
-                    id="watershed_results_wyield.csv",
-                    about=gettext(
-                        "Table containing biophysical output values per"
-                        " watershed."
-                    ),
-                    columns=WATERSHED_OUTPUT_FIELDS,
-                    index_col="ws_id"
-                ),
-                spec.VectorOutput(
-                    id="subwatershed_results_wyield.shp",
-                    about=gettext(
-                        "Shapefile containing biophysical output values per"
-                        " subwatershed."
-                    ),
-                    geometry_types={"POLYGON"},
-                    fields=SUBWATERSHED_OUTPUT_FIELDS
-                ),
-                spec.CSVOutput(
-                    id="subwatershed_results_wyield.csv",
-                    about=gettext(
-                        "Table containing biophysical output values per"
-                        " subwatershed."
-                    ),
-                    columns=SUBWATERSHED_OUTPUT_FIELDS,
-                    index_col="subws_id"
-                ),
-                spec.DirectoryOutput(
-                    id="per_pixel",
-                    about=gettext(
-                        "Outputs in the per_pixel folder can be useful for"
-                        " intermediate calculations but should NOT be"
-                        " interpreted at the pixel level, as model assumptions"
-                        " are based on processes understood at the subwatershed"
-                        " scale."
-                    ),
-                    contents=[
-                        spec.SingleBandRasterOutput(
-                            id="fractp.tif",
-                            about=gettext(
-                                "The fraction of precipitation that actually"
-                                " evapotranspires at the pixel level."
-                            ),
-                            data_type=float,
-                            units=None
-                        ),
-                        spec.SingleBandRasterOutput(
-                            id="aet.tif",
-                            about=gettext(
-                                "Estimated actual evapotranspiration per pixel."
-                            ),
-                            data_type=float,
-                            units=u.millimeter
-                        ),
-                        spec.SingleBandRasterOutput(
-                            id="wyield.tif",
-                            about=gettext("Estimated water yield per pixel."),
-                            data_type=float,
-                            units=u.millimeter
-                        )
-                    ]
-                )
-            ]
+        spec.VectorOutput(
+            id="watershed_results_wyield",
+            path="output/watershed_results_wyield.shp",
+            about=gettext(
+                "Shapefile containing biophysical output values per"
+                " watershed."
+            ),
+            geometry_types={"POLYGON"},
+            fields=WATERSHED_OUTPUT_FIELDS
         ),
-        spec.DirectoryOutput(
-            id="intermediate",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="clipped_lulc.tif",
-                    about=gettext("Aligned and clipped copy of LULC input."),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="depth_to_root_rest_layer.tif",
-                    about=gettext(
-                        "Aligned and clipped copy of root restricting layer"
-                        " depth input."
-                    ),
-                    data_type=float,
-                    units=u.millimeter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="eto.tif",
-                    about=gettext("Aligned and clipped copy of ET0 input."),
-                    data_type=float,
-                    units=u.millimeter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="kc_raster.tif",
-                    about=gettext("Map of KC values."),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="pawc.tif",
-                    about=gettext("Aligned and clipped copy of PAWC input."),
-                    data_type=float,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="pet.tif",
-                    about=gettext("Map of potential evapotranspiration."),
-                    data_type=float,
-                    units=u.millimeter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="precip.tif",
-                    about=gettext(
-                        "Aligned and clipped copy of precipitation input."
-                    ),
-                    data_type=float,
-                    units=u.millimeter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="root_depth.tif",
-                    about=gettext("Map of root depth."),
-                    data_type=float,
-                    units=u.millimeter
-                ),
-                spec.SingleBandRasterOutput(
-                    id="veg.tif",
-                    about=gettext("Map of vegetated state."),
-                    data_type=int,
-                    units=None
-                )
-            ]
+        spec.CSVOutput(
+            id="watershed_results_wyield_csv",
+            path="output/watershed_results_wyield.csv",
+            about=gettext(
+                "Table containing biophysical output values per"
+                " watershed."
+            ),
+            columns=WATERSHED_OUTPUT_FIELDS,
+            index_col="ws_id"
         ),
-        spec.TASKGRAPH_DIR.model_copy(update=dict(
-            id="taskgraph_dir"
-        ))
+        spec.VectorOutput(
+            id="subwatershed_results_wyield",
+            path="output/subwatershed_results_wyield.shp",
+            about=gettext(
+                "Shapefile containing biophysical output values per"
+                " subwatershed."
+            ),
+            geometry_types={"POLYGON"},
+            fields=SUBWATERSHED_OUTPUT_FIELDS
+        ),
+        spec.CSVOutput(
+            id="subwatershed_results_wyield_csv",
+            path="output/subwatershed_results_wyield.csv",
+            about=gettext(
+                "Table containing biophysical output values per"
+                " subwatershed."
+            ),
+            columns=SUBWATERSHED_OUTPUT_FIELDS,
+            index_col="subws_id"
+        ),
+        spec.SingleBandRasterOutput(
+            id="fractp",
+            path="output/per_pixel/fractp.tif",
+            about=gettext(
+                "The fraction of precipitation that actually"
+                " evapotranspires at the pixel level."
+            ),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="aet",
+            path="output/per_pixel/aet.tif",
+            about=gettext(
+                "Estimated actual evapotranspiration per pixel."
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="wyield",
+            path="output/per_pixel/wyield.tif",
+            about=gettext("Estimated water yield per pixel."),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="clipped_lulc",
+            path="intermediate/clipped_lulc.tif",
+            about=gettext("Aligned and clipped copy of LULC input."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="depth_to_root_rest_layer",
+            path="intermeditae/depth_to_root_rest_layer.tif",
+            about=gettext(
+                "Aligned and clipped copy of root restricting layer"
+                " depth input."
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="eto",
+            path="intermediate/eto.tif",
+            about=gettext("Aligned and clipped copy of ET0 input."),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="kc_raster",
+            path="intermediate/kc_raster.tif",
+            about=gettext("Map of KC values."),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="pawc",
+            path="intermediate/pawc.tif",
+            about=gettext("Aligned and clipped copy of PAWC input."),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="pet",
+            path="intermediate/pet.tif",
+            about=gettext("Map of potential evapotranspiration."),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="precip",
+            path="intermediate/precip.tif",
+            about=gettext(
+                "Aligned and clipped copy of precipitation input."
+            ),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="root_depth",
+            path="intermediate/root_depth.tif",
+            about=gettext("Map of root depth."),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.SingleBandRasterOutput(
+            id="veg",
+            path="intermediate/veg.tif",
+            about=gettext("Map of vegetated state."),
+            data_type=int,
+            units=None
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

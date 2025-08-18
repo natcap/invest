@@ -152,25 +152,29 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.SingleBandRasterOutput(
-            id="Runoff_retention_index.tif",
+            id="runoff_retention_index",
+            path="Runoff_retention_index.tif",
             about=gettext("Map of runoff retention index."),
             data_type=float,
             units=u.none
         ),
         spec.SingleBandRasterOutput(
-            id="Runoff_retention_m3.tif",
+            id="runoff_retention_m3",
+            path="Runoff_retention_m3.tif",
             about=gettext("Map of runoff retention volume."),
             data_type=float,
             units=u.meter**3
         ),
         spec.SingleBandRasterOutput(
-            id="Q_mm.tif",
+            id="q_mm",
+            path="Q_mm.tif",
             about=gettext("Map of runoff."),
             data_type=float,
             units=u.millimeter
         ),
         spec.VectorOutput(
-            id="flood_risk_service.shp",
+            id="flood_risk_service",
+            path="flood_risk_service.shp",
             about=gettext("Aggregated results for each area of interest."),
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[
@@ -201,61 +205,62 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ]
         ),
-        spec.DirectoryOutput(
-            id="intermediate_files",
-            about=None,
-            contents=[
-                spec.SingleBandRasterOutput(
-                    id="Q_m3.tif",
-                    about=gettext("Map of runoff volume."),
-                    data_type=float,
-                    units=u.meter**3
-                ),
-                spec.VectorOutput(
-                    id="reprojected_aoi.shp",
-                    about=gettext(
-                        "Copy of AOI vector reprojected to the same spatial reference as"
-                        " the LULC."
-                    ),
-                    geometry_types={"POLYGON", "MULTIPOLYGON"},
-                    fields=[]
-                ),
-                spec.VectorOutput(
-                    id="structures_reprojected.shp",
-                    about=gettext(
-                        "Copy of built infrastructure vector reprojected to the same"
-                        " spatial reference as the LULC."
-                    ),
-                    geometry_types={"POLYGON", "MULTIPOLYGON"},
-                    fields=[]
-                ),
-                spec.SingleBandRasterOutput(
-                    id="aligned_lulc.tif",
-                    about=gettext("Aligned and clipped copy of the LULC."),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="aligned_soils_hydrological_group.tif",
-                    about=gettext("Aligned and clipped copy of the soils map."),
-                    data_type=int,
-                    units=None
-                ),
-                spec.SingleBandRasterOutput(
-                    id="cn_raster.tif",
-                    about=gettext("Map of curve number."),
-                    data_type=float,
-                    units=u.none
-                ),
-                spec.SingleBandRasterOutput(
-                    id="s_max.tif",
-                    about=gettext("Map of potential retention."),
-                    data_type=float,
-                    units=u.millimeter
-                )
-            ]
+        spec.SingleBandRasterOutput(
+            id="q_m3",
+            path="intermediate_files/Q_m3.tif",
+            about=gettext("Map of runoff volume."),
+            data_type=float,
+            units=u.meter**3
         ),
-        spec.TASKGRAPH_DIR
+        spec.VectorOutput(
+            id="reprojected_aoi",
+            path="intermediate_files/reprojected_aoi.shp",
+            about=gettext(
+                "Copy of AOI vector reprojected to the same spatial reference as"
+                " the LULC."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
+        ),
+        spec.VectorOutput(
+            id="structures_reprojected",
+            path="intermediate_files/structures_reprojected.shp",
+            about=gettext(
+                "Copy of built infrastructure vector reprojected to the same"
+                " spatial reference as the LULC."
+            ),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_lulc",
+            path="intermediate_files/aligned_lulc.tif",
+            about=gettext("Aligned and clipped copy of the LULC."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_soils_hydrological_group",
+            path="intermediate_files/aligned_soils_hydrological_group.tif",
+            about=gettext("Aligned and clipped copy of the soils map."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="cn_raster",
+            path="intermediate_files/cn_raster.tif",
+            about=gettext("Map of curve number."),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="s_max",
+            path="intermediate_files/s_max.tif",
+            about=gettext("Map of potential retention."),
+            data_type=float,
+            units=u.millimeter
+        ),
+        spec.TASKGRAPH_CACHE
     ]
 )
 

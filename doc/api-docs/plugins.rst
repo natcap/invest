@@ -232,7 +232,7 @@ Certain input and output types contain multiple types of data (such as columns i
 
 - :func:`.VectorInput` and :func:`.VectorOutput`: The ``fields`` attribute is an iterable of ``Input``\ s or ``Output``\ s that represent the data stored in each field of the Vector. The ``id`` of each ``Input``/``Output`` must match the field name.
 
-- :func:`.DirectoryInput` and :func:`.DirectoryOutput`: The ``contents`` attribute is an iterable of ``Input``\ s or ``Output``\ s that represent the file contents of the directory. The ``id`` of each ``Input``/``Output`` must match the file name.
+- :func:`.DirectoryInput`: The ``contents`` attribute is an iterable of ``Input``\ s that represent the file contents of the directory. The ``id`` of each ``Input`` must match the file name.
 
 Example: ::
 

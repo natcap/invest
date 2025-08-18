@@ -123,14 +123,19 @@ MODEL_SPEC = spec.ModelSpec(
         )
     ],
     outputs=[
-        spec.TASKGRAPH_DIR,
-        spec.FILLED_DEM.model_copy(update=dict(id="filled.tif")),
-        spec.FLOW_ACCUMULATION.model_copy(update=dict(id="flow_accumulation.tif")),
-        spec.FLOW_DIRECTION.model_copy(update=dict(id="flow_direction.tif")),
+        spec.TASKGRAPH_CACHE,
+        spec.FILLED_DEM.model_copy(update=dict(
+            id="filled",
+            path="filled.tif")),
+        spec.FLOW_ACCUMULATION,
+        spec.FLOW_DIRECTION,
         spec.SLOPE,
-        spec.STREAM.model_copy(update=dict(id="stream_mask.tif")),
+        spec.STREAM.model_copy(update=dict(
+            id="stream_mask",
+            path="stream_mask.tif")),
         spec.VectorOutput(
-            id="strahler_stream_order.gpkg",
+            id="strahler_stream_order",
+            path="strahler_stream_order.gpkg",
             about=gettext(
                 "A vector of line segments indicating the Strahler stream order and other"
                 " properties of each stream segment."
@@ -231,7 +236,8 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.VectorOutput(
-            id="subwatersheds.gpkg",
+            id="subwatersheds",
+            path="subwatersheds.gpkg",
             about=gettext(
                 "A GeoPackage with polygon features representing subwatersheds.  A new"
                 " subwatershed is created for each tributary of a stream and is"
@@ -277,7 +283,7 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ]
         )
-    ],
+    ]
 )
 
 
