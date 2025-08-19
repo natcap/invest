@@ -1,0 +1,13 @@
+{
+    "args": {
+   	    "skip_invalid_geometry": true,
+        "dem_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/DelineateIt.zip/DelineateIt/DEM_gura.tif",
+        "flow_threshold": "1000", 
+        "outlet_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/DelineateIt.zip/DelineateIt/outlet_points.shp",
+        "results_suffix": "gura", 
+        "snap_distance": "3",
+        "snap_points": true
+    }, 
+    "invest_version": "3.7.0", 
+    "model_name": "natcap.invest.delineateit.delineateit"
+}

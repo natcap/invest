@@ -1,0 +1,17 @@
+{
+    "args": {
+        "analysis_year": "2060",
+        "biophysical_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/CoastalBlueCarbon/outputs_preprocessor/biophysical_table_sample.csv",
+        "discount_rate": "6",
+        "do_economic_analysis": true,
+        "inflation_rate": "3",
+        "landcover_snapshot_csv": "https://bitbucket.org/natcap/invest-sample-data/raw/vsi-data/CoastalBlueCarbon/inputs/snapshots_remote.csv",
+        "landcover_transitions_table": "https://bitbucket.org/natcap/invest-sample-data/raw/master/CoastalBlueCarbon/outputs_preprocessor/transitions_sample.csv",
+        "price": "10",
+        "price_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/CoastalBlueCarbon/inputs/Price_table_SCC_5.csv",
+        "results_suffix": "",
+        "use_price_table": true
+    },
+    "invest_version": "3.8.7.post648+ga0875280.d20200922",
+    "model_name": "natcap.invest.coastal_blue_carbon.coastal_blue_carbon"
+}

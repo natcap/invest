@@ -1,0 +1,19 @@
+{
+    "args": {
+        "biophysical_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/NDR/biophysical_table_gura.csv",
+        "calc_n": true,
+        "calc_p": true,
+        "dem_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/NDR.zip/NDR/DEM_gura.tif",
+        "k_param": "2",
+        "lulc_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/NDR.zip/NDR/land_use_gura.tif",
+        "results_suffix": "gura",
+        "runoff_proxy_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/NDR.zip/NDR/precipitation_gura.tif",
+        "subsurface_critical_length_n": "200",
+        "subsurface_eff_n": "0.8",
+        "threshold_flow_accumulation": "1000",
+        "watersheds_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/NDR.zip/NDR/watershed_gura.shp",
+        "flow_dir_algorithm": "MFD"
+    },
+    "invest_version": "3.10.2",
+    "model_name": "natcap.invest.ndr.ndr"
+}
