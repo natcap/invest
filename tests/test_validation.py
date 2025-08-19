@@ -1008,7 +1008,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(df['header'][1], 'b')
 
     def test_remote_csv_with_local_path(self):
-        """validation: an error is raised if a remote csv reference local paths"""
+        """validation: an error is raised if a remote csv reference local paths."""
         from natcap.invest import validation
 
         input_spec = CSVInput(id='foo', columns=[spec.VectorInput(
