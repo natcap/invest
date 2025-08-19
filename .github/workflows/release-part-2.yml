@@ -107,7 +107,8 @@ jobs:
                       if line.startswith(os.environ['VERSION']):
                           do_write = True
                       # match the header pattern X.XX.X (XXXX-XX-XX)
-                      elif re.match(r'\d+\.\d+\.\d+ \(\d{4}-\d{2}-\d{2}\)', line):
+                      # using \w to allow for alpha and post releases
+                      elif re.match(r'\d+\.\d+\.\w+ \(\d{4}-\d{2}-\d{2}\)', line):
                           do_write = False
                       if do_write:
                           notes.write(line)
