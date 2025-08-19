@@ -452,7 +452,7 @@ class HRAUnitTests(unittest.TestCase):
         self.assertIn('HABITAT RESILIENCE ATTRIBUTES', str(cm.exception))
 
     def test_criteria_table_remote_filepath(self):
-        """HRA: verify exception when a required section is not found."""
+        """HRA: correctly parse a remote path in criteria table."""
         from natcap.invest import hra
 
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
