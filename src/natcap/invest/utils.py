@@ -863,6 +863,7 @@ class _GDALPath:
     scheme : str
         URI scheme such as "https" or "zip+s3".
     """
+    
     def __init__(self, path, archive, scheme):
         self.path = path
         self.archive = archive
