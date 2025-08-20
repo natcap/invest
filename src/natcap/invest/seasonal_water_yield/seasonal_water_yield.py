@@ -40,8 +40,8 @@ MODEL_SPEC = spec.ModelSpec(
         ["lulc_raster_path", "biophysical_table_path"],
         ["dem_raster_path", "aoi_path"],
         ["flow_dir_algorithm", "threshold_flow_accumulation", "beta_i", "gamma"],
-        ["user_defined_local_recharge", "l_path", "et0_dir", "precip_dir",
-         "soil_group_path"],
+        ["user_defined_local_recharge", "l_path", "et0_raster_table",
+         "precip_raster_table", "soil_group_path"],
         ["monthly_alpha", "alpha_m", "monthly_alpha_path"],
         ["user_defined_climate_zones", "rain_events_table_path",
          "climate_zone_table_path", "climate_zone_raster_path"]
@@ -51,25 +51,27 @@ MODEL_SPEC = spec.ModelSpec(
         spec.SUFFIX,
         spec.N_WORKERS,
         spec.THRESHOLD_FLOW_ACCUMULATION,
-        spec.DirectoryInput(
-            id="et0_dir",
-            name=gettext("ET0 directory"),
+        spec.CSVInput(
+            id="et0_raster_table",
+            name=gettext("ET0 table"),
             about=gettext(
-                "Directory containing maps of reference evapotranspiration for each"
-                " month. Only .tif files should be in this folder (no .tfw, .xml, etc"
-                " files). Required if User-Defined Local Recharge is not selected."
+                "Table mapping month indexes (1-12) to reference evapotranspiration"
+                " raster paths. The paths may be either absolute or relative to the"
+                " location of the ET0 table itself. Required if User-Defined Local"
+                " Recharge is not selected."
             ),
             required="not user_defined_local_recharge",
             allowed="not user_defined_local_recharge",
-            contents=[
+            columns=[
+                spec.IntegerInput(
+                    id="month",
+                    about=("The month index (1-12)."),
+                    expression="(value >= 1) & (value <= 12)"
+                ),
                 spec.SingleBandRasterInput(
-                    id="[MONTH]",
-                    name=gettext("reference evapotranspiration"),
+                    id="path",
                     about=(
-                        "Twelve files, one for each month. File names must end with the"
-                        " month number (1-12). For example, the filenames 'et0_1.tif'"
-                        " 'evapotranspiration1.tif' are both valid for the month of"
-                        " January."
+                        "Path to a reference evapotranspiration raster for the month."
                     ),
                     data_type=float,
                     units=u.millimeter / u.month,
@@ -77,25 +79,27 @@ MODEL_SPEC = spec.ModelSpec(
                 )
             ]
         ),
-        spec.DirectoryInput(
-            id="precip_dir",
-            name=gettext("precipitation directory"),
+        spec.CSVInput(
+            id="precip_raster_table",
+            name=gettext("precipitation table"),
             about=gettext(
-                "Directory containing maps of monthly precipitation for each month. Only"
-                " .tif files should be in this folder (no .tfw, .xml, etc files)."
-                " Required if User-Defined Local Recharge is not selected."
+                "Table mapping month indexes (1-12) to monthly precipitation raster"
+                " paths. The paths may be either absolute or relative to the location"
+                " of the precipitation table itself. Required if User-Defined Local"
+                " Recharge is not selected."
             ),
             required="not user_defined_local_recharge",
             allowed="not user_defined_local_recharge",
-            contents=[
+            columns=[
+                spec.IntegerInput(
+                    id="month",
+                    about=("The month index (1-12)."),
+                    expression="(value >= 1) & (value <= 12)"
+                ),
                 spec.SingleBandRasterInput(
-                    id="[MONTH]",
-                    name=gettext("precipitation"),
+                    id="path",
                     about=(
-                        "Twelve files, one for each month. File names must end with the"
-                        " month number (1-12). For example, the filenames 'precip_1.tif'"
-                        " and 'precip1.tif' are both valid names for the month of"
-                        " January."
+                        "Path to a precipitation raster for the month."
                     ),
                     data_type=float,
                     units=u.millimeter / u.month,
@@ -618,13 +622,15 @@ def execute(args):
             stream pixels from the DEM by thresholding the number of upslope
             cells that must flow into a cell before it's considered
             part of a stream.
-        args['et0_dir'] (string): required if
-            args['user_defined_local_recharge'] is False.  Path to a directory
-            that contains rasters of monthly reference evapotranspiration;
-            units in mm.
-        args['precip_dir'] (string): required if
-            args['user_defined_local_recharge'] is False. A path to a directory
-            that contains rasters of monthly precipitation; units in mm.
+        args['et0_raster_table'] (string): required if
+            args['user_defined_local_recharge'] is False. Path to a CSV table
+            that has headers 'month' (1-12) and 'path', mapping months to
+            monthly reference evapotranspiration rasters. The rasters should
+            have units in mm.
+        args['precip_raster_table'] (string): required if
+            args['user_defined_local_recharge'] is False. Path to a CSV table
+            that has headers 'month' (1-12) and 'path', mapping months to
+            monthly precipitation rasters. The rasters should have units in mm.
         args['dem_raster_path'] (string): a path to a digital elevation raster
         args['lulc_raster_path'] (string): a path to a land cover raster used
             to classify biophysical properties of pixels.
@@ -749,8 +755,28 @@ def execute(args):
     output_align_list = [
         file_registry['lulc_aligned_path'], file_registry['dem_aligned_path']]
     if not args['user_defined_local_recharge']:
-        precip_path_list = _get_monthly_file_lists(N_MONTHS, args['precip_dir'])
-        et0_path_list = _get_monthly_file_lists(N_MONTHS, args['et0_dir'])
+        month_indexes = [m+1 for m in range(N_MONTHS)]
+
+        precip_df = MODEL_SPEC.get_input(
+            'precip_raster_table').get_validated_dataframe(
+            args['precip_raster_table'])
+        precip_df.sort_values('month', inplace=True)
+        if not month_indexes == precip_df['month'].tolist():
+            raise ValueError(
+                'Precipitation raster table must include the '
+                'month index values 1-12.')
+
+        et0_df = MODEL_SPEC.get_input(
+            'et0_raster_table').get_validated_dataframe(
+            args['et0_raster_table'])
+        et0_df.sort_values('month', inplace=True)
+        if not month_indexes == et0_df['month'].tolist():
+            raise ValueError(
+                'ET0 raster table must include the '
+                'month index values 1-12.')
+
+        precip_path_list = precip_df['path'].tolist()
+        et0_path_list = et0_df['path'].tolist()
 
         input_align_list = (
             precip_path_list + [args['soil_group_path']] + et0_path_list +
@@ -1489,42 +1515,6 @@ def _aggregate_recharge(
     aggregate_layer = None
     gdal.Dataset.__swig_destroy__(aggregate_vector)
     aggregate_vector = None
-
-
-def _get_monthly_file_lists(n_months, in_dir):
-    """Create list of monthly files for data type
-
-    Parameters:
-        n_months (int): Number of months to iterate over (should be 12)
-        in_dir (string): Path to directory of monthly files (for specific
-                         data type)
-
-    Raises:
-        ValueError: If no file or multiple files are found for a month
-
-    Returns:
-        list: contains monthly file paths for data type
-    """
-    in_path_list = [os.path.join(in_dir, f) for f in os.listdir(in_dir)]
-    out_path_list = []
-
-    for month_index in range(1, n_months + 1):
-        month_file_pattern = re.compile(r'.*[^\d]0?%d\.[^.]+$' % month_index)
-        file_list = [
-            month_file_path for month_file_path in in_path_list
-            if month_file_pattern.match(month_file_path)]
-        if len(file_list) == 0:
-            raise ValueError(
-                "No files found in %s for month %d. Please ensure that \
-                    filenames end in the month number (e.g., precip_1.tif)."
-                % (in_dir, month_index))
-        if len(file_list) > 1:
-            raise ValueError(
-                "Ambiguous set of files found for month %d: %s" %
-                (month_index, file_list))
-        out_path_list.append(file_list[0])
-
-    return out_path_list
 
 
 @validation.invest_validator
