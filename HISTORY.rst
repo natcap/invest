@@ -62,9 +62,16 @@
 
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+
+Seasonal Water Yield
+====================
+* Replaced the model inputs ``et0_dir`` and ``precip_dir`` with CSV inputs.
+  These CSVs must have the columns ``month`` and ``path``, mapping month indexes
+  (1-12) to raster paths.
+  (`#2096 <https://github.com/natcap/invest/issues/2096>`_)
+
 
 3.16.2 (2025-08-13)
 -------------------
@@ -77,7 +84,6 @@ General
 * Fixed a bug in ``build_datastack_archive`` where the raster filepath
   included in a datastack JSON for an ArcGIS GRID would be unusable.
   (`#2103 <https://github.com/natcap/invest/issues/2103>`_)
-
 
 Workbench
 =========
