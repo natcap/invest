@@ -98,7 +98,7 @@ def make_lulc_raster(lulc_ras_path):
 
 
 def make_soil_raster(soil_ras_path):
-    """Make a 100x100 soil group raster with four soil groups on th raster path.
+    """Make a 100x100 soil group raster with four soil groups on the raster path.
 
     Args:
         soil_ras_path (str): path to the soil group raster.
@@ -133,38 +133,58 @@ def make_gradient_raster(grad_ras_path):
     make_raster_from_array(grad_array, grad_ras_path)
 
 
-def make_eto_rasters(eto_dir_path):
-    """Make twelve 100x100 rasters of monthly evapotranspiration.
+def make_eto_csv(eto_csv_path, dir_path):
+    """Make twelve 100x100 rasters of monthly evapotranspiration and write
+    them to a CSV.
 
     Args:
-        eto_dir_path (str): path to the directory for saving the rasters.
+        eto_csv_path (str): path to the csv for mapping month indexes
+            to raster paths.
+        dir_path (str): path to the directory for saving the rasters.
 
     Returns:
         None.
     """
+    months_paths = []
     size = 100
     for month in range(1, 13):
         eto_raster_path = os.path.join(
-            eto_dir_path, 'eto' + str(month) + '.tif')
+            dir_path, 'eto' + str(month) + '.tif')
         eto_array = numpy.full((size, size), month, dtype=numpy.int32)
         make_raster_from_array(eto_array, eto_raster_path)
+        months_paths.append((month, eto_raster_path))
+
+    with open(eto_csv_path, 'w') as open_table:
+        open_table.write('month,path\n')
+        for month, path in months_paths:
+            open_table.write(str(month) + ',' + path + '\n')
 
 
-def make_precip_rasters(precip_dir_path):
-    """Make twelve 100x100 rasters of monthly precipitation.
+def make_precip_csv(precip_csv_path, dir_path):
+    """Make twelve 100x100 rasters of monthly precipitation and write them
+    to a CSV.
 
     Args:
-        precip_dir_path (str): path to the directory for saving the rasters.
+        precip_csv_path (str): path to the csv for mapping month indexes
+            to raster paths.
+        dir_path (str): path to the directory for saving the rasters.
 
     Returns:
         None.
     """
+    months_paths = []
     size = 100
     for month in range(1, 13):
         precip_raster_path = os.path.join(
-            precip_dir_path, 'precip_mm_' + str(month) + '.tif')
+            dir_path, 'precip_mm_' + str(month) + '.tif')
         precip_array = numpy.full((size, size), month + 10, dtype=numpy.int32)
         make_raster_from_array(precip_array, precip_raster_path)
+        months_paths.append((month, precip_raster_path))
+
+    with open(precip_csv_path, 'w') as open_table:
+        open_table.write('month,path\n')
+        for month, path in months_paths:
+            open_table.write(str(month) + ',' + path + '\n')
 
 
 def make_zeropadded_rasters(dir_path, prefix):
@@ -343,136 +363,14 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         """Delete workspace after test is done."""
         shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
-    def test_zeropadded_monthly_filenames(self):
-        """test filenames with zero-padded months in
-        _get_monthly_file_lists function
-        """
-        from natcap.invest.seasonal_water_yield.seasonal_water_yield import _get_monthly_file_lists
-
-        n_months = 12
-
-        # Make directory and file names with zero-padded months
-        test_precip_dir_path = os.path.join(self.workspace_dir,
-                                            'test_0pad_precip_dir')
-        os.makedirs(test_precip_dir_path)
-        precip_file_list = make_zeropadded_rasters(test_precip_dir_path, 'Prcp')
-
-        test_eto_dir_path = os.path.join(self.workspace_dir,
-                                         'test_0pad_eto_dir')
-        os.makedirs(test_eto_dir_path)
-        eto_file_list = make_zeropadded_rasters(test_eto_dir_path, 'et0_')
-
-        # Create list of monthly files for data_type
-        eto_path_list = _get_monthly_file_lists(
-            n_months, test_eto_dir_path)
-        
-        precip_path_list = _get_monthly_file_lists(
-            n_months, test_precip_dir_path)
-        
-        # Verify that the returned lists match the input
-        self.assertEqual(precip_path_list, precip_file_list)
-        self.assertEqual(eto_path_list, eto_file_list)
-
-    def test_nonpadded_monthly_filenames(self):
-        """test filenames without zero-padded months in
-        _get_monthly_file_lists function
-        """
-        from natcap.invest.seasonal_water_yield.seasonal_water_yield import _get_monthly_file_lists
-
-        n_months = 12
-
-        # Make directory and file names with (non-zero-padded) months
-        precip_dir_path = os.path.join(self.workspace_dir, 'precip_dir')
-        os.makedirs(precip_dir_path)
-        make_precip_rasters(precip_dir_path)
-
-        precip_path_list = _get_monthly_file_lists(
-            n_months, precip_dir_path)
-        
-        # Create lists of monthly filenames to which to compare function output
-        # Note this is hardcoded to match the filenames created in make_precip_rasters
-        match_precip = [os.path.join(precip_dir_path,
-                                     "precip_mm_" + str(m) + ".tif")
-                                     for m in range(1, n_months + 1)]
-        
-        # Verify that the returned lists match the input
-        self.assertEqual(precip_path_list, match_precip)
-
-    def test_ambiguous_precip_data(self):
-        """SWY test case where there are more than 12 precipitation files."""
-        from natcap.invest.seasonal_water_yield import seasonal_water_yield
-
-        precip_dir_path = os.path.join(self.workspace_dir, 'precip_dir')
-        test_precip_dir_path = os.path.join(self.workspace_dir,
-                                            'test_precip_dir')
-        os.makedirs(precip_dir_path)
-        make_precip_rasters(precip_dir_path)
-        shutil.copytree(precip_dir_path, test_precip_dir_path)
-        shutil.copy(
-            os.path.join(test_precip_dir_path, 'precip_mm_3.tif'),
-            os.path.join(test_precip_dir_path, 'bonus_precip_mm_3.tif'))
-
-        # A placeholder args that has the property that the aoi_path will be
-        # the same name as the output aggregate vector
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'alpha_m': '1/12',
-            'beta_i': '1.0',
-            'gamma': '1.0',
-            'precip_dir': test_precip_dir_path,  # test constructed one
-            'threshold_flow_accumulation': '1000',
-            'user_defined_climate_zones': False,
-            'user_defined_local_recharge': False,
-            'monthly_alpha': False,
-            'flow_dir_algorithm': 'MFD'
-        }
-
-        watershed_shp_path = os.path.join(args['workspace_dir'],
-                                          'watershed.shp')
-        make_simple_shp(watershed_shp_path, (1180000.0, 690000.0))
-        args['aoi_path'] = watershed_shp_path
-
-        biophysical_csv_path = os.path.join(args['workspace_dir'],
-                                            'biophysical_table.csv')
-        make_biophysical_csv(biophysical_csv_path)
-        args['biophysical_table_path'] = biophysical_csv_path
-
-        dem_ras_path = os.path.join(args['workspace_dir'], 'dem.tif')
-        make_gradient_raster(dem_ras_path)
-        args['dem_raster_path'] = dem_ras_path
-
-        eto_dir_path = os.path.join(args['workspace_dir'], 'eto_dir')
-        os.makedirs(eto_dir_path)
-        make_eto_rasters(eto_dir_path)
-        args['et0_dir'] = eto_dir_path
-
-        lulc_ras_path = os.path.join(args['workspace_dir'], 'lulc.tif')
-        make_lulc_raster(lulc_ras_path)
-        args['lulc_raster_path'] = lulc_ras_path
-
-        rain_csv_path = os.path.join(args['workspace_dir'],
-                                     'rain_events_table.csv')
-        make_rain_csv(rain_csv_path)
-        args['rain_events_table_path'] = rain_csv_path
-
-        soil_ras_path = os.path.join(args['workspace_dir'], 'soil_group.tif')
-        make_soil_raster(soil_ras_path)
-        args['soil_group_path'] = soil_ras_path
-
-        with self.assertRaises(ValueError):
-            seasonal_water_yield.execute(args)
-
     def test_precip_data_missing(self):
         """SWY test case where there is a missing precipitation file."""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
-        precip_dir_path = os.path.join(self.workspace_dir, 'precip_dir')
-        test_precip_dir_path = os.path.join(self.workspace_dir,
-                                            'test_precip_dir')
-        os.makedirs(precip_dir_path)
-        make_precip_rasters(precip_dir_path)
-        shutil.copytree(precip_dir_path, test_precip_dir_path)
-        os.remove(os.path.join(test_precip_dir_path, 'precip_mm_3.tif'))
+        precip_csv_path = os.path.join(self.workspace_dir,
+                                    'precip_raster_table.csv')
+        make_precip_csv(precip_csv_path, self.workspace_dir)
+        os.remove(os.path.join(self.workspace_dir, 'precip_mm_3.tif'))
 
         # A placeholder args that has the property that the aoi_path will be
         # the same name as the output aggregate vector
@@ -481,7 +379,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'alpha_m': '1/12',
             'beta_i': '1.0',
             'gamma': '1.0',
-            'precip_dir': test_precip_dir_path,  # test constructed one
+            'precip_raster_table': precip_csv_path,
             'threshold_flow_accumulation': '1000',
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
@@ -503,10 +401,10 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         make_gradient_raster(dem_ras_path)
         args['dem_raster_path'] = dem_ras_path
 
-        eto_dir_path = os.path.join(args['workspace_dir'], 'eto_dir')
-        os.makedirs(eto_dir_path)
-        make_eto_rasters(eto_dir_path)
-        args['et0_dir'] = eto_dir_path
+        eto_csv_path = os.path.join(args['workspace_dir'],
+                                    'eto_raster_table.csv')
+        make_eto_csv(eto_csv_path, args['workspace_dir'])
+        args['et0_raster_table'] = eto_csv_path
 
         lulc_ras_path = os.path.join(args['workspace_dir'], 'lulc.tif')
         make_lulc_raster(lulc_ras_path)
@@ -599,19 +497,19 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         make_gradient_raster(dem_ras_path)
         args['dem_raster_path'] = dem_ras_path
 
-        eto_dir_path = os.path.join(args['workspace_dir'], 'eto_dir')
-        os.makedirs(eto_dir_path)
-        make_eto_rasters(eto_dir_path)
-        args['et0_dir'] = eto_dir_path
+        eto_csv_path = os.path.join(args['workspace_dir'],
+                                    'eto_raster_table.csv')
+        make_eto_csv(eto_csv_path, args['workspace_dir'])
+        args['et0_raster_table'] = eto_csv_path
 
         lulc_ras_path = os.path.join(args['workspace_dir'], 'lulc.tif')
         make_lulc_raster(lulc_ras_path)
         args['lulc_raster_path'] = lulc_ras_path
 
-        precip_dir_path = os.path.join(args['workspace_dir'], 'precip_dir')
-        os.makedirs(precip_dir_path)
-        make_precip_rasters(precip_dir_path)
-        args['precip_dir'] = precip_dir_path
+        precip_csv_path = os.path.join(args['workspace_dir'],
+                                    'precip_raster_table.csv')
+        make_precip_csv(precip_csv_path, args['workspace_dir'])
+        args['precip_raster_table'] = precip_csv_path
 
         rain_csv_path = os.path.join(args['workspace_dir'],
                                      'rain_events_table.csv')
@@ -663,19 +561,19 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_gradient_raster(dem_ras_path)
         args['dem_raster_path'] = dem_ras_path
 
-        eto_dir_path = os.path.join(workspace_dir, 'eto_dir')
-        os.makedirs(eto_dir_path)
-        make_eto_rasters(eto_dir_path)
-        args['et0_dir'] = eto_dir_path
+        eto_csv_path = os.path.join(args['workspace_dir'],
+                                    'eto_raster_table.csv')
+        make_eto_csv(eto_csv_path, args['workspace_dir'])
+        args['et0_raster_table'] = eto_csv_path
 
         lulc_ras_path = os.path.join(workspace_dir, 'lulc.tif')
         make_lulc_raster(lulc_ras_path)
         args['lulc_raster_path'] = lulc_ras_path
 
-        precip_dir_path = os.path.join(workspace_dir, 'precip_dir')
-        os.makedirs(precip_dir_path)
-        make_precip_rasters(precip_dir_path)
-        args['precip_dir'] = precip_dir_path
+        precip_csv_path = os.path.join(args['workspace_dir'],
+                                    'precip_raster_table.csv')
+        make_precip_csv(precip_csv_path, args['workspace_dir'])
+        args['precip_raster_table'] = precip_csv_path
 
         rain_csv_path = os.path.join(workspace_dir, 'rain_events_table.csv')
         make_rain_csv(rain_csv_path)
@@ -818,13 +716,13 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # set precip nodata values to a large, negative 64bit value.
         nodata = numpy.finfo(numpy.float64).min
-        precip_nodata_dir = os.path.join(
-            self.workspace_dir, 'precip_nodata_dir')
-        os.makedirs(precip_nodata_dir)
+        precip_csv_path = os.path.join(self.workspace_dir,
+                                    'precip_raster_table.csv')
+        months_paths = []
         size = 100
         for month in range(1, 13):
             precip_raster_path = os.path.join(
-                precip_nodata_dir, 'precip_mm_' + str(month) + '.tif')
+                self.workspace_dir, 'precip_mm_' + str(month) + '.tif')
             precip_array = numpy.full(
                 (size, size), month + 10, dtype=numpy.float64)
             precip_array[size - 1, :] = nodata
@@ -837,8 +735,14 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             pygeoprocessing.numpy_array_to_raster(
                 precip_array, nodata, (1, -1), (1180000, 690000), project_wkt,
                 precip_raster_path)
+            months_paths.append((month, precip_raster_path))
 
-        args['precip_dir'] = precip_nodata_dir
+        with open(precip_csv_path, 'w') as open_table:
+            open_table.write('month,path\n')
+            for month, path in months_paths:
+                open_table.write(str(month) + ',' + path + '\n')
+
+        args['precip_raster_table'] = precip_csv_path
 
         # make args explicit that this is a base run of SWY
         args['user_defined_climate_zones'] = False
@@ -1530,9 +1434,9 @@ class SWYValidationTests(unittest.TestCase):
             'lulc_raster_path',
             'dem_raster_path',
             'beta_i',
-            'et0_dir',
+            'et0_raster_table',
             'aoi_path',
-            'precip_dir',
+            'precip_raster_table',
             'threshold_flow_accumulation',
             'user_defined_local_recharge',
             'flow_dir_algorithm'
@@ -1580,8 +1484,8 @@ class SWYValidationTests(unittest.TestCase):
             self.base_required_keys + ['l_path'])
         expected_missing_keys.difference_update(
             {'user_defined_local_recharge',
-             'et0_dir',
-             'precip_dir',
+             'et0_raster_table',
+             'precip_raster_table',
              'rain_events_table_path',
              'soil_group_path'})
         self.assertEqual(invalid_keys, expected_missing_keys)
