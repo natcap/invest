@@ -397,9 +397,25 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="[LULC]_aligned",
-            path="intermediate/[LULC]_aligned.tif",
-            about=gettext("Aligned copy of each LULC raster"),
+            id="lulc_cur_aligned",
+            path="intermediate/lulc_cur_aligned.tif",
+            about=gettext("Aligned copy of the current LULC raster"),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="lulc_fut_aligned",
+            path="intermediate/lulc_fut_aligned.tif",
+            about=gettext("Aligned copy of the future LULC raster"),
+            created_if="lulc_fut_path",
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="lulc_bas_aligned",
+            path="intermediate/lulc_bas_aligned.tif",
+            about=gettext("Aligned copy of the baseline LULC raster"),
+            created_if="lulc_bas_path",
             data_type=int,
             units=None
         ),
@@ -510,33 +526,37 @@ def execute(args):
 
     # declare dictionaries to store the land cover and the threat rasters
     # pertaining to the different threats
-    lulc_path_dict = {}
-    threat_path_dict = {}
+    aligned_lulc_path_dict = {}
+    aligned_threat_path_dict = {}
     # store land cover and threat rasters in a list for convenient access
-    lulc_and_threat_raster_list = []
+    lulc_raster_list = []
+    threat_raster_list = []
+    aligned_raster_list = []
     # list for checking threat values tasks
     threat_values_task_lookup = {}
     LOGGER.info("Validate threat rasters and collect unique LULC codes")
     # compile all the threat rasters associated with the land cover
-    for lulc_key, lulc_arg in (('_c', 'lulc_cur_path'),
-                               ('_f', 'lulc_fut_path'),
-                               ('_b', 'lulc_bas_path')):
+    for lulc_key, lulc_arg, aligned_key in (
+                               ('_c', 'lulc_cur_path', 'lulc_cur_aligned'),
+                               ('_f', 'lulc_fut_path', 'lulc_fut_aligned'),
+                               ('_b', 'lulc_bas_path', 'lulc_bas_aligned')):
         if lulc_arg in args and args[lulc_arg] != '':
             lulc_path = args[lulc_arg]
-            lulc_path_dict[lulc_key] = lulc_path
             # save land cover paths in a list for alignment and resize
-            lulc_and_threat_raster_list.append(lulc_path)
+            lulc_raster_list.append(lulc_path)
+            aligned_lulc_path = os.path.join(intermediate_output_dir, aligned_key)
+            aligned_raster_list.append(aligned_lulc_path)
+            aligned_lulc_path_dict[lulc_key] = aligned_lulc_path
 
             # add a key to the threat dictionary that associates all threat
             # rasters with this land cover
-            threat_path_dict['threat' + lulc_key] = {}
+            aligned_threat_path_dict['threat' + lulc_key] = {}
 
             # for each threat given in the CSV file try opening the associated
             # raster which should be found relative to the Threat CSV
             for threat, row in threat_df.iterrows():
                 LOGGER.debug(f"Validating path for threat: {threat}")
                 threat_table_path_col = _THREAT_SCENARIO_MAP[lulc_key]
-
                 threat_validate_result = _validate_threat_path(
                     row[threat_table_path_col], lulc_key)
                 if threat_validate_result == 'error':
@@ -548,17 +568,26 @@ def execute(args):
 
                 threat_path = threat_validate_result
 
-                threat_path_dict['threat' + lulc_key][threat] = threat_path
                 # save threat paths in a list for alignment and resize
                 if threat_path:
                     # check for duplicate absolute threat path names that
                     # cause errors when trying to write aligned versions
-                    if (threat_path not in lulc_and_threat_raster_list):
-                        lulc_and_threat_raster_list.append(threat_path)
+                    if (threat_path not in threat_raster_list):
+                        threat_raster_list.append(threat_path)
                     else:
                         raise ValueError(
                             DUPLICATE_PATHS_MSG + os.path.basename(threat_path)
                         )
+
+                    if os.path.isdir(threat_path):
+                        threat_name = f'{os.path.basename(os.path.dirname(threat_path))}'
+                    else:
+                        threat_name = f'{os.path.splitext(os.path.basename(threat_path))[0]}'
+                    aligned_threat_path = os.path.join(
+                        intermediate_output_dir, f'{threat_name}_aligned{file_suffix}.tif')
+                    aligned_threat_path_dict['threat' + lulc_key][threat] = aligned_threat_path
+                    aligned_raster_list.append(aligned_threat_path)
+
                     # Check threat raster values are 0 <= x <= 1
                     threat_values_task = task_graph.add_task(
                         func=_raster_values_in_bounds,
@@ -569,6 +598,8 @@ def execute(args):
                         'task': threat_values_task,
                         'path': threat_path,
                         'table_col': threat_table_path_col}
+                else:
+                    aligned_threat_path_dict['threat' + lulc_key][threat] = None
 
     LOGGER.info("Checking threat raster values are valid ( 0 <= x <= 1 ).")
     # Assert that threat rasters have valid values.
@@ -592,58 +623,25 @@ def execute(args):
     lulc_bbox = lulc_raster_info['bounding_box']
     lulc_wkt = lulc_raster_info['projection_wkt']
 
-    # create paths for aligned rasters checking for the case the raster path
-    # is a folder
-    aligned_raster_list = []
-    for path in lulc_and_threat_raster_list:
-        if os.path.isdir(path):
-            threat_dir_name = (f'{os.path.basename(os.path.dirname(path))}'
-                               f'_aligned{file_suffix}.tif')
-            aligned_raster_list.append(
-                os.path.join(intermediate_output_dir, threat_dir_name))
-        else:
-            aligned_path = (f'{os.path.splitext(os.path.basename(path))[0]}'
-                            f'_aligned{file_suffix}.tif')
-            aligned_raster_list.append(
-                os.path.join(intermediate_output_dir, aligned_path))
-
     LOGGER.debug(f"Raster paths for aligning: {aligned_raster_list}")
     # Align and resize all the land cover and threat rasters,
     # and store them in the intermediate folder
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         kwargs={
-            'base_raster_path_list': lulc_and_threat_raster_list,
+            'base_raster_path_list': lulc_raster_list + threat_raster_list,
             'target_raster_path_list': aligned_raster_list,
-            'resample_method_list': ['near']*len(lulc_and_threat_raster_list),
+            'resample_method_list': ['near']*len(lulc_raster_list + threat_raster_list),
             'target_pixel_size': pixel_size,
             'bounding_box_mode': lulc_bbox,
             'target_projection_wkt': lulc_wkt},
         target_path_list=aligned_raster_list,
         task_name='align_input_rasters')
 
-    LOGGER.debug("Updating dict raster paths to reflect aligned paths")
-    # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
-    for lulc_key, lulc_path in lulc_path_dict.items():
-        lulc_path_dict[lulc_key] = os.path.join(
-            intermediate_output_dir,
-            (f'{os.path.splitext(os.path.basename(lulc_path))[0]}'
-             f'_aligned{file_suffix}.tif'))
-        for threat in threat_df.index.values:
-            threat_path = threat_path_dict['threat' + lulc_key][threat]
-            if threat_path in lulc_and_threat_raster_list:
-                aligned_threat_path = os.path.join(
-                    intermediate_output_dir,
-                    (f'{os.path.splitext(os.path.basename(threat_path))[0]}'
-                     f'_aligned{file_suffix}.tif'))
-                # Use these updated threat raster paths in future calculations
-                threat_path_dict['threat' + lulc_key][threat] = (
-                    aligned_threat_path)
-
     LOGGER.info('Starting habitat_quality biophysical calculations')
     # Rasterize access vector, if value is null set to 1 (fully accessible),
     # else set to the value according to the ACCESS attribute
-    cur_lulc_path = lulc_path_dict['_c']
+    cur_lulc_path = aligned_lulc_path_dict['_c']
 
     access_raster_path = os.path.join(
         intermediate_output_dir, f'access_layer{file_suffix}.tif')
@@ -694,7 +692,7 @@ def execute(args):
     weight_sum = threat_df['weight'].sum()
 
     # for each land cover raster provided compute habitat quality
-    for lulc_key, lulc_path in lulc_path_dict.items():
+    for lulc_key, lulc_path in aligned_lulc_path_dict.items():
         LOGGER.info(f'Calculating habitat quality for landuse: {lulc_path}')
 
         threat_decay_task_list = []
@@ -731,7 +729,7 @@ def execute(args):
                 f'Calculating threat: {threat}.\nThreat data: {row}')
 
             # get the threat raster for the specific threat
-            threat_raster_path = threat_path_dict['threat' + lulc_key][threat]
+            threat_raster_path = aligned_threat_path_dict['threat' + lulc_key][threat]
             # if threat path is None then must be in Base scenario where
             # threats are not required.
             if threat_raster_path is None:
@@ -850,16 +848,16 @@ def execute(args):
             task_name='habitat_quality')
 
     # Compute Rarity if user supplied baseline raster
-    if '_b' not in lulc_path_dict:
+    if '_b' not in aligned_lulc_path_dict:
         LOGGER.info('Baseline not provided to compute Rarity')
     else:
-        lulc_base_path = lulc_path_dict['_b']
+        lulc_base_path = aligned_lulc_path_dict['_b']
 
         # compute rarity for current landscape and future (if provided)
         for lulc_key in ['_c', '_f']:
-            if lulc_key not in lulc_path_dict:
+            if lulc_key not in aligned_lulc_path_dict:
                 continue
-            lulc_path = lulc_path_dict[lulc_key]
+            lulc_path = aligned_lulc_path_dict[lulc_key]
             lulc_time = 'current' if lulc_key == '_c' else 'future'
 
             new_cover_path = os.path.join(
