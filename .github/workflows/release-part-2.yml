@@ -93,12 +93,28 @@ jobs:
           gh run download $RUN_ID --dir sdists --pattern "Source*"
           cp "$(find sdists -name '*.tar.gz' -print -quit)" artifacts/
 
+      - name: Create release notes
+        shell: python
+        run: |
+          import os
+          import re
+          with open('notes.rst', 'w') as notes:
+              notes.write('This release includes the following fixes and features:\n\n')
+              with open('HISTORY.rst') as f:
+                  do_write = False
+                  for line in f.readlines():
+                      # match the header starting with $VERSION
+                      if line.startswith(os.environ['VERSION']):
+                          do_write = True
+                      # match the header pattern X.XX.X (XXXX-XX-XX)
+                      # using \w to allow for alpha and post releases
+                      elif re.match(r'\d+\.\d+\.\w+ \(\d{4}-\d{2}-\d{2}\)', line):
+                          do_write = False
+                      if do_write:
+                          notes.write(line)
+
       - name: Create Github release
         run: |
-          # Copy the history notes for this version into the release message
-          echo "This release includes the following fixes and features:" > notes.rst
-          echo "" >> notes.rst
-          sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3 >> notes.rst
           gh release create $VERSION \
             --verify-tag \
             --title $VERSION \
