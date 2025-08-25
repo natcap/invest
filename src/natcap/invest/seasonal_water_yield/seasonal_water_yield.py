@@ -65,12 +65,12 @@ MODEL_SPEC = spec.ModelSpec(
             columns=[
                 spec.IntegerInput(
                     id="month",
-                    about=("The month index (1-12)."),
+                    about=gettext("The month index (1-12)."),
                     expression="(value >= 1) & (value <= 12)"
                 ),
                 spec.SingleBandRasterInput(
                     id="path",
-                    about=(
+                    about=gettext(
                         "Path to a reference evapotranspiration raster for the month."
                     ),
                     data_type=float,
@@ -93,14 +93,12 @@ MODEL_SPEC = spec.ModelSpec(
             columns=[
                 spec.IntegerInput(
                     id="month",
-                    about=("The month index (1-12)."),
+                    about=gettext("The month index (1-12)."),
                     expression="(value >= 1) & (value <= 12)"
                 ),
                 spec.SingleBandRasterInput(
                     id="path",
-                    about=(
-                        "Path to a precipitation raster for the month."
-                    ),
+                    about=gettext("Path to a precipitation raster for the month."),
                     data_type=float,
                     units=u.millimeter / u.month,
                     projected=None
@@ -592,19 +590,19 @@ _OUTPUT_BASE_FILES = {
 
 _INTERMEDIATE_BASE_FILES = {
     'aet_path': 'aet.tif',
-    'aetm_path_list': ['aetm_%d.tif' % (x+1) for x in range(N_MONTHS)],
+    'aetm_path_list': [f'aetm_{x+1}.tif' for x in range(N_MONTHS)],
     'flow_dir_path': 'flow_dir.tif',
-    'qfm_path_list': ['qf_%d.tif' % (x+1) for x in range(N_MONTHS)],
+    'qfm_path_list': [f'qf_{x+1}.tif' for x in range(N_MONTHS)],
     'si_path': 'Si.tif',
     'lulc_aligned_path': 'lulc_aligned.tif',
     'dem_aligned_path': 'dem_aligned.tif',
     'dem_pit_filled_path': 'pit_filled_dem.tif',
     'soil_group_aligned_path': 'soil_group_aligned.tif',
     'flow_accum_path': 'flow_accum.tif',
-    'precip_path_aligned_list': ['prcp_a%d.tif' % (x+1) for x in range(N_MONTHS)],
-    'n_events_path_list': ['n_events%d.tif' % (x+1) for x in range(N_MONTHS)],
-    'et0_path_aligned_list': ['et0_a%d.tif' % (x+1) for x in range(N_MONTHS)],
-    'kc_path_list': ['kc_%d.tif' % (x+1) for x in range(N_MONTHS)],
+    'precip_path_aligned_list': [f'prcp_a{x+1}.tif' for x in range(N_MONTHS)],
+    'n_events_path_list': [f'n_events{x+1}.tif' for x in range(N_MONTHS)],
+    'et0_path_aligned_list': [f'et0_a{x+1}.tif' for x in range(N_MONTHS)],
+    'kc_path_list': [f'kc_{x+1}.tif' for x in range(N_MONTHS)],
     'l_aligned_path': 'l_aligned.tif',
     'cz_aligned_raster_path': 'cz_aligned.tif',
 }
@@ -759,21 +757,19 @@ def execute(args):
 
         precip_df = MODEL_SPEC.get_input(
             'precip_raster_table').get_validated_dataframe(
-            args['precip_raster_table'])
-        precip_df.sort_values('month', inplace=True)
+            args['precip_raster_table']).sort_values('month')
         if not month_indexes == precip_df['month'].tolist():
             raise ValueError(
-                'Precipitation raster table must include the '
-                'month index values 1-12.')
+                'Precipitation table "month" column must include exactly the '
+                'values 1 - 12 and no other values.')
 
         et0_df = MODEL_SPEC.get_input(
             'et0_raster_table').get_validated_dataframe(
-            args['et0_raster_table'])
-        et0_df.sort_values('month', inplace=True)
+            args['et0_raster_table']).sort_values('month')
         if not month_indexes == et0_df['month'].tolist():
             raise ValueError(
-                'ET0 raster table must include the '
-                'month index values 1-12.')
+                'ET0 table "month" column must include exactly the values '
+                '1 - 12 and no other values.')
 
         precip_path_list = precip_df['path'].tolist()
         et0_path_list = et0_df['path'].tolist()

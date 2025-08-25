@@ -187,30 +187,6 @@ def make_precip_csv(precip_csv_path, dir_path):
             open_table.write(str(month) + ',' + path + '\n')
 
 
-def make_zeropadded_rasters(dir_path, prefix):
-    """Make twelve 1x1 raster files with filenames ending in zero-padded
-    month number.
-
-    Args:
-        dir_path (str): path to the directory for saving the rasters.
-        file_prefix (str): prefix of new files to create.
-
-    Returns:
-        list: monthly raster filenames
-    """
-    size = 1
-    monthly_raster_list = []
-
-    for month in range(1, 13):
-        raster_path = os.path.join(
-            dir_path, prefix + str(month).zfill(2) + '.tif')
-        temp_array = numpy.full((size, size), 1, dtype=numpy.int8)
-        make_raster_from_array(temp_array, raster_path)
-        monthly_raster_list.append(raster_path)
-
-    return monthly_raster_list
-
-
 def make_recharge_raster(recharge_ras_path):
     """Make a 100x100 raster of user defined recharge.
 
