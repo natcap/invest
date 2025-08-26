@@ -62,9 +62,15 @@
 
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+
+Habitat Quality
+===============
+* The aligned LULC outputs are no longer named after the original LULC files.
+  Instead they are named ``lulc_cur_aligned``, ``lulc_fut_aligned``, and
+  ``lulc_bas_aligned``. This is consistent with other models and simplifies the
+  model spec and documentation. (`#2127 <https://github.com/natcap/invest/issues/2127>`_)
 
 3.16.2 (2025-08-13)
 -------------------

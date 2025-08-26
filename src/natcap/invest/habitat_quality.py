@@ -584,7 +584,6 @@ def execute(args):
                         'path': threat_path,
                         'table_col': _THREAT_SCENARIO_MAP[scenario]}
 
-
                     # create paths for aligned rasters checking for the case the raster path
                     # is a folder
                     if os.path.isdir(threat_path):
