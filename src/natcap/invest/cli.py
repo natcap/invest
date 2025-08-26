@@ -464,6 +464,15 @@ def main(user_args=None):
             model_module = importlib.import_module(name=target_model)
             LOGGER.info('Imported target %s from %s',
                         model_module.__name__, model_module)
+            for arg_key, val in parsed_datastack.args.items():
+                try:
+                    input_spec = model_module.MODEL_SPEC.get_input(arg_key)
+                except KeyError:
+                    continue
+                if type(input_spec) in {spec.RasterInput, spec.SingleBandRasterInput,
+                                        spec.VectorInput}:
+                    parsed_datastack.args[arg_key] = utils._GDALPath.from_uri(
+                        val).to_normalized_path()
 
             with utils.prepare_workspace(parsed_datastack.args['workspace_dir'],
                                          model_id=parsed_datastack.model_id,

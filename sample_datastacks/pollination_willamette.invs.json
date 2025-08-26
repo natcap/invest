@@ -1,0 +1,11 @@
+{
+    "args": {
+        "farm_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/pollination.zip/pollination/farms.shp",
+        "guild_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/pollination/guild_table.csv",
+        "landcover_biophysical_table_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/pollination/landcover_biophysical_table.csv",
+        "landcover_raster_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/pollination.zip/pollination/landcover.tif",
+        "results_suffix": ""
+    }, 
+    "invest_version": "3.7.0", 
+    "model_name": "natcap.invest.pollination"
+}

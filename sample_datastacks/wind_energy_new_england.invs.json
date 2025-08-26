@@ -1,0 +1,20 @@
+{
+    "args": {
+        "aoi_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/WindEnergy.zip/WindEnergy/input/New_England_US_Aoi.shp",
+        "avg_grid_distance": "4",
+        "bathymetry_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Base_Data.zip/Base_Data/global_dem.tif",
+        "global_wind_parameters_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/WindEnergy/input/global_wind_energy_parameters.csv",
+        "land_polygon_vector_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Base_Data.zip/Base_Data/global_polygon.shp",
+        "max_depth": "60",
+        "max_distance": "200000",
+        "min_depth": "3",
+        "min_distance": "0",
+        "number_of_turbines": "80",
+        "results_suffix": "",
+        "turbine_parameters_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/WindEnergy/input/3_6_turbine.csv",
+        "valuation_container": false,
+        "wind_data_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/WindEnergy/input/ECNA_EEZ_WEBPAR_Aug27_2012.csv"
+    },
+    "invest_version": "3.5.0.post842+he0330f5be515",
+    "model_name": "natcap.invest.wind_energy"
+}
