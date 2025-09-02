@@ -449,10 +449,10 @@ def execute(args):
             carbon_map_task = graph.add_task(
                 _generate_carbon_map,
                 args=(args[lulc_key], carbon_pool_by_type,
-                      file_registry.get(storage_key)),
-                target_path_list=[file_registry.get(storage_key)],
+                      file_registry[storage_key]),
+                target_path_list=[file_registry[storage_key]],
                 task_name=f'carbon_map_{storage_key}')
-            storage_path_list.append(file_registry.get(storage_key))
+            storage_path_list.append(file_registry[storage_key])
             carbon_map_task_lookup[scenario_type].append(carbon_map_task)
 
         output_key = 'c_storage_' + scenario_type
@@ -464,13 +464,13 @@ def execute(args):
             kwargs=dict(
                 op=sum_op,
                 rasters=storage_path_list,
-                target_path=file_registry.get(output_key),
+                target_path=file_registry[output_key],
                 target_nodata=_CARBON_NODATA),
-            target_path_list=[file_registry.get(output_key)],
+            target_path_list=[file_registry[output_key]],
             dependent_task_list=carbon_map_task_lookup[scenario_type],
             task_name='sum_rasters_for_total_c_%s' % output_key)
         sum_rasters_task_lookup[scenario_type] = sum_rasters_task
-        tifs_to_summarize.add(file_registry.get(output_key))
+        tifs_to_summarize.add(file_registry[output_key])
 
     # calculate sequestration
     diff_rasters_task_lookup = {}
@@ -482,17 +482,17 @@ def execute(args):
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=numpy.subtract,  # c_change = scenario C - baseline C
-                rasters=[file_registry.get('c_storage_alt'),
-                         file_registry.get('c_storage_bas')],
-                target_path=file_registry.get(output_key),
+                rasters=[file_registry['c_storage_alt'],
+                         file_registry['c_storage_bas']],
+                target_path=file_registry[output_key],
                 target_nodata=_CARBON_NODATA),
-            target_path_list=[file_registry.get(output_key)],
+            target_path_list=[file_registry[output_key]],
             dependent_task_list=[
                 sum_rasters_task_lookup['bas'],
                 sum_rasters_task_lookup['alt']],
             task_name='diff_rasters_for_%s' % output_key)
         diff_rasters_task_lookup['alt'] = diff_rasters_task
-        tifs_to_summarize.add(file_registry.get(output_key))
+        tifs_to_summarize.add(file_registry[output_key])
 
     # calculate net present value
     calculate_npv_tasks = []
@@ -509,13 +509,13 @@ def execute(args):
 
             calculate_npv_task = graph.add_task(
                 _calculate_npv,
-                args=(file_registry.get('c_change_bas_alt'),
-                      valuation_constant, file_registry.get(output_key)),
-                target_path_list=[file_registry.get(output_key)],
+                args=(file_registry['c_change_bas_alt'],
+                      valuation_constant, file_registry[output_key]),
+                target_path_list=[file_registry[output_key]],
                 dependent_task_list=[diff_rasters_task_lookup['alt']],
                 task_name='calculate_%s' % output_key)
             calculate_npv_tasks.append(calculate_npv_task)
-            tifs_to_summarize.add(file_registry.get(output_key))
+            tifs_to_summarize.add(file_registry[output_key])
 
     # Report aggregate results
     tasks_to_report = (list(sum_rasters_task_lookup.values())
@@ -524,13 +524,10 @@ def execute(args):
     _ = graph.add_task(
         _generate_report,
         args=(tifs_to_summarize, args, file_registry),
-        target_path_list=[file_registry.get('html_report')],
+        target_path_list=[file_registry['html_report']],
         dependent_task_list=tasks_to_report,
         task_name='generate_report')
     graph.join()
-
-    import pprint
-    pprint.pprint(file_registry.as_dict())
 
 
 # element-wise sum function to pass to raster_map
@@ -641,7 +638,7 @@ def _generate_report(raster_file_set, model_args, file_registry):
     Returns:
         None.
     """
-    html_report_path = file_registry.get('html_report')
+    html_report_path = file_registry['html_report']
     with codecs.open(html_report_path, 'w', encoding='utf-8') as report_doc:
         # Boilerplate header that defines style and intro header.
         header = (
@@ -723,13 +720,13 @@ def _generate_report(raster_file_set, model_args, file_registry):
 
         # value lists are [sort priority, description, statistic, units]
         report = [
-            (file_registry.get('c_storage_bas'), 'Baseline Carbon Storage',
+            (file_registry['c_storage_bas'], 'Baseline Carbon Storage',
              carbon_units),
-            (file_registry.get('c_storage_alt'), 'Alternate Carbon Storage',
+            (file_registry['c_storage_alt'], 'Alternate Carbon Storage',
              carbon_units),
-            (file_registry.get('c_change_bas_alt'), 'Change in Carbon Storage',
+            (file_registry['c_change_bas_alt'], 'Change in Carbon Storage',
              carbon_units),
-            (file_registry.get('npv_alt'),
+            (file_registry['npv_alt'],
              'Net Present Value of Carbon Change', 'currency units'),
         ]
 

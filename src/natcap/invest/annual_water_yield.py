@@ -14,6 +14,7 @@ from . import gettext
 from . import spec
 from . import utils
 from . import validation
+from .file_registry import FileRegistry
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -463,11 +464,19 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
+            id="demand",
+            path="intermediate/demand.tif",
+            about=gettext("Water demand per pixel."),
+            data_type=float,
+            units=u.meter ** 3 / u.year
+        ),
+        spec.SingleBandRasterOutput(
             id="wyield",
             path="output/per_pixel/wyield.tif",
             about=gettext("Estimated water yield per pixel."),
             data_type=float,
-            units=u.millimeter
+            units=u.millimeter,
+            created_if="demand_table_path"
         ),
         spec.SingleBandRasterOutput(
             id="clipped_lulc",
@@ -478,7 +487,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="depth_to_root_rest_layer",
-            path="intermeditae/depth_to_root_rest_layer.tif",
+            path="intermediate/depth_to_root_rest_layer.tif",
             about=gettext(
                 "Aligned and clipped copy of root restricting layer"
                 " depth input."
@@ -536,6 +545,62 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Map of vegetated state."),
             data_type=int,
             units=None
+        ),
+        spec.FileOutput(
+            id="ws_id_wyield_mn",
+            path="intermediate/_tmp_zonal_stats/ws_id_wyield_mn.pickle",
+            about=gettext("Pickled watershed zonal statistics dictionary for wyield"),
+        ),
+        spec.FileOutput(
+            id="ws_id_aet_mn",
+            path="intermediate/_tmp_zonal_stats/ws_id_AET_mn.pickle",
+            about=gettext("Pickled watershed zonal statistics dictionary for AET"),
+        ),
+        spec.FileOutput(
+            id="ws_id_pet_mn",
+            path="intermediate/_tmp_zonal_stats/ws_id_PET_mn.pickle",
+            about=gettext("Pickled watershed zonal statistics dictionary for PET"),
+        ),
+        spec.FileOutput(
+            id="ws_id_precip_mn",
+            path="intermediate/_tmp_zonal_stats/ws_id_precip_mn.pickle",
+            about=gettext("Pickled watershed zonal statistics dictionary for precip"),
+        ),
+        spec.FileOutput(
+            id="ws_id_demand",
+            path="intermediate/_tmp_zonal_stats/ws_id_demand.pickle",
+            about=gettext("Pickled watershed zonal statistics dictionary for demand"),
+            created_if="demand_table_path"
+        ),
+        spec.FileOutput(
+            id="subws_id_wyield_mn",
+            path="intermediate/_tmp_zonal_stats/subws_id_wyield_mn.pickle",
+            about=gettext("Pickled subwatershed zonal statistics dictionary for wyield"),
+            created_if="sub_watersheds_path"
+        ),
+        spec.FileOutput(
+            id="subws_id_aet_mn",
+            path="intermediate/_tmp_zonal_stats/subws_id_AET_mn.pickle",
+            about=gettext("Pickled subwatershed zonal statistics dictionary for AET"),
+            created_if="sub_watersheds_path"
+        ),
+        spec.FileOutput(
+            id="subws_id_pet_mn",
+            path="intermediate/_tmp_zonal_stats/subws_id_PET_mn.pickle",
+            about=gettext("Pickled subwatershed zonal statistics dictionary for PET"),
+            created_if="sub_watersheds_path"
+        ),
+        spec.FileOutput(
+            id="subws_id_precip_mn",
+            path="intermediate/_tmp_zonal_stats/subws_id_precip_mn.pickle",
+            about=gettext("Pickled subwatershed zonal statistics dictionary for precip"),
+            created_if="sub_watersheds_path"
+        ),
+        spec.FileOutput(
+            id="subws_id_demand",
+            path="intermediate/_tmp_zonal_stats/subws_id_demand.pickle",
+            about=gettext("Pickled subwatershed zonal statistics dictionary for demand"),
+            created_if="sub_watersheds_path and demand_table_path"
         ),
         spec.TASKGRAPH_CACHE
     ]
@@ -661,44 +726,38 @@ def execute(args):
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    file_registry = FileRegistry(MODEL_SPEC, workspace_dir, file_suffix)
 
     # Paths for targets of align_and_resize_raster_stack
-    clipped_lulc_path = os.path.join(
-        intermediate_dir, f'clipped_lulc{file_suffix}.tif')
-    eto_path = os.path.join(intermediate_dir, f'eto{file_suffix}.tif')
-    precip_path = os.path.join(intermediate_dir, f'precip{file_suffix}.tif')
-    depth_to_root_rest_layer_path = os.path.join(
-        intermediate_dir, f'depth_to_root_rest_layer{file_suffix}.tif')
-    pawc_path = os.path.join(intermediate_dir, f'pawc{file_suffix}.tif')
-    tmp_pet_path = os.path.join(intermediate_dir, f'pet{file_suffix}.tif')
+    clipped_lulc_path = file_registry['clipped_lulc']
+    eto_path = file_registry['eto']
+    precip_path = file_registry['precip']
+    depth_to_root_rest_layer_path = file_registry['depth_to_root_rest_layer']
+    pawc_path = file_registry['pawc']
+    tmp_pet_path = file_registry['pet']
 
     # Paths for output rasters
-    fractp_path = os.path.join(
-        per_pixel_output_dir, f'fractp{file_suffix}.tif')
-    wyield_path = os.path.join(
-        per_pixel_output_dir, f'wyield{file_suffix}.tif')
-    aet_path = os.path.join(per_pixel_output_dir, f'aet{file_suffix}.tif')
-    demand_path = os.path.join(intermediate_dir, f'demand{file_suffix}.tif')
-    veg_raster_path = os.path.join(intermediate_dir, f'veg{file_suffix}.tif')
-    root_raster_path = os.path.join(
-        intermediate_dir, f'root_depth{file_suffix}.tif')
-    kc_raster_path = os.path.join(
-        intermediate_dir, f'kc_raster{file_suffix}.tif')
+    fractp_path = file_registry['fractp']
+    wyield_path = file_registry['wyield']
+    aet_path = file_registry['aet']
+    demand_path = file_registry['demand']
+    veg_raster_path = file_registry['veg']
+    root_raster_path = file_registry['root_depth']
+    kc_raster_path = file_registry['kc_raster']
 
     watersheds_path = args['watersheds_path']
-    watershed_results_vector_path = os.path.join(
-        output_dir, f'watershed_results_wyield{file_suffix}.shp')
-    watershed_paths_list = [
-        (watersheds_path, 'ws_id', watershed_results_vector_path)]
+    watershed_paths_list = [(
+        watersheds_path, 'ws_id',
+        file_registry['watershed_results_wyield'],
+        file_registry['watershed_results_wyield_csv'])]
 
     sub_watersheds_path = None
     if 'sub_watersheds_path' in args and args['sub_watersheds_path'] != '':
         sub_watersheds_path = args['sub_watersheds_path']
-        subwatershed_results_vector_path = os.path.join(
-            output_dir, f'subwatershed_results_wyield{file_suffix}.shp')
-        watershed_paths_list.append(
-            (sub_watersheds_path, 'subws_id',
-             subwatershed_results_vector_path))
+        watershed_paths_list.append((
+            sub_watersheds_path, 'subws_id',
+            file_registry['subwatershed_results_wyield'],
+            file_registry['subwatershed_results_wyield_csv']))
 
     seasonality_constant = float(args['seasonality_constant'])
 
@@ -711,7 +770,7 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
     graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
+        file_registry['taskgraph_cache'], n_workers)
 
     base_raster_path_list = [
         args['eto_path'],
@@ -919,7 +978,7 @@ def execute(args):
 
     # Aggregate results to watershed polygons, and do the optional
     # scarcity and valuation calculations.
-    for base_ws_path, ws_id_name, target_ws_path in watershed_paths_list:
+    for base_ws_path, ws_id_name, target_ws_path, target_csv_path in watershed_paths_list:
         # make a copy so we don't modify the original
         # do zonal stats with the copy so that FIDS are correct
         copy_watersheds_vector_task = graph.add_task(
@@ -934,9 +993,7 @@ def execute(args):
         # Do zonal stats with the input shapefiles provided by the user
         # and store results dictionaries in pickles
         for key_name, rast_path in raster_names_paths_list:
-            target_stats_pickle = os.path.join(
-                pickle_dir,
-                f'{ws_id_name}_{key_name}{file_suffix}.pickle')
+            target_stats_pickle = file_registry[f'{ws_id_name}_{key_name.lower()}']
             zonal_stats_pickle_list.append((target_stats_pickle, key_name))
             zonal_stats_task_list.append(graph.add_task(
                 func=zonal_stats_tofile,
@@ -959,8 +1016,6 @@ def execute(args):
             task_name=f'create_{ws_id_name}_vector_output')
 
         # Export a CSV with all the fields present in the output vector
-        target_basename = os.path.splitext(target_ws_path)[0]
-        target_csv_path = target_basename + '.csv'
         create_output_table_task = graph.add_task(
             func=convert_vector_to_csv,
             args=(target_ws_path, target_csv_path),

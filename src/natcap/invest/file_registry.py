@@ -19,19 +19,20 @@ class FileRegistryGroup:
 
         self.items = {}
 
-    def create_item(self, **kwargs):
+    def create_item(self, *args):
 
-        if set(kwargs) != set(self.fields):
-            raise ValueError(f'Expected exactly these kwargs: {self.fields}')
+        if len(args) != len(self.fields):
+            raise ValueError(
+                f'Expected exactly {len(self.fields)} args but received {len(args)}')
 
         if len(self.fields) > 1:
-            field_value = tuple([kwargs[field] for field in self.fields])
+            field_value = tuple(args)
         else:
-            field_value = kwargs[self.fields[0]]
+            field_value = args[0]
 
         path = self.pattern
-        for field in self.fields:
-            path = path.replace(f'[{field.upper()}]', kwargs[field])
+        for field, value in zip(self.fields, args):
+            path = path.replace(f'[{field.upper()}]', value)
 
         item = FileRegistryItem(field_value, path)
         self.items[field_value] = item
@@ -66,44 +67,27 @@ class FileRegistry:
 
             all_paths.add(full_path)
 
-
             match = re.match(r'(.*)\[(\w+)\](.*)', full_path)
             if match:
                 self.registry[output.id] = FileRegistryGroup(output.id, full_path)
             else:
                 self.registry[output.id] = FileRegistryItem(output.id, full_path)
 
-    def get(self, key, **kwargs):
+    def __getitem__(self, key):
+        vals = None
+        if isinstance(key, tuple):
+            key, *vals = key
+
         if key not in self.registry:
             raise ValueError(f'Key not found in registry: {key}')
 
         if isinstance(self.registry[key], FileRegistryGroup):
-            sub_key = list(kwargs.values)[0]
-            return self.registry[key].items[sub_key]
-        else:
-            return self.registry[key]
-
-    def get_path(self, key, **kwargs):
-        return self.get(key, **kwargs).path
-
-    def register(self, key, **kwargs):
-        print('register', key, kwargs, self.registry[key])
-        if key not in self.registry:
-            raise ValueError(f'Key not found in registry: {key}')
-
-        if isinstance(self.registry[key], FileRegistryGroup):
-            sub_key = list(kwargs.values())[0]
-            sub_item = self.registry[key].create_item(**kwargs)
-            self.paths_used[key][sub_key] = sub_item.path
-            print(self.paths_used[key])
+            sub_item = self.registry[key].create_item(*vals)
+            self.paths_used[key][sub_item.key] = sub_item.path
             return sub_item.path
         else:
             self.paths_used[key] = self.registry[key].path
             return self.registry[key].path
-
-
-    def create_item(self, key, **kwargs):
-        return self.registry[key].create_item(**kwargs)
 
     def get_group_path_list(self, key):
         return self.registry[key].path_list
