@@ -244,7 +244,7 @@ MODEL_SPEC = spec.ModelSpec(
     outputs=[
         spec.SingleBandRasterOutput(
             id="deg_sum_c",
-            path="output/deg_sum_c.tif",
+            path="deg_sum_c.tif",
             about=gettext(
                 "Relative level of habitat degradation on the current landscape."
             ),
@@ -253,7 +253,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="deg_sum_f",
-            path="output/deg_sum_f.tif",
+            path="deg_sum_f.tif",
             about=gettext(
                 "Relative level of habitat degradation on the future landscape."
             ),
@@ -263,7 +263,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="quality_c",
-            path="output/quality_c.tif",
+            path="quality_c.tif",
             about=gettext(
                 "Relative level of habitat quality on the current landscape."
             ),
@@ -272,7 +272,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="quality_f",
-            path="output/quality_f.tif",
+            path="quality_f.tif",
             about=gettext(
                 "Relative level of habitat quality on the future landscape."
             ),
@@ -281,8 +281,23 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
+            id="new_cover_c",
+            path="new_cover_c.tif",
+            about=gettext("Masked current land cover"),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="new_cover_f",
+            path="new_cover_f.tif",
+            about=gettext("Masked future land cover"),
+            created_if="lulc_fut_path",
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
             id="rarity_c",
-            path="output/rarity_c.tif",
+            path="rarity_c.tif",
             about=(
                 "Relative habitat rarity on the current landscape vis-a-vis the"
                 " baseline map. The grid cell's values are defined between a"
@@ -303,7 +318,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="rarity_f",
-            path="output/rarity_f.tif",
+            path="rarity_f.tif",
             about=(
                 "Relative habitat rarity on the future landscape vis-a-vis the"
                 " baseline map. The grid cell's values are defined between a"
@@ -324,7 +339,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.CSVOutput(
             id="rarity_c_csv",
-            path="output/rarity_c.csv",
+            path="rarity_c.csv",
             about=gettext(
                 "Table of rarity values by LULC code for the current landscape."
             ),
@@ -358,7 +373,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.CSVOutput(
             id="rarity_f_csv",
-            path="output/rarity_f.csv",
+            path="rarity_f.csv",
             about=gettext(
                 "Table of rarity values by LULC code for the future landscape."
             ),
@@ -396,6 +411,15 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Rasterized access map"),
             data_type=float,
             units=None
+        ),
+        spec.VectorOutput(
+            id="reprojected_access_vector",
+            path="intermediate/access_projected_to_lulc_cur.gpkg",
+            about=gettext("Access vector reprojected to LULC projection"),
+            created_if="access_vector_path",
+            geometry_types={"MULTIPOLYGON", "POLYGON"},
+            fields=[],
+            projected=False
         ),
         spec.SingleBandRasterOutput(
             id="lulc_cur_aligned",
@@ -438,6 +462,111 @@ MODEL_SPEC = spec.ModelSpec(
             id="degradation_[THREAT]",
             path="intermediate/degradation_[THREAT].tif",
             about=gettext("Degradation raster for each threat"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="habitat_cur",
+            path="intermediate/habitat_c.tif",
+            about=gettext("Current habitat raster"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="habitat_fut",
+            path="intermediate/habitat_f.tif",
+            about=gettext("Future habitat raster"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="habitat_bas",
+            path="intermediate/habitat_b.tif",
+            about=gettext("Baseline habitat raster"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="[THREAT]_distance_transform_cur",
+            path="intermediate/[THREAT]_distance_transform_c.tif",
+            about=gettext("Map of distance to each threat in the current scenario"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="[THREAT]_distance_transform_fut",
+            path="intermediate/[THREAT]_distance_transform_f.tif",
+            about=gettext("Map of distance to each threat in the future scenario"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="[THREAT]_distance_transform_bas",
+            path="intermediate/[THREAT]_distance_transform_b.tif",
+            about=gettext("Map of distance to each threat in the baseline scenario"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="filtered_[DECAY]_[THREAT]_cur",
+            path="intermediate/filtered_[DECAY]_[THREAT]_c.tif",
+            about=gettext("Decayed distance to each threat in the current scenario"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="filtered_[DECAY]_[THREAT]_fut",
+            path="intermediate/filtered_[DECAY]_[THREAT]_f.tif",
+            about=gettext("Decayed distance to each threat in the future scenario"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="filtered_[DECAY]_[THREAT]_bas",
+            path="intermediate/filtered_[DECAY]_[THREAT]_b.tif",
+            about=gettext("Decayed distance to each threat in the baseline scenario"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="sens_[THREAT]_cur",
+            path="intermediate/sens_[THREAT]_c.tif",
+            about=gettext("Threat sensitivity in the current scenario"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="sens_[THREAT]_fut",
+            path="intermediate/sens_[THREAT]_f.tif",
+            about=gettext("Threat sensitivity in the future scenario"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="sens_[THREAT]_bas",
+            path="intermediate/sens_[THREAT]_b.tif",
+            about=gettext("Threat sensitivity in the baseline scenario"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="degradation_[THREAT]_cur",
+            path="intermediate/degradation_[THREAT]_c.tif",
+            about=gettext("Degradation for each threat in the current scenario"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="degradation_[THREAT]_fut",
+            path="intermediate/degradation_[THREAT]_f.tif",
+            about=gettext("Degradation for each threat in the future scenario"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="degradation_[THREAT]_bas",
+            path="intermediate/degradation_[THREAT]_b.tif",
+            about=gettext("Degradation for each threat in the baseline scenario"),
             data_type=float,
             units=None
         ),
@@ -510,7 +639,7 @@ def execute(args):
     file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
     n_workers = int(args.get('n_workers', -1))
     task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
+        file_registry.register('taskgraph_cache'), n_workers)
 
     LOGGER.info("Checking Threat and Sensitivity tables for compliance")
     # Get CSVs as dictionaries and ensure the key is a string for threats.
@@ -544,8 +673,7 @@ def execute(args):
         if lulc_arg in args and args[lulc_arg] != '':
             # save land cover paths in a list for alignment and resize
             lulc_raster_list.append(args[lulc_arg])
-            aligned_lulc_path = os.path.join(
-                intermediate_output_dir, f'lulc_{scenario}_aligned{file_suffix}.tif')
+            aligned_lulc_path = file_registry.register(f'lulc_{scenario}_aligned')
             aligned_lulc_raster_list.append(aligned_lulc_path)
             lulc_path_dict[scenario] = aligned_lulc_path
 
@@ -592,8 +720,8 @@ def execute(args):
                         threat_name = os.path.basename(os.path.dirname(threat_path))
                     else:
                         threat_name = os.path.splitext(os.path.basename(threat_path))[0]
-                    aligned_threat_path = os.path.join(
-                        intermediate_output_dir, f'{threat_name}_aligned{file_suffix}.tif')
+                    aligned_threat_path = file_registry.register(
+                        '[THREAT]_aligned', threat=threat_name)
                     aligned_threat_raster_list.append(aligned_threat_path)
                     threat_path_dict[scenario][threat] = aligned_threat_path
 
@@ -637,8 +765,7 @@ def execute(args):
     LOGGER.info('Starting habitat_quality biophysical calculations')
     # Rasterize access vector, if value is null set to 1 (fully accessible),
     # else set to the value according to the ACCESS attribute
-    access_raster_path = os.path.join(
-        intermediate_output_dir, f'access_layer{file_suffix}.tif')
+    access_raster_path = file_registry.register('access_layer')
     # create a new raster based on the raster info of current land cover.
     # fill with 1.0 for case where no access shapefile provided,
     # which indicates we don't want to mask anything out later
@@ -656,8 +783,7 @@ def execute(args):
 
     if 'access_vector_path' in args and args['access_vector_path']:
         LOGGER.debug("Reproject and rasterize Access vector")
-        reprojected_access_path = os.path.join(
-            intermediate_output_dir, 'access_projected_to_lulc_cur.gpkg')
+        reprojected_access_path = file_registry.register('reprojected_access_vector')
         reproject_access_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             kwargs={
@@ -694,9 +820,7 @@ def execute(args):
         individual_degradation_task_list = []
 
         # Create raster of habitat based on habitat field
-        habitat_raster_path = os.path.join(
-            intermediate_output_dir,
-            f'habitat_{scenario[0]}{file_suffix}.tif')
+        habitat_raster_path = file_registry.register(f'habitat_{scenario}')
 
         reclass_error_details = {
             'raster_name': f'LULC_{scenario[0]}', 'column_name': 'lucode',
@@ -739,9 +863,8 @@ def execute(args):
                     f"The max distance for threat: '{threat}' is less than"
                     " or equal to 0. MAX_DIST should be a positive value.")
 
-            distance_raster_path = os.path.join(
-                intermediate_output_dir,
-                f'{threat}_distance_transform_{scenario[0]}{file_suffix}.tif')
+            distance_raster_path = file_registry.register(
+                f'[THREAT]_distance_transform_{scenario}', threat=threat)
 
             dist_edt_task = task_graph.add_task(
                 func=pygeoprocessing.distance_transform_edt,
@@ -750,9 +873,8 @@ def execute(args):
                 dependent_task_list=[align_task],
                 task_name=f'distance edt {scenario} {threat}')
 
-            filtered_threat_raster_path = os.path.join(
-                intermediate_output_dir,
-                f'filtered_{row["decay"]}_{threat}_{scenario[0]}{file_suffix}.tif')
+            filtered_threat_raster_path = file_registry.register(
+                f'filtered_[DECAY]_[THREAT]_{scenario}', decay=row["decay"], threat=threat)
 
             dist_decay_task = task_graph.add_task(
                 func=_decay_distance,
@@ -765,9 +887,8 @@ def execute(args):
             threat_decay_task_list.append(dist_decay_task)
 
             # create sensitivity raster based on threat
-            sens_raster_path = os.path.join(
-                intermediate_output_dir,
-                f'sens_{threat}_{scenario[0]}{file_suffix}.tif')
+            sens_raster_path = file_registry.register(
+                f'sens_[THREAT]_{scenario}', threat=threat)
 
             # Dictionary for reclassing threat sensitivity values
             sensitivity_reclassify_threat_dict = sensitivity_df[threat].to_dict()
@@ -790,8 +911,8 @@ def execute(args):
             weight_avg = row['weight'] / weight_sum
 
             # Calculate degradation for each threat
-            indiv_threat_raster_path = os.path.join(
-                intermediate_output_dir, f'degradation_{threat}_{scenario[0]}{file_suffix}.tif')
+            indiv_threat_raster_path = file_registry.register(
+                f'degradation_[THREAT]_{scenario}', threat=threat)
 
             individual_threat_task = task_graph.add_task(
                 func=_calculate_individual_degradation,
@@ -811,8 +932,7 @@ def execute(args):
         if exit_landcover:
             continue
 
-        deg_sum_raster_path = os.path.join(
-            output_dir, f'deg_sum_{scenario[0]}{file_suffix}.tif')
+        deg_sum_raster_path = file_registry.register(f'deg_sum_{scenario[0]}')
 
         LOGGER.info('Starting raster calculation on total degradation')
 
@@ -827,8 +947,7 @@ def execute(args):
         # ksq: a term used below to compute habitat quality
         ksq = half_saturation_constant**_SCALING_PARAM
 
-        quality_path = os.path.join(
-            output_dir, f'quality_{scenario[0]}{file_suffix}.tif')
+        quality_path = file_registry.register(f'quality_{scenario[0]}')
 
         LOGGER.info('Starting raster calculation on quality')
 
@@ -850,15 +969,9 @@ def execute(args):
             if scenario not in lulc_path_dict:
                 continue
 
-            new_cover_path = os.path.join(
-                intermediate_output_dir,
-                f'new_cover_{scenario[0]}{file_suffix}.tif')
-
-            rarity_raster_path = os.path.join(
-                output_dir, f'rarity_{scenario[0]}{file_suffix}.tif')
-
-            rarity_csv_path = os.path.join(
-                output_dir, f'rarity_{scenario[0]}{file_suffix}.csv')
+            new_cover_path = file_registry.register(f'new_cover_{scenario[0]}')
+            rarity_raster_path = file_registry.register(f'rarity_{scenario[0]}')
+            rarity_csv_path = file_registry.register(f'rarity_{scenario[0]}_csv')
 
             _ = task_graph.add_task(
                 func=_compute_rarity_operation,
