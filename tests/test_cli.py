@@ -126,6 +126,34 @@ class CLIHeadlessTests(unittest.TestCase):
             ])
         self.assertEqual(exit_cm.exception.code, 1)
 
+    def test_run_carbon_remote_files(self):
+        """CLI: Run the carbon model using a datastack with remote paths."""
+        from natcap.invest import cli
+        parameter_set_path = os.path.join(
+            os.path.dirname(__file__), '..', 'sample_datastacks',
+            'carbon_willamette.invs.json')
+
+        with unittest.mock.patch('natcap.invest.carbon.execute',
+                                 return_value=None) as patched_model:
+            cli.main([
+                'run',
+                'carbon',
+                '--datastack', parameter_set_path,
+                '--workspace', self.workspace_dir,
+            ])
+        # zip+https prefix should be converted to /vsizip/vsicurl
+        patched_model.assert_called_once_with({
+            "calc_sequestration": True,
+            "carbon_pools_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/Carbon/carbon_pools_willamette.csv",
+            "do_valuation": False,
+            "lulc_bas_path": "/vsizip/vsicurl/https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Carbon.zip/Carbon/lulc_current_willamette.tif",
+            "lulc_bas_year": "2020",
+            "lulc_alt_path": "/vsizip/vsicurl/https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Carbon.zip/Carbon/lulc_future_willamette.tif",
+            "lulc_alt_year": "2050",
+            "results_suffix": "willamette",
+            "workspace_dir": self.workspace_dir
+        })
+
     def test_run_ambiguous_modelname(self):
         """CLI: Raise an error when an ambiguous model name used."""
         from natcap.invest import cli

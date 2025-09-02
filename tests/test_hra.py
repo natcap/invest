@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import textwrap
 import unittest
+import unittest.mock
 
 import numpy
 import pandas
@@ -449,6 +450,41 @@ class HRAUnitTests(unittest.TestCase):
                       str(cm.exception))
         self.assertIn('HABITAT NAME', str(cm.exception))
         self.assertIn('HABITAT RESILIENCE ATTRIBUTES', str(cm.exception))
+
+    def test_criteria_table_remote_filepath(self):
+        """HRA: correctly parse a remote path in criteria table."""
+        from natcap.invest import hra
+
+        criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
+        with open(criteria_table_path, 'w') as criteria_table:
+            criteria_table.write(
+                textwrap.dedent(  # NOTE: also checking whitespace around
+                    """\
+                    HABITAT NAME,Eelgrass,,,Hardbottom,,,CRITERIA TYPE
+                    HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    recruitment rate,2,2,2,2,2,2,C
+                    connectivity rate,https://example.com/raster.tif,2,2,2,2,2,C
+                    ,,,,,,,
+                    HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
+                    Oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
+                    ,,,,,,,
+                    Fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
+                    """
+                ))
+        target_composite_csv_path = os.path.join(self.workspace_dir,
+                                                 'composite.csv')
+        with unittest.mock.patch('pygeoprocessing.get_gis_type',
+                                 lambda path: pygeoprocessing.RASTER_TYPE):
+            habitats, stressors = hra._parse_criteria_table(
+                criteria_table_path, target_composite_csv_path)
+        parsed_table = pandas.read_csv(target_composite_csv_path)
+        self.assertEqual(parsed_table['rating'][2],
+                        '/vsicurl/https://example.com/raster.tif')
+
 
     def test_maximum_reclassified_score(self):
         """HRA: check maximum reclassed score given a stack of scores."""
