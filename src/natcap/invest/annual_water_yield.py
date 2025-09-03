@@ -728,23 +728,6 @@ def execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     file_registry = FileRegistry(MODEL_SPEC, workspace_dir, file_suffix)
 
-    # Paths for targets of align_and_resize_raster_stack
-    clipped_lulc_path = file_registry['clipped_lulc']
-    eto_path = file_registry['eto']
-    precip_path = file_registry['precip']
-    depth_to_root_rest_layer_path = file_registry['depth_to_root_rest_layer']
-    pawc_path = file_registry['pawc']
-    tmp_pet_path = file_registry['pet']
-
-    # Paths for output rasters
-    fractp_path = file_registry['fractp']
-    wyield_path = file_registry['wyield']
-    aet_path = file_registry['aet']
-    demand_path = file_registry['demand']
-    veg_raster_path = file_registry['veg']
-    root_raster_path = file_registry['root_depth']
-    kc_raster_path = file_registry['kc_raster']
-
     watersheds_path = args['watersheds_path']
     watershed_paths_list = [(
         watersheds_path, 'ws_id',
@@ -780,11 +763,11 @@ def execute(args):
         args['lulc_path']]
 
     aligned_raster_path_list = [
-        eto_path,
-        precip_path,
-        depth_to_root_rest_layer_path,
-        pawc_path,
-        clipped_lulc_path]
+        file_registry['eto'],
+        file_registry['precip'],
+        file_registry['depth_to_root_rest_layer'],
+        file_registry['pawc'],
+        file_registry['clipped_lulc']]
 
     target_pixel_size = pygeoprocessing.get_raster_info(
         args['lulc_path'])['pixel_size']
@@ -803,12 +786,12 @@ def execute(args):
 
     nodata_dict = {
         'out_nodata': -1,
-        'precip': pygeoprocessing.get_raster_info(precip_path)['nodata'][0],
-        'eto': pygeoprocessing.get_raster_info(eto_path)['nodata'][0],
+        'precip': pygeoprocessing.get_raster_info(file_registry['precip'])['nodata'][0],
+        'eto': pygeoprocessing.get_raster_info(file_registry['eto'])['nodata'][0],
         'depth_root': pygeoprocessing.get_raster_info(
-            depth_to_root_rest_layer_path)['nodata'][0],
-        'pawc': pygeoprocessing.get_raster_info(pawc_path)['nodata'][0],
-        'lulc': pygeoprocessing.get_raster_info(clipped_lulc_path)['nodata'][0]}
+            file_registry['depth_to_root_rest_layer'])['nodata'][0],
+        'pawc': pygeoprocessing.get_raster_info(file_registry['pawc'])['nodata'][0],
+        'lulc': pygeoprocessing.get_raster_info(file_registry['clipped_lulc'])['nodata'][0]}
 
     # Open/read in the csv file into a dictionary and add to arguments
     bio_df = MODEL_SPEC.get_input('biophysical_table_path').get_validated_dataframe(
@@ -862,10 +845,10 @@ def execute(args):
     LOGGER.info("Reclassifying temp_Kc raster")
     create_Kc_raster_task = graph.add_task(
         func=utils.reclassify_raster,
-        args=((clipped_lulc_path, 1), Kc_dict, kc_raster_path,
+        args=((file_registry['clipped_lulc'], 1), Kc_dict, file_registry['kc_raster'],
               gdal.GDT_Float32, nodata_dict['out_nodata'],
               reclass_error_details),
-        target_path_list=[kc_raster_path],
+        target_path_list=[file_registry['kc_raster']],
         dependent_task_list=[align_raster_stack_task],
         task_name='create_Kc_raster')
 
@@ -873,10 +856,10 @@ def execute(args):
     LOGGER.info("Reclassifying tmp_root raster")
     create_root_raster_task = graph.add_task(
         func=utils.reclassify_raster,
-        args=((clipped_lulc_path, 1), root_dict, root_raster_path,
+        args=((file_registry['clipped_lulc'], 1), root_dict, file_registry['root_depth'],
               gdal.GDT_Float32, nodata_dict['out_nodata'],
               reclass_error_details),
-        target_path_list=[root_raster_path],
+        target_path_list=[file_registry['root_depth']],
         dependent_task_list=[align_raster_stack_task],
         task_name='create_root_raster')
 
@@ -885,10 +868,10 @@ def execute(args):
     LOGGER.info("Reclassifying tmp_veg raster")
     create_veg_raster_task = graph.add_task(
         func=utils.reclassify_raster,
-        args=((clipped_lulc_path, 1), vegetated_dict, veg_raster_path,
+        args=((file_registry['clipped_lulc'], 1), vegetated_dict, file_registry['veg'],
               gdal.GDT_Float32, nodata_dict['out_nodata'],
               reclass_error_details),
-        target_path_list=[veg_raster_path],
+        target_path_list=[file_registry['veg']],
         dependent_task_list=[align_raster_stack_task],
         task_name='create_veg_raster')
 
@@ -899,27 +882,27 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=numpy.multiply,  # PET = ET0 * KC
-            rasters=[eto_path, kc_raster_path],
-            target_path=tmp_pet_path,
+            rasters=[file_registry['eto'], file_registry['kc_raster']],
+            target_path=file_registry['pet'],
             target_nodata=nodata_dict['out_nodata']),
-        target_path_list=[tmp_pet_path],
+        target_path_list=[file_registry['pet']],
         dependent_task_list=[create_Kc_raster_task],
         task_name='calculate_pet')
     dependent_tasks_for_watersheds_list.append(calculate_pet_task)
 
     # List of rasters to pass into the vectorized fractp operation
     raster_list = [
-        kc_raster_path, eto_path, precip_path, root_raster_path,
-        depth_to_root_rest_layer_path, pawc_path, veg_raster_path]
+        file_registry['kc_raster'], file_registry['eto'], file_registry['precip'], file_registry['root_depth'],
+        file_registry['depth_to_root_rest_layer'], file_registry['pawc'], file_registry['veg']]
 
     LOGGER.debug('Performing fractp operation')
     calculate_fractp_task = graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(x, 1) for x in raster_list]
               + [(nodata_dict, 'raw'), (seasonality_constant, 'raw')],
-              fractp_op, fractp_path, gdal.GDT_Float32,
+              fractp_op, file_registry['fractp'], gdal.GDT_Float32,
               nodata_dict['out_nodata']),
-        target_path_list=[fractp_path],
+        target_path_list=[file_registry['fractp']],
         dependent_task_list=[
             create_Kc_raster_task, create_veg_raster_task,
             create_root_raster_task, align_raster_stack_task],
@@ -930,10 +913,10 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=wyield_op,
-            rasters=[fractp_path, precip_path],
-            target_path=wyield_path,
+            rasters=[file_registry['fractp'], file_registry['precip']],
+            target_path=file_registry['wyield'],
             target_nodata=nodata_dict['out_nodata']),
-        target_path_list=[wyield_path],
+        target_path_list=[file_registry['wyield']],
         dependent_task_list=[calculate_fractp_task, align_raster_stack_task],
         task_name='calculate_wyield')
     dependent_tasks_for_watersheds_list.append(calculate_wyield_task)
@@ -943,10 +926,10 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=numpy.multiply,  # AET = fractp * precip
-            rasters=[fractp_path, precip_path],
-            target_path=aet_path,
+            rasters=[file_registry['fractp'], file_registry['precip']],
+            target_path=file_registry['aet'],
             target_nodata=nodata_dict['out_nodata']),
-        target_path_list=[aet_path],
+        target_path_list=[file_registry['aet']],
         dependent_task_list=[
             calculate_fractp_task, create_veg_raster_task,
             align_raster_stack_task],
@@ -955,10 +938,10 @@ def execute(args):
 
     # list of rasters that will always be summarized with zonal stats
     raster_names_paths_list = [
-        ('precip_mn', precip_path),
-        ('PET_mn', tmp_pet_path),
-        ('AET_mn', aet_path),
-        ('wyield_mn', wyield_path)]
+        ('precip_mn', file_registry['precip']),
+        ('PET_mn', file_registry['pet']),
+        ('AET_mn', file_registry['aet']),
+        ('wyield_mn', file_registry['wyield'])]
 
     if 'demand_table_path' in args and args['demand_table_path'] != '':
         reclass_error_details = {
@@ -967,14 +950,14 @@ def execute(args):
         # Create demand raster from table values to use in future calculations
         create_demand_raster_task = graph.add_task(
             func=utils.reclassify_raster,
-            args=((clipped_lulc_path, 1), demand_reclassify_dict, demand_path,
+            args=((file_registry['clipped_lulc'], 1), demand_reclassify_dict, file_registry['demand'],
                   gdal.GDT_Float32, nodata_dict['out_nodata'],
                   reclass_error_details),
-            target_path_list=[demand_path],
+            target_path_list=[file_registry['demand']],
             dependent_task_list=[align_raster_stack_task],
             task_name='create_demand_raster')
         dependent_tasks_for_watersheds_list.append(create_demand_raster_task)
-        raster_names_paths_list.append(('demand', demand_path))
+        raster_names_paths_list.append(('demand', file_registry['demand']))
 
     # Aggregate results to watershed polygons, and do the optional
     # scarcity and valuation calculations.
