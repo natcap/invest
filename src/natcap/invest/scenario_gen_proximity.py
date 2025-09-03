@@ -20,6 +20,7 @@ from . import gettext
 from . import spec
 from . import utils
 from . import validation
+from .file_registry import FileRegistry
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -202,14 +203,14 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="aoi_masked_lulc",
-            path="intermediate/aoi_masked_lulc.tif",
+            path="intermediate_outputs/aoi_masked_lulc.tif",
             about=gettext("Copy of the LULC raster masked to the AOI extent."),
             data_type=int,
             units=None
         ),
         spec.SingleBandRasterOutput(
             id="farthest_from_edge_distance",
-            path="intermediate/farthest_from_edge_distance.tif",
+            path="intermediate_outputs/farthest_from_edge_distance.tif",
             about=gettext(
                 "Map of the distance from each pixel to the farthest edge of the"
                 " focal landcover."
@@ -219,13 +220,69 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="nearest_to_edge_distance",
-            path="intermediate/nearest_to_edge_distance.tif",
+            path="intermediate_outputs/nearest_to_edge_distance.tif",
             about=gettext(
                 "Map of the distance from each pixel to the nearest edge of the"
                 " focal landcover."
             ),
             data_type=float,
             units=u.pixel
+        ),
+        spec.SingleBandRasterOutput(
+            id="tmp_non_base_mask",
+            path="tmp/non_base_mask.tif",
+            about=gettext("Temporary mask raster for non-base pixels."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="tmp_base_mask",
+            path="tmp/base_mask.tif",
+            about=gettext("Temporary mask raster for base pixels."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="tmp_mask",
+            path="tmp/mask.tif",
+            about=gettext("Temporary mask raster."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="tmp_gaussian_kernel",
+            path="tmp/gaussian_kernel.tif",
+            about=gettext("Temporary Gaussian kernel raster for smoothing."),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="tmp_distance_from_base_mask_edge",
+            path="tmp/distance_from_base_mask_edge.tif",
+            about=gettext("Temporary raster for distance from base mask edge."),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="tmp_distance_from_non_base_mask_edge",
+            path="tmp/distance_from_non_base_mask_edge.tif",
+            about=gettext("Temporary raster for distance from non-base mask edge."),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="tmp_convertible_distances",
+            path="tmp/convertible_distances.tif",
+            about=gettext("Temporary raster for convertible pixel distances."),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="tmp_distance_from_edge",
+            path="tmp/distance_from_edge.tif",
+            about=gettext("Temporary raster for combined edge distances."),
+            data_type=float,
+            units=None
         ),
         spec.TASKGRAPH_CACHE
     ]
@@ -291,15 +348,12 @@ def execute(args):
 
     # append a _ to the suffix if it's not empty and doesn't already have one
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    output_dir = args['workspace_dir']
+    intermediate_output_dir = os.path.join(output_dir, 'intermediate_outputs')
+    tmp_dir = os.path.join(output_dir, 'tmp')
+    utils.make_directories([output_dir, intermediate_output_dir, tmp_dir])
 
-    # create working directories
-    output_dir = os.path.join(args['workspace_dir'])
-    intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate_outputs')
-    tmp_dir = os.path.join(args['workspace_dir'], 'tmp')
-
-    utils.make_directories(
-        [output_dir, intermediate_output_dir, tmp_dir])
+    file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
 
     try:
         n_workers = int(args['n_workers'])
@@ -309,7 +363,7 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Single process mode.
     task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
+        file_registry['taskgraph_cache'], n_workers)
 
     area_to_convert = float(args['area_to_convert'])
     replacement_lucode = int(args['replacement_lucode'])
@@ -322,13 +376,11 @@ def execute(args):
 
     aoi_mask_task_list = []
     if 'aoi_path' in args and args['aoi_path'] != '':
-        # clip base lulc to a new raster
-        working_lulc_path = os.path.join(
-            intermediate_output_dir, 'aoi_masked_lulc%s.tif' % file_suffix)
+        working_lulc_path = file_registry['aoi_masked_lulc']
         aoi_mask_task_list.append(task_graph.add_task(
             func=_mask_raster_by_vector,
             args=((args['base_lulc_path'], 1), args['aoi_path'], tmp_dir,
-                  working_lulc_path),
+                  working_lulc_path, file_registry['tmp_mask']),
             target_path_list=[working_lulc_path],
             task_name='aoi_mask'))
     else:
@@ -342,31 +394,28 @@ def execute(args):
         if not scenario_enabled:
             continue
         LOGGER.info('executing %s scenario', basename)
-        output_landscape_raster_path = os.path.join(
-            output_dir, basename+file_suffix+'.tif')
-        stats_path = os.path.join(
-            output_dir, basename+file_suffix+'.csv')
-        distance_from_edge_path = os.path.join(
-            intermediate_output_dir, basename+'_distance'+file_suffix+'.tif')
+        output_landscape_raster_path = file_registry[basename]
+        stats_path = file_registry[f"{basename}_csv"]
+        distance_from_edge_path = file_registry[f"{basename}_distance"]
         task_graph.add_task(
             func=_convert_landscape,
             args=(working_lulc_path, replacement_lucode, area_to_convert,
                   focal_landcover_codes, convertible_type_list, score_weight,
                   int(args['n_fragmentation_steps']), distance_from_edge_path,
                   output_landscape_raster_path, stats_path,
-                  args['workspace_dir']),
+                  output_dir, file_registry),
             target_path_list=[
                 distance_from_edge_path, output_landscape_raster_path,
                 stats_path],
             dependent_task_list=aoi_mask_task_list,
-            task_name='convert_landscape_%s' % basename)
+            task_name=f'convert_landscape_{basename}')
 
     task_graph.close()
     task_graph.join()
 
 
 def _mask_raster_by_vector(
-        base_raster_path_band, vector_path, working_dir, target_raster_path):
+        base_raster_path_band, vector_path, working_dir, target_raster_path, mask_raster_path):
     """Mask pixels outside of the vector to nodata.
 
     Args:
@@ -379,6 +428,7 @@ def _mask_raster_by_vector(
             created of the same dimensions and data type as
             `base_raster_path_band` where any pixels that lie outside of
             `vector_path` coverage will be set to nodata.
+        mask_raster_path (string): path to a mask raster to be created.
 
     Returns:
         None.
@@ -399,7 +449,6 @@ def _mask_raster_by_vector(
 
     # Create mask raster same size as the warped raster.
     tmp_dir = tempfile.mkdtemp(dir=working_dir)
-    mask_raster_path = os.path.join(tmp_dir, 'mask.tif')
     pygeoprocessing.new_raster_from_base(
         target_raster_path, mask_raster_path, gdal.GDT_Byte, [0],
         fill_value_list=[0])
@@ -436,7 +485,7 @@ def _convert_landscape(
         base_lulc_path, replacement_lucode, area_to_convert,
         focal_landcover_codes, convertible_type_list, score_weight, n_steps,
         smooth_distance_from_edge_path, output_landscape_raster_path,
-        stats_path, workspace_dir):
+        stats_path, workspace_dir, file_registry):
     """Expand replacement lucodes in relation to the focal lucodes.
 
     If the sign on `score_weight` is positive, expansion occurs marches
@@ -472,29 +521,24 @@ def _convert_landscape(
         workspace_dir (string): workspace directory that will be used to
             hold temporary files. On a successful run of this function,
             the temporary directory will be removed.
+        file_registry: FileRegistry object for output filepaths.
 
     Returns:
         None.
 
     """
     temp_dir = tempfile.mkdtemp(prefix='temp_dir', dir=workspace_dir)
-    tmp_file_registry = {
-        'non_base_mask': os.path.join(temp_dir, 'non_base_mask.tif'),
-        'base_mask': os.path.join(temp_dir, 'base_mask.tif'),
-        'gaussian_kernel': os.path.join(temp_dir, 'gaussian_kernel.tif'),
-        'distance_from_base_mask_edge': os.path.join(
-            temp_dir, 'distance_from_base_mask_edge.tif'),
-        'distance_from_non_base_mask_edge': os.path.join(
-            temp_dir, 'distance_from_non_base_mask_edge.tif'),
-        'convertible_distances': os.path.join(
-            temp_dir, 'convertible_distances.tif'),
-        'distance_from_edge': os.path.join(
-            temp_dir, 'distance_from_edge.tif'),
-    }
-    # a sigma of 1.0 gives nice visual results to smooth pixel level artifacts
-    # since a pixel is the 1.0 unit
+    # Use file_registry for all tmp outputs
+    non_base_mask_path = file_registry['tmp_non_base_mask']
+    base_mask_path = file_registry['tmp_base_mask']
+    gaussian_kernel_path = file_registry['tmp_gaussian_kernel']
+    distance_from_base_mask_edge_path = file_registry['tmp_distance_from_base_mask_edge']
+    distance_from_non_base_mask_edge_path = file_registry['tmp_distance_from_non_base_mask_edge']
+    convertible_distances_path = file_registry['tmp_convertible_distances']
+    distance_from_edge_path = file_registry['tmp_distance_from_edge']
+
     pygeoprocessing.kernels.normal_distribution_kernel(
-        tmp_file_registry['gaussian_kernel'], sigma=1)
+        gaussian_kernel_path, sigma=1)
 
     # create the output raster first as a copy of the base landcover so it can
     # be looped on for each step
@@ -529,11 +573,9 @@ def _convert_landscape(
         if pixels_left_to_convert < 0:
             pixels_to_convert += pixels_left_to_convert
 
-        # create distance transforms for inside and outside the base lulc codes
-        LOGGER.info('create distance transform for current landcover')
-        for invert_mask, mask_id, distance_id in [
-                (False, 'non_base_mask', 'distance_from_non_base_mask_edge'),
-                (True, 'base_mask', 'distance_from_base_mask_edge')]:
+        for invert_mask, mask_path, distance_path in [
+                (False, non_base_mask_path, distance_from_non_base_mask_edge_path),
+                (True, base_mask_path, distance_from_base_mask_edge_path)]:
 
             def _mask_base_op(lulc_array):
                 """Create a mask of valid non-base pixels only."""
@@ -547,19 +589,19 @@ def _convert_landscape(
             pygeoprocessing.raster_map(
                 op=_mask_base_op,
                 rasters=[output_landscape_raster_path],
-                target_path=tmp_file_registry[mask_id],
+                target_path=mask_path,
                 target_dtype=numpy.uint8,
                 target_nodata=mask_nodata)
 
             # create distance transform for the current mask
             pygeoprocessing.distance_transform_edt(
-                (tmp_file_registry[mask_id], 1),
-                tmp_file_registry[distance_id],
+                (mask_path, 1),
+                distance_path,
                 working_dir=temp_dir)
 
         # combine inner and outer distance transforms into one
         distance_nodata = pygeoprocessing.get_raster_info(
-            tmp_file_registry['distance_from_base_mask_edge'])['nodata'][0]
+            distance_from_base_mask_edge_path)['nodata'][0]
 
         def _combine_masks(base_distance_array, non_base_distance_array):
             """Create a mask of valid non-base pixels only."""
@@ -568,15 +610,15 @@ def _convert_landscape(
             result[valid_base_mask] = base_distance_array[valid_base_mask]
             return result
         pygeoprocessing.raster_calculator(
-            [(tmp_file_registry['distance_from_base_mask_edge'], 1),
-             (tmp_file_registry['distance_from_non_base_mask_edge'], 1)],
-            _combine_masks, tmp_file_registry['distance_from_edge'],
+            [(distance_from_base_mask_edge_path, 1),
+             (distance_from_non_base_mask_edge_path, 1)],
+            _combine_masks, distance_from_edge_path,
             gdal.GDT_Float32, distance_nodata)
 
         # smooth the distance transform to avoid scanline artifacts
         pygeoprocessing.convolve_2d(
-            (tmp_file_registry['distance_from_edge'], 1),
-            (tmp_file_registry['gaussian_kernel'], 1),
+            (distance_from_edge_path, 1),
+            (gaussian_kernel_path, 1),
             smooth_distance_from_edge_path)
 
         # turn inside and outside masks into a single mask
@@ -591,14 +633,14 @@ def _convert_landscape(
             [(smooth_distance_from_edge_path, 1),
              (output_landscape_raster_path, 1)],
             _mask_to_convertible_codes,
-            tmp_file_registry['convertible_distances'], gdal.GDT_Float32,
+            convertible_distances_path, gdal.GDT_Float32,
             convertible_type_nodata)
 
         LOGGER.info(
             'convert %d pixels to lucode %d', pixels_to_convert,
             replacement_lucode)
         _convert_by_score(
-            tmp_file_registry['convertible_distances'], pixels_to_convert,
+            convertible_distances_path, pixels_to_convert,
             output_landscape_raster_path, replacement_lucode, stats_cache,
             score_weight)
 

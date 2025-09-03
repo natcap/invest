@@ -10,6 +10,7 @@ from . import gettext
 from . import spec
 from . import utils
 from . import validation
+from .file_registry import FileRegistry
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -282,6 +283,13 @@ MODEL_SPEC = spec.ModelSpec(
                     units=u.none
                 )
             ]
+        ),
+        spec.SingleBandRasterOutput(
+            id="downslope_distance",
+            path="downslope_distance.tif",
+            about=gettext("Flow distance from each pixel to a stream."),
+            data_type=float,
+            units=u.pixel
         )
     ]
 )
@@ -368,6 +376,7 @@ def execute(args):
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     utils.make_directories([args['workspace_dir']])
+    file_registry = FileRegistry(MODEL_SPEC, args['workspace_dir'], file_suffix)
 
     if ('calculate_flow_direction' in args and
             bool(args['calculate_flow_direction'])):
@@ -391,24 +400,20 @@ def execute(args):
         n_workers = -1  # Synchronous mode.
 
     graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers=n_workers)
+        file_registry['taskgraph_cache'], n_workers=n_workers)
 
     # Calculate slope.  This is intentionally on the original DEM, not
     # on the pitfilled DEM.  If the user really wants the slop of the filled
     # DEM, they can pass it back through RouteDEM.
     if bool(args.get('calculate_slope', False)):
-        target_slope_path = os.path.join(
-            args['workspace_dir'], _TARGET_SLOPE_FILE_PATTERN % file_suffix)
+        target_slope_path = file_registry['slope']
         graph.add_task(
             pygeoprocessing.calculate_slope,
-            args=(dem_raster_path_band,
-                  target_slope_path),
+            args=(dem_raster_path_band, target_slope_path),
             task_name='calculate_slope',
             target_path_list=[target_slope_path])
 
-    dem_filled_pits_path = os.path.join(
-        args['workspace_dir'],
-        _TARGET_FILLED_PITS_FILED_PATTERN % file_suffix)
+    dem_filled_pits_path = file_registry['filled']
     filled_pits_task = graph.add_task(
         pygeoprocessing.routing.fill_pits,
         args=(dem_raster_path_band,
@@ -419,9 +424,7 @@ def execute(args):
 
     if bool(args.get('calculate_flow_direction', False)):
         LOGGER.info("calculating flow direction")
-        flow_dir_path = os.path.join(
-            args['workspace_dir'],
-            _TARGET_FLOW_DIRECTION_FILE_PATTERN % file_suffix)
+        flow_dir_path = file_registry['flow_direction']
         flow_direction_task = graph.add_task(
             routing_funcs['flow_direction'],
             args=((dem_filled_pits_path, 1),  # PGP>1.9.0 creates 1-band fills
@@ -433,21 +436,16 @@ def execute(args):
 
         if bool(args.get('calculate_flow_accumulation', False)):
             LOGGER.info("calculating flow accumulation")
-            flow_accumulation_path = os.path.join(
-                args['workspace_dir'],
-                _FLOW_ACCUMULATION_FILE_PATTERN % file_suffix)
+            flow_accumulation_path = file_registry['flow_accumulation']
             flow_accum_task = graph.add_task(
                 routing_funcs['flow_accumulation'],
-                args=((flow_dir_path, 1),
-                      flow_accumulation_path),
+                args=((flow_dir_path, 1), flow_accumulation_path),
                 target_path_list=[flow_accumulation_path],
                 task_name='flow_accumulation_%s' % algorithm,
                 dependent_task_list=[flow_direction_task])
 
             if bool(args.get('calculate_stream_threshold', False)):
-                stream_mask_path = os.path.join(
-                        args['workspace_dir'],
-                        _STREAM_MASK_FILE_PATTERN % file_suffix)
+                stream_mask_path = file_registry['stream_mask']
                 stream_threshold = float(args['threshold_flow_accumulation'])
                 stream_extraction_kwargs = {
                     'flow_accum_raster_path_band': (flow_accumulation_path, 1),
@@ -465,9 +463,7 @@ def execute(args):
                     task_name=f'stream_thresholding_{algorithm}')
 
                 if bool(args.get('calculate_downslope_distance', False)):
-                    distance_path = os.path.join(
-                        args['workspace_dir'],
-                        _DOWNSLOPE_DISTANCE_FILE_PATTERN % file_suffix)
+                    distance_path = file_registry['downslope_distance']
                     graph.add_task(
                         routing_funcs['distance_to_channel'],
                         args=((flow_dir_path, 1),
@@ -477,12 +473,8 @@ def execute(args):
                         task_name='downslope_distance_%s' % algorithm,
                         dependent_task_list=[stream_threshold_task])
 
-                # We are only doing stream order for D8 flow direction.
-                if (bool(args.get('calculate_stream_order', False)
-                         and algorithm == 'D8')):
-                    stream_order_path = os.path.join(
-                        args['workspace_dir'],
-                        _STRAHLER_STREAM_ORDER_PATTERN % file_suffix)
+                if (bool(args.get('calculate_stream_order', False)) and algorithm == 'D8'):
+                    stream_order_path = file_registry['strahler_stream_order']
                     stream_order_task = graph.add_task(
                         pygeoprocessing.routing.extract_strahler_streams_d8,
                         kwargs={
@@ -505,9 +497,7 @@ def execute(args):
                         ])
 
                     if bool(args.get('calculate_subwatersheds', False)):
-                        subwatersheds_path = os.path.join(
-                            args['workspace_dir'],
-                            _SUBWATERSHEDS_PATTERN % file_suffix)
+                        subwatersheds_path = file_registry['subwatersheds']
                         graph.add_task(
                             pygeoprocessing.routing.calculate_subwatershed_boundary,
                             kwargs={

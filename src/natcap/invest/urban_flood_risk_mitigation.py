@@ -18,6 +18,7 @@ from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
+from .file_registry import FileRegistry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -312,6 +313,8 @@ def execute(args):
     utils.make_directories([
         args['workspace_dir'], intermediate_dir])
 
+    file_registry = FileRegistry(MODEL_SPEC, args['workspace_dir'], file_suffix)
+
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -320,14 +323,11 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
+        file_registry['taskgraph_cache'], n_workers)
 
     # Align LULC with soils
-    aligned_lulc_path = os.path.join(
-        intermediate_dir, f'aligned_lulc{file_suffix}.tif')
-    aligned_soils_path = os.path.join(
-        intermediate_dir,
-        f'aligned_soils_hydrological_group{file_suffix}.tif')
+    aligned_lulc_path = file_registry['aligned_lulc']
+    aligned_soils_path = file_registry['aligned_soils_hydrological_group']
 
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_path'])
@@ -373,8 +373,7 @@ def execute(args):
     lucode_nodata = lulc_raster_info['nodata'][0]
     soil_type_nodata = soil_raster_info['nodata'][0]
 
-    cn_raster_path = os.path.join(
-        intermediate_dir, f'cn_raster{file_suffix}.tif')
+    cn_raster_path = file_registry['cn_raster']
     align_raster_stack_task.join()
 
     cn_raster_task = task_graph.add_task(
@@ -390,8 +389,7 @@ def execute(args):
 
     # Generate S_max
     s_max_nodata = -9999
-    s_max_raster_path = os.path.join(
-        intermediate_dir, f's_max{file_suffix}.tif')
+    s_max_raster_path = file_registry['s_max']
     s_max_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
@@ -403,8 +401,7 @@ def execute(args):
 
     # Generate Qpi
     q_pi_nodata = -9999
-    q_pi_raster_path = os.path.join(
-        args['workspace_dir'], f'Q_mm{file_suffix}.tif')
+    q_pi_raster_path = file_registry['q_mm']
     q_pi_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
@@ -417,8 +414,7 @@ def execute(args):
 
     # Generate Runoff Retention
     runoff_retention_nodata = -9999
-    runoff_retention_raster_path = os.path.join(
-        args['workspace_dir'], f'Runoff_retention_index{file_suffix}.tif')
+    runoff_retention_raster_path = file_registry['runoff_retention_index']
     runoff_retention_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
@@ -431,8 +427,7 @@ def execute(args):
         task_name='generate runoff retention')
 
     # calculate runoff retention volume
-    runoff_retention_vol_raster_path = os.path.join(
-        args['workspace_dir'], f'Runoff_retention_m3{file_suffix}.tif')
+    runoff_retention_vol_raster_path = file_registry['runoff_retention_m3']
     runoff_retention_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
@@ -448,8 +443,7 @@ def execute(args):
         task_name='calculate runoff retention vol')
 
     # calculate flood vol raster
-    flood_vol_raster_path = os.path.join(
-        intermediate_dir, f'Q_m3{file_suffix}.tif')
+    flood_vol_raster_path = file_registry['q_m3']
     flood_vol_nodata = -1
     flood_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
@@ -462,8 +456,7 @@ def execute(args):
         dependent_task_list=[q_pi_task],
         task_name='calculate service built raster')
 
-    reprojected_aoi_path = os.path.join(
-        intermediate_dir, 'reprojected_aoi')
+    reprojected_aoi_path = file_registry['reprojected_aoi']
     reprojected_aoi_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
@@ -511,8 +504,7 @@ def execute(args):
     if 'built_infrastructure_vector_path' in args and (
             args['built_infrastructure_vector_path'] not in ('', None)):
         # Reproject the built infrastructure vector to the target SRS.
-        reprojected_structures_path = os.path.join(
-            intermediate_dir, 'structures_reprojected')
+        reprojected_structures_path = file_registry['structures_reprojected']
         reproject_built_infrastructure_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(args['built_infrastructure_vector_path'],
@@ -542,8 +534,7 @@ def execute(args):
         # "just in case".
         summary_tasks.append(damage_to_infrastructure_in_aoi_task)
 
-    summary_vector_path = os.path.join(
-        args['workspace_dir'], f'flood_risk_service{file_suffix}.shp')
+    summary_vector_path = file_registry['flood_risk_service']
     _ = task_graph.add_task(
         func=_write_summary_vector,
         args=(reprojected_aoi_path,
