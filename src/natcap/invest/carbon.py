@@ -638,8 +638,7 @@ def _generate_report(raster_file_set, model_args, file_registry):
     Returns:
         None.
     """
-    html_report_path = file_registry['html_report']
-    with codecs.open(html_report_path, 'w', encoding='utf-8') as report_doc:
+    with codecs.open(file_registry['html_report'], 'w', encoding='utf-8') as report_doc:
         # Boilerplate header that defines style and intro header.
         header = (
             """
