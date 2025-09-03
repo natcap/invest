@@ -15,6 +15,7 @@ from . import spec
 from . import utils
 from . import validation
 from .crop_production_regression import NUTRIENTS
+from .file_registry import FileRegistry
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -473,7 +474,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="clipped_[CROP]_climate_bin_map",
-            path="intermediate/clipped_[CROP]_climate_bin_map.tif",
+            path="intermediate_output/clipped_[CROP]_climate_bin_map.tif",
             about=gettext(
                 "Climate bin map for the given crop, clipped to the LULC extent"
             ),
@@ -482,7 +483,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="[CROP]_clipped_observed_yield",
-            path="intermediate/[CROP]_clipped_observed_yield.tif",
+            path="intermediate_output/[CROP]_clipped_observed_yield.tif",
             about=gettext(
                 "Observed yield for the given crop, clipped to the extend of the"
                 " landcover map"
@@ -492,7 +493,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="[CROP]_interpolated_observed_yield",
-            path="intermediate/[CROP]_interpolated_observed_yield.tif",
+            path="intermediate_output/[CROP]_interpolated_observed_yield.tif",
             about=gettext(
                 "Observed yield for the given crop, interpolated to the"
                 " resolution of the landcover map"
@@ -502,7 +503,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="[CROP]_yield_[PERCENTILE]_coarse_yield",
-            path="intermediate/[CROP]_yield_[PERCENTILE]_coarse_yield.tif",
+            path="intermediate_output/[CROP]_yield_[PERCENTILE]_coarse_yield.tif",
             about=gettext(
                 "Percentile yield of the given crop, at the coarse resolution of"
                 " the climate bin map"
@@ -512,7 +513,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="[CROP]_yield_[PERCENTILE]_interpolated_yield",
-            path="intermediate/[CROP]_yield_[PERCENTILE]_interpolated_yield.tif",
+            path="intermediate_output/[CROP]_yield_[PERCENTILE]_interpolated_yield.tif",
             about=gettext(
                 "Percentile yield of the given crop, interpolated to the"
                 " resolution of the landcover map"
@@ -522,12 +523,52 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="[CROP]_zeroed_observed_yield",
-            path="intermediate/[CROP]_zeroed_observed_yield.tif",
+            path="intermediate_output/[CROP]_zeroed_observed_yield.tif",
             about=gettext(
                 "Observed yield for the given crop, with nodata converted to 0"
             ),
             data_type=float,
             units=u.metric_ton / u.hectare
+        ),
+        spec.VectorOutput(
+            id="aggregate_vector",
+            path="intermediate_output/aggregate_vector.shp",
+            about=gettext("Model results aggregated to AOI polygons"),
+            created_if="aggregate_polygon_path",
+            fields=[
+                spec.IntegerOutput(id="FID", about=gettext("FID of the AOI polygon")),
+                spec.NumberOutput(
+                    id="[CROP]_observed",
+                    about=gettext(
+                        "Observed production of the given crop within the polygon"
+                    ),
+                    units=u.metric_ton
+                ),
+                spec.NumberOutput(
+                    id="[CROP]_yield_[PERCENTILE]",
+                    about=gettext(
+                        "Modeled production of the given crop within the polygon at the"
+                        " given percentile"
+                    ),
+                    units=u.metric_ton
+                ),
+                *[
+                    spec.NumberOutput(
+                        id=f"{nutrient_code}_observed",
+                        about=f"Observed {nutrient} production within the polygon",
+                        units=units
+                    ) for nutrient_code, nutrient, units in NUTRIENTS
+                ],
+                *[
+                    spec.NumberOutput(
+                        id=f"{nutrient_code}_[PERCENTILE]",
+                        about=(
+                            f"Modeled {nutrient} production within the polygon at"
+                            "the given percentile"),
+                        units=units
+                    ) for nutrient_code, nutrient, units in NUTRIENTS
+                ]
+            ]
         ),
         spec.TASKGRAPH_CACHE
     ]
@@ -681,6 +722,7 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'])
     utils.make_directories([
         output_dir, os.path.join(output_dir, _INTERMEDIATE_OUTPUT_DIR)])
+    file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
 
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
@@ -710,7 +752,7 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Single process mode.
     task_graph = taskgraph.TaskGraph(
-        os.path.join(output_dir, 'taskgraph_cache'), n_workers)
+        file_registry['taskgraph_cache'], n_workers)
     dependent_task_list = []
 
     crop_lucode = None
@@ -724,9 +766,7 @@ def execute(args):
 
         LOGGER.info(
             "Clipping global climate bin raster to landcover bounding box.")
-        clipped_climate_bin_raster_path = os.path.join(
-            output_dir, _CLIPPED_CLIMATE_BIN_FILE_PATTERN % (
-                crop_name, file_suffix))
+        clipped_climate_bin_raster_path = file_registry['clipped_[CROP]_climate_bin_map', crop_name]
         crop_climate_bin_raster_info = pygeoprocessing.get_raster_info(
             crop_climate_bin_raster_path)
         crop_climate_bin_task = task_graph.add_task(
@@ -831,9 +871,7 @@ def execute(args):
             pygeoprocessing.get_raster_info(
                 global_observed_yield_raster_path))
 
-        clipped_observed_yield_raster_path = os.path.join(
-            output_dir, _CLIPPED_OBSERVED_YIELD_FILE_PATTERN % (
-                crop_name, file_suffix))
+        clipped_observed_yield_raster_path = file_registry['[CROP]_clipped_observed_yield', crop_name]
         clip_global_observed_yield_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
             args=(global_observed_yield_raster_path,
@@ -847,9 +885,7 @@ def execute(args):
         observed_yield_nodata = (
             global_observed_yield_raster_info['nodata'][0])
 
-        zeroed_observed_yield_raster_path = os.path.join(
-            output_dir, _ZEROED_OBSERVED_YIELD_FILE_PATTERN % (
-                crop_name, file_suffix))
+        zeroed_observed_yield_raster_path = file_registry['[CROP]_zeroed_observed_yield', crop_name]
 
         nodata_to_zero_for_observed_yield_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
@@ -862,9 +898,7 @@ def execute(args):
             task_name='nodata_to_zero_for_observed_yield_%s_' % crop_name)
         dependent_task_list.append(nodata_to_zero_for_observed_yield_task)
 
-        interpolated_observed_yield_raster_path = os.path.join(
-            output_dir, _INTERPOLATED_OBSERVED_YIELD_FILE_PATTERN % (
-                crop_name, file_suffix))
+        interpolated_observed_yield_raster_path = file_registry['[CROP]_interpolated_observed_yield', crop_name]
 
         LOGGER.info(
             "Interpolating observed %s raster to landcover.", crop_name)
@@ -880,9 +914,7 @@ def execute(args):
             task_name='interpolate_observed_yield_to_lulc_%s' % crop_name)
         dependent_task_list.append(interpolate_observed_yield_task)
 
-        observed_production_raster_path = os.path.join(
-            output_dir, _OBSERVED_PRODUCTION_FILE_PATTERN % (
-                crop_name, file_suffix))
+        observed_production_raster_path = file_registry['[CROP]_observed_production', crop_name]
 
         calculate_observed_production_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
@@ -904,8 +936,7 @@ def execute(args):
         'crop_nutrient.csv').get_validated_dataframe(
             os.path.join(args['model_data_path'], 'crop_nutrient.csv'))
 
-    result_table_path = os.path.join(
-        output_dir, 'result_table%s.csv' % file_suffix)
+    result_table_path = file_registry['result_table']
 
     crop_names = crop_to_landcover_df.index.to_list()
     _ = task_graph.add_task(
@@ -920,11 +951,9 @@ def execute(args):
 
     if ('aggregate_polygon_path' in args and
             args['aggregate_polygon_path'] not in ['', None]):
+        target_aggregate_vector_path = file_registry['aggregate_vector']
+        aggregate_results_table_path = file_registry['aggregate_results']
         LOGGER.info("aggregating result over query polygon")
-        target_aggregate_vector_path = os.path.join(
-            output_dir, _AGGREGATE_VECTOR_FILE_PATTERN % (file_suffix))
-        aggregate_results_table_path = os.path.join(
-            output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
         _ = task_graph.add_task(
             func=aggregate_to_polygons,
             args=(args['aggregate_polygon_path'],
