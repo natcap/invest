@@ -188,9 +188,8 @@ MODEL_SPEC = spec.ModelSpec(
             id="aoi_vector_path",
             about=gettext(
                 "Map of the area(s) of interest over which to run the model and aggregate"
-                " valuation results. Required if Run Valuation is selected."
+                " valuation results."
             ),
-            required="valuation_container",
             projected=True,
             projection_units=u.meter
         )),
@@ -206,11 +205,8 @@ MODEL_SPEC = spec.ModelSpec(
             id="land_polygon_vector_path",
             name=gettext("land polygon"),
             about=gettext(
-                "Map of the coastlines of landmasses in the area of interest. Required if"
-                " the Minimum Distance and Maximum Distance inputs are provided."
+                "Map of the coastlines of landmasses in the area of interest."
             ),
-            required="min_distance or max_distance or valuation_container",
-            allowed="aoi_vector_path",
             geometry_types={"POLYGON", "MULTIPOLYGON"},
             fields=[],
             projected=None
@@ -398,10 +394,7 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("minimum distance"),
             about=gettext(
                 "Minimum distance from shore for offshore wind farm installation."
-                " Required if Run Valuation is selected."
             ),
-            required="valuation_container",
-            allowed="land_polygon_vector_path",
             units=u.meter
         ),
         spec.NumberInput(
@@ -409,10 +402,7 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("maximum distance"),
             about=gettext(
                 "Maximum distance from shore for offshore wind farm installation."
-                " Required if Run Valuation is selected."
             ),
-            required="valuation_container",
-            allowed="land_polygon_vector_path",
             units=u.meter
         ),
         spec.BooleanInput(
@@ -798,6 +788,9 @@ _NPV_FIELD_NAME = 'NPV'
 _LEVELIZED_COST_FIELD_NAME = 'Level_Cost'
 _CARBON_FIELD_NAME = 'CO2_Tons'
 
+# The field names used to mask out points in the output shapefile:
+_MASK_KEYS = [_DEPTH_FIELD_NAME, _DIST_FIELD_NAME]
+
 # The field name that will be added to the intermediate point shapefile,
 # indicating whether or not a point is masked out by depth / distance.
 _MASK_FIELD_NAME = 'Masked'
@@ -827,15 +820,12 @@ def execute(args):
             projected in linear units of meters. The polygon specifies the
             area of interest for the wind data points. If limiting the wind
             farm bins by distance, then the aoi should also cover a portion
-            of the land polygon that is of interest (optional for biophysical
-            and no distance masking, required for biophysical and distance
-            masking, required for valuation)
+            of the land polygon that is of interest (required)
         bathymetry_path (str): a path to a GDAL raster that has the depth
             values of the area of interest (required)
         land_polygon_vector_path (str): a path to an OGR polygon vector that
-            provides a coastline for determining distances from wind farm bins.
-            Enabled by AOI and required if wanting to mask by distances or run
-            valuation
+            provides a coastline for determining distances from wind farm bins
+            (required)
         global_wind_parameters_path (str): a float for the average distance
             in kilometers from a grid connection point to a land connection
             point (required for valuation if grid connection points are not
@@ -852,13 +842,9 @@ def execute(args):
         max_depth (float): a float value for the maximum depth for offshore
             wind farm installation (meters) (required)
         min_distance (float): a float value for the minimum distance from shore
-            for offshore wind farm installation (meters) The land polygon must
-            be selected for this input to be active (optional, required for
-            valuation)
+            for offshore wind farm installation (meters) (required)
         max_distance (float): a float value for the maximum distance from shore
-            for offshore wind farm installation (meters) The land polygon must
-            be selected for this input to be active (optional, required for
-            valuation)
+            for offshore wind farm installation (meters) (required)
         valuation_container (boolean): Indicates whether model includes
             valuation
         foundation_cost (float): a float representing how much the foundation
@@ -1005,155 +991,91 @@ def execute(args):
         target_path_list=[wind_data_pickle_path],
         task_name='compute_density_harvested_fields')
 
-    # Instantiate lists needed for writing raster values to vector later
-    raster_field_to_vector_list = []
-    mask_keys = []
-    write_vector_dependent_task_list = []
+    aoi_vector_path = args['aoi_vector_path']
 
-    if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
-        LOGGER.info('AOI Provided')
-        aoi_vector_path = args['aoi_vector_path']
+    bathymetry_proj_raster_path = os.path.join(
+        inter_dir, 'bathymetry_projected%s.tif' % suffix)
+    reproject_bathy_task = task_graph.add_task(
+        func=_reproject_bathymetry,
+        args=(bathymetry_path, aoi_vector_path, _TARGET_PIXEL_SIZE,
+              bathymetry_proj_raster_path),
+        target_path_list=[bathymetry_proj_raster_path],
+        task_name='reproject_bathymetry')
 
-        bathymetry_proj_raster_path = os.path.join(
-            inter_dir, 'bathymetry_projected%s.tif' % suffix)
-        reproject_bathy_task = task_graph.add_task(
-            func=_reproject_bathymetry,
-            args=(bathymetry_path, aoi_vector_path, _TARGET_PIXEL_SIZE,
-                  bathymetry_proj_raster_path),
-            target_path_list=[bathymetry_proj_raster_path],
-            task_name='reproject_bathymetry')
+    # Create point shapefile from wind data
+    LOGGER.info('Create point shapefile from wind data')
 
-        # Depth mask will be dependent on the final bathymetry
-        depth_mask_dependent_task_list = [reproject_bathy_task]
+    # The wind energy points shapefile constructed from the dictionary will
+    # need to be clipped and projected to the AOI, so save it as an intermediate
+    # file. The final clipped and projected shapefile will be written to the
+    # output directory.
+    wind_point_vector_path = os.path.join(
+        inter_dir, 'wind_energy_points_from_data%s.shp' % suffix)
 
-        # Since an AOI was provided the wind energy points shapefile will need
-        # to be clipped and projected. Thus save the construction of the
-        # shapefile from dictionary in the intermediate directory. The final
-        # projected shapefile will be written to the output directory
-        wind_point_vector_path = os.path.join(
-            inter_dir, 'wind_energy_points_from_data%s.shp' % suffix)
+    # Use the projection from the projected bathymetry as reference to
+    # create wind point vector from wind data dictionary
+    target_sr_wkt = pygeoprocessing.get_vector_info(
+        aoi_vector_path)['projection_wkt']
 
-        # Create point shapefile from wind data
-        LOGGER.info('Create point shapefile from wind data')
-        # Use the projection from the projected bathymetry as reference to
-        # create wind point vector from wind data dictionary
-        target_sr_wkt = pygeoprocessing.get_vector_info(
-            aoi_vector_path)['projection_wkt']
+    wind_data_to_vector_task = task_graph.add_task(
+        func=_wind_data_to_point_vector,
+        args=(wind_data_pickle_path, 'wind_data', wind_point_vector_path),
+        kwargs={'ref_projection_wkt': target_sr_wkt},
+        target_path_list=[wind_point_vector_path],
+        task_name='wind_data_to_vector',
+        dependent_task_list=[compute_density_harvested_task])
 
-        wind_data_to_vector_task = task_graph.add_task(
-            func=_wind_data_to_point_vector,
-            args=(wind_data_pickle_path, 'wind_data', wind_point_vector_path),
-            kwargs={'ref_projection_wkt': target_sr_wkt},
-            target_path_list=[wind_point_vector_path],
-            task_name='wind_data_to_vector',
-            dependent_task_list=[compute_density_harvested_task])
+    # Clip the wind energy point shapefile to AOI
+    LOGGER.info('Clip and project wind points to AOI')
+    clipped_wind_point_vector_path = os.path.join(
+        inter_dir, 'unmasked_wind_energy_points%s.shp' % suffix)
+    clip_wind_vector_task = task_graph.add_task(
+        func=_clip_vector_by_vector,
+        args=(wind_point_vector_path, aoi_vector_path,
+              clipped_wind_point_vector_path, inter_dir),
+        target_path_list=[clipped_wind_point_vector_path],
+        task_name='clip_wind_point_by_aoi',
+        dependent_task_list=[wind_data_to_vector_task])
 
-        # Clip the wind energy point shapefile to AOI
-        LOGGER.info('Clip and project wind points to AOI')
-        clipped_wind_point_vector_path = os.path.join(
-            inter_dir, 'unmasked_wind_energy_points%s.shp' % suffix)
-        clip_wind_vector_task = task_graph.add_task(
-            func=_clip_vector_by_vector,
-            args=(wind_point_vector_path, aoi_vector_path,
-                  clipped_wind_point_vector_path, inter_dir),
-            target_path_list=[clipped_wind_point_vector_path],
-            task_name='clip_wind_point_by_aoi',
-            dependent_task_list=[wind_data_to_vector_task])
+    # Handle distance constraints:
+    min_distance = float(args['min_distance'])
+    max_distance = float(args['max_distance'])
+    land_polygon_vector_path = args['land_polygon_vector_path']
 
-        # Writing raster values to wind vector depends on clipped wind vector
-        write_vector_dependent_task_list.append(clip_wind_vector_task)
+    # Clip and project the land polygon shapefile to AOI
+    LOGGER.info('Clip and project land polygon to AOI')
+    land_poly_proj_vector_path = os.path.join(
+        inter_dir, 'projected_clipped_land_poly%s.shp' % suffix)
+    clip_reproject_land_poly_task = task_graph.add_task(
+        func=_clip_and_reproject_vector,
+        args=(land_polygon_vector_path, aoi_vector_path,
+              land_poly_proj_vector_path, inter_dir),
+        target_path_list=[land_poly_proj_vector_path],
+        task_name='clip_and_reproject_land_poly_to_aoi')
 
-        # Set the bathymetry path to use for creating the depth mask and the
-        # wind point vector path to use for the rest of the model.
-        # In this case these paths refer to the projected files. This may not
-        # be the case if an AOI is not provided.
-        final_bathy_raster_path = bathymetry_proj_raster_path
-        intermediate_wind_point_vector_path = clipped_wind_point_vector_path
+    # Rasterize land polygon and calculate distance transform
+    dist_trans_path = os.path.join(
+        inter_dir, 'distance_trans%s.tif' % suffix)
+    create_distance_raster_task = task_graph.add_task(
+        func=_create_distance_raster,
+        args=(bathymetry_proj_raster_path, land_poly_proj_vector_path,
+              dist_trans_path, inter_dir),
+        target_path_list=[dist_trans_path],
+        task_name='create_distance_raster',
+        dependent_task_list=[reproject_bathy_task,
+            clip_reproject_land_poly_task])
 
-        # Try to handle the distance inputs and land datasource if they
-        # are present
-        try:
-            min_distance = float(args['min_distance'])
-            max_distance = float(args['max_distance'])
-            land_polygon_vector_path = args['land_polygon_vector_path']
-        # ValueError will be thrown if run via workbench without params,
-        # since min_distance and max_distance will both be ''
-        except (KeyError, ValueError):
-            LOGGER.info('Distance information not provided')
-        else:
-            # Clip and project the land polygon shapefile to AOI
-            LOGGER.info('Clip and project land polygon to AOI')
-            land_poly_proj_vector_path = os.path.join(
-                inter_dir, 'projected_clipped_land_poly%s.shp' % suffix)
-            clip_reproject_land_poly_task = task_graph.add_task(
-                func=_clip_and_reproject_vector,
-                args=(land_polygon_vector_path, aoi_vector_path,
-                      land_poly_proj_vector_path, inter_dir),
-                target_path_list=[land_poly_proj_vector_path],
-                task_name='clip_and_reproject_land_poly_to_aoi')
-
-            # Rasterize land polygon and calculate distance transform
-            dist_trans_path = os.path.join(
-                inter_dir, 'distance_trans%s.tif' % suffix)
-            create_distance_raster_task = task_graph.add_task(
-                func=_create_distance_raster,
-                args=(final_bathy_raster_path, land_poly_proj_vector_path,
-                      dist_trans_path, inter_dir),
-                target_path_list=[dist_trans_path],
-                task_name='create_distance_raster',
-                dependent_task_list=[reproject_bathy_task,
-                    clip_reproject_land_poly_task])
-
-            # Create the distance mask:
-            LOGGER.info('Creating Distance Mask')
-            dist_mask_path = os.path.join(inter_dir,
-                                          'distance_mask%s.tif' % suffix)
-            create_dist_mask_task = task_graph.add_task(
-                func=_mask_by_distance,
-                args=(dist_trans_path, min_distance, max_distance,
-                      _TARGET_NODATA, dist_mask_path),
-                target_path_list=[dist_mask_path],
-                task_name='mask_raster_by_distance',
-                dependent_task_list=[create_distance_raster_task])
-
-            raster_field_to_vector_list.append(
-                (dist_mask_path, _DIST_FIELD_NAME))
-            mask_keys.append(_DIST_FIELD_NAME)
-            write_vector_dependent_task_list.append(create_dist_mask_task)
-
-    else:
-        LOGGER.info("AOI argument was not selected")
-        if run_valuation:
-            # Guard against trying to run the Valuation model without an AOI
-            LOGGER.warning("Run Valuation was selected but no AOI was provided. "
-                           "Please provide an AOI in order to run Valuation.")
-            run_valuation = False
-
-        # Wind point vector that will be the template for the final
-        # shapefile; does not need to be clipped to AOI
-        intermediate_wind_point_vector_path = os.path.join(
-            inter_dir, 'unmasked_wind_energy_points%s.shp' % suffix)
-
-        # Create point shapefile from wind data dictionary
-        LOGGER.info('Create point shapefile from wind data')
-        wind_data_to_vector_task = task_graph.add_task(
-            func=_wind_data_to_point_vector,
-            args=(wind_data_pickle_path, 'wind_data',
-                  intermediate_wind_point_vector_path),
-            target_path_list=[intermediate_wind_point_vector_path],
-            task_name='wind_data_to_vector_without_aoi',
-            dependent_task_list=[compute_density_harvested_task])
-
-        # Set the bathymetry path to use for creating the depth mask.
-        # In this case, this path refers to the unprojected file. This may not
-        # be the case if an AOI is provided.
-        final_bathy_raster_path = bathymetry_path
-
-        # Depth mask creation is not dependent on clipping bathymetry
-        depth_mask_dependent_task_list = []
-
-        # Writing raster values to wind vector depends on clipped wind vector
-        write_vector_dependent_task_list.append(wind_data_to_vector_task)
+    # Create the distance mask:
+    LOGGER.info('Creating Distance Mask')
+    dist_mask_path = os.path.join(inter_dir,
+                                  'distance_mask%s.tif' % suffix)
+    create_dist_mask_task = task_graph.add_task(
+        func=_mask_by_distance,
+        args=(dist_trans_path, min_distance, max_distance,
+              _TARGET_NODATA, dist_mask_path),
+        target_path_list=[dist_mask_path],
+        task_name='mask_raster_by_distance',
+        dependent_task_list=[create_distance_raster_task])
 
     # Create a mask for values that are out of the range of the depth values:
     # Get the min and max depth values from the arguments and set to a negative
@@ -1165,33 +1087,34 @@ def execute(args):
     depth_mask_path = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
     create_depth_mask_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(final_bathy_raster_path, 1), (min_depth, 'raw'),
+        args=([(bathymetry_proj_raster_path, 1), (min_depth, 'raw'),
                (max_depth, 'raw')], _depth_op, depth_mask_path,
               _TARGET_DATA_TYPE, _TARGET_NODATA),
         target_path_list=[depth_mask_path],
         task_name='mask_depth_on_bathymetry',
-        dependent_task_list=depth_mask_dependent_task_list)
-
-    raster_field_to_vector_list.append(
-        (depth_mask_path, _DEPTH_FIELD_NAME))
-    mask_keys.append(_DEPTH_FIELD_NAME)
-    write_vector_dependent_task_list.append(create_depth_mask_task)
+        dependent_task_list=[reproject_bathy_task])
 
     if not run_valuation:
-        # Write Depth [and Distance] mask values to Wind Points Shapefile
+        # Write Depth and Distance mask values to Wind Points Shapefile
         LOGGER.info("Adding mask values to shapefile")
+        raster_field_to_vector_list = [
+            (dist_mask_path, _DIST_FIELD_NAME),
+            (depth_mask_path, _DEPTH_FIELD_NAME)
+        ]
+
         final_wind_point_vector_path = os.path.join(
             out_dir, 'wind_energy_points%s.shp' % suffix)
         task_graph.add_task(
             func=_index_raster_values_to_point_vector,
-            args=(intermediate_wind_point_vector_path,
+            args=(clipped_wind_point_vector_path,
                   raster_field_to_vector_list,
                   final_wind_point_vector_path),
-            kwargs={'mask_keys': mask_keys,
+            kwargs={'mask_keys': _MASK_KEYS,
                     'mask_field': _MASK_FIELD_NAME},
             target_path_list=[final_wind_point_vector_path],
             task_name='add_masked_vals_to_wind_vector',
-            dependent_task_list=write_vector_dependent_task_list)
+            dependent_task_list=[clip_wind_vector_task,
+                create_dist_mask_task, create_depth_mask_task])
 
         LOGGER.info('Wind Energy Biophysical Model completed')
 
@@ -1219,7 +1142,7 @@ def execute(args):
     LOGGER.info('Rasterizing Harvested Points')
     rasterize_harvested_task = task_graph.add_task(
         func=pygeoprocessing.rasterize,
-        args=(intermediate_wind_point_vector_path, initial_harvested_raster_path),
+        args=(clipped_wind_point_vector_path, initial_harvested_raster_path),
         kwargs={'option_list': [f'ATTRIBUTE={_HARVESTED_FIELD_NAME}']},
         task_name='rasterize_harvested_points',
         dependent_task_list=[clip_wind_vector_task, create_harvested_raster_task])
@@ -1467,16 +1390,15 @@ def execute(args):
         (depth_mask_path, _DEPTH_FIELD_NAME),
         (dist_mask_path, _DIST_FIELD_NAME)
     ]
-    mask_keys = [_DEPTH_FIELD_NAME, _DIST_FIELD_NAME]
 
     final_wind_point_vector_path = os.path.join(
         out_dir, 'wind_energy_points%s.shp' % suffix)
     task_graph.add_task(
         func=_index_raster_values_to_point_vector,
-        args=(intermediate_wind_point_vector_path,
+        args=(clipped_wind_point_vector_path,
               raster_field_to_vector_list,
               final_wind_point_vector_path),
-        kwargs={'mask_keys': mask_keys,
+        kwargs={'mask_keys': _MASK_KEYS,
                 'mask_field': _MASK_FIELD_NAME},
         target_path_list=[final_wind_point_vector_path],
         task_name='add_harv_valuation_to_wind_vector',

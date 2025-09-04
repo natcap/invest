@@ -78,6 +78,13 @@ Seasonal Water Yield
   (1-12) to raster paths.
   (`#2096 <https://github.com/natcap/invest/issues/2096>`_)
 
+Wind Energy
+===========
+* Updated Wind Energy model to always require an AOI, Land Polygon, and Minimum
+  and Maximum Distance values. Since model outputs should only be provided for valid
+  wind farm locations, distance-from-shore constraints should always be taken into
+  account. (`#1944 <https://github.com/natcap/invest/issues/1944>`_)
+
 3.16.2 (2025-08-13)
 -------------------
 
