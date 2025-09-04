@@ -24,6 +24,7 @@ from . import gettext
 from . import spec
 from . import utils
 from . import validation
+from .file_registry import FileRegistry
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -895,6 +896,7 @@ def execute(args):
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
     suffix = utils.make_suffix_string(args, 'results_suffix')
+    file_registry = FileRegistry(MODEL_SPEC, workspace, suffix)
 
     # Initialize a TaskGraph
     try:
@@ -904,8 +906,7 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
+    task_graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'], n_workers)
 
     # Resample the bathymetry raster if it does not have square pixel size
     try:
@@ -922,10 +923,7 @@ def execute(args):
         LOGGER.debug(
             '%s has pixels that are not square. Resampling the raster to have '
             'square pixels.' % args['bathymetry_path'])
-        bathymetry_path = os.path.join(
-            inter_dir, 'bathymetry_resampled%s.tif' % suffix)
-
-        # Get the minimum absolute value from the bathymetry pixel size tuple
+        bathymetry_path = file_registry['bathymetry_path']
         mean_pixel_size = numpy.min(numpy.absolute(bathy_pixel_size))
         # Use it as the target pixel size for resampling and warping rasters
         target_pixel_size = (mean_pixel_size, -mean_pixel_size)
@@ -994,10 +992,7 @@ def execute(args):
             for time_step in range(int(time) + 1):
                 price_list.append(wind_price * (1 + change_rate)**(time_step))
 
-    # Compute Wind Density and Harvested Wind Energy,
-    # and pickle the resulting dictionary
-    wind_data_pickle_path = os.path.join(
-        inter_dir, 'wind_data%s.pickle' % suffix)
+    wind_data_pickle_path = file_registry['wind_data_pickle_path']
     compute_density_harvested_task = task_graph.add_task(
         func=_compute_density_harvested_fields,
         args=(args['wind_data_path'], parameters_dict, number_of_turbines,
@@ -1013,9 +1008,7 @@ def execute(args):
     if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
         LOGGER.info('AOI Provided')
         aoi_vector_path = args['aoi_vector_path']
-
-        bathymetry_proj_raster_path = os.path.join(
-            inter_dir, 'bathymetry_projected%s.tif' % suffix)
+        bathymetry_proj_raster_path = file_registry['bathymetry_proj_raster_path']
         reproject_bathy_task = task_graph.add_task(
             func=_reproject_bathymetry,
             args=(bathymetry_path, aoi_vector_path, _TARGET_PIXEL_SIZE,
@@ -1025,18 +1018,7 @@ def execute(args):
 
         # Depth mask will be dependent on the final bathymetry
         depth_mask_dependent_task_list = [reproject_bathy_task]
-
-        # Since an AOI was provided the wind energy points shapefile will need
-        # to be clipped and projected. Thus save the construction of the
-        # shapefile from dictionary in the intermediate directory. The final
-        # projected shapefile will be written to the output directory
-        wind_point_vector_path = os.path.join(
-            inter_dir, 'wind_energy_points_from_data%s.shp' % suffix)
-
-        # Create point shapefile from wind data
-        LOGGER.info('Create point shapefile from wind data')
-        # Use the projection from the projected bathymetry as reference to
-        # create wind point vector from wind data dictionary
+        wind_point_vector_path = file_registry['wind_point_vector_path']
         target_sr_wkt = pygeoprocessing.get_vector_info(
             aoi_vector_path)['projection_wkt']
 
@@ -1050,8 +1032,7 @@ def execute(args):
 
         # Clip the wind energy point shapefile to AOI
         LOGGER.info('Clip and project wind points to AOI')
-        clipped_wind_point_vector_path = os.path.join(
-            inter_dir, 'unmasked_wind_energy_points%s.shp' % suffix)
+        clipped_wind_point_vector_path = file_registry['unmasked_wind_point_vector_path']
         clip_wind_vector_task = task_graph.add_task(
             func=_clip_vector_by_vector,
             args=(wind_point_vector_path, aoi_vector_path,
@@ -1083,8 +1064,7 @@ def execute(args):
         else:
             # Clip and project the land polygon shapefile to AOI
             LOGGER.info('Clip and project land polygon to AOI')
-            land_poly_proj_vector_path = os.path.join(
-                inter_dir, 'projected_clipped_land_poly%s.shp' % suffix)
+            land_poly_proj_vector_path = file_registry['land_poly_proj_vector_path']
             clip_reproject_land_poly_task = task_graph.add_task(
                 func=_clip_and_reproject_vector,
                 args=(land_polygon_vector_path, aoi_vector_path,
@@ -1093,8 +1073,7 @@ def execute(args):
                 task_name='clip_and_reproject_land_poly_to_aoi')
 
             # Rasterize land polygon and calculate distance transform
-            dist_trans_path = os.path.join(
-                inter_dir, 'distance_trans%s.tif' % suffix)
+            dist_trans_path = file_registry['dist_trans_path']
             create_distance_raster_task = task_graph.add_task(
                 func=_create_distance_raster,
                 args=(final_bathy_raster_path, land_poly_proj_vector_path,
@@ -1106,8 +1085,7 @@ def execute(args):
 
             # Create the distance mask:
             LOGGER.info('Creating Distance Mask')
-            dist_mask_path = os.path.join(inter_dir,
-                                          'distance_mask%s.tif' % suffix)
+            dist_mask_path = file_registry['dist_mask_path']
             create_dist_mask_task = task_graph.add_task(
                 func=_mask_by_distance,
                 args=(dist_trans_path, min_distance, max_distance,
@@ -1131,8 +1109,7 @@ def execute(args):
 
         # Wind point vector that will be the template for the final
         # shapefile; does not need to be clipped to AOI
-        intermediate_wind_point_vector_path = os.path.join(
-            inter_dir, 'unmasked_wind_energy_points%s.shp' % suffix)
+        intermediate_wind_point_vector_path = file_registry['unmasked_wind_point_vector_path']
 
         # Create point shapefile from wind data dictionary
         LOGGER.info('Create point shapefile from wind data')
@@ -1162,7 +1139,7 @@ def execute(args):
     max_depth = abs(float(args['max_depth'])) * -1
 
     LOGGER.info('Creating Depth Mask')
-    depth_mask_path = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
+    depth_mask_path = file_registry['depth_mask_path']
     create_depth_mask_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(final_bathy_raster_path, 1), (min_depth, 'raw'),
@@ -1180,8 +1157,7 @@ def execute(args):
     if not run_valuation:
         # Write Depth [and Distance] mask values to Wind Points Shapefile
         LOGGER.info("Adding mask values to shapefile")
-        final_wind_point_vector_path = os.path.join(
-            out_dir, 'wind_energy_points%s.shp' % suffix)
+        final_wind_point_vector_path = file_registry['final_wind_point_vector_path']
         task_graph.add_task(
             func=_index_raster_values_to_point_vector,
             args=(intermediate_wind_point_vector_path,
@@ -1205,8 +1181,7 @@ def execute(args):
 
     # Rasterize harvested values:
     LOGGER.info('Creating Harvested Raster')
-    initial_harvested_raster_path = os.path.join(
-        inter_dir, 'harvested_unmasked%s.tif' % suffix)
+    initial_harvested_raster_path = file_registry['initial_harvested_rater_path']
 
     create_harvested_raster_task = task_graph.add_task(
         func=pygeoprocessing.new_raster_from_base,
@@ -1227,8 +1202,7 @@ def execute(args):
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
     LOGGER.info('Mask Harvested raster by depth and distance')
-    harvested_masked_path = os.path.join(
-        inter_dir, 'harvested_energy_MWhr_per_yr%s.tif' % suffix)
+    harvested_masked_path = file_registry['harvested_masked_path']
 
     # We always will have a distance raster if we're running valuation
     harvest_mask_list = [
@@ -1245,10 +1219,7 @@ def execute(args):
         target_path_list=[harvested_masked_path],
         dependent_task_list=[rasterize_harvested_task,
             create_dist_mask_task])
-
-    # path for final distance transform used in valuation calculations
-    final_dist_raster_path = os.path.join(
-        inter_dir, 'val_distance_trans%s.tif' % suffix)
+    final_dist_raster_path = file_registry['final_dist_raster_path']
 
     if 'grid_points_path' in args and args['grid_points_path']:
         # Handle Grid Points
@@ -1262,8 +1233,7 @@ def execute(args):
         grid_dict = grid_land_df[grid_land_df['type'] == 'grid'].to_dict('index')
         land_dict = grid_land_df[grid_land_df['type'] == 'land'].to_dict('index')
 
-        grid_point_vector_path = os.path.join(
-            inter_dir, 'val_grid_points%s.shp' % suffix)
+        grid_point_vector_path = file_registry['grid_point_vector_path']
 
         # Create a point shapefile from the grid point dictionary.
         # This makes it easier for future distance calculations and provides a
@@ -1276,8 +1246,7 @@ def execute(args):
 
         # In case any of the above points lie outside the AOI, clip the
         # shapefiles and then project them to the AOI as well.
-        grid_projected_vector_path = os.path.join(
-            inter_dir, 'grid_point_projected_clipped%s.shp' % suffix)
+        grid_projected_vector_path = file_registry['grid_projected_vector_path']
         task_graph.add_task(
             func=_clip_and_reproject_vector,
             args=(grid_point_vector_path, aoi_vector_path,
@@ -1300,8 +1269,7 @@ def execute(args):
                 # be calculated without land points later
                 calc_grid_dist_without_land = False
 
-                land_point_vector_path = os.path.join(
-                    inter_dir, 'val_land_points%s.shp' % suffix)
+                land_point_vector_path = file_registry['land_point_vector_path']
                 # Create a point shapefile from the land point dictionary.
                 # This makes it easier for future distance calculations and
                 # provides a nice intermediate output for users
@@ -1313,8 +1281,7 @@ def execute(args):
 
                 # In case any of the above points lie outside the AOI, clip the
                 # shapefiles and then project them to the AOI as well.
-                land_projected_vector_path = os.path.join(
-                    inter_dir, 'land_point_projected_clipped%s.shp' % suffix)
+                land_projected_vector_path = file_registry['land_projected_vector_path']
                 task_graph.add_task(
                     func=_clip_and_reproject_vector,
                     args=(land_point_vector_path, aoi_vector_path,
@@ -1340,9 +1307,7 @@ def execute(args):
 
                     # Make a path for the grid vector, so Taskgraph can keep
                     # track of the correct timestamp of file being modified
-                    land_to_grid_vector_path = os.path.join(
-                        inter_dir,
-                        'land_point_to_grid%s.shp' % suffix)
+                    land_to_grid_vector_path = file_registry['land_to_grid_vector_path']
 
                     land_to_grid_task = task_graph.add_task(
                         func=_calculate_land_to_grid_distance,
@@ -1401,8 +1366,7 @@ def execute(args):
         # The average land cable distance in km converted to meters
         avg_grid_distance = float(args['avg_grid_distance']) * 1000
 
-        land_poly_dist_raster_path = os.path.join(
-            inter_dir, 'land_poly_dist%s.tif' % suffix)
+        land_poly_dist_raster_path = file_registry['land_poly_dist_raster_path']
 
         land_poly_dist_raster_task = task_graph.add_task(
             func=_create_distance_raster,
@@ -1423,9 +1387,8 @@ def execute(args):
             dependent_task_list=[land_poly_dist_raster_task])
 
     # Create NPV and levelized rasters
-    npv_raster_path = os.path.join(inter_dir, 'npv%s.tif' % suffix)
-    levelized_raster_path = os.path.join(
-        inter_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
+    npv_raster_path = file_registry['npv_raster_path']
+    levelized_raster_path = file_registry['levelized_raster_path']
 
     # Include foundation_cost, discount_rate, number_of_turbines with
     # parameters_dict to pass for NPV calculation
@@ -1441,8 +1404,7 @@ def execute(args):
         dependent_task_list=[final_dist_task])
 
     # Creating carbon offset raster
-    carbon_raster_path = os.path.join(
-        inter_dir, 'carbon_emissions_tons%s.tif' % suffix)
+    carbon_raster_path = file_registry['carbon_raster_path']
 
     # The amount of CO2 not released into the atmosphere, with the constant
     # conversion factor provided in the users guide by Rob Griffin
@@ -1468,9 +1430,7 @@ def execute(args):
         (dist_mask_path, _DIST_FIELD_NAME)
     ]
     mask_keys = [_DEPTH_FIELD_NAME, _DIST_FIELD_NAME]
-
-    final_wind_point_vector_path = os.path.join(
-        out_dir, 'wind_energy_points%s.shp' % suffix)
+    final_wind_point_vector_path = file_registry['final_wind_point_vector_path']
     task_graph.add_task(
         func=_index_raster_values_to_point_vector,
         args=(intermediate_wind_point_vector_path,

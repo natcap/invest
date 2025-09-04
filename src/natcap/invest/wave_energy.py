@@ -22,6 +22,7 @@ from . import spec
 from .unit_registry import u
 from . import validation
 from . import gettext
+from .file_registry import FileRegistry
 
 
 LOGGER = logging.getLogger(__name__)
@@ -459,7 +460,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.VectorOutput(
             id="gridpt_prj",
-            path="output/GridPt_prj.shp",
+            path="output/GridPts_prj.shp",
             about=gettext("Vector map of the provided grid points"),
             created_if="valuation_container",
             geometry_types={"POINT"},
@@ -861,11 +862,11 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    file_registry = FileRegistry(MODEL_SPEC, workspace, file_suffix)
+    task_graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'], n_workers)
 
     # Get the path for the DEM
     dem_path = args['dem_path']
@@ -993,18 +994,29 @@ def execute(args):
     analysis_area_extract_path = analysis_dict[analysis_area][
         'extract_vector']
 
-    # Remove the wave point shapefile if it exists
-    wave_vector_path = os.path.join(intermediate_dir,
-                                    'WEM_InputOutput_Pts%s.shp' % file_suffix)
-    if os.path.isfile(wave_vector_path):
-        os.remove(wave_vector_path)
-
-    # Set the source projection for a coordinate transformation
-    # to the input projection from the wave watch point shapefile
+    # Use file_registry for all output/intermediate file paths below
+    wave_vector_path = file_registry['wem_inputoutput_pts']
+    indexed_wave_vector_path = file_registry['indexed_wem_inputoutput_pts']
+    wave_energy_power_vector_path = file_registry['captured_wem_inputoutput_pts']
+    unclipped_energy_raster_path = file_registry['unclipped_capwe_mwh']
+    unclipped_power_raster_path = file_registry['unclipped_wp_kw']
+    interpolated_energy_raster_path = file_registry['interpolated_capwe_mwh']
+    interpolated_power_raster_path = file_registry['interpolated_wp_kw']
+    energy_raster_path = file_registry['capwe_mwh']
+    wave_power_raster_path = file_registry['wp_kw']
+    wp_rc_path = file_registry['wp_rc']
+    capwe_rc_path = file_registry['capwe_rc']
+    aoi_clipped_to_extract_path = file_registry['aoi_clipped_to_extract_path']
+    final_wave_energy_power_vector_path = file_registry['final_wem_inputoutput_pts']
+    inter_npv_raster_path = file_registry['npv_not_clipped']
+    target_npv_rc_path = file_registry['npv_rc']
+    target_npv_raster_path = file_registry['npv_usd']
+    land_vector_path = file_registry['landpts_prj']
+    grid_vector_path = file_registry['gridpt_prj']
+    result_table_path = file_registry['capwe_rc_csv']
     analysis_area_sr = _get_vector_spatial_ref(analysis_area_points_path)
 
-    # This if/else statement differentiates between having an AOI or doing
-    # a broad run on all the wave points specified by args['analysis_area'].
+    # If AOI is not provided
     if 'aoi_path' not in args or not args['aoi_path']:
         LOGGER.info('AOI not provided.')
 
@@ -1044,9 +1056,7 @@ def execute(args):
 
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
-        aoi_clipped_to_extract_path = os.path.join(
-            intermediate_dir,
-            'aoi_clipped_to_extract_path%s.shp' % file_suffix)
+        aoi_clipped_to_extract_path = file_registry['aoi_clipped_to_extract_path']
         task_graph.add_task(
             func=_clip_vector_by_vector,
             args=(aoi_vector_path, analysis_area_extract_path,
@@ -1077,8 +1087,7 @@ def execute(args):
     # from the raster DEM
     LOGGER.info('Adding DEPTH_M field to the wave shapefile from the DEM')
     # Add the depth value to the wave points by indexing into the DEM dataset
-    indexed_wave_vector_path = os.path.join(
-        intermediate_dir, 'Indexed_WEM_InputOutput_Pts%s.shp' % file_suffix)
+    indexed_wave_vector_path = file_registry['indexed_wem_inputoutput_pts']
     index_depth_to_wave_vector_task = task_graph.add_task(
         func=_index_raster_value_to_point_vector,
         args=(wave_vector_path, dem_path, indexed_wave_vector_path,
@@ -1098,8 +1107,7 @@ def execute(args):
     # Add wave energy and wave power fields to the shapefile for the
     # corresponding points
     LOGGER.info('Adding wave energy and power fields to the wave vector.')
-    wave_energy_power_vector_path = os.path.join(
-        intermediate_dir, 'Captured_WEM_InputOutput_Pts%s.shp' % file_suffix)
+    wave_energy_power_vector_path = file_registry['captured_wem_inputoutput_pts']
     create_wave_energy_and_power_raster_task = task_graph.add_task(
         func=_energy_and_power_to_wave_vector,
         args=(energy_cap, indexed_wave_vector_path,
@@ -1108,22 +1116,6 @@ def execute(args):
         task_name='get_wave_energy_and_power',
         dependent_task_list=[index_depth_to_wave_vector_task])
 
-    # Intermediate/final output paths for wave energy and wave power rasters
-    unclipped_energy_raster_path = os.path.join(
-        intermediate_dir, 'unclipped_capwe_mwh%s.tif' % file_suffix)
-    unclipped_power_raster_path = os.path.join(
-        intermediate_dir, 'unclipped_wp_kw%s.tif' % file_suffix)
-    interpolated_energy_raster_path = os.path.join(
-        intermediate_dir, 'interpolated_capwe_mwh%s.tif' % file_suffix)
-    interpolated_power_raster_path = os.path.join(
-        intermediate_dir, 'interpolated_wp_kw%s.tif' % file_suffix)
-    energy_raster_path = os.path.join(output_dir,
-                                      'capwe_mwh%s.tif' % file_suffix)
-    wave_power_raster_path = os.path.join(output_dir,
-                                          'wp_kw%s.tif' % file_suffix)
-
-    # Create blank rasters bounded by the vector of analysis area (AOI)
-    LOGGER.info('Create wave power and energy rasters from AOI extent')
     create_unclipped_energy_raster_task = task_graph.add_task(
         func=pygeoprocessing.create_raster_from_vector_extents,
         args=(aoi_vector_path, unclipped_energy_raster_path, target_pixel_size,
@@ -1176,11 +1168,6 @@ def execute(args):
         task_name='clip_power_raster',
         dependent_task_list=[interpolate_power_points_task])
 
-    # Paths for wave energy and wave power percentile rasters
-    wp_rc_path = os.path.join(output_dir, 'wp_rc%s.tif' % file_suffix)
-    capwe_rc_path = os.path.join(output_dir, 'capwe_rc%s.tif' % file_suffix)
-
-    # Create the percentile rasters for wave energy and wave power
     task_graph.add_task(
         func=_create_percentile_rasters,
         args=(energy_raster_path, capwe_rc_path, _CAPWE_UNITS_SHORT,
@@ -1210,15 +1197,14 @@ def execute(args):
     else:
         LOGGER.info('Valuation selected')
 
-    # Output path for landing point shapefile
-    land_vector_path = os.path.join(
-        output_dir, 'LandPts_prj%s.shp' % file_suffix)
-    # Output path for grid point shapefile
-    grid_vector_path = os.path.join(
-        output_dir, 'GridPts_prj%s.shp' % file_suffix)
+    # Use file_registry for valuation outputs
+    land_vector_path = file_registry['landpts_prj']
+    grid_vector_path = file_registry['gridpt_prj']
+    final_wave_energy_power_vector_path = file_registry['final_wem_inputoutput_pts']
+    inter_npv_raster_path = file_registry['npv_not_clipped']
+    target_npv_rc_path = file_registry['npv_rc']
+    target_npv_raster_path = file_registry['npv_usd']
 
-    # Make a point shapefile for grid points
-    LOGGER.info('Creating Grid Points Vector.')
     create_grid_points_vector_task = task_graph.add_task(
         func=_dict_to_point_vector,
         args=(grid_land_df[grid_land_df['type'] == 'grid'].to_dict('index'),
@@ -1235,9 +1221,6 @@ def execute(args):
         target_path_list=[land_vector_path],
         task_name='create_land_points_vector')
 
-    # Add new fields to the wave vector.
-    final_wave_energy_power_vector_path = os.path.join(
-        intermediate_dir, 'Final_WEM_InputOutput_Pts%s.shp' % file_suffix)
     add_target_fields_to_wave_vector_task = task_graph.add_task(
         func=_add_target_fields_to_wave_vector,
         args=(wave_energy_power_vector_path, land_vector_path,
@@ -1249,16 +1232,6 @@ def execute(args):
                              create_land_points_vector_task,
                              create_grid_points_vector_task])
 
-    # Intermediate path for the projected net present value raster
-    inter_npv_raster_path = os.path.join(
-        intermediate_dir, 'npv_not_clipped%s.tif' % file_suffix)
-    # Path for the net present value percentile raster
-    target_npv_rc_path = os.path.join(output_dir, 'npv_rc%s.tif' % file_suffix)
-    # Output path for the projected net present value raster
-    target_npv_raster_path = os.path.join(
-        output_dir, 'npv_usd%s.tif' % file_suffix)
-
-    LOGGER.info('Create NPV raster from wave vector and AOI extents.')
     create_npv_raster_task = task_graph.add_task(
         func=_create_npv_raster,
         args=(final_wave_energy_power_vector_path, aoi_vector_path,
@@ -1268,7 +1241,6 @@ def execute(args):
         task_name='create_npv_raster',
         dependent_task_list=[add_target_fields_to_wave_vector_task])
 
-    LOGGER.info('Create percentile NPV raster.')
     task_graph.add_task(
         func=_create_percentile_rasters,
         args=(target_npv_raster_path, target_npv_rc_path, _NPV_UNITS_SHORT,
@@ -1277,7 +1249,6 @@ def execute(args):
         task_name='create_npv_percentile_raster',
         dependent_task_list=[create_npv_raster_task])
 
-    # Close Taskgraph
     task_graph.close()
     task_graph.join()
     LOGGER.info('End of Wave Energy Valuation.')
