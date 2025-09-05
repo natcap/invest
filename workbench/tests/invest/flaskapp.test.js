@@ -105,7 +105,6 @@ describe('requests to flask endpoints', () => {
     const data = JSON.parse(fs.readFileSync(filepath));
     const expectedKeys = [
       'args',
-      'invest_version',
       'model_id',
     ];
     expectedKeys.forEach((key) => {
@@ -118,7 +117,6 @@ describe('requests to flask endpoints', () => {
     const expectedKeys2 = [
       'type',
       'args',
-      'invest_version',
       'model_id',
     ];
     expectedKeys2.forEach((key) => {

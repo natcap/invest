@@ -170,8 +170,7 @@ def post_datastack_file():
     result_dict = {
         'type': stack_type,
         'args': stack_info.args,
-        'model_id': stack_info.model_id,
-        'invest_version': stack_info.invest_version
+        'model_id': stack_info.model_id
     }
     return json.dumps(result_dict)
 
