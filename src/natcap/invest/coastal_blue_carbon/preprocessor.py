@@ -332,21 +332,19 @@ def execute(args):
         'lulc_lookup_table_path').get_validated_dataframe(
             args['lulc_lookup_table_path'])
 
-    target_transition_table = file_registry['carbon_pool_transition_template']
     _ = task_graph.add_task(
         func=_create_transition_table,
         args=(landcover_df,
               aligned_snapshot_paths,
-              target_transition_table),
-        target_path_list=[target_transition_table],
+              file_registry['carbon_pool_transition_template']),
+        target_path_list=[file_registry['carbon_pool_transition_template']],
         dependent_task_list=[alignment_task],
         task_name='Determine transitions and write transition table')
 
-    target_biophysical_table_path = file_registry['carbon_biophysical_table_template']
     _ = task_graph.add_task(
         func=_create_biophysical_table,
-        args=(landcover_df, target_biophysical_table_path),
-        target_path_list=[target_biophysical_table_path],
+        args=(landcover_df, file_registry['carbon_biophysical_table_template']),
+        target_path_list=[file_registry['carbon_biophysical_table_template']],
         task_name='Write biophysical table template')
 
     task_graph.close()
