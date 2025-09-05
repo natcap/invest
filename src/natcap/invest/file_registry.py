@@ -32,7 +32,7 @@ class FileRegistryGroup:
 
         path = self.pattern
         for field, value in zip(self.fields, args):
-            path = path.replace(f'[{field.upper()}]', value)
+            path = path.replace(f'[{field.upper()}]', str(value))
 
         item = FileRegistryItem(field_value, path)
         self.items[field_value] = item

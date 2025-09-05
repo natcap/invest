@@ -17,6 +17,7 @@ from .. import spec
 from .. import utils
 from .. import validation
 from ..sdr import sdr
+from ..file_registry import FileRegistry
 from ..unit_registry import u
 from . import ndr_core
 
@@ -681,64 +682,7 @@ MODEL_SPEC = spec.ModelSpec(
     ]
 )
 
-_OUTPUT_BASE_FILES = {
-    'n_surface_export_path': 'n_surface_export.tif',
-    'n_subsurface_export_path': 'n_subsurface_export.tif',
-    'n_total_export_path': 'n_total_export.tif',
-    'p_surface_export_path': 'p_surface_export.tif',
-    'watershed_results_ndr_path': 'watershed_results_ndr.gpkg',
-    'stream_path': 'stream.tif'
-}
-
 INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
-
-_INTERMEDIATE_BASE_FILES = {
-    'mask_path': 'watersheds_mask.tif',
-    'ic_factor_path': 'ic_factor.tif',
-    'load_n_path': 'load_n.tif',
-    'load_p_path': 'load_p.tif',
-    'modified_load_n_path': 'modified_load_n.tif',
-    'modified_load_p_path': 'modified_load_p.tif',
-    'ndr_n_path': 'ndr_n.tif',
-    'ndr_p_path': 'ndr_p.tif',
-    'runoff_proxy_index_path': 'runoff_proxy_index.tif',
-    's_accumulation_path': 's_accumulation.tif',
-    's_bar_path': 's_bar.tif',
-    's_factor_inverse_path': 's_factor_inverse.tif',
-    'sub_load_n_path': 'sub_load_n.tif',
-    'surface_load_n_path': 'surface_load_n.tif',
-    'surface_load_p_path': 'surface_load_p.tif',
-    'sub_ndr_n_path': 'sub_ndr_n.tif',
-    'crit_len_n_path': 'crit_len_n.tif',
-    'crit_len_p_path': 'crit_len_p.tif',
-    'd_dn_path': 'd_dn.tif',
-    'd_up_path': 'd_up.tif',
-    'eff_n_path': 'eff_n.tif',
-    'eff_p_path': 'eff_p.tif',
-    'effective_retention_n_path': 'effective_retention_n.tif',
-    'effective_retention_p_path': 'effective_retention_p.tif',
-    'flow_accumulation_path': 'flow_accumulation.tif',
-    'flow_direction_path': 'flow_direction.tif',
-    'thresholded_slope_path': 'thresholded_slope.tif',
-    'dist_to_channel_path': 'dist_to_channel.tif',
-    'drainage_mask': 'what_drains_to_stream.tif',
-    'filled_dem_path': 'filled_dem.tif',
-    'aligned_dem_path': 'aligned_dem.tif',
-    'masked_dem_path': 'masked_dem.tif',
-    'slope_path': 'slope.tif',
-    'aligned_lulc_path': 'aligned_lulc.tif',
-    'masked_lulc_path': 'masked_lulc.tif',
-    'aligned_runoff_proxy_path': 'aligned_runoff_proxy.tif',
-    'masked_runoff_proxy_path': 'masked_runoff_proxy.tif',
-    'surface_load_n_pickle_path': 'surface_load_n.pickle',
-    'surface_load_p_pickle_path': 'surface_load_p.pickle',
-    'subsurface_load_n_pickle_path': 'subsurface_load_n.pickle',
-    'surface_export_n_pickle_path': 'surface_export_n.pickle',
-    'surface_export_p_pickle_path': 'surface_export_p.pickle',
-    'subsurface_export_n_pickle_path': 'subsurface_export_n.pickle',
-    'total_export_n_pickle_path': 'total_export_n.pickle'
-}
-
 _TARGET_NODATA = -1
 
 
@@ -804,6 +748,8 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)
     utils.make_directories([output_dir, intermediate_output_dir])
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    f_reg = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
 
     try:
         n_workers = int(args['n_workers'])
@@ -813,13 +759,7 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
-        n_workers, reporting_interval=5.0)
-
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    f_reg = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
+        f_reg['taskgraph_cache'], n_workers, reporting_interval=5.0)
 
     # Build up a list of nutrients to process based on what's checked on
     nutrients_to_process = []

@@ -108,6 +108,7 @@ from .. import spec
 from .. import utils
 from .. import validation
 from ..unit_registry import u
+from ..file_registry import FileRegistry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -476,14 +477,14 @@ MODEL_SPEC = spec.ModelSpec(
     outputs=[
         spec.SingleBandRasterOutput(
             id="carbon-accumulation-between-[YEAR1]-and-[YEAR2]",
-            path="carbon-accumulation-between-[YEAR1]-and-[YEAR2].tif",
+            path="output/carbon-accumulation-between-[YEAR1]-and-[YEAR2].tif",
             about=gettext("Amount of CO2E accumulated between the two specified years."),
             data_type=float,
             units=u.megametric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
             id="carbon-emissions-between-[YEAR1]-and-[YEAR2]",
-            path="carbon-emissions-between-[YEAR1]-and-[YEAR2].tif",
+            path="output/carbon-emissions-between-[YEAR1]-and-[YEAR2].tif",
             about=gettext(
                 "Amount of CO2E lost to disturbance between the two specified years."
             ),
@@ -492,7 +493,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="carbon-stock-at-[YEAR]",
-            path="carbon-stock-at-[YEAR].tif",
+            path="output/carbon-stock-at-[YEAR].tif",
             about=gettext(
                 "Sum of the 3 carbon pools for each LULC for the specified year"
             ),
@@ -500,8 +501,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.megametric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="total-net-carbon-sequestion-between-[YEAR1]-and-[YEAR2]",
-            path="total-net-carbon-sequestion-between-[YEAR1]-and-[YEAR2].tif",
+            id="total-net-carbon-sequestration-between-[YEAR1]-and-[YEAR2]",
+            path="output/total-net-carbon-sequestration-between-[YEAR1]-and-[YEAR2].tif",
             about=gettext(
                 "Total carbon sequestration between the two specified years, based on"
                 " accumulation minus emissions during that time period."
@@ -511,7 +512,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="total-net-carbon-sequestration",
-            path="total-net-carbon-sequestration.tif",
+            path="output/total-net-carbon-sequestration.tif",
             about=gettext(
                 "Total carbon sequestration over the whole time period between the"
                 " Baseline and either the latest Snapshot Year or the Analysis Year,"
@@ -521,9 +522,9 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.megametric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="net-present-value",
-            path="net-present-value.tif",
-            about=gettext("Monetary value of carbon sequestration."),
+            id="net-present-value-at-[YEAR]",
+            path="output/net-present-value-at-[YEAR].tif",
+            about=gettext("Monetary value of carbon sequestration in a given year."),
             data_type=float,
             units=u.currency / u.hectare
         ),
@@ -542,6 +543,17 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/accumulation-[POOL]-[YEAR].tif",
             about=gettext(
                 "The spatial distribution of rates of carbon accumulation in the"
+                " given pool at the given year. Years will represent the snapshot"
+                " years in which the accumulation raster takes effect."
+            ),
+            data_type=float,
+            units=u.megametric_ton / u.hectare
+        ),
+        spec.SingleBandRasterOutput(
+            id="emissions-[POOL]-[YEAR]",
+            path="intermediate/emissions-[POOL]-[YEAR].tif",
+            about=gettext(
+                "The spatial distribution of rates of carbon emission in the"
                 " given pool at the given year. Years will represent the snapshot"
                 " years in which the accumulation raster takes effect."
             ),
@@ -665,7 +677,7 @@ def execute(args):
         ``None``.
 
     """
-    task_graph, n_workers, intermediate_dir, output_dir, suffix = (
+    task_graph, n_workers, intermediate_dir, output_dir, suffix, file_registry = (
         _set_up_workspace(args))
 
     snapshots = MODEL_SPEC.get_input(
@@ -703,24 +715,14 @@ def execute(args):
             "duplicates were found.")
 
     aligned_lulc_paths = {
-        baseline_lulc_year: os.path.join(
-            intermediate_dir,
-            ALIGNED_LULC_RASTER_PATTERN.format(
-                snapshot_type='baseline', year=baseline_lulc_year,
-                suffix=suffix))
+        baseline_lulc_year: file_registry['aligned-lulc-[SNAPSHOT_TYPE]-[YEAR]', 'baseline', baseline_lulc_year]
     }
 
     for snapshot_year in snapshots:
         # We just created a baseline year, so don't re-create the path.
         if snapshot_year == baseline_lulc_year:
             continue
-
-        aligned_path = os.path.join(
-            intermediate_dir,
-            ALIGNED_LULC_RASTER_PATTERN.format(
-                snapshot_type='snapshot', year=snapshot_year,
-                suffix=suffix))
-        aligned_lulc_paths[snapshot_year] = aligned_path
+        aligned_lulc_paths[snapshot_year] = file_registry['aligned-lulc-[SNAPSHOT_TYPE]-[YEAR]', 'snapshot', snapshot_year]
 
     transition_years = set(aligned_lulc_paths.keys())
     transition_years.remove(baseline_lulc_year)
@@ -762,9 +764,7 @@ def execute(args):
         baseline_lulc_year: {}
     }
     for pool in (POOL_BIOMASS, POOL_LITTER, POOL_SOIL):
-        stock_rasters[baseline_lulc_year][pool] = os.path.join(
-            intermediate_dir, STOCKS_RASTER_PATTERN.format(
-                pool=pool, year=baseline_lulc_year, suffix=suffix))
+        stock_rasters[baseline_lulc_year][pool] = file_registry['stocks-[POOL]-[YEAR]', pool, baseline_lulc_year]
         stock_tasks[baseline_lulc_year][pool] = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=(
@@ -779,9 +779,8 @@ def execute(args):
 
         # Initial accumulation values are a simple reclassification
         # rather than a mapping by the transition.
-        yearly_accum_rasters[baseline_lulc_year][pool] = os.path.join(
-            intermediate_dir, ACCUMULATION_RASTER_PATTERN.format(
-                pool=pool, year=baseline_lulc_year, suffix=suffix))
+        yearly_accum_rasters[baseline_lulc_year][pool] = file_registry[
+            'accumulation-[POOL]-[YEAR]', pool, baseline_lulc_year]
         yearly_accum_tasks[baseline_lulc_year][pool] = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=(
@@ -796,9 +795,8 @@ def execute(args):
                 f'Mapping {pool} carbon accumulation for '
                 f'{baseline_lulc_year}'))
 
-    total_stock_rasters[baseline_lulc_year] = os.path.join(
-        intermediate_dir, TOTAL_STOCKS_RASTER_PATTERN.format(
-            year=baseline_lulc_year, suffix=suffix))
+    total_stock_rasters[baseline_lulc_year] = file_registry[
+        'total-carbon-stocks-[YEAR]', baseline_lulc_year]
     total_stock_tasks[baseline_lulc_year] = task_graph.add_task(
         func=_sum_n_rasters,
         args=([stock_rasters[baseline_lulc_year][POOL_SOIL],
@@ -813,9 +811,7 @@ def execute(args):
         target_path_list=[total_stock_rasters[baseline_lulc_year]],
         task_name=f'Calculating total carbon stocks in {baseline_lulc_year}')
 
-    output_stock_raster = os.path.join(
-        output_dir, CARBON_STOCK_AT_YEAR_RASTER_PATTERN.format(
-            year=baseline_lulc_year, suffix=suffix))
+    output_stock_raster = file_registry['carbon-stock-at-[YEAR]', baseline_lulc_year]
     _ = task_graph.add_task(
         func=shutil.copyfile,
         args=(total_stock_rasters[baseline_lulc_year],
@@ -830,9 +826,7 @@ def execute(args):
         stock_rasters[year] = {}
         stock_tasks[year] = {}
         for pool in (POOL_SOIL, POOL_BIOMASS, POOL_LITTER):
-            stock_rasters[year][pool] = os.path.join(
-                intermediate_dir, STOCKS_RASTER_PATTERN.format(
-                    pool=pool, year=year, suffix=suffix))
+            stock_rasters[year][pool] = file_registry['stocks-[POOL]-[YEAR]', pool, year]
             stock_tasks[year][pool] = task_graph.add_task(
                 func=_calculate_stocks_after_baseline_period,
                 args=(stock_rasters[baseline_lulc_year][pool],
@@ -845,9 +839,7 @@ def execute(args):
                 target_path_list=[stock_rasters[year][pool]],
                 task_name=f'Calculating {pool} stocks for {year}')
 
-        total_stock_rasters[year] = os.path.join(
-            intermediate_dir, TOTAL_STOCKS_RASTER_PATTERN.format(
-                year=year, suffix=suffix))
+        total_stock_rasters[year] = file_registry['total-carbon-stocks-[YEAR]', year]
         total_stock_tasks[year] = task_graph.add_task(
             func=_sum_n_rasters,
             args=([stock_rasters[year][POOL_SOIL],
@@ -862,11 +854,8 @@ def execute(args):
             target_path_list=[total_stock_rasters[year]],
             task_name=f'Calculating total carbon stocks in {year}')
 
-    total_net_sequestration_for_baseline_period = (
-        os.path.join(
-            output_dir, TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN.format(
-                start_year=baseline_lulc_year, end_year=end_of_baseline_period,
-                suffix=suffix)))
+    total_net_sequestration_for_baseline_period = file_registry[
+        'total-net-carbon-sequestration-between-[YEAR1]-and-[YEAR2]', baseline_lulc_year, end_of_baseline_period]
     baseline_net_seq_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(yearly_accum_rasters[baseline_lulc_year][POOL_BIOMASS], 1),
@@ -900,9 +889,8 @@ def execute(args):
             # actually comes from the carbon stores from the prior transition.
             # If Mangroves transition to a parking lot, we use the half-life of
             # the stored carbon from the mangroves.
-            halflife_rasters[current_transition_year][pool] = os.path.join(
-                intermediate_dir, HALF_LIFE_RASTER_PATTERN.format(
-                    pool=pool, year=current_transition_year, suffix=suffix))
+            halflife_rasters[current_transition_year][pool] = file_registry[
+                'halflife-[POOL]-[YEAR]', pool, current_transition_year]
             _ = task_graph.add_task(
                 func=pygeoprocessing.reclassify_raster,
                 args=(
@@ -920,9 +908,8 @@ def execute(args):
             # Soil and biomass pools will only accumulate if the transition
             # table for this transition specifies accumulation.  We
             # can't assume that this will match a basic reclassification.
-            yearly_accum_rasters[current_transition_year][pool] = os.path.join(
-                intermediate_dir, ACCUMULATION_RASTER_PATTERN.format(
-                    pool=pool, year=current_transition_year, suffix=suffix))
+            yearly_accum_rasters[
+                current_transition_year][pool] = file_registry['accumulation-[POOL]-[YEAR]', pool, current_transition_year]
             yearly_accum_tasks[current_transition_year][pool] = task_graph.add_task(
                 func=_reclassify_accumulation_transition,
                 args=(aligned_lulc_paths[prior_transition_year],
@@ -936,12 +923,8 @@ def execute(args):
                     f'Mapping {pool} carbon accumulation for '
                     f'{current_transition_year}'))
 
-            disturbance_magnitude_rasters[
-                current_transition_year][pool] = os.path.join(
-                    intermediate_dir,
-                    DISTURBANCE_MAGNITUDE_RASTER_PATTERN.format(
-                        pool=pool, year=current_transition_year,
-                        suffix=suffix))
+            disturbance_magnitude_rasters[current_transition_year][pool] = file_registry[
+                'disturbance-magnitude-[POOL]-[YEAR]', pool, current_transition_year]
             # this is _actually_ the magnitude, not the magnitude multiplied by
             # the stocks.
             _ = task_graph.add_task(
@@ -962,9 +945,8 @@ def execute(args):
         # Litter accumulation is a simple reclassification because it really
         # isn't affected by transitions as soil and biomass carbon are.
         yearly_accum_rasters[
-            current_transition_year][POOL_LITTER] = os.path.join(
-            intermediate_dir, ACCUMULATION_RASTER_PATTERN.format(
-                pool=POOL_LITTER, year=current_transition_year, suffix=suffix))
+            current_transition_year][POOL_LITTER] = file_registry[
+                'accumulation-[POOL]-[YEAR]', POOL_LITTER, current_transition_year]
         yearly_accum_tasks[current_transition_year][POOL_LITTER] = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=((aligned_lulc_paths[current_transition_year], 1),
@@ -987,10 +969,8 @@ def execute(args):
     prior_transition_year = baseline_lulc_year
     for current_transition_year in sorted(
             transition_years.union([analysis_year])):
-        total_accumulation_rasters[current_transition_year] = os.path.join(
-            output_dir, ACCUMULATION_SINCE_TRANSITION_RASTER_PATTERN.format(
-                start_year=prior_transition_year,
-                end_year=current_transition_year, suffix=suffix))
+        total_accumulation_rasters[current_transition_year] = file_registry[
+            'carbon-accumulation-between-[YEAR1]-and-[YEAR2]', prior_transition_year, current_transition_year]
         total_accumulation_tasks[current_transition_year] = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(yearly_accum_rasters[
@@ -1018,11 +998,8 @@ def execute(args):
 
     # Total sequestration for the baseline period is just total accumulation
     # by another name, so just copy the file over.
-    total_net_sequestration_for_baseline_period = (
-        os.path.join(
-            output_dir, TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN.format(
-                start_year=baseline_lulc_year, end_year=end_of_baseline_period,
-                suffix=suffix)))
+    total_net_sequestration_for_baseline_period = file_registry[
+        'total-net-carbon-sequestration-between-[YEAR1]-and-[YEAR2]', baseline_lulc_year, end_of_baseline_period]
     baseline_net_seq_task = task_graph.add_task(
         func=shutil.copyfile,
         args=(total_accumulation_rasters[end_of_baseline_period],
@@ -1080,9 +1057,7 @@ def execute(args):
                     annual_price)
         discount_rate = float(args['discount_rate']) * 0.01
 
-        baseline_period_npv_raster = os.path.join(
-            output_dir, NET_PRESENT_VALUE_RASTER_PATTERN.format(
-                year=end_of_baseline_period, suffix=suffix))
+        baseline_period_npv_raster = file_registry['net-present-value-at-[YEAR]', end_of_baseline_period]
         _ = task_graph.add_task(
             func=_calculate_npv,
             args=({end_of_baseline_period:
@@ -1107,9 +1082,7 @@ def execute(args):
     else:
         # The stocks for the baseline period need to also be in the outputs
         # directory.
-        stocks_at_end_of_baseline_period = os.path.join(
-            output_dir, CARBON_STOCK_AT_YEAR_RASTER_PATTERN.format(
-                year=end_of_baseline_period, suffix=suffix))
+        stocks_at_end_of_baseline_period = file_registry['carbon-stock-at-[YEAR]', end_of_baseline_period]
         _ = task_graph.add_task(
             func=shutil.copyfile,
             args=(total_stock_rasters[end_of_baseline_period],
@@ -1155,6 +1128,9 @@ def _set_up_workspace(args):
                 exist.
             * ``suffix`` - the suffix string, derived from the user-provided
                 suffix, if it was provided.
+            * ``file_registry`` - a ``utils.FileRegistry`` object that can be used to
+                look up paths to files in the intermediate and output
+                directories.
     """
     try:
         n_workers = int(args['n_workers'])
@@ -1164,10 +1140,6 @@ def _set_up_workspace(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
 
-    task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
-        n_workers, reporting_interval=5.0)
-
     suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)
@@ -1175,8 +1147,11 @@ def _set_up_workspace(args):
         args['workspace_dir'], OUTPUT_DIR_NAME)
 
     utils.make_directories([output_dir, intermediate_dir])
+    file_registry = FileRegistry(MODEL_SPEC, args['workspace_dir'], suffix)
+    task_graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'],
+                                    n_workers, reporting_interval=5.0)
 
-    return task_graph, n_workers, intermediate_dir, output_dir, suffix
+    return task_graph, n_workers, intermediate_dir, output_dir, suffix, file_registry
 
 
 def execute_transition_analysis(args):
@@ -1258,7 +1233,7 @@ def execute_transition_analysis(args):
         ``None``.
 
     """
-    task_graph, n_workers, intermediate_dir, output_dir, suffix = (
+    task_graph, n_workers, intermediate_dir, output_dir, suffix, file_registry = (
         _set_up_workspace(args))
 
     transition_years = set([int(year) for year in args['transition_years']])
@@ -1337,10 +1312,7 @@ def execute_transition_analysis(args):
             # sequestration.
             # Stock rasters from ``year`` represent the carbon stocks present
             # at the very beginning of ``year``.
-            stock_rasters[year][pool] = os.path.join(
-                intermediate_dir,
-                STOCKS_RASTER_PATTERN.format(
-                    year=year, pool=pool, suffix=suffix))
+            stock_rasters[year][pool] = file_registry['stocks-[POOL]-[YEAR]', pool, year]
             if year == first_transition_year:
                 current_stock_dependent_tasks = []
             else:
@@ -1370,14 +1342,10 @@ def execute_transition_analysis(args):
                 # span multiple transition years.  This raster is derived from
                 # the incoming landcover rasters and is not something that is
                 # defined by the user.
-                year_of_disturbance_rasters[year][pool] = os.path.join(
-                    intermediate_dir, YEAR_OF_DIST_RASTER_PATTERN.format(
-                        pool=pool, year=year, suffix=suffix))
-                disturbance_vol_rasters[year][pool] = os.path.join(
-                    intermediate_dir,
-                    DISTURBANCE_VOL_RASTER_PATTERN.format(
-                        pool=pool, year=year, suffix=suffix))
-
+                year_of_disturbance_rasters[year][pool] = file_registry[
+                    'year-of-latest-disturbance-[POOL]-[YEAR]', pool, year]
+                disturbance_vol_rasters[year][pool] = file_registry[
+                    'disturbance-volume-[POOL]-[YEAR]', pool, year]
                 if year == min(transition_years):
                     prior_transition_year_raster = None
                     prior_disturbance_vol_raster = None
@@ -1410,9 +1378,8 @@ def execute_transition_analysis(args):
             #  * stocks at the disturbance year
             #  * disturbance magnitude
             #  * halflife
-            emissions_rasters[year][pool] = os.path.join(
-                intermediate_dir, EMISSIONS_RASTER_PATTERN.format(
-                    pool=pool, year=year, suffix=suffix))
+            emissions_rasters[year][pool] = file_registry[
+                'emissions-[POOL]-[YEAR]', pool, year]
             emissions_tasks[year][pool] = task_graph.add_task(
                 func=pygeoprocessing.raster_calculator,
                 args=(
@@ -1435,9 +1402,8 @@ def execute_transition_analysis(args):
             # Calculate net sequestration (all years after 1st transition)
             #   * Where pixels are accumulating, accumulate.
             #   * Where pixels are emitting, emit.
-            net_sequestration_rasters[year][pool] = os.path.join(
-                intermediate_dir, NET_SEQUESTRATION_RASTER_PATTERN.format(
-                    pool=pool, year=year, suffix=suffix))
+            net_sequestration_rasters[year][pool] = file_registry[
+                'net-sequestration-[POOL]-[YEAR]', pool, year]
             net_sequestration_tasks[year][pool] = task_graph.add_task(
                 func=_calculate_net_sequestration,
                 args=(yearly_accum_rasters[current_transition_year][pool],
@@ -1449,9 +1415,8 @@ def execute_transition_analysis(args):
                     f'Calculating net sequestration for {pool} in {year}'))
 
         # Calculate total carbon stocks (sum stocks across all 3 pools)
-        total_carbon_rasters[year] = os.path.join(
-            intermediate_dir, TOTAL_STOCKS_RASTER_PATTERN.format(
-                year=year, suffix=suffix))
+        total_carbon_rasters[year] = file_registry[
+            'total-carbon-stocks-[YEAR]', year]
         total_stocks_task = task_graph.add_task(
             func=_sum_n_rasters,
             args=([stock_rasters[year][POOL_SOIL],
@@ -1466,9 +1431,7 @@ def execute_transition_analysis(args):
 
         if year in transition_years.union(set([final_year])):
             # Copy the current stock raster into the outputs directory.
-            output_stock_raster = os.path.join(
-                output_dir, CARBON_STOCK_AT_YEAR_RASTER_PATTERN.format(
-                    year=year, suffix=suffix))
+            output_stock_raster = file_registry['carbon-stock-at-[YEAR]', year]
             _ = task_graph.add_task(
                 func=shutil.copyfile,
                 args=(total_carbon_rasters[year],
@@ -1502,10 +1465,8 @@ def execute_transition_analysis(args):
                     list(net_sequestration_tasks[
                         year_after_transition].values()))
 
-            emissions_since_last_transition_raster = os.path.join(
-                output_dir, EMISSIONS_SINCE_TRANSITION_RASTER_PATTERN.format(
-                    start_year=current_transition_year, end_year=(year + 1),
-                    suffix=suffix))
+            emissions_since_last_transition_raster = file_registry[
+                'carbon-emissions-between-[YEAR1]-and-[YEAR2]', current_transition_year, year + 1]
             _ = task_graph.add_task(
                 func=_sum_n_rasters,
                 args=(emissions_rasters_since_transition,
@@ -1516,11 +1477,8 @@ def execute_transition_analysis(args):
                     f'Sum emissions between {current_transition_year} '
                     f'and {year}'))
 
-            net_carbon_sequestration_since_last_transition = os.path.join(
-                output_dir,
-                TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN.format(
-                    start_year=current_transition_year, end_year=(year + 1),
-                    suffix=suffix))
+            net_carbon_sequestration_since_last_transition = file_registry[
+                'total-net-carbon-sequestration-between-[YEAR1]-and-[YEAR2]', current_transition_year, year + 1]
             summary_net_sequestration_tasks.append(task_graph.add_task(
                 func=_sum_n_rasters,
                 args=(net_seq_rasters_since_transition,
@@ -1539,9 +1497,7 @@ def execute_transition_analysis(args):
         prior_stock_tasks = current_stock_tasks
 
     # Calculate total net sequestration
-    total_net_sequestration_raster_path = os.path.join(
-        output_dir, TOTAL_NET_SEQ_ALL_YEARS_RASTER_PATTERN.format(
-            suffix=suffix))
+    total_net_sequestration_raster_path = file_registry['total-net-carbon-sequestration']
     _ = task_graph.add_task(
         func=_sum_n_rasters,
         args=(list(summary_net_sequestration_raster_paths.values()),
@@ -1557,9 +1513,8 @@ def execute_transition_analysis(args):
         target_npv_paths = {}
         for transition_year in (
                 sorted(set(transition_years).union(set([final_year])))[1:]):
-            target_npv_paths[transition_year] = os.path.join(
-                output_dir, NET_PRESENT_VALUE_RASTER_PATTERN.format(
-                    year=transition_year, suffix=suffix))
+            target_npv_paths[transition_year] = file_registry[
+                'net-present-value-at-[YEAR]', transition_year]
         _ = task_graph.add_task(
             func=_calculate_npv,
             args=(summary_net_sequestration_raster_paths,

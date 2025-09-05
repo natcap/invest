@@ -14,6 +14,7 @@ from .. import utils
 from .. import validation
 from ..unit_registry import u
 from . import coastal_blue_carbon
+from ..file_registry import FileRegistry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -85,8 +86,8 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.CSVOutput(
-            id="transitions",
-            path="transitions.csv",
+            id="carbon_biophysical_table_template",
+            path="carbon_biophysical_table_template.csv",
             about=gettext(
                 "LULC transition matrix. The first column represents the source LULC"
                 " class, and the first row represents the destination LULC classes. Cells"
@@ -121,8 +122,8 @@ MODEL_SPEC = spec.ModelSpec(
             index_col="lulc-class"
         ),
         spec.CSVOutput(
-            id="carbon_pool_transient_template",
-            path="carbon_pool_transient_template.csv",
+            id="carbon_pool_transition_template",
+            path="carbon_pool_transition_template.csv",
             about=gettext(
                 "Table mapping each LULC type to impact and accumulation information."
                 " This is a template that you will fill out to create the biophysical"
@@ -290,6 +291,8 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'outputs_preprocessor')
     utils.make_directories([output_dir])
 
+    file_registry = FileRegistry(MODEL_SPEC, output_dir, suffix)
+
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -312,9 +315,7 @@ def execute(args):
     for snapshot_year, raster_path in sorted(
             snapshots_dict.items(), key=lambda x: x[0]):
         source_snapshot_paths.append(raster_path)
-        aligned_snapshot_paths.append(os.path.join(
-            output_dir, ALIGNED_LULC_RASTER_TEMPLATE.format(
-                year=snapshot_year, suffix=suffix)))
+        aligned_snapshot_paths.append(file_registry['aligned_lulc_[YEAR]', snapshot_year])
         min_pixel_size = min(
             utils.mean_pixel_size_and_area(
                 pygeoprocessing.get_raster_info(raster_path)['pixel_size'])[0],
@@ -337,8 +338,7 @@ def execute(args):
         'lulc_lookup_table_path').get_validated_dataframe(
             args['lulc_lookup_table_path'])
 
-    target_transition_table = os.path.join(
-        output_dir, TRANSITION_TABLE.format(suffix=suffix))
+    target_transition_table = file_registry['carbon_pool_transition_template']
     _ = task_graph.add_task(
         func=_create_transition_table,
         args=(landcover_df,
@@ -348,8 +348,7 @@ def execute(args):
         dependent_task_list=[alignment_task],
         task_name='Determine transitions and write transition table')
 
-    target_biophysical_table_path = os.path.join(
-        output_dir, BIOPHYSICAL_TABLE.format(suffix=suffix))
+    target_biophysical_table_path = file_registry['carbon_biophysical_table_template']
     _ = task_graph.add_task(
         func=_create_biophysical_table,
         args=(landcover_df, target_biophysical_table_path),

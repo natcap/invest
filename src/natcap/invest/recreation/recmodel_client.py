@@ -33,6 +33,7 @@ from .. import gettext
 from .. import spec
 from .. import utils
 from .. import validation
+from ..file_registry import FileRegistry
 from ..unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -370,6 +371,11 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             created_if="compute_regression"
         ),
+        spec.CSVOutput(
+            id="regression_coefficients",
+            path="regression_coefficients.csv",
+            about=gettext("Regression coefficients table")
+        ),
         spec.VectorOutput(
             id="scenario_results",
             path="scenario_results.gpkg",
@@ -409,7 +415,7 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Compressed AOI")
         ),
         spec.FileOutput(
-            id="[PREDICTOR]",
+            id="[PREDICTOR]_json",
             path="intermediate/[PREDICTOR].json",
             about=gettext("aggregated predictor values within each polygon")
         ),
@@ -420,8 +426,13 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.FileOutput(
             id="pud_zip",
-            path="intermediate/pud.zip",
+            path="intermediate/pud_userdays.zip",
             about=gettext("Compressed photo-user-day data")
+        ),
+        spec.FileOutput(
+            id="tud_zip",
+            path="intermediate/tud_userdays.zip",
+            about=gettext("Compressed twitter-user-day data")
         ),
         spec.FileOutput(
             id="response_polygons_lookup",
@@ -452,26 +463,6 @@ LOGGER_TIME_DELAY = 5
 
 RESPONSE_VARIABLE_ID = 'avg_pr_UD'
 SCENARIO_RESPONSE_ID = 'pr_UD_EST'
-
-_OUTPUT_BASE_FILES = {
-    'pud_results_path': 'PUD_results.gpkg',
-    'pud_monthly_table_path': 'PUD_monthly_table.csv',
-    'tud_results_path': 'TUD_results.gpkg',
-    'tud_monthly_table_path': 'TUD_monthly_table.csv',
-    'regression_vector_path': 'regression_data.gpkg',
-    'scenario_results_path': 'scenario_results.gpkg',
-    'regression_summary': 'regression_summary.txt',
-    'regression_coefficients': 'regression_coefficients.csv',
-}
-
-_INTERMEDIATE_BASE_FILES = {
-    'local_aoi_path': 'aoi.gpkg',
-    'compressed_aoi_path': 'aoi.zip',
-    'pud_compressed_userdays_path': 'pud_userdays.zip',
-    'tud_compressed_userdays_path': 'tud_userdays.zip',
-    'response_polygons_lookup': 'response_polygons_lookup.pickle',
-    'server_version': 'server_version.pickle',
-}
 
 
 def execute(args):
@@ -560,9 +551,7 @@ def execute(args):
     scenario_dir = os.path.join(intermediate_dir, 'scenario')
     utils.make_directories([output_dir, intermediate_dir])
 
-    file_registry = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_dir)], file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
 
     # Initialize a TaskGraph
     try:
@@ -572,23 +561,22 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(
-        os.path.join(output_dir, 'taskgraph_cache'), n_workers)
+    task_graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'], n_workers)
 
     if args['grid_aoi']:
         prep_aoi_task = task_graph.add_task(
             func=_grid_vector,
             args=(args['aoi_path'], args['grid_type'],
-                  float(args['cell_size']), file_registry['local_aoi_path']),
-            target_path_list=[file_registry['local_aoi_path']],
+                  float(args['cell_size']), file_registry['aoi']),
+            target_path_list=[file_registry['aoi']],
             task_name='grid_aoi')
     else:
         # Even if we don't modify the AOI by gridding it, we still need
         # to move it to the expected location.
         prep_aoi_task = task_graph.add_task(
             func=_copy_aoi_no_grid,
-            args=(args['aoi_path'], file_registry['local_aoi_path']),
-            target_path_list=[file_registry['local_aoi_path']],
+            args=(args['aoi_path'], file_registry['aoi']),
+            target_path_list=[file_registry['aoi']],
             task_name='copy_aoi')
     # All other tasks are dependent on this one, including tasks added
     # within _schedule_predictor_data_processing(). Rather than passing
@@ -598,22 +586,22 @@ def execute(args):
     # All the server communication happens in this task.
     calc_user_days_task = task_graph.add_task(
         func=_retrieve_user_days,
-        args=(file_registry['local_aoi_path'],
-              file_registry['compressed_aoi_path'],
+        args=(file_registry['aoi'],
+              file_registry['aoi_zip'],
               args['start_year'], args['end_year'], file_suffix,
               output_dir, server_url, file_registry['server_version']),
-        target_path_list=[file_registry['compressed_aoi_path'],
-                          file_registry['pud_results_path'],
-                          file_registry['pud_monthly_table_path'],
-                          file_registry['tud_results_path'],
-                          file_registry['tud_monthly_table_path'],
+        target_path_list=[file_registry['aoi_zip'],
+                          file_registry['pud_results'],
+                          file_registry['pud_monthly_table'],
+                          file_registry['tud_results'],
+                          file_registry['tud_monthly_table'],
                           file_registry['server_version']],
         task_name='user-day-calculation')
 
     assemble_userday_variables_task = task_graph.add_task(
         func=_assemble_regression_data,
-        args=(file_registry['pud_results_path'],
-              file_registry['tud_results_path'],
+        args=(file_registry['pud_results'],
+              file_registry['tud_results'],
               file_registry['regression_vector_path']),
         target_path_list=[file_registry['regression_vector_path']],
         dependent_task_list=[calc_user_days_task],
@@ -623,14 +611,14 @@ def execute(args):
         # Prepare the AOI for geoprocessing.
         prepare_response_polygons_task = task_graph.add_task(
             func=_prepare_response_polygons_lookup,
-            args=(file_registry['local_aoi_path'],
+            args=(file_registry['aoi'],
                   file_registry['response_polygons_lookup']),
             target_path_list=[file_registry['response_polygons_lookup']],
             task_name='prepare response polygons for geoprocessing')
 
         # Build predictor data
         assemble_predictor_data_task = _schedule_predictor_data_processing(
-            file_registry['local_aoi_path'],
+            file_registry['aoi'],
             file_registry['response_polygons_lookup'],
             [prepare_response_polygons_task, assemble_userday_variables_task],
             args['predictor_table_path'],
@@ -638,8 +626,7 @@ def execute(args):
             intermediate_dir, task_graph)
 
         # Compute the regression
-        coefficient_json_path = os.path.join(
-            intermediate_dir, 'predictor_estimates.json')
+        coefficient_json_path = file_registry['predictor_estimates']
         predictor_df = MODEL_SPEC.get_input(
             'predictor_table_path').get_validated_dataframe(
             args['predictor_table_path'])
@@ -664,7 +651,7 @@ def execute(args):
             driver = gdal.GetDriverByName('GPKG')
             if os.path.exists(file_registry['scenario_results_path']):
                 driver.Delete(file_registry['scenario_results_path'])
-            aoi_vector = gdal.OpenEx(file_registry['local_aoi_path'])
+            aoi_vector = gdal.OpenEx(file_registry['aoi'])
             target_vector = driver.CreateCopy(
                 file_registry['scenario_results_path'], aoi_vector)
             target_layer = target_vector.GetLayer()
@@ -674,7 +661,7 @@ def execute(args):
             utils.make_directories([scenario_dir])
 
             build_scenario_data_task = _schedule_predictor_data_processing(
-                file_registry['local_aoi_path'],
+                file_registry['aoi'],
                 file_registry['response_polygons_lookup'],
                 [prepare_response_polygons_task],
                 args['scenario_predictor_table_path'],
@@ -842,8 +829,7 @@ def _retrieve_user_days(
                     'workspace_id': workspace_id}}, f)
 
         # unpack result
-        compressed_userdays_path = os.path.join(
-            output_dir, 'intermediate', f'{dataset}_userdays.zip')
+        compressed_userdays_path = file_registry[f'{dataset}_userdays']
         with open(compressed_userdays_path, 'wb') as pud_file:
             pud_file.write(result_zip_file_binary)
         temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
@@ -1044,42 +1030,29 @@ def _schedule_predictor_data_processing(
     for predictor_id, row in predictor_df.iterrows():
         LOGGER.info(f"Building predictor {predictor_id}")
         predictor_type = row['type']
+        predictor_target_path = file_registry['[PREDICTOR]_json', predictor_id]
+        predictor_json_list.append(predictor_target_path)
         if predictor_type.startswith('raster'):
             # type must be one of raster_sum or raster_mean
-            raster_op_mode = predictor_type.split('_')[1]
-            predictor_target_path = os.path.join(
-                working_dir, predictor_id + '.json')
-            predictor_json_list.append(predictor_target_path)
-            predictor_task_list.append(task_graph.add_task(
-                func=_raster_sum_mean,
-                args=(row['path'], raster_op_mode,
-                      response_vector_path, predictor_target_path),
-                target_path_list=[predictor_target_path],
-                task_name=f'predictor {predictor_id}'))
+            func = _raster_sum_mean
+            args = (row['path'], predictor_type.split('_')[1],
+                    response_vector_path, predictor_target_path)
         # polygon types are a special case because the polygon_area
         # function requires an additional 'mode' argument.
         elif predictor_type.startswith('polygon'):
-            predictor_target_path = os.path.join(
-                working_dir, predictor_id + '.json')
-            predictor_json_list.append(predictor_target_path)
-            predictor_task_list.append(task_graph.add_task(
-                func=_polygon_area,
-                args=(predictor_type, response_polygons_pickle_path,
-                      row['path'], predictor_target_path),
-                target_path_list=[predictor_target_path],
-                dependent_task_list=dependent_task_list,
-                task_name=f'predictor {predictor_id}'))
+            func = _polygon_area,
+            args = (predictor_type, response_polygons_pickle_path,
+                    row['path'], predictor_target_path)
         else:
-            predictor_target_path = os.path.join(
-                working_dir, predictor_id + '.json')
-            predictor_json_list.append(predictor_target_path)
-            predictor_task_list.append(task_graph.add_task(
-                func=predictor_functions[predictor_type],
-                args=(response_polygons_pickle_path,
-                      row['path'], predictor_target_path),
-                target_path_list=[predictor_target_path],
-                dependent_task_list=dependent_task_list,
-                task_name=f'predictor {predictor_id}'))
+            func = predictor_functions[predictor_type],
+            args = (response_polygons_pickle_path,
+                    row['path'], predictor_target_path)
+        predictor_task_list.append(task_graph.add_task(
+            func=func,
+            args=args,
+            target_path_list=[predictor_target_path],
+            dependent_task_list=dependent_task_list,
+            task_name=f'predictor {predictor_id}'))
 
     assemble_predictor_data_task = task_graph.add_task(
         func=_json_to_gpkg_table,
