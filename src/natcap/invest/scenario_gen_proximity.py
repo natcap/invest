@@ -289,7 +289,6 @@ MODEL_SPEC = spec.ModelSpec(
 )
 
 
-
 # This sets the largest number of elements that will be packed at once and
 # addresses a memory leak issue that happens when many arguments are passed
 # to the function via the * operator

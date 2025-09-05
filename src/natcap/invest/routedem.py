@@ -295,17 +295,6 @@ MODEL_SPEC = spec.ModelSpec(
 )
 
 
-
-# replace %s with file suffix
-_TARGET_FILLED_PITS_FILED_PATTERN = 'filled%s.tif'
-_TARGET_SLOPE_FILE_PATTERN = 'slope%s.tif'
-_TARGET_FLOW_DIRECTION_FILE_PATTERN = 'flow_direction%s.tif'
-_FLOW_ACCUMULATION_FILE_PATTERN = 'flow_accumulation%s.tif'
-_STREAM_MASK_FILE_PATTERN = 'stream_mask%s.tif'
-_DOWNSLOPE_DISTANCE_FILE_PATTERN = 'downslope_distance%s.tif'
-_STRAHLER_STREAM_ORDER_PATTERN = 'strahler_stream_order%s.gpkg'
-_SUBWATERSHEDS_PATTERN = 'subwatersheds%s.gpkg'
-
 _ROUTING_FUNCS = {
     'D8': {
         'flow_accumulation': pygeoprocessing.routing.flow_accumulation_d8,

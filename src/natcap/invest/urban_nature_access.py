@@ -688,30 +688,6 @@ MODEL_SPEC = spec.ModelSpec(
 )
 
 
-_OUTPUT_BASE_FILES = {
-    'urban_nature_supply_percapita': 'urban_nature_supply_percapita.tif',
-    'admin_boundaries': 'admin_boundaries.gpkg',
-    'urban_nature_balance_percapita': 'urban_nature_balance_percapita.tif',
-    'urban_nature_balance_totalpop': 'urban_nature_balance_totalpop.tif',
-    'urban_nature_demand': 'urban_nature_demand.tif',
-}
-
-_INTERMEDIATE_BASE_FILES = {
-    'aligned_population': 'aligned_population.tif',
-    'masked_population': 'masked_population.tif',
-    'aligned_lulc': 'aligned_lulc.tif',
-    'masked_lulc': 'masked_lulc.tif',
-    'aligned_mask': 'aligned_valid_pixels_mask.tif',
-    'urban_nature_area': 'urban_nature_area.tif',
-    'urban_nature_population_ratio': 'urban_nature_population_ratio.tif',
-    'convolved_population': 'convolved_population.tif',
-    'undersupplied_population': 'undersupplied_population.tif',
-    'oversupplied_population': 'oversupplied_population.tif',
-    'reprojected_admin_boundaries': 'reprojected_admin_boundaries.gpkg',
-    'admin_boundaries_ids': 'admin_boundaries_ids.tif',
-}
-
-
 def execute(args):
     """Urban Nature Access.
 

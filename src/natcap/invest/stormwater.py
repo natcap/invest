@@ -488,34 +488,6 @@ MODEL_SPEC = spec.ModelSpec(
 )
 
 
-INTERMEDIATE_OUTPUTS = {
-    'lulc_aligned_path': 'lulc_aligned.tif',
-    'soil_group_aligned_path': 'soil_group_aligned.tif',
-    'precipitation_aligned_path': 'precipitation_aligned.tif',
-    'reprojected_centerlines_path': 'reprojected_centerlines.gpkg',
-    'rasterized_centerlines_path': 'rasterized_centerlines.tif',
-    'connected_lulc_path': 'is_connected_lulc.tif',
-    'road_distance_path': 'road_distance.tif',
-    'search_kernel_path': 'search_kernel.tif',
-    'connected_lulc_distance_path': 'connected_lulc_distance.tif',
-    'near_connected_lulc_path': 'near_connected_lulc.tif',
-    'near_road_path': 'near_road.tif',
-    'ratio_average_path': 'ratio_average.tif'
-}
-
-FINAL_OUTPUTS = {
-    'reprojected_aggregate_areas_path': 'aggregate_data.gpkg',
-    'retention_ratio_path': 'retention_ratio.tif',
-    'adjusted_retention_ratio_path': 'adjusted_retention_ratio.tif',
-    'runoff_ratio_path': 'runoff_ratio.tif',
-    'retention_volume_path': 'retention_volume.tif',
-    'runoff_volume_path': 'runoff_volume.tif',
-    'percolation_ratio_path': 'percolation_ratio.tif',
-    'percolation_volume_path': 'percolation_volume.tif',
-    'retention_value_path': 'retention_value.tif'
-}
-
-
 def execute(args):
     """Execute the urban stormwater retention model.
 
