@@ -22,6 +22,7 @@ from .. import spec
 from .. import urban_nature_access
 from .. import utils
 from .. import validation
+from ..file_registry import FileRegistry
 from ..unit_registry import u
 from . import sdr_core
 
@@ -575,55 +576,8 @@ MODEL_SPEC = spec.ModelSpec(
     ]
 )
 
-_OUTPUT_BASE_FILES = {
-    'rkls_path': 'rkls.tif',
-    'sed_export_path': 'sed_export.tif',
-    'sed_deposition_path': 'sed_deposition.tif',
-    'stream_and_drainage_path': 'stream_and_drainage.tif',
-    'stream_path': 'stream.tif',
-    'usle_path': 'usle.tif',
-    'watershed_results_sdr_path': 'watershed_results_sdr.shp',
-    'avoided_export_path': 'avoided_export.tif',
-    'avoided_erosion_path': 'avoided_erosion.tif',
-}
 
 INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
-
-_INTERMEDIATE_BASE_FILES = {
-    'aligned_dem_path': 'aligned_dem.tif',
-    'aligned_drainage_path': 'aligned_drainage.tif',
-    'aligned_erodibility_path': 'aligned_erodibility.tif',
-    'aligned_erosivity_path': 'aligned_erosivity.tif',
-    'aligned_lulc_path': 'aligned_lulc.tif',
-    'mask_path': 'mask.tif',
-    'masked_dem_path': 'masked_dem.tif',
-    'masked_drainage_path': 'masked_drainage.tif',
-    'masked_erodibility_path': 'masked_erodibility.tif',
-    'masked_erosivity_path': 'masked_erosivity.tif',
-    'masked_lulc_path': 'masked_lulc.tif',
-    'cp_factor_path': 'cp.tif',
-    'd_dn_path': 'd_dn.tif',
-    'd_up_path': 'd_up.tif',
-    'f_path': 'f.tif',
-    'flow_accumulation_path': 'flow_accumulation.tif',
-    'flow_direction_path': 'flow_direction.tif',
-    'ic_path': 'ic.tif',
-    'ls_path': 'ls.tif',
-    'pit_filled_dem_path': 'pit_filled_dem.tif',
-    's_accumulation_path': 's_accumulation.tif',
-    's_bar_path': 's_bar.tif',
-    'sdr_path': 'sdr_factor.tif',
-    'slope_path': 'slope.tif',
-    'thresholded_slope_path': 'slope_threshold.tif',
-    'thresholded_w_path': 'w_threshold.tif',
-    'w_accumulation_path': 'w_accumulation.tif',
-    'w_bar_path': 'w_bar.tif',
-    'w_path': 'w.tif',
-    'ws_inverse_path': 'ws_inverse.tif',
-    'e_prime_path': 'e_prime.tif',
-    'drainage_mask': 'what_drains_to_stream.tif',
-}
-
 
 # Target nodata is for general rasters that are positive, and _IC_NODATA are
 # for rasters that are any range
@@ -693,9 +647,7 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'])
     utils.make_directories([output_dir, intermediate_output_dir])
 
-    f_reg = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
+    f_reg = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
 
     try:
         n_workers = int(args['n_workers'])
@@ -705,8 +657,7 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
-        os.path.join(output_dir, 'taskgraph_cache'),
-        n_workers, reporting_interval=5.0)
+        f_reg['taskgraph_cache'], n_workers, reporting_interval=5.0)
 
     base_list = []
     aligned_list = []
@@ -714,8 +665,8 @@ def execute(args):
     input_raster_key_list = ['dem', 'lulc', 'erosivity', 'erodibility']
     for file_key in input_raster_key_list:
         base_list.append(args[f"{file_key}_path"])
-        aligned_list.append(f_reg[f"aligned_{file_key}_path"])
-        masked_list.append(f_reg[f"masked_{file_key}_path"])
+        aligned_list.append(f_reg[f"aligned_{file_key}"])
+        masked_list.append(f_reg[f"masked_{file_key}"])
     # all continuous rasters can use bilinear, but lulc should be mode
     interpolation_list = ['bilinear', 'mode', 'bilinear', 'bilinear']
 
@@ -724,8 +675,8 @@ def execute(args):
         drainage_present = True
         input_raster_key_list.append('drainage')
         base_list.append(args['drainage_path'])
-        aligned_list.append(f_reg['aligned_drainage_path'])
-        masked_list.append(f_reg['masked_drainage_path'])
+        aligned_list.append(f_reg['aligned_drainage'])
+        masked_list.append(f_reg['masked_drainage'])
         interpolation_list.append('near')
 
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
@@ -755,10 +706,10 @@ def execute(args):
         kwargs={
             'op': _create_mutual_mask_op,
             'rasters': aligned_list,
-            'target_path': f_reg['mask_path'],
+            'target_path': f_reg['mask'],
             'target_nodata': 0,
         },
-        target_path_list=[f_reg['mask_path']],
+        target_path_list=[f_reg['mask']],
         dependent_task_list=[align_task],
         task_name='create mask')
 
@@ -769,7 +720,7 @@ def execute(args):
             func=pygeoprocessing.raster_map,
             kwargs={
                 'op': _mask_single_raster_op,
-                'rasters': [aligned_path, f_reg['mask_path']],
+                'rasters': [aligned_path, f_reg['mask']],
                 'target_path': masked_path,
             },
             target_path_list=[masked_path],
@@ -779,28 +730,28 @@ def execute(args):
     pit_fill_task = task_graph.add_task(
         func=pygeoprocessing.routing.fill_pits,
         args=(
-            (f_reg['masked_dem_path'], 1),
-            f_reg['pit_filled_dem_path']),
-        target_path_list=[f_reg['pit_filled_dem_path']],
+            (f_reg['masked_dem'], 1),
+            f_reg['pit_filled_dem']),
+        target_path_list=[f_reg['pit_filled_dem']],
         dependent_task_list=[mask_tasks['masked_dem']],
         task_name='fill pits')
 
     slope_task = task_graph.add_task(
         func=pygeoprocessing.calculate_slope,
         args=(
-            (f_reg['pit_filled_dem_path'], 1),
-            f_reg['slope_path']),
+            (f_reg['pit_filled_dem'], 1),
+            f_reg['slope']),
         dependent_task_list=[pit_fill_task],
-        target_path_list=[f_reg['slope_path']],
+        target_path_list=[f_reg['slope']],
         task_name='calculate slope')
 
     threshold_slope_task = task_graph.add_task(
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=threshold_slope_op,
-            rasters=[f_reg['slope_path']],
-            target_path=f_reg['thresholded_slope_path']),
-        target_path_list=[f_reg['thresholded_slope_path']],
+            rasters=[f_reg['slope']],
+            target_path=f_reg['slope_threshold']),
+        target_path_list=[f_reg['slope_threshold']],
         dependent_task_list=[slope_task],
         task_name='threshold slope')
 
@@ -808,30 +759,30 @@ def execute(args):
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_mfd,
             args=(
-                (f_reg['pit_filled_dem_path'], 1),
-                f_reg['flow_direction_path']),
-            target_path_list=[f_reg['flow_direction_path']],
+                (f_reg['pit_filled_dem'], 1),
+                f_reg['flow_direction']),
+            target_path_list=[f_reg['flow_direction']],
             dependent_task_list=[pit_fill_task],
             task_name='flow direction calculation')
 
         flow_accumulation_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_mfd,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                f_reg['flow_accumulation_path']),
-            target_path_list=[f_reg['flow_accumulation_path']],
+                (f_reg['flow_direction'], 1),
+                f_reg['flow_accumulation']),
+            target_path_list=[f_reg['flow_accumulation']],
             dependent_task_list=[flow_dir_task],
             task_name='flow accumulation calculation')
 
         stream_task = task_graph.add_task(
             func=pygeoprocessing.routing.extract_streams_mfd,
             args=(
-                (f_reg['flow_accumulation_path'], 1),
-                (f_reg['flow_direction_path'], 1),
+                (f_reg['flow_accumulation'], 1),
+                (f_reg['flow_direction'], 1),
                 float(args['threshold_flow_accumulation']),
-                f_reg['stream_path']),
+                f_reg['stream']),
             kwargs={'trace_threshold_proportion': 0.7},
-            target_path_list=[f_reg['stream_path']],
+            target_path_list=[f_reg['stream']],
             dependent_task_list=[flow_accumulation_task],
             task_name='extract streams')
 
@@ -841,28 +792,28 @@ def execute(args):
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_d8,
             args=(
-                (f_reg['pit_filled_dem_path'], 1),
-                f_reg['flow_direction_path']),
-            target_path_list=[f_reg['flow_direction_path']],
+                (f_reg['pit_filled_dem'], 1),
+                f_reg['flow_direction']),
+            target_path_list=[f_reg['flow_direction']],
             dependent_task_list=[pit_fill_task],
             task_name='flow direction calculation')
 
         flow_accumulation_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_d8,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                f_reg['flow_accumulation_path']),
-            target_path_list=[f_reg['flow_accumulation_path']],
+                (f_reg['flow_direction'], 1),
+                f_reg['flow_accumulation']),
+            target_path_list=[f_reg['flow_accumulation']],
             dependent_task_list=[flow_dir_task],
             task_name='flow accumulation calculation')
 
         stream_task = task_graph.add_task(
             func=pygeoprocessing.routing.extract_streams_d8,
             kwargs=dict(
-                flow_accum_raster_path_band=(f_reg['flow_accumulation_path'], 1),
+                flow_accum_raster_path_band=(f_reg['flow_accumulation'], 1),
                 flow_threshold=float(args['threshold_flow_accumulation']),
-                target_stream_raster_path=f_reg['stream_path']),
-            target_path_list=[f_reg['stream_path']],
+                target_stream_raster_path=f_reg['stream']),
+            target_path_list=[f_reg['stream']],
             dependent_task_list=[flow_accumulation_task],
             task_name='extract streams')
         d_dn_func = pygeoprocessing.routing.distance_to_channel_d8
@@ -870,11 +821,11 @@ def execute(args):
     ls_factor_task = task_graph.add_task(
         func=_calculate_ls_factor,
         args=(
-            f_reg['flow_accumulation_path'],
-            f_reg['slope_path'],
+            f_reg['flow_accumulation'],
+            f_reg['slope'],
             float(args['l_max']),
-            f_reg['ls_path']),
-        target_path_list=[f_reg['ls_path']],
+            f_reg['ls']),
+        target_path_list=[f_reg['ls']],
         dependent_task_list=[
             flow_accumulation_task, slope_task],
         task_name='ls factor calculation')
@@ -884,25 +835,25 @@ def execute(args):
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=add_drainage_op,
-                rasters=[f_reg['stream_path'], f_reg['masked_drainage_path']],
-                target_path=f_reg['stream_and_drainage_path'],
+                rasters=[f_reg['stream'], f_reg['masked_drainage']],
+                target_path=f_reg['stream_and_drainage'],
                 target_dtype=numpy.uint8),
-            target_path_list=[f_reg['stream_and_drainage_path']],
+            target_path_list=[f_reg['stream_and_drainage']],
             dependent_task_list=[stream_task, mask_tasks['masked_drainage']],
             task_name='add drainage')
         drainage_raster_path_task = (
-            f_reg['stream_and_drainage_path'], drainage_task)
+            f_reg['stream_and_drainage'], drainage_task)
     else:
         drainage_raster_path_task = (
-            f_reg['stream_path'], stream_task)
+            f_reg['stream'], stream_task)
 
     lulc_to_c = biophysical_df['usle_c'].to_dict()
     threshold_w_task = task_graph.add_task(
         func=_calculate_w,
         args=(
-            lulc_to_c, f_reg['masked_lulc_path'], f_reg['w_path'],
-            f_reg['thresholded_w_path']),
-        target_path_list=[f_reg['w_path'], f_reg['thresholded_w_path']],
+            lulc_to_c, f_reg['masked_lulc'], f_reg['w'],
+            f_reg['w_threshold']),
+        target_path_list=[f_reg['w'], f_reg['w_threshold']],
         dependent_task_list=[mask_tasks['masked_lulc']],
         task_name='calculate W')
 
@@ -910,21 +861,21 @@ def execute(args):
     cp_task = task_graph.add_task(
         func=_calculate_cp,
         args=(
-            lulc_to_cp, f_reg['masked_lulc_path'],
-            f_reg['cp_factor_path']),
-        target_path_list=[f_reg['cp_factor_path']],
+            lulc_to_cp, f_reg['masked_lulc'],
+            f_reg['cp']),
+        target_path_list=[f_reg['cp']],
         dependent_task_list=[mask_tasks['masked_lulc']],
         task_name='calculate CP')
 
     rkls_task = task_graph.add_task(
         func=_calculate_rkls,
         args=(
-            f_reg['ls_path'],
-            f_reg['masked_erosivity_path'],
-            f_reg['masked_erodibility_path'],
+            f_reg['ls'],
+            f_reg['masked_erosivity'],
+            f_reg['masked_erodibility'],
             drainage_raster_path_task[0],
-            f_reg['rkls_path']),
-        target_path_list=[f_reg['rkls_path']],
+            f_reg['rkls']),
+        target_path_list=[f_reg['rkls']],
         dependent_task_list=[
             mask_tasks['masked_erosivity'], mask_tasks['masked_erodibility'],
             drainage_raster_path_task[1], ls_factor_task],
@@ -934,28 +885,28 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=usle_op,
-            rasters=[f_reg['rkls_path'], f_reg['cp_factor_path']],
-            target_path=f_reg['usle_path']),
-        target_path_list=[f_reg['usle_path']],
+            rasters=[f_reg['rkls'], f_reg['cp']],
+            target_path=f_reg['usle']),
+        target_path_list=[f_reg['usle']],
         dependent_task_list=[rkls_task, cp_task],
         task_name='calculate USLE')
 
     bar_task_map = {}
     for factor_path, factor_task, accumulation_path, out_bar_path, bar_id in [
-            (f_reg['thresholded_w_path'], threshold_w_task,
-             f_reg['w_accumulation_path'],
-             f_reg['w_bar_path'],
+            (f_reg['w_threshold'], threshold_w_task,
+             f_reg['w_accumulation'],
+             f_reg['w_bar'],
              'w_bar'),
-            (f_reg['thresholded_slope_path'], threshold_slope_task,
-             f_reg['s_accumulation_path'],
-             f_reg['s_bar_path'],
+            (f_reg['slope_threshold'], threshold_slope_task,
+             f_reg['s_accumulation'],
+             f_reg['s_bar'],
              's_bar')]:
         bar_task = task_graph.add_task(
             func=_calculate_bar_factor,
             kwargs=dict(
-                flow_direction_path=f_reg['flow_direction_path'],
+                flow_direction_path=f_reg['flow_direction'],
                 factor_path=factor_path,
-                flow_accumulation_path=f_reg['flow_accumulation_path'],
+                flow_accumulation_path=f_reg['flow_accumulation'],
                 accumulation_path=accumulation_path,
                 out_bar_path=out_bar_path,
                 flow_dir_algorithm=args['flow_dir_algorithm']),
@@ -968,9 +919,9 @@ def execute(args):
     d_up_task = task_graph.add_task(
         func=_calculate_d_up,
         args=(
-            f_reg['w_bar_path'], f_reg['s_bar_path'],
-            f_reg['flow_accumulation_path'], f_reg['d_up_path']),
-        target_path_list=[f_reg['d_up_path']],
+            f_reg['w_bar'], f_reg['s_bar'],
+            f_reg['flow_accumulation'], f_reg['d_up']),
+        target_path_list=[f_reg['d_up']],
         dependent_task_list=[
             bar_task_map['s_bar'], bar_task_map['w_bar'],
             flow_accumulation_task],
@@ -980,21 +931,21 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=inverse_ws_op,
-            rasters=[f_reg['thresholded_w_path'],
-                     f_reg['thresholded_slope_path']],
-            target_path=f_reg['ws_inverse_path']),
-        target_path_list=[f_reg['ws_inverse_path']],
+            rasters=[f_reg['w_threshold'],
+                     f_reg['slope_threshold']],
+            target_path=f_reg['ws_inverse']),
+        target_path_list=[f_reg['ws_inverse']],
         dependent_task_list=[threshold_slope_task, threshold_w_task],
         task_name='calculate inverse ws factor')
 
     d_dn_task = task_graph.add_task(
         func=d_dn_func,
         args=(
-            (f_reg['flow_direction_path'], 1),
+            (f_reg['flow_direction'], 1),
             (drainage_raster_path_task[0], 1),
-            f_reg['d_dn_path']),
-        kwargs={'weight_raster_path_band': (f_reg['ws_inverse_path'], 1)},
-        target_path_list=[f_reg['d_dn_path']],
+            f_reg['d_dn']),
+        kwargs={'weight_raster_path_band': (f_reg['ws_inverse'], 1)},
+        target_path_list=[f_reg['d_dn']],
         dependent_task_list=[
             flow_dir_task, drainage_raster_path_task[1],
             inverse_ws_factor_task],
@@ -1003,8 +954,8 @@ def execute(args):
     ic_task = task_graph.add_task(
         func=_calculate_ic,
         args=(
-            f_reg['d_up_path'], f_reg['d_dn_path'], f_reg['ic_path']),
-        target_path_list=[f_reg['ic_path']],
+            f_reg['d_up'], f_reg['d_dn'], f_reg['ic']),
+        target_path_list=[f_reg['ic']],
         dependent_task_list=[d_up_task, d_dn_task],
         task_name='calculate ic')
 
@@ -1012,9 +963,9 @@ def execute(args):
         func=_calculate_sdr,
         args=(
             float(args['k_param']), float(args['ic_0_param']),
-            float(args['sdr_max']), f_reg['ic_path'],
-            drainage_raster_path_task[0], f_reg['sdr_path']),
-        target_path_list=[f_reg['sdr_path']],
+            float(args['sdr_max']), f_reg['ic'],
+            drainage_raster_path_task[0], f_reg['sdr_factor']),
+        target_path_list=[f_reg['sdr_factor']],
         dependent_task_list=[ic_task],
         task_name='calculate sdr')
 
@@ -1022,73 +973,73 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=numpy.multiply,  # export = USLE * SDR
-            rasters=[f_reg['usle_path'], f_reg['sdr_path']],
-            target_path=f_reg['sed_export_path']),
-        target_path_list=[f_reg['sed_export_path']],
+            rasters=[f_reg['usle'], f_reg['sdr_factor']],
+            target_path=f_reg['sed_export']),
+        target_path_list=[f_reg['sed_export']],
         dependent_task_list=[usle_task, sdr_task],
         task_name='calculate sed export')
 
     e_prime_task = task_graph.add_task(
         func=_calculate_e_prime,
         args=(
-            f_reg['usle_path'], f_reg['sdr_path'],
-            drainage_raster_path_task[0], f_reg['e_prime_path']),
-        target_path_list=[f_reg['e_prime_path']],
+            f_reg['usle'], f_reg['sdr_factor'],
+            drainage_raster_path_task[0], f_reg['e_prime']),
+        target_path_list=[f_reg['e_prime']],
         dependent_task_list=[usle_task, sdr_task],
         task_name='calculate export prime')
 
     sed_deposition_task = task_graph.add_task(
         func=sdr_core.calculate_sediment_deposition,
         kwargs=dict(
-            flow_direction_path=f_reg['flow_direction_path'],
-            e_prime_path=f_reg['e_prime_path'],
-            f_path=f_reg['f_path'],
-            sdr_path=f_reg['sdr_path'],
-            target_sediment_deposition_path=f_reg['sed_deposition_path'],
+            flow_direction_path=f_reg['flow_direction'],
+            e_prime_path=f_reg['e_prime'],
+            f_path=f_reg['flux'],
+            sdr_path=f_reg['sdr_factor'],
+            target_sediment_deposition_path=f_reg['sed_deposition'],
             algorithm=args['flow_dir_algorithm']),
         dependent_task_list=[e_prime_task, sdr_task, flow_dir_task],
-        target_path_list=[f_reg['sed_deposition_path'], f_reg['f_path']],
+        target_path_list=[f_reg['sed_deposition'], f_reg['flux']],
         task_name='sediment deposition')
 
     avoided_erosion_task = task_graph.add_task(
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=numpy.subtract,  # avoided erosion = rkls - usle
-            rasters=[f_reg['rkls_path'], f_reg['usle_path']],
-            target_path=f_reg['avoided_erosion_path']),
+            rasters=[f_reg['rkls'], f_reg['usle']],
+            target_path=f_reg['avoided_erosion']),
         dependent_task_list=[rkls_task, usle_task],
-        target_path_list=[f_reg['avoided_erosion_path']],
+        target_path_list=[f_reg['avoided_erosion']],
         task_name='calculate avoided erosion')
 
     avoided_export_task = task_graph.add_task(
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=_avoided_export_op,
-            rasters=[f_reg['avoided_erosion_path'],
-                     f_reg['sdr_path'],
-                     f_reg['sed_deposition_path']],
-            target_path=f_reg['avoided_export_path']),
+            rasters=[f_reg['avoided_erosion'],
+                     f_reg['sdr_factor'],
+                     f_reg['sed_deposition']],
+            target_path=f_reg['avoided_export']),
         dependent_task_list=[avoided_erosion_task, sdr_task,
                              sed_deposition_task],
-        target_path_list=[f_reg['avoided_export_path']],
+        target_path_list=[f_reg['avoided_export']],
         task_name='calculate total retention')
 
     _ = task_graph.add_task(
         func=_calculate_what_drains_to_stream,
-        args=(f_reg['flow_direction_path'], f_reg['d_dn_path'],
-              f_reg['drainage_mask']),
-        target_path_list=[f_reg['drainage_mask']],
+        args=(f_reg['flow_direction'], f_reg['d_dn'],
+              f_reg['what_drains_to_stream']),
+        target_path_list=[f_reg['what_drains_to_stream']],
         dependent_task_list=[flow_dir_task, d_dn_task],
         task_name='write mask of what drains to stream')
 
     _ = task_graph.add_task(
         func=_generate_report,
         args=(
-            args['watersheds_path'], f_reg['usle_path'],
-            f_reg['sed_export_path'], f_reg['sed_deposition_path'],
-            f_reg['avoided_export_path'], f_reg['avoided_erosion_path'],
-            f_reg['watershed_results_sdr_path']),
-        target_path_list=[f_reg['watershed_results_sdr_path']],
+            args['watersheds_path'], f_reg['usle'],
+            f_reg['sed_export'], f_reg['sed_deposition'],
+            f_reg['avoided_export'], f_reg['avoided_erosion'],
+            f_reg['watershed_results_sdr']),
+        target_path_list=[f_reg['watershed_results_sdr']],
         dependent_task_list=[
             usle_task, sed_export_task, avoided_export_task,
             sed_deposition_task, avoided_erosion_task],

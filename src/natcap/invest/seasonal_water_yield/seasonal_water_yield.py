@@ -17,6 +17,7 @@ from .. import gettext
 from .. import spec
 from .. import utils
 from .. import validation
+from ..file_registry import FileRegistry
 from ..unit_registry import u
 from . import seasonal_water_yield_core
 
@@ -397,7 +398,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.STREAM,
         spec.SingleBandRasterOutput(
-            id="p",
+            id="annual_precip",
             path="P.tif",
             about=gettext("The total precipitation across all months on this pixel."),
             data_type=float,
@@ -414,7 +415,7 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.VectorOutput(
-            id="aggregated_results_swy",
+            id="aggregate_vector",
             path="aggregated_results_swy.shp",
             about=gettext("Table of biophysical values for each watershed"),
             geometry_types={"MULTIPOLYGON", "POLYGON"},
@@ -573,41 +574,6 @@ MODEL_SPEC = spec.ModelSpec(
 )
 
 
-_OUTPUT_BASE_FILES = {
-    'aggregate_vector_path': 'aggregated_results_swy.shp',
-    'annual_precip_path': 'P.tif',
-    'cn_path': 'CN.tif',
-    'l_avail_path': 'L_avail.tif',
-    'l_path': 'L.tif',
-    'l_sum_path': 'L_sum.tif',
-    'l_sum_avail_path': 'L_sum_avail.tif',
-    'qf_path': 'QF.tif',
-    'stream_path': 'stream.tif',
-    'b_sum_path': 'B_sum.tif',
-    'b_path': 'B.tif',
-    'vri_path': 'Vri.tif',
-}
-
-_INTERMEDIATE_BASE_FILES = {
-    'aet_path': 'aet.tif',
-    'aetm_path_list': [f'aetm_{x+1}.tif' for x in range(N_MONTHS)],
-    'flow_dir_path': 'flow_dir.tif',
-    'qfm_path_list': [f'qf_{x+1}.tif' for x in range(N_MONTHS)],
-    'si_path': 'Si.tif',
-    'lulc_aligned_path': 'lulc_aligned.tif',
-    'dem_aligned_path': 'dem_aligned.tif',
-    'dem_pit_filled_path': 'pit_filled_dem.tif',
-    'soil_group_aligned_path': 'soil_group_aligned.tif',
-    'flow_accum_path': 'flow_accum.tif',
-    'precip_path_aligned_list': [f'prcp_a{x+1}.tif' for x in range(N_MONTHS)],
-    'n_events_path_list': [f'n_events{x+1}.tif' for x in range(N_MONTHS)],
-    'et0_path_aligned_list': [f'et0_a{x+1}.tif' for x in range(N_MONTHS)],
-    'kc_path_list': [f'kc_{x+1}.tif' for x in range(N_MONTHS)],
-    'l_aligned_path': 'l_aligned.tif',
-    'cz_aligned_raster_path': 'cz_aligned.tif',
-}
-
-
 def execute(args):
     """Seasonal Water Yield.
 
@@ -718,6 +684,7 @@ def execute(args):
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = args['workspace_dir']
     utils.make_directories([intermediate_output_dir, output_dir])
+    file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
 
     try:
         n_workers = int(args['n_workers'])
@@ -728,30 +695,24 @@ def execute(args):
         n_workers = -1  # Synchronous mode.
     LOGGER.debug('n_workers: %s', n_workers)
     task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
-        n_workers, reporting_interval=5)
-
-    LOGGER.info('Building file registry')
-    file_registry = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
+        file_registry['taskgraph_cache'], n_workers, reporting_interval=5)
 
     LOGGER.info('Checking that the AOI is not the output aggregate vector')
     LOGGER.debug("aoi_path: %s", args['aoi_path'])
     LOGGER.debug("aggregate_vector_path: %s",
-                 os.path.normpath(file_registry['aggregate_vector_path']))
+                 os.path.normpath(file_registry['aggregate_vector']))
     if (os.path.normpath(args['aoi_path']) ==
-            os.path.normpath(file_registry['aggregate_vector_path'])):
+            os.path.normpath(file_registry['aggregate_vector'])):
         raise ValueError(
             "The input AOI is the same as the output aggregate vector, "
             "please choose a different workspace or move the AOI file "
             "out of the current workspace %s" %
-            file_registry['aggregate_vector_path'])
+            file_registry['aggregate_vector'])
 
     LOGGER.info('Aligning and clipping dataset list')
     input_align_list = [args['lulc_raster_path'], args['dem_raster_path']]
     output_align_list = [
-        file_registry['lulc_aligned_path'], file_registry['dem_aligned_path']]
+        file_registry['lulc_aligned'], file_registry['dem_aligned']]
     if not args['user_defined_local_recharge']:
         month_indexes = [m+1 for m in range(N_MONTHS)]
 
@@ -778,18 +739,18 @@ def execute(args):
             precip_path_list + [args['soil_group_path']] + et0_path_list +
             input_align_list)
         output_align_list = (
-            file_registry['precip_path_aligned_list'] +
-            [file_registry['soil_group_aligned_path']] +
-            file_registry['et0_path_aligned_list'] + output_align_list)
+            [file_registry['prcp_a[MONTH]', month] for month in range(12)] +
+            [file_registry['soil_group_aligned']] +
+            [file_registry['et0_a[MONTH]', month] for month in range(12)] +
+            output_align_list)
 
     align_index = len(input_align_list) - 1  # this aligns with the DEM
     if args['user_defined_local_recharge']:
         input_align_list.append(args['l_path'])
-        output_align_list.append(file_registry['l_aligned_path'])
+        output_align_list.append(file_registry['l_aligned'])
     elif args['user_defined_climate_zones']:
         input_align_list.append(args['climate_zone_raster_path'])
-        output_align_list.append(
-            file_registry['cz_aligned_raster_path'])
+        output_align_list.append(file_registry['cz_aligned'])
     interpolate_list = ['near'] * len(input_align_list)
 
     align_task = task_graph.add_task(
@@ -806,10 +767,10 @@ def execute(args):
     fill_pit_task = task_graph.add_task(
         func=pygeoprocessing.routing.fill_pits,
         args=(
-            (file_registry['dem_aligned_path'], 1),
-            file_registry['dem_pit_filled_path']),
+            (file_registry['dem_aligned'], 1),
+            file_registry['pit_filled_dem']),
         kwargs={'working_dir': intermediate_output_dir},
-        target_path_list=[file_registry['dem_pit_filled_path']],
+        target_path_list=[file_registry['pit_filled_dem']],
         dependent_task_list=[align_task],
         task_name='fill dem pits')
 
@@ -817,59 +778,59 @@ def execute(args):
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_mfd,
             args=(
-                (file_registry['dem_pit_filled_path'], 1),
-                file_registry['flow_dir_path']),
+                (file_registry['pit_filled_dem'], 1),
+                file_registry['flow_dir']),
             kwargs={'working_dir': intermediate_output_dir},
-            target_path_list=[file_registry['flow_dir_path']],
+            target_path_list=[file_registry['flow_dir']],
             dependent_task_list=[fill_pit_task],
             task_name='flow direction - MFD')
 
         flow_accum_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_mfd,
             args=(
-                (file_registry['flow_dir_path'], 1),
-                file_registry['flow_accum_path']),
-            target_path_list=[file_registry['flow_accum_path']],
+                (file_registry['flow_dir'], 1),
+                file_registry['flow_accum']),
+            target_path_list=[file_registry['flow_accum']],
             dependent_task_list=[flow_dir_task],
             task_name='flow accumulation - MFD')
 
         stream_threshold_task = task_graph.add_task(
             func=pygeoprocessing.routing.extract_streams_mfd,
             args=(
-                (file_registry['flow_accum_path'], 1),
-                (file_registry['flow_dir_path'], 1),
+                (file_registry['flow_accum'], 1),
+                (file_registry['flow_dir'], 1),
                 threshold_flow_accumulation,
-                file_registry['stream_path']),
-            target_path_list=[file_registry['stream_path']],
+                file_registry['stream']),
+            target_path_list=[file_registry['stream']],
             dependent_task_list=[flow_accum_task],
             task_name='stream threshold - MFD')
     else: # D8
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_d8,
             args=(
-                (file_registry['dem_pit_filled_path'], 1),
-                file_registry['flow_dir_path']),
+                (file_registry['pit_filled_dem'], 1),
+                file_registry['flow_dir']),
             kwargs={'working_dir': intermediate_output_dir},
-            target_path_list=[file_registry['flow_dir_path']],
+            target_path_list=[file_registry['flow_dir']],
             dependent_task_list=[fill_pit_task],
             task_name='flow direction - D8')
 
         flow_accum_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_d8,
             args=(
-                (file_registry['flow_dir_path'], 1),
-                file_registry['flow_accum_path']),
-            target_path_list=[file_registry['flow_accum_path']],
+                (file_registry['flow_dir'], 1),
+                file_registry['flow_accum']),
+            target_path_list=[file_registry['flow_accum']],
             dependent_task_list=[flow_dir_task],
             task_name='flow accumulation - D8')
 
         stream_threshold_task = task_graph.add_task(
             func=pygeoprocessing.routing.extract_streams_d8,
             kwargs=dict(
-                flow_accum_raster_path_band=(file_registry['flow_accum_path'], 1),
+                flow_accum_raster_path_band=(file_registry['flow_accum'], 1),
                 flow_threshold=threshold_flow_accumulation,
-                target_stream_raster_path=file_registry['stream_path']),
-            target_path_list=[file_registry['stream_path']],
+                target_stream_raster_path=file_registry['stream']),
+            target_path_list=[file_registry['stream']],
             dependent_task_list=[flow_accum_task],
             task_name='stream threshold - D8')
 
@@ -877,14 +838,12 @@ def execute(args):
 
     LOGGER.info('quick flow')
     if args['user_defined_local_recharge']:
-        file_registry['l_path'] = file_registry['l_aligned_path']
-
         l_avail_task = task_graph.add_task(
             func=_calculate_l_avail,
             args=(
-                file_registry['l_path'], gamma,
-                file_registry['l_avail_path']),
-            target_path_list=[file_registry['l_avail_path']],
+                file_registry['l_aligned'], gamma,
+                file_registry['l_avail']),
+            target_path_list=[file_registry['l_avail']],
             dependent_task_list=[align_task],
             task_name='l avail task')
     else:
@@ -904,13 +863,13 @@ def execute(args):
                 n_events_task = task_graph.add_task(
                     func=utils.reclassify_raster,
                     args=(
-                        (file_registry['cz_aligned_raster_path'], 1),
+                        (file_registry['cz_aligned'], 1),
                         climate_zone_rain_events_month,
-                        file_registry['n_events_path_list'][month_id],
+                        file_registry['n_events[MONTH]', month_id],
                         gdal.GDT_Float32, TARGET_NODATA,
                         reclass_error_details),
                     target_path_list=[
-                        file_registry['n_events_path_list'][month_id]],
+                        file_registry['n_events[MONTH]', month_id]],
                     dependent_task_list=[align_task],
                     task_name='n_events for month %d' % month_id)
                 reclassify_n_events_task_list.append(n_events_task)
@@ -918,13 +877,13 @@ def execute(args):
                 n_events_task = task_graph.add_task(
                     func=pygeoprocessing.new_raster_from_base,
                     args=(
-                        file_registry['dem_aligned_path'],
-                        file_registry['n_events_path_list'][month_id],
+                        file_registry['dem_aligned'],
+                        file_registry['n_events[MONTH]', month_id],
                         gdal.GDT_Float32, [TARGET_NODATA]),
                     kwargs={'fill_value_list': (
                         rain_events_df['events'][month_id+1],)},
                     target_path_list=[
-                        file_registry['n_events_path_list'][month_id]],
+                        file_registry['n_events[MONTH]', month_id]],
                     dependent_task_list=[align_task],
                     task_name=(
                         'n_events as a constant raster month %d' % month_id))
@@ -933,20 +892,20 @@ def execute(args):
         curve_number_task = task_graph.add_task(
             func=_calculate_curve_number_raster,
             args=(
-                file_registry['lulc_aligned_path'],
-                file_registry['soil_group_aligned_path'],
+                file_registry['lulc_aligned'],
+                file_registry['soil_group_aligned'],
                 biophysical_df,
-                file_registry['cn_path']),
-            target_path_list=[file_registry['cn_path']],
+                file_registry['cn']),
+            target_path_list=[file_registry['cn']],
             dependent_task_list=[align_task],
             task_name='calculate curve number')
 
         si_task = task_graph.add_task(
             func=_calculate_si_raster,
             args=(
-                file_registry['cn_path'], file_registry['stream_path'],
-                file_registry['si_path']),
-            target_path_list=[file_registry['si_path']],
+                file_registry['cn'], file_registry['stream'],
+                file_registry['si']),
+            target_path_list=[file_registry['si']],
             dependent_task_list=[curve_number_task, stream_threshold_task],
             task_name='calculate Si raster')
 
@@ -956,13 +915,13 @@ def execute(args):
             monthly_quick_flow_task = task_graph.add_task(
                 func=_calculate_monthly_quick_flow,
                 args=(
-                    file_registry['precip_path_aligned_list'][month_index],
-                    file_registry['n_events_path_list'][month_index],
-                    file_registry['stream_path'],
-                    file_registry['si_path'],
-                    file_registry['qfm_path_list'][month_index]),
+                    file_registry['prcp_a[MONTH]', month_index],
+                    file_registry['n_events[MONTH]', month_index],
+                    file_registry['stream'],
+                    file_registry['si'],
+                    file_registry['qf_[MONTH]', month_index + 1]),
                 target_path_list=[
-                    file_registry['qfm_path_list'][month_index]],
+                    file_registry['qf_[MONTH]', month_index + 1]],
                 dependent_task_list=[
                     align_task, reclassify_n_events_task_list[month_index],
                     si_task, stream_threshold_task],
@@ -974,9 +933,9 @@ def execute(args):
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=qfi_sum_op,
-                rasters=file_registry['qfm_path_list'],
-                target_path=file_registry['qf_path']),
-            target_path_list=[file_registry['qf_path']],
+                rasters=[file_registry['qf_[MONTH]', month] for month in range(1, 13)],
+                target_path=file_registry['qf']),
+            target_path_list=[file_registry['qf']],
             dependent_task_list=quick_flow_task_list,
             task_name='calculate QFi')
 
@@ -990,10 +949,10 @@ def execute(args):
             kc_task = task_graph.add_task(
                 func=utils.reclassify_raster,
                 args=(
-                    (file_registry['lulc_aligned_path'], 1), kc_lookup,
-                    file_registry['kc_path_list'][month_index],
+                    (file_registry['lulc_aligned'], 1), kc_lookup,
+                    file_registry['kc_[MONTH]', month_index],
                     gdal.GDT_Float32, TARGET_NODATA, reclass_error_details),
-                target_path_list=[file_registry['kc_path_list'][month_index]],
+                target_path_list=[file_registry['kc_[MONTH]', month_index]],
                 dependent_task_list=[align_task],
                 task_name='classify kc month %d' % month_index)
             kc_task_list.append(kc_task)
@@ -1003,25 +962,25 @@ def execute(args):
         calculate_local_recharge_task = task_graph.add_task(
             func=seasonal_water_yield_core.calculate_local_recharge,
             args=(
-                file_registry['precip_path_aligned_list'],
-                file_registry['et0_path_aligned_list'],
-                file_registry['qfm_path_list'],
-                file_registry['flow_dir_path'],
-                file_registry['kc_path_list'],
+                [file_registry['prcp_a[MONTH]', month] for month in range(12)],
+                [file_registry['et0_a[MONTH]', month] for month in range(12)],
+                [file_registry['qf_[MONTH]', month] for month in range(1, 13)],
+                file_registry['flow_dir'],
+                [file_registry['kc_[MONTH]', month] for month in range(12)],
                 alpha_month_map,
-                beta_i, gamma, file_registry['stream_path'],
-                file_registry['l_path'],
-                file_registry['l_avail_path'],
-                file_registry['l_sum_avail_path'],
-                file_registry['aet_path'],
-                file_registry['annual_precip_path'],
+                beta_i, gamma, file_registry['stream'],
+                file_registry['l_aligned'],
+                file_registry['l_avail'],
+                file_registry['l_sum_avail'],
+                file_registry['aet'],
+                file_registry['annual_precip'],
                 args['flow_dir_algorithm']),
             target_path_list=[
-                file_registry['l_path'],
-                file_registry['l_avail_path'],
-                file_registry['l_sum_avail_path'],
-                file_registry['aet_path'],
-                file_registry['annual_precip_path']
+                file_registry['l_aligned'],
+                file_registry['l_avail'],
+                file_registry['l_sum_avail'],
+                file_registry['aet'],
+                file_registry['annual_precip']
             ],
             dependent_task_list=[
                 align_task, flow_dir_task, stream_threshold_task,
@@ -1036,18 +995,18 @@ def execute(args):
 
     vri_task = task_graph.add_task(
         func=_calculate_vri,
-        args=(file_registry['l_path'], file_registry['vri_path']),
-        target_path_list=[file_registry['vri_path']],
+        args=(file_registry['l_aligned'], file_registry['vri']),
+        target_path_list=[file_registry['vri']],
         dependent_task_list=vri_dependent_task_list,
         task_name='calculate vri')
 
     aggregate_recharge_task = task_graph.add_task(
         func=_aggregate_recharge,
         args=(
-            args['aoi_path'], file_registry['l_path'],
-            file_registry['vri_path'],
-            file_registry['aggregate_vector_path']),
-        target_path_list=[file_registry['aggregate_vector_path']],
+            args['aoi_path'], file_registry['l_aligned'],
+            file_registry['vri'],
+            file_registry['aggregate_vector']),
+        target_path_list=[file_registry['aggregate_vector']],
         dependent_task_list=[vri_task],
         task_name='aggregate recharge')
 
@@ -1056,10 +1015,10 @@ def execute(args):
         l_sum_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_mfd,
             args=(
-                (file_registry['flow_dir_path'], 1),
-                file_registry['l_sum_path']),
-            kwargs={'weight_raster_path_band': (file_registry['l_path'], 1)},
-            target_path_list=[file_registry['l_sum_path']],
+                (file_registry['flow_dir'], 1),
+                file_registry['l_sum']),
+            kwargs={'weight_raster_path_band': (file_registry['l_aligned'], 1)},
+            target_path_list=[file_registry['l_sum']],
             dependent_task_list=vri_dependent_task_list + [
                 fill_pit_task, flow_dir_task, stream_threshold_task],
             task_name='calculate l sum - MFD')
@@ -1067,10 +1026,10 @@ def execute(args):
         l_sum_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_d8,
             args=(
-                (file_registry['flow_dir_path'], 1),
-                file_registry['l_sum_path']),
-            kwargs={'weight_raster_path_band': (file_registry['l_path'], 1)},
-            target_path_list=[file_registry['l_sum_path']],
+                (file_registry['flow_dir'], 1),
+                file_registry['l_sum']),
+            kwargs={'weight_raster_path_band': (file_registry['l_aligned'], 1)},
+            target_path_list=[file_registry['l_sum']],
             dependent_task_list=vri_dependent_task_list + [
                 fill_pit_task, flow_dir_task, stream_threshold_task],
             task_name='calculate l sum - D8')
@@ -1083,16 +1042,16 @@ def execute(args):
     b_sum_task = task_graph.add_task(
         func=seasonal_water_yield_core.route_baseflow_sum,
         args=(
-            file_registry['flow_dir_path'],
-            file_registry['l_path'],
-            file_registry['l_avail_path'],
-            file_registry['l_sum_path'],
-            file_registry['stream_path'],
-            file_registry['b_path'],
-            file_registry['b_sum_path'],
+            file_registry['flow_dir'],
+            file_registry['l_aligned'],
+            file_registry['l_avail'],
+            file_registry['l_sum'],
+            file_registry['stream'],
+            file_registry['b'],
+            file_registry['b_sum'],
             args['flow_dir_algorithm']),
         target_path_list=[
-            file_registry['b_sum_path'], file_registry['b_path']],
+            file_registry['b_sum'], file_registry['b']],
         dependent_task_list=b_sum_dependent_task_list + [l_sum_task],
         task_name='calculate B_sum')
 
