@@ -260,12 +260,6 @@ MODEL_SPEC = spec.ModelSpec(
 )
 
 
-
-ALIGNED_LULC_RASTER_TEMPLATE = 'aligned_lulc_{year}{suffix}.tif'
-TRANSITION_TABLE = 'carbon_pool_transition_template{suffix}.csv'
-BIOPHYSICAL_TABLE = 'carbon_biophysical_table_template{suffix}.csv'
-
-
 def execute(args):
     """Coastal Blue Carbon Preprocessor.
 

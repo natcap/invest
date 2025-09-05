@@ -396,92 +396,10 @@ _REGRESSION_TABLE_PATTERN = os.path.join(
 _EXPECTED_REGRESSION_TABLE_HEADERS = [
     'yield_ceiling', 'b_nut', 'b_k2o', 'c_n', 'c_p2o5', 'c_k2o']
 
-# crop_name, yield_regression_id, file_suffix
-_COARSE_YIELD_REGRESSION_PARAMETER_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_%s_coarse_regression_parameter%s.tif')
-
-# crop_name, yield_regression_id
-_INTERPOLATED_YIELD_REGRESSION_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_%s_interpolated_regression_parameter%s.tif')
-
-# crop_id, file_suffix
-_NITROGEN_YIELD_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_nitrogen_yield%s.tif')
-
-# crop_id, file_suffix
-_PHOSPHORUS_YIELD_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_phosphorus_yield%s.tif')
-
-# crop_id, file_suffix
-_POTASSIUM_YIELD_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_potassium_yield%s.tif')
-
-# file suffix
-_CLIPPED_NITROGEN_RATE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, 'nitrogen_rate%s.tif')
-
-# file suffix
-_CLIPPED_PHOSPHORUS_RATE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, 'phosphorus_rate%s.tif')
-
-# file suffix
-_CLIPPED_POTASSIUM_RATE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, 'potassium_rate%s.tif')
-
-# file suffix
-_CLIPPED_IRRIGATION_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, 'irrigation_mask%s.tif')
-
-# crop_name, file_suffix
-_CROP_PRODUCTION_FILE_PATTERN = os.path.join(
-    '.', '%s_regression_production%s.tif')
-
-# crop_name, file_suffix
-_N_REQ_RF_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_n_req_rf_%s.tif')
-
-# crop_name, file_suffix
-_P_REQ_RF_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_p_req_rf_%s.tif')
-
-# crop_name, file_suffix
-_K_REQ_RF_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_k_req_rf_%s.tif')
-
-
 _GLOBAL_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
     'observed_yield', '%s_yield_map.tif')  # crop_name
 _EXTENDED_CLIMATE_BIN_FILE_PATTERN = os.path.join(
     'extended_climate_bin_maps', 'extendedclimatebins%s.tif')  # crop_name
-
-# crop_name, file_suffix
-_CLIPPED_CLIMATE_BIN_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR,
-    'clipped_%s_climate_bin_map%s.tif')
-
-# crop_name, file_suffix
-_CLIPPED_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_clipped_observed_yield%s.tif')
-
-# crop_name, file_suffix
-_ZEROED_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_zeroed_observed_yield%s.tif')
-
-# crop_name, file_suffix
-_INTERPOLATED_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_interpolated_observed_yield%s.tif')
-
-# crop_name, file_suffix
-_OBSERVED_PRODUCTION_FILE_PATTERN = os.path.join(
-    '.', '%s_observed_production%s.tif')
-
-# file_suffix
-_AGGREGATE_VECTOR_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, 'aggregate_vector%s.shp')
-
-# file_suffix
-_AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
-    '.', 'aggregate_results%s.csv')
 
 _EXPECTED_NUTRIENT_TABLE_HEADERS = [
     'protein', 'lipid', 'energy', 'ca', 'fe', 'mg', 'ph', 'k', 'na', 'zn',
@@ -814,7 +732,8 @@ def execute(args):
             task_name='nodata_to_zero_for_observed_yield_%s_' % crop_name)
         dependent_task_list.append(nodata_to_zero_for_observed_yield_task)
 
-        interpolated_observed_yield_raster_path = file_registry['[CROP]_interpolated_observed_yield', crop_name]
+        interpolated_observed_yield_raster_path = file_registry[
+            '[CROP]_interpolated_observed_yield', crop_name]
         LOGGER.info(
             "Interpolating observed %s raster to landcover.", crop_name)
         interpolate_observed_yield_task = task_graph.add_task(
@@ -829,7 +748,8 @@ def execute(args):
             task_name='interpolate_observed_yield_to_lulc_%s' % crop_name)
         dependent_task_list.append(interpolate_observed_yield_task)
 
-        observed_production_raster_path = file_registry['[CROP]_observed_production', crop_name]
+        observed_production_raster_path = file_registry[
+            '[CROP]_observed_production', crop_name]
         calculate_observed_production_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(args['landcover_raster_path'], 1),
@@ -857,7 +777,7 @@ def execute(args):
         args=(nutrient_df,
               crop_names, pixel_area_ha,
               args['landcover_raster_path'], landcover_nodata,
-              output_dir, file_suffix, result_table_path),
+              output_dir, file_suffix, file_registry, result_table_path),
         target_path_list=[result_table_path],
         dependent_task_list=dependent_task_list,
         task_name='tabulate_results')
@@ -874,7 +794,7 @@ def execute(args):
                   aggregate_results_table_path,
                   landcover_raster_info['projection_wkt'],
                   crop_names, nutrient_df, pixel_area_ha,
-                  output_dir, file_suffix),
+                  output_dir, file_suffix, file_registry),
             target_path_list=[target_aggregate_vector_path,
                               aggregate_results_table_path],
             dependent_task_list=dependent_task_list,
@@ -962,9 +882,9 @@ def _mask_observed_yield_op(
 
 
 def tabulate_regression_results(
-        nutrient_df,
-        crop_names, pixel_area_ha, landcover_raster_path,
-        landcover_nodata, output_dir, file_suffix, target_table_path):
+        nutrient_df, crop_names, pixel_area_ha, landcover_raster_path,
+        landcover_nodata, output_dir, file_suffix, file_registry,
+        target_table_path):
     """Write table with total yield and nutrient results by crop.
 
     This function includes all the operations that write to results_table.csv.
@@ -977,6 +897,7 @@ def tabulate_regression_results(
         landcover_nodata (float): landcover raster nodata value
         output_dir (string): the file path to the output workspace.
         file_suffix (string): string to append to any output filenames.
+        file_registry (FileRegistry): used to look up target file paths
         target_table_path (string): path to 'result_table.csv' in the output
             workspace
 
@@ -1002,10 +923,8 @@ def tabulate_regression_results(
             production_lookup = {}
             production_pixel_count = 0
             yield_sum = 0
-            observed_production_raster_path = os.path.join(
-                output_dir,
-                _OBSERVED_PRODUCTION_FILE_PATTERN % (
-                    crop_name, file_suffix))
+            observed_production_raster_path = file_registry[
+                '[CROP]_observed_production', crop_name]
 
             LOGGER.info(
                 "Calculating production area and summing observed yield.")
@@ -1029,9 +948,8 @@ def tabulate_regression_results(
             result_table.write(',%f' % production_area)
             result_table.write(",%f" % yield_sum)
 
-            crop_production_raster_path = os.path.join(
-                output_dir, _CROP_PRODUCTION_FILE_PATTERN % (
-                    crop_name, file_suffix))
+            crop_production_raster_path = file_registry[
+                '[CROP]_regression_production', crop_name]
             yield_sum = 0
             for _, yield_block in pygeoprocessing.iterblocks(
                     (crop_production_raster_path, 1)):
@@ -1074,8 +992,8 @@ def tabulate_regression_results(
 
 def aggregate_regression_results_to_polygons(
         base_aggregate_vector_path, target_aggregate_vector_path,
-        aggregate_results_table_path, landcover_raster_projection,
-        crop_names, nutrient_df, pixel_area_ha, output_dir, file_suffix):
+        aggregate_results_table_path, landcover_raster_projection, crop_names,
+        nutrient_df, pixel_area_ha, output_dir, file_suffix, file_registry):
     """Write table with aggregate results of yield and nutrient values.
 
     Use zonal statistics to summarize total observed and interpolated
@@ -1094,6 +1012,7 @@ def aggregate_regression_results_to_polygons(
         pixel_area_ha (float): area of lulc raster cells (hectares)
         output_dir (string): the file path to the output workspace.
         file_suffix (string): string to append to any output filenames.
+        file_registry (FileRegistry): used to look up target file paths
 
     Returns:
         None
@@ -1120,9 +1039,8 @@ def aggregate_regression_results_to_polygons(
             1 - nutrient_df['percentrefuse'][crop_name] / 100)
         LOGGER.info(
             "Calculating zonal stats for %s", crop_name)
-        crop_production_raster_path = os.path.join(
-            output_dir, _CROP_PRODUCTION_FILE_PATTERN % (
-                crop_name, file_suffix))
+        crop_production_raster_path = file_registry[
+            '[CROP]_regression_production', crop_name]
         total_yield_lookup['%s_modeled' % crop_name] = (
             pygeoprocessing.zonal_statistics(
                 (crop_production_raster_path, 1),
@@ -1139,9 +1057,7 @@ def aggregate_regression_results_to_polygons(
                         * nutrient_df[nutrient_id][crop_name])
 
         # process observed
-        observed_yield_path = os.path.join(
-            output_dir, _OBSERVED_PRODUCTION_FILE_PATTERN % (
-                crop_name, file_suffix))
+        observed_yield_path = file_registry['[CROP]_observed_production', crop_name]
         total_yield_lookup['%s_observed' % crop_name] = (
             pygeoprocessing.zonal_statistics(
                 (observed_yield_path, 1),

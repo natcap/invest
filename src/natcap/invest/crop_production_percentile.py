@@ -392,7 +392,7 @@ MODEL_SPEC = spec.ModelSpec(
                     units=u.metric_ton
                 ),
                 spec.NumberOutput(
-                    id="[CROP]_yield_[PERCENTILE]",
+                    id="[CROP]_yield_[PERCENTILE]th",
                     about=gettext(
                         "Modeled production of the given crop within the polygon at the"
                         " given percentile"
@@ -408,7 +408,7 @@ MODEL_SPEC = spec.ModelSpec(
                 ],
                 *[
                     spec.NumberOutput(
-                        id=f"{nutrient_code}_[PERCENTILE]",
+                        id=f"{nutrient_code}_yield_[PERCENTILE]th",
                         about=(
                             f"Modeled {nutrient} production within the polygon at"
                             "the given percentile"),
@@ -435,7 +435,7 @@ MODEL_SPEC = spec.ModelSpec(
                     units=u.metric_ton
                 ),
                 spec.NumberOutput(
-                    id="production_[PERCENTILE]",
+                    id="production_[PERCENTILE]th",
                     about=gettext("Modeled crop production at the given percentile"),
                     units=u.metric_ton
                 ),
@@ -448,7 +448,7 @@ MODEL_SPEC = spec.ModelSpec(
                 ],
                 *[
                     spec.NumberOutput(
-                        id=f"{nutrient_code}_[PERCENTILE]",
+                        id=f"{nutrient_code}_[PERCENTILE]th",
                         about=(
                             f"Modeled {nutrient} production from the crop at"
                             "the given percentile"),
@@ -585,47 +585,6 @@ _EXTENDED_CLIMATE_BIN_FILE_PATTERN = os.path.join(
 _CLIMATE_PERCENTILE_TABLE_PATTERN = os.path.join(
     'climate_percentile_yield_tables',
     '%s_percentile_yield_table.csv')  # crop_name
-
-# crop_name, yield_percentile_id
-_INTERPOLATED_YIELD_PERCENTILE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_%s_interpolated_yield%s.tif')
-
-# crop_name, file_suffix
-_CLIPPED_CLIMATE_BIN_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR,
-    'clipped_%s_climate_bin_map%s.tif')
-
-# crop_name, yield_percentile_id, file_suffix
-_COARSE_YIELD_PERCENTILE_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_%s_coarse_yield%s.tif')
-
-# crop_name, yield_percentile_id, file_suffix
-_PERCENTILE_CROP_PRODUCTION_FILE_PATTERN = os.path.join(
-    '.', '%s_%s_production%s.tif')
-
-# crop_name, file_suffix
-_CLIPPED_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_clipped_observed_yield%s.tif')
-
-# crop_name, file_suffix
-_ZEROED_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_zeroed_observed_yield%s.tif')
-
-# crop_name, file_suffix
-_INTERPOLATED_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, '%s_interpolated_observed_yield%s.tif')
-
-# crop_name, file_suffix
-_OBSERVED_PRODUCTION_FILE_PATTERN = os.path.join(
-    '.', '%s_observed_production%s.tif')
-
-# file_suffix
-_AGGREGATE_VECTOR_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, 'aggregate_vector%s.shp')
-
-# file_suffix
-_AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
-    '.', 'aggregate_results%s.csv')
 
 _EXPECTED_NUTRIENT_TABLE_HEADERS = list(nutrient_units.keys())
 _EXPECTED_LUCODE_TABLE_HEADER = 'lucode'
@@ -789,17 +748,16 @@ def execute(args):
             climate_percentile_yield_table_path)
         yield_percentile_headers = [
             x for x in crop_climate_percentile_df.columns if x != 'climate_bin']
-
+        print(yield_percentile_headers)
         reclassify_error_details = {
             'raster_name': f'{crop_name} Climate Bin',
             'column_name': 'climate_bin',
             'table_name': f'Climate {crop_name} Percentile Yield'}
         for yield_percentile_id in yield_percentile_headers:
             LOGGER.info("Map %s to climate bins.", yield_percentile_id)
-            interpolated_yield_percentile_raster_path = os.path.join(
-                output_dir,
-                _INTERPOLATED_YIELD_PERCENTILE_FILE_PATTERN % (
-                    crop_name, yield_percentile_id, file_suffix))
+            interpolated_yield_percentile_raster_path = file_registry[
+                '[CROP]_yield_[PERCENTILE]_interpolated_yield',
+                crop_name, yield_percentile_id]
             bin_to_percentile_yield = (
                 crop_climate_percentile_df[yield_percentile_id].to_dict())
             # reclassify nodata to a valid value of 0
@@ -808,10 +766,9 @@ def execute(args):
             # in the context of the provided climate bins map
             bin_to_percentile_yield[
                 crop_climate_bin_raster_info['nodata'][0]] = 0
-            coarse_yield_percentile_raster_path = os.path.join(
-                output_dir,
-                _COARSE_YIELD_PERCENTILE_FILE_PATTERN % (
-                    crop_name, yield_percentile_id, file_suffix))
+            coarse_yield_percentile_raster_path = file_registry[
+                '[CROP]_yield_[PERCENTILE]_coarse_yield',
+                crop_name, yield_percentile_id]
             create_coarse_yield_percentile_task = task_graph.add_task(
                 func=utils.reclassify_raster,
                 args=((clipped_climate_bin_raster_path, 1),
@@ -844,10 +801,9 @@ def execute(args):
             LOGGER.info(
                 "Calculate yield for %s at %s", crop_name,
                 yield_percentile_id)
-            percentile_crop_production_raster_path = os.path.join(
-                output_dir,
-                _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
-                    crop_name, yield_percentile_id, file_suffix))
+            percentile_crop_production_raster_path = file_registry[
+                '[CROP]_yield_[PERCENTILE]_production',
+                crop_name, yield_percentile_id.split('_')[1]]
 
             create_percentile_production_task = task_graph.add_task(
                 func=calculate_crop_production,
@@ -871,7 +827,8 @@ def execute(args):
             pygeoprocessing.get_raster_info(
                 global_observed_yield_raster_path))
 
-        clipped_observed_yield_raster_path = file_registry['[CROP]_clipped_observed_yield', crop_name]
+        clipped_observed_yield_raster_path = file_registry[
+            '[CROP]_clipped_observed_yield', crop_name]
         clip_global_observed_yield_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
             args=(global_observed_yield_raster_path,
@@ -944,7 +901,7 @@ def execute(args):
         args=(nutrient_df, yield_percentile_headers,
               crop_names, pixel_area_ha,
               args['landcover_raster_path'], landcover_nodata,
-              output_dir, file_suffix, result_table_path),
+              output_dir, file_suffix, file_registry, result_table_path),
         target_path_list=[result_table_path],
         dependent_task_list=dependent_task_list,
         task_name='tabulate_results')
@@ -961,7 +918,7 @@ def execute(args):
                   landcover_raster_info['projection_wkt'],
                   crop_names, nutrient_df,
                   yield_percentile_headers, pixel_area_ha, output_dir,
-                  file_suffix, aggregate_results_table_path),
+                  file_suffix, file_registry, aggregate_results_table_path),
             target_path_list=[target_aggregate_vector_path,
                               aggregate_results_table_path],
             dependent_task_list=dependent_task_list,
@@ -1052,9 +1009,9 @@ def _mask_observed_yield_op(
 
 
 def tabulate_results(
-        nutrient_df, yield_percentile_headers,
-        crop_names, pixel_area_ha, landcover_raster_path,
-        landcover_nodata, output_dir, file_suffix, target_table_path):
+        nutrient_df, yield_percentile_headers, crop_names, pixel_area_ha,
+        landcover_raster_path, landcover_nodata, output_dir, file_suffix,
+        file_registry, target_table_path):
     """Write table with total yield and nutrient results by crop.
 
     This function includes all the operations that write to results_table.csv.
@@ -1069,6 +1026,7 @@ def tabulate_results(
         landcover_nodata (float): landcover raster nodata value
         output_dir (string): the file path to the output workspace.
         file_suffix (string): string to append to any output filenames.
+        file_registry (FileRegistry): used to look up target file paths
         target_table_path (string): path to 'result_table.csv' in the output
             workspace
 
@@ -1104,10 +1062,8 @@ def tabulate_results(
             production_lookup = {}
             production_pixel_count = 0
             yield_sum = 0
-            observed_production_raster_path = os.path.join(
-                output_dir,
-                _OBSERVED_PRODUCTION_FILE_PATTERN % (
-                    crop_name, file_suffix))
+            observed_production_raster_path = file_registry[
+                '[CROP]_observed_production', crop_name]
 
             LOGGER.info(
                 "Calculating production area and summing observed yield.")
@@ -1132,10 +1088,9 @@ def tabulate_results(
             result_table.write(",%f" % yield_sum)
 
             for yield_percentile_id in sorted(yield_percentile_headers):
-                yield_percentile_raster_path = os.path.join(
-                    output_dir,
-                    _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
-                        crop_name, yield_percentile_id, file_suffix))
+                yield_percentile_raster_path = file_registry[
+                    '[CROP]_yield_[PERCENTILE]_production',
+                    crop_name, yield_percentile_id.split('_')[1]]
                 yield_sum = 0
                 for _, yield_block in pygeoprocessing.iterblocks(
                         (yield_percentile_raster_path, 1)):
@@ -1182,7 +1137,7 @@ def aggregate_to_polygons(
         base_aggregate_vector_path, target_aggregate_vector_path,
         landcover_raster_projection, crop_names, nutrient_df,
         yield_percentile_headers, pixel_area_ha, output_dir, file_suffix,
-        target_aggregate_table_path):
+        file_registry, target_aggregate_table_path):
     """Write table with aggregate results of yield and nutrient values.
 
     Use zonal statistics to summarize total observed and interpolated
@@ -1201,6 +1156,7 @@ def aggregate_to_polygons(
         pixel_area_ha (float): area of lulc raster cells (hectares)
         output_dir (string): the file path to the output workspace.
         file_suffix (string): string to append to any output filenames.
+        file_registry (FileRegistry): used to look up target paths
         target_aggregate_table_path (string): path to 'aggregate_results.csv'
             in the output workspace
 
@@ -1230,10 +1186,9 @@ def aggregate_to_polygons(
             1 - nutrient_df['percentrefuse'][crop_name] / 100)
         # loop over percentiles
         for yield_percentile_id in yield_percentile_headers:
-            percentile_crop_production_raster_path = os.path.join(
-                output_dir,
-                _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
-                    crop_name, yield_percentile_id, file_suffix))
+            percentile_crop_production_raster_path = file_registry[
+                '[CROP]_yield_[PERCENTILE]_production',
+                crop_name, yield_percentile_id.split('_')[1]]
             LOGGER.info(
                 "Calculating zonal stats for %s  %s", crop_name,
                 yield_percentile_id)
@@ -1256,9 +1211,7 @@ def aggregate_to_polygons(
                             * nutrient_df[nutrient_id][crop_name])
 
         # process observed
-        observed_yield_path = os.path.join(
-            output_dir, _OBSERVED_PRODUCTION_FILE_PATTERN % (
-                crop_name, file_suffix))
+        observed_yield_path = file_registry['[CROP]_observed_production', crop_name]
         total_yield_lookup[f'{crop_name}_observed'] = (
             pygeoprocessing.zonal_statistics(
                 (observed_yield_path, 1),

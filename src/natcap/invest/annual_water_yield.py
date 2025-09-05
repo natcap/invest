@@ -607,7 +607,6 @@ MODEL_SPEC = spec.ModelSpec(
 )
 
 
-
 def execute(args):
     """Annual Water Yield: Reservoir Hydropower Production.
 

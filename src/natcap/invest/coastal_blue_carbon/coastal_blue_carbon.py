@@ -127,35 +127,6 @@ POOL_LITTER = 'litter'
 NODATA_FLOAT32_MIN = float(numpy.finfo(numpy.float32).min)
 NODATA_UINT16_MAX = int(numpy.iinfo(numpy.uint16).max)
 
-# Rasters written to the intermediate directory
-STOCKS_RASTER_PATTERN = 'stocks-{pool}-{year}{suffix}.tif'
-ACCUMULATION_RASTER_PATTERN = 'accumulation-{pool}-{year}{suffix}.tif'
-HALF_LIFE_RASTER_PATTERN = 'halflife-{pool}-{year}{suffix}.tif'
-DISTURBANCE_VOL_RASTER_PATTERN = 'disturbance-volume-{pool}-{year}{suffix}.tif'
-DISTURBANCE_MAGNITUDE_RASTER_PATTERN = (
-    'disturbance-magnitude-{pool}-{year}{suffix}.tif')
-EMISSIONS_RASTER_PATTERN = 'emissions-{pool}-{year}{suffix}.tif'
-YEAR_OF_DIST_RASTER_PATTERN = (
-    'year-of-latest-disturbance-{pool}-{year}{suffix}.tif')
-ALIGNED_LULC_RASTER_PATTERN = (
-    'aligned-lulc-{snapshot_type}-{year}{suffix}.tif')
-NET_SEQUESTRATION_RASTER_PATTERN = (
-    'net-sequestration-{pool}-{year}{suffix}.tif')
-TOTAL_STOCKS_RASTER_PATTERN = 'total-carbon-stocks-{year}{suffix}.tif'
-
-# Rasters written to the output directory
-EMISSIONS_SINCE_TRANSITION_RASTER_PATTERN = (
-    'carbon-emissions-between-{start_year}-and-{end_year}{suffix}.tif')
-ACCUMULATION_SINCE_TRANSITION_RASTER_PATTERN = (
-    'carbon-accumulation-between-{start_year}-and-{end_year}{suffix}.tif')
-TOTAL_NET_SEQ_SINCE_TRANSITION_RASTER_PATTERN = (
-    'total-net-carbon-sequestration-between-{start_year}-and-'
-    '{end_year}{suffix}.tif')
-TOTAL_NET_SEQ_ALL_YEARS_RASTER_PATTERN = (
-    'total-net-carbon-sequestration{suffix}.tif')
-NET_PRESENT_VALUE_RASTER_PATTERN = 'net-present-value-at-{year}{suffix}.tif'
-CARBON_STOCK_AT_YEAR_RASTER_PATTERN = 'carbon-stock-at-{year}{suffix}.tif'
-
 INTERMEDIATE_DIR_NAME = 'intermediate'
 OUTPUT_DIR_NAME = 'output'
 
@@ -635,7 +606,6 @@ MODEL_SPEC = spec.ModelSpec(
         spec.TASKGRAPH_CACHE
     ]
 )
-
 
 
 def execute(args):
