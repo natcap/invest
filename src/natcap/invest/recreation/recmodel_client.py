@@ -1042,11 +1042,11 @@ def _schedule_predictor_data_processing(
         # polygon types are a special case because the polygon_area
         # function requires an additional 'mode' argument.
         elif predictor_type.startswith('polygon'):
-            func = _polygon_area,
+            func = _polygon_area
             args = (predictor_type, response_polygons_pickle_path,
                     row['path'], file_registry['[PREDICTOR]_json', predictor_id])
         else:
-            func = predictor_functions[predictor_type],
+            func = predictor_functions[predictor_type]
             args = (response_polygons_pickle_path,
                     row['path'], file_registry['[PREDICTOR]_json', predictor_id])
         predictor_task_list.append(task_graph.add_task(
