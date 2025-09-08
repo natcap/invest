@@ -589,7 +589,8 @@ def execute(args):
         args=(file_registry['aoi'],
               file_registry['aoi_zip'],
               args['start_year'], args['end_year'], file_suffix,
-              output_dir, server_url, file_registry['server_version']),
+              output_dir, server_url, file_registry['server_version'],
+              file_registry['pud_userdays'], file_registry['tud_userdays']),
         target_path_list=[file_registry['aoi_zip'],
                           file_registry['pud_results'],
                           file_registry['pud_monthly_table'],
@@ -623,7 +624,7 @@ def execute(args):
             [prepare_response_polygons_task, assemble_userday_variables_task],
             args['predictor_table_path'],
             file_registry['regression_vector_path'],
-            intermediate_dir, task_graph)
+            intermediate_dir, task_graph, file_registry)
 
         # Compute the regression
         predictor_df = MODEL_SPEC.get_input(
@@ -665,7 +666,7 @@ def execute(args):
                 [prepare_response_polygons_task],
                 args['scenario_predictor_table_path'],
                 file_registry['scenario_results_path'],
-                scenario_dir, task_graph)
+                scenario_dir, task_graph, file_registry)
 
             task_graph.add_task(
                 func=_calculate_scenario,
@@ -704,7 +705,8 @@ def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
 
 def _retrieve_user_days(
         local_aoi_path, compressed_aoi_path, start_year, end_year,
-        file_suffix, output_dir, server_url, server_version_pickle):
+        file_suffix, output_dir, server_url, server_version_pickle,
+        pud_userdays_path, tud_userdays_path):
     """Calculate user-days (PUD & TUD) on the server and send back results.
 
     All of the client-server communication happens in this scope. The local AOI
@@ -723,6 +725,8 @@ def _retrieve_user_days(
         server_url (string): URL for connecting to the server
         server_version_pickle (string): path to a pickle that stores server
             version and workspace id info.
+        pud_userdays_path (str): Path to zipped photo-user-days data
+        tud_userdays_path (str): Path to zipped twitter-user-days data
 
     Returns:
         None
@@ -806,7 +810,7 @@ def _retrieve_user_days(
                 LOGGER.handle(logging.makeLogRecord(record_dict))
         result_dict = future.result()
 
-    for dataset in datasets:
+    for dataset, userdays_path in zip(datasets, [pud_userdays_path, tud_userdays_path]):
         result = result_dict[datasets[dataset]]
 
         # If an exception occurred on the server's worker, we returned it
@@ -828,11 +832,10 @@ def _retrieve_user_days(
                     'workspace_id': workspace_id}}, f)
 
         # unpack result
-        with open(file_registry[f'{dataset}_userdays'], 'wb') as pud_file:
+        with open(userdays_path, 'wb') as pud_file:
             pud_file.write(result_zip_file_binary)
         temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
-        zipfile.ZipFile(file_registry[f'{dataset}_userdays'], 'r').extractall(
-            temporary_output_dir)
+        zipfile.ZipFile(userdays_path, 'r').extractall(temporary_output_dir)
 
         for filename in os.listdir(temporary_output_dir):
             # Results are returned from the server without a results_suffix.
@@ -967,7 +970,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 def _schedule_predictor_data_processing(
         response_vector_path, response_polygons_pickle_path,
         dependent_task_list, predictor_table_path,
-        target_predictor_vector_path, working_dir, task_graph):
+        target_predictor_vector_path, working_dir, task_graph, file_registry):
     """Summarize spatial predictor data by polygons in the response vector.
 
     Build a shapefile with geometry from the response vector, and tabular
@@ -1004,6 +1007,7 @@ def _schedule_predictor_data_processing(
         working_dir (string): path to an intermediate directory to store json
             files with geoprocessing results.
         task_graph (Taskgraph): the graph that was initialized in execute()
+        file_registry (FileRegistry): used to look up predictor json paths
 
     Returns:
         The ultimate task object from this branch of the taskgraph.
