@@ -403,19 +403,18 @@ def execute(args):
     for viewpoint, max_radius, weight, viewpoint_height in sorted(
             viewpoint_tuples, key=lambda x: x[0]):
         weights.append(weight)
-        visibility_filepath = file_registry['visibility_[FEATURE_ID]', feature_index]
-        viewshed_files.append(visibility_filepath)
+        viewshed_files.append(file_registry['visibility_[FEATURE_ID]', feature_index])
         viewshed_task = graph.add_task(
             viewshed,
             args=((file_registry['dem_clipped'], 1),  # DEM
                   viewpoint,
-                  visibility_filepath),
+                  file_registry['visibility_[FEATURE_ID]', feature_index]),
             kwargs={'curved_earth': True,  # SQ model always assumes this.
                     'refraction_coeff': float(args['refraction']),
                     'max_distance': max_radius,
                     'viewpoint_height': viewpoint_height,
                     'aux_filepath': None},  # Remove aux filepath after run
-            target_path_list=[visibility_filepath],
+            target_path_list=[file_registry['visibility_[FEATURE_ID]', feature_index]],
             dependent_task_list=[clipped_dem_task,
                                  clipped_viewpoints_task],
             task_name='calculate_visibility_%s' % feature_index)
@@ -426,7 +425,7 @@ def execute(args):
             viewshed_valuation_path = file_registry['value_[FEATURE_ID]', feature_index]
             valuation_task = graph.add_task(
                 _calculate_valuation,
-                args=(visibility_filepath,
+                args=(file_registry['visibility_[FEATURE_ID]', feature_index],
                       viewpoint,
                       weight,  # user defined, from WEIGHT field in vector
                       args['valuation_function'],
@@ -457,8 +456,7 @@ def execute(args):
     # sum of the valuation rasters.
     if not do_valuation:
         parent_visual_quality_task = weighted_visible_structures_task
-        parent_visual_quality_raster_path = (
-            file_registry['vshed'])
+        parent_visual_quality_raster_path = file_registry['vshed']
     else:
         parent_visual_quality_task = graph.add_task(
             _sum_valuation_rasters,

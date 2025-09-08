@@ -993,27 +993,6 @@ def execute(args):
         'point_vector']
     analysis_area_extract_path = analysis_dict[analysis_area][
         'extract_vector']
-
-    # Use file_registry for all output/intermediate file paths below
-    wave_vector_path = file_registry['wem_inputoutput_pts']
-    indexed_wave_vector_path = file_registry['indexed_wem_inputoutput_pts']
-    wave_energy_power_vector_path = file_registry['captured_wem_inputoutput_pts']
-    unclipped_energy_raster_path = file_registry['unclipped_capwe_mwh']
-    unclipped_power_raster_path = file_registry['unclipped_wp_kw']
-    interpolated_energy_raster_path = file_registry['interpolated_capwe_mwh']
-    interpolated_power_raster_path = file_registry['interpolated_wp_kw']
-    energy_raster_path = file_registry['capwe_mwh']
-    wave_power_raster_path = file_registry['wp_kw']
-    wp_rc_path = file_registry['wp_rc']
-    capwe_rc_path = file_registry['capwe_rc']
-    aoi_clipped_to_extract_path = file_registry['aoi_clipped_to_extract_path']
-    final_wave_energy_power_vector_path = file_registry['final_wem_inputoutput_pts']
-    inter_npv_raster_path = file_registry['npv_not_clipped']
-    target_npv_rc_path = file_registry['npv_rc']
-    target_npv_raster_path = file_registry['npv_usd']
-    land_vector_path = file_registry['landpts_prj']
-    grid_vector_path = file_registry['gridpt_prj']
-    result_table_path = file_registry['capwe_rc_csv']
     analysis_area_sr = _get_vector_spatial_ref(analysis_area_points_path)
 
     # If AOI is not provided
@@ -1022,7 +1001,8 @@ def execute(args):
 
         # Make a copy of the wave point shapefile so that the original input is
         # not corrupted when we clip the vector
-        _copy_vector_or_raster(analysis_area_points_path, wave_vector_path)
+        _copy_vector_or_raster(
+            analysis_area_points_path, file_registry['wem_inputoutput_pts'])
 
         # The path to a polygon shapefile that specifies the broader AOI
         aoi_vector_path = analysis_area_extract_path
@@ -1049,23 +1029,23 @@ def execute(args):
         # Clip the wave data shapefile by the bounds provided from the AOI
         task_graph.add_task(
             func=_clip_vector_by_vector,
-            args=(analysis_area_points_path, aoi_vector_path, wave_vector_path,
-                  aoi_sr_wkt, intermediate_dir),
-            target_path_list=[wave_vector_path],
+            args=(analysis_area_points_path, aoi_vector_path,
+                  file_registry['wem_inputoutput_pts'], aoi_sr_wkt, intermediate_dir),
+            target_path_list=[file_registry['wem_inputoutput_pts']],
             task_name='clip_wave_points_to_aoi')
 
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
-        aoi_clipped_to_extract_path = file_registry['aoi_clipped_to_extract_path']
         task_graph.add_task(
             func=_clip_vector_by_vector,
             args=(aoi_vector_path, analysis_area_extract_path,
-                  aoi_clipped_to_extract_path, aoi_sr_wkt, intermediate_dir),
-            target_path_list=[aoi_clipped_to_extract_path],
+                  file_registry['aoi_clipped_to_extract_path'],
+                  aoi_sr_wkt, intermediate_dir),
+            target_path_list=[file_registry['aoi_clipped_to_extract_path']],
             task_name='clip_aoi_to_extract_data')
 
         # Replace the AOI path with the clipped AOI path
-        aoi_vector_path = aoi_clipped_to_extract_path
+        aoi_vector_path = file_registry['aoi_clipped_to_extract_path']
 
         # Join here since we need pixel size for creating output rasters
         task_graph.join()
@@ -1076,8 +1056,9 @@ def execute(args):
             analysis_area_sr, aoi_sr)
         coord_trans_opposite = utils.create_coordinate_transformer(
             aoi_sr, analysis_area_sr)
-        target_pixel_size = _pixel_size_helper(wave_vector_path, coord_trans,
-                                               coord_trans_opposite, dem_path)
+        target_pixel_size = _pixel_size_helper(
+            file_registry['wem_inputoutput_pts'], coord_trans,
+            coord_trans_opposite, dem_path)
 
     LOGGER.debug('target_pixel_size: %s, target_projection: %s',
                  target_pixel_size, aoi_sr_wkt)
@@ -1087,12 +1068,11 @@ def execute(args):
     # from the raster DEM
     LOGGER.info('Adding DEPTH_M field to the wave shapefile from the DEM')
     # Add the depth value to the wave points by indexing into the DEM dataset
-    indexed_wave_vector_path = file_registry['indexed_wem_inputoutput_pts']
     index_depth_to_wave_vector_task = task_graph.add_task(
         func=_index_raster_value_to_point_vector,
-        args=(wave_vector_path, dem_path, indexed_wave_vector_path,
-              _DEPTH_FIELD),
-        target_path_list=[indexed_wave_vector_path],
+        args=(file_registry['wem_inputoutput_pts'], dem_path,
+              file_registry['indexed_wem_inputoutput_pts'], _DEPTH_FIELD),
+        target_path_list=[file_registry['indexed_wem_inputoutput_pts']],
         task_name='index_depth_to_wave_vector')
 
     # Generate an interpolate object for wave_energy_capacity
@@ -1107,82 +1087,83 @@ def execute(args):
     # Add wave energy and wave power fields to the shapefile for the
     # corresponding points
     LOGGER.info('Adding wave energy and power fields to the wave vector.')
-    wave_energy_power_vector_path = file_registry['captured_wem_inputoutput_pts']
     create_wave_energy_and_power_raster_task = task_graph.add_task(
         func=_energy_and_power_to_wave_vector,
-        args=(energy_cap, indexed_wave_vector_path,
-              wave_energy_power_vector_path),
-        target_path_list=[wave_energy_power_vector_path],
+        args=(energy_cap, file_registry['indexed_wem_inputoutput_pts'],
+              file_registry['captured_wem_inputoutput_pts']),
+        target_path_list=[file_registry['captured_wem_inputoutput_pts']],
         task_name='get_wave_energy_and_power',
         dependent_task_list=[index_depth_to_wave_vector_task])
 
     create_unclipped_energy_raster_task = task_graph.add_task(
         func=pygeoprocessing.create_raster_from_vector_extents,
-        args=(aoi_vector_path, unclipped_energy_raster_path, target_pixel_size,
-              _TARGET_PIXEL_TYPE, _NODATA),
-        target_path_list=[unclipped_energy_raster_path],
+        args=(aoi_vector_path, file_registry['unclipped_capwe_mwh'],
+              target_pixel_size, _TARGET_PIXEL_TYPE, _NODATA),
+        target_path_list=[file_registry['unclipped_capwe_mwh']],
         task_name='create_unclipped_energy_raster')
 
     create_unclipped_power_raster_task = task_graph.add_task(
         func=pygeoprocessing.create_raster_from_vector_extents,
-        args=(aoi_vector_path, unclipped_power_raster_path, target_pixel_size,
-              _TARGET_PIXEL_TYPE, _NODATA),
-        target_path_list=[unclipped_power_raster_path],
+        args=(aoi_vector_path, file_registry['unclipped_wp_kw'],
+              target_pixel_size, _TARGET_PIXEL_TYPE, _NODATA),
+        target_path_list=[file_registry['unclipped_wp_kw']],
         task_name='create_unclipped_power_raster')
 
     # Interpolate wave energy and power from the wave vector over the rasters
     LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
     interpolate_energy_points_task = task_graph.add_task(
         func=_interpolate_vector_field_onto_raster,
-        args=(wave_energy_power_vector_path, unclipped_energy_raster_path,
-              interpolated_energy_raster_path, _CAP_WE_FIELD),
-        target_path_list=[interpolated_energy_raster_path],
+        args=(file_registry['captured_wem_inputoutput_pts'],
+              file_registry['unclipped_capwe_mwh'],
+              file_registry['interpolated_capwe_mwh'], _CAP_WE_FIELD),
+        target_path_list=[file_registry['interpolated_capwe_mwh']],
         task_name='interpolate_energy_points',
         dependent_task_list=[create_wave_energy_and_power_raster_task,
                              create_unclipped_energy_raster_task])
 
     interpolate_power_points_task = task_graph.add_task(
         func=_interpolate_vector_field_onto_raster,
-        args=(wave_energy_power_vector_path, unclipped_power_raster_path,
-              interpolated_power_raster_path, _WAVE_POWER_FIELD),
-        target_path_list=[interpolated_power_raster_path],
+        args=(file_registry['captured_wem_inputoutput_pts'],
+              file_registry['unclipped_wp_kw'],
+              file_registry['interpolated_wp_kw'], _WAVE_POWER_FIELD),
+        target_path_list=[file_registry['interpolated_wp_kw']],
         task_name='interpolate_power_points',
         dependent_task_list=[create_wave_energy_and_power_raster_task,
                              create_unclipped_power_raster_task])
 
     clip_energy_raster_task = task_graph.add_task(
         func=pygeoprocessing.mask_raster,
-        args=((interpolated_energy_raster_path, 1), aoi_vector_path,
-              energy_raster_path,),
+        args=((file_registry['interpolated_capwe_mwh'], 1), aoi_vector_path,
+              file_registry['capwe_mwh'],),
         kwargs={'all_touched': True},
-        target_path_list=[energy_raster_path],
+        target_path_list=[file_registry['capwe_mwh']],
         task_name='clip_energy_raster',
         dependent_task_list=[interpolate_energy_points_task])
 
     clip_power_raster_task = task_graph.add_task(
         func=pygeoprocessing.mask_raster,
-        args=((interpolated_power_raster_path, 1), aoi_vector_path,
-              wave_power_raster_path,),
+        args=((file_registry['interpolated_wp_kw'], 1), aoi_vector_path,
+              file_registry['wp_kw'],),
         kwargs={'all_touched': True},
-        target_path_list=[wave_power_raster_path],
+        target_path_list=[file_registry['wp_kw']],
         task_name='clip_power_raster',
         dependent_task_list=[interpolate_power_points_task])
 
     task_graph.add_task(
         func=_create_percentile_rasters,
-        args=(energy_raster_path, capwe_rc_path, _CAPWE_UNITS_SHORT,
+        args=(file_registry['capwe_mwh'], file_registry['capwe_rc'], _CAPWE_UNITS_SHORT,
               _CAPWE_UNITS_LONG, _PERCENTILES, intermediate_dir),
         kwargs={'start_value': _STARTING_PERC_RANGE},
-        target_path_list=[capwe_rc_path],
+        target_path_list=[file_registry['capwe_rc']],
         task_name='create_energy_percentile_raster',
         dependent_task_list=[clip_energy_raster_task])
 
     task_graph.add_task(
         func=_create_percentile_rasters,
-        args=(wave_power_raster_path, wp_rc_path, _WP_UNITS_SHORT,
+        args=(file_registry['wp_kw'], file_registry['wp_rc'], _WP_UNITS_SHORT,
               _WP_UNITS_LONG, _PERCENTILES, intermediate_dir),
         kwargs={'start_value': _STARTING_PERC_RANGE},
-        target_path_list=[wp_rc_path],
+        target_path_list=[file_registry['wp_rc']],
         task_name='create_power_percentile_raster',
         dependent_task_list=[clip_power_raster_task])
 
@@ -1197,19 +1178,12 @@ def execute(args):
     else:
         LOGGER.info('Valuation selected')
 
-    # Use file_registry for valuation outputs
-    land_vector_path = file_registry['landpts_prj']
-    grid_vector_path = file_registry['gridpt_prj']
-    final_wave_energy_power_vector_path = file_registry['final_wem_inputoutput_pts']
-    inter_npv_raster_path = file_registry['npv_not_clipped']
-    target_npv_rc_path = file_registry['npv_rc']
-    target_npv_raster_path = file_registry['npv_usd']
-
     create_grid_points_vector_task = task_graph.add_task(
         func=_dict_to_point_vector,
         args=(grid_land_df[grid_land_df['type'] == 'grid'].to_dict('index'),
-              grid_vector_path, 'grid_points', analysis_area_sr_wkt, aoi_sr_wkt),
-        target_path_list=[grid_vector_path],
+              file_registry['gridpt_prj'], 'grid_points',
+              analysis_area_sr_wkt, aoi_sr_wkt),
+        target_path_list=[file_registry['gridpt_prj']],
         task_name='create_grid_points_vector')
 
     # Make a point shapefile for landing points.
@@ -1217,16 +1191,19 @@ def execute(args):
     create_land_points_vector_task = task_graph.add_task(
         func=_dict_to_point_vector,
         args=(grid_land_df[grid_land_df['type'] == 'land'].to_dict('index'),
-              land_vector_path, 'land_points', analysis_area_sr_wkt, aoi_sr_wkt),
-        target_path_list=[land_vector_path],
+              file_registry['landpts_prj'], 'land_points',
+              analysis_area_sr_wkt, aoi_sr_wkt),
+        target_path_list=[file_registry['landpts_prj']],
         task_name='create_land_points_vector')
 
     add_target_fields_to_wave_vector_task = task_graph.add_task(
         func=_add_target_fields_to_wave_vector,
-        args=(wave_energy_power_vector_path, land_vector_path,
-              grid_vector_path, final_wave_energy_power_vector_path,
+        args=(file_registry['captured_wem_inputoutput_pts'],
+              file_registry['landpts_prj'],
+              file_registry['gridpt_prj'],
+              file_registry['final_wem_inputoutput_pts'],
               machine_econ_dict, int(args['number_of_machines'])),
-        target_path_list=[final_wave_energy_power_vector_path],
+        target_path_list=[file_registry['final_wem_inputoutput_pts']],
         task_name='add_fields_to_wave_vector',
         dependent_task_list=[create_wave_energy_and_power_raster_task,
                              create_land_points_vector_task,
@@ -1234,18 +1211,18 @@ def execute(args):
 
     create_npv_raster_task = task_graph.add_task(
         func=_create_npv_raster,
-        args=(final_wave_energy_power_vector_path, aoi_vector_path,
-              inter_npv_raster_path, target_npv_raster_path,
+        args=(file_registry['final_wem_inputoutput_pts'], aoi_vector_path,
+              file_registry['npv_not_clipped'], file_registry['npv_usd'],
               target_pixel_size),
-        target_path_list=[inter_npv_raster_path, target_npv_raster_path],
+        target_path_list=[file_registry['npv_not_clipped'], file_registry['npv_usd']],
         task_name='create_npv_raster',
         dependent_task_list=[add_target_fields_to_wave_vector_task])
 
     task_graph.add_task(
         func=_create_percentile_rasters,
-        args=(target_npv_raster_path, target_npv_rc_path, _NPV_UNITS_SHORT,
+        args=(file_registry['npv_usd'], file_registry['npv_rc'], _NPV_UNITS_SHORT,
               _NPV_UNITS_LONG, _PERCENTILES, intermediate_dir),
-        target_path_list=[target_npv_rc_path],
+        target_path_list=[file_registry['npv_rc']],
         task_name='create_npv_percentile_raster',
         dependent_task_list=[create_npv_raster_task])
 

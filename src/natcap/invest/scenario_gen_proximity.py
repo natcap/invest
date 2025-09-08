@@ -393,19 +393,18 @@ def execute(args):
         if not scenario_enabled:
             continue
         LOGGER.info('executing %s scenario', basename)
-        output_landscape_raster_path = file_registry[basename]
-        stats_path = file_registry[f"{basename}_csv"]
-        distance_from_edge_path = file_registry[f"{basename}_distance"]
         task_graph.add_task(
             func=_convert_landscape,
             args=(working_lulc_path, replacement_lucode, area_to_convert,
                   focal_landcover_codes, convertible_type_list, score_weight,
-                  int(args['n_fragmentation_steps']), distance_from_edge_path,
-                  output_landscape_raster_path, stats_path,
+                  int(args['n_fragmentation_steps']),
+                  file_registry[f"{basename}_distance"],
+                  file_registry[basename], file_registry[f"{basename}_csv"],
                   output_dir, file_registry),
             target_path_list=[
-                distance_from_edge_path, output_landscape_raster_path,
-                stats_path],
+                file_registry[f"{basename}_distance"],
+                file_registry[basename],
+                file_registry[f"{basename}_csv"]],
             dependent_task_list=aoi_mask_task_list,
             task_name=f'convert_landscape_{basename}')
 
@@ -527,17 +526,9 @@ def _convert_landscape(
 
     """
     temp_dir = tempfile.mkdtemp(prefix='temp_dir', dir=workspace_dir)
-    # Use file_registry for all tmp outputs
-    non_base_mask_path = file_registry['tmp_non_base_mask']
-    base_mask_path = file_registry['tmp_base_mask']
-    gaussian_kernel_path = file_registry['tmp_gaussian_kernel']
-    distance_from_base_mask_edge_path = file_registry['tmp_distance_from_base_mask_edge']
-    distance_from_non_base_mask_edge_path = file_registry['tmp_distance_from_non_base_mask_edge']
-    convertible_distances_path = file_registry['tmp_convertible_distances']
-    distance_from_edge_path = file_registry['tmp_distance_from_edge']
 
     pygeoprocessing.kernels.normal_distribution_kernel(
-        gaussian_kernel_path, sigma=1)
+        file_registry['tmp_gaussian_kernel'], sigma=1)
 
     # create the output raster first as a copy of the base landcover so it can
     # be looped on for each step
@@ -573,8 +564,10 @@ def _convert_landscape(
             pixels_to_convert += pixels_left_to_convert
 
         for invert_mask, mask_path, distance_path in [
-                (False, non_base_mask_path, distance_from_non_base_mask_edge_path),
-                (True, base_mask_path, distance_from_base_mask_edge_path)]:
+                (False, file_registry['tmp_non_base_mask'],
+                    file_registry['tmp_distance_from_non_base_mask_edge']),
+                (True, file_registry['tmp_base_mask'],
+                    file_registry['tmp_distance_from_base_mask_edge'])]:
 
             def _mask_base_op(lulc_array):
                 """Create a mask of valid non-base pixels only."""
@@ -600,7 +593,7 @@ def _convert_landscape(
 
         # combine inner and outer distance transforms into one
         distance_nodata = pygeoprocessing.get_raster_info(
-            distance_from_base_mask_edge_path)['nodata'][0]
+            file_registry['tmp_distance_from_base_mask_edge'])['nodata'][0]
 
         def _combine_masks(base_distance_array, non_base_distance_array):
             """Create a mask of valid non-base pixels only."""
@@ -609,15 +602,15 @@ def _convert_landscape(
             result[valid_base_mask] = base_distance_array[valid_base_mask]
             return result
         pygeoprocessing.raster_calculator(
-            [(distance_from_base_mask_edge_path, 1),
-             (distance_from_non_base_mask_edge_path, 1)],
-            _combine_masks, distance_from_edge_path,
+            [(file_registry['tmp_distance_from_base_mask_edge'], 1),
+             (file_registry['tmp_distance_from_non_base_mask_edge'], 1)],
+            _combine_masks, file_registry['tmp_distance_from_edge'],
             gdal.GDT_Float32, distance_nodata)
 
         # smooth the distance transform to avoid scanline artifacts
         pygeoprocessing.convolve_2d(
-            (distance_from_edge_path, 1),
-            (gaussian_kernel_path, 1),
+            (file_registry['tmp_distance_from_edge'], 1),
+            (file_registry['tmp_gaussian_kernel'], 1),
             smooth_distance_from_edge_path)
 
         # turn inside and outside masks into a single mask
@@ -632,14 +625,14 @@ def _convert_landscape(
             [(smooth_distance_from_edge_path, 1),
              (output_landscape_raster_path, 1)],
             _mask_to_convertible_codes,
-            convertible_distances_path, gdal.GDT_Float32,
-            convertible_type_nodata)
+            file_registry['tmp_convertible_distances'],
+            gdal.GDT_Float32, convertible_type_nodata)
 
         LOGGER.info(
             'convert %d pixels to lucode %d', pixels_to_convert,
             replacement_lucode)
         _convert_by_score(
-            convertible_distances_path, pixels_to_convert,
+            file_registry['tmp_convertible_distances'], pixels_to_convert,
             output_landscape_raster_path, replacement_lucode, stats_cache,
             score_weight)
 

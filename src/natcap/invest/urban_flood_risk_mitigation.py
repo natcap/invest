@@ -326,9 +326,6 @@ def execute(args):
         file_registry['taskgraph_cache'], n_workers)
 
     # Align LULC with soils
-    aligned_lulc_path = file_registry['aligned_lulc']
-    aligned_soils_path = file_registry['aligned_soils_hydrological_group']
-
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_path'])
     target_pixel_size = lulc_raster_info['pixel_size']
@@ -342,14 +339,15 @@ def execute(args):
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
             [args['lulc_path'], args['soils_hydrological_group_raster_path']],
-            [aligned_lulc_path, aligned_soils_path],
+            [file_registry['aligned_lulc'],
+            file_registry['aligned_soils_hydrological_group']],
             ['mode', 'mode'],
             target_pixel_size, 'intersection'),
         kwargs={
             'target_projection_wkt': target_sr_wkt,
             'base_vector_path_list': [args['aoi_watersheds_path']],
             'raster_align_index': 0},
-        target_path_list=[aligned_lulc_path, aligned_soils_path],
+        target_path_list=[file_registry['aligned_lulc'], file_registry['aligned_soils_hydrological_group']],
         task_name='align raster stack')
 
     # Load CN table
@@ -373,106 +371,100 @@ def execute(args):
     lucode_nodata = lulc_raster_info['nodata'][0]
     soil_type_nodata = soil_raster_info['nodata'][0]
 
-    cn_raster_path = file_registry['cn_raster']
     align_raster_stack_task.join()
 
     cn_raster_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
-            [(aligned_lulc_path, 1), (aligned_soils_path, 1),
+            [(file_registry['aligned_lulc'], 1),
+             (file_registry['aligned_soils_hydrological_group'], 1),
              (lucode_nodata, 'raw'), (soil_type_nodata, 'raw'),
              (cn_nodata, 'raw'), (lucode_to_cn_table, 'raw')], _lu_to_cn_op,
-            cn_raster_path, gdal.GDT_Float32, cn_nodata),
-        target_path_list=[cn_raster_path],
+            file_registry['cn_raster'], gdal.GDT_Float32, cn_nodata),
+        target_path_list=[file_registry['cn_raster']],
         dependent_task_list=[align_raster_stack_task],
         task_name='create Curve Number raster')
 
     # Generate S_max
     s_max_nodata = -9999
-    s_max_raster_path = file_registry['s_max']
     s_max_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
-            [(cn_raster_path, 1), (cn_nodata, 'raw'), (s_max_nodata, 'raw')],
-            _s_max_op, s_max_raster_path, gdal.GDT_Float32, s_max_nodata),
-        target_path_list=[s_max_raster_path],
+            [(file_registry['cn_raster'], 1), (cn_nodata, 'raw'), (s_max_nodata, 'raw')],
+            _s_max_op, file_registry['s_max'], gdal.GDT_Float32, s_max_nodata),
+        target_path_list=[file_registry['s_max']],
         dependent_task_list=[cn_raster_task],
         task_name='create S_max')
 
     # Generate Qpi
     q_pi_nodata = -9999
-    q_pi_raster_path = file_registry['q_mm']
     q_pi_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
-            [(float(args['rainfall_depth']), 'raw'), (s_max_raster_path, 1),
+            [(float(args['rainfall_depth']), 'raw'), (file_registry['s_max'], 1),
              (s_max_nodata, 'raw'), (q_pi_nodata, 'raw')], _q_pi_op,
-            q_pi_raster_path, gdal.GDT_Float32, q_pi_nodata),
-        target_path_list=[q_pi_raster_path],
+            file_registry['q_mm'], gdal.GDT_Float32, q_pi_nodata),
+        target_path_list=[file_registry['q_mm']],
         dependent_task_list=[s_max_task],
         task_name='create Q_mm.tif')
 
     # Generate Runoff Retention
     runoff_retention_nodata = -9999
-    runoff_retention_raster_path = file_registry['runoff_retention_index']
     runoff_retention_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
-            (q_pi_raster_path, 1), (float(args['rainfall_depth']), 'raw'),
+            (file_registry['q_mm'], 1), (float(args['rainfall_depth']), 'raw'),
             (q_pi_nodata, 'raw'), (runoff_retention_nodata, 'raw')],
-            _runoff_retention_op, runoff_retention_raster_path,
+            _runoff_retention_op, file_registry['runoff_retention_index'],
             gdal.GDT_Float32, runoff_retention_nodata),
-        target_path_list=[runoff_retention_raster_path],
+        target_path_list=[file_registry['runoff_retention_index']],
         dependent_task_list=[q_pi_task],
         task_name='generate runoff retention')
 
     # calculate runoff retention volume
-    runoff_retention_vol_raster_path = file_registry['runoff_retention_m3']
     runoff_retention_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
-            (runoff_retention_raster_path, 1),
+            (file_registry['runoff_retention_index'], 1),
             (runoff_retention_nodata, 'raw'),
             (float(args['rainfall_depth']), 'raw'),
             (abs(target_pixel_size[0]*target_pixel_size[1]), 'raw'),
             (runoff_retention_nodata, 'raw')], _runoff_retention_vol_op,
-            runoff_retention_vol_raster_path, gdal.GDT_Float32,
+            file_registry['runoff_retention_m3'], gdal.GDT_Float32,
             runoff_retention_nodata),
-        target_path_list=[runoff_retention_vol_raster_path],
+        target_path_list=[file_registry['runoff_retention_m3']],
         dependent_task_list=[runoff_retention_task],
         task_name='calculate runoff retention vol')
 
     # calculate flood vol raster
-    flood_vol_raster_path = file_registry['q_m3']
     flood_vol_nodata = -1
     flood_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
-            [(q_pi_raster_path, 1), (q_pi_nodata, 'raw'),
+            [(file_registry['q_mm'], 1), (q_pi_nodata, 'raw'),
              (pixel_area, 'raw'), (flood_vol_nodata, 'raw')],
-            _flood_vol_op, flood_vol_raster_path, gdal.GDT_Float32,
+            _flood_vol_op, file_registry['q_m3'], gdal.GDT_Float32,
             flood_vol_nodata),
-        target_path_list=[flood_vol_raster_path],
+        target_path_list=[file_registry['q_m3']],
         dependent_task_list=[q_pi_task],
         task_name='calculate service built raster')
 
-    reprojected_aoi_path = file_registry['reprojected_aoi']
     reprojected_aoi_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
             args['aoi_watersheds_path'],
             target_sr_wkt,
-            reprojected_aoi_path),
+            file_registry['reprojected_aoi']),
         kwargs={'driver_name': 'ESRI Shapefile'},
-        target_path_list=[reprojected_aoi_path],
+        target_path_list=[file_registry['reprojected_aoi']],
         task_name='reproject aoi/watersheds')
 
     # Determine flood_volume over the watershed
     flood_volume_in_aoi_task = task_graph.add_task(
         func=pygeoprocessing.zonal_statistics,
         args=(
-            (flood_vol_raster_path, 1),
-            reprojected_aoi_path),
+            (file_registry['q_m3'], 1),
+            file_registry['reprojected_aoi']),
         store_result=True,
         dependent_task_list=[flood_vol_task, reprojected_aoi_task],
         task_name='zonal_statistics over the flood_volume raster')
@@ -480,8 +472,8 @@ def execute(args):
     runoff_retention_stats_task = task_graph.add_task(
         func=pygeoprocessing.zonal_statistics,
         args=(
-            (runoff_retention_raster_path, 1),
-            reprojected_aoi_path),
+            (file_registry['runoff_retention_index'], 1),
+            file_registry['reprojected_aoi']),
         store_result=True,
         dependent_task_list=[runoff_retention_task, reprojected_aoi_task],
         task_name='zonal_statistics over runoff_retention raster')
@@ -489,8 +481,8 @@ def execute(args):
     runoff_retention_volume_stats_task = task_graph.add_task(
         func=pygeoprocessing.zonal_statistics,
         args=(
-            (runoff_retention_vol_raster_path, 1),
-            reprojected_aoi_path),
+            (file_registry['runoff_retention_m3'], 1),
+            file_registry['reprojected_aoi']),
         store_result=True,
         dependent_task_list=[runoff_retention_vol_task, reprojected_aoi_task],
         task_name='zonal_statistics over runoff_retention_volume raster')
@@ -504,21 +496,20 @@ def execute(args):
     if 'built_infrastructure_vector_path' in args and (
             args['built_infrastructure_vector_path'] not in ('', None)):
         # Reproject the built infrastructure vector to the target SRS.
-        reprojected_structures_path = file_registry['structures_reprojected']
         reproject_built_infrastructure_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(args['built_infrastructure_vector_path'],
                   target_sr_wkt,
-                  reprojected_structures_path),
+                  file_registry['structures_reprojected']),
             kwargs={'driver_name': 'ESRI Shapefile'},
-            target_path_list=[reprojected_structures_path],
+            target_path_list=[file_registry['structures_reprojected']],
             task_name='reproject built infrastructure to target SRS')
 
         # determine the total damage to all infrastructure in the watershed/AOI
         damage_to_infrastructure_in_aoi_task = task_graph.add_task(
             func=_calculate_damage_to_infrastructure_in_aoi,
-            args=(reprojected_aoi_path,
-                  reprojected_structures_path,
+            args=(file_registry['reprojected_aoi'],
+                  file_registry['structures_reprojected'],
                   args['infrastructure_damage_loss_table_path']),
             store_result=True,
             dependent_task_list=[
@@ -534,18 +525,17 @@ def execute(args):
         # "just in case".
         summary_tasks.append(damage_to_infrastructure_in_aoi_task)
 
-    summary_vector_path = file_registry['flood_risk_service']
     _ = task_graph.add_task(
         func=_write_summary_vector,
-        args=(reprojected_aoi_path,
-              summary_vector_path),
+        args=(file_registry['reprojected_aoi'],
+              file_registry['flood_risk_service']),
         kwargs={
             'runoff_ret_stats': runoff_retention_stats_task.get(),
             'runoff_ret_vol_stats': runoff_retention_volume_stats_task.get(),
             'damage_per_aoi_stats': damage_per_aoi_stats,
             'flood_volume_stats': flood_volume_stats,
         },
-        target_path_list=[summary_vector_path],
+        target_path_list=[file_registry['flood_risk_service']],
         task_name='write summary stats to flood_risk_service.shp',
         dependent_task_list=summary_tasks)
 

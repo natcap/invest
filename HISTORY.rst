@@ -64,6 +64,11 @@
 Unreleased Changes
 ------------------
 
+Coastal Blue Carbon
+===================
+* The intermediate outputs ``aligned-lulc-baseline-[YEAR].tif`` and
+  ``aligned-lulc-snapshot-[YEAR].tif`` have been renamed to ``aligned-lulc-[YEAR].tif``.
+
 Habitat Quality
 ===============
 * The aligned LULC outputs are no longer named after the original LULC files.

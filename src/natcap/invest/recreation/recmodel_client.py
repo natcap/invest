@@ -626,7 +626,6 @@ def execute(args):
             intermediate_dir, task_graph)
 
         # Compute the regression
-        coefficient_json_path = file_registry['predictor_estimates']
         predictor_df = MODEL_SPEC.get_input(
             'predictor_table_path').get_validated_dataframe(
             args['predictor_table_path'])
@@ -637,12 +636,12 @@ def execute(args):
                   RESPONSE_VARIABLE_ID,
                   predictor_id_list,
                   file_registry['server_version'],
-                  coefficient_json_path,
+                  file_registry['predictor_estimates'],
                   file_registry['regression_coefficients'],
                   file_registry['regression_summary']),
             target_path_list=[file_registry['regression_coefficients'],
                               file_registry['regression_summary'],
-                              coefficient_json_path],
+                              file_registry['predictor_estimates']],
             dependent_task_list=[assemble_predictor_data_task],
             task_name='compute regression')
 
@@ -671,7 +670,7 @@ def execute(args):
             task_graph.add_task(
                 func=_calculate_scenario,
                 args=(file_registry['scenario_results_path'],
-                      SCENARIO_RESPONSE_ID, coefficient_json_path),
+                      SCENARIO_RESPONSE_ID, file_registry['predictor_estimates']),
                 target_path_list=[file_registry['scenario_results_path']],
                 dependent_task_list=[
                     compute_regression_task, build_scenario_data_task],
@@ -829,11 +828,10 @@ def _retrieve_user_days(
                     'workspace_id': workspace_id}}, f)
 
         # unpack result
-        compressed_userdays_path = file_registry[f'{dataset}_userdays']
-        with open(compressed_userdays_path, 'wb') as pud_file:
+        with open(file_registry[f'{dataset}_userdays'], 'wb') as pud_file:
             pud_file.write(result_zip_file_binary)
         temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
-        zipfile.ZipFile(compressed_userdays_path, 'r').extractall(
+        zipfile.ZipFile(file_registry[f'{dataset}_userdays'], 'r').extractall(
             temporary_output_dir)
 
         for filename in os.listdir(temporary_output_dir):
@@ -1030,27 +1028,27 @@ def _schedule_predictor_data_processing(
     for predictor_id, row in predictor_df.iterrows():
         LOGGER.info(f"Building predictor {predictor_id}")
         predictor_type = row['type']
-        predictor_target_path = file_registry['[PREDICTOR]_json', predictor_id]
-        predictor_json_list.append(predictor_target_path)
+        predictor_json_list.append(file_registry['[PREDICTOR]_json', predictor_id])
         if predictor_type.startswith('raster'):
             # type must be one of raster_sum or raster_mean
             func = _raster_sum_mean
             args = (row['path'], predictor_type.split('_')[1],
-                    response_vector_path, predictor_target_path)
+                    response_vector_path,
+                    file_registry['[PREDICTOR]_json', predictor_id])
         # polygon types are a special case because the polygon_area
         # function requires an additional 'mode' argument.
         elif predictor_type.startswith('polygon'):
             func = _polygon_area,
             args = (predictor_type, response_polygons_pickle_path,
-                    row['path'], predictor_target_path)
+                    row['path'], file_registry['[PREDICTOR]_json', predictor_id])
         else:
             func = predictor_functions[predictor_type],
             args = (response_polygons_pickle_path,
-                    row['path'], predictor_target_path)
+                    row['path'], file_registry['[PREDICTOR]_json', predictor_id])
         predictor_task_list.append(task_graph.add_task(
             func=func,
             args=args,
-            target_path_list=[predictor_target_path],
+            target_path_list=[file_registry['[PREDICTOR]_json', predictor_id]],
             dependent_task_list=dependent_task_list,
             task_name=f'predictor {predictor_id}'))
 

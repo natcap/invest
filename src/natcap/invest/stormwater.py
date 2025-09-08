@@ -840,12 +840,8 @@ def execute(args):
     actual_load_paths = []
     for pollutant in pollutants:
         # two output rasters for each pollutant
-        avoided_pollutant_load_path = file_registry[
-            'avoided_pollutant_load_[POLLUTANT]', pollutant]
-        avoided_load_paths.append(avoided_pollutant_load_path)
-        actual_pollutant_load_path = file_registry[
-            'actual_pollutant_load_[POLLUTANT]', pollutant]
-        actual_load_paths.append(actual_pollutant_load_path)
+        avoided_load_paths.append(file_registry['avoided_pollutant_load_[POLLUTANT]', pollutant])
+        actual_load_paths.append(file_registry['actual_pollutant_load_[POLLUTANT]', pollutant])
         # make an array mapping each LULC code to the pollutant EMC value
         emc_array = biophysical_df[f'emc_{pollutant}'].to_numpy(dtype=numpy.float32)
 
@@ -859,10 +855,10 @@ def execute(args):
                 (sorted_lucodes, 'raw'),
                 (emc_array, 'raw')],
                 pollutant_load_op,
-                avoided_pollutant_load_path,
+                file_registry['avoided_pollutant_load_[POLLUTANT]', pollutant],
                 gdal.GDT_Float32,
                 FLOAT_NODATA),
-            target_path_list=[avoided_pollutant_load_path],
+            target_path_list=[file_registry['avoided_pollutant_load_[POLLUTANT]', pollutant]],
             dependent_task_list=[retention_volume_task],
             task_name=f'calculate avoided pollutant {pollutant} load'
         )
@@ -876,18 +872,19 @@ def execute(args):
                 (sorted_lucodes, 'raw'),
                 (emc_array, 'raw')],
                 pollutant_load_op,
-                actual_pollutant_load_path,
+                file_registry['actual_pollutant_load_[POLLUTANT]', pollutant],
                 gdal.GDT_Float32,
                 FLOAT_NODATA),
-            target_path_list=[actual_pollutant_load_path],
+            target_path_list=[file_registry['actual_pollutant_load_[POLLUTANT]', pollutant]],
             dependent_task_list=[runoff_volume_task],
             task_name=f'calculate actual pollutant {pollutant} load'
         )
         aggregation_task_dependencies += [avoided_load_task, actual_load_task]
-        data_to_aggregate.append((avoided_pollutant_load_path,
+        data_to_aggregate.append((file_registry['avoided_pollutant_load_[POLLUTANT]', pollutant],
                                  f'{pollutant}_total_avoided_load', 'sum'))
         data_to_aggregate.append(
-            (actual_pollutant_load_path, f'{pollutant}_total_load', 'sum'))
+            (file_registry['actual_pollutant_load_[POLLUTANT]', pollutant],
+                f'{pollutant}_total_load', 'sum'))
 
     # (Optional) Do valuation if a replacement cost is defined
     # you could theoretically have a cost of 0 which should be allowed

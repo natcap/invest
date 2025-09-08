@@ -673,9 +673,8 @@ def execute(args):
         if lulc_arg in args and args[lulc_arg] != '':
             # save land cover paths in a list for alignment and resize
             lulc_raster_list.append(args[lulc_arg])
-            aligned_lulc_path = file_registry[f'lulc_{scenario}_aligned']
-            aligned_lulc_raster_list.append(aligned_lulc_path)
-            lulc_path_dict[scenario] = aligned_lulc_path
+            aligned_lulc_raster_list.append(file_registry[f'lulc_{scenario}_aligned'])
+            lulc_path_dict[scenario] = file_registry[f'lulc_{scenario}_aligned']
 
             # for each threat given in the CSV file try opening the associated
             # raster which should be found relative to the Threat CSV
@@ -720,9 +719,8 @@ def execute(args):
                         threat_name = os.path.basename(os.path.dirname(threat_path))
                     else:
                         threat_name = os.path.splitext(os.path.basename(threat_path))[0]
-                    aligned_threat_path = file_registry['[THREAT]_aligned', threat_name]
-                    aligned_threat_raster_list.append(aligned_threat_path)
-                    threat_path_dict[scenario][threat] = aligned_threat_path
+                    aligned_threat_raster_list.append(file_registry['[THREAT]_aligned', threat_name])
+                    threat_path_dict[scenario][threat] = file_registry['[THREAT]_aligned', threat_name]
 
     LOGGER.info("Checking threat raster values are valid ( 0 <= x <= 1 ).")
     # Assert that threat rasters have valid values.
@@ -764,44 +762,42 @@ def execute(args):
     LOGGER.info('Starting habitat_quality biophysical calculations')
     # Rasterize access vector, if value is null set to 1 (fully accessible),
     # else set to the value according to the ACCESS attribute
-    access_raster_path = file_registry['access_layer']
     # create a new raster based on the raster info of current land cover.
     # fill with 1.0 for case where no access shapefile provided,
     # which indicates we don't want to mask anything out later
     create_access_raster_task = task_graph.add_task(
         func=pygeoprocessing.new_raster_from_base,
-        args=(lulc_path_dict['cur'], access_raster_path, gdal.GDT_Float32,
+        args=(lulc_path_dict['cur'], file_registry['access_layer'], gdal.GDT_Float32,
               [_OUT_NODATA]),
         kwargs={
             'fill_value_list': [1.0]
         },
-        target_path_list=[access_raster_path],
+        target_path_list=[file_registry['access_layer']],
         dependent_task_list=[align_task],
         task_name='access_raster')
     access_task_list = [create_access_raster_task]
 
     if 'access_vector_path' in args and args['access_vector_path']:
         LOGGER.debug("Reproject and rasterize Access vector")
-        reprojected_access_path = file_registry['reprojected_access_vector']
         reproject_access_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             kwargs={
                 'base_vector_path': args['access_vector_path'],
                 'target_projection_wkt': lulc_wkt,
-                'target_path': reprojected_access_path,
+                'target_path': file_registry['reprojected_access_vector'],
                 'driver_name': 'GPKG'
             },
-            target_path_list=[reprojected_access_path],
+            target_path_list=[file_registry['reprojected_access_vector']],
             task_name='reproject_access_vector')
 
         rasterize_access_task = task_graph.add_task(
             func=pygeoprocessing.rasterize,
-            args=(reprojected_access_path, access_raster_path),
+            args=(file_registry['reprojected_access_vector'], file_registry['access_layer']),
             kwargs={
                 'option_list': ['ATTRIBUTE=ACCESS'],
                 'burn_values': None
             },
-            target_path_list=[access_raster_path],
+            target_path_list=[file_registry['access_layer']],
             dependent_task_list=[
                 create_access_raster_task, reproject_access_task],
             task_name='rasterize_access')
@@ -819,15 +815,13 @@ def execute(args):
         individual_degradation_task_list = []
 
         # Create raster of habitat based on habitat field
-        habitat_raster_path = file_registry[f'habitat_{scenario}']
-
         reclass_error_details = {
             'raster_name': f'LULC_{scenario[0]}', 'column_name': 'lucode',
             'table_name': 'Sensitivity'}
         habitat_raster_task = task_graph.add_task(
             func=utils.reclassify_raster,
             args=((lulc_path, 1), sensitivity_reclassify_habitat_dict,
-                  habitat_raster_path, gdal.GDT_Float32, _OUT_NODATA,
+                  file_registry[f'habitat_{scenario}'], gdal.GDT_Float32, _OUT_NODATA,
                   reclass_error_details),
             dependent_task_list=[align_task],
             task_name=f'habitat_raster_{scenario[0]}')
@@ -862,32 +856,28 @@ def execute(args):
                     f"The max distance for threat: '{threat}' is less than"
                     " or equal to 0. MAX_DIST should be a positive value.")
 
-            distance_raster_path = file_registry[
-                f'[THREAT]_distance_transform_{scenario}', threat]
-
             dist_edt_task = task_graph.add_task(
                 func=pygeoprocessing.distance_transform_edt,
-                args=((threat_raster_path, 1), distance_raster_path),
-                target_path_list=[distance_raster_path],
+                args=(
+                    (threat_raster_path, 1),
+                    file_registry[f'[THREAT]_distance_transform_{scenario}', threat]),
+                target_path_list=[file_registry[f'[THREAT]_distance_transform_{scenario}', threat]],
                 dependent_task_list=[align_task],
                 task_name=f'distance edt {scenario} {threat}')
-
-            filtered_threat_raster_path = file_registry[
-                f'filtered_[DECAY]_[THREAT]_{scenario}', row["decay"], threat]
 
             dist_decay_task = task_graph.add_task(
                 func=_decay_distance,
                 args=(
-                    distance_raster_path, row['max_dist'],
-                    row['decay'], filtered_threat_raster_path),
-                target_path_list=[filtered_threat_raster_path],
+                    file_registry[f'[THREAT]_distance_transform_{scenario}', threat],
+                    row['max_dist'], row['decay'], file_registry[
+                        f'filtered_[DECAY]_[THREAT]_{scenario}', row["decay"], threat]),
+                target_path_list=[file_registry[f'filtered_[DECAY]_[THREAT]_{scenario}',
+                    row["decay"], threat]],
                 dependent_task_list=[dist_edt_task],
                 task_name=f'distance decay {scenario} {threat}')
             threat_decay_task_list.append(dist_decay_task)
 
             # create sensitivity raster based on threat
-            sens_raster_path = file_registry[f'sens_[THREAT]_{scenario}', threat]
-
             # Dictionary for reclassing threat sensitivity values
             sensitivity_reclassify_threat_dict = sensitivity_df[threat].to_dict()
 
@@ -897,9 +887,10 @@ def execute(args):
             sens_threat_task = task_graph.add_task(
                 func=utils.reclassify_raster,
                 args=((lulc_path, 1), sensitivity_reclassify_threat_dict,
-                      sens_raster_path, gdal.GDT_Float32, _OUT_NODATA,
+                      file_registry[f'sens_[THREAT]_{scenario}', threat],
+                      gdal.GDT_Float32, _OUT_NODATA,
                       reclass_error_details),
-                target_path_list=[sens_raster_path],
+                target_path_list=[file_registry[f'sens_[THREAT]_{scenario}', threat]],
                 dependent_task_list=[align_task],
                 task_name=f'sens_raster_{row["decay"]}_{scenario[0]}_{threat}')
             sensitivity_task_list.append(sens_threat_task)
@@ -909,35 +900,36 @@ def execute(args):
             weight_avg = row['weight'] / weight_sum
 
             # Calculate degradation for each threat
-            indiv_threat_raster_path = file_registry[
-                f'degradation_[THREAT]_{scenario}', threat]
-
             individual_threat_task = task_graph.add_task(
                 func=_calculate_individual_degradation,
-                args=(filtered_threat_raster_path, sens_raster_path, weight_avg,
-                      access_raster_path, indiv_threat_raster_path),
-                target_path_list=[indiv_threat_raster_path],
+                args=(
+                    file_registry[f'filtered_[DECAY]_[THREAT]_{scenario}',
+                        row["decay"], threat],
+                    file_registry[f'sens_[THREAT]_{scenario}', threat],
+                    weight_avg,
+                    file_registry['access_layer'],
+                    file_registry[f'degradation_[THREAT]_{scenario}', threat]),
+                target_path_list=[file_registry[f'degradation_[THREAT]_{scenario}', threat]],
                 dependent_task_list=[
                     sens_threat_task, dist_decay_task,
                     *access_task_list],
                 task_name=f'deg raster {scenario} {threat}')
             individual_degradation_task_list.append(individual_threat_task)
 
-            indiv_deg_raster_list.append(indiv_threat_raster_path)
+            indiv_deg_raster_list.append(file_registry[
+                f'degradation_[THREAT]_{scenario}', threat])
 
         # check to see if we got here because a threat raster was missing
         # for baseline lulc, if so then we want to skip to the next landcover
         if exit_landcover:
             continue
 
-        deg_sum_raster_path = file_registry[f'deg_sum_{scenario[0]}']
-
         LOGGER.info('Starting raster calculation on total degradation')
 
         total_degradation_task = task_graph.add_task(
             func=_calculate_total_degradation,
-            args=(indiv_deg_raster_list, deg_sum_raster_path),
-            target_path_list=[deg_sum_raster_path],
+            args=(indiv_deg_raster_list, file_registry[f'deg_sum_{scenario[0]}']),
+            target_path_list=[file_registry[f'deg_sum_{scenario[0]}']],
             dependent_task_list=individual_degradation_task_list,
             task_name=f'tot_degradation_{row["decay"]}{scenario}_{threat}')
 
@@ -945,16 +937,16 @@ def execute(args):
         # ksq: a term used below to compute habitat quality
         ksq = half_saturation_constant**_SCALING_PARAM
 
-        quality_path = file_registry[f'quality_{scenario[0]}']
-
         LOGGER.info('Starting raster calculation on quality')
 
-        deg_hab_raster_list = [deg_sum_raster_path, habitat_raster_path]
+        deg_hab_raster_list = [
+            file_registry[f'deg_sum_{scenario[0]}'],
+            file_registry[f'habitat_{scenario}']]
 
         _ = task_graph.add_task(
             func=_calculate_habitat_quality,
-            args=(deg_hab_raster_list, quality_path, ksq),
-            target_path_list=[quality_path],
+            args=(deg_hab_raster_list, file_registry[f'quality_{scenario[0]}'], ksq),
+            target_path_list=[file_registry[f'quality_{scenario[0]}']],
             dependent_task_list=[habitat_raster_task, total_degradation_task],
             task_name='habitat_quality')
 
@@ -966,15 +958,12 @@ def execute(args):
         for scenario in ['cur', 'fut']:
             if scenario not in lulc_path_dict:
                 continue
-
-            new_cover_path = file_registry[f'new_cover_{scenario[0]}']
-            rarity_raster_path = file_registry[f'rarity_{scenario[0]}']
-            rarity_csv_path = file_registry[f'rarity_{scenario[0]}_csv']
-
             _ = task_graph.add_task(
                 func=_compute_rarity_operation,
                 args=((lulc_path_dict['bas'], 1), (lulc_path_dict[scenario], 1),
-                      (new_cover_path, 1), rarity_raster_path, rarity_csv_path),
+                      (file_registry[f'new_cover_{scenario[0]}'], 1),
+                      file_registry[f'rarity_{scenario[0]}'],
+                      file_registry[f'rarity_{scenario[0]}_csv']),
                 dependent_task_list=[align_task],
                 task_name=f'rarity_{scenario}')
 

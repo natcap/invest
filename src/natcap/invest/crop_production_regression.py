@@ -553,16 +553,16 @@ def execute(args):
             _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
 
         # Use file_registry for clipped climate bin raster path
-        clipped_climate_bin_raster_path = file_registry['clipped_[CROP]_climate_bin_map', crop_name]
         crop_climate_bin_raster_info = pygeoprocessing.get_raster_info(
             crop_climate_bin_raster_path)
         crop_climate_bin_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
             args=(crop_climate_bin_raster_path,
                   crop_climate_bin_raster_info['pixel_size'],
-                  clipped_climate_bin_raster_path, 'near'),
+                  file_registry['clipped_[CROP]_climate_bin_map', crop_name],
+                  'near'),
             kwargs={'target_bb': landcover_wgs84_bounding_box},
-            target_path_list=[clipped_climate_bin_raster_path],
+            target_path_list=[file_registry['clipped_[CROP]_climate_bin_map', crop_name]],
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
@@ -583,13 +583,11 @@ def execute(args):
             'raster_name': f'{crop_name} Climate Bin',
             'column_name': 'climate_bin',
             'table_name': f'Climate {crop_name} Regression Yield'}
-        regression_parameter_raster_path_lookup = {}
         for yield_regression_id in yield_regression_headers:
             # there are extra headers in that table
             if yield_regression_id not in _EXPECTED_REGRESSION_TABLE_HEADERS:
                 continue
             LOGGER.info("Map %s to climate bins.", yield_regression_id)
-            regression_parameter_raster_path_lookup[yield_regression_id] = file_registry['[CROP]_[PARAMETER]_interpolated_regression_parameter', crop_name, yield_regression_id]
             bin_to_regression_value = crop_regression_df[yield_regression_id].to_dict()
             # reclassify nodata to a valid value of 0
             # we're assuming that the crop doesn't exist where there is no data
@@ -597,15 +595,16 @@ def execute(args):
             # in the context of the provided climate bins map
             bin_to_regression_value[
                 crop_climate_bin_raster_info['nodata'][0]] = 0
-            coarse_regression_parameter_raster_path = file_registry['[CROP]_[PARAMETER]_coarse_regression_parameter', crop_name, yield_regression_id]
             create_coarse_regression_parameter_task = task_graph.add_task(
                 func=utils.reclassify_raster,
-                args=((clipped_climate_bin_raster_path, 1),
+                args=((file_registry['clipped_[CROP]_climate_bin_map', crop_name], 1),
                       bin_to_regression_value,
-                      coarse_regression_parameter_raster_path,
+                      file_registry['[CROP]_[PARAMETER]_coarse_regression_parameter',
+                        crop_name, yield_regression_id],
                       gdal.GDT_Float32, _NODATA_YIELD,
                       reclassify_error_details),
-                target_path_list=[coarse_regression_parameter_raster_path],
+                target_path_list=[file_registry['[CROP]_[PARAMETER]_coarse_regression_parameter',
+                    crop_name, yield_regression_id]],
                 dependent_task_list=[crop_climate_bin_task],
                 task_name='create_coarse_regression_parameter_%s_%s' % (
                     crop_name, yield_regression_id))
@@ -616,14 +615,17 @@ def execute(args):
                 crop_name, yield_regression_id)
             create_interpolated_parameter_task = task_graph.add_task(
                 func=pygeoprocessing.warp_raster,
-                args=(coarse_regression_parameter_raster_path,
+                args=(file_registry['[CROP]_[PARAMETER]_coarse_regression_parameter',
+                        crop_name, yield_regression_id],
                       landcover_raster_info['pixel_size'],
-                      regression_parameter_raster_path_lookup[yield_regression_id],
+                      file_registry['[CROP]_[PARAMETER]_interpolated_regression_parameter',
+                        crop_name, yield_regression_id],
                       'cubicspline'),
                 kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
                         'target_bb': landcover_raster_info['bounding_box']},
-                target_path_list=[
-                    regression_parameter_raster_path_lookup[yield_regression_id]],
+                target_path_list=[file_registry[
+                    '[CROP]_[PARAMETER]_interpolated_regression_parameter',
+                    crop_name, yield_regression_id]],
                 dependent_task_list=[
                     create_coarse_regression_parameter_task],
                 task_name='create_interpolated_parameter_%s_%s' % (
@@ -631,50 +633,59 @@ def execute(args):
             dependent_task_list.append(create_interpolated_parameter_task)
 
         LOGGER.info('Calc nitrogen yield')
-        nitrogen_yield_raster_path = file_registry['[CROP]_nitrogen_yield', crop_name]
         calc_nitrogen_yield_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
-            args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
-                   (regression_parameter_raster_path_lookup['b_nut'], 1),
-                   (regression_parameter_raster_path_lookup['c_n'], 1),
+            args=([(file_registry['[CROP]_[PARAMETER]_interpolated_regression_parameter',
+                        crop_name, 'yield_ceiling'], 1),
+                   (file_registry['[CROP]_[PARAMETER]_interpolated_regression_parameter',
+                        crop_name, 'b_nut'], 1),
+                   (file_registry['[CROP]_[PARAMETER]_interpolated_regression_parameter',
+                        crop_name, 'c_n'], 1),
                    (args['landcover_raster_path'], 1),
                    (crop_to_fertilization_rate_df['nitrogen_rate'][crop_name],
                     'raw'), (crop_lucode, 'raw')],
                   _x_yield_op,
-                  nitrogen_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
-            target_path_list=[nitrogen_yield_raster_path],
+                  file_registry['[CROP]_nitrogen_yield', crop_name],
+                  gdal.GDT_Float32, _NODATA_YIELD),
+            target_path_list=[file_registry['[CROP]_nitrogen_yield', crop_name]],
             dependent_task_list=dependent_task_list,
             task_name='calculate_nitrogen_yield_%s' % crop_name)
 
         LOGGER.info('Calc phosphorus yield')
-        phosphorus_yield_raster_path = file_registry['[CROP]_phosphorus_yield', crop_name]
         calc_phosphorus_yield_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
-            args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
-                   (regression_parameter_raster_path_lookup['b_nut'], 1),
-                   (regression_parameter_raster_path_lookup['c_p2o5'], 1),
+            args=([(file_registry['[CROP]_[PARAMETER]_interpolated_regression_parameter',
+                        crop_name, 'yield_ceiling'], 1),
+                   (file_registry['[CROP]_[PARAMETER]_interpolated_regression_parameter',
+                        crop_name, 'b_nut'], 1),
+                   (file_registry['[CROP]_[PARAMETER]_interpolated_regression_parameter',
+                        crop_name, 'c_p2o5'], 1),
                    (args['landcover_raster_path'], 1),
                    (crop_to_fertilization_rate_df['phosphorus_rate'][crop_name],
                     'raw'), (crop_lucode, 'raw')],
                   _x_yield_op,
-                  phosphorus_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
-            target_path_list=[phosphorus_yield_raster_path],
+                  file_registry['[CROP]_phosphorus_yield', crop_name],
+                  gdal.GDT_Float32, _NODATA_YIELD),
+            target_path_list=[file_registry['[CROP]_phosphorus_yield', crop_name]],
             dependent_task_list=dependent_task_list,
             task_name='calculate_phosphorus_yield_%s' % crop_name)
 
         LOGGER.info('Calc potassium yield')
-        potassium_yield_raster_path = file_registry['[CROP]_potassium_yield', crop_name]
         calc_potassium_yield_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
-            args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
-                   (regression_parameter_raster_path_lookup['b_k2o'], 1),
-                   (regression_parameter_raster_path_lookup['c_k2o'], 1),
+            args=([(file_registry['[CROP]_[PARAMETER]_interpolated_regression_parameter',
+                        crop_name, 'yield_ceiling'], 1),
+                   (file_registry['[CROP]_[PARAMETER]_interpolated_regression_parameter',
+                        crop_name, 'b_k2o'], 1),
+                   (file_registry['[CROP]_[PARAMETER]_interpolated_regression_parameter',
+                        crop_name, 'c_k2o'], 1),
                    (args['landcover_raster_path'], 1),
                    (crop_to_fertilization_rate_df['potassium_rate'][crop_name],
                     'raw'), (crop_lucode, 'raw')],
                   _x_yield_op,
-                  potassium_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
-            target_path_list=[potassium_yield_raster_path],
+                  file_registry['[CROP]_potassium_yield', crop_name],
+                  gdal.GDT_Float32, _NODATA_YIELD),
+            target_path_list=[file_registry['[CROP]_potassium_yield', crop_name]],
             dependent_task_list=dependent_task_list,
             task_name='calculate_potassium_yield_%s' % crop_name)
 
@@ -684,17 +695,16 @@ def execute(args):
             calc_potassium_yield_task))
 
         LOGGER.info('Calc the min of N, K, and P')
-        crop_production_raster_path = file_registry['[CROP]_regression_production', crop_name]
         calc_min_NKP_task = task_graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=_min_op,
-                rasters=[nitrogen_yield_raster_path,
-                         phosphorus_yield_raster_path,
-                         potassium_yield_raster_path],
-                target_path=crop_production_raster_path,
+                rasters=[file_registry['[CROP]_nitrogen_yield', crop_name],
+                         file_registry['[CROP]_phosphorus_yield', crop_name],
+                         file_registry['[CROP]_potassium_yield', crop_name]],
+                target_path=file_registry['[CROP]_regression_production', crop_name],
                 target_nodata=_NODATA_YIELD),
-            target_path_list=[crop_production_raster_path],
+            target_path_list=[file_registry['[CROP]_regression_production', crop_name]],
             dependent_task_list=dependent_task_list,
             task_name='calc_min_of_NKP')
         dependent_task_list.append(calc_min_NKP_task)
@@ -706,59 +716,57 @@ def execute(args):
         global_observed_yield_raster_info = (
             pygeoprocessing.get_raster_info(
                 global_observed_yield_raster_path))
-        clipped_observed_yield_raster_path = file_registry['[CROP]_clipped_observed_yield', crop_name]
         clip_global_observed_yield_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
             args=(global_observed_yield_raster_path,
                   global_observed_yield_raster_info['pixel_size'],
-                  clipped_observed_yield_raster_path, 'near'),
+                  file_registry['[CROP]_clipped_observed_yield', crop_name],
+                  'near'),
             kwargs={'target_bb': landcover_wgs84_bounding_box},
-            target_path_list=[clipped_observed_yield_raster_path],
+            target_path_list=[file_registry['[CROP]_clipped_observed_yield', crop_name]],
             task_name='clip_global_observed_yield_%s_' % crop_name)
         dependent_task_list.append(clip_global_observed_yield_task)
 
         observed_yield_nodata = (
             global_observed_yield_raster_info['nodata'][0])
 
-        zeroed_observed_yield_raster_path = file_registry['[CROP]_zeroed_observed_yield', crop_name]
         nodata_to_zero_for_observed_yield_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
-            args=([(clipped_observed_yield_raster_path, 1),
+            args=([(file_registry['[CROP]_clipped_observed_yield', crop_name], 1),
                    (observed_yield_nodata, 'raw')],
-                  _zero_observed_yield_op, zeroed_observed_yield_raster_path,
+                  _zero_observed_yield_op,
+                  file_registry['[CROP]_zeroed_observed_yield', crop_name],
                   gdal.GDT_Float32, observed_yield_nodata),
-            target_path_list=[zeroed_observed_yield_raster_path],
+            target_path_list=[file_registry['[CROP]_zeroed_observed_yield', crop_name]],
             dependent_task_list=[clip_global_observed_yield_task],
             task_name='nodata_to_zero_for_observed_yield_%s_' % crop_name)
         dependent_task_list.append(nodata_to_zero_for_observed_yield_task)
 
-        interpolated_observed_yield_raster_path = file_registry[
-            '[CROP]_interpolated_observed_yield', crop_name]
         LOGGER.info(
             "Interpolating observed %s raster to landcover.", crop_name)
         interpolate_observed_yield_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
-            args=(zeroed_observed_yield_raster_path,
+            args=(file_registry['[CROP]_zeroed_observed_yield', crop_name],
                   landcover_raster_info['pixel_size'],
-                  interpolated_observed_yield_raster_path, 'cubicspline'),
+                  file_registry['[CROP]_interpolated_observed_yield', crop_name],
+                  'cubicspline'),
             kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
                     'target_bb': landcover_raster_info['bounding_box']},
-            target_path_list=[interpolated_observed_yield_raster_path],
+            target_path_list=[file_registry['[CROP]_interpolated_observed_yield', crop_name]],
             dependent_task_list=[nodata_to_zero_for_observed_yield_task],
             task_name='interpolate_observed_yield_to_lulc_%s' % crop_name)
         dependent_task_list.append(interpolate_observed_yield_task)
 
-        observed_production_raster_path = file_registry[
-            '[CROP]_observed_production', crop_name]
         calculate_observed_production_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(args['landcover_raster_path'], 1),
-                   (interpolated_observed_yield_raster_path, 1),
+                   (file_registry['[CROP]_interpolated_observed_yield', crop_name], 1),
                    (observed_yield_nodata, 'raw'), (landcover_nodata, 'raw'),
                    (crop_lucode, 'raw')],
-                  _mask_observed_yield_op, observed_production_raster_path,
+                  _mask_observed_yield_op,
+                  file_registry['[CROP]_observed_production', crop_name],
                   gdal.GDT_Float32, observed_yield_nodata),
-            target_path_list=[observed_production_raster_path],
+            target_path_list=[file_registry['[CROP]_observed_production', crop_name]],
             dependent_task_list=[interpolate_observed_yield_task],
             task_name='calculate_observed_production_%s' % crop_name)
         dependent_task_list.append(calculate_observed_production_task)
@@ -771,32 +779,29 @@ def execute(args):
 
     LOGGER.info("Generating report table")
     crop_names = list(crop_to_landcover_df.index)
-    result_table_path = file_registry['result_table']
     _ = task_graph.add_task(
         func=tabulate_regression_results,
         args=(nutrient_df,
               crop_names, pixel_area_ha,
               args['landcover_raster_path'], landcover_nodata,
-              output_dir, file_suffix, file_registry, result_table_path),
-        target_path_list=[result_table_path],
+              output_dir, file_suffix, file_registry, file_registry['result_table']),
+        target_path_list=[file_registry['result_table']],
         dependent_task_list=dependent_task_list,
         task_name='tabulate_results')
 
     if ('aggregate_polygon_path' in args and
             args['aggregate_polygon_path'] not in ['', None]):
         LOGGER.info("aggregating result over query polygon")
-        target_aggregate_vector_path = file_registry['aggregate_vector']
-        aggregate_results_table_path = file_registry['aggregate_results']
         _ = task_graph.add_task(
             func=aggregate_regression_results_to_polygons,
             args=(args['aggregate_polygon_path'],
-                  target_aggregate_vector_path,
-                  aggregate_results_table_path,
+                  file_registry['aggregate_vector'],
+                  file_registry['aggregate_results'],
                   landcover_raster_info['projection_wkt'],
                   crop_names, nutrient_df, pixel_area_ha,
                   output_dir, file_suffix, file_registry),
-            target_path_list=[target_aggregate_vector_path,
-                              aggregate_results_table_path],
+            target_path_list=[file_registry['aggregate_vector'],
+                              file_registry['aggregate_results']],
             dependent_task_list=dependent_task_list,
             task_name='aggregate_results_to_polygons')
 
@@ -923,15 +928,13 @@ def tabulate_regression_results(
             production_lookup = {}
             production_pixel_count = 0
             yield_sum = 0
-            observed_production_raster_path = file_registry[
-                '[CROP]_observed_production', crop_name]
 
             LOGGER.info(
                 "Calculating production area and summing observed yield.")
             observed_yield_nodata = pygeoprocessing.get_raster_info(
-                observed_production_raster_path)['nodata'][0]
+                file_registry['[CROP]_observed_production', crop_name])['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
-                    (observed_production_raster_path, 1)):
+                    (file_registry['[CROP]_observed_production', crop_name], 1)):
 
                 # make a valid mask showing which pixels are not nodata
                 # if nodata value undefined, assume all pixels are valid
@@ -948,11 +951,9 @@ def tabulate_regression_results(
             result_table.write(',%f' % production_area)
             result_table.write(",%f" % yield_sum)
 
-            crop_production_raster_path = file_registry[
-                '[CROP]_regression_production', crop_name]
             yield_sum = 0
             for _, yield_block in pygeoprocessing.iterblocks(
-                    (crop_production_raster_path, 1)):
+                    (file_registry['[CROP]_regression_production', crop_name], 1)):
                 yield_sum += numpy.sum(
                     # _NODATA_YIELD will always have a value (defined above)
                     yield_block[~pygeoprocessing.array_equals_nodata(
@@ -1039,11 +1040,9 @@ def aggregate_regression_results_to_polygons(
             1 - nutrient_df['percentrefuse'][crop_name] / 100)
         LOGGER.info(
             "Calculating zonal stats for %s", crop_name)
-        crop_production_raster_path = file_registry[
-            '[CROP]_regression_production', crop_name]
         total_yield_lookup['%s_modeled' % crop_name] = (
             pygeoprocessing.zonal_statistics(
-                (crop_production_raster_path, 1),
+                (file_registry['[CROP]_regression_production', crop_name], 1),
                 target_aggregate_vector_path))
 
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
@@ -1057,10 +1056,9 @@ def aggregate_regression_results_to_polygons(
                         * nutrient_df[nutrient_id][crop_name])
 
         # process observed
-        observed_yield_path = file_registry['[CROP]_observed_production', crop_name]
         total_yield_lookup['%s_observed' % crop_name] = (
             pygeoprocessing.zonal_statistics(
-                (observed_yield_path, 1),
+                (file_registry['[CROP]_observed_production', crop_name], 1),
                 target_aggregate_vector_path))
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
             for fid_index in total_yield_lookup[
