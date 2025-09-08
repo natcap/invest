@@ -603,8 +603,8 @@ def execute(args):
         func=_assemble_regression_data,
         args=(file_registry['pud_results'],
               file_registry['tud_results'],
-              file_registry['regression_vector_path']),
-        target_path_list=[file_registry['regression_vector_path']],
+              file_registry['regression_data']),
+        target_path_list=[file_registry['regression_data']],
         dependent_task_list=[calc_user_days_task],
         task_name='assemble userday variables')
 
@@ -623,7 +623,7 @@ def execute(args):
             file_registry['response_polygons_lookup'],
             [prepare_response_polygons_task, assemble_userday_variables_task],
             args['predictor_table_path'],
-            file_registry['regression_vector_path'],
+            file_registry['regression_data'],
             intermediate_dir, task_graph, file_registry)
 
         # Compute the regression
@@ -633,7 +633,7 @@ def execute(args):
         predictor_id_list = predictor_df.index
         compute_regression_task = task_graph.add_task(
             func=_compute_and_summarize_regression,
-            args=(file_registry['regression_vector_path'],
+            args=(file_registry['regression_data'],
                   RESPONSE_VARIABLE_ID,
                   predictor_id_list,
                   file_registry['server_version'],
