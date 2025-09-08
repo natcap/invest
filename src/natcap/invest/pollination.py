@@ -565,6 +565,8 @@ def execute(args):
     file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
 
     if 'farm_vector_path' in args and args['farm_vector_path'] != '':
+        # we set the vector path to be the projected vector that we'll create
+        # later
         farm_vector_path = file_registry['reprojected_farm_vector']
     else:
         farm_vector_path = None
@@ -683,6 +685,7 @@ def execute(args):
         # if there's a farm, rasterize floral resources over the top
         if farm_vector_path is not None:
             farm_floral_resources_id = _FARM_FLORAL_RESOURCES_HEADER_PATTERN % season
+            # override the relative floral task because we'll need this one
             relative_floral_abudance_task = task_graph.add_task(
                 task_name=f'relative_floral_abudance_task_{season}',
                 func=_rasterize_vector_onto_base,
@@ -704,6 +707,7 @@ def execute(args):
                 relative_abundance_path = file_registry['relative_floral_abundance_index_[SEASON]', season]
             else:
                 relative_abundance_path = file_registry['farm_relative_floral_abundance_index_[SEASON]', season]
+            # calculate foraged_flowers_species_season = RA(l(x),j)*fa(s,j)
             foraged_flowers_index_task_map[(species, season)] = task_graph.add_task(
                 task_name=f'calculate_foraged_flowers_{species}_{season}',
                 func=_multiply_by_scalar,
@@ -749,8 +753,11 @@ def execute(args):
                 'Land Cover Raster has unequal x, y pixel sizes: '
                 f'{landcover_pixel_size_tuple}. Using'
                 f'{landcover_mean_pixel_size} as the mean pixel size.')
+        # create a convolution kernel for the species flight range
         alpha = scenario_variables['alpha_value'][species] / landcover_mean_pixel_size
         kernel_path = file_registry['kernel_[ALPHA]', f'{alpha:.6f}']
+        # to avoid creating duplicate kernel rasters check to see if an
+        # adequate kernel task has already been submitted
         try:
             alpha_kernel_raster_task = alpha_kernel_map[kernel_path]
         except KeyError:
@@ -764,6 +771,7 @@ def execute(args):
                 target_path_list=[kernel_path])
             alpha_kernel_map[kernel_path] = alpha_kernel_raster_task
 
+        # convolve FE with alpha_s
         floral_resources_task = task_graph.add_task(
             task_name=f'convolve_{species}',
             func=pygeoprocessing.convolve_2d,
@@ -782,6 +790,8 @@ def execute(args):
 
         floral_resources_index_task_map[species] = floral_resources_task
 
+        # calculate
+        # pollinator_supply_index[species] PS(x,s) = FR(x,s) * HN(x,s) * sa(s)
         pollinator_supply_task = task_graph.add_task(
             task_name=f'calculate_pollinator_supply_{species}',
             func=_calculate_pollinator_supply_index,
@@ -794,6 +804,7 @@ def execute(args):
                 floral_resources_task, habitat_nesting_tasks[species]],
             target_path_list=[file_registry['pollinator_supply_[SPECIES]', species]])
 
+        # calc convolved_PS PS over alpha_s
         convolve_ps_task = task_graph.add_task(
             task_name=f'convolve_ps_{species}',
             func=pygeoprocessing.convolve_2d,
@@ -811,6 +822,8 @@ def execute(args):
             target_path_list=[file_registry['convolve_ps_[SPECIES]', species]])
 
         for season in scenario_variables['season_list']:
+            # calculate pollinator activity as
+            # PA(x,s,j)=RA(l(x),j)fa(s,j) convolve(ps, alpha_s)
             pollinator_abundance_task_map[(species, season)] = task_graph.add_task(
                 task_name=f'calculate_poll_abudance_{species}',
                 func=pygeoprocessing.raster_map,
@@ -855,6 +868,7 @@ def execute(args):
         task_graph.join()
         return
 
+    # blank raster used for rasterizing all the farm parameters/fields later
     blank_raster_task = task_graph.add_task(
         task_name='create_blank_raster',
         func=pygeoprocessing.new_raster_from_base,
@@ -876,6 +890,7 @@ def execute(args):
             kwargs={'filter_string': f"{_FARM_SEASON_FIELD}='{season}'"},
             dependent_task_list=[blank_raster_task],
             target_path_list=[file_registry['half_saturation_[SEASON]', season]])
+        # calc on farm pollinator abundance i.e. FP_season
         farm_pollinator_season_task_list.append(task_graph.add_task(
             task_name=f'farm_pollinator_{season}',
             func=pygeoprocessing.raster_map,
@@ -891,6 +906,7 @@ def execute(args):
                 half_saturation_task, total_pollinator_abundance_task[season]],
             target_path_list=[file_registry['farm_pollinator_[SEASON]', season]]))
 
+    # sum farm pollinators
     farm_pollinator_task = task_graph.add_task(
         task_name='sum_farm_pollinators',
         func=pygeoprocessing.raster_calculator,
@@ -902,6 +918,7 @@ def execute(args):
         dependent_task_list=farm_pollinator_season_task_list,
         target_path_list=[file_registry['farm_pollinators']])
 
+    # rasterize managed pollinators
     managed_pollinator_task = task_graph.add_task(
         task_name='rasterize_managed_pollinators',
         func=_rasterize_vector_onto_base,
@@ -911,6 +928,7 @@ def execute(args):
         dependent_task_list=[reproject_farm_task, blank_raster_task],
         target_path_list=[file_registry['managed_pollinators']])
 
+    # calculate PYT
     pyt_task = task_graph.add_task(
         task_name='calculate_total_pollinators',
         func=pygeoprocessing.raster_map,
@@ -923,6 +941,7 @@ def execute(args):
         dependent_task_list=[farm_pollinator_task, managed_pollinator_task],
         target_path_list=[file_registry['total_pollinator_yield']])
 
+    # calculate PYW
     wild_pollinator_task = task_graph.add_task(
         task_name='calculate_wild_pollinators',
         func=pygeoprocessing.raster_map,
@@ -937,6 +956,7 @@ def execute(args):
         dependent_task_list=[pyt_task, managed_pollinator_task],
         target_path_list=[file_registry['wild_pollinator_yield']])
 
+    # aggregate yields across farms
     if os.path.exists(file_registry['farm_results']):
         os.remove(file_registry['farm_results'])
     reproject_farm_task.join()
