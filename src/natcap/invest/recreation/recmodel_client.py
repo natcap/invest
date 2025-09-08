@@ -590,7 +590,7 @@ def execute(args):
               file_registry['aoi_zip'],
               args['start_year'], args['end_year'], file_suffix,
               output_dir, server_url, file_registry['server_version'],
-              file_registry['pud_userdays'], file_registry['tud_userdays']),
+              file_registry['pud_zip'], file_registry['tud_zip']),
         target_path_list=[file_registry['aoi_zip'],
                           file_registry['pud_results'],
                           file_registry['pud_monthly_table'],
