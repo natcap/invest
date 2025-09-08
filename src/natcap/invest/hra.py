@@ -386,11 +386,11 @@ MODEL_SPEC = spec.ModelSpec(
             index_col=None
         ),
         spec.SingleBandRasterOutput(
-            id="aligned_[HABITAT_STRESSOR_CRITERIA]",
-            path="intermediate_outputs/aligned_[HABITAT_STRESSOR_CRITERIA].tif",
+            id="aligned_[KEY]",
+            path="intermediate_outputs/aligned_[KEY].tif",
             about=gettext(
-                "Copy of the input, aligned to the same projection and extent"
-            ),
+                "A copy of each habitat, stressor, and criteria input, aligned "
+                "to the same projection and extent"),
             data_type=float,
             units=u.none
         ),
@@ -471,15 +471,15 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="polygonize_mask_[HABITAT_STRESSOR]",
-            path="intermediate_outputs/polygonize_mask_[HABITAT_STRESSOR].tif",
-            about=gettext("Map of which pixels to polygonize."),
+            id="polygonize_mask_[KEY]",
+            path="intermediate_outputs/polygonize_mask_[KEY].tif",
+            about=gettext("Map of which pixels to polygonize for each habitat or stressor."),
             data_type=int,
             units=None
         ),
         spec.VectorOutput(
-            id="polygonized_[HABITAT_STRESSOR]",
-            path="intermediate_outputs/polygonized_[HABITAT_STRESSOR].gpkg",
+            id="polygonized_[KEY]",
+            path="intermediate_outputs/polygonized_[KEY].gpkg",
             about=gettext("Polygonized habitat or stressor map"),
             geometry_types={"POLYGON"},
             fields=[]
@@ -511,8 +511,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.VectorOutput(
-            id="reprojected_[HABITAT_STRESSOR_CRITERIA]",
-            path="intermediate_outputs/reprojected_[HABITAT_STRESSOR_CRITERIA].shp",
+            id="reprojected_[KEY]",
+            path="intermediate_outputs/reprojected_[KEY].shp",
             about=gettext(
                 "If any habitat, stressor or spatial criteria layers were"
                 " provided in a spatial vector format, it will be reprojected to"
@@ -522,8 +522,8 @@ MODEL_SPEC = spec.ModelSpec(
             fields=[]
         ),
         spec.SingleBandRasterOutput(
-            id="rewritten_[HABITAT_STRESSOR_CRITERIA]",
-            path="intermediate_outputs/rewritten_[HABITAT_STRESSOR_CRITERIA].tif",
+            id="rewritten_[KEY]",
+            path="intermediate_outputs/rewritten_[KEY].tif",
             about=gettext(
                 "If any habitat, stressor or spatial criteria layers were"
                 " provided in a spatial raster format, it will be reprojected to"
@@ -541,8 +541,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.VectorOutput(
-            id="simplified_[HABITAT_STRESSOR_CRITERIA]",
-            path="intermediate_outputs/simplified_[HABITAT_STRESSOR_CRITERIA].gpkg",
+            id="simplified_[KEY]",
+            path="intermediate_outputs/simplified_[KEY].gpkg",
             about=gettext(
                 "Any habitat, stressor or spatial criteria layers provided are"
                 " simplified to 1/2 the user-defined raster resolution in order"
@@ -702,14 +702,14 @@ def execute(args):
         source_filepath = attributes['path']
         gis_type = pygeoprocessing.get_gis_type(source_filepath)
         user_files_to_aligned_raster_paths[
-            source_filepath] = file_registry['aligned_[HABITAT_STRESSOR_CRITERIA]', name]
+            source_filepath] = file_registry['aligned_[KEY]', name]
 
         # If the input is already a raster, run it through raster_calculator to
         # ensure we know the nodata value and pixel values.
         if gis_type == pygeoprocessing.RASTER_TYPE:
             alignment_source_raster_paths[
-                file_registry['rewritten_[HABITAT_STRESSOR_CRITERIA]', name]] = (
-                    file_registry['aligned_[HABITAT_STRESSOR_CRITERIA]', name])
+                file_registry['rewritten_[KEY]', name]] = (
+                    file_registry['aligned_[KEY]', name])
             # Habitats/stressors must have pixel values of 0 or 1.
             # Criteria may be between [0, max_criteria_score]
             if name in spatial_criteria_attrs:
@@ -720,13 +720,11 @@ def execute(args):
                     func=_prep_input_criterion_raster,
                     kwargs={
                         'source_raster_path': source_filepath,
-                        'target_filepath': file_registry[
-                            'rewritten_[HABITAT_STRESSOR_CRITERIA]', name],
+                        'target_filepath': file_registry['rewritten_[KEY]', name],
                     },
                     task_name=(
                         f'Rewrite {name} criteria raster for consistency'),
-                    target_path_list=[file_registry[
-                        'rewritten_[HABITAT_STRESSOR_CRITERIA]', name]],
+                    target_path_list=[file_registry['rewritten_[KEY]', name]],
                     dependent_task_list=[]
                 )
             else:
@@ -736,14 +734,12 @@ def execute(args):
                     func=_mask_binary_presence_absence_rasters,
                     kwargs={
                         'source_raster_paths': [source_filepath],
-                        'target_mask_path': file_registry[
-                            'rewritten_[HABITAT_STRESSOR_CRITERIA]', name],
+                        'target_mask_path': file_registry['rewritten_[KEY]', name],
                     },
                     task_name=(
                         f'Rewrite {name} habitat/stressor raster for '
                         'consistency'),
-                    target_path_list=[file_registry[
-                        'rewritten_[HABITAT_STRESSOR_CRITERIA]', name]],
+                    target_path_list=[file_registry['rewritten_[KEY]', name]],
                     dependent_task_list=[]
                 )
             alignment_dependent_tasks.append(prep_raster_task)
@@ -760,12 +756,10 @@ def execute(args):
                 kwargs={
                     'base_vector_path': source_filepath,
                     'target_projection_wkt': target_srs_wkt,
-                    'target_path': file_registry[
-                        'reprojected_[HABITAT_STRESSOR_CRITERIA]', name],
+                    'target_path': file_registry['reprojected_[KEY]', name],
                 },
                 task_name=f'Reproject {name} to AOI',
-                target_path_list=[file_registry[
-                    'reprojected_[HABITAT_STRESSOR_CRITERIA]', name]],
+                target_path_list=[file_registry['reprojected_[KEY]', name]],
                 dependent_task_list=[]
             )
 
@@ -778,36 +772,31 @@ def execute(args):
                 fields_to_preserve = ['rating']
 
             alignment_source_vector_paths[
-                file_registry['simplified_[HABITAT_STRESSOR_CRITERIA]', name]] = (
-                    file_registry['aligned_[HABITAT_STRESSOR_CRITERIA]', name])
+                file_registry['simplified_[KEY]', name]] = (
+                    file_registry['aligned_[KEY]', name])
             alignment_dependent_tasks.append(graph.add_task(
                 func=_simplify,
                 kwargs={
                     'source_vector_path': source_filepath,
                     'tolerance': resolution / 2,  # by the nyquist theorem.
-                    'target_vector_path': file_registry[
-                        'simplified_[HABITAT_STRESSOR_CRITERIA]', name],
+                    'target_vector_path': file_registry['simplified_[KEY]', name],
                     'preserve_columns': fields_to_preserve,
                 },
                 task_name=f'Simplify {name}',
-                target_path_list=[file_registry[
-                    'simplified_[HABITAT_STRESSOR_CRITERIA]', name]],
+                target_path_list=[file_registry['simplified_[KEY]', name]],
                 dependent_task_list=[reprojected_vector_task]
             ))
 
             # Habitats and stressors are rasterized with ALL_TOUCHED=TRUE
             if name in habitats_info or name in stressors_info:
-                habitat_stressor_vectors.add(file_registry[
-                    'simplified_[HABITAT_STRESSOR_CRITERIA]', name])
+                habitat_stressor_vectors.add(file_registry['simplified_[KEY]', name])
 
         # Later operations make use of the habitats rasters or the stressors
         # rasters, so it's useful to collect those here now.
         if name in habitats_info:
-            aligned_habitat_raster_paths[name] = file_registry[
-                'aligned_[HABITAT_STRESSOR_CRITERIA]', name]
+            aligned_habitat_raster_paths[name] = file_registry['aligned_[KEY]', name]
         elif name in stressors_info:
-            aligned_stressor_raster_paths[name] = file_registry[
-                'aligned_[HABITAT_STRESSOR_CRITERIA]', name]
+            aligned_stressor_raster_paths[name] = file_registry['aligned_[KEY]', name]
 
     alignment_task = graph.add_task(
         func=_align,
@@ -916,7 +905,7 @@ def execute(args):
                     kwargs={
                         'attributes_list': attributes_list,
                         'habitat_mask_raster_path':
-                            file_registry['aligned_[HABITAT_STRESSOR_CRITERIA]', habitat],
+                            file_registry['aligned_[KEY]', habitat],
                         'target_criterion_path':
                             file_registry[f'{criteria_type}_[HABITAT]_[STRESSOR]', habitat, stressor],
                         'decayed_edt_raster_path':
@@ -938,7 +927,7 @@ def execute(args):
                 _calculate_pairwise_risk,
                 kwargs={
                     'habitat_mask_raster_path':
-                        file_registry['aligned_[HABITAT_STRESSOR_CRITERIA]', habitat],
+                        file_registry['aligned_[KEY]', habitat],
                     'exposure_raster_path': file_registry['e_[HABITAT]_[STRESSOR]', habitat, stressor],
                     'consequence_raster_path': file_registry['c_[HABITAT]_[STRESSOR]', habitat, stressor],
                     'risk_equation': args['risk_eq'],
@@ -957,7 +946,7 @@ def execute(args):
                 pygeoprocessing.raster_calculator,
                 kwargs={
                     'base_raster_path_band_const_list': [
-                        (file_registry['aligned_[HABITAT_STRESSOR_CRITERIA]', habitat], 1),
+                        (file_registry['aligned_[KEY]', habitat], 1),
                         (max_pairwise_risk, 'raw'),
                         (file_registry['risk_[HABITAT]_[STRESSOR]', habitat, stressor], 1)],
                     'local_op': _reclassify_score,
@@ -993,7 +982,7 @@ def execute(args):
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (file_registry['aligned_[HABITAT_STRESSOR_CRITERIA]', habitat], 1),
+                    (file_registry['aligned_[KEY]', habitat], 1),
                     (max_pairwise_risk * max_n_stressors, 'raw'),
                     (file_registry['total_risk_[HABITAT]', habitat], 1)],
                 'local_op': _reclassify_score,
@@ -1013,7 +1002,7 @@ def execute(args):
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (file_registry['aligned_[HABITAT_STRESSOR_CRITERIA]', habitat], 1),
+                    (file_registry['aligned_[KEY]', habitat], 1),
                     (file_registry['reclass_total_risk_[HABITAT]', habitat], 1)
                 ] + [(path, 1) for path in reclassified_pairwise_risk_paths],
                 'local_op': _maximum_reclassified_score,
@@ -1098,7 +1087,7 @@ def execute(args):
             kwargs={
                 'attributes_list': criteria_attributes_list,
                 'habitat_mask_raster_path':
-                    file_registry['aligned_[HABITAT_STRESSOR_CRITERIA]', habitat],
+                    file_registry['aligned_[KEY]', habitat],
                 'target_criterion_path': file_registry['recovery_[HABITAT]', habitat],
                 'decayed_edt_raster_path': None,  # not a stressor so no EDT
             },
@@ -1178,11 +1167,11 @@ def execute(args):
                 kwargs={
                     'source_raster_path': source_raster_path,
                     'target_raster_path': file_registry[
-                        'polygonize_mask_[HABITAT_STRESSOR]', basename],
+                        'polygonize_mask_[KEY]', basename],
                 },
                 task_name=f'Rewrite {basename} for polygonization',
                 target_path_list=[file_registry[
-                    'polygonize_mask_[HABITAT_STRESSOR]', basename]],
+                    'polygonize_mask_[KEY]', basename]],
                 dependent_task_list=[]
             )
 
@@ -1191,15 +1180,15 @@ def execute(args):
                 kwargs={
                     'source_raster_path': source_raster_path,
                     'mask_raster_path': file_registry[
-                        'polygonize_mask_[HABITAT_STRESSOR]', basename],
+                        'polygonize_mask_[KEY]', basename],
                     'target_polygonized_vector': file_registry[
-                        'polygonized_[HABITAT_STRESSOR]', basename],
+                        'polygonized_[KEY]', basename],
                     'field_name': fieldname,
                     'layer_name': f'{geojson_prefix}_{basename}',
                 },
                 task_name=f'Polygonizing {basename}',
                 target_path_list=[file_registry[
-                    'polygonized_[HABITAT_STRESSOR]', basename]],
+                    'polygonized_[KEY]', basename]],
                 dependent_task_list=[rewrite_for_polygonize_task]
             )
 
@@ -1210,7 +1199,7 @@ def execute(args):
                 pygeoprocessing.reproject_vector,
                 kwargs={
                     'base_vector_path': file_registry[
-                        'polygonized_[HABITAT_STRESSOR]', basename],
+                        'polygonized_[KEY]', basename],
                     'target_projection_wkt': _WGS84_WKT,
                     'target_path': target_geojson_path,
                     'driver_name': 'GeoJSON',
@@ -1223,7 +1212,6 @@ def execute(args):
         'HRA model completed. Please visit http://marineapps.'
         'naturalcapitalproject.org/ to visualize your outputs.')
 
-    print(file_registry.as_dict())
     graph.close()
     graph.join()
     LOGGER.info('HRA complete!')
