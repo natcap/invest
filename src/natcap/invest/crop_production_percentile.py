@@ -392,7 +392,7 @@ MODEL_SPEC = spec.ModelSpec(
                     units=u.metric_ton
                 ),
                 spec.NumberOutput(
-                    id="[CROP]_yield_[PERCENTILE]th",
+                    id="[CROP]_yield_[PERCENTILE]",
                     about=gettext(
                         "Modeled production of the given crop within the polygon at the"
                         " given percentile"
@@ -408,7 +408,7 @@ MODEL_SPEC = spec.ModelSpec(
                 ],
                 *[
                     spec.NumberOutput(
-                        id=f"{nutrient_code}_yield_[PERCENTILE]th",
+                        id=f"{nutrient_code}_[PERCENTILE]",
                         about=(
                             f"Modeled {nutrient} production within the polygon at"
                             "the given percentile"),
@@ -435,7 +435,7 @@ MODEL_SPEC = spec.ModelSpec(
                     units=u.metric_ton
                 ),
                 spec.NumberOutput(
-                    id="production_[PERCENTILE]th",
+                    id="production_[PERCENTILE]",
                     about=gettext("Modeled crop production at the given percentile"),
                     units=u.metric_ton
                 ),
@@ -448,7 +448,7 @@ MODEL_SPEC = spec.ModelSpec(
                 ],
                 *[
                     spec.NumberOutput(
-                        id=f"{nutrient_code}_[PERCENTILE]th",
+                        id=f"{nutrient_code}_[PERCENTILE]",
                         about=(
                             f"Modeled {nutrient} production from the crop at"
                             "the given percentile"),
@@ -466,8 +466,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.metric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="[CROP]_yield_[PERCENTILE]_production",
-            path="[CROP]_yield_[PERCENTILE]_production.tif",
+            id="[CROP]_[PERCENTILE]_production",
+            path="[CROP]_[PERCENTILE]_production.tif",
             about=gettext("Modeled yield for the given crop at the given percentile"),
             data_type=float,
             units=u.metric_ton / u.hectare
@@ -502,8 +502,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.metric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="[CROP]_yield_[PERCENTILE]_coarse_yield",
-            path="intermediate_output/[CROP]_yield_[PERCENTILE]_coarse_yield.tif",
+            id="[CROP]_[PERCENTILE]_coarse_yield",
+            path="intermediate_output/[CROP]_[PERCENTILE]_coarse_yield.tif",
             about=gettext(
                 "Percentile yield of the given crop, at the coarse resolution of"
                 " the climate bin map"
@@ -512,8 +512,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.metric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
-            id="[CROP]_yield_[PERCENTILE]_interpolated_yield",
-            path="intermediate_output/[CROP]_yield_[PERCENTILE]_interpolated_yield.tif",
+            id="[CROP]_[PERCENTILE]_interpolated_yield",
+            path="intermediate_output/[CROP]_[PERCENTILE]_interpolated_yield.tif",
             about=gettext(
                 "Percentile yield of the given crop, interpolated to the"
                 " resolution of the landcover map"
@@ -710,8 +710,7 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Single process mode.
-    task_graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], n_workers)
+    task_graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'], n_workers)
     dependent_task_list = []
 
     crop_lucode = None
@@ -734,7 +733,8 @@ def execute(args):
                   file_registry['clipped_[CROP]_climate_bin_map', crop_name],
                   'near'),
             kwargs={'target_bb': landcover_wgs84_bounding_box},
-            target_path_list=[file_registry['clipped_[CROP]_climate_bin_map', crop_name]],
+            target_path_list=[
+                file_registry['clipped_[CROP]_climate_bin_map', crop_name]],
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
@@ -748,7 +748,7 @@ def execute(args):
             climate_percentile_yield_table_path)
         yield_percentile_headers = [
             x for x in crop_climate_percentile_df.columns if x != 'climate_bin']
-        print(yield_percentile_headers)
+
         reclassify_error_details = {
             'raster_name': f'{crop_name} Climate Bin',
             'column_name': 'climate_bin',
@@ -767,12 +767,11 @@ def execute(args):
                 func=utils.reclassify_raster,
                 args=((file_registry['clipped_[CROP]_climate_bin_map', crop_name], 1),
                       bin_to_percentile_yield,
-                      file_registry['[CROP]_yield_[PERCENTILE]_coarse_yield',
+                      file_registry['[CROP]_[PERCENTILE]_coarse_yield',
                         crop_name, yield_percentile_id], gdal.GDT_Float32,
                       _NODATA_YIELD, reclassify_error_details),
-                target_path_list=[
-                    file_registry['[CROP]_yield_[PERCENTILE]_coarse_yield',
-                        crop_name, yield_percentile_id]],
+                target_path_list=[file_registry['[CROP]_[PERCENTILE]_coarse_yield',
+                    crop_name, yield_percentile_id]],
                 dependent_task_list=[crop_climate_bin_task],
                 task_name='create_coarse_yield_percentile_%s_%s' % (
                     crop_name, yield_percentile_id))
@@ -783,15 +782,15 @@ def execute(args):
                 crop_name, yield_percentile_id)
             create_interpolated_yield_percentile_task = task_graph.add_task(
                 func=pygeoprocessing.warp_raster,
-                args=(file_registry['[CROP]_yield_[PERCENTILE]_coarse_yield',
+                args=(file_registry['[CROP]_[PERCENTILE]_coarse_yield',
                         crop_name, yield_percentile_id],
                       landcover_raster_info['pixel_size'],
-                      file_registry['[CROP]_yield_[PERCENTILE]_interpolated_yield',
+                      file_registry['[CROP]_[PERCENTILE]_interpolated_yield',
                         crop_name, yield_percentile_id],
                       'cubicspline'),
                 kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
                         'target_bb': landcover_raster_info['bounding_box']},
-                target_path_list=[file_registry['[CROP]_yield_[PERCENTILE]_interpolated_yield',
+                target_path_list=[file_registry['[CROP]_[PERCENTILE]_interpolated_yield',
                     crop_name, yield_percentile_id]],
                 dependent_task_list=[create_coarse_yield_percentile_task],
                 task_name='create_interpolated_yield_percentile_%s_%s' % (
@@ -802,19 +801,18 @@ def execute(args):
             LOGGER.info(
                 "Calculate yield for %s at %s", crop_name,
                 yield_percentile_id)
-            percentile_crop_production_raster_path = file_registry[
-                '[CROP]_yield_[PERCENTILE]_production',
-                crop_name, yield_percentile_id.split('_')[1]]
 
             create_percentile_production_task = task_graph.add_task(
                 func=calculate_crop_production,
                 args=(
                     args['landcover_raster_path'],
-                    file_registry['[CROP]_yield_[PERCENTILE]_interpolated_yield',
+                    file_registry['[CROP]_[PERCENTILE]_interpolated_yield',
                         crop_name, yield_percentile_id],
                     crop_lucode,
-                    percentile_crop_production_raster_path),
-                target_path_list=[percentile_crop_production_raster_path],
+                    file_registry['[CROP]_[PERCENTILE]_production',
+                        crop_name, yield_percentile_id]),
+                target_path_list=[file_registry['[CROP]_[PERCENTILE]_production',
+                    crop_name, yield_percentile_id]],
                 dependent_task_list=[
                     create_interpolated_yield_percentile_task],
                 task_name='create_percentile_production_%s_%s' % (
@@ -836,7 +834,8 @@ def execute(args):
                   file_registry['[CROP]_clipped_observed_yield', crop_name],
                   'near'),
             kwargs={'target_bb': landcover_wgs84_bounding_box},
-            target_path_list=[file_registry['[CROP]_clipped_observed_yield', crop_name]],
+            target_path_list=[
+                file_registry['[CROP]_clipped_observed_yield', crop_name]],
             task_name='clip_global_observed_yield_%s_' % crop_name)
         dependent_task_list.append(clip_global_observed_yield_task)
 
@@ -865,7 +864,8 @@ def execute(args):
                   'cubicspline'),
             kwargs={'target_projection_wkt': landcover_raster_info['projection_wkt'],
                     'target_bb': landcover_raster_info['bounding_box']},
-            target_path_list=[file_registry['[CROP]_interpolated_observed_yield', crop_name]],
+            target_path_list=[
+                file_registry['[CROP]_interpolated_observed_yield', crop_name]],
             dependent_task_list=[nodata_to_zero_for_observed_yield_task],
             task_name='interpolate_observed_yield_to_lulc_%s' % crop_name)
         dependent_task_list.append(interpolate_observed_yield_task)
@@ -911,9 +911,9 @@ def execute(args):
             args=(args['aggregate_polygon_path'],
                   file_registry['aggregate_vector'],
                   landcover_raster_info['projection_wkt'],
-                  crop_names, nutrient_df,
-                  yield_percentile_headers, pixel_area_ha, output_dir,
-                  file_suffix, file_registry, file_registry['aggregate_results']),
+                  crop_names, nutrient_df, yield_percentile_headers,
+                  pixel_area_ha, output_dir, file_suffix, file_registry,
+                  file_registry['aggregate_results']),
             target_path_list=[file_registry['aggregate_vector'],
                               file_registry['aggregate_results']],
             dependent_task_list=dependent_task_list,
@@ -1021,7 +1021,7 @@ def tabulate_results(
         landcover_nodata (float): landcover raster nodata value
         output_dir (string): the file path to the output workspace.
         file_suffix (string): string to append to any output filenames.
-        file_registry (FileRegistry): used to look up target file paths
+        file_registry (FileRegistry): used to look up output file paths
         target_table_path (string): path to 'result_table.csv' in the output
             workspace
 
@@ -1081,12 +1081,10 @@ def tabulate_results(
             result_table.write(",%f" % yield_sum)
 
             for yield_percentile_id in sorted(yield_percentile_headers):
-                yield_percentile_raster_path = file_registry[
-                    '[CROP]_yield_[PERCENTILE]_production',
-                    crop_name, yield_percentile_id.split('_')[1]]
                 yield_sum = 0
                 for _, yield_block in pygeoprocessing.iterblocks(
-                        (yield_percentile_raster_path, 1)):
+                        (file_registry['[CROP]_[PERCENTILE]_production',
+                            crop_name, yield_percentile_id], 1)):
                     # _NODATA_YIELD will always have a value (defined above)
                     yield_sum += numpy.sum(
                         yield_block[~pygeoprocessing.array_equals_nodata(
@@ -1149,7 +1147,7 @@ def aggregate_to_polygons(
         pixel_area_ha (float): area of lulc raster cells (hectares)
         output_dir (string): the file path to the output workspace.
         file_suffix (string): string to append to any output filenames.
-        file_registry (FileRegistry): used to look up target paths
+        file_registry (FileRegistry): used to look up output file paths
         target_aggregate_table_path (string): path to 'aggregate_results.csv'
             in the output workspace
 
@@ -1179,16 +1177,14 @@ def aggregate_to_polygons(
             1 - nutrient_df['percentrefuse'][crop_name] / 100)
         # loop over percentiles
         for yield_percentile_id in yield_percentile_headers:
-            percentile_crop_production_raster_path = file_registry[
-                '[CROP]_yield_[PERCENTILE]_production',
-                crop_name, yield_percentile_id.split('_')[1]]
             LOGGER.info(
                 "Calculating zonal stats for %s  %s", crop_name,
                 yield_percentile_id)
             total_yield_lookup['%s_%s' % (
                 crop_name, yield_percentile_id)] = (
                     pygeoprocessing.zonal_statistics(
-                        (percentile_crop_production_raster_path, 1),
+                        (file_registry['[CROP]_[PERCENTILE]_production',
+                            crop_name, yield_percentile_id], 1),
                         target_aggregate_vector_path))
 
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
