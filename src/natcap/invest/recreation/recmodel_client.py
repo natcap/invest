@@ -426,12 +426,12 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.FileOutput(
             id="pud_zip",
-            path="intermediate/pud_userdays.zip",
+            path="intermediate/pud.zip",
             about=gettext("Compressed photo-user-day data")
         ),
         spec.FileOutput(
             id="tud_zip",
-            path="intermediate/tud_userdays.zip",
+            path="intermediate/tud.zip",
             about=gettext("Compressed twitter-user-day data")
         ),
         spec.FileOutput(
@@ -649,11 +649,11 @@ def execute(args):
         if ('scenario_predictor_table_path' in args and
                 args['scenario_predictor_table_path'] != ''):
             driver = gdal.GetDriverByName('GPKG')
-            if os.path.exists(file_registry['scenario_results_path']):
-                driver.Delete(file_registry['scenario_results_path'])
+            if os.path.exists(file_registry['scenario_results']):
+                driver.Delete(file_registry['scenario_results'])
             aoi_vector = gdal.OpenEx(file_registry['aoi'])
             target_vector = driver.CreateCopy(
-                file_registry['scenario_results_path'], aoi_vector)
+                file_registry['scenario_results'], aoi_vector)
             target_layer = target_vector.GetLayer()
             _rename_layer_from_parent(target_layer)
             target_vector = target_layer = None
@@ -665,14 +665,14 @@ def execute(args):
                 file_registry['response_polygons_lookup'],
                 [prepare_response_polygons_task],
                 args['scenario_predictor_table_path'],
-                file_registry['scenario_results_path'],
+                file_registry['scenario_results'],
                 scenario_dir, task_graph, file_registry)
 
             task_graph.add_task(
                 func=_calculate_scenario,
-                args=(file_registry['scenario_results_path'],
+                args=(file_registry['scenario_results'],
                       SCENARIO_RESPONSE_ID, file_registry['predictor_estimates']),
-                target_path_list=[file_registry['scenario_results_path']],
+                target_path_list=[file_registry['scenario_results']],
                 dependent_task_list=[
                     compute_regression_task, build_scenario_data_task],
                 task_name='calculate scenario')
@@ -725,8 +725,8 @@ def _retrieve_user_days(
         server_url (string): URL for connecting to the server
         server_version_pickle (string): path to a pickle that stores server
             version and workspace id info.
-        pud_userdays_path (str): Path to zipped photo-user-days data
-        tud_userdays_path (str): Path to zipped twitter-user-days data
+        pud_userdays_path (string): path to compressed photo-user-days data
+        tud_userdays_path (string): path to compressed twitter-user-days data
 
     Returns:
         None
@@ -735,10 +735,10 @@ def _retrieve_user_days(
     LOGGER.info('Contacting server, please wait.')
     recmodel_manager = Pyro5.api.Proxy(server_url)
 
-    datasets = {
-        'flickr': 'PUD',
-        'twitter': 'TUD'
-    }
+    dataset_tuples = [
+        ('flickr', 'PUD', pud_userdays_path),
+        ('twitter', 'TUD', tud_userdays_path)
+    ]
 
     aoi_info = pygeoprocessing.get_vector_info(local_aoi_path)
     srs = osr.SpatialReference()
@@ -747,7 +747,7 @@ def _retrieve_user_days(
     aoi_bounding_box = pygeoprocessing.transform_bounding_box(
         aoi_info['bounding_box'], aoi_info['projection_wkt'], target_proj)
 
-    for dataset in datasets:
+    for dataset, _, _ in dataset_tuples:
         # validate available year range
         min_year, max_year = recmodel_manager.get_valid_year_range(dataset)
         LOGGER.info(
@@ -792,7 +792,7 @@ def _retrieve_user_days(
         with Pyro5.api.Proxy(server_url) as proxy:
             return proxy.calculate_userdays(
                 zip_file_binary, os.path.basename(local_aoi_path),
-                start_year, end_year, list(datasets), client_id)
+                start_year, end_year, [tup[0] for tup in dataset_tuples], client_id)
 
     # Use a separate thread for the long-running remote function call so
     # that we can make concurrent requests for the logging messages
@@ -810,8 +810,8 @@ def _retrieve_user_days(
                 LOGGER.handle(logging.makeLogRecord(record_dict))
         result_dict = future.result()
 
-    for dataset, userdays_path in zip(datasets, [pud_userdays_path, tud_userdays_path]):
-        result = result_dict[datasets[dataset]]
+    for dataset, result_key, compressed_userdays_path in dataset_tuples:
+        result = result_dict[result_key]
 
         # If an exception occurred on the server's worker, we returned it
         # as a 2-tuple: ('ERROR', 'traceback as formatted string')
@@ -832,10 +832,11 @@ def _retrieve_user_days(
                     'workspace_id': workspace_id}}, f)
 
         # unpack result
-        with open(userdays_path, 'wb') as pud_file:
+        with open(compressed_userdays_path, 'wb') as pud_file:
             pud_file.write(result_zip_file_binary)
         temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
-        zipfile.ZipFile(userdays_path, 'r').extractall(temporary_output_dir)
+        zipfile.ZipFile(compressed_userdays_path, 'r').extractall(
+            temporary_output_dir)
 
         for filename in os.listdir(temporary_output_dir):
             # Results are returned from the server without a results_suffix.
@@ -1028,38 +1029,43 @@ def _schedule_predictor_data_processing(
         'predictor_table_path').get_validated_dataframe(predictor_table_path)
     predictor_task_list = []
     predictor_json_list = []  # tracks predictor files to add to gpkg
-
+    predictor_ids = []
     for predictor_id, row in predictor_df.iterrows():
         LOGGER.info(f"Building predictor {predictor_id}")
         predictor_type = row['type']
-        predictor_json_list.append(file_registry['[PREDICTOR]_json', predictor_id])
+        predictor_target_path = file_registry['[PREDICTOR]_json', predictor_id]
+        predictor_ids.append(predictor_id)
+        # predictor_target_path = os.path.join(working_dir, predictor_id + '.json')
+        predictor_json_list.append(predictor_target_path)
         if predictor_type.startswith('raster'):
             # type must be one of raster_sum or raster_mean
+            raster_op_mode = predictor_type.split('_')[1]
             func = _raster_sum_mean
-            args = (row['path'], predictor_type.split('_')[1],
-                    response_vector_path,
-                    file_registry['[PREDICTOR]_json', predictor_id])
+            args = (row['path'], raster_op_mode,
+                    response_vector_path, predictor_target_path)
         # polygon types are a special case because the polygon_area
         # function requires an additional 'mode' argument.
         elif predictor_type.startswith('polygon'):
             func = _polygon_area
             args = (predictor_type, response_polygons_pickle_path,
-                    row['path'], file_registry['[PREDICTOR]_json', predictor_id])
+                    row['path'], predictor_target_path)
         else:
             func = predictor_functions[predictor_type]
             args = (response_polygons_pickle_path,
-                    row['path'], file_registry['[PREDICTOR]_json', predictor_id])
+                    row['path'], predictor_target_path)
+
         predictor_task_list.append(task_graph.add_task(
             func=func,
             args=args,
-            target_path_list=[file_registry['[PREDICTOR]_json', predictor_id]],
+            target_path_list=[predictor_target_path],
             dependent_task_list=dependent_task_list,
             task_name=f'predictor {predictor_id}'))
 
     assemble_predictor_data_task = task_graph.add_task(
         func=_json_to_gpkg_table,
         args=(target_predictor_vector_path,
-              predictor_json_list),
+              predictor_ids,
+              file_registry),
         target_path_list=[target_predictor_vector_path],
         dependent_task_list=predictor_task_list,
         task_name='assemble predictor data')
@@ -1084,17 +1090,14 @@ def _prepare_response_polygons_lookup(
         pickle.dump(response_polygons_lookup, pickle_file)
 
 
-def _json_to_gpkg_table(
-        regression_vector_path, predictor_json_list):
+def _json_to_gpkg_table(regression_vector_path, predictor_ids, file_registry):
     """Create a GeoPackage and a field with data from each json file."""
     target_vector = gdal.OpenEx(
         regression_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     target_layer = target_vector.GetLayer()
 
-    predictor_id_list = []
-    for json_filename in predictor_json_list:
-        predictor_id = os.path.basename(os.path.splitext(json_filename)[0])
-        predictor_id_list.append(predictor_id)
+    for predictor_id in predictor_ids:
+        json_filename = file_registry['[PREDICTOR]_json', predictor_id]
         # Create a new field for the predictor
         # Delete the field first if it already exists
         field_index = target_layer.FindFieldIndex(
@@ -1614,7 +1617,6 @@ def _build_regression(
 
     # Y-Intercept data matrix
     intercept_array = numpy.ones_like(transformed_array)
-
     # Predictor data matrix
     predictor_matrix = numpy.empty((n_features, len(predictor_id_list)))
     for row_index, feature in enumerate(data_layer):
