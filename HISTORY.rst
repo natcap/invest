@@ -83,6 +83,10 @@ Seasonal Water Yield
   (1-12) to raster paths.
   (`#2096 <https://github.com/natcap/invest/issues/2096>`_)
 
+Visitation: Recreation and Tourism
+==================================
+* The intermediate predictor JSON outputs now include the file suffix, if provided.
+
 3.16.2 (2025-08-13)
 -------------------
 
