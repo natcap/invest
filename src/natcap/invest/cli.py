@@ -8,6 +8,7 @@ import importlib
 import json
 import logging
 import multiprocessing
+import os
 import pprint
 import sys
 import textwrap
@@ -490,7 +491,11 @@ def main(user_args=None):
                 # Exceptions will already be logged to the logfile but will ALSO be
                 # written to stdout if this exception is uncaught.  This is by
                 # design.
-                model_module.execute(parsed_datastack.args)
+                file_registry = model_module.execute(parsed_datastack.args)
+                # Write the file registry dict to a JSON file in the workspace
+                with open(os.path.join(parsed_datastack.args['workspace_dir'],
+                                       'file_registry.json'), "w") as json_file:
+                    json.dump(file_registry, json_file, indent=4)
                 LOGGER.info('Generating metadata for results')
                 try:
                     # If there's an exception from creating metadata

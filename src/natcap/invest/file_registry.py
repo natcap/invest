@@ -57,8 +57,8 @@ class FileRegistry:
                 self.pattern_fields[output.id] = [
                     field.lower() for field in re.findall(r'\[(\w+)\]', path)]
 
-            full_path = os.path.join(
-                workspace_dir, path + file_suffix + extension)
+            full_path = os.path.abspath(os.path.join(
+                workspace_dir, path + file_suffix + extension))
             # Check for duplicate keys or paths
             if full_path in self.keys_to_paths.values():
                 raise ValueError(f'Duplicate path: {full_path}')
