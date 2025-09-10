@@ -64,6 +64,7 @@ runs:
         init-shell: bash
         cache-environment: true
         cache-environment-key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
+        micromamba-version: 2.3.1-0  # version 2.3.2 caused https://github.com/natcap/invest/issues/2139
 
     - name: List conda environment
       shell: bash -l {0}
