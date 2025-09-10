@@ -633,7 +633,8 @@ class CropProductionTests(unittest.TestCase):
     def test_tabulate_regression_results(self):
         """Test `tabulate_regression_results`"""
         from natcap.invest.crop_production_regression import \
-            tabulate_regression_results
+            tabulate_regression_results, MODEL_SPEC
+        from natcap.invest.file_registry import FileRegistry
         from crop_production.data_helpers import sample_nutrient_df
         from crop_production.data_helpers import tabulate_regr_results_table
 
@@ -652,13 +653,14 @@ class CropProductionTests(unittest.TestCase):
         file_suffix = "v1"
         target_table_path = os.path.join(workspace_dir, "output_table.csv")
         crop_names = ["corn", "soybean"]
+        file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
         _create_crop_rasters(output_dir, crop_names, file_suffix)
 
         tabulate_regression_results(
             nutrient_df, crop_names, pixel_area_ha,
             landcover_raster_path, landcover_nodata,
-            output_dir, file_suffix, target_table_path
+            output_dir, file_suffix, file_registry, target_table_path
         )
 
         # Read only the first 2 crop's data (skipping total area)
@@ -673,7 +675,8 @@ class CropProductionTests(unittest.TestCase):
     def test_aggregate_regression_results_to_polygons(self):
         """Test `aggregate_regression_results_to_polygons`"""
         from natcap.invest.crop_production_regression import \
-            aggregate_regression_results_to_polygons
+            aggregate_regression_results_to_polygons, MODEL_SPEC
+        from natcap.invest.file_registry import FileRegistry
         from crop_production.data_helpers import sample_nutrient_df
         from crop_production.data_helpers import \
             aggregate_regr_polygons_table
@@ -696,6 +699,7 @@ class CropProductionTests(unittest.TestCase):
         output_dir = os.path.join(workspace, "OUTPUT")
         os.makedirs(output_dir, exist_ok=True)
         file_suffix = 'test'
+        file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
         _AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
             '.', 'aggregate_results%s.csv')
@@ -710,7 +714,7 @@ class CropProductionTests(unittest.TestCase):
         aggregate_regression_results_to_polygons(
             base_aggregate_vector_path, target_aggregate_vector_path,
             aggregate_table_path, landcover_raster_projection, crop_names,
-            nutrient_df, pixel_area_ha, output_dir, file_suffix)
+            nutrient_df, pixel_area_ha, output_dir, file_suffix, file_registry)
 
         actual_aggregate_table = pandas.read_csv(aggregate_table_path,
                                                  dtype=float)
@@ -723,7 +727,8 @@ class CropProductionTests(unittest.TestCase):
     def test_aggregate_to_polygons(self):
         """Test `aggregate_to_polygons`"""
         from natcap.invest.crop_production_percentile import \
-            aggregate_to_polygons
+            aggregate_to_polygons, MODEL_SPEC
+        from natcap.invest.file_registry import FileRegistry
         from crop_production.data_helpers import sample_nutrient_df
         from crop_production.data_helpers import aggregate_pctl_polygons_table
 
@@ -749,6 +754,7 @@ class CropProductionTests(unittest.TestCase):
         file_suffix = 'v1'
         target_aggregate_table_path = os.path.join(output_dir,
                                                    "results.csv")
+        file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
         _create_crop_pctl_rasters(output_dir, crop_names, file_suffix,
                                   yield_percentile_headers)
@@ -757,7 +763,7 @@ class CropProductionTests(unittest.TestCase):
             base_aggregate_vector_path, target_aggregate_vector_path,
             landcover_raster_projection, crop_names, nutrient_df,
             yield_percentile_headers, pixel_area_ha, output_dir,
-            file_suffix, target_aggregate_table_path)
+            file_suffix, file_registry, target_aggregate_table_path)
 
         actual_aggregate_pctl_table = pandas.read_csv(
             target_aggregate_table_path, dtype=float)
@@ -769,7 +775,8 @@ class CropProductionTests(unittest.TestCase):
     def test_tabulate_percentile_results(self):
         """Test `tabulate_results"""
         from natcap.invest.crop_production_percentile import \
-            tabulate_results
+            tabulate_results, MODEL_SPEC
+        from natcap.invest.file_registry import FileRegistry
         from crop_production.data_helpers import sample_nutrient_df
         from crop_production.data_helpers import tabulate_pctl_results_table
 
@@ -786,13 +793,14 @@ class CropProductionTests(unittest.TestCase):
         make_simple_raster(landcover_raster_path,
                            numpy.array([[1, 4], [2, 2]], dtype=numpy.int16))
         file_suffix = 'test'
+        file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
         target_table_path = os.path.join(output_dir, "result_table.csv")
         _create_crop_pctl_rasters(output_dir, crop_names, file_suffix,
                                   yield_percentile_headers)
         tabulate_results(nutrient_df, yield_percentile_headers,
                          crop_names, pixel_area_ha,
                          landcover_raster_path, landcover_nodata,
-                         output_dir, file_suffix, target_table_path)
+                         output_dir, file_suffix, file_registry, target_table_path)
 
         actual_table = pandas.read_csv(target_table_path, nrows=2)
         expected_table = tabulate_pctl_results_table()
