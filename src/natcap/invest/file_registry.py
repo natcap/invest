@@ -33,14 +33,15 @@ class FileRegistry:
     For example, after performing the indexing examples above,
     ``file_registry.registry`` would be:
 
-    ```
-    {
-        'aligned_dem': '/.../workspace_dir/aligned_dem_suffix.tif',
-        '[CROP]_[PERCENTILE]_coarse_yield': {
-            ('corn', '25th'): '/.../workspace_dir/intermediate_outputs/corn_25th_coarse_yield_suffix.tif''
+    .. code-block::
+
+        {
+            'aligned_dem': '/.../workspace_dir/aligned_dem_suffix.tif',
+            '[CROP]_[PERCENTILE]_coarse_yield': {
+                ('corn', '25th'): '/.../workspace_dir/intermediate_outputs/corn_25th_coarse_yield_suffix.tif''
+            }
         }
-    }
-    ```
+
     """
 
     def __init__(self, outputs, workspace_dir, file_suffix=None):
