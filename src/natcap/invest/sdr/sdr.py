@@ -1047,7 +1047,7 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
-    return file_registry.registry
+    return f_reg.registry
 
 
 # raster_map op for building a mask where all pixels in the stack are valid.

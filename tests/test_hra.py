@@ -1036,7 +1036,7 @@ class HRAUnitTests(unittest.TestCase):
 
         os.mkdir(os.path.join(self.workspace_dir, 'intermediate_outputs'))
         file_registry = file_registry.FileRegistry(
-            hra.MODEL_SPEC, self.workspace_dir, '')
+            hra.MODEL_SPEC.outputs, self.workspace_dir, '')
         nodata = -1
         for array, path in [
                 (e_array, 'E_life_industry.tif'),

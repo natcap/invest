@@ -653,7 +653,7 @@ class CropProductionTests(unittest.TestCase):
         file_suffix = "v1"
         target_table_path = os.path.join(workspace_dir, "output_table.csv")
         crop_names = ["corn", "soybean"]
-        file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
+        file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
         _create_crop_rasters(output_dir, crop_names, file_suffix)
 
@@ -699,7 +699,7 @@ class CropProductionTests(unittest.TestCase):
         output_dir = os.path.join(workspace, "OUTPUT")
         os.makedirs(output_dir, exist_ok=True)
         file_suffix = 'test'
-        file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
+        file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
         _AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
             '.', 'aggregate_results%s.csv')
@@ -754,7 +754,7 @@ class CropProductionTests(unittest.TestCase):
         file_suffix = 'v1'
         target_aggregate_table_path = os.path.join(output_dir,
                                                    "results.csv")
-        file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
+        file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
         _create_crop_pctl_rasters(output_dir, crop_names, file_suffix,
                                   yield_percentile_headers)
@@ -793,7 +793,7 @@ class CropProductionTests(unittest.TestCase):
         make_simple_raster(landcover_raster_path,
                            numpy.array([[1, 4], [2, 2]], dtype=numpy.int16))
         file_suffix = 'test'
-        file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
+        file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
         target_table_path = os.path.join(output_dir, "result_table.csv")
         _create_crop_pctl_rasters(output_dir, crop_names, file_suffix,
                                   yield_percentile_headers)
