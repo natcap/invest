@@ -553,7 +553,7 @@ def execute(args):
             place in the current process.
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
     # create initial working directories and determine file suffixes
     intermediate_output_dir = os.path.join(
@@ -1024,6 +1024,7 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 def pollinator_supply_op(

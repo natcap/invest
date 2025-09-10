@@ -279,7 +279,7 @@ def execute(args):
             any order, but must be unique.
 
     Returns:
-        ``None``
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
     suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = os.path.join(args['workspace_dir'], 'outputs_preprocessor')
@@ -349,6 +349,7 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 def _create_transition_table(landcover_df, lulc_snapshot_list,

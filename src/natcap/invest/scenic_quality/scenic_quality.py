@@ -295,7 +295,7 @@ def execute(args):
             place in the current process.
 
     Returns:
-        ``None``
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     LOGGER.info("Starting Scenic Quality Model")
@@ -481,6 +481,7 @@ def execute(args):
 
     LOGGER.info('Waiting for Scenic Quality tasks to complete.')
     graph.join()
+    return file_registry.registry
 
 
 def _determine_valid_viewpoints(dem_path, structures_path):

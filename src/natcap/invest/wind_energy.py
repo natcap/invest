@@ -885,7 +885,7 @@ def execute(args):
             process. (optional)
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     LOGGER.info('Starting the Wind Energy Model')
@@ -1428,6 +1428,7 @@ def execute(args):
     task_graph.close()
     task_graph.join()
     LOGGER.info('Wind Energy Valuation Model Completed')
+    return file_registry.registry
 
 
 def _index_raster_values_to_point_vector(

@@ -644,7 +644,7 @@ def execute(args):
             landscape undergoes a transition.
 
     Returns:
-        ``None``.
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     task_graph, n_workers, intermediate_dir, output_dir, suffix, file_registry = (
@@ -1022,6 +1022,7 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 def _set_up_workspace(args):

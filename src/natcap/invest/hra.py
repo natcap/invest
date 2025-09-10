@@ -601,7 +601,7 @@ def execute(args):
             (optional)
 
     Returns:
-        None.
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     intermediate_dir = os.path.join(args['workspace_dir'],
@@ -1215,6 +1215,7 @@ def execute(args):
     graph.close()
     graph.join()
     LOGGER.info('HRA complete!')
+    return file_registry.registry
 
 
 def _create_mask_for_polygonization(source_raster_path, target_raster_path):

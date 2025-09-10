@@ -747,7 +747,7 @@ def execute(args):
             and >= 1 is number of processes.
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     # Load all the tables for preprocessing
@@ -1291,6 +1291,8 @@ def execute(args):
     LOGGER.info(r' |_| \_|  |____/ u|_| \_\   ')
     LOGGER.info(r' ||   \\,-.|||_   //   \\_  ')
     LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
+
+    return file_registry.registry
 
 
 # raster_map equation: Multiply a series of arrays element-wise

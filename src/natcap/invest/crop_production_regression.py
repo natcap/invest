@@ -454,7 +454,7 @@ def execute(args):
             details about how to download these data.
 
     Returns:
-        None.
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
@@ -807,6 +807,7 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 def _x_yield_op(

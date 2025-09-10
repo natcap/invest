@@ -648,7 +648,7 @@ def execute(args):
             parallel execution.
 
     Returns:
-        None.
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
     LOGGER.info('prepare and test inputs for common errors')
 
@@ -1065,6 +1065,8 @@ def execute(args):
     LOGGER.info(' `--\' (v  __( / ||')
     LOGGER.info('       |||  ||| ||')
     LOGGER.info('      //_| //_|')
+
+    return file_registry.registry
 
 
 # raster_map equation: sum the monthly qfis

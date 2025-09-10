@@ -615,7 +615,7 @@ def execute(args):
 
 
     Returns:
-        None.
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     LOGGER.info('Starting Urban Cooling Model')
@@ -1011,6 +1011,7 @@ def execute(args):
     task_graph.close()
     task_graph.join()
     LOGGER.info('Urban Cooling Model complete.')
+    return file_registry.registry
 
 
 def calculate_uhi_result_vector(

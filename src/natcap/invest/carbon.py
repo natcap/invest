@@ -374,7 +374,7 @@ def execute(args):
             place in the current process.
 
     Returns:
-        None.
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
@@ -528,6 +528,7 @@ def execute(args):
         dependent_task_list=tasks_to_report,
         task_name='generate_report')
     graph.join()
+    return file_registry.registry
 
 
 # element-wise sum function to pass to raster_map

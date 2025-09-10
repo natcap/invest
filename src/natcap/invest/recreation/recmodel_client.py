@@ -530,7 +530,7 @@ def execute(args):
             any output file paths.
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     if int(args['end_year']) < int(args['start_year']):
@@ -679,6 +679,7 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):

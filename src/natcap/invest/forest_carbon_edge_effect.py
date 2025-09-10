@@ -433,7 +433,7 @@ def execute(args):
             place in the current process.
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     # just check that the AOI exists since it wouldn't crash until the end of
@@ -575,6 +575,7 @@ def execute(args):
     # close taskgraph
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 def combine_carbon_maps(*carbon_maps):

@@ -682,7 +682,7 @@ def execute(args):
             place in the current process.
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     # valuation_df is passed to create_vector_output()
@@ -1006,6 +1006,7 @@ def execute(args):
             task_name=f'create_{ws_id_name}_table_output')
 
     graph.join()
+    return file_registry.registry
 
 
 # wyield equation to pass to raster_map

@@ -361,7 +361,7 @@ def execute(args):
             the task graph.  The default is ``-1`` if not provided.
 
     Returns:
-        ``None``
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     utils.make_directories([args['workspace_dir']])
@@ -498,6 +498,7 @@ def execute(args):
 
     graph.close()
     graph.join()
+    return file_registry.registry
 
 
 @validation.invest_validator

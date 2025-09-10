@@ -622,7 +622,7 @@ def execute(args):
             place in the current process.
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
     LOGGER.info("Starting execute of Habitat Quality model.")
     # Append a _ to the suffix if it's not empty and doesn't already have one
@@ -970,6 +970,7 @@ def execute(args):
     task_graph.close()
     task_graph.join()
     LOGGER.info("Habitat Quality Model complete.")
+    return file_registry.registry
 
 
 def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):

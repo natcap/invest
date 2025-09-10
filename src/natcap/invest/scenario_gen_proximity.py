@@ -338,7 +338,7 @@ def execute(args):
             place in the current process.
 
     Returns:
-        None.
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     if (not args['convert_farthest_from_edge'] and
@@ -410,6 +410,7 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 def _mask_raster_by_vector(

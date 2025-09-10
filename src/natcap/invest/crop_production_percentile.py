@@ -631,7 +631,7 @@ def execute(args):
             place in the current process.
 
     Returns:
-        None.
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     crop_to_landcover_df = MODEL_SPEC.get_input(
@@ -921,6 +921,7 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 def calculate_crop_production(lulc_path, yield_path, crop_lucode,

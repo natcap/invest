@@ -240,7 +240,7 @@ def execute(args):
             taskgraph. Defaults to -1 (no parallelism).
 
     Returns:
-        ``None``
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     output_directory = args['workspace_dir']
@@ -356,6 +356,7 @@ def execute(args):
 
     graph.close()
     graph.join()
+    return file_registry.registry
 
 
 def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):

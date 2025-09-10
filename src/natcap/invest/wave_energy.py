@@ -1229,6 +1229,7 @@ def execute(args):
     task_graph.close()
     task_graph.join()
     LOGGER.info('End of Wave Energy Valuation.')
+    return file_registry.registry
 
 
 def _copy_vector_or_raster(base_file_path, target_file_path):
@@ -1240,7 +1241,7 @@ def _copy_vector_or_raster(base_file_path, target_file_path):
         target_file_path (str): a path to the target copied vector or raster.
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     Raises:
         ValueError if the base file can't be opened by GDAL.

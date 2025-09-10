@@ -46,15 +46,12 @@ class FileRegistry:
     def __init__(self, model_spec, workspace_dir, file_suffix):
         self.model_spec = model_spec
         self.file_suffix = file_suffix
-
         self.registry = collections.defaultdict(dict)
         self.keys_to_paths = {}
         self.pattern_fields = {}
 
         for output in model_spec.outputs:
-
             path, extension = os.path.splitext(output.path)
-
             # Distinguish between paths that are/aren't patterns
             if re.match(r'(.*)\[(\w+)\](.*)', path):
                 self.pattern_fields[output.id] = [
@@ -62,7 +59,6 @@ class FileRegistry:
 
             full_path = os.path.join(
                 workspace_dir, path + file_suffix + extension)
-
             # Check for duplicate keys or paths
             if full_path in self.keys_to_paths.values():
                 raise ValueError(f'Duplicate path: {full_path}')

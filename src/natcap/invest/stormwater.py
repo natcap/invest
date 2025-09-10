@@ -522,7 +522,7 @@ def execute(args):
             devices in units currency per cubic meter
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
     # set up files and directories
     suffix = utils.make_suffix_string(args, 'results_suffix')
@@ -923,6 +923,7 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 def lookup_ratios(lulc_path, soil_group_path, ratio_lookup, sorted_lucodes,

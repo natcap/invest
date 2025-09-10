@@ -746,7 +746,7 @@ def execute(args):
             RADIUS_OPT_POP_GROUP``
 
     Returns:
-        ``None``
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
     #    args['decay_function_power_beta'] (number): The beta parameter used
     #        during creation of a power kernel. Required when the selected
@@ -1561,6 +1561,7 @@ def execute(args):
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+    return file_registry.registry
 
 
 # Sum a list of arrays element-wise

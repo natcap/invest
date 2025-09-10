@@ -624,7 +624,7 @@ def execute(args):
             and >= 1 is number of processes.
 
     Returns:
-        None.
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
@@ -1047,6 +1047,7 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 # raster_map op for building a mask where all pixels in the stack are valid.
