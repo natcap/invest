@@ -759,7 +759,7 @@ def execute(args):
     utils.make_directories([output_dir, intermediate_dir])
 
     suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = FileRegistry(MODEL_SPEC, args['workspace_dir'], suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], suffix)
 
     try:
         n_workers = int(args['n_workers'])

@@ -610,7 +610,7 @@ def execute(args):
     utils.make_directories([intermediate_dir, output_dir])
     suffix = utils.make_suffix_string(args, 'results_suffix')
 
-    file_registry = FileRegistry(MODEL_SPEC, args['workspace_dir'], suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], suffix)
 
     resolution = float(args['resolution'])
     max_rating = float(args['max_rating'])

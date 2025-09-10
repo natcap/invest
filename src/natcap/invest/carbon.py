@@ -383,7 +383,7 @@ def execute(args):
     utils.make_directories([intermediate_output_dir, output_dir])
 
     LOGGER.info('Building file registry')
-    file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
     if args['do_valuation'] and args['lulc_bas_year'] >= args['lulc_alt_year']:
         raise ValueError(

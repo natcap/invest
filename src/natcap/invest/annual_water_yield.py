@@ -725,7 +725,7 @@ def execute(args):
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = FileRegistry(MODEL_SPEC, workspace_dir, file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, workspace_dir, file_suffix)
 
     watersheds_path = args['watersheds_path']
     watershed_paths_list = [(

@@ -681,7 +681,7 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'])
     utils.make_directories([
         output_dir, os.path.join(output_dir, _INTERMEDIATE_OUTPUT_DIR)])
-    file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])

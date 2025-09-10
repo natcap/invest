@@ -457,7 +457,7 @@ def execute(args):
         args['workspace_dir'], 'intermediate_outputs')
     utils.make_directories([output_dir, intermediate_dir])
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
     # Initialize a TaskGraph
     try:

@@ -352,7 +352,7 @@ def execute(args):
     tmp_dir = os.path.join(output_dir, 'tmp')
     utils.make_directories([output_dir, intermediate_output_dir, tmp_dir])
 
-    file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
     try:
         n_workers = int(args['n_workers'])

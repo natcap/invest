@@ -7,9 +7,9 @@ class FileRegistry:
     """
     The FileRegistry creates and tracks absolute paths that correspond to
     model outputs defined in a ModelSpec. Instantiate a FileRegistry from a
-    ModelSpec, a target directory, and a file suffix:
+    list of spec.Outputs, a target directory, and a file suffix:
 
-    ``file_registry = FileRegistry(MODEL_SPEC, workspace_dir, file_suffix)``
+    ``file_registry = FileRegistry(MODEL_SPEC.outputs, workspace_dir, file_suffix)``
 
     The file registry is responsible for creating the output filepaths defined
     in the ModelSpec, in their real locations within the workspace directory,
@@ -43,33 +43,40 @@ class FileRegistry:
     ```
     """
 
-    def __init__(self, model_spec, workspace_dir, file_suffix):
-        self.model_spec = model_spec
-        self.file_suffix = file_suffix
-        self.registry = collections.defaultdict(dict)
-        self.keys_to_paths = {}
-        self.pattern_fields = {}
+    def __init__(self, outputs, workspace_dir, file_suffix=None):
+        self.registry = {}
+        self._keys_to_paths = {}
+        self._pattern_fields = {}
 
-        for output in model_spec.outputs:
+        for output in outputs:
             path, extension = os.path.splitext(output.path)
             # Distinguish between paths that are/aren't patterns
             if re.match(r'(.*)\[(\w+)\](.*)', path):
-                self.pattern_fields[output.id] = [
-                    field.lower() for field in re.findall(r'\[(\w+)\]', path)]
+                self._pattern_fields[output.id] = [
+                    field.lower() for field in re.findall(r'\[(\w+)\]', output.id)]
 
             full_path = os.path.abspath(os.path.join(
-                workspace_dir, path + file_suffix + extension))
+                workspace_dir, path + (file_suffix or '') + extension))
             # Check for duplicate keys or paths
-            if full_path in self.keys_to_paths.values():
+            if full_path in self._keys_to_paths.values():
                 raise ValueError(f'Duplicate path: {full_path}')
-            elif output.id in self.keys_to_paths:
+            elif output.id in self._keys_to_paths:
                 raise ValueError(f'Duplicate id: {output.id}')
 
-            self.keys_to_paths[output.id] = full_path
+            self._keys_to_paths[output.id] = full_path
 
 
     def __getitem__(self, keys):
         """Return the result of indexing the FileRegistry.
+
+        For outputs that represent a single file (not a pattern), index by
+        the output ID string. For outputs that represent a file pattern (those
+        that contain one or more variables in square brackets), index by the
+        output ID string followed by the value for each of the variables. For
+        instance, an output with ID '[FOO]_result_[BAR]' should be accessed like
+        ``file_registry['[FOO]_result_[BAR]', 'a', 'b']``. This will return the
+        absolute path for '[FOO]_result_[BAR]', where '[FOO]' is replaced with 'a'
+        and '[BAR]' is replaced with 'b'.
 
         Args:
             keys (str | tuple(str)): key(s) to index the file registry by.
@@ -79,23 +86,28 @@ class FileRegistry:
 
 
         """
-        key = keys[0] if isinstance(keys, tuple) else keys
-        if key not in self.keys_to_paths:
-            raise ValueError(f'Key not found: {key}')
+        if isinstance(keys, str):
+            keys = (keys,)
+        key, *field_values = keys
+        if key not in self._keys_to_paths:
+            raise KeyError(f'Key not found: {key}')
 
-        path = self.keys_to_paths[key]
-        if key in self.pattern_fields:
-            field_values = keys[1:]
-            fields = self.pattern_fields[key]
+        path = self._keys_to_paths[key]
+        if key in self._pattern_fields:
+            fields = self._pattern_fields[key]
             if len(field_values) != len(fields):
-                raise ValueError(
+                raise KeyError(
                     f'Expected exactly {len(fields)} field values but received {len(field_values)}')
 
             for field, val in zip(fields, field_values):
                 path = path.replace(f'[{field.upper()}]', str(val))
 
+            if key not in self.registry:
+                self.registry[key] = {}
             sub_key = tuple(field_values) if len(field_values) > 1 else field_values[0]
             self.registry[key][sub_key] = path
         else:
+            if field_values:
+                raise KeyError('Received field values for a key that has no fields')
             self.registry[key] = path
         return path

@@ -896,7 +896,7 @@ def execute(args):
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
     suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = FileRegistry(MODEL_SPEC, workspace, suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, workspace, suffix)
 
     # Initialize a TaskGraph
     try:

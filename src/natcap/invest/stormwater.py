@@ -530,7 +530,7 @@ def execute(args):
     intermediate_dir = os.path.join(output_dir, 'intermediate')
     utils.make_directories([output_dir, intermediate_dir])
 
-    file_registry = FileRegistry(MODEL_SPEC, output_dir, suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, suffix)
 
     task_graph = taskgraph.TaskGraph(
         file_registry['taskgraph_cache'],

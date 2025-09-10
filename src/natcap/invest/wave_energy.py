@@ -865,7 +865,7 @@ def execute(args):
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = FileRegistry(MODEL_SPEC, workspace, file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, workspace, file_suffix)
     task_graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'], n_workers)
 
     # Get the path for the DEM

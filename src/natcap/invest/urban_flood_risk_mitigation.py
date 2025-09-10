@@ -313,7 +313,7 @@ def execute(args):
     utils.make_directories([
         args['workspace_dir'], intermediate_dir])
 
-    file_registry = FileRegistry(MODEL_SPEC, args['workspace_dir'], file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], file_suffix)
 
     try:
         n_workers = int(args['n_workers'])

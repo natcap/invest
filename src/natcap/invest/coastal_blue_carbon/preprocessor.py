@@ -285,7 +285,7 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'outputs_preprocessor')
     utils.make_directories([output_dir])
 
-    file_registry = FileRegistry(MODEL_SPEC, output_dir, suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, suffix)
 
     try:
         n_workers = int(args['n_workers'])

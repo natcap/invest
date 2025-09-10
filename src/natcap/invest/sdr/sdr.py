@@ -647,7 +647,7 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'])
     utils.make_directories([output_dir, intermediate_output_dir])
 
-    f_reg = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
+    f_reg = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
     try:
         n_workers = int(args['n_workers'])

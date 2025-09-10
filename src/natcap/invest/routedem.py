@@ -365,7 +365,7 @@ def execute(args):
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     utils.make_directories([args['workspace_dir']])
-    file_registry = FileRegistry(MODEL_SPEC, args['workspace_dir'], file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], file_suffix)
 
     if ('calculate_flow_direction' in args and
             bool(args['calculate_flow_direction'])):

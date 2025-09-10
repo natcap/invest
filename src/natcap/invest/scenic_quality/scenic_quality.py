@@ -322,7 +322,7 @@ def execute(args):
         args, 'results_suffix')
 
     LOGGER.info('Building file registry')
-    file_registry = FileRegistry(MODEL_SPEC, args['workspace_dir'], file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], file_suffix)
 
     try:
         n_workers = int(args['n_workers'])

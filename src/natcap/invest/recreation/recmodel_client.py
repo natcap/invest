@@ -551,7 +551,7 @@ def execute(args):
     scenario_dir = os.path.join(intermediate_dir, 'scenario')
     utils.make_directories([output_dir, intermediate_dir])
 
-    file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
     # Initialize a TaskGraph
     try:

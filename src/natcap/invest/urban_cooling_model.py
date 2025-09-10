@@ -627,7 +627,7 @@ def execute(args):
         'biophysical_table_path').get_validated_dataframe(
         args['biophysical_table_path'])
 
-    file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
     # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide

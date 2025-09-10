@@ -636,7 +636,7 @@ def execute(args):
         args['workspace_dir'], 'intermediate')
     utils.make_directories([intermediate_output_dir, output_dir])
 
-    file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
     n_workers = int(args.get('n_workers', -1))
     task_graph = taskgraph.TaskGraph(
         file_registry['taskgraph_cache'], n_workers)

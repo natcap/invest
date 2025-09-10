@@ -1074,7 +1074,7 @@ def _set_up_workspace(args):
         args['workspace_dir'], OUTPUT_DIR_NAME)
 
     utils.make_directories([output_dir, intermediate_dir])
-    file_registry = FileRegistry(MODEL_SPEC, args['workspace_dir'], suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], suffix)
     task_graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'],
                                     n_workers, reporting_interval=5.0)
 

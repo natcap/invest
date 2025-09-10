@@ -247,7 +247,7 @@ def execute(args):
     utils.make_directories([output_directory])
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = FileRegistry(MODEL_SPEC, output_directory, file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, output_directory, file_suffix)
 
     # Manually setting n_workers to be -1 so that everything happens in the
     # same thread.

@@ -562,7 +562,7 @@ def execute(args):
     utils.make_directories(
         [output_dir, intermediate_output_dir])
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = FileRegistry(MODEL_SPEC, output_dir, file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
     if 'farm_vector_path' in args and args['farm_vector_path'] != '':
         # we set the vector path to be the projected vector that we'll create
