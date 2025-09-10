@@ -182,7 +182,7 @@ class CLIHeadlessTests(unittest.TestCase):
             '--workspace', self.workspace_dir
         ])
         expected_file_registry = {
-            'taskgraph_cache': os.path.join(self.workspace_dir, 'taskgraph_cache/taskgraph_gura.db'),
+            'taskgraph_cache': os.path.join(self.workspace_dir, 'taskgraph_cache', 'taskgraph_gura.db'),
             'filled_dem': os.path.join(self.workspace_dir, 'filled_dem_gura.tif'),
             'flow_direction': os.path.join(self.workspace_dir, 'flow_direction_gura.tif'),
             'preprocessed_geometries': os.path.join(self.workspace_dir, 'preprocessed_geometries_gura.gpkg'),
