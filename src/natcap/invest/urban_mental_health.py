@@ -5,6 +5,7 @@ import os
 import pickle
 
 import numpy
+import pandas
 import pygeoprocessing
 import taskgraph
 from osgeo import gdal
@@ -23,6 +24,7 @@ SCENARIO_OPTIONS = [
     spec.Option(key="lulc", display_name="Baseline & Alternate LULC"),
     spec.Option(key="ndvi", display_name="Baseline & Alternate NDVI")
     ]
+NODATA = -1 #TODO: get dynamically
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="urban_mental_health",
@@ -151,6 +153,14 @@ MODEL_SPEC = spec.ModelSpec(
                 "specified at national, regional, or local levels depending "
                 "on data availability."
             ),
+            columns=[
+                spec.NumberInput(
+                    id="cost_value",
+                    about=gettext("Societal cost per case"),
+                    units=None
+                ),
+                # TODO: add region/spatial unit input or change to number input
+            ],
             required=False
         ),
         spec.OptionStringInput(
@@ -338,9 +348,24 @@ MODEL_SPEC = spec.ModelSpec(
         ]
 )
 
+_OUTPUT_BASE_FILES = {
+    "preventable_cases_path": "preventable_cases.tif",
+    "preventable_cost_path": "preventable_cost.tif",
+    "preventable_cases_cost_sum_vector_path":"preventable_cases_cost_sum.shp",
+    "prevantable_cases_cost_sum_table_path":"prevantable_cases_cost_sum.csv",
+}
+
+_INTERMEDIATE_BASE_FILES = {
+    "tc_aligned": "tc_aligned.tif",
+    "lulc_base_aligned": "lulc_base_aligned.tif",
+    "lulc_alt_aligned": "lulc_alt_aligned.tif",
+    "ndvi_base_aligned": "ndvi_base_aligned.tif",
+    "ndvi_alt_aligned": "ndvi_alt_aligned.tif",
+    "delta_ndvi": "delta_ndvi.tif"
+}
 
 def execute(args):
-    """Urban Mental Health
+    """Urban Mental Health.
 
     The model estimates the impacts of nature exposure, and more specifically
     residential greenness, on mental health. Residential nature exposure is
@@ -412,8 +437,140 @@ def execute(args):
             'exclude' (bool): 0 for keeping, 1 for excluding the LULC class
 
     """
+    LOGGER.info("Test inputs")
+    effect_size_df = MODEL_SPEC.get_input(
+        'effect_size_csv').get_validated_dataframe(
+        args['effect_size_csv'])
+    
+    if args['health_cost_rate_csv']:
+        health_cost_rate_df = MODEL_SPEC.get_input(
+            'health_cost_rate_csv').get_validated_dataframe(
+            args['health_cost_rate_csv'])
+        
+    search_radius = float(args['search_radius'])
+
+    LOGGER.info("Make directories")
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    intermediate_output_dir = os.path.join(
+        args['workspace_dir'], 'intermediate_outputs')
+    output_dir = args['workspace_dir']
+    utils.make_directories([intermediate_output_dir, output_dir])
+
+    LOGGER.info('Building file registry')
+    file_registry = utils.build_file_registry(
+        [(_OUTPUT_BASE_FILES, output_dir),
+         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
+    
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
+    LOGGER.debug('n_workers: %s', n_workers)
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
+        n_workers, reporting_interval=5)
+
+    # preprocessing
+    LOGGER.info("Start preprocessing")
+    if args['scenario'] == 'ndvi':
+        base_ndvi_raster_info = pygeoprocessing.get_raster_info(
+            args['ndvi_base'])
+        pixel_size = base_ndvi_raster_info['pixel_size']
+        target_projection = base_ndvi_raster_info['projection_wkt']
+        
+        input_align_list = [args['ndvi_base'], args['ndvi_alt']]
+        output_align_list = [file_registry['ndvi_base_aligned'],
+                             file_registry['ndvi_alt_aligned']]
+
+        align_task = task_graph.add_task(
+            func=pygeoprocessing.align_and_resize_raster_stack,
+            args=(input_align_list, output_align_list,
+                ['cubicspline', 'cubicspline'],
+                pixel_size,
+                'intersection'),
+            kwargs={
+                'base_vector_path_list': [args['aoi_vector_path']],
+                'raster_align_index': 0,  # align to base_ndvi
+                'target_projection_wkt': target_projection},
+            target_path_list=output_align_list,
+            task_name='align rasters')
+        delta_ndvi_task = task_graph.add_task(
+            func=calc_delta_ndvi,
+            args=(file_registry['ndvi_base_aligned'],
+                  file_registry['ndvi_alt_aligned']),
+            target_path_list=file_registry['delta_ndvi'],
+            dependent_task_list=align_task,
+            task_name="calculate delta ndvi"
+        )
+
+
+    elif args['scenario'] == 'tc_ndvi':
+        tc_target = float(args['tc_target'])
+
     return True
 
+
+#TODO: convert to pgp raster calc ops
+def calc_delta_ndvi(base_ndvi, alt_ndvi):
+    """Calculate the change in nature exposure (NE)"""
+
+    return alt_ndvi - base_ndvi
+
+def calc_baseline_cases(base_prevalence_rate, population_raster):
+    """Calculate baseline cases
+    
+    BC = BIR x POP
+
+    Args:
+        base_prevalence_rate (string): vector that provides the baseline
+            prevalence (or incidence) rate by spatial unit (e.g., census tract) 
+        population_raster (string): raster dataset representing the number of
+            inhabitants per pixel across the study area. Pixels with
+            no population should be assigned a value of 0. 
+
+    """
+    #TODO? rasterize baseline prevalence vector
+    baseline_cases = base_prevalence_rate*population_raster
+    return baseline_cases
+
+def calc_preventable_cases(delta_ndvi, health_effect_table, baseline_cases):
+    """Calculate preventable cases
+
+    PC = PF * BC
+    PF = 1 - RR
+    RR=exp(ln(RR_0.1NE) * 10 * delta_NE)
+
+    PC = (1 - exp(ln(RR_0.1NE) * 10 * delta_NE))*BC
+
+    PC: preventable cases
+    PF: preventable fraction
+    BC: baseline cases
+    RR: relative risk or risk ratio. 
+    NE: nature exposure, as approimated by NDVI.
+    RR0.1NE: RR per 0.1 NE increase.
+        By default, the model uses the relative risk associated with a 
+        0.1 increase in NDVI-based nature exposure. This value must be 
+        provided by users in the effect size table, based on empirical 
+        studies or meta-analyses relevant to the selected health outcome. 
+
+    Args:
+        
+    """
+    rr0 = health_effect_table["risk_ratio"]
+    relative_risk = numpy.exp(numpy.log(rr0) * 10 * delta_ndvi)
+    preventable_fraction = 1 - relative_risk
+    preventable_cases = preventable_fraction * baseline_cases
+
+    return preventable_cases
+
+def calc_preventable_cost(preventable_cases, health_cost_rate):
+    """Calculate preventable cost"""
+
+    preventable_cost = preventable_cases*health_cost_rate
+    return preventable_cost
 
 @validation.invest_validator
 def validate(args, limit_to=None):
