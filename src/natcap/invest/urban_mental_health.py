@@ -24,7 +24,7 @@ SCENARIO_OPTIONS = [
     spec.Option(key="lulc", display_name="Baseline & Alternate LULC"),
     spec.Option(key="ndvi", display_name="Baseline & Alternate NDVI")
     ]
-NODATA = -1 #TODO: get dynamically
+FLOAT32_NODATA = float(numpy.finfo(numpy.float32).min)
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="urban_mental_health",
@@ -45,7 +45,7 @@ MODEL_SPEC = spec.ModelSpec(
         #  ^ could either be a dropdown menu of scenario options (i.e., "TC + baseline NDVI", "baseline and alternate LULC", "baseline and alternate NDVI")
     ],
     validate_spatial_overlap=True,  # TODO
-    different_projections_ok=False,  # TODO
+    different_projections_ok=True,  # TODO
     aliases=("umh",),
     inputs=[
         spec.WORKSPACE,
@@ -361,7 +361,10 @@ _INTERMEDIATE_BASE_FILES = {
     "lulc_alt_aligned": "lulc_alt_aligned.tif",
     "ndvi_base_aligned": "ndvi_base_aligned.tif",
     "ndvi_alt_aligned": "ndvi_alt_aligned.tif",
-    "delta_ndvi": "delta_ndvi.tif"
+    "population_raster_aligned": "population_raster_aligned.tif",
+    "delta_ndvi": "delta_ndvi.tif",
+    "baseline_prevalence_raster": "baseline_prevalence.tif",
+    "baseline_cases": "baseline_cases.tif"
 }
 
 def execute(args):
@@ -375,41 +378,41 @@ def execute(args):
     greening scenario.
 
     Args:
-        args['workspace_dir'] (string): (required) a path to the directory that
+        args['workspace_dir'] (str): (required) a path to the directory that
             will write output and other temporary files during calculation.
-        args['results_suffix'] (string): (optional) appended to any output
+        args['results_suffix'] (str): (optional) appended to any output
             filename.
-        args['aoi_vector_path'] (string): (required) path to a polygon vector
+        args['aoi_vector_path'] (str): (required) path to a polygon vector
             that is projected in a coordinate system with units of meters.
             The polygon should intersect the baseline prevalence vector and
             the population raster.
-        args['population_raster] (string): (required) a path to a raster of
+        args['population_raster] (str): (required) a path to a raster of
             gridded population data representing the number of people per pixel,
             ideally at the pixel level.
         args['search_radius'] (float): (required) the distance used to define
             the surrounding area of a person's residence that best represents
             daily exposure to nearby nature.
-        args['effect_size_csv'] (string): (required) a path to a CSV table
+        args['effect_size_csv'] (str): (required) a path to a CSV table
             containing health indicator-specific effect sizes, such as risk
             ratios or odds ratios, representing the relationship between nature
             exposure and mental health outcomes.
-        args['baseline_prevalence_vector'] (string): (required) a path to a
+        args['baseline_prevalence_vector'] (str): (required) a path to a
             vector providing the baseline prevalence (or incidence) rate of
             a specific mental health outcome (e.g., depression or anxiety)
             across administrative units within the study area. This data allows
             the model to estimate preventable cases by comparing current rates
             with those projected under improved nature exposure scenarios. The
             vector must contain field `risk_rate`.
-        args['health_cost_rate_csv'] (string): (optional) a path to a CSV table
+        args['health_cost_rate_csv'] (str): (optional) a path to a CSV table
             providing the societal cost per case (e.g., in USD PPP) for the
             mental health outcome described by the `baseline_prevalence_vector`.
             This data enables the model to estimate the economic value of
             preventable cases under different urban nature scenarios. Costs can
             be specified at national, regional, or local levels depending on
             data availability.
-        args['scenario'] (string): (required) which of the three land use scenarios
+        args['scenario'] (str): (required) which of the three land use scenarios
             to model.
-        args['tc_raster'] (string): required if args['scenario'] == 'tc_ndvi',
+        args['tc_raster'] (str): required if args['scenario'] == 'tc_ndvi',
             a path to a raster providing tree canopy cover under current or
             baseline conditions.
         args['tc_target'] (float): required if args['scenario'] == 'tc_ndvi',
@@ -417,18 +420,18 @@ def execute(args):
             This value represents a desired scenario and will be used to
             compare against the baseline tree cover to estimate potential
             health benefits.
-        args['ndvi_base'] (string): required if args['scenario'] != 'lulc' or
+        args['ndvi_base'] (str): required if args['scenario'] != 'lulc' or
             not args['lulc_attr_csv'], a path to a Normalized Difference Vegetation
             Index raster representing current or baseline conditions, which gives
             the greenness of vegetation in a given cell.
-        args['ndvi_alt'] (string): required if args['scenario'] == 'ndvi', a path
+        args['ndvi_alt'] (str): required if args['scenario'] == 'ndvi', a path
             to an NDVI raster under future or counterfactual conditions.
-        args['lulc_base'] (string): required if args['scenario'] == 'lulc', a path
+        args['lulc_base'] (str): required if args['scenario'] == 'lulc', a path
             to a Land Use/Land Cover raster showing current or baseline conditions
-        args['lulc_alt'] (string): required if args['scenario'] == 'lulc', a path
+        args['lulc_alt'] (str): required if args['scenario'] == 'lulc', a path
             to a Land Use/Land Cover raster showing a future or counterfactural
             scenario.
-        args['lulc_attr_csv'] (string): required if args['scenario'] == 'lulc' and
+        args['lulc_attr_csv'] (str): required if args['scenario'] == 'lulc' and
             not args['ndvi_base'], a path to a CSV table that maps LULC codes to
             corresponding NDVI values and specifies whether to exclude the LULC
             class from analysis. The following fields are required: 
@@ -476,19 +479,22 @@ def execute(args):
     # preprocessing
     LOGGER.info("Start preprocessing")
     if args['scenario'] == 'ndvi':
+        LOGGER.info("Using scenario option 3: NDVI")
         base_ndvi_raster_info = pygeoprocessing.get_raster_info(
             args['ndvi_base'])
         pixel_size = base_ndvi_raster_info['pixel_size']
         target_projection = base_ndvi_raster_info['projection_wkt']
         
-        input_align_list = [args['ndvi_base'], args['ndvi_alt']]
+        input_align_list = [args['ndvi_base'], args['ndvi_alt'],
+                            args['population_raster']]
         output_align_list = [file_registry['ndvi_base_aligned'],
-                             file_registry['ndvi_alt_aligned']]
+                             file_registry['ndvi_alt_aligned'],
+                             file_registry['population_raster_aligned']]
 
         align_task = task_graph.add_task(
             func=pygeoprocessing.align_and_resize_raster_stack,
             args=(input_align_list, output_align_list,
-                ['cubicspline', 'cubicspline'],
+                ['cubicspline', 'cubicspline', 'near'],
                 pixel_size,
                 'intersection'),
             kwargs={
@@ -497,13 +503,37 @@ def execute(args):
                 'target_projection_wkt': target_projection},
             target_path_list=output_align_list,
             task_name='align rasters')
+        # TODO mask out water
         delta_ndvi_task = task_graph.add_task(
             func=calc_delta_ndvi,
             args=(file_registry['ndvi_base_aligned'],
-                  file_registry['ndvi_alt_aligned']),
-            target_path_list=file_registry['delta_ndvi'],
-            dependent_task_list=align_task,
+                  file_registry['ndvi_alt_aligned'],
+                  file_registry['delta_ndvi']),
+            target_path_list=[file_registry['delta_ndvi']],
+            dependent_task_list=[align_task],
             task_name="calculate delta ndvi"
+        )
+
+        baseline_cases_task = task_graph.add_task(
+            func=calc_baseline_cases,
+            args=(file_registry['population_raster_aligned'],
+                  args['baseline_prevalence_vector'],
+                  file_registry['baseline_prevalence_raster'],
+                  file_registry['baseline_cases']),
+            target_path_list=[file_registry['baseline_cases']],
+            dependent_task_list=[align_task],
+            task_name="calculate baseline cases"
+        )
+
+        preventable_cases_task = task_graph.add_task(
+            func=calc_preventable_cases,
+            args=(file_registry['delta_ndvi'],
+                  file_registry['baseline_cases'],
+                  args['effect_size_csv'],
+                  file_registry['preventable_cases_path']),
+            target_path_list=[file_registry['preventable_cases_path']],
+            dependent_task_list=[delta_ndvi_task, baseline_cases_task],
+            task_name="calculate preventable cases"
         )
 
 
@@ -513,30 +543,91 @@ def execute(args):
     return True
 
 
-#TODO: convert to pgp raster calc ops
-def calc_delta_ndvi(base_ndvi, alt_ndvi):
-    """Calculate the change in nature exposure (NE)"""
-
-    return alt_ndvi - base_ndvi
-
-def calc_baseline_cases(base_prevalence_rate, population_raster):
-    """Calculate baseline cases
+# TODO: calculate population weighted exposure
+def calc_delta_ndvi(base_ndvi, alt_ndvi, target_path):
+    """Calculate the change in nature exposure (NE)
     
-    BC = BIR x POP
+    Args:
+        base_ndvi (str): path to baseline NDVI raster
+        alt_ndvi (str): path to future or counterfactual NDVI raster
+        target_path (str): path to output delta NDVI raster
+
+    Returns:
+        None.
+    
+    """
+    def _subtract_op(base_ndvi, alt_ndvi, base_nodata, alt_nodata):
+        """operation to subtract alt ndvi from base ndvi and mask nodata"""
+        mask = pygeoprocessing.array_equals_nodata(base_ndvi, base_nodata) | pygeoprocessing.array_equals_nodata(alt_ndvi, alt_nodata)
+        delta_ndvi = base_ndvi - alt_ndvi
+        delta_ndvi[mask] = FLOAT32_NODATA
+        
+        return delta_ndvi
+
+    base_nodata = pygeoprocessing.get_raster_info(base_ndvi)['nodata']
+    alt_nodata = pygeoprocessing.get_raster_info(alt_ndvi)['nodata']
+    base_raster_path_band_const_list = [(base_ndvi, 1), (alt_ndvi, 1),
+                                        (base_nodata, "raw"), (alt_nodata, "raw")]
+   
+    pygeoprocessing.raster_calculator(
+        base_raster_path_band_const_list, _subtract_op, target_path,
+        gdal.GDT_Float32, nodata_target=FLOAT32_NODATA)
+
+
+def calc_baseline_cases(population_raster, base_prevalence_vector,
+                        target_base_prevalence_raster, target_base_cases):
+    """Calculate baseline cases via incidence_rate * population
 
     Args:
-        base_prevalence_rate (string): vector that provides the baseline
-            prevalence (or incidence) rate by spatial unit (e.g., census tract) 
-        population_raster (string): raster dataset representing the number of
-            inhabitants per pixel across the study area. Pixels with
-            no population should be assigned a value of 0. 
+        population_raster (str): path to aligned population raster
+            representing the number of inhabitants per pixel across
+            the study area. Pixels with no population should be
+            assigned a value of 0. 
+        base_prevalence_vector (str): path to vector with field # TODO: check units/intended range of rate?
+            `risk_rate` that provides the baseline prevalence
+            (or incidence) rate of a mental health outcome by
+            spatial unit (e.g., census tract).
+        target_base_prevalence_raster (str): target output path for
+            rasterized baseline prevalence
+        target_base_cases (str): target output path for baseline
+            cases raster
+        
+    Returns:
+        None.
 
     """
-    #TODO? rasterize baseline prevalence vector
-    baseline_cases = base_prevalence_rate*population_raster
-    return baseline_cases
+    def _multiply_op(prevalence, pop, prevalence_nodata, pop_nodata):
+        """Mulitply baseline prevalence raster (float) by population raster (int)"""
+        mask = (pygeoprocessing.array_equals_nodata(prevalence, prevalence_nodata) |
+                pygeoprocessing.array_equals_nodata(pop, pop_nodata))
+        output_array = prevalence * pop
+        output_array[mask] = FLOAT32_NODATA
+        
+        return output_array
 
-def calc_preventable_cases(delta_ndvi, health_effect_table, baseline_cases):
+    pygeoprocessing.new_raster_from_base(
+        population_raster, target_base_prevalence_raster,
+        gdal.GDT_Float32, [FLOAT32_NODATA])
+    
+    pygeoprocessing.rasterize(base_prevalence_vector,
+                              target_base_prevalence_raster,
+                              option_list=[
+                                  "ATTRIBUTE=risk_rate", "ALL_TOUCHED=TRUE",
+                                  "MERGE_ALG=REPLACE"])
+    
+    # don't need to dynamically get target_base_prevalence_raster's nodata as we defined it above
+    population_nodata = pygeoprocessing.get_raster_info(population_raster)['nodata']
+    base_raster_path_band_const_list = [(target_base_prevalence_raster, 1),
+                                        (population_raster, 1),
+                                        (FLOAT32_NODATA, "raw"),
+                                        (population_nodata, "raw")]
+    pygeoprocessing.raster_calculator(
+        base_raster_path_band_const_list, _multiply_op,
+        target_base_cases, gdal.GDT_Float32, nodata_target=FLOAT32_NODATA)
+
+
+def calc_preventable_cases(delta_ndvi, baseline_cases, health_effect_table,
+                           target_preventable_cases):
     """Calculate preventable cases
 
     PC = PF * BC
@@ -548,8 +639,8 @@ def calc_preventable_cases(delta_ndvi, health_effect_table, baseline_cases):
     PC: preventable cases
     PF: preventable fraction
     BC: baseline cases
-    RR: relative risk or risk ratio. 
-    NE: nature exposure, as approimated by NDVI.
+    RR: relative risk or risk ratio
+    NE: nature exposure, as approimated by NDVI
     RR0.1NE: RR per 0.1 NE increase.
         By default, the model uses the relative risk associated with a 
         0.1 increase in NDVI-based nature exposure. This value must be 
@@ -557,14 +648,38 @@ def calc_preventable_cases(delta_ndvi, health_effect_table, baseline_cases):
         studies or meta-analyses relevant to the selected health outcome. 
 
     Args:
+        delta_ndvi (str): path to raster representing change in NDVI from
+            baseline to alternate/counterfactural scenario
+        baseline_cases (str): path to raster of number of baseline cases 
+        health_effect_table (str): path to health effect table containing
+            'risk_ratio' column
+        target_preventable_cases (str): path to output preventable cases raster
+    
+    Returns:
+        None.
         
     """
-    rr0 = health_effect_table["risk_ratio"]
-    relative_risk = numpy.exp(numpy.log(rr0) * 10 * delta_ndvi)
-    preventable_fraction = 1 - relative_risk
-    preventable_cases = preventable_fraction * baseline_cases
+    def _preventable_cases_op(delta_ndvi, baseline_cases, effect_size_val):
+        mask = (pygeoprocessing.array_equals_nodata(delta_ndvi, FLOAT32_NODATA) |
+                pygeoprocessing.array_equals_nodata(baseline_cases, FLOAT32_NODATA))
+        relative_risk = numpy.exp(numpy.log(effect_size_val) * 10 * delta_ndvi)
+        preventable_fraction = 1 - relative_risk
+        preventable_cases = preventable_fraction * baseline_cases
+        preventable_cases[mask] = FLOAT32_NODATA
+        return preventable_cases
+    
+    # TODO: determine if risk_ratio can just be entered as single value?
+    health_effect_df = pandas.read_csv(health_effect_table)
+    effect_size_val = health_effect_df["effect_size"][0] #previously called 'rr0'?
+    LOGGER.info(f"effect_size_val {effect_size_val}")
 
-    return preventable_cases
+    base_raster_path_band_const_list = [(delta_ndvi, 1),
+                                        (baseline_cases, 1),
+                                        (effect_size_val, "raw")]
+
+    pygeoprocessing.raster_calculator(
+        base_raster_path_band_const_list, _preventable_cases_op,
+        target_preventable_cases, gdal.GDT_Float32, nodata_target=FLOAT32_NODATA)
 
 def calc_preventable_cost(preventable_cases, health_cost_rate):
     """Calculate preventable cost"""
