@@ -92,7 +92,6 @@ export default function PluginModal(props) {
 
   const addPlugin = () => {
     setInstallLoading(true);
-    ipcRenderer.on(`plugin-install-status`, (msg) => { setStatusMessage(msg); });
     ipcRenderer.invoke(
       ipcMainChannels.ADD_PLUGIN,
       installFrom === 'url' ? url : undefined, // url
@@ -135,6 +134,7 @@ export default function PluginModal(props) {
   };
 
   useEffect(() => {
+    ipcRenderer.on('plugin-install-status', (msg) => { setStatusMessage(msg); });
     if (show) {
       if (window.Workbench.OS === 'win32') {
         ipcRenderer.invoke(ipcMainChannels.HAS_MSVC).then((hasMSVC) => {
@@ -142,6 +142,7 @@ export default function PluginModal(props) {
         });
       }
     }
+    return () => { ipcRenderer.removeAllListeners('plugin-install-status'); };
   }, [show]);
 
   useEffect(() => {
@@ -299,9 +300,7 @@ export default function PluginModal(props) {
             {
               installLoading ? (
                 <div className="adding-button">
-                  <Spinner animation="border" role="status" size="sm" className="plugin-spinner">
-                    <span className="sr-only">{t('Adding...')}</span>
-                  </Spinner>
+                  <Spinner animation="border" role="status" size="sm" className="plugin-spinner" aria-label="loading"/>
                   {t(statusMessage)}
                 </div>
               ) : t('Add')
