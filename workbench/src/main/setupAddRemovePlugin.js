@@ -55,6 +55,143 @@ function spawnWithLogging(cmd, args, options) {
   });
 }
 
+/*
+
+ */
+async function createBaseEnv(baseEnvPrefix, micromamba) {
+  // Create environment from a YML file so that we can specify nodefaults
+  // which is needed for licensing reasons. micromamba does not support
+  // disabling the default channel in the command line.
+  const baseEnvYMLPath = upath.join(app.getPath('temp'), 'baseEnv.yml');
+  const baseEnvYMLContents = (
+    'channels:\n' +
+    '- conda-forge\n' +
+    '- nodefaults\n' +
+    'dependencies:\n' +
+    '- git\n');
+  logger.info(`creating base environment from file:\n${baseEnvYMLContents}`);
+  fs.writeFileSync(baseEnvYMLPath, baseEnvYMLContents);
+  await spawnWithLogging(micromamba, [
+    'create', '--yes', '--prefix', `"${baseEnvPrefix}"`,
+    '--file', `"${baseEnvYMLPath}"`]);
+}
+
+async function cloneAndCheckoutPlugin(
+  micromamba,
+  baseEnvPrefix,
+  url,
+  revision,
+  tmpPluginDir
+) {
+  await spawnWithLogging(
+    micromamba, [
+      'run', '--prefix', `"${baseEnvPrefix}"`,
+      'git', 'clone', '--depth', 1, '--no-checkout', url, tmpPluginDir,
+    ]
+  );
+
+  let head = 'HEAD';
+  if (revision) {
+    head = 'FETCH_HEAD';
+    await spawnWithLogging(
+      micromamba,
+      [
+        'run', '--prefix', `"${baseEnvPrefix}"`,
+        'git', 'fetch', 'origin', `${revision}`,
+      ],
+      { cwd: tmpPluginDir }
+    );
+  }
+  await spawnWithLogging(
+    micromamba,
+    [
+      'run', '--prefix', `"${baseEnvPrefix}"`,
+      'git', 'checkout', head, '--', 'pyproject.toml',
+    ],
+    { cwd: tmpPluginDir }
+  );
+}
+
+async function installPlugin(
+  micromamba,
+  pluginEnvPrefix,
+  condaDeps,
+  installString,
+  i18n,
+  event
+) {
+  // Create environment from a YML file so that we can specify nodefaults
+  // which is needed for licensing reasons. micromamba does not support
+  // disabling the default channel in the command line.
+  const pluginEnvYMLPath = upath.join(app.getPath('temp'), 'env.yml');
+  let pluginEnvYMLContents = (
+    'channels:\n' +
+    '- conda-forge\n' +
+    '- nodefaults\n' +
+    'dependencies:\n' +
+    '- python\n' +
+    '- git\n'
+  );
+  if (condaDeps) { // include dependencies read from pyproject.toml
+    condaDeps.forEach((dep) => pluginEnvYMLContents += `- ${dep}\n`);
+  }
+  logger.info(`creating plugin environment from file:\n${pluginEnvYMLContents}`);
+
+  fs.writeFileSync(pluginEnvYMLPath, pluginEnvYMLContents);
+  event.sender.send('plugin-install-status', i18n.t('Creating plugin environment...'));
+  await spawnWithLogging(micromamba, [
+    'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
+    '--file', `"${pluginEnvYMLPath}"`]);
+  logger.info('created micromamba env for plugin');
+  event.sender.send('plugin-install-status', i18n.t('Installing plugin into environment...'));
+  await spawnWithLogging(
+    micromamba,
+    [
+      'run', '--prefix', `"${pluginEnvPrefix}"`,
+      'python', '-m', 'pip', 'install', installString
+    ]
+  );
+  logger.info('installed plugin into its env');
+}
+
+function storePluginMetadataSync(
+  micromamba,
+  pluginEnvPrefix,
+  packageName,
+  installString
+) {
+  const modelID = execSync(
+    `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
+    `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
+  ).toString().trim();
+  const modelTitle = execSync(
+    `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
+    `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
+  ).toString().trim();
+  const version = execSync(
+    `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
+    `python -c "from importlib.metadata import version; ` +
+    `print(version('${packageName}'))"`
+  ).toString().trim();
+
+  // Write plugin metadata to the workbench's config.json
+  logger.info('writing plugin info to settings store');
+  // Uniquely identify plugin by a hash of its ID and version
+  // Replace dots with underscores in the version, because dots are a
+  // special character in keys for electron-store's set and get methods
+  const pluginID = `${modelID}@${version}`;
+  settingsStore.set(
+    `plugins.${pluginID.replaceAll('.', '_')}`,
+    {
+      modelID: modelID,
+      modelTitle: modelTitle,
+      type: 'plugin',
+      source: installString,
+      env: pluginEnvPrefix,
+      version: version,
+    }
+  );
+}
 
 export function setupAddPlugin(i18n) {
   ipcMain.handle(
@@ -77,53 +214,23 @@ export function setupAddPlugin(i18n) {
           // Create invest_base environment, if it doesn't already exist
           // The purpose of this environment is just to ensure that git is available
           if (!fs.existsSync(baseEnvPrefix)) {
-            event.sender.send('plugin-install-status', i18n.t('Creating base environment...'));
-
-            // Create environment from a YML file so that we can specify nodefaults
-            // which is needed for licensing reasons. micromamba does not support
-            // disabling the default channel in the command line.
-            const baseEnvYMLPath = upath.join(app.getPath('temp'), 'baseEnv.yml');
-            const baseEnvYMLContents = (
-              'channels:\n' +
-              '- conda-forge\n' +
-              '- nodefaults\n' +
-              'dependencies:\n' +
-              '- git\n');
-            logger.info(`creating base environment from file:\n${baseEnvYMLContents}`);
-            try {
-              fs.writeFileSync(baseEnvYMLPath, baseEnvYMLContents);
-              await spawnWithLogging(micromamba, [
-                'create', '--yes', '--prefix', `"${baseEnvPrefix}"`,
-                '--file', `"${baseEnvYMLPath}"`]);
-            } catch (error) {
-              logger.error('Error creating invest_base environment:');
-              throw error;
-            }
+            event.sender.send(
+              'plugin-install-status',
+              i18n.t('Creating base environment...')
+            );
+            await createBaseEnv(baseEnvPrefix, micromamba);
           }
 
-          // Create a temporary directory and check out the plugin's pyproject.toml,
+          // check out the plugin's pyproject.toml,
           // without downloading any extra files or git history
-          event.sender.send('plugin-install-status', i18n.t('Downloading plugin source code...'));
+          event.sender.send(
+            'plugin-install-status',
+            i18n.t('Downloading plugin source code...')
+          );
           const tmpPluginDir = fs.mkdtempSync(upath.join(tmpdir(), 'natcap-invest-'));
           try {
-            await spawnWithLogging(
-              micromamba,
-              ['run', '--prefix', `"${baseEnvPrefix}"`,
-                'git', 'clone', '--depth', 1, '--no-checkout', url, tmpPluginDir]);
-
-            let head = 'HEAD';
-            if (revision) {
-              head = 'FETCH_HEAD';
-              await spawnWithLogging(
-                micromamba,
-                ['run', '--prefix', `"${baseEnvPrefix}"`, 'git', 'fetch', 'origin', `${revision}`],
-                { cwd: tmpPluginDir }
-              );
-            }
-            await spawnWithLogging(
-              micromamba,
-              ['run', '--prefix', `"${baseEnvPrefix}"`, 'git', 'checkout', head, '--', 'pyproject.toml'],
-              { cwd: tmpPluginDir }
+            await cloneAndCheckoutPlugin(
+              micromamba, baseEnvPrefix, url, revision, tmpPluginDir
             );
             // Read in the plugin's pyproject.toml, then delete it
             pyprojectTOML = toml.parse(fs.readFileSync(
@@ -133,6 +240,7 @@ export function setupAddPlugin(i18n) {
             logger.error('Error downloading plugin source code:');
             throw error;
           } finally {
+            // We only needed the pyproject.toml content, the rest can go.
             fs.rmSync(tmpPluginDir, { recursive: true, force: true });
           }
         } else { // install from local path
@@ -154,95 +262,26 @@ export function setupAddPlugin(i18n) {
         // import metadata from the MODEL_SPEC. And mamba does not support
         // renaming or moving environments after they're created.
         const pluginEnvPrefix = upath.join(rootPrefix, `plugin_${Date.now()}`);
-
-        // Create environment from a YML file so that we can specify nodefaults
-        // which is needed for licensing reasons. micromamba does not support
-        // disabling the default channel in the command line.
-        const pluginEnvYMLPath = upath.join(app.getPath('temp'), 'env.yml');
-        let pluginEnvYMLContents = (
-          'channels:\n' +
-          '- conda-forge\n' +
-          '- nodefaults\n' +
-          'dependencies:\n' +
-          '- python\n' +
-          '- git\n')
-        if (condaDeps) { // include dependencies read from pyproject.toml
-          condaDeps.forEach((dep) => pluginEnvYMLContents += `- ${dep}\n`);
-        }
-        logger.info(`creating plugin environment from file:\n${pluginEnvYMLContents}`);
         try {
-          fs.writeFileSync(pluginEnvYMLPath, pluginEnvYMLContents);
-          event.sender.send('plugin-install-status', i18n.t('Creating plugin environment...'));
-          await spawnWithLogging(micromamba, [
-            'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
-            '--file', `"${pluginEnvYMLPath}"`]);
-          logger.info('created micromamba env for plugin');
-          event.sender.send('plugin-install-status', i18n.t('Installing plugin into environment...'));
-          await spawnWithLogging(
-            micromamba,
-            ['run', '--prefix', `"${pluginEnvPrefix}"`,
-             'python', '-m', 'pip', 'install', installString]
+          await installPlugin(
+            micromamba, pluginEnvPrefix, condaDeps, installString, i18n, event
           );
-          logger.info('installed plugin into its env');
           event.sender.send('plugin-install-status', i18n.t('Importing plugin...'));
-          // Access plugin metadata from the package
-          const modelID = execSync(
-            `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
-            `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_id)"`
-          ).toString().trim();
-          const modelTitle = execSync(
-            `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
-            `python -c "import ${packageName}; print(${packageName}.MODEL_SPEC.model_title)"`
-          ).toString().trim();
-          const version = execSync(
-            `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
-            `python -c "from importlib.metadata import version; ` +
-            `print(version('${packageName}'))"`
-          ).toString().trim();
-
-          // Write plugin metadata to the workbench's config.json
-          logger.info('writing plugin info to settings store');
-          // Uniquely identify plugin by a hash of its ID and version
-          // Replace dots with underscores in the version, because dots are a
-          // special character in keys for electron-store's set and get methods
-          const pluginID = `${modelID}@${version}`;
-          settingsStore.set(
-            `plugins.${pluginID.replaceAll('.', '_')}`,
-            {
-              modelID: modelID,
-              modelTitle: modelTitle,
-              type: 'plugin',
-              source: installString,
-              env: pluginEnvPrefix,
-              version: version,
-            }
+          storePluginMetadataSync(
+            micromamba, pluginEnvPrefix, packageName, installString
           );
           logger.info('successfully added plugin');
         } catch (error) {
-          logger.error('Error creating plugin environment:');
-          logger.info('cleaning up failed installation environment');
+          logger.info('Cleaning up failed installation environment.');
           fs.rmSync(pluginEnvPrefix, { recursive: true, force: true });
           throw error;
         }
       } catch (error) {
         logger.error(error);
-        return error;
+        throw error;
       }
     }
   );
-}
-
-async function removePlugin(pluginID) {
-  // Shut down the plugin server process
-  const pluginPID = settingsStore.get(`plugins.${pluginID}.pid`);
-  await shutdownPythonProcess(pluginPID);
-  // Delete the plugin's conda env
-  const env = settingsStore.get(`plugins.${pluginID}.env`);
-  const micromamba = settingsStore.get('micromamba');
-  await spawnWithLogging(micromamba, ['env', 'remove', '--yes', '--prefix', `"${env}"`]);
-  // Delete the plugin's data from storage
-  settingsStore.delete(`plugins.${pluginID}`);
-  logger.info('successfully removed plugin');
 }
 
 export function setupRemovePlugin() {
@@ -251,7 +290,18 @@ export function setupRemovePlugin() {
     async (e, pluginID) => {
       logger.info('removing plugin', pluginID);
       try {
-        await removePlugin(pluginID);
+        // Shut down the plugin server process
+        const pluginPID = settingsStore.get(`plugins.${pluginID}.pid`);
+        await shutdownPythonProcess(pluginPID);
+        // Delete the plugin's conda env
+        const env = settingsStore.get(`plugins.${pluginID}.env`);
+        const micromamba = settingsStore.get('micromamba');
+        await spawnWithLogging(
+          micromamba, ['env', 'remove', '--yes', '--prefix', `"${env}"`]
+        );
+        // Delete the plugin's data from storage
+        settingsStore.delete(`plugins.${pluginID}`);
+        logger.info('successfully removed plugin');
       } catch (error) {
         logger.info('Error removing plugin:');
         logger.info(error);

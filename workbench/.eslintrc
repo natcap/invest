@@ -39,7 +39,8 @@
             "exports": "never",
             "functions": "never"
         }],
-        "import/no-extraneous-dependencies": [error, { devDependencies: true }],
+        "function-paren-newline": ["error", "consistent"],
+        "import/no-extraneous-dependencies": ["error", { "devDependencies": true }],
         "linebreak-style": ["off", ],
         "max-classes-per-file": ["error", 2],
         "object-shorthand": ["error", "never"],
