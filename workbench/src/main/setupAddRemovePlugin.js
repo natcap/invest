@@ -54,8 +54,11 @@ function spawnWithLogging(cmd, args, options) {
   });
 }
 
-/*
-
+/**
+ * Create a base micromamba environment containing git.
+ * @param  {string} baseEnvPrefix location for the environment
+ * @param  {string} micromamba    path to the micromamba executable
+ * @return {Promise}
  */
 async function createBaseEnv(baseEnvPrefix, micromamba) {
   // Create environment from a YML file so that we can specify nodefaults
@@ -75,6 +78,15 @@ async function createBaseEnv(baseEnvPrefix, micromamba) {
     '--file', `"${baseEnvYMLPath}"`]);
 }
 
+/**
+ * Clone a git repository to a temporary directory and check out a revision
+ * @param  {string} micromamba    path to the micromamba executable
+ * @param  {string} baseEnvPrefix the base environment where git is available
+ * @param  {string} url           a git repository
+ * @param  {string} revision      a valid git revision (branch, tag, commit hash)
+ * @param  {string} tmpPluginDir  a location to clone to
+ * @return {Promise}
+ */
 async function cloneAndCheckoutPlugin(
   micromamba,
   baseEnvPrefix,
@@ -111,6 +123,17 @@ async function cloneAndCheckoutPlugin(
   );
 }
 
+/**
+ * Install a plugin and its dependencies into a new micromamba environment.
+ * @param  {string} micromamba      path to the micromamba executable
+ * @param  {string} pluginEnvPrefix location for the new environment
+ * @param  {string} condaDeps       dependencies to install from conda-forge
+ * @param  {string} installString   pip install argument for the plugin
+ * @param  {Object} i18n            i18n instance for translating status messages
+ * @param  {Object} event           ipcMain event object so we can send status
+ *                                  updates to renderer
+ * @return {Promise}
+ */
 async function installPlugin(
   micromamba,
   pluginEnvPrefix,
@@ -153,6 +176,14 @@ async function installPlugin(
   logger.info('installed plugin into its env');
 }
 
+/**
+ * Get plugin metadata from the installed Python package,
+ * and store that metadata in the Workbench's settingsStore.
+ * @param  {string} micromamba      path to the micromamba executable
+ * @param  {string} pluginEnvPrefix location of the plugin's micromamba env
+ * @param  {string} packageName     the plugin's python package name
+ * @param  {string} installString   pip install argument for the plugin
+ */
 function storePluginMetadataSync(
   micromamba,
   pluginEnvPrefix,
@@ -195,7 +226,7 @@ function storePluginMetadataSync(
 export function setupAddPlugin(i18n) {
   ipcMain.handle(
     ipcMainChannels.ADD_PLUGIN,
-    async (event, url, revision, path) => {
+    async (event, url, revision, localPath) => {
       try {
         let pyprojectTOML;
         let installString;
@@ -243,11 +274,11 @@ export function setupAddPlugin(i18n) {
             fs.rmSync(tmpPluginDir, { recursive: true, force: true });
           }
         } else { // install from local path
-          logger.info(`adding plugin from ${path}`);
-          installString = path;
+          logger.info(`adding plugin from ${localPath}`);
+          installString = localPath;
           // Read in the plugin's pyproject.toml
           pyprojectTOML = toml.parse(fs.readFileSync(
-            upath.join(path, 'pyproject.toml')
+            upath.join(localPath, 'pyproject.toml')
           ).toString());
         }
         // Access plugin metadata from the pyproject.toml
