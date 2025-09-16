@@ -3,13 +3,17 @@ import logging
 import math
 import os
 import pickle
+import shutil
+import tempfile
+
 
 import numpy
 import pandas
 import pygeoprocessing
+import pygeoprocessing.kernels
 import taskgraph
 from osgeo import gdal
-from osgeo import ogr
+from osgeo import ogr, osr
 
 from . import gettext
 from . import spec
@@ -75,7 +79,8 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=int,
             units=None,
-            projected=True
+            projected=True,
+            projection_units=u.meter
         ),
         spec.NumberInput(
             id="search_radius",
@@ -348,6 +353,7 @@ MODEL_SPEC = spec.ModelSpec(
         ]
 )
 
+# TODO: use FileRegistry
 _OUTPUT_BASE_FILES = {
     "preventable_cases_path": "preventable_cases.tif",
     "preventable_cost_path": "preventable_cost.tif",
@@ -361,7 +367,10 @@ _INTERMEDIATE_BASE_FILES = {
     "lulc_alt_aligned": "lulc_alt_aligned.tif",
     "ndvi_base_aligned": "ndvi_base_aligned.tif",
     "ndvi_alt_aligned": "ndvi_alt_aligned.tif",
-    "population_raster_aligned": "population_raster_aligned.tif",
+    "population_aligned": "population_aligned.tif",
+    "kernel": "kernel.tif",
+    "ndvi_base_buffer_mean": "ndvi_base_buffer_mean.tif", #mean NDVI within a circular buffer
+    "ndvi_alt_buffer_mean": "ndvi_alt_buffer_mean.tif",
     "delta_ndvi": "delta_ndvi.tif",
     "baseline_prevalence_raster": "baseline_prevalence.tif",
     "baseline_cases": "baseline_cases.tif"
@@ -484,44 +493,104 @@ def execute(args):
             args['ndvi_base'])
         pixel_size = base_ndvi_raster_info['pixel_size']
         target_projection = base_ndvi_raster_info['projection_wkt']
+        # bounding boxes.
+        pop_raster_info = pygeoprocessing.get_raster_info(
+            args['population_raster'])
+        aoi_info = pygeoprocessing.get_vector_info(args['aoi_vector_path'])
+        target_bounding_box = pygeoprocessing.merge_bounding_box_list(
+            [aoi_info['bounding_box'], base_ndvi_raster_info['bounding_box'],
+             pop_raster_info['bounding_box']], 'intersection')
         
-        input_align_list = [args['ndvi_base'], args['ndvi_alt'],
-                            args['population_raster']]
+        input_align_list = [args['ndvi_base'], args['ndvi_alt']]
         output_align_list = [file_registry['ndvi_base_aligned'],
-                             file_registry['ndvi_alt_aligned'],
-                             file_registry['population_raster_aligned']]
+                             file_registry['ndvi_alt_aligned']]
 
-        align_task = task_graph.add_task(
+        ndvi_align_task = task_graph.add_task(
             func=pygeoprocessing.align_and_resize_raster_stack,
             args=(input_align_list, output_align_list,
-                ['cubicspline', 'cubicspline', 'near'],
+                ['cubicspline', 'cubicspline'],
                 pixel_size,
-                'intersection'),
+                target_bounding_box),
             kwargs={
-                'base_vector_path_list': [args['aoi_vector_path']],
                 'raster_align_index': 0,  # align to base_ndvi
                 'target_projection_wkt': target_projection},
             target_path_list=output_align_list,
-            task_name='align rasters')
+            task_name='align NDVI rasters')
+        
+        population_align_task = task_graph.add_task(
+            func=_resample_population_raster,
+            kwargs={
+                'source_population_raster_path': args['population_raster'],
+                'target_population_raster_path': file_registry[
+                    'population_aligned'],
+                'target_pixel_size': pixel_size,
+                'target_bb': target_bounding_box,
+                'target_projection_wkt': target_projection,
+                'working_dir': intermediate_output_dir,
+            },
+            target_path_list=[file_registry['population_aligned']],
+            task_name='Resample population to NDVI resolution')
+
+        pixel_radius = int(round(search_radius/pixel_size[0]))
+        LOGGER.info(f"Search radius {search_radius} results in buffer of {pixel_radius} pixels")
+        kernel_task = task_graph.add_task(
+            func=pygeoprocessing.kernels.dichotomous_kernel,
+            kwargs={
+                'target_kernel_path': file_registry['kernel'],
+                'max_distance': pixel_radius,
+                'normalize': True},
+            target_path_list=[file_registry['kernel']],
+            task_name=f'create kernel raster',)
+
+        mean_buffer_base_ndvi_task = task_graph.add_task(
+            func=pygeoprocessing.convolve_2d,
+            args=(
+                (file_registry['ndvi_base_aligned'], 1), (file_registry['kernel'], 1),
+                file_registry['ndvi_base_buffer_mean']),
+            kwargs={
+                'ignore_nodata_and_edges': True,
+                'mask_nodata': True,
+                'normalize_kernel': True,
+                'target_datatype': gdal.GDT_Float32,
+                'target_nodata': FLOAT32_NODATA},
+            dependent_task_list=[ndvi_align_task, kernel_task],
+            target_path_list=[file_registry['ndvi_base_buffer_mean']],
+            task_name="calculate mean baseline NDVI within buffer")
+        
+        mean_buffer_alt_ndvi_task = task_graph.add_task(
+            func=pygeoprocessing.convolve_2d,
+            args=(
+                (file_registry['ndvi_alt_aligned'], 1), (file_registry['kernel'], 1),
+                file_registry['ndvi_alt_buffer_mean']),
+            kwargs={
+                'ignore_nodata_and_edges': True,
+                'mask_nodata': True,
+                'normalize_kernel': True,
+                'target_datatype':gdal.GDT_Float32,
+                'target_nodata': FLOAT32_NODATA},
+            dependent_task_list=[ndvi_align_task, kernel_task], #TODO: should this task depend on mean_buffer_base_ndvi_task in case both try to open kernel raster simultaneously?
+            target_path_list=[file_registry['ndvi_alt_buffer_mean']],
+            task_name="calculate mean alternate NDVI within buffer")
+        
         # TODO mask out water
         delta_ndvi_task = task_graph.add_task(
             func=calc_delta_ndvi,
-            args=(file_registry['ndvi_base_aligned'],
-                  file_registry['ndvi_alt_aligned'],
+            args=(file_registry['ndvi_base_buffer_mean'],
+                  file_registry['ndvi_alt_buffer_mean'],
                   file_registry['delta_ndvi']),
             target_path_list=[file_registry['delta_ndvi']],
-            dependent_task_list=[align_task],
+            dependent_task_list=[mean_buffer_base_ndvi_task, mean_buffer_alt_ndvi_task],
             task_name="calculate delta ndvi"
         )
 
         baseline_cases_task = task_graph.add_task(
             func=calc_baseline_cases,
-            args=(file_registry['population_raster_aligned'],
+            args=(file_registry['population_aligned'],
                   args['baseline_prevalence_vector'],
                   file_registry['baseline_prevalence_raster'],
                   file_registry['baseline_cases']),
             target_path_list=[file_registry['baseline_cases']],
-            dependent_task_list=[align_task],
+            dependent_task_list=[population_align_task],
             task_name="calculate baseline cases"
         )
 
@@ -542,13 +611,127 @@ def execute(args):
 
     return True
 
+def _resample_population_raster(
+        source_population_raster_path, target_population_raster_path,
+        target_pixel_size, target_bb, target_projection_wkt, working_dir):
+    """Resample a population raster without losing or gaining people.
 
-# TODO: calculate population weighted exposure
+    Population rasters are an interesting special case where the data are
+    neither continuous nor categorical, and the total population count
+    typically matters.  Common resampling methods for continuous
+    (interpolation) and categorical (nearest-neighbor) datasets leave room for
+    the total population of a resampled raster to significantly change.  This
+    function resamples a population raster with the following steps:
+
+        1. Convert a population count raster to population density per pixel
+        2. Warp the population density raster to the target spatial reference
+           and pixel size using bilinear interpolation.
+        3. Convert the warped density raster back to population counts.
+
+    This function is pulled from urban_nature_access.
+
+    Args:
+        source_population_raster_path (string): The source population raster.
+            Pixel values represent the number of people occupying the pixel.
+            Must be linearly projected in meters.
+        target_population_raster_path (string): The path to where the target,
+            warped population raster will live on disk.
+        target_pixel_size (tuple): A tuple of the pixel size for the target
+            raster.  Passed directly to ``pygeoprocessing.warp_raster``.
+        target_bb (tuple): A tuple of the bounding box for the target raster.
+            Passed directly to ``pygeoprocessing.warp_raster``.
+        target_projection_wkt (string): The Well-Known Text of the target
+            spatial reference fro the target raster.  Passed directly to
+            ``pygeoprocessing.warp_raster``.  Assumed to be a linear projection
+            in meters.
+        working_dir (string): The path to a directory on disk.  A new directory
+            is created within this directory for the storage of temporary files
+            and then deleted upon successful completion of the function.
+
+    Returns:
+        ``None``
+    """
+    if not os.path.isdir(working_dir):
+        os.makedirs(working_dir)
+    tmp_working_dir = tempfile.mkdtemp(dir=working_dir)
+    population_raster_info = pygeoprocessing.get_raster_info(
+        source_population_raster_path)
+    pixel_area = numpy.multiply(*population_raster_info['pixel_size'])
+    population_srs = osr.SpatialReference()
+    population_srs.ImportFromWkt(population_raster_info['projection_wkt'])
+
+    # Convert population pixel area to square km
+    population_pixel_area = (
+        pixel_area * population_srs.GetLinearUnits()) / 1e6
+
+    def _convert_population_to_density(population):
+        """Convert population counts to population per square km.
+
+        Args:
+            population (numpy.array): A numpy array where pixel values
+                represent the number of people who reside in a pixel.
+
+        Returns:
+            """
+        return population / population_pixel_area
+
+    # Step 1: convert the population raster to population density per sq. km
+    density_raster_path = os.path.join(tmp_working_dir, 'pop_density.tif')
+    pygeoprocessing.raster_map(
+        rasters=[source_population_raster_path],
+        op=_convert_population_to_density,
+        target_path=density_raster_path,
+        target_dtype=numpy.float32)
+
+    # Step 2: align to the LULC
+    warped_density_path = os.path.join(tmp_working_dir, 'warped_density.tif')
+    pygeoprocessing.warp_raster(
+        density_raster_path,
+        target_pixel_size=target_pixel_size,
+        target_raster_path=warped_density_path,
+        resample_method='bilinear',
+        target_bb=target_bb,
+        target_projection_wkt=target_projection_wkt)
+
+    # Step 3: convert the warped population raster back from density to the
+    # population per pixel
+    target_srs = osr.SpatialReference()
+    target_srs.ImportFromWkt(target_projection_wkt)
+    # Calculate target pixel area in km to match above
+    target_pixel_area = (
+        numpy.multiply(*target_pixel_size) * target_srs.GetLinearUnits()) / 1e6
+
+    def _convert_density_to_population(density):
+        """Convert a population density raster back to population counts.
+
+        Args:
+            density (numpy.array): An array of the population density per
+                square kilometer.
+
+        Returns:
+            A ``numpy.array`` of the population counts given the target pixel
+            size of the output raster."""
+        # We're using a float32 array here because doing these unit
+        # conversions is likely to end up with partial people spread out
+        # between multiple pixels.  So it's preserving an unrealistic degree of
+        # precision, but that's probably OK because pixels are imprecise
+        # measures anyways.
+        return density * target_pixel_area
+
+    pygeoprocessing.raster_map(
+        op=_convert_density_to_population,
+        rasters=[warped_density_path],
+        target_path=target_population_raster_path)
+
+    shutil.rmtree(tmp_working_dir, ignore_errors=True)
+
+
+
 def calc_delta_ndvi(base_ndvi, alt_ndvi, target_path):
     """Calculate the change in nature exposure (NE)
     
     Args:
-        base_ndvi (str): path to baseline NDVI raster
+        base_ndvi (str): path to baseline NDVI raster 
         alt_ndvi (str): path to future or counterfactual NDVI raster
         target_path (str): path to output delta NDVI raster
 
@@ -559,7 +742,7 @@ def calc_delta_ndvi(base_ndvi, alt_ndvi, target_path):
     def _subtract_op(base_ndvi, alt_ndvi, base_nodata, alt_nodata):
         """operation to subtract alt ndvi from base ndvi and mask nodata"""
         mask = pygeoprocessing.array_equals_nodata(base_ndvi, base_nodata) | pygeoprocessing.array_equals_nodata(alt_ndvi, alt_nodata)
-        delta_ndvi = base_ndvi - alt_ndvi
+        delta_ndvi = alt_ndvi - base_ndvi
         delta_ndvi[mask] = FLOAT32_NODATA
         
         return delta_ndvi
@@ -598,12 +781,12 @@ def calc_baseline_cases(population_raster, base_prevalence_vector,
     """
     def _multiply_op(prevalence, pop, prevalence_nodata, pop_nodata):
         """Mulitply baseline prevalence raster (float) by population raster (int)"""
-        mask = (pygeoprocessing.array_equals_nodata(prevalence, prevalence_nodata) |
-                pygeoprocessing.array_equals_nodata(pop, pop_nodata))
-        output_array = prevalence * pop
-        output_array[mask] = FLOAT32_NODATA
-        
-        return output_array
+        valid_mask = (~pygeoprocessing.array_equals_nodata(prevalence, prevalence_nodata) &
+                      ~pygeoprocessing.array_equals_nodata(pop, pop_nodata))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = FLOAT32_NODATA
+        result[valid_mask] = prevalence[valid_mask] * pop[valid_mask]
+        return result
 
     pygeoprocessing.new_raster_from_base(
         population_raster, target_base_prevalence_raster,
@@ -660,13 +843,13 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, health_effect_table,
         
     """
     def _preventable_cases_op(delta_ndvi, baseline_cases, effect_size_val):
-        mask = (pygeoprocessing.array_equals_nodata(delta_ndvi, FLOAT32_NODATA) |
-                pygeoprocessing.array_equals_nodata(baseline_cases, FLOAT32_NODATA))
-        relative_risk = numpy.exp(numpy.log(effect_size_val) * 10 * delta_ndvi)
-        preventable_fraction = 1 - relative_risk
-        preventable_cases = preventable_fraction * baseline_cases
-        preventable_cases[mask] = FLOAT32_NODATA
-        return preventable_cases
+        valid_mask = (~pygeoprocessing.array_equals_nodata(delta_ndvi, FLOAT32_NODATA) &
+                      ~pygeoprocessing.array_equals_nodata(baseline_cases, FLOAT32_NODATA))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = FLOAT32_NODATA
+        result[valid_mask] = 1 - numpy.exp(numpy.log(effect_size_val) * 10 * delta_ndvi[valid_mask])
+        result[valid_mask] *= baseline_cases[valid_mask] #preventable cases
+        return result
     
     # TODO: determine if risk_ratio can just be entered as single value?
     health_effect_df = pandas.read_csv(health_effect_table)
