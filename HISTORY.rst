@@ -62,9 +62,17 @@
 
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+
+Plugins
+=======
+* Fixed a bug where some errors during plugin installation would crash
+  the Workbench. Specifically, if the plugin was installed but could not
+  import. (`#2071 <https://github.com/natcap/invest/issues/2071>`_)
+* If plugin installation fails, the Workbench now cleans up any
+  leftover, unusable micromamba environments.
+  (`#2104 <https://github.com/natcap/invest/issues/2104>`_)
 
 3.16.2 (2025-08-13)
 -------------------
