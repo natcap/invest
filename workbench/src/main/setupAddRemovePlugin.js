@@ -6,7 +6,6 @@ import { execFile, execSync, spawn } from 'child_process';
 import { promisify } from 'util';
 import { app, ipcMain } from 'electron';
 import { Downloader } from 'nodejs-file-downloader';
-import crypto from 'crypto';
 
 import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
