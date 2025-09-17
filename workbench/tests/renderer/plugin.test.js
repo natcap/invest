@@ -170,7 +170,7 @@ describe('Add plugin modal', () => {
     // 'loading' status, which  is only present before the click handler
     // fully resolves.
     userEvent.click(submitButton);
-    await findByRole('status', { name: 'loading' });
+    await findByText('Adding plugin');
 
     await waitFor(() => {
       const calledChannels = spy.mock.calls.map((call) => call[0]);

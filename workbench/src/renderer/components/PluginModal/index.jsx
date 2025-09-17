@@ -300,7 +300,9 @@ export default function PluginModal(props) {
             {
               installLoading ? (
                 <div className="adding-button">
-                  <Spinner animation="border" role="status" size="sm" className="plugin-spinner" aria-label="loading"/>
+                  <Spinner animation="border" role="status" size="sm" className="plugin-spinner">
+                    <span className="sr-only">{t('Adding plugin')}</span>
+                  </Spinner>
                   {t(statusMessage)}
                 </div>
               ) : t('Add')
