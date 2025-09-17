@@ -65,6 +65,12 @@
 Unreleased Changes
 ------------------
 
+General
+=======
+* Added a `ModelSpec.get_output` method to access items in `ModelSpec.outputs`
+  using the `id` property of the `Output`.
+  (`#2138 <https://github.com/natcap/invest/issues/2138>`_)
+
 Plugins
 =======
 * Fixed a bug where some errors during plugin installation would crash
