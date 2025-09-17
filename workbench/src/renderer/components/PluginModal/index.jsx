@@ -415,7 +415,12 @@ export default function PluginModal(props) {
   }
 
   return (
-    <Modal show={show} onHide={handleModalClose} contentClassName="plugin-modal">
+    <Modal
+      show={show}
+      onHide={handleModalClose}
+      backdrop="static"
+      contentClassName="plugin-modal"
+    >
       <Modal.Header>
         <Modal.Title>{t('Manage plugins')}</Modal.Title>
         <Button
