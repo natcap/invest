@@ -62,9 +62,14 @@
 
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+
+General
+=======
+* Added a `ModelSpec.get_output` method to access items in `ModelSpec.outputs`
+  using the `id` property of the `Output`.
+  (`#2138 <https://github.com/natcap/invest/issues/2138>`_)
 
 3.16.2 (2025-08-13)
 -------------------
