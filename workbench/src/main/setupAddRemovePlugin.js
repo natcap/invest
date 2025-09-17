@@ -152,6 +152,9 @@ async function installPlugin(
 
   fs.writeFileSync(pluginEnvYMLPath, pluginEnvYMLContents);
   event.sender.send('plugin-install-status', i18n.t('Creating plugin environment...'));
+  // In case the specific natcap.invest dependency does not have a
+  // conda-forge build, setup.py requires this env variable.
+  process.env['NATCAP_INVEST_GDAL_LIB_PATH'] = `${pluginEnvPrefix}/Library`;
   await spawnWithLogging(micromamba, [
     'create', '--yes', '--prefix', `"${pluginEnvPrefix}"`,
     '--file', `"${pluginEnvYMLPath}"`]);
