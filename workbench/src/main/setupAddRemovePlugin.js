@@ -88,11 +88,7 @@ async function createBaseEnv(baseEnvPrefix, micromamba) {
  * @return {Promise}
  */
 async function cloneAndCheckoutPlugin(
-  micromamba,
-  baseEnvPrefix,
-  url,
-  revision,
-  tmpPluginDir
+  micromamba, baseEnvPrefix, url, revision, tmpPluginDir
 ) {
   await spawnWithLogging(
     micromamba, [
@@ -135,12 +131,7 @@ async function cloneAndCheckoutPlugin(
  * @return {Promise}
  */
 async function installPlugin(
-  micromamba,
-  pluginEnvPrefix,
-  condaDeps,
-  installString,
-  i18n,
-  event
+  micromamba, pluginEnvPrefix, condaDeps, installString, i18n, event
 ) {
   // Create environment from a YML file so that we can specify nodefaults
   // which is needed for licensing reasons. micromamba does not support
@@ -185,10 +176,7 @@ async function installPlugin(
  * @param  {string} installString   pip install argument for the plugin
  */
 function storePluginMetadataSync(
-  micromamba,
-  pluginEnvPrefix,
-  packageName,
-  installString
+  micromamba, pluginEnvPrefix, packageName, installString
 ) {
   const modelID = execSync(
     `${micromamba} run --prefix "${pluginEnvPrefix}" ` +
@@ -345,7 +333,9 @@ export function setupWindowsMSVCHandlers() {
   ipcMain.handle(
     ipcMainChannels.HAS_MSVC,
     () => {
-      return fs.existsSync(upath.join('C:', 'Windows', 'System32', 'VCRUNTIME140_1.dll'));
+      return fs.existsSync(
+        upath.join('C:', 'Windows', 'System32', 'VCRUNTIME140_1.dll')
+      );
     }
   );
 
