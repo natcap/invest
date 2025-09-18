@@ -294,7 +294,9 @@ export function setupAddPlugin(i18n) {
           logger.info('successfully added plugin');
         } catch (error) {
           logger.info('Cleaning up failed installation environment.');
-          fs.rmSync(pluginEnvPrefix, { recursive: true, force: true });
+          await spawnWithLogging(
+            micromamba, ['env', 'remove', '--yes', '--prefix', `"${pluginEnvPrefix}"`]
+          );
           throw error;
         }
       } catch (error) {
