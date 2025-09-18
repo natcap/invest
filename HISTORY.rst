@@ -64,6 +64,13 @@
 Unreleased Changes
 ------------------
 
+General
+=======
+* Fixed a bug where datastacks missing the ``invest_version`` attribute could not be
+  opened. Additionally, new datastacks created with InVEST will no longer include
+  an ``invest_version``, since tying a datastack to a specific version of InVEST is
+  unnecessary. (`#2092 <https://github.com/natcap/invest/issues/2092>`_)
+
 Habitat Quality
 ===============
 * The aligned LULC outputs are no longer named after the original LULC files.
