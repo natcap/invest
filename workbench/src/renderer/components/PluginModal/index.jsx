@@ -92,23 +92,20 @@ export default function PluginModal(props) {
 
   const addPlugin = () => {
     setInstallLoading(true);
-    ipcRenderer.on(`plugin-install-status`, (msg) => { setStatusMessage(msg); });
     ipcRenderer.invoke(
       ipcMainChannels.ADD_PLUGIN,
       installFrom === 'url' ? url : undefined, // url
       installFrom === 'url' ? revision : undefined, // revision
       installFrom === 'path' ? path : undefined // path
-    ).then((addPluginErr) => {
+    ).then(() => {
       setInstallLoading(false);
       updateInvestList();
-      if (addPluginErr) {
-        setInstallErr(addPluginErr);
-      } else {
-        // clear the input fields
-        setURL('');
-        setRevision('');
-        setPath('');
-      }
+      // clear the input fields
+      setURL('');
+      setRevision('');
+      setPath('');
+    }).catch((err) => {
+      setInstallErr(err.toString());
     });
   };
 
@@ -119,13 +116,13 @@ export default function PluginModal(props) {
         closeInvestModel(tabID);
       }
     });
-    ipcRenderer.invoke(ipcMainChannels.REMOVE_PLUGIN, pluginToRemove).then((err) => {
-      if (err) {
-        setUninstallErr(err)
-      } else {
-        updateInvestList();
-        setUninstallLoading(false);
-      }
+    ipcRenderer.invoke(
+      ipcMainChannels.REMOVE_PLUGIN, pluginToRemove
+    ).then(() => {
+      updateInvestList();
+      setUninstallLoading(false);
+    }).catch((err) => {
+      setUninstallErr(err.toString());
     });
   };
 
@@ -137,6 +134,7 @@ export default function PluginModal(props) {
   };
 
   useEffect(() => {
+    ipcRenderer.on('plugin-install-status', (msg) => { setStatusMessage(msg); });
     if (show) {
       if (window.Workbench.OS === 'win32') {
         ipcRenderer.invoke(ipcMainChannels.HAS_MSVC).then((hasMSVC) => {
@@ -144,6 +142,7 @@ export default function PluginModal(props) {
         });
       }
     }
+    return () => { ipcRenderer.removeAllListeners('plugin-install-status'); };
   }, [show]);
 
   useEffect(() => {
@@ -302,7 +301,7 @@ export default function PluginModal(props) {
               installLoading ? (
                 <div className="adding-button">
                   <Spinner animation="border" role="status" size="sm" className="plugin-spinner">
-                    <span className="sr-only">{t('Adding...')}</span>
+                    <span className="sr-only">{t('Adding plugin')}</span>
                   </Spinner>
                   {t(statusMessage)}
                 </div>

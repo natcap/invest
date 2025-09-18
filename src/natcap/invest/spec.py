@@ -1586,6 +1586,10 @@ class ModelSpec(BaseModel):
         """Get an Input of this model by its key."""
         return {_input.id: _input for _input in self.inputs}[key]
 
+    def get_output(self, key: str) -> Output:
+        """Get an Output of this model by its key."""
+        return {_output.id: _output for _output in self.outputs}[key]
+
     def to_json(self):
         """Serialize an MODEL_SPEC dict to a JSON string.
 
