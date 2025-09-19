@@ -360,7 +360,7 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.NumberInput(
                     id="turbine_rated_pwr",
                     about="The turbine's rated power output.",
-                    units=u.kilowatt
+                    units=u.megawatt
                 ),
                 spec.NumberInput(
                     id="turbine_cost",
