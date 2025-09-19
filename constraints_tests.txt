@@ -4,4 +4,8 @@
 
 # A gdal bug caused our test suite to fail, but this issue is unlikely to
 # occur with regular use of invest. https://github.com/OSGeo/gdal/issues/8497
-GDAL!=3.6.*,!=3.7.*
+gdal!=3.6.*,!=3.7.*
+
+# docutils version 0.22.1 crashes installation
+# https://sourceforge.net/p/docutils/bugs/513/
+docutils<0.22.1

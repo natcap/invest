@@ -202,7 +202,7 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          requirements-files: requirements.txt
+          requirements-files: requirements.txt constraints_tests.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python=${{ matrix.python-version }}
@@ -312,7 +312,7 @@ jobs:
       - name: Set up python environment
         uses: ./.github/actions/setup_env
         with:
-          requirements-files: requirements.txt requirements-dev.txt
+          requirements-files: requirements.txt requirements-dev.txt constraints_tests.txt
           requirements: |
             ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
             python=${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
