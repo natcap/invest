@@ -308,14 +308,11 @@ class StormwaterTests(unittest.TestCase):
         stormwater.execute(args)
 
         retention_volume_path = os.path.join(
-            self.workspace_dir,
-            stormwater.FINAL_OUTPUTS['retention_volume_path'])
+            self.workspace_dir, 'retention_volume.tif')
         percolation_volume_path = os.path.join(
-            self.workspace_dir,
-            stormwater.FINAL_OUTPUTS['percolation_volume_path'])
+            self.workspace_dir, 'percolation_volume.tif')
         value_path = os.path.join(
-            self.workspace_dir,
-            stormwater.FINAL_OUTPUTS['retention_value_path'])
+            self.workspace_dir, 'retention_value.tif')
 
         retention_raster = gdal.OpenEx(retention_volume_path, gdal.OF_RASTER)
         retention_volume = retention_raster.GetRasterBand(1).ReadAsArray()
@@ -400,18 +397,14 @@ class StormwaterTests(unittest.TestCase):
 
         adjusted_ratio_raster = gdal.OpenEx(
             os.path.join(
-                self.workspace_dir,
-                stormwater.FINAL_OUTPUTS['adjusted_retention_ratio_path']),
+                self.workspace_dir, 'adjusted_retention_ratio.tif'),
             gdal.OF_RASTER)
         retention_volume_raster = gdal.OpenEx(
             os.path.join(
-                self.workspace_dir,
-                stormwater.FINAL_OUTPUTS['retention_volume_path']),
+                self.workspace_dir, 'retention_volume.tif'),
             gdal.OF_RASTER)
         runoff_volume_raster = gdal.OpenEx(
-            os.path.join(
-                self.workspace_dir,
-                stormwater.FINAL_OUTPUTS['runoff_volume_path']),
+            os.path.join(self.workspace_dir, 'runoff_volume.tif'),
             gdal.OF_RASTER)
         actual_runoff_volume = runoff_volume_raster.GetRasterBand(
             1).ReadAsArray()
@@ -501,8 +494,7 @@ class StormwaterTests(unittest.TestCase):
         }
 
         aggregate_data_path = os.path.join(
-            args['workspace_dir'],
-            stormwater.FINAL_OUTPUTS['reprojected_aggregate_areas_path'])
+            args['workspace_dir'], 'aggregate_data.gpkg')
         aggregate_vector = gdal.OpenEx(aggregate_data_path, gdal.OF_VECTOR)
         aggregate_layer = aggregate_vector.GetLayer()
         for feature in aggregate_layer:

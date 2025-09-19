@@ -760,13 +760,15 @@ class UNATests(unittest.TestCase):
             urban_nature_access.execute(args)
 
             # make sure the output dir contains the correct files.
-            for output_filename in (
-                    urban_nature_access._OUTPUT_BASE_FILES.values()):
-                basename, ext = os.path.splitext(
-                    os.path.basename(output_filename))
+            for output_filename in ['urban_nature_supply_percapita.tif',
+                                    'admin_boundaries.gpkg',
+                                    'urban_nature_balance_percapita.tif',
+                                    'urban_nature_balance_totalpop.tif',
+                                    'urban_nature_demand.tif']:
+                basename, ext = os.path.splitext(output_filename)
                 suffix = args['results_suffix']
-                filepath = os.path.join(args['workspace_dir'], 'output',
-                                        f'{basename}_{suffix}{ext}')
+                filepath = os.path.join(
+                    args['workspace_dir'], 'output', f'{basename}_{suffix}{ext}')
                 self.assertTrue(os.path.exists(filepath))
 
             # check the urban_nature demand raster
