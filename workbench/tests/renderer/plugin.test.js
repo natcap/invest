@@ -3,7 +3,6 @@ import { ipcRenderer } from 'electron';
 import '@testing-library/jest-dom';
 import {
   within, render, waitFor,
-  findByText
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -135,7 +134,9 @@ describe('Add plugin modal', () => {
     });
   });
 
-  test('Add a plugin', async () => {
+  test('Add a plugin: success', async () => {
+    // mocking the plugins data in the settings store is how
+    // we mock a successfull plugin installation
     const spy = ipcRenderer.invoke.mockImplementation((channel, setting) => {
       if (channel === ipcMainChannels.GET_SETTING) {
         if (setting === 'plugins') {
@@ -165,10 +166,12 @@ describe('Add plugin modal', () => {
     await userEvent.click(userAcknowledgmentCheckbox);
 
     const submitButton = await findByText('Add');
-    // The following event is synchronous bc awaiting it causes the test to fail.
+    // The following click event is not awaited because we want to expect the
+    // 'loading' status, which  is only present before the click handler
+    // fully resolves.
     userEvent.click(submitButton);
+    await findByText('Adding plugin');
 
-    await findByText('Adding...');
     await waitFor(() => {
       const calledChannels = spy.mock.calls.map((call) => call[0]);
       expect(calledChannels).toContain(ipcMainChannels.ADD_PLUGIN);
@@ -179,6 +182,42 @@ describe('Add plugin modal', () => {
     const pluginButton = await findByRole('button', { name: /Foo/ });
     // assert that the 'plugin' badge is displayed
     await waitFor(() => expect(within(pluginButton).getByText('Plugin')).toBeInTheDocument());
+  });
+
+  test('Add a plugin: failure with error displayed', async () => {
+    const errorString = 'Failed to clone repository.';
+    const spy = ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === ipcMainChannels.HAS_MSVC) {
+        return Promise.resolve(true);
+      }
+      if (channel === ipcMainChannels.ADD_PLUGIN) {
+        return Promise.reject(
+          new Error(errorString)
+        );
+      }
+      return Promise.resolve();
+    });
+    const {
+      findByText, findByLabelText, findByRole,
+    } = render(<App />);
+
+    await userEvent.click(await findByRole('button', { name: 'menu' }));
+    const managePluginsButton = await findByText(/Manage plugins/i);
+    await userEvent.click(managePluginsButton);
+
+    const urlField = await findByLabelText('Git URL');
+    await userEvent.type(urlField, 'fake url', { delay: 0 });
+    const userAcknowledgmentCheckbox = await findByLabelText(/I acknowledge and accept/i);
+    await userEvent.click(userAcknowledgmentCheckbox);
+
+    const submitButton = await findByText('Add');
+    await userEvent.click(submitButton);
+
+    await waitFor(() => {
+      const calledChannels = spy.mock.calls.map((call) => call[0]);
+      expect(calledChannels).toContain(ipcMainChannels.ADD_PLUGIN);
+    });
+    await findByText(new RegExp(errorString));
   });
 
   test('Open and run a plugin', async () => {

@@ -561,7 +561,7 @@ class ParameterSetTest(unittest.TestCase):
         datastack.build_parameter_set(params, modelname, paramset_filename)
 
         # Read back the parameter set
-        args, callable_name, invest_version = datastack.extract_parameter_set(
+        args, callable_name = datastack.extract_parameter_set(
             paramset_filename)
 
         # parameter set calculations normalizes all paths.
@@ -572,7 +572,6 @@ class ParameterSetTest(unittest.TestCase):
             normalized_params[key] = os.path.normpath(normalized_params[key])
 
         self.assertEqual(args, normalized_params)
-        self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
 
     def test_relative_parameter_set(self):
@@ -621,11 +620,10 @@ class ParameterSetTest(unittest.TestCase):
 
         # Read back the parameter set and verify the returned paths are
         # absolute
-        args, callable_name, invest_version = datastack.extract_parameter_set(
+        args, callable_name = datastack.extract_parameter_set(
             paramset_filename)
 
         self.assertEqual(args, params)
-        self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
 
     def test_relative_path_failure(self):
@@ -687,11 +685,10 @@ class ParameterSetTest(unittest.TestCase):
 
         # Read back the parameter set and verify the returned paths are
         # absolute
-        args, callable_name, invest_version = datastack.extract_parameter_set(
+        args, callable_name = datastack.extract_parameter_set(
             paramset_filename)
 
         self.assertEqual(args, params)
-        self.assertEqual(invest_version, __version__)
         self.assertEqual(callable_name, modelname)
 
     def test_extract_parameters_from_logfile(self):
@@ -716,8 +713,7 @@ class ParameterSetTest(unittest.TestCase):
              'some_int': 1,
              'some_float': 2.33,
              'workspace_dir': 'some_workspace_dir'},
-            'some_model',
-            'some_version')
+            'some_model')
 
         self.assertEqual(params, expected_params)
 
@@ -758,8 +754,7 @@ class ParameterSetTest(unittest.TestCase):
 
         self.assertEqual(stack_type, 'archive')
         self.assertEqual(stack_info, datastack.ParameterSet(
-            params, 'simple_parameters',
-            natcap.invest.__version__))
+            params, 'simple_parameters'))
 
     def test_get_datastack_info_parameter_set(self):
         """Datastack: test get datastack info parameter set."""
@@ -783,7 +778,7 @@ class ParameterSetTest(unittest.TestCase):
         self.assertEqual(
             stack_info,
             datastack.ParameterSet(
-                params, test_module_name, natcap.invest.__version__))
+                params, test_module_name))
 
     def test_get_datastack_info_logfile_new_style(self):
         """Datastack: test get datastack info logfile new style."""
@@ -804,7 +799,7 @@ class ParameterSetTest(unittest.TestCase):
         stack_type, stack_info = datastack.get_datastack_info(logfile_path)
         self.assertEqual(stack_type, 'logfile')
         self.assertEqual(stack_info, datastack.ParameterSet(
-            args, 'some_modelname', natcap.invest.__version__))
+            args, 'some_modelname'))
 
     def test_get_datastack_info_logfile_old_style(self):
         """Datastack: test get datastack info logfile old style."""
@@ -826,7 +821,7 @@ class ParameterSetTest(unittest.TestCase):
         stack_type, stack_info = datastack.get_datastack_info(logfile_path)
         self.assertEqual(stack_type, 'logfile')
         self.assertEqual(stack_info, datastack.ParameterSet(
-            args, 'carbon', natcap.invest.__version__))
+            args, 'carbon'))
 
     @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
     def test_mixed_path_separators_in_paramset_windows(self):
