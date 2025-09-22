@@ -20,6 +20,7 @@ from .. import gettext
 from .. import spec
 from .. import utils
 from .. import validation
+from ..file_registry import FileRegistry
 from ..unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -30,21 +31,6 @@ BYTE_GTIFF_CREATION_OPTIONS = (
               'BLOCKXSIZE=256', 'BLOCKYSIZE=256'))
 FLOAT_GTIFF_CREATION_OPTIONS = (
     'GTIFF', ('PREDICTOR=3',) + BYTE_GTIFF_CREATION_OPTIONS[1])
-
-_OUTPUT_BASE_FILES = {
-    'viewshed_value': 'vshed_value.tif',
-    'n_visible_structures': 'vshed.tif',
-    'viewshed_quality': 'vshed_qual.tif',
-}
-
-_INTERMEDIATE_BASE_FILES = {
-    'aoi_reprojected': 'aoi_reprojected.shp',
-    'clipped_dem': 'dem_clipped.tif',
-    'structures_clipped': 'structures_clipped.shp',
-    'structures_reprojected': 'structures_reprojected.shp',
-    'visibility_pattern': 'visibility_{id}.tif',
-    'value_pattern': 'value_{id}.tif',
-}
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="scenic_quality",
@@ -309,7 +295,7 @@ def execute(args):
             place in the current process.
 
     Returns:
-        ``None``
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     LOGGER.info("Starting Scenic Quality Model")
@@ -336,10 +322,7 @@ def execute(args):
         args, 'results_suffix')
 
     LOGGER.info('Building file registry')
-    file_registry = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_dir)],
-        file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], file_suffix)
 
     try:
         n_workers = int(args['n_workers'])
@@ -348,9 +331,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous execution
-    graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
-
+    graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'], n_workers)
+    print(file_registry['aoi_reprojected'])
     reprojected_aoi_task = graph.add_task(
         pygeoprocessing.reproject_vector,
         args=(args['aoi_path'],
@@ -381,9 +363,9 @@ def execute(args):
         _clip_and_mask_dem,
         args=(args['dem_path'],
               file_registry['aoi_reprojected'],
-              file_registry['clipped_dem'],
+              file_registry['dem_clipped'],
               intermediate_dir),
-        target_path_list=[file_registry['clipped_dem']],
+        target_path_list=[file_registry['dem_clipped']],
         dependent_task_list=[reprojected_aoi_task],
         task_name='clip_dem_to_aoi')
 
@@ -396,7 +378,7 @@ def execute(args):
     # phase 2: calculate viewsheds.
     valid_viewpoints_task = graph.add_task(
         _determine_valid_viewpoints,
-        args=(file_registry['clipped_dem'],
+        args=(file_registry['dem_clipped'],
               file_registry['structures_clipped']),
         store_result=True,
         dependent_task_list=[clipped_viewpoints_task, clipped_dem_task],
@@ -421,20 +403,18 @@ def execute(args):
     for viewpoint, max_radius, weight, viewpoint_height in sorted(
             viewpoint_tuples, key=lambda x: x[0]):
         weights.append(weight)
-        visibility_filepath = file_registry['visibility_pattern'].format(
-            id=feature_index)
-        viewshed_files.append(visibility_filepath)
+        viewshed_files.append(file_registry['visibility_[FEATURE_ID]', feature_index])
         viewshed_task = graph.add_task(
             viewshed,
-            args=((file_registry['clipped_dem'], 1),  # DEM
+            args=((file_registry['dem_clipped'], 1),  # DEM
                   viewpoint,
-                  visibility_filepath),
+                  file_registry['visibility_[FEATURE_ID]', feature_index]),
             kwargs={'curved_earth': True,  # SQ model always assumes this.
                     'refraction_coeff': float(args['refraction']),
                     'max_distance': max_radius,
                     'viewpoint_height': viewpoint_height,
                     'aux_filepath': None},  # Remove aux filepath after run
-            target_path_list=[visibility_filepath],
+            target_path_list=[file_registry['visibility_[FEATURE_ID]', feature_index]],
             dependent_task_list=[clipped_dem_task,
                                  clipped_viewpoints_task],
             task_name='calculate_visibility_%s' % feature_index)
@@ -442,11 +422,10 @@ def execute(args):
 
         if do_valuation:
             # calculate valuation
-            viewshed_valuation_path = file_registry['value_pattern'].format(
-                id=feature_index)
+            viewshed_valuation_path = file_registry['value_[FEATURE_ID]', feature_index]
             valuation_task = graph.add_task(
                 _calculate_valuation,
-                args=(visibility_filepath,
+                args=(file_registry['visibility_[FEATURE_ID]', feature_index],
                       viewpoint,
                       weight,  # user defined, from WEIGHT field in vector
                       args['valuation_function'],
@@ -466,9 +445,9 @@ def execute(args):
         _count_and_weight_visible_structures,
         args=(viewshed_files,
               weights,
-              file_registry['clipped_dem'],
-              file_registry['n_visible_structures']),
-        target_path_list=[file_registry['n_visible_structures']],
+              file_registry['dem_clipped'],
+              file_registry['vshed']),
+        target_path_list=[file_registry['vshed']],
         dependent_task_list=sorted(viewshed_tasks),
         task_name='sum_visibility_for_all_structures')
 
@@ -477,32 +456,32 @@ def execute(args):
     # sum of the valuation rasters.
     if not do_valuation:
         parent_visual_quality_task = weighted_visible_structures_task
-        parent_visual_quality_raster_path = (
-            file_registry['n_visible_structures'])
+        parent_visual_quality_raster_path = file_registry['vshed']
     else:
         parent_visual_quality_task = graph.add_task(
             _sum_valuation_rasters,
-            args=(file_registry['clipped_dem'],
+            args=(file_registry['dem_clipped'],
                   valuation_filepaths,
-                  file_registry['viewshed_value']),
-            target_path_list=[file_registry['viewshed_value']],
+                  file_registry['vshed_value']),
+            target_path_list=[file_registry['vshed_value']],
             dependent_task_list=sorted(valuation_tasks),
             task_name='add_up_valuation_rasters')
-        parent_visual_quality_raster_path = file_registry['viewshed_value']
+        parent_visual_quality_raster_path = file_registry['vshed_value']
 
     # visual quality is one of the leaf nodes on the task graph.
     graph.add_task(
         _calculate_visual_quality,
         args=(parent_visual_quality_raster_path,
               intermediate_dir,
-              file_registry['viewshed_quality']),
+              file_registry['vshed_qual']),
         dependent_task_list=[parent_visual_quality_task],
-        target_path_list=[file_registry['viewshed_quality']],
+        target_path_list=[file_registry['vshed_qual']],
         task_name='calculate_visual_quality'
     )
 
     LOGGER.info('Waiting for Scenic Quality tasks to complete.')
     graph.join()
+    return file_registry.registry
 
 
 def _determine_valid_viewpoints(dem_path, structures_path):

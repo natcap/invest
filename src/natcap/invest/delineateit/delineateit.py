@@ -18,6 +18,7 @@ from .. import gettext
 from .. import spec
 from .. import utils
 from .. import validation
+from ..file_registry import FileRegistry
 from ..unit_registry import u
 from . import delineateit_core
 
@@ -179,16 +180,6 @@ MODEL_SPEC = spec.ModelSpec(
 
 )
 
-_OUTPUT_FILES = {
-    'preprocessed_geometries': 'preprocessed_geometries.gpkg',
-    'filled_dem': 'filled_dem.tif',
-    'flow_dir_d8': 'flow_direction.tif',
-    'flow_accumulation': 'flow_accumulation.tif',
-    'streams': 'streams.tif',
-    'snapped_outlets': 'snapped_outlets.gpkg',
-    'watersheds': 'watersheds.gpkg',
-    'pour_points': 'pour_points.gpkg'
-}
 _WS_ID_OVERWRITE_WARNING = (
     'Layer {layer_name} of vector {vector_basename} already has a feature '
     'named "ws_id". Field values will be overwritten.')
@@ -249,15 +240,14 @@ def execute(args):
             taskgraph. Defaults to -1 (no parallelism).
 
     Returns:
-        ``None``
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     output_directory = args['workspace_dir']
     utils.make_directories([output_directory])
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = utils.build_file_registry(
-        [(_OUTPUT_FILES, output_directory)], file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, output_directory, file_suffix)
 
     # Manually setting n_workers to be -1 so that everything happens in the
     # same thread.
@@ -268,8 +258,7 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1
-    graph = taskgraph.TaskGraph(
-        os.path.join(output_directory, '_work_tokens'), n_workers=n_workers)
+    graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'], n_workers=n_workers)
 
     fill_pits_task = graph.add_task(
         pygeoprocessing.routing.fill_pits,
@@ -282,9 +271,9 @@ def execute(args):
     flow_dir_task = graph.add_task(
         pygeoprocessing.routing.flow_dir_d8,
         args=((file_registry['filled_dem'], 1),
-              file_registry['flow_dir_d8']),
+              file_registry['flow_direction']),
         kwargs={'working_dir': output_directory},
-        target_path_list=[file_registry['flow_dir_d8']],
+        target_path_list=[file_registry['flow_direction']],
         dependent_task_list=[fill_pits_task],
         task_name='flow_direction')
 
@@ -293,7 +282,7 @@ def execute(args):
         # user-provided geometries
         pour_points_task = graph.add_task(
             detect_pour_points,
-            args=((file_registry['flow_dir_d8'], 1),
+            args=((file_registry['flow_direction'], 1),
                   file_registry['pour_points']),
             dependent_task_list=[flow_dir_task],
             target_path_list=[file_registry['pour_points']],
@@ -317,7 +306,7 @@ def execute(args):
     if 'snap_points' in args and args['snap_points']:
         flow_accumulation_task = graph.add_task(
             pygeoprocessing.routing.flow_accumulation_d8,
-            args=((file_registry['flow_dir_d8'], 1),
+            args=((file_registry['flow_direction'], 1),
                   file_registry['flow_accumulation']),
             target_path_list=[file_registry['flow_accumulation']],
             dependent_task_list=[flow_dir_task],
@@ -354,7 +343,7 @@ def execute(args):
 
     _ = graph.add_task(
         pygeoprocessing.routing.delineate_watersheds_d8,
-        args=((file_registry['flow_dir_d8'], 1),
+        args=((file_registry['flow_direction'], 1),
               outlet_vector_path,
               file_registry['watersheds']),
         kwargs={'working_dir': output_directory,
@@ -367,6 +356,7 @@ def execute(args):
 
     graph.close()
     graph.join()
+    return file_registry.registry
 
 
 def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
