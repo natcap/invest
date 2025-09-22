@@ -15,6 +15,7 @@ from . import utils
 from . import spec
 from .unit_registry import u
 from . import gettext
+from .file_registry import FileRegistry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -181,7 +182,7 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.FileOutput(
-            id="report",
+            id="html_report",
             path="report.html",
             about=gettext(
                 "This file presents a summary of all data computed by the model. It also"
@@ -322,26 +323,6 @@ MODEL_SPEC = spec.ModelSpec(
     ]
 )
 
-
-_OUTPUT_BASE_FILES = {
-    'c_storage_bas': 'c_storage_bas.tif',
-    'c_storage_alt': 'c_storage_alt.tif',
-    'c_change_bas_alt': 'c_change_bas_alt.tif',
-    'npv_alt': 'npv_alt.tif',
-    'html_report': 'report.html',
-}
-
-_INTERMEDIATE_BASE_FILES = {
-    'c_above_bas': 'c_above_bas.tif',
-    'c_below_bas': 'c_below_bas.tif',
-    'c_soil_bas': 'c_soil_bas.tif',
-    'c_dead_bas': 'c_dead_bas.tif',
-    'c_above_alt': 'c_above_alt.tif',
-    'c_below_alt': 'c_below_alt.tif',
-    'c_soil_alt': 'c_soil_alt.tif',
-    'c_dead_alt': 'c_dead_alt.tif',
-}
-
 # -1.0 since carbon stocks are 0 or greater
 _CARBON_NODATA = -1.0
 
@@ -393,7 +374,7 @@ def execute(args):
             place in the current process.
 
     Returns:
-        None.
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
@@ -402,9 +383,7 @@ def execute(args):
     utils.make_directories([intermediate_output_dir, output_dir])
 
     LOGGER.info('Building file registry')
-    file_registry = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),], file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
 
     if args['do_valuation'] and args['lulc_bas_year'] >= args['lulc_alt_year']:
         raise ValueError(
@@ -462,18 +441,17 @@ def execute(args):
         for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
             carbon_pool_by_type = carbon_pool_df[pool_type].to_dict()
 
-            lulc_key = 'lulc_%s_path' % scenario_type
-            storage_key = '%s_%s' % (pool_type, scenario_type)
+            lulc_key = f'lulc_{scenario_type}_path'
+            storage_key = f'{pool_type}_{scenario_type}'
             LOGGER.info(
-                "Mapping carbon from '%s' to '%s' scenario.",
-                lulc_key, storage_key)
+                f"Mapping carbon from '{lulc_key}' to '{storage_key}' scenario.")
 
             carbon_map_task = graph.add_task(
                 _generate_carbon_map,
                 args=(args[lulc_key], carbon_pool_by_type,
                       file_registry[storage_key]),
                 target_path_list=[file_registry[storage_key]],
-                task_name='carbon_map_%s' % storage_key)
+                task_name=f'carbon_map_{storage_key}')
             storage_path_list.append(file_registry[storage_key])
             carbon_map_task_lookup[scenario_type].append(carbon_map_task)
 
@@ -550,6 +528,7 @@ def execute(args):
         dependent_task_list=tasks_to_report,
         task_name='generate_report')
     graph.join()
+    return file_registry.registry
 
 
 # element-wise sum function to pass to raster_map
@@ -660,8 +639,7 @@ def _generate_report(raster_file_set, model_args, file_registry):
     Returns:
         None.
     """
-    html_report_path = file_registry['html_report']
-    with codecs.open(html_report_path, 'w', encoding='utf-8') as report_doc:
+    with codecs.open(file_registry['html_report'], 'w', encoding='utf-8') as report_doc:
         # Boilerplate header that defines style and intro header.
         header = (
             """

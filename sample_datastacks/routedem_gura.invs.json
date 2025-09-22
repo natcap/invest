@@ -1,0 +1,18 @@
+{
+    "args": {
+        "algorithm": "D8", 
+        "calculate_downstream_distance": false, 
+        "calculate_flow_accumulation": true, 
+        "calculate_flow_direction": true, 
+        "calculate_slope": true, 
+        "calculate_stream_order": true,
+        "calculate_stream_threshold": true, 
+        "calculate_subwatersheds": true,
+        "dem_band_index": "", 
+        "dem_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/RouteDEM.zip/RouteDEM/DEM_gura.tif",
+        "results_suffix": "gura", 
+        "threshold_flow_accumulation": "1000"
+    }, 
+    "invest_version": "3.7.0", 
+    "model_name": "natcap.invest.routedem"
+}

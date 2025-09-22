@@ -9,6 +9,7 @@ import threading
 import types
 import typing
 import warnings
+from urllib.parse import urlparse
 
 from osgeo import gdal
 from osgeo import ogr
@@ -321,9 +322,18 @@ class FileInput(Input):
         Returns:
             Transformed dataframe column
         """
-        return col.apply(
-            lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), base_path)
-        ).astype(pandas.StringDtype())
+        def format_path(p):
+            if pandas.isna(p):
+                return p
+            p = str(p).strip()
+            # don't expand remote paths
+            if utils._GDALPath.from_uri(p).is_local:
+                if not utils._GDALPath.from_uri(base_path).is_local:
+                    raise ValueError('Remote CSVs cannot reference local file paths')
+                return utils.expand_path(p, base_path)
+            return p
+
+        return col.apply(format_path).astype(pandas.StringDtype())
 
     def preprocess(self, value):
         """Normalize a value to an absolute path.
@@ -395,12 +405,14 @@ class RasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        file_warning = super().validate(filepath)
-        if file_warning:
-            return file_warning
+        gdal_path = utils._GDALPath.from_uri(filepath)
+        if gdal_path.is_local:
+            file_warning = super().validate(filepath)
+            if file_warning:
+                return file_warning
 
         try:
-            gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
+            gdal_dataset = gdal.OpenEx(gdal_path.to_normalized_path(), gdal.OF_RASTER)
         except RuntimeError:
             return get_message('NOT_GDAL_RASTER')
 
@@ -456,12 +468,14 @@ class SingleBandRasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        file_warning = super().validate(filepath)
-        if file_warning:
-            return file_warning
+        gdal_path = utils._GDALPath.from_uri(filepath)
+        if gdal_path.is_local:
+            file_warning = super().validate(filepath)
+            if file_warning:
+                return file_warning
 
         try:
-            gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
+            gdal_dataset = gdal.OpenEx(gdal_path.to_normalized_path(), gdal.OF_RASTER)
         except RuntimeError:
             return get_message('NOT_GDAL_RASTER')
 
@@ -533,12 +547,14 @@ class VectorInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        file_warning = super().validate(filepath)
-        if file_warning:
-            return file_warning
+        gdal_path = utils._GDALPath.from_uri(filepath)
+        if gdal_path.is_local:
+            file_warning = super().validate(filepath)
+            if file_warning:
+                return file_warning
 
         try:
-            gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
+            gdal_dataset = gdal.OpenEx(gdal_path.to_normalized_path(), gdal.OF_VECTOR)
         except RuntimeError:
             return get_message('NOT_GDAL_VECTOR')
 
@@ -675,7 +691,8 @@ class RasterOrVectorInput(FileInput):
             A string error message if an error was found.  ``None`` otherwise.
         """
         try:
-            gis_type = pygeoprocessing.get_gis_type(filepath)
+            gis_type = pygeoprocessing.get_gis_type(
+                utils._GDALPath.from_uri(filepath).to_normalized_path())
         except ValueError as err:
             return str(err)
         if gis_type == pygeoprocessing.RASTER_TYPE:
@@ -761,9 +778,12 @@ class CSVInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        file_warning = super().validate(filepath)
-        if file_warning:
-            return file_warning
+        # don't check existence of remote paths
+        if utils._GDALPath.from_uri(filepath).is_local:
+            file_warning = super().validate(filepath)
+            if file_warning:
+                return file_warning
+
         if self.columns or self.rows:
             try:
                 self.get_validated_dataframe(filepath)
@@ -859,7 +879,14 @@ class CSVInput(FileInput):
                         if err_msg:
                             raise ValueError(
                                 f'Error in {axis} "{col}", value "{value}": {err_msg}')
+
+                    def normalize_path(value):
+                        if pandas.isna(value):
+                            return value
+                        return utils._GDALPath.from_uri(value).to_normalized_path()
+
                     df[col].apply(check_value)
+                    df[col] = df[col].apply(normalize_path)
 
         if any(df.columns.duplicated()):
             duplicated_columns = df.columns[df.columns.duplicated]
@@ -947,6 +974,9 @@ class DirectoryInput(Input):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
+        if not utils._GDALPath.from_uri(dirpath).is_local:
+            return  # Don't check paths and permissions for remote paths
+
         if self.must_exist:
             if not os.path.exists(dirpath):
                 return get_message('DIR_NOT_FOUND')

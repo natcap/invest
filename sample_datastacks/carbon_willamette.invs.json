@@ -1,0 +1,14 @@
+{
+    "args": {
+        "calc_sequestration": true, 
+        "carbon_pools_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/Carbon/carbon_pools_willamette.csv",
+        "do_valuation": false, 
+        "lulc_bas_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Carbon.zip/Carbon/lulc_current_willamette.tif",
+        "lulc_bas_year": "2020", 
+        "lulc_alt_path": "zip+https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Carbon.zip/Carbon/lulc_future_willamette.tif",
+        "lulc_alt_year": "2050", 
+        "results_suffix": "willamette"
+    }, 
+    "invest_version": "3.7.0", 
+    "model_name": "natcap.invest.carbon"
+}

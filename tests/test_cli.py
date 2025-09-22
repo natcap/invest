@@ -126,6 +126,74 @@ class CLIHeadlessTests(unittest.TestCase):
             ])
         self.assertEqual(exit_cm.exception.code, 1)
 
+    def test_run_carbon_remote_files(self):
+        """CLI: Run the carbon model using a datastack with remote paths."""
+        from natcap.invest import cli
+        parameter_set_path = os.path.join(
+            os.path.dirname(__file__), '..', 'sample_datastacks',
+            'carbon_willamette.invs.json')
+
+        with unittest.mock.patch('natcap.invest.carbon.execute',
+                                 return_value=None) as patched_model:
+            cli.main([
+                'run',
+                'carbon',
+                '--datastack', parameter_set_path,
+                '--workspace', self.workspace_dir,
+            ])
+        # zip+https prefix should be converted to /vsizip/vsicurl
+        patched_model.assert_called_once_with({
+            "calc_sequestration": True,
+            "carbon_pools_path": "https://bitbucket.org/natcap/invest-sample-data/raw/master/Carbon/carbon_pools_willamette.csv",
+            "do_valuation": False,
+            "lulc_bas_path": "/vsizip/vsicurl/https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Carbon.zip/Carbon/lulc_current_willamette.tif",
+            "lulc_bas_year": "2020",
+            "lulc_alt_path": "/vsizip/vsicurl/https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.16.1/data/Carbon.zip/Carbon/lulc_future_willamette.tif",
+            "lulc_alt_year": "2050",
+            "results_suffix": "willamette",
+            "workspace_dir": self.workspace_dir
+        })
+
+    def test_run_produces_file_registry_json(self):
+        """CLI: file_registry.json should be produced in the workspace."""
+        from natcap.invest import cli
+        parameter_set = {
+            "args": {
+                "skip_invalid_geometry": True,
+                "dem_path": os.path.join(os.path.dirname(__file__), '..',
+                    'data', 'invest-test-data', 'delineateit', 'input', 'dem.tif'),
+                "flow_threshold": "1000",
+                "outlet_vector_path": os.path.join(os.path.dirname(__file__), '..',
+                    'data', 'invest-test-data', 'delineateit', 'input', 'outlets.shp'),
+                "results_suffix": "gura",
+                "snap_distance": "3",
+                "snap_points": True
+            },
+            "invest_version": "3.16.2",
+            "model_name": "natcap.invest.delineateit.delineateit"
+        }
+        parameter_set_path = os.path.join(self.workspace_dir, 'delineateit_params.json')
+        with open(parameter_set_path, 'w') as fp:
+            json.dump(parameter_set, fp)
+        cli.main([
+            'run',
+            'delineateit',
+            '--datastack', parameter_set_path,
+            '--workspace', self.workspace_dir
+        ])
+        expected_file_registry = {
+            'taskgraph_cache': os.path.join(self.workspace_dir, 'taskgraph_cache', 'taskgraph_gura.db'),
+            'filled_dem': os.path.join(self.workspace_dir, 'filled_dem_gura.tif'),
+            'flow_direction': os.path.join(self.workspace_dir, 'flow_direction_gura.tif'),
+            'preprocessed_geometries': os.path.join(self.workspace_dir, 'preprocessed_geometries_gura.gpkg'),
+            'flow_accumulation': os.path.join(self.workspace_dir, 'flow_accumulation_gura.tif'),
+            'streams': os.path.join(self.workspace_dir, 'streams_gura.tif'),
+            'snapped_outlets': os.path.join(self.workspace_dir, 'snapped_outlets_gura.gpkg'),
+            'watersheds': os.path.join(self.workspace_dir, 'watersheds_gura.gpkg')
+        }
+        with open(os.path.join(self.workspace_dir, 'file_registry.json')) as json_file:
+            self.assertEqual(json.load(json_file), expected_file_registry)
+
     def test_run_ambiguous_modelname(self):
         """CLI: Raise an error when an ambiguous model name used."""
         from natcap.invest import cli

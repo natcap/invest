@@ -36,7 +36,6 @@ from osgeo import gdal
 
 from . import spec
 from . import utils
-from . import validation
 from . import models
 
 try:
@@ -59,7 +58,7 @@ DATASTACK_PARAMETER_FILENAME = 'parameters' + PARAMETER_SET_EXTENSION
 
 
 ParameterSet = collections.namedtuple('ParameterSet',
-                                      'args model_id invest_version')
+                                      'args model_id')
 
 
 def _tarfile_safe_extract(archive_path, dest_dir_path):
@@ -529,7 +528,6 @@ def build_parameter_set(args, model_id, paramset_path, relative=False):
         return args_param
     parameter_data = {
         'model_id': model_id,
-        'invest_version': __version__,
         'args': _recurse(args)
     }
     with codecs.open(paramset_path, 'w', encoding='UTF-8') as paramset_file:
@@ -554,8 +552,6 @@ def extract_parameter_set(paramset_path):
         A ``ParameterSet`` namedtuple with these attributes::
 
             args (dict): The arguments dict for the callable
-            invest_version (string): The version of InVEST used to record the
-                parameter set.
             model_id (string): the ID of the model that these parameters are for
     """
     paramset_parent_dir = os.path.dirname(os.path.abspath(paramset_path))
@@ -577,6 +573,11 @@ def extract_parameter_set(paramset_path):
             except KeyError:
                 # Probably not a boolean, so continue checking paths.
                 pass
+
+            # Don't expand or modify remote paths
+            gdal_path = utils._GDALPath.from_uri(args_param)
+            if not gdal_path.is_local:
+                return args_param
 
             # Convert paths to whatever makes sense for the current OS.
             expanded_param = os.path.expandvars(
@@ -601,8 +602,7 @@ def extract_parameter_set(paramset_path):
         model_id = models.pyname_to_model_id[read_params['model_name']]
     return ParameterSet(
         args=_recurse(read_params['args']),
-        model_id=model_id,
-        invest_version=read_params['invest_version'])
+        model_id=model_id)
 
 
 def extract_parameters_from_logfile(logfile_path):
@@ -640,7 +640,7 @@ def extract_parameters_from_logfile(logfile_path):
                 # "Arguments for InVEST natcap.invest.carbon 3.4.1rc1:\n"
                 # (old style, using model pyname)
                 if line.startswith('Arguments for InVEST'):
-                    identifier, invest_version = line.split(' ')[3:5]
+                    identifier = line.split(' ')[3]
                     if identifier in models.pyname_to_model_id:
                         # Old style logfiles use the pyname
                         # These will be for core models only, not plugins
@@ -648,7 +648,6 @@ def extract_parameters_from_logfile(logfile_path):
                     else:
                         # New style logfiles use the model id
                         model_id = identifier
-                    invest_version = invest_version.replace(':', '')
                     args_started = True
                     continue
             else:
@@ -694,4 +693,4 @@ def extract_parameters_from_logfile(logfile_path):
             pass
 
         args_dict[args_key] = args_value
-    return ParameterSet(args_dict, model_id, invest_version)
+    return ParameterSet(args_dict, model_id)

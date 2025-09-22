@@ -8,6 +8,7 @@ import importlib
 import json
 import logging
 import multiprocessing
+import os
 import pprint
 import sys
 import textwrap
@@ -464,6 +465,15 @@ def main(user_args=None):
             model_module = importlib.import_module(name=target_model)
             LOGGER.info('Imported target %s from %s',
                         model_module.__name__, model_module)
+            for arg_key, val in parsed_datastack.args.items():
+                try:
+                    input_spec = model_module.MODEL_SPEC.get_input(arg_key)
+                except KeyError:
+                    continue
+                if type(input_spec) in {spec.RasterInput, spec.SingleBandRasterInput,
+                                        spec.VectorInput}:
+                    parsed_datastack.args[arg_key] = utils._GDALPath.from_uri(
+                        val).to_normalized_path()
 
             with utils.prepare_workspace(parsed_datastack.args['workspace_dir'],
                                          model_id=parsed_datastack.model_id,
@@ -481,7 +491,11 @@ def main(user_args=None):
                 # Exceptions will already be logged to the logfile but will ALSO be
                 # written to stdout if this exception is uncaught.  This is by
                 # design.
-                model_module.execute(parsed_datastack.args)
+                file_registry = model_module.execute(parsed_datastack.args)
+                # Write the file registry dict to a JSON file in the workspace
+                with open(os.path.join(parsed_datastack.args['workspace_dir'],
+                                       'file_registry.json'), "w") as json_file:
+                    json.dump(file_registry, json_file, indent=4)
                 LOGGER.info('Generating metadata for results')
                 try:
                     # If there's an exception from creating metadata
