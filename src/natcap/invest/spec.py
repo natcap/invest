@@ -1102,8 +1102,10 @@ class RatioInput(NumberInput):
 class PercentInput(NumberInput):
     """A percent input, or parameter, of an invest model.
 
-    A percent is a proportion expressed as a value from 0 to 100 (in contrast to
-    a ratio, which ranges from 0 to 1). Values are restricted to the range [0, 100].
+    A percent is a proportion expressed as a value from 0% to 100% (in contrast
+    to a ratio, which ranges from 0 to 1). By default there is no restriction on
+    the range a percent value can take, so values may be less than 0 or greater
+    than 100. Use the ``expression`` parameter to enforce a value range.
     """
     type: typing.ClassVar[str] = 'percent'
 
