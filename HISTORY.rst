@@ -74,6 +74,13 @@ General
 * Added a `ModelSpec.get_output` method to access items in `ModelSpec.outputs`
   using the `id` property of the `Output`.
   (`#2138 <https://github.com/natcap/invest/issues/2138>`_)
+* A new module ``natcap.invest.file_registry`` exposes the ``FileRegistry`` class.
+  All models now use this to create and track the filepaths of their outputs.
+* The ``execute`` function of each invest model now returns a dictionary
+  summarizing all output files produced by the model. It maps output IDs (found
+  in the model's ``MODEL_SPEC``) to the absolute paths where those outputs were
+  created. This may be used to access model results programmatically for subsequent
+  data processing.
 
 Plugins
 =======
