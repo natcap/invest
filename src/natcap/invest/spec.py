@@ -1122,10 +1122,6 @@ class PercentInput(NumberInput):
         if message:
             return message
         as_float = float(value)
-        if as_float < 0 or as_float > 100:
-            return get_message('NOT_WITHIN_RANGE').format(
-                value=as_float,
-                range='[0, 100]')
 
 
 class BooleanInput(Input):

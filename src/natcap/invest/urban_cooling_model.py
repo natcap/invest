@@ -187,7 +187,8 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             required="do_productivity_valuation",
             allowed="do_productivity_valuation",
-            units=None
+            units=None,
+            expression="0 <= value <= 100"
         ),
         spec.VectorInput(
             id="building_vector_path",

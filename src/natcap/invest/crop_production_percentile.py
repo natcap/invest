@@ -366,7 +366,11 @@ MODEL_SPEC = spec.ModelSpec(
                             about=None,
                             options=CROP_OPTIONS
                         ),
-                        spec.PercentInput(id="percentrefuse", about=None, units=None),
+                        spec.PercentInput(
+                            id="percentrefuse",
+                            about=None,
+                            units=None,
+                            expression="0 <= value <= 100"),
                         *[spec.NumberInput(id=nutrient, units=units)
                             for nutrient, units in nutrient_units.items()]
                     ],
