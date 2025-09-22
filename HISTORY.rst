@@ -66,10 +66,22 @@ Unreleased Changes
 
 General
 =======
+* Added a ``ModelSpec.get_output`` method to access items in ``ModelSpec.outputs``
+  using the ``id`` property of the ``Output``.
+  (`#2138 <https://github.com/natcap/invest/issues/2138>`_)
 * Fixed a bug where datastacks missing the ``invest_version`` attribute could not be
   opened. Additionally, new datastacks created with InVEST will no longer include
   an ``invest_version``, since tying a datastack to a specific version of InVEST is
   unnecessary. (`#2092 <https://github.com/natcap/invest/issues/2092>`_)
+
+Plugins
+=======
+* Fixed a bug where some errors during plugin installation would crash
+  the Workbench. Specifically, if the plugin was installed but could not
+  import. (`#2071 <https://github.com/natcap/invest/issues/2071>`_)
+* If plugin installation fails, the Workbench now cleans up any
+  leftover, unusable micromamba environments.
+  (`#2104 <https://github.com/natcap/invest/issues/2104>`_)
 
 Habitat Quality
 ===============
