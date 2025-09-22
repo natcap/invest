@@ -979,3 +979,12 @@ class _GDALPath:
     def is_local(self):
         """Test if the path is a local URI"""
         return not self.is_remote
+
+
+def execute_function(execute_func, model_spec):
+    @functools.wraps(execute_func)
+    def wrapper(args):
+        preprocessed_args = model_spec.preprocess_inputs(args)
+        results = execute_func(preprocessed_args)
+        return results
+    return wrapper
