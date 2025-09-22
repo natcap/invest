@@ -178,7 +178,12 @@ MODEL_SPEC = spec.ModelSpec(
                             about=None,
                             options=CROPS
                         ),
-                        spec.PercentInput(id="percentrefuse", about=None, units=None),
+                        spec.PercentInput(
+                            id="percentrefuse",
+                            about=None,
+                            units=None,
+                            expression="0 <= value <= 100"
+                        ),
                         *[
                             spec.NumberInput(id=nutrient, about=about, units=units)
                             for nutrient, about, units in NUTRIENTS
