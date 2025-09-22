@@ -70,6 +70,8 @@ Habitat Quality
   Instead they are named ``lulc_cur_aligned``, ``lulc_fut_aligned``, and
   ``lulc_bas_aligned``. This is consistent with other models and simplifies the
   model spec and documentation. (`#2127 <https://github.com/natcap/invest/issues/2127>`_)
+* Fixed units for Turbine Rated Power, which were incorrectly listed as kilowatt when
+  the model expected megwatt. (`#2127 <https://github.com/natcap/invest/issues/2127>`_)
 
 Seasonal Water Yield
 ====================

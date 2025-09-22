@@ -92,10 +92,7 @@ VALUATION_WIND_DATA_FIELDS = [
     ),
     spec.NumberOutput(
         id="DistVal",
-        about=gettext(
-            "Distance to shore from this point. Included only if"
-            " distance parameters were provided."
-        ),
+        about=gettext("Distance to shore from this point."),
         units=u.meter,
     ),
     spec.NumberOutput(
@@ -740,7 +737,7 @@ MODEL_SPEC = spec.ModelSpec(
         spec.VectorOutput(
             id="unmasked_wind_point_vector_path",
             path="intermediate/unmasked_wind_energy_points.shp",
-            about=gettext("Input wind point data, clipped to the AOI if relevant"),
+            about=gettext("Input wind point data, clipped to the AOI"),
             geometry_types={"POINT"},
             fields=WIND_DATA_FIELDS_FROM_INPUT + [
                 spec.NumberOutput(
@@ -1012,7 +1009,7 @@ def execute(args):
     wind_point_vector_path = os.path.join(
         inter_dir, 'wind_energy_points_from_data%s.shp' % suffix)
 
-    # Use the projection from the projected bathymetry as reference to
+    # Use the projection from the AOI as reference to
     # create wind point vector from wind data dictionary
     target_sr_wkt = pygeoprocessing.get_vector_info(
         aoi_vector_path)['projection_wkt']
