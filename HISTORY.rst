@@ -71,8 +71,8 @@ Coastal Blue Carbon
 
 General
 =======
-* Added a `ModelSpec.get_output` method to access items in `ModelSpec.outputs`
-  using the `id` property of the `Output`.
+* Added a ``ModelSpec.get_output`` method to access items in ``ModelSpec.outputs``
+  using the ``id`` property of the ``Output``.
   (`#2138 <https://github.com/natcap/invest/issues/2138>`_)
 * A new module ``natcap.invest.file_registry`` exposes the ``FileRegistry`` class.
   All models now use this to create and track the filepaths of their outputs.
@@ -81,6 +81,10 @@ General
   in the model's ``MODEL_SPEC``) to the absolute paths where those outputs were
   created. This may be used to access model results programmatically for subsequent
   data processing.
+* Fixed a bug where datastacks missing the ``invest_version`` attribute could not be
+  opened. Additionally, new datastacks created with InVEST will no longer include
+  an ``invest_version``, since tying a datastack to a specific version of InVEST is
+  unnecessary. (`#2092 <https://github.com/natcap/invest/issues/2092>`_)
 
 Plugins
 =======
