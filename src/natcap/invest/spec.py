@@ -1121,7 +1121,6 @@ class PercentInput(NumberInput):
         message = super().validate(value)
         if message:
             return message
-        as_float = float(value)
 
 
 class BooleanInput(Input):
