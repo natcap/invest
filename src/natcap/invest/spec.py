@@ -425,6 +425,9 @@ class RasterInput(FileInput):
         if projection_warning:
             return projection_warning
 
+    def preprocess(self, value):
+        return utils._GDALPath.from_uri(value).to_normalized_path()
+
 
 class SingleBandRasterInput(FileInput):
     """A single-band raster input, or parameter, of an invest model.
@@ -487,6 +490,9 @@ class SingleBandRasterInput(FileInput):
         projection_warning = _check_projection(srs, self.projected, self.projection_units)
         if projection_warning:
             return projection_warning
+
+    def preprocess(self, value):
+        return utils._GDALPath.from_uri(value).to_normalized_path()
 
 
 class VectorInput(FileInput):
@@ -606,7 +612,6 @@ class VectorInput(FileInput):
         projection_warning = _check_projection(srs, self.projected, self.projection_units)
         return projection_warning
 
-
     def format_geometry_types_rst(self):
         """Represent self.geometry_types in RST text.
 
@@ -621,6 +626,9 @@ class VectorInput(FileInput):
             self.geometry_types,
             key=lambda g: GEOMETRY_ORDER.index(g))
         return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
+
+    def preprocess(self, value):
+        return utils._GDALPath.from_uri(value).to_normalized_path()
 
 
 class RasterOrVectorInput(FileInput):
