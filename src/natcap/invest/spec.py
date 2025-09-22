@@ -325,6 +325,17 @@ class FileInput(Input):
             lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), base_path)
         ).astype(pandas.StringDtype())
 
+    def preprocess(self, value):
+        """Normalize a value to an absolute path.
+
+        Args:
+            value: value to preprocess
+
+        Returns:
+            string
+        """
+        return os.path.abspath(value)
+
 
 class RasterBand(BaseModel):
     """A single-band raster input, or parameter, of an invest model.
@@ -871,6 +882,17 @@ class CSVInput(FileInput):
 
         return df
 
+    def preprocess(self, value):
+        """Normalize an input CSV value to a parsed dataframe.
+
+        Args:
+            value: path to CSV to preprocess
+
+        Returns:
+            pandas.DataFrame
+        """
+        return self.get_validated_dataframe(os.path.abspath(value))
+
 
 class DirectoryInput(Input):
     """A directory input, or parameter, of an invest model.
@@ -972,6 +994,17 @@ class DirectoryInput(Input):
             except OSError:
                 return get_message(MESSAGE_KEY).format(permission='write')
 
+    def preprocess(self, value):
+        """Normalize a value to an absolute path.
+
+        Args:
+            value: value to preprocess
+
+        Returns:
+            string
+        """
+        return os.path.abspath(value)
+
 
 class NumberInput(Input):
     """A floating-point number input, or parameter, of an invest model.
@@ -1032,6 +1065,17 @@ class NumberInput(Input):
         """
         return col.astype(float)
 
+    def preprocess(self, value):
+        """Normalize a value to a float.
+
+        Args:
+            value: value to preprocess
+
+        Returns:
+            float
+        """
+        return float(value)
+
 
 class IntegerInput(Input):
     """An integer input, or parameter, of an invest model."""
@@ -1067,6 +1111,18 @@ class IntegerInput(Input):
             Transformed dataframe column
         """
         return col.astype(pandas.Int64Dtype())
+
+    def preprocess(self, value):
+        """Normalize a value to an integer.
+
+        Args:
+            value: value to preprocess
+
+        Returns:
+            int
+        """
+        # cast to float first to handle strings and floats
+        return int(float(value))
 
 
 class RatioInput(NumberInput):
@@ -1158,6 +1214,17 @@ class BooleanInput(Input):
         """
         return col.astype('boolean')
 
+    def preprocess(self, value):
+        """Normalize a value to a boolean.
+
+        Args:
+            value: value to preprocess
+
+        Returns:
+            bool
+        """
+        return bool(value)
+
 
 class StringInput(Input):
     """A string input, or parameter, of an invest model.
@@ -1210,6 +1277,17 @@ class StringInput(Input):
         return col.apply(
             lambda s: s if pandas.isna(s) else str(s).strip().lower()
         ).astype(pandas.StringDtype())
+
+    def preprocess(self, value):
+        """Normalize a value to a string.
+
+        Args:
+            value: value to preprocess
+
+        Returns:
+            string
+        """
+        return str(value)
 
 
 class Option(BaseModel):
@@ -1313,6 +1391,17 @@ class OptionStringInput(Input):
         # casefold() is a more aggressive version of lower() that may work better
         # for some languages to remove all case distinctions
         return sorted(lines, key=lambda line: line.casefold())
+
+    def preprocess(self, value):
+        """Normalize an option string value to a lower cased string.
+
+        Args:
+            value: value to preprocess
+
+        Returns:
+            string
+        """
+        return str(value).lower()
 
 
 class FileOutput(Output):
@@ -1603,6 +1692,26 @@ class ModelSpec(BaseModel):
         spec_dict['args'] = {_input.id: _input for _input in self.inputs}
         spec_dict['outputs'] = {_output.id: _output for _output in self.outputs}
         return json.dumps(spec_dict, default=fallback_serializer, ensure_ascii=False)
+
+    def preprocess_inputs(self, input_values):
+        """Preprocess a dictionary of input values.
+
+        The resulting dict will contain exactly the input keys in the model spec.
+        Inputs which were not provided will have a value of None. Each provided
+        input value is passed through the corresponding Input.preprocess method.
+
+        Args:
+            input_values (dict): Dict mapping input keys to input values
+
+        Returns:
+            dictionary mapping input keys to preprocessed input values
+        """
+        values = {}
+        for _input in self.inputs:
+            if _input.id in input_values:
+                values[_input.id] = _input.preprocess(input_values[_input.id])
+            else:
+                values[_input.id] = None
 
 
 # Specs for common arg types ##################################################
