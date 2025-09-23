@@ -1,6 +1,7 @@
 """InVEST specific code utils."""
 import codecs
 import contextlib
+import functools
 import logging
 import os
 import platform
@@ -13,6 +14,7 @@ from urllib.parse import urlparse
 from datetime import datetime
 
 import natcap.invest
+from natcap.invest.file_registry import FileRegistry
 import numpy
 import pandas
 import pygeoprocessing
@@ -320,101 +322,6 @@ def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
             LOGGER.exception('Could not remove sandbox %s', sandbox)
 
 
-def make_suffix_string(args, suffix_key):
-    """Make an InVEST appropriate suffix string.
-
-    Creates an InVEST appropriate suffix string  given the args dictionary and
-    suffix key.  In general, prepends an '_' when necessary and generates an
-    empty string when necessary.
-
-    Args:
-        args (dict): the classic InVEST model parameter dictionary that is
-            passed to `execute`.
-        suffix_key (string): the key used to index the base suffix.
-
-    Returns:
-        If `suffix_key` is not in `args`, or `args['suffix_key']` is ""
-            return "",
-        If `args['suffix_key']` starts with '_' return `args['suffix_key']`
-            else return '_'+`args['suffix_key']`
-    """
-    try:
-        file_suffix = args[suffix_key]
-        if file_suffix != "" and not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
-
-    return file_suffix
-
-
-def build_file_registry(base_file_path_list, file_suffix):
-    """Combine file suffixes with key names, base filenames, and directories.
-
-    Args:
-        base_file_tuple_list (list): a list of (dict, path) tuples where
-            the dictionaries have a 'file_key': 'basefilename' pair, or
-            'file_key': list of 'basefilename's.  'path'
-            indicates the file directory path to prepend to the basefile name.
-        file_suffix (string): a string to append to every filename, can be
-            empty string
-
-    Returns:
-        dictionary of 'file_keys' from the dictionaries in
-        `base_file_tuple_list` mapping to full file paths with suffixes or
-        lists of file paths with suffixes depending on the original type of
-        the 'basefilename' pair.
-
-    Raises:
-        ValueError if there are duplicate file keys or duplicate file paths.
-        ValueError if a path is not a string or a list of strings.
-    """
-    all_paths = set()
-    duplicate_keys = set()
-    duplicate_paths = set()
-    f_reg = {}
-
-    def _build_path(base_filename, path):
-        """Internal helper to avoid code duplication."""
-        pre, post = os.path.splitext(base_filename)
-        full_path = os.path.join(path, pre+file_suffix+post)
-
-        # Check for duplicate keys or paths
-        if full_path in all_paths:
-            duplicate_paths.add(full_path)
-        else:
-            all_paths.add(full_path)
-        return full_path
-
-    for base_file_dict, path in base_file_path_list:
-        for file_key, file_payload in base_file_dict.items():
-            # check for duplicate keys
-            if file_key in f_reg:
-                duplicate_keys.add(file_key)
-            else:
-                # handle the case whether it's a filename or a list of strings
-                if isinstance(file_payload, str):
-                    full_path = _build_path(file_payload, path)
-                    f_reg[file_key] = full_path
-                elif isinstance(file_payload, list):
-                    f_reg[file_key] = []
-                    for filename in file_payload:
-                        full_path = _build_path(filename, path)
-                        f_reg[file_key].append(full_path)
-                else:
-                    raise ValueError(
-                        "Unknown type in base_file_dict[%s]=%s" % (
-                            file_key, path))
-
-    if len(duplicate_paths) > 0 or len(duplicate_keys):
-        raise ValueError(
-            "Cannot consolidate because of duplicate paths or keys: "
-            "duplicate_keys: %s duplicate_paths: %s" % (
-                duplicate_keys, duplicate_paths))
-
-    return f_reg
-
-
 def expand_path(path, base_path):
     """Check if a path is relative, and if so, expand it using the base path.
 
@@ -478,22 +385,6 @@ def read_csv_to_dataframe(path, **kwargs):
     df.columns = df.columns.astype(str).str.strip().str.lower()
 
     return df
-
-
-def make_directories(directory_list):
-    """Create directories in `directory_list` if they do not already exist."""
-    if not isinstance(directory_list, list):
-        raise ValueError(
-            "Expected `directory_list` to be an instance of `list` instead "
-            "got type %s instead", type(directory_list))
-
-    for path in directory_list:
-        # From http://stackoverflow.com/a/14364249/42897
-        try:
-            os.makedirs(path)
-        except OSError:
-            if not os.path.isdir(path):
-                raise
 
 
 def mean_pixel_size_and_area(pixel_size_tuple):
@@ -981,10 +872,38 @@ class _GDALPath:
         return not self.is_remote
 
 
-def execute_function(execute_func, model_spec):
-    @functools.wraps(execute_func)
-    def wrapper(args):
-        preprocessed_args = model_spec.preprocess_inputs(args)
-        results = execute_func(preprocessed_args)
-        return results
-    return wrapper
+def execute_function(model_spec):
+
+    def exec_wrapper(execute_func):
+
+        @functools.wraps(execute_func)
+        def wrapper(args):
+            preprocessed_args = model_spec.preprocess_inputs(args)
+
+            # default to single process mode
+            if preprocessed_args['n_workers'] is None:
+                preprocessed_args['n_workers'] = -1
+
+            # suffix should always start with an underscore
+            if (preprocessed_args['results_suffix'] and not
+                    preprocessed_args['results_suffix'].startswith('_')):
+                preprocessed_args['results_suffix'] = (
+                    '_' + preprocessed_args['results_suffix'])
+
+            # Identify all output subdirectories needed, based on the output
+            # paths, and create them
+            for output in model_spec.outputs:
+                os.makedirs(os.path.join(
+                    args['workspace_dir'], os.path.split(output.path)[0]
+                ), exist_ok=True)
+
+            file_registry = FileRegistry(
+                outputs=model_spec.outputs,
+                workspace_dir=preprocessed_args['workspace_dir'],
+                file_suffix=preprocessed_args['results_suffix'])
+
+            execute_func(preprocessed_args, file_registry)
+
+            return file_registry.registry
+        return wrapper
+    return exec_wrapper

@@ -918,15 +918,15 @@ class CSVInput(FileInput):
         return df
 
     def preprocess(self, value):
-        """Normalize an input CSV value to a parsed dataframe.
+        """Normalize an input CSV path to an absolute path.
 
         Args:
             value: path to CSV to preprocess
 
         Returns:
-            pandas.DataFrame
+            string
         """
-        return self.get_validated_dataframe(os.path.abspath(value))
+        return os.path.abspath(value)
 
 
 class DirectoryInput(Input):
@@ -1750,6 +1750,7 @@ class ModelSpec(BaseModel):
                 values[_input.id] = _input.preprocess(input_values[_input.id])
             else:
                 values[_input.id] = None
+        return values
 
 
 # Specs for common arg types ##################################################
