@@ -64,14 +64,43 @@
 Unreleased Changes
 ------------------
 
+Coastal Blue Carbon
+===================
+* The intermediate outputs ``aligned-lulc-baseline-[YEAR].tif`` and
+  ``aligned-lulc-snapshot-[YEAR].tif`` have been renamed to ``aligned-lulc-[YEAR].tif``.
+
+General
+=======
+* Added a ``ModelSpec.get_output`` method to access items in ``ModelSpec.outputs``
+  using the ``id`` property of the ``Output``.
+  (`#2138 <https://github.com/natcap/invest/issues/2138>`_)
+* A new module ``natcap.invest.file_registry`` exposes the ``FileRegistry`` class.
+  All models now use this to create and track the filepaths of their outputs.
+* The ``execute`` function of each invest model now returns a dictionary
+  summarizing all output files produced by the model. It maps output IDs (found
+  in the model's ``MODEL_SPEC``) to the absolute paths where those outputs were
+  created. This may be used to access model results programmatically for subsequent
+  data processing.
+* Fixed a bug where datastacks missing the ``invest_version`` attribute could not be
+  opened. Additionally, new datastacks created with InVEST will no longer include
+  an ``invest_version``, since tying a datastack to a specific version of InVEST is
+  unnecessary. (`#2092 <https://github.com/natcap/invest/issues/2092>`_)
+
+Plugins
+=======
+* Fixed a bug where some errors during plugin installation would crash
+  the Workbench. Specifically, if the plugin was installed but could not
+  import. (`#2071 <https://github.com/natcap/invest/issues/2071>`_)
+* If plugin installation fails, the Workbench now cleans up any
+  leftover, unusable micromamba environments.
+  (`#2104 <https://github.com/natcap/invest/issues/2104>`_)
+
 Habitat Quality
 ===============
 * The aligned LULC outputs are no longer named after the original LULC files.
   Instead they are named ``lulc_cur_aligned``, ``lulc_fut_aligned``, and
   ``lulc_bas_aligned``. This is consistent with other models and simplifies the
   model spec and documentation. (`#2127 <https://github.com/natcap/invest/issues/2127>`_)
-* Fixed units for Turbine Rated Power, which were incorrectly listed as kilowatt when
-  the model expected megwatt. (`#2127 <https://github.com/natcap/invest/issues/2127>`_)
 
 Seasonal Water Yield
 ====================
@@ -80,12 +109,18 @@ Seasonal Water Yield
   (1-12) to raster paths.
   (`#2096 <https://github.com/natcap/invest/issues/2096>`_)
 
+Visitation: Recreation and Tourism
+==================================
+* The intermediate predictor JSON outputs now include the file suffix, if provided.
+
 Wind Energy
 ===========
 * Updated Wind Energy model to always require an AOI, Land Polygon, and Minimum
   and Maximum Distance values. Since model outputs should only be provided for valid
   wind farm locations, distance-from-shore constraints should always be taken into
   account. (`#1944 <https://github.com/natcap/invest/issues/1944>`_)
+* Fixed units for Turbine Rated Power, which were incorrectly listed as kilowatt when
+  the model expected megwatt. (`#1944 <https://github.com/natcap/invest/issues/1944>`_)
 
 3.16.2 (2025-08-13)
 -------------------
