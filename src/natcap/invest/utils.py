@@ -1,4 +1,5 @@
 """InVEST specific code utils."""
+import ast
 import codecs
 import contextlib
 import functools
@@ -872,6 +873,49 @@ class _GDALPath:
         return not self.is_remote
 
 
+def evaluate_expression(expression, variable_map):
+    """Evaluate a python expression.
+
+    The expression must be able to be evaluated as a python expression.
+
+    Args:
+        expression (string): A string expression that returns a value.
+        variable_map (dict): A dict mapping string variable names to their
+            python object values.  This is the variable map that will be used
+            when evaluating the expression.
+
+    Returns:
+        Whatever value is returned from evaluating ``expression`` with the
+        variables stored in ``variable_map``.
+
+    """
+    # __builtins__ can be either a dict or a module.  We need its contents as a
+    # dict in order to use ``eval``.
+    if not isinstance(__builtins__, dict):
+        builtins = __builtins__.__dict__
+    else:
+        builtins = __builtins__
+    builtin_symbols = set(builtins.keys())
+
+    active_symbols = set()
+    for tree_node in ast.walk(ast.parse(expression)):
+        if isinstance(tree_node, ast.Name):
+            active_symbols.add(tree_node.id)
+
+    # This should allow any builtin functions, exceptions, etc. to be handled
+    # correctly within an expression.
+    missing_symbols = (active_symbols -
+                       set(variable_map.keys()).union(builtin_symbols))
+    if missing_symbols:
+        raise AssertionError(
+            'Identifiers expected in the expression "%s" are missing: %s' % (
+                expression, ', '.join(missing_symbols)))
+
+    # The usual warnings should go with this call to eval:
+    # Don't run untrusted code!!!
+    return eval(expression, builtins, variable_map)
+
+
 def execute_function(model_spec):
 
     def exec_wrapper(execute_func):
@@ -879,6 +923,17 @@ def execute_function(model_spec):
         @functools.wraps(execute_func)
         def wrapper(args):
             preprocessed_args = model_spec.preprocess_inputs(args)
+
+            # evaluate which outputs we expect to be created, given the
+            # model spec and provided input values
+            outputs_to_be_created = set([
+                output.id for output in model_spec.outputs if bool(
+                    evaluate_expression(
+                        expression=f'{output.created_if}',
+                        variable_map=preprocessed_args
+                    )
+                ) is True
+            ])
 
             # default to single process mode
             if preprocessed_args['n_workers'] is None:
@@ -893,9 +948,10 @@ def execute_function(model_spec):
             # Identify all output subdirectories needed, based on the output
             # paths, and create them
             for output in model_spec.outputs:
-                os.makedirs(os.path.join(
-                    args['workspace_dir'], os.path.split(output.path)[0]
-                ), exist_ok=True)
+                if output.id in outputs_to_be_created:
+                    os.makedirs(os.path.join(
+                        args['workspace_dir'], os.path.split(output.path)[0]
+                    ), exist_ok=True)
 
             file_registry = FileRegistry(
                 outputs=model_spec.outputs,
@@ -903,6 +959,16 @@ def execute_function(model_spec):
                 file_suffix=preprocessed_args['results_suffix'])
 
             execute_func(preprocessed_args, file_registry)
+
+            # print(outputs_to_be_created)
+            # print(file_registry.registry)
+
+            if outputs_to_be_created != set(file_registry.registry.keys()):
+                print('Missing outputs:',
+                    outputs_to_be_created - set(file_registry.registry.keys()))
+                print('Extra outputs:',
+                    set(file_registry.registry.keys()) - outputs_to_be_created)
+
 
             return file_registry.registry
         return wrapper

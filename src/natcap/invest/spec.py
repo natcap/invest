@@ -23,7 +23,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, \
     field_validator, model_validator, ValidationError
 
 from natcap.invest import utils
-from natcap.invest.validation import get_message, _evaluate_expression
+from natcap.invest.validation import get_message
 from . import gettext
 from .unit_registry import u
 
@@ -1085,7 +1085,7 @@ class NumberInput(Input):
             # Expression is assumed to return a boolean, something like
             # "value > 0" or "(value >= 0) & (value < 1)".  An exception will
             # be raised if asteval can't evaluate the expression.
-            result = _evaluate_expression(self.expression, {'value': float(value)})
+            result = utils.evaluate_expression(self.expression, {'value': float(value)})
             if not result:  # A python bool object is returned.
                 return get_message('INVALID_VALUE').format(condition=self.expression)
 
