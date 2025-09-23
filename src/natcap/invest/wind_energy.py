@@ -897,20 +897,20 @@ def execute(args):
             args['bathymetry_path'])['pixel_size']
         mean_pixel_size, _ = utils.mean_pixel_size_and_area(bathy_pixel_size)
         target_pixel_size = (mean_pixel_size, -mean_pixel_size)
-        LOGGER.debug('Target pixel size: %s' % (target_pixel_size,))
+        LOGGER.debug(f'Target pixel size: {target_pixel_size}')
         bathymetry_path = args['bathymetry_path']
         # The task list would be empty for clipping and reprojecting bathymetry
         bathy_dependent_task_list = None
 
     except ValueError:
         LOGGER.debug(
-            '%s has pixels that are not square. Resampling the raster to have '
-            'square pixels.' % args['bathymetry_path'])
+            f"{args['bathymetry_path']} has pixels that are not square. "
+            "Resampling the raster to have square pixels.")
         bathymetry_path = file_registry['bathymetry_path']
         mean_pixel_size = numpy.min(numpy.absolute(bathy_pixel_size))
         # Use it as the target pixel size for resampling and warping rasters
         target_pixel_size = (mean_pixel_size, -mean_pixel_size)
-        LOGGER.debug('Target pixel size: %s' % (target_pixel_size,))
+        LOGGER.debug(f'Target pixel size: {target_pixel_size}')
 
         resample_bathymetry_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
@@ -937,10 +937,9 @@ def execute(args):
     parameters_dict = global_params_dict.copy()
     parameters_dict.update(turbine_dict)
 
-    LOGGER.debug('Biophysical Turbine Parameters: %s', parameters_dict)
+    LOGGER.debug(f'Biophysical Turbine Parameters: {parameters_dict}')
 
-    if ('valuation_container' not in args or
-            args['valuation_container'] is False):
+    if ('valuation_container' not in args or args['valuation_container'] is False):
         LOGGER.info('Valuation Not Selected')
         run_valuation = False
     else:
@@ -959,8 +958,8 @@ def execute(args):
             if year_count != time + 1:
                 raise ValueError(
                     "The 'time' argument in the Global Wind Energy Parameters "
-                    "file must equal the number of years provided in the price"
-                    " table.")
+                    "file must equal the number of years provided in the price "
+                    "table.")
 
             # Save the price values into a list where the indices of the list
             # indicate the time steps for the lifespan of the wind farm
@@ -1173,8 +1172,7 @@ def execute(args):
         task_graph.join()  # need to join to get grid feature count
         grid_feature_count = _get_feature_count(file_registry['grid_projected_vector_path'])
         if grid_feature_count > 0:
-            LOGGER.debug('There are %s grid point(s) within AOI.' %
-                         grid_feature_count)
+            LOGGER.debug(f'There are {grid_feature_count} grid point(s) within AOI.')
             # It's possible that no land points were provided, and we need to
             # handle both cases
             if land_dict:
@@ -1738,24 +1736,24 @@ def _calculate_npv_levelized_rasters(
 
     # Total infield cable cost
     infield_cable_cost = infield_length * infield_cost * number_of_turbines
-    LOGGER.debug('infield_cable_cost : %s', infield_cable_cost)
+    LOGGER.debug(f'infield_cable_cost : {infield_cable_cost}')
 
     # Total foundation cost
     total_foundation_cost = (foundation_cost + unit_cost) * number_of_turbines
-    LOGGER.debug('total_foundation_cost : %s', total_foundation_cost)
+    LOGGER.debug(f'total_foundation_cost : {total_foundation_cost}')
 
     # Nominal Capital Cost (CAP) minus the cost of cable which needs distances
     cap_less_dist = infield_cable_cost + total_foundation_cost
-    LOGGER.debug('cap_less_dist : %s', cap_less_dist)
+    LOGGER.debug(f'cap_less_dist : {cap_less_dist}')
 
     # Discount rate plus one to get that constant
     disc_const = discount_rate + 1
-    LOGGER.debug('discount_rate : %s', disc_const)
+    LOGGER.debug(f'discount_rate : {disc_const}')
 
     # Discount constant raised to the total time, a constant found in the NPV
     # calculation (1+i)^T
     disc_time = disc_const**parameters_dict['time_period']
-    LOGGER.debug('disc_time : %s', disc_time)
+    LOGGER.debug(f'disc_time : {disc_time}')
 
     for (harvest_block_info, harvest_block_data), (_, dist_block_data) in zip(
             pygeoprocessing.iterblocks((base_harvested_raster_path, 1)),
@@ -1913,8 +1911,7 @@ def _get_file_ext_and_driver_name(base_vector_path):
     try:
         driver_name = vector_formats[file_ext]
     except KeyError:
-        raise KeyError(
-            'Unknown file extension for vector file %s' % base_vector_path)
+        raise KeyError(f'Unknown file extension for vector file {base_vector_path}')
 
     return file_ext, driver_name
 
@@ -2224,7 +2221,7 @@ def _compute_density_harvested_fields(
     """
     # Hub Height to use for setting Weibull parameters
     hub_height = parameters_dict['hub_height']
-    LOGGER.debug('hub_height : %s', hub_height)
+    LOGGER.debug(f'hub_height : {hub_height}')
 
     # Read the wind energy data into a dictionary
     LOGGER.info('Reading in Wind Data into a dictionary')
@@ -2524,7 +2521,7 @@ def _wind_data_to_point_vector(wind_data_pickle_path,
             field_list.remove(field)
             field_list.append(field)
 
-    LOGGER.debug('field_list : %s', field_list)
+    LOGGER.debug(f'field_list : {field_list}')
 
     LOGGER.info('Creating fields for the target vector')
     for field in field_list:
