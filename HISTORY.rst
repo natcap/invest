@@ -64,11 +64,6 @@
 Unreleased Changes
 ------------------
 
-Coastal Blue Carbon
-===================
-* The intermediate outputs ``aligned-lulc-baseline-[YEAR].tif`` and
-  ``aligned-lulc-snapshot-[YEAR].tif`` have been renamed to ``aligned-lulc-[YEAR].tif``.
-
 General
 =======
 * Added a ``ModelSpec.get_output`` method to access items in ``ModelSpec.outputs``
@@ -94,6 +89,29 @@ Plugins
 * If plugin installation fails, the Workbench now cleans up any
   leftover, unusable micromamba environments.
   (`#2104 <https://github.com/natcap/invest/issues/2104>`_)
+
+Annual Water Yield
+==================
+* The discount rate parameter was previously incorrectly restricted to the
+  range [0, 100]. Now there is no minimum or maximum value.
+
+Carbon
+======
+* The discount rate and price change parameters were previously incorrectly
+  restricted to the range [0, 100]. Now there is no minimum or maximum value.
+
+Coastal Blue Carbon
+===================
+* The intermediate outputs ``aligned-lulc-baseline-[YEAR].tif`` and
+  ``aligned-lulc-snapshot-[YEAR].tif`` have been renamed to ``aligned-lulc-[YEAR].tif``.
+* The discount rate and price change parameters were previously incorrectly
+  restricted to the range [0, 100]. Now there is no minimum or maximum value.
+
+Coastal Vulnerability
+=====================
+* The WWIII ``v10pct_[SECTOR]`` field was incorrectly documented as a unitless
+  percent; this has been corrected to show that it is a numeric input with
+  units of meters/second.
 
 Habitat Quality
 ===============
