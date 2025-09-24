@@ -426,6 +426,14 @@ class RasterInput(FileInput):
             return projection_warning
 
     def preprocess(self, value):
+        """Normalize a path to a GDAL-compatible local or remote path.
+
+        Args:
+            value (string): path to normalize
+
+        Returns:
+            normalized path string
+        """
         return utils._GDALPath.from_uri(value).to_normalized_path()
 
 
@@ -492,6 +500,14 @@ class SingleBandRasterInput(FileInput):
             return projection_warning
 
     def preprocess(self, value):
+        """Normalize a path to a GDAL-compatible local or remote path.
+
+        Args:
+            value (string): path to normalize
+
+        Returns:
+            normalized path string
+        """
         return utils._GDALPath.from_uri(value).to_normalized_path()
 
 
@@ -628,6 +644,14 @@ class VectorInput(FileInput):
         return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
 
     def preprocess(self, value):
+        """Normalize a path to a GDAL-compatible local or remote path.
+
+        Args:
+            value (string): path to normalize
+
+        Returns:
+            normalized path string
+        """
         return utils._GDALPath.from_uri(value).to_normalized_path()
 
 
