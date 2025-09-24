@@ -505,60 +505,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         return args
 
-    def test_no_aoi(self):
-        """WindEnergy: testing base case w/o AOI, distances, or valuation."""
-        from natcap.invest import wind_energy
-        from natcap.invest.utils import _assert_vectors_equal
-
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        # Also test on input bathymetry that has equal x, y pixel sizes
-        args['bathymetry_path'] = os.path.join(
-            SAMPLE_DATA, 'resampled_global_dem_equal_pixel.tif')
-
-        wind_energy.execute(args)
-
-        vector_path = 'wind_energy_points.shp'
-
-        _assert_vectors_equal(
-            os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(REGRESSION_DATA, 'noaoi', vector_path))
-
-    def test_no_land_polygon(self):
-        """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
-        from natcap.invest import wind_energy
-        from natcap.invest.utils import _assert_vectors_equal
-
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['aoi_vector_path'] = os.path.join(
-            SAMPLE_DATA, 'New_England_US_Aoi.shp')
-
-        wind_energy.execute(args)
-
-        vector_path = 'wind_energy_points.shp'
-
-        _assert_vectors_equal(
-            os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path))
-
-    def test_no_distances(self):
-        """WindEnergy: testing case w/ AOI and land poly, but w/o distances."""
-        from natcap.invest import wind_energy
-        from natcap.invest.utils import _assert_vectors_equal
-
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['aoi_vector_path'] = os.path.join(
-            SAMPLE_DATA, 'New_England_US_Aoi.shp')
-        args['land_polygon_vector_path'] = os.path.join(
-            SAMPLE_DATA, 'simple_north_america_polygon.shp')
-
-        wind_energy.execute(args)
-
-        vector_path = 'wind_energy_points.shp'
-
-        _assert_vectors_equal(
-            os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(REGRESSION_DATA, 'nodistances', vector_path))
-
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest import wind_energy
@@ -834,7 +780,11 @@ class WindEnergyValidationTests(unittest.TestCase):
             'turbine_parameters_path',
             'bathymetry_path',
             'global_wind_parameters_path',
-            'wind_data_path'
+            'wind_data_path',
+            'aoi_vector_path',
+            'land_polygon_vector_path',
+            'max_distance',
+            'min_distance'
         ]
 
     def test_missing_keys(self):
