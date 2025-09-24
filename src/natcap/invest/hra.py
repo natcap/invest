@@ -668,9 +668,6 @@ def execute(preprocessed_args, file_registry):
     alignment_source_raster_paths = {}
     alignment_source_vector_paths = {}
     alignment_dependent_tasks = []
-    aligned_habitat_raster_paths = {}
-    aligned_stressor_raster_paths = {}
-    habitat_stressor_vectors = set([])
     for name, attributes in itertools.chain(habitats_info.items(),
                                             stressors_info.items(),
                                             spatial_criteria_attrs.items()):
@@ -762,17 +759,6 @@ def execute(preprocessed_args, file_registry):
                 dependent_task_list=[reprojected_vector_task]
             ))
 
-            # Habitats and stressors are rasterized with ALL_TOUCHED=TRUE
-            if name in habitats_info or name in stressors_info:
-                habitat_stressor_vectors.add(file_registry['simplified_[KEY]', name])
-
-        # Later operations make use of the habitats rasters or the stressors
-        # rasters, so it's useful to collect those here now.
-        if name in habitats_info:
-            aligned_habitat_raster_paths[name] = file_registry['aligned_[KEY]', name]
-        elif name in stressors_info:
-            aligned_stressor_raster_paths[name] = file_registry['aligned_[KEY]', name]
-
     alignment_task = graph.add_task(
         func=_align,
         kwargs={
@@ -781,7 +767,9 @@ def execute(preprocessed_args, file_registry):
             'target_pixel_size': (
                 preprocessed_args['resolution'], -preprocessed_args['resolution']),
             'target_srs_wkt': target_srs_wkt,
-            'all_touched_vectors': habitat_stressor_vectors,
+            'all_touched_vectors': [
+                file_registry['simplified_[KEY]', key] for key in
+                habitats_info | stressors_info],
         },
         task_name='Align raster stack',
         target_path_list=list(itertools.chain(
@@ -794,8 +782,8 @@ def execute(preprocessed_args, file_registry):
     all_habitats_mask_task = graph.add_task(
         _mask_binary_presence_absence_rasters,
         kwargs={
-            'source_raster_paths':
-                list(aligned_habitat_raster_paths.values()),
+            'source_raster_paths':[
+                file_registry['aligned_[KEY]', habitat] for habitat in habitats_info],
             'target_mask_path': file_registry['habitat_mask'],
         },
         task_name='Create mask of all habitats',
@@ -805,11 +793,11 @@ def execute(preprocessed_args, file_registry):
 
     # --> for stressor in stressors, do a decayed EDT.
     decayed_edt_tasks = {}  # {stressor name: decayed EDT task}
-    for stressor, stressor_path in aligned_stressor_raster_paths.items():
+    for stressor in stressors_info:
         decayed_edt_tasks[stressor] = graph.add_task(
             _calculate_decayed_distance,
             kwargs={
-                'stressor_raster_path': stressor_path,
+                'stressor_raster_path': file_registry['aligned_[KEY]', stressor],
                 'decay_type': preprocessed_args['decay_eq'],
                 'buffer_distance': stressors_info[stressor]['buffer'],
                 'target_edt_path': file_registry['decayed_edt_[STRESSOR]', stressor],
@@ -824,7 +812,6 @@ def execute(preprocessed_args, file_registry):
     reclassed_habitat_risk_tasks = []
     cumulative_risk_to_habitat_paths = []
     cumulative_risk_to_habitat_tasks = []
-    reclassified_rasters = []  # For visualization geojson, if requested
     habitat_stressor_pairs = []
     all_pairwise_risk_tasks = []
     for habitat in habitats_info:
@@ -973,7 +960,6 @@ def execute(preprocessed_args, file_registry):
         reclassed_habitat_risk_tasks.append(reclassified_cumulative_risk_task)
 
         max_risk_classification_path = file_registry['reclass_risk_[HABITAT]', habitat]
-        reclassified_rasters.append(max_risk_classification_path)
         _ = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
@@ -1123,71 +1109,62 @@ def execute(preprocessed_args, file_registry):
         summary_csv_path,
         file_registry['summary_statistics_viz'])
 
-    # For each raster in reclassified risk rasters + Reclass ecosystem risk:
-    #   convert to geojson with fieldname "Risk Score"
-    target_habitat_geojson_paths = [
-        file_registry[f'reclass_risk_[HABITAT]_viz', habitat]
-        for habitat in habitats_info]
-    target_stressor_geojson_paths = [
-        file_registry[f'stressor_[STRESSOR]_viz', stressor]
-        for stressor in stressors_info]
-    reclassified_rasters.append(file_registry['reclass_risk_ecosystem'])
-    target_habitat_geojson_paths.append(file_registry['reclass_risk_ecosystem_viz'])
-    for raster_paths, target_paths, fieldname, geojson_prefix, output_type in [
-            (reclassified_rasters, target_habitat_geojson_paths, 'Risk Score', 'RECLASS_RISK', 'habitat'),
-            (aligned_stressor_raster_paths.values(), target_stressor_geojson_paths, 'Stressor', 'STRESSOR', 'stressor')]:
-        for source_raster_path, target_geojson_path in zip(raster_paths, target_paths):
-            basename = os.path.splitext(
-                os.path.basename(source_raster_path))[0]
+    for key, type in ([(habitat, 'habitat') for habitat in habitats_info] +
+                      [('ecosystem', 'habitat')] +
+                      [(stressor, 'stressor') for stressor in stressors_info]):
+        if type == 'habitat':
+            if key == 'ecosystem':
+                source_raster_path = file_registry['reclass_risk_ecosystem']
+                target_geojson_path = file_registry[f'reclass_risk_ecosystem_viz']
+            else:
+                source_raster_path = file_registry['reclass_risk_[HABITAT]', key]
+                target_geojson_path = file_registry[f'reclass_risk_[HABITAT]_viz', key]
+            fieldname = 'Risk Score'
+            geojson_prefix = 'RECLASS_RISK'
+        else:  # type == 'stressor'
+            source_raster_path = file_registry['aligned_[KEY]', key]
+            target_geojson_path = file_registry[f'stressor_[STRESSOR]_viz', key]
+            fieldname = 'Stressor'
+            geojson_prefix = 'STRESSOR'
 
-            # clean up the filename to what the viz webapp expects.
-            for pattern in (f'^{geojson_prefix}_',
-                            '^aligned_'):
-                basename = re.sub(pattern, '', basename)
+        rewrite_for_polygonize_task = graph.add_task(
+            func=_create_mask_for_polygonization,
+            kwargs={
+                'source_raster_path': source_raster_path,
+                'target_raster_path': file_registry['polygonize_mask_[KEY]', key],
+            },
+            task_name=f'Rewrite {key} for polygonization',
+            target_path_list=[file_registry['polygonize_mask_[KEY]', key]],
+            dependent_task_list=[]
+        )
 
-            rewrite_for_polygonize_task = graph.add_task(
-                func=_create_mask_for_polygonization,
-                kwargs={
-                    'source_raster_path': source_raster_path,
-                    'target_raster_path': file_registry[
-                        'polygonize_mask_[KEY]', basename],
-                },
-                task_name=f'Rewrite {basename} for polygonization',
-                target_path_list=[file_registry[
-                    'polygonize_mask_[KEY]', basename]],
-                dependent_task_list=[]
-            )
+        polygonize_task = graph.add_task(
+            func=_polygonize,
+            kwargs={
+                'source_raster_path': source_raster_path,
+                'mask_raster_path': file_registry['polygonize_mask_[KEY]', key],
+                'target_polygonized_vector': file_registry['polygonized_[KEY]', key],
+                'field_name': fieldname,
+                'layer_name': f'{geojson_prefix}_{key}',
+            },
+            task_name=f'Polygonizing {key}',
+            target_path_list=[file_registry['polygonized_[KEY]', key]],
+            dependent_task_list=[rewrite_for_polygonize_task]
+        )
 
-            polygonize_task = graph.add_task(
-                func=_polygonize,
-                kwargs={
-                    'source_raster_path': source_raster_path,
-                    'mask_raster_path': file_registry[
-                        'polygonize_mask_[KEY]', basename],
-                    'target_polygonized_vector': file_registry[
-                        'polygonized_[KEY]', basename],
-                    'field_name': fieldname,
-                    'layer_name': f'{geojson_prefix}_{basename}',
-                },
-                task_name=f'Polygonizing {basename}',
-                target_path_list=[file_registry[
-                    'polygonized_[KEY]', basename]],
-                dependent_task_list=[rewrite_for_polygonize_task]
-            )
+        _ = graph.add_task(
+            pygeoprocessing.reproject_vector,
+            kwargs={
+                'base_vector_path': file_registry['polygonized_[KEY]', key],
+                'target_projection_wkt': _WGS84_WKT,
+                'target_path': target_geojson_path,
+                'driver_name': 'GeoJSON',
+            },
+            task_name=f'Reproject {key} to AOI',
+            target_path_list=[target_geojson_path],
+            dependent_task_list=[polygonize_task]
+        )
 
-            _ = graph.add_task(
-                pygeoprocessing.reproject_vector,
-                kwargs={
-                    'base_vector_path': file_registry[
-                        'polygonized_[KEY]', basename],
-                    'target_projection_wkt': _WGS84_WKT,
-                    'target_path': target_geojson_path,
-                    'driver_name': 'GeoJSON',
-                },
-                task_name=f'Reproject {name} to AOI',
-                target_path_list=[target_geojson_path],
-                dependent_task_list=[polygonize_task]
-            )
     LOGGER.info(
         'HRA model completed. Please visit http://marineapps.'
         'naturalcapitalproject.org/ to visualize your outputs.')
