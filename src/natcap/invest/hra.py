@@ -1102,9 +1102,6 @@ def execute(preprocessed_args, file_registry):
     # component and it isn't clear if we'll end up keeping this in HRA or
     # refactoring it out (should we end up doing more such visualizations).
     LOGGER.info('Generating visualization outputs')
-    visualization_dir = os.path.join(preprocessed_args['workspace_dir'],
-                                     'visualization_outputs')
-    os.makedirs(visualization_dir, exist_ok=True)
     shutil.copy(  # copy in the summary table.
         summary_csv_path,
         file_registry['summary_statistics_viz'])
@@ -1119,13 +1116,13 @@ def execute(preprocessed_args, file_registry):
             else:
                 source_raster_path = file_registry['reclass_risk_[HABITAT]', key]
                 target_geojson_path = file_registry[f'reclass_risk_[HABITAT]_viz', key]
-            fieldname = 'Risk Score'
-            geojson_prefix = 'RECLASS_RISK'
+            field_name = 'Risk Score'
+            layer_name = f'RECLASS_RISK_{key}'
         else:  # type == 'stressor'
             source_raster_path = file_registry['aligned_[KEY]', key]
             target_geojson_path = file_registry[f'stressor_[STRESSOR]_viz', key]
-            fieldname = 'Stressor'
-            geojson_prefix = 'STRESSOR'
+            field_name = 'Stressor'
+            layer_name = f'STRESSOR_{key}'
 
         rewrite_for_polygonize_task = graph.add_task(
             func=_create_mask_for_polygonization,
@@ -1144,8 +1141,8 @@ def execute(preprocessed_args, file_registry):
                 'source_raster_path': source_raster_path,
                 'mask_raster_path': file_registry['polygonize_mask_[KEY]', key],
                 'target_polygonized_vector': file_registry['polygonized_[KEY]', key],
-                'field_name': fieldname,
-                'layer_name': f'{geojson_prefix}_{key}',
+                'field_name': field_name,
+                'layer_name': layer_name
             },
             task_name=f'Polygonizing {key}',
             target_path_list=[file_registry['polygonized_[KEY]', key]],
