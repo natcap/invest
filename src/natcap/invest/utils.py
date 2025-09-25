@@ -3,6 +3,7 @@ import ast
 import codecs
 import contextlib
 import functools
+import json
 import logging
 import os
 import platform
@@ -19,6 +20,7 @@ from natcap.invest.file_registry import FileRegistry
 import numpy
 import pandas
 import pygeoprocessing
+from pygeoprocessing.geoprocessing_core import GDALUseExceptions
 from osgeo import gdal
 from osgeo import osr
 from shapely.wkt import loads
@@ -52,102 +54,6 @@ GDAL_ERROR_LEVELS = {
 DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
 
 
-def _log_gdal_errors(*args, **kwargs):
-    """Log error messages to osgeo.
-
-    All error messages are logged with reasonable ``logging`` levels based
-    on the GDAL error level. While we are now using ``gdal.UseExceptions()``,
-    we still need this to handle GDAL logging that does not get raised as
-    an exception.
-
-    Note:
-        This function is designed to accept any number of positional and
-        keyword arguments because of some odd forums questions where this
-        function was being called with an unexpected number of arguments.
-        With this catch-all function signature, we can at least guarantee
-        that in the off chance this function is called with the wrong
-        parameters, we can at least log what happened.  See the issue at
-        https://github.com/natcap/invest/issues/630 for details.
-
-    Args:
-        err_level (int): The GDAL error level (e.g. ``gdal.CE_Failure``)
-        err_no (int): The GDAL error number.  For a full listing of error
-            codes, see: http://www.gdal.org/cpl__error_8h.html
-        err_msg (string): The error string.
-
-    Returns:
-        ``None``
-    """
-    if len(args) + len(kwargs) != 3:
-        LOGGER.error(
-            '_log_gdal_errors was called with an incorrect number of '
-            f'arguments.  args: {args}, kwargs: {kwargs}')
-
-    try:
-        gdal_args = {}
-        for index, key in enumerate(('err_level', 'err_no', 'err_msg')):
-            try:
-                parameter = args[index]
-            except IndexError:
-                parameter = kwargs[key]
-            gdal_args[key] = parameter
-    except KeyError as missing_key:
-        LOGGER.exception(
-            f'_log_gdal_errors called without the argument {missing_key}. '
-            f'Called with args: {args}, kwargs: {kwargs}')
-
-        # Returning from the function because we don't have enough
-        # information to call the ``osgeo_logger`` in the way we intended.
-        return
-
-    err_level = gdal_args['err_level']
-    err_no = gdal_args['err_no']
-    err_msg = gdal_args['err_msg'].replace('\n', '')
-    _OSGEO_LOGGER.log(
-        level=GDAL_ERROR_LEVELS[err_level],
-        msg=f'[errno {err_no}] {err_msg}')
-
-
-@contextlib.contextmanager
-def capture_gdal_logging():
-    """Context manager for logging GDAL errors with python logging.
-
-    GDAL error messages are logged via python's logging system, at a severity
-    that corresponds to a log level in ``logging``.  Error messages are logged
-    with the ``osgeo.gdal`` logger.
-
-    Args:
-        ``None``
-
-    Returns:
-        ``None``
-    """
-    gdal.PushErrorHandler(_log_gdal_errors)
-    try:
-        yield
-    finally:
-        gdal.PopErrorHandler()
-
-
-@contextlib.contextmanager
-def _set_gdal_configuration(opt, value):
-    """Temporarily set a GDAL configuration option.
-
-    Args:
-        opt (string): The GDAL configuration option to set.
-        value (string): The value to set the option to.
-
-    Returns:
-        ``None``
-    """
-    prior_value = gdal.GetConfigOption(opt)
-    gdal.SetConfigOption(opt, value)
-    try:
-        yield
-    finally:
-        gdal.SetConfigOption(opt, prior_value)
-
-
 def _format_time(seconds):
     """Render the integer number of seconds as a string. Returns a string."""
     hours, remainder = divmod(seconds, 3600)
@@ -175,26 +81,24 @@ def prepare_workspace(
         workspace,
         f'InVEST-{model_id}-log-{datetime.now().strftime("%Y-%m-%d--%H_%M_%S")}.txt')
 
-    with capture_gdal_logging(), log_to_file(logfile,
-                                             exclude_threads=exclude_threads,
-                                             logging_level=logging_level):
-        with sandbox_tempdir(dir=workspace):
-            logging.captureWarnings(True)
-            # If invest is launched as a subprocess (e.g. the Workbench)
-            # the parent process can rely on this announcement to know the
-            # logfile path (within []), and to know the invest process started.
-            LOGGER.log(100, 'Writing log messages to [%s]', logfile)
-            start_time = time.time()
-            try:
-                yield
-            except Exception:
-                LOGGER.exception(f'Exception while executing {model_id}')
-                raise
-            finally:
-                LOGGER.info('Elapsed time: %s',
-                            _format_time(round(time.time() - start_time, 2)))
-                logging.captureWarnings(False)
-                LOGGER.info(f'Execution finished; version: {natcap.invest.__version__}')
+    with log_to_file(logfile, exclude_threads=exclude_threads,
+                     logging_level=logging_level):
+        logging.captureWarnings(True)
+        # If invest is launched as a subprocess (e.g. the Workbench)
+        # the parent process can rely on this announcement to know the
+        # logfile path (within []), and to know the invest process started.
+        LOGGER.log(100, f'Writing log messages to [{logfile}]', )
+        start_time = time.time()
+        try:
+            yield
+        except Exception:
+            LOGGER.exception(f'Exception while executing {model_id}')
+            raise
+        finally:
+            LOGGER.info(
+                f'Elapsed time: {_format_time(round(time.time() - start_time, 2))}')
+            logging.captureWarnings(False)
+            LOGGER.info(f'Execution finished; version: {natcap.invest.__version__}')
 
 
 class ThreadFilter(logging.Filter):
@@ -259,8 +163,8 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
     """
     try:
         if os.path.exists(logfile):
-            LOGGER.warning('Logfile %s exists and will be overwritten',
-                           logfile)
+            LOGGER.warning(
+                f'Logfile {logfile} exists and will be overwritten')
     except SystemError:
         # This started happening in Windows tests:
         #  SystemError: <built-in function stat> returned NULL without
@@ -277,7 +181,7 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
     handler.setFormatter(formatter)
     handler.setLevel(logging_level)
 
-    if exclude_threads is not None:
+    if exclude_threads:
         for threadname in exclude_threads:
             thread_filter = ThreadFilter(threadname)
             handler.addFilter(thread_filter)
@@ -287,40 +191,6 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
     finally:
         handler.close()
         root_logger.removeHandler(handler)
-
-
-@contextlib.contextmanager
-def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
-    """Create a temporary directory for this context and clean it up on exit.
-
-    Parameters are identical to those for :py:func:`tempfile.mkdtemp`.
-
-    When the context manager exits, the created temporary directory is
-    recursively removed.
-
-    Args:
-        suffix='' (string): a suffix for the name of the directory.
-        prefix='tmp' (string): the prefix to use for the directory name.
-        dir=None (string or None): If a string, a directory that should be
-            the parent directory of the new temporary directory.  If None,
-            tempfile will determine the appropriate tempdir to use as the
-            parent folder.
-
-    Yields:
-        ``sandbox`` (string): The path to the new folder on disk.
-
-    Returns:
-        ``None``
-    """
-    sandbox = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
-
-    try:
-        yield sandbox
-    finally:
-        try:
-            shutil.rmtree(sandbox)
-        except OSError:
-            LOGGER.exception('Could not remove sandbox %s', sandbox)
 
 
 def expand_path(path, base_path):
@@ -916,60 +786,131 @@ def evaluate_expression(expression, variable_map):
     return eval(expression, builtins, variable_map)
 
 
+def do_execute(model_spec, execute_func, args, generate_metadata=False,
+               save_file_registry=False):
+    """Execute with pre and post processing.
+
+    Args:
+        model_spec (spec.ModelSpec): model spec for the model being run
+        execute_func (callable): the model execute function to call
+        args (dict): the raw user input args dictionary
+        generate_metadata (bool): Defaults to False. If True, generate
+            output metadata files in the workspace.
+        save_file_registry (bool): Defaults to False. If True, save the file
+            registry dictionary to a JSON file in the workspace.
+    """
+    preprocessed_args = model_spec.preprocess_inputs(args)
+
+    # evaluate which outputs we expect to be created, given the
+    # model spec and provided input values
+    outputs_to_be_created = set([
+        output.id for output in model_spec.outputs if bool(
+            evaluate_expression(
+                expression=f'{output.created_if}',
+                variable_map=preprocessed_args
+            )
+        ) is True
+    ])
+
+    # Identify all output subdirectories needed, based on the output
+    # paths, and create them
+    for output in model_spec.outputs:
+        if output.id in outputs_to_be_created:
+            os.makedirs(os.path.join(
+                args['workspace_dir'], os.path.split(output.path)[0]
+            ), exist_ok=True)
+
+    file_registry = FileRegistry(
+        outputs=model_spec.outputs,
+        workspace_dir=preprocessed_args['workspace_dir'],
+        file_suffix=preprocessed_args['results_suffix'])
+
+    execute_func(preprocessed_args, file_registry)
+
+    if outputs_to_be_created != set(file_registry.registry.keys()):
+        print('Missing outputs:',
+            outputs_to_be_created - set(file_registry.registry.keys()))
+        print('Extra outputs:',
+            set(file_registry.registry.keys()) - outputs_to_be_created)
+
+    # optionally create metadata files for the results
+    if generate_metadata:
+        LOGGER.info('Generating metadata for results')
+        try:
+            # If there's an exception from creating metadata
+            # I don't think we want to indicate a model failure
+            model_spec.generate_metadata_for_outputs(preprocessed_args)
+        except Exception as exc:
+            LOGGER.warning(
+                'Something went wrong while generating metadata', exc_info=exc)
+
+    # optionally write the file registry dict to a JSON file in the workspace
+    if save_file_registry:
+        with open(os.path.join(preprocessed_args['workspace_dir'],
+                               'file_registry.json'), "w") as json_file:
+            json.dump(file_registry.registry, json_file, indent=4)
+
+    return file_registry.registry
+
+
 def execute_function(model_spec):
+    """Returns a decorator intended for an invest model execute function.
 
+    The purpose of this outer function is to allow us to pass in the MODEL_SPEC
+    as an argument to the decorator.
+
+    Args:
+        model_spec (MODEL_SPEC): invest model spec
+
+    Returns:
+        execute decorator which has access to the model spec
+    """
     def exec_wrapper(execute_func):
+        """Decorator intended for an invest model execute function.
 
+        Args:
+            execute_func (callable): the invest model execute function to wrap
+
+        Returns:
+            wrapped execute function
+        """
         @functools.wraps(execute_func)
-        def wrapper(args):
-            preprocessed_args = model_spec.preprocess_inputs(args)
+        def wrapper(args, generate_metadata=False, save_file_registry=False,
+                create_logfile=False, log_level=logging.DEBUG):
+            """Invest model execute function wrapper.
 
-            # evaluate which outputs we expect to be created, given the
-            # model spec and provided input values
-            outputs_to_be_created = set([
-                output.id for output in model_spec.outputs if bool(
-                    evaluate_expression(
-                        expression=f'{output.created_if}',
-                        variable_map=preprocessed_args
-                    )
-                ) is True
-            ])
+            Performs additonal work before and after the execute function runs:
+                - GDAL exceptions are enabled
+                - Optionally,
 
-            # default to single process mode
-            if preprocessed_args['n_workers'] is None:
-                preprocessed_args['n_workers'] = -1
+            Args:
+                args (dict): the raw user input args dictionary
+                generate_metadata (bool): Defaults to False. If True, use
+                    geometamaker to create metadata files in the workspace
+                    after execution completes.
+                save_file_registry (bool): Defaults to False. If True, the
+                    file registry dictionary will be saved to the workspace
+                    as a JSON file after execution completes.
+                create_logfile (bool): Defaults to False. If True, all logging
+                    from the execute function as well as all other pre- and
+                    post-processing will be written to a logfile in the workspace.
+                log_level :
+            """
 
-            # suffix should always start with an underscore
-            if (preprocessed_args['results_suffix'] and not
-                    preprocessed_args['results_suffix'].startswith('_')):
-                preprocessed_args['results_suffix'] = (
-                    '_' + preprocessed_args['results_suffix'])
+            with GDALUseExceptions():
+                if create_logfile:
+                    cm = prepare_workspace(args['workspace_dir'],
+                                           model_id=model_spec.model_id,
+                                           logging_level=log_level)
+                else: # null context manager, has no effect
+                    cm = contextlib.nullcontext()
 
-            # Identify all output subdirectories needed, based on the output
-            # paths, and create them
-            for output in model_spec.outputs:
-                if output.id in outputs_to_be_created:
-                    os.makedirs(os.path.join(
-                        args['workspace_dir'], os.path.split(output.path)[0]
-                    ), exist_ok=True)
-
-            file_registry = FileRegistry(
-                outputs=model_spec.outputs,
-                workspace_dir=preprocessed_args['workspace_dir'],
-                file_suffix=preprocessed_args['results_suffix'])
-
-            execute_func(preprocessed_args, file_registry)
-
-            # print(outputs_to_be_created)
-            # print(file_registry.registry)
-
-            if outputs_to_be_created != set(file_registry.registry.keys()):
-                print('Missing outputs:',
-                    outputs_to_be_created - set(file_registry.registry.keys()))
-                print('Extra outputs:',
-                    set(file_registry.registry.keys()) - outputs_to_be_created)
-
-
-            return file_registry.registry
+                with cm:
+                    return do_execute(
+                        model_spec=model_spec,
+                        execute_func=execute_func,
+                        args=args,
+                        generate_metadata=generate_metadata,
+                        save_file_registry=save_file_registry)
         return wrapper
     return exec_wrapper

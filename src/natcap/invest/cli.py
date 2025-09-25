@@ -466,36 +466,22 @@ def main(user_args=None):
             LOGGER.info('Imported target %s from %s',
                         model_module.__name__, model_module)
 
-            with utils.prepare_workspace(parsed_datastack.args['workspace_dir'],
-                                         model_id=parsed_datastack.model_id,
-                                         logging_level=log_level):
-                LOGGER.log(
-                    datastack.ARGS_LOG_LEVEL,
-                    'Starting model with parameters: \n%s',
-                    datastack.format_args_dict(
-                        parsed_datastack.args,
-                        parsed_datastack.model_id))
+            LOGGER.log(
+                datastack.ARGS_LOG_LEVEL,
+                'Starting model with parameters: \n%s',
+                datastack.format_args_dict(
+                    parsed_datastack.args,
+                    parsed_datastack.model_id))
 
-                # We're deliberately not validating here because the user
-                # can just call ``invest validate <datastack>`` to validate.
-                #
-                # Exceptions will already be logged to the logfile but will ALSO be
-                # written to stdout if this exception is uncaught.  This is by
-                # design.
-                file_registry = model_module.execute(parsed_datastack.args)
-                # Write the file registry dict to a JSON file in the workspace
-                with open(os.path.join(parsed_datastack.args['workspace_dir'],
-                                       'file_registry.json'), "w") as json_file:
-                    json.dump(file_registry, json_file, indent=4)
-                LOGGER.info('Generating metadata for results')
-                try:
-                    # If there's an exception from creating metadata
-                    # I don't think we want to indicate a model failure
-                    spec.generate_metadata_for_outputs(
-                        model_module, parsed_datastack.args)
-                except Exception as exc:
-                    LOGGER.warning(
-                        'Something went wrong while generating metadata', exc_info=exc)
+            # We're deliberately not validating here because the user
+            # can just call ``invest validate <datastack>`` to validate.
+            #
+            # Exceptions will already be logged to the logfile but will ALSO be
+            # written to stdout if this exception is uncaught.  This is by
+            # design.
+            file_registry = model_module.execute(
+                parsed_datastack.args, generate_metadata=True,
+                save_file_registry=True, create_logfile=True)
 
         if args.subcommand == 'serve':
             ui_server.app.run(port=args.port)

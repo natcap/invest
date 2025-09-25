@@ -19,6 +19,7 @@ import natcap.invest
 import pandas
 import pint
 import pygeoprocessing
+from pygeoprocessing.geoprocessing_core import GDALUseExceptions
 from pydantic import AfterValidator, BaseModel, ConfigDict, \
     field_validator, model_validator, ValidationError
 
@@ -124,28 +125,29 @@ def _check_projection(srs, projected, projection_units):
         A string error message if an error was found. ``None`` otherwise.
 
     """
-    empty_srs = osr.SpatialReference()
-    if srs is None or srs.IsSame(empty_srs):
-        return get_message('INVALID_PROJECTION')
+    with GDALUseExceptions:
+        empty_srs = osr.SpatialReference()
+        if srs is None or srs.IsSame(empty_srs):
+            return get_message('INVALID_PROJECTION')
 
-    if projected:
-        if not srs.IsProjected():
-            return get_message('NOT_PROJECTED')
+        if projected:
+            if not srs.IsProjected():
+                return get_message('NOT_PROJECTED')
 
-    if projection_units:
-        # pint uses underscores in multi-word units e.g. 'survey_foot'
-        # it is case-sensitive
-        layer_units_name = srs.GetLinearUnitsName().lower().replace(' ', '_')
-        try:
-            # this will parse common synonyms: m, meter, meters, metre, metres
-            layer_units = u.Unit(layer_units_name)
-            # Compare pint Unit objects
-            if projection_units != layer_units:
+        if projection_units:
+            # pint uses underscores in multi-word units e.g. 'survey_foot'
+            # it is case-sensitive
+            layer_units_name = srs.GetLinearUnitsName().lower().replace(' ', '_')
+            try:
+                # this will parse common synonyms: m, meter, meters, metre, metres
+                layer_units = u.Unit(layer_units_name)
+                # Compare pint Unit objects
+                if projection_units != layer_units:
+                    return get_message('WRONG_PROJECTION_UNIT').format(
+                        unit_a=projection_units, unit_b=layer_units_name)
+            except pint.errors.UndefinedUnitError:
                 return get_message('WRONG_PROJECTION_UNIT').format(
                     unit_a=projection_units, unit_b=layer_units_name)
-        except pint.errors.UndefinedUnitError:
-            return get_message('WRONG_PROJECTION_UNIT').format(
-                unit_a=projection_units, unit_b=layer_units_name)
 
 
 def validate_permissions_string(permissions):
@@ -249,6 +251,19 @@ class Input(BaseModel):
         title = '/'.join([capitalize_word(word) for word in title.split('/')])
         return title
 
+    def preprocess(self, value):
+        """Base preprocessing function.
+
+        Override this when specific preprocessing is needed.
+
+        Args:
+            value (object): value to preprocess
+
+        Returns:
+            unchanged value (object)
+        """
+        return value
+
 
 class Output(BaseModel):
     """A data output, or result, of an invest model.
@@ -335,17 +350,6 @@ class FileInput(Input):
 
         return col.apply(format_path).astype(pandas.StringDtype())
 
-    def preprocess(self, value):
-        """Normalize a value to an absolute path.
-
-        Args:
-            value: value to preprocess
-
-        Returns:
-            string
-        """
-        return os.path.abspath(value)
-
 
 class RasterBand(BaseModel):
     """A single-band raster input, or parameter, of an invest model.
@@ -405,25 +409,28 @@ class RasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        gdal_path = utils._GDALPath.from_uri(filepath)
-        if gdal_path.is_local:
-            file_warning = super().validate(filepath)
-            if file_warning:
-                return file_warning
+        with GDALUseExceptions:
+            gdal_path = utils._GDALPath.from_uri(filepath)
+            if gdal_path.is_local:
+                file_warning = super().validate(filepath)
+                if file_warning:
+                    return file_warning
 
-        try:
-            gdal_dataset = gdal.OpenEx(gdal_path.to_normalized_path(), gdal.OF_RASTER)
-        except RuntimeError:
-            return get_message('NOT_GDAL_RASTER')
+            try:
+                gdal_dataset = gdal.OpenEx(
+                    gdal_path.to_normalized_path(), gdal.OF_RASTER)
+            except RuntimeError:
+                return get_message('NOT_GDAL_RASTER')
 
-        # Check that an overview .ovr file wasn't opened.
-        if os.path.splitext(filepath)[1] == '.ovr':
-            return get_message('OVR_FILE')
+            # Check that an overview .ovr file wasn't opened.
+            if os.path.splitext(filepath)[1] == '.ovr':
+                return get_message('OVR_FILE')
 
-        srs = gdal_dataset.GetSpatialRef()
-        projection_warning = _check_projection(srs, self.projected, self.projection_units)
-        if projection_warning:
-            return projection_warning
+            srs = gdal_dataset.GetSpatialRef()
+            projection_warning = _check_projection(
+                srs, self.projected, self.projection_units)
+            if projection_warning:
+                return projection_warning
 
     def preprocess(self, value):
         """Normalize a path to a GDAL-compatible local or remote path.
@@ -479,25 +486,28 @@ class SingleBandRasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        gdal_path = utils._GDALPath.from_uri(filepath)
-        if gdal_path.is_local:
-            file_warning = super().validate(filepath)
-            if file_warning:
-                return file_warning
+        with GDALUseExceptions:
+            gdal_path = utils._GDALPath.from_uri(filepath)
+            if gdal_path.is_local:
+                file_warning = super().validate(filepath)
+                if file_warning:
+                    return file_warning
 
-        try:
-            gdal_dataset = gdal.OpenEx(gdal_path.to_normalized_path(), gdal.OF_RASTER)
-        except RuntimeError:
-            return get_message('NOT_GDAL_RASTER')
+            try:
+                gdal_dataset = gdal.OpenEx(
+                    gdal_path.to_normalized_path(), gdal.OF_RASTER)
+            except RuntimeError:
+                return get_message('NOT_GDAL_RASTER')
 
-        # Check that an overview .ovr file wasn't opened.
-        if os.path.splitext(filepath)[1] == '.ovr':
-            return get_message('OVR_FILE')
+            # Check that an overview .ovr file wasn't opened.
+            if os.path.splitext(filepath)[1] == '.ovr':
+                return get_message('OVR_FILE')
 
-        srs = gdal_dataset.GetSpatialRef()
-        projection_warning = _check_projection(srs, self.projected, self.projection_units)
-        if projection_warning:
-            return projection_warning
+            srs = gdal_dataset.GetSpatialRef()
+            projection_warning = _check_projection(
+                srs, self.projected, self.projection_units)
+            if projection_warning:
+                return projection_warning
 
     def preprocess(self, value):
         """Normalize a path to a GDAL-compatible local or remote path.
@@ -569,64 +579,66 @@ class VectorInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        gdal_path = utils._GDALPath.from_uri(filepath)
-        if gdal_path.is_local:
-            file_warning = super().validate(filepath)
-            if file_warning:
-                return file_warning
+        with GDALUseExceptions:
+            gdal_path = utils._GDALPath.from_uri(filepath)
+            if gdal_path.is_local:
+                file_warning = super().validate(filepath)
+                if file_warning:
+                    return file_warning
 
-        try:
-            gdal_dataset = gdal.OpenEx(gdal_path.to_normalized_path(), gdal.OF_VECTOR)
-        except RuntimeError:
-            return get_message('NOT_GDAL_VECTOR')
+            try:
+                gdal_dataset = gdal.OpenEx(
+                    gdal_path.to_normalized_path(), gdal.OF_VECTOR)
+            except RuntimeError:
+                return get_message('NOT_GDAL_VECTOR')
 
-        geom_map = {
-            'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM,
-                      ogr.wkbPoint25D],
-            'LINESTRING': [ogr.wkbLineString, ogr.wkbLineStringM,
-                           ogr.wkbLineStringZM, ogr.wkbLineString25D],
-            'POLYGON': [ogr.wkbPolygon, ogr.wkbPolygonM,
-                        ogr.wkbPolygonZM, ogr.wkbPolygon25D],
-            'MULTIPOINT': [ogr.wkbMultiPoint, ogr.wkbMultiPointM,
-                           ogr.wkbMultiPointZM, ogr.wkbMultiPoint25D],
-            'MULTILINESTRING': [ogr.wkbMultiLineString, ogr.wkbMultiLineStringM,
-                                ogr.wkbMultiLineStringZM,
-                                ogr.wkbMultiLineString25D],
-            'MULTIPOLYGON': [ogr.wkbMultiPolygon, ogr.wkbMultiPolygonM,
-                             ogr.wkbMultiPolygonZM, ogr.wkbMultiPolygon25D]
-        }
+            geom_map = {
+                'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM,
+                          ogr.wkbPoint25D],
+                'LINESTRING': [ogr.wkbLineString, ogr.wkbLineStringM,
+                               ogr.wkbLineStringZM, ogr.wkbLineString25D],
+                'POLYGON': [ogr.wkbPolygon, ogr.wkbPolygonM,
+                            ogr.wkbPolygonZM, ogr.wkbPolygon25D],
+                'MULTIPOINT': [ogr.wkbMultiPoint, ogr.wkbMultiPointM,
+                               ogr.wkbMultiPointZM, ogr.wkbMultiPoint25D],
+                'MULTILINESTRING': [ogr.wkbMultiLineString, ogr.wkbMultiLineStringM,
+                                    ogr.wkbMultiLineStringZM,
+                                    ogr.wkbMultiLineString25D],
+                'MULTIPOLYGON': [ogr.wkbMultiPolygon, ogr.wkbMultiPolygonM,
+                                 ogr.wkbMultiPolygonZM, ogr.wkbMultiPolygon25D]
+            }
 
-        allowed_geom_types = []
-        for geom in self.geometry_types:
-            allowed_geom_types += geom_map[geom]
+            allowed_geom_types = []
+            for geom in self.geometry_types:
+                allowed_geom_types += geom_map[geom]
 
-        # NOTE: this only checks the layer geometry type, not the types of the
-        # actual geometries (layer.GetGeometryTypes()). This is probably equivalent
-        # in most cases, and it's more efficient than checking every geometry, but
-        # we might need to change this in the future if it becomes a problem.
-        # Currently not supporting ogr.wkbUnknown which allows mixed types.
-        layer = gdal_dataset.GetLayer()
-        if layer.GetGeomType() not in allowed_geom_types:
-            return get_message('WRONG_GEOM_TYPE').format(allowed=self.geometry_types)
+            # NOTE: this only checks the layer geometry type, not the types of the
+            # actual geometries (layer.GetGeometryTypes()). This is probably equivalent
+            # in most cases, and it's more efficient than checking every geometry, but
+            # we might need to change this in the future if it becomes a problem.
+            # Currently not supporting ogr.wkbUnknown which allows mixed types.
+            layer = gdal_dataset.GetLayer()
+            if layer.GetGeomType() not in allowed_geom_types:
+                return get_message('WRONG_GEOM_TYPE').format(allowed=self.geometry_types)
 
-        if self.fields:
-            field_patterns = []
-            for spec in self.fields:
-                # brackets are a special character for our args spec syntax
-                # they surround the part of the key that's user-defined
-                # user-defined rows/columns/fields are not validated here, so skip
-                if spec.required is True and '[' not in spec.id:
-                    field_patterns.append(spec.id)
+            if self.fields:
+                field_patterns = []
+                for spec in self.fields:
+                    # brackets are a special character for our args spec syntax
+                    # they surround the part of the key that's user-defined
+                    # user-defined rows/columns/fields are not validated here, so skip
+                    if spec.required is True and '[' not in spec.id:
+                        field_patterns.append(spec.id)
 
-            fieldnames = [defn.GetName() for defn in layer.schema]
-            required_field_warning = check_headers(
-                field_patterns, fieldnames, 'field')
-            if required_field_warning:
-                return required_field_warning
+                fieldnames = [defn.GetName() for defn in layer.schema]
+                required_field_warning = check_headers(
+                    field_patterns, fieldnames, 'field')
+                if required_field_warning:
+                    return required_field_warning
 
-        srs = layer.GetSpatialRef()
-        projection_warning = _check_projection(srs, self.projected, self.projection_units)
-        return projection_warning
+            srs = layer.GetSpatialRef()
+            projection_warning = _check_projection(srs, self.projected, self.projection_units)
+            return projection_warning
 
     def format_geometry_types_rst(self):
         """Represent self.geometry_types in RST text.
@@ -941,17 +953,6 @@ class CSVInput(FileInput):
 
         return df
 
-    def preprocess(self, value):
-        """Normalize an input CSV path to an absolute path.
-
-        Args:
-            value: path to CSV to preprocess
-
-        Returns:
-            string
-        """
-        return os.path.abspath(value)
-
 
 class DirectoryInput(Input):
     """A directory input, or parameter, of an invest model.
@@ -1055,17 +1056,6 @@ class DirectoryInput(Input):
                     os.remove(temp_path)
             except OSError:
                 return get_message(MESSAGE_KEY).format(permission='write')
-
-    def preprocess(self, value):
-        """Normalize a value to an absolute path.
-
-        Args:
-            value: value to preprocess
-
-        Returns:
-            string
-        """
-        return os.path.abspath(value)
 
 
 class NumberInput(Input):
@@ -1684,7 +1674,6 @@ class ModelSpec(BaseModel):
     def check_inputs_in_field_order(self):
         """Check that all inputs either appear in `input_field_order`,
         or are marked as hidden."""
-
         found_keys = set()
         for group in self.input_field_order:
             for key in group:
@@ -1774,7 +1763,51 @@ class ModelSpec(BaseModel):
                 values[_input.id] = _input.preprocess(input_values[_input.id])
             else:
                 values[_input.id] = None
+
+        # default to single process mode
+        if values['n_workers'] is None:
+            values['n_workers'] = -1
+
+        # suffix should always start with an underscore
+        if (values['results_suffix'] and not
+                values['results_suffix'].startswith('_')):
+            values['results_suffix'] = '_' + values['results_suffix']
+
         return values
+
+    def generate_metadata_for_outputs(self, args_dict):
+        """Create metadata for all items in an invest model output workspace.
+
+        Args:
+            args_dict (dict) - the arguments dictionary passed to the
+                model's ``execute`` function.
+
+        Returns:
+            None
+        """
+        from natcap.invest import models
+        file_suffix = utils.make_suffix_string(args_dict, 'results_suffix')
+        formatted_args = pprint.pformat(args_dict)
+        lineage_statement = (
+            f'Created by {self.model_id} execute('
+            f'\n{formatted_args})\nVersion {natcap.invest.__version__}')
+        keywords = [self.model_id, 'InVEST']
+
+        def _walk_spec(output_spec, workspace):
+            for spec_data in output_spec:
+                if 'taskgraph.db' in spec_data.path:
+                    continue
+                pre, post = os.path.splitext(spec_data.path)
+                full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
+                if os.path.exists(full_path):
+                    try:
+                        write_metadata_file(
+                            full_path, spec_data, keywords, lineage_statement)
+                    except ValueError as error:
+                        # Some unsupported file formats, e.g. html
+                        LOGGER.debug(error)
+
+        _walk_spec(self.outputs, args_dict['workspace_dir'])
 
 
 # Specs for common arg types ##################################################
@@ -2274,40 +2307,3 @@ def write_metadata_file(datasource_path, spec, keywords_list,
             resource.set_band_description(1, units=units)
 
     resource.write(workspace=out_workspace)
-
-
-def generate_metadata_for_outputs(model_module, args_dict):
-    """Create metadata for all items in an invest model output workspace.
-
-    Args:
-        model_module (object) - the natcap.invest module containing
-            the MODEL_SPEC attribute
-        args_dict (dict) - the arguments dictionary passed to the
-            model's ``execute`` function.
-
-    Returns:
-        None
-
-    """
-    file_suffix = utils.make_suffix_string(args_dict, 'results_suffix')
-    formatted_args = pprint.pformat(args_dict)
-    lineage_statement = (
-        f'Created by {model_module.__name__}.execute(\n{formatted_args})\n'
-        f'Version {natcap.invest.__version__}')
-    keywords = [model_module.MODEL_SPEC.model_id, 'InVEST']
-
-    def _walk_spec(output_spec, workspace):
-        for spec_data in output_spec:
-            if 'taskgraph.db' in spec_data.path:
-                continue
-            pre, post = os.path.splitext(spec_data.path)
-            full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
-            if os.path.exists(full_path):
-                try:
-                    write_metadata_file(
-                        full_path, spec_data, keywords, lineage_statement)
-                except ValueError as error:
-                    # Some unsupported file formats, e.g. html
-                    LOGGER.debug(error)
-
-    _walk_spec(model_module.MODEL_SPEC.outputs, args_dict['workspace_dir'])

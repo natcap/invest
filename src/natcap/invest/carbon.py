@@ -327,7 +327,8 @@ MODEL_SPEC = spec.ModelSpec(
 _CARBON_NODATA = -1.0
 
 
-def execute(args):
+@utils.execute_function(MODEL_SPEC)
+def execute(preprocessed_args, file_registry):
     """Carbon.
 
     Calculate the amount of carbon stocks given a landscape, or the difference
@@ -376,35 +377,17 @@ def execute(args):
     Returns:
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate_outputs')
-    output_dir = args['workspace_dir']
-    utils.make_directories([intermediate_output_dir, output_dir])
-
-    LOGGER.info('Building file registry')
-    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
-
-    if args['do_valuation'] and args['lulc_bas_year'] >= args['lulc_alt_year']:
+    if (preprocessed_args['do_valuation'] and
+            preprocessed_args['lulc_bas_year'] >= preprocessed_args['lulc_alt_year']):
         raise ValueError(
             "Invalid input for lulc_bas_year or lulc_alt_year. The Alternate "
-            f"LULC Year ({args['lulc_alt_year']}) must be greater than the "
-            f"Baseline LULC Year ({args['lulc_bas_year']}). Ensure that the "
-            "Baseline LULC Year is earlier than the Alternate LULC Year."
+            f"LULC Year ({preprocessed_args['lulc_alt_year']}) must be greater "
+            f"than the Baseline LULC Year ({preprocessed_args['lulc_bas_year']}). "
+            "Ensure that the Baseline LULC Year is earlier than the Alternate LULC Year."
         )
 
-    carbon_pool_df = MODEL_SPEC.get_input(
-        'carbon_pools_path').get_validated_dataframe(args['carbon_pools_path'])
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
     graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
+        file_registry['taskgraph_cache'], preprocessed_args['n_workers'])
 
     cell_size_set = set()
     raster_size_set = set()
@@ -414,8 +397,8 @@ def execute(args):
 
     for scenario_type in ['bas', 'alt']:
         lulc_key = "lulc_%s_path" % (scenario_type)
-        if lulc_key in args and args[lulc_key]:
-            raster_info = pygeoprocessing.get_raster_info(args[lulc_key])
+        if preprocessed_args[lulc_key]:
+            raster_info = pygeoprocessing.get_raster_info(preprocessed_args[lulc_key])
             cell_size_set.add(raster_info['pixel_size'])
             raster_size_set.add(raster_info['raster_size'])
             valid_lulc_keys.append(lulc_key)
@@ -435,6 +418,9 @@ def execute(args):
     LOGGER.info('Map all carbon pools to carbon storage rasters.')
     carbon_map_task_lookup = {}
     sum_rasters_task_lookup = {}
+    carbon_pool_df = MODEL_SPEC.get_input(
+        'carbon_pools_path').get_validated_dataframe(
+        preprocessed_args['carbon_pools_path'])
     for scenario_type in valid_scenarios:
         carbon_map_task_lookup[scenario_type] = []
         storage_path_list = []
@@ -448,7 +434,7 @@ def execute(args):
 
             carbon_map_task = graph.add_task(
                 _generate_carbon_map,
-                args=(args[lulc_key], carbon_pool_by_type,
+                args=(preprocessed_args[lulc_key], carbon_pool_by_type,
                       file_registry[storage_key]),
                 target_path_list=[file_registry[storage_key]],
                 task_name=f'carbon_map_{storage_key}')
@@ -496,12 +482,14 @@ def execute(args):
 
     # calculate net present value
     calculate_npv_tasks = []
-    if 'do_valuation' in args and args['do_valuation']:
+    if preprocessed_args['do_valuation']:
         LOGGER.info('Constructing valuation formula.')
         valuation_constant = _calculate_valuation_constant(
-            int(args['lulc_bas_year']), int(args['lulc_alt_year']),
-            float(args['discount_rate']), float(args['rate_change']),
-            float(args['price_per_metric_ton_of_c']))
+            preprocessed_args['lulc_bas_year'],
+            preprocessed_args['lulc_alt_year'],
+            preprocessed_args['discount_rate'],
+            preprocessed_args['rate_change'],
+            preprocessed_args['price_per_metric_ton_of_c'])
 
         if 'alt' in valid_scenarios:
             output_key = 'npv_alt'
@@ -523,7 +511,7 @@ def execute(args):
                        + calculate_npv_tasks)
     _ = graph.add_task(
         _generate_report,
-        args=(tifs_to_summarize, args, file_registry),
+        args=(tifs_to_summarize, preprocessed_args, file_registry),
         target_path_list=[file_registry['html_report']],
         dependent_task_list=tasks_to_report,
         task_name='generate_report')
