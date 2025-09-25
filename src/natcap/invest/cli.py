@@ -466,13 +466,6 @@ def main(user_args=None):
             LOGGER.info('Imported target %s from %s',
                         model_module.__name__, model_module)
 
-            LOGGER.log(
-                datastack.ARGS_LOG_LEVEL,
-                'Starting model with parameters: \n%s',
-                datastack.format_args_dict(
-                    parsed_datastack.args,
-                    parsed_datastack.model_id))
-
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.
             #

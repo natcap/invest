@@ -51,7 +51,6 @@ except ImportError:
 
 
 LOGGER = logging.getLogger(__name__)
-ARGS_LOG_LEVEL = 100  # define high log level so it should always show in logs
 DATASTACK_EXTENSION = '.invest.tar.gz'
 PARAMETER_SET_EXTENSION = '.invest.json'
 DATASTACK_PARAMETER_FILENAME = 'parameters' + PARAMETER_SET_EXTENSION
@@ -94,34 +93,6 @@ def _tarfile_safe_extract(archive_path, dest_dir_path):
             tar.extractall(path, members, numeric_owner=numeric_owner)
 
         safe_extract(tar, dest_dir_path)
-
-
-def format_args_dict(args_dict, model_id):
-    """Nicely format an arguments dictionary for writing to a stream.
-
-    If printed to a console, the returned string will be aligned in two columns
-    representing each key and value in the arg dict.  Keys are in ascending,
-    sorted order.  Both columns are left-aligned.
-
-    Args:
-        args_dict (dict): The args dictionary to format.
-        model_id (string): The model ID (e.g. carbon)
-
-    Returns:
-        A formatted, unicode string.
-    """
-    sorted_args = sorted(args_dict.items(), key=lambda x: x[0])
-
-    max_key_width = 0
-    if len(sorted_args) > 0:
-        max_key_width = max(len(x[0]) for x in sorted_args)
-
-    format_str = f"%-{max_key_width}s %s"
-
-    args_string = '\n'.join([format_str % (arg) for arg in sorted_args])
-    args_string = (
-        f"Arguments for InVEST {model_id} {__version__}:\n{args_string}\n")
-    return args_string
 
 
 def get_datastack_info(filepath, extract_path=None):

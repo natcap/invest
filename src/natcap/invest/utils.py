@@ -20,7 +20,7 @@ from natcap.invest.file_registry import FileRegistry
 import numpy
 import pandas
 import pygeoprocessing
-from pygeoprocessing.geoprocessing_core import GDALUseExceptions
+from pygeoprocessing.geoprocessing_core import gdal_use_exceptions
 from osgeo import gdal
 from osgeo import osr
 from shapely.wkt import loads
@@ -33,6 +33,7 @@ LOG_FMT = (
     "(%(name)s) "
     "%(module)s.%(funcName)s(%(lineno)d) "
     "%(levelname)s %(message)s")
+ARGS_LOG_LEVEL = 100  # define high log level so it should always show in logs
 
 # GDAL has 5 error levels, python's logging has 6.  We skip logging.INFO.
 # A dict clarifies the mapping between levels.
@@ -786,6 +787,35 @@ def evaluate_expression(expression, variable_map):
     return eval(expression, builtins, variable_map)
 
 
+def format_args_dict(args_dict, model_id):
+    """Nicely format an arguments dictionary for writing to a stream.
+
+    If printed to a console, the returned string will be aligned in two columns
+    representing each key and value in the arg dict.  Keys are in ascending,
+    sorted order.  Both columns are left-aligned.
+
+    Args:
+        args_dict (dict): The args dictionary to format.
+        model_id (string): The model ID (e.g. carbon)
+
+    Returns:
+        A formatted, unicode string.
+    """
+    sorted_args = sorted(args_dict.items(), key=lambda x: x[0])
+
+    max_key_width = 0
+    if len(sorted_args) > 0:
+        max_key_width = max(len(x[0]) for x in sorted_args)
+
+    format_str = f"%-{max_key_width}s %s"
+
+    args_string = '\n'.join([format_str % (arg) for arg in sorted_args])
+    args_string = (
+        f"Arguments for InVEST {model_id} {__version__}:\n{args_string}\n")
+    return args_string
+
+
+@gdal_use_exceptions
 def do_execute(model_spec, execute_func, args, generate_metadata=False,
                save_file_registry=False):
     """Execute with pre and post processing.
@@ -799,6 +829,11 @@ def do_execute(model_spec, execute_func, args, generate_metadata=False,
         save_file_registry (bool): Defaults to False. If True, save the file
             registry dictionary to a JSON file in the workspace.
     """
+    LOGGER.log(
+        ARGS_LOG_LEVEL,
+        'Starting model with parameters: \n' +
+        format_args_dict(args, model_spec.model_id))
+
     preprocessed_args = model_spec.preprocess_inputs(args)
 
     # evaluate which outputs we expect to be created, given the
@@ -896,21 +931,19 @@ def execute_function(model_spec):
                     post-processing will be written to a logfile in the workspace.
                 log_level :
             """
+            if create_logfile:
+                cm = prepare_workspace(args['workspace_dir'],
+                                       model_id=model_spec.model_id,
+                                       logging_level=log_level)
+            else: # null context manager, has no effect
+                cm = contextlib.nullcontext()
 
-            with GDALUseExceptions():
-                if create_logfile:
-                    cm = prepare_workspace(args['workspace_dir'],
-                                           model_id=model_spec.model_id,
-                                           logging_level=log_level)
-                else: # null context manager, has no effect
-                    cm = contextlib.nullcontext()
-
-                with cm:
-                    return do_execute(
-                        model_spec=model_spec,
-                        execute_func=execute_func,
-                        args=args,
-                        generate_metadata=generate_metadata,
-                        save_file_registry=save_file_registry)
+            with cm:
+                return do_execute(
+                    model_spec=model_spec,
+                    execute_func=execute_func,
+                    args=args,
+                    generate_metadata=generate_metadata,
+                    save_file_registry=save_file_registry)
         return wrapper
     return exec_wrapper
