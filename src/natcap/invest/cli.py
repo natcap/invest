@@ -472,7 +472,7 @@ def main(user_args=None):
             # Exceptions will already be logged to the logfile but will ALSO be
             # written to stdout if this exception is uncaught.  This is by
             # design.
-            file_registry = model_module.execute(
+            model_module.execute(
                 parsed_datastack.args, generate_metadata=True,
                 save_file_registry=True, create_logfile=True)
 

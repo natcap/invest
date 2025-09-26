@@ -16,11 +16,9 @@ from urllib.parse import urlparse
 from datetime import datetime
 
 import natcap.invest
-from natcap.invest.file_registry import FileRegistry
 import numpy
 import pandas
 import pygeoprocessing
-from pygeoprocessing.geoprocessing_core import gdal_use_exceptions
 from osgeo import gdal
 from osgeo import osr
 from shapely.wkt import loads
@@ -33,7 +31,6 @@ LOG_FMT = (
     "(%(name)s) "
     "%(module)s.%(funcName)s(%(lineno)d) "
     "%(levelname)s %(message)s")
-ARGS_LOG_LEVEL = 100  # define high log level so it should always show in logs
 
 # GDAL has 5 error levels, python's logging has 6.  We skip logging.INFO.
 # A dict clarifies the mapping between levels.
@@ -814,79 +811,6 @@ def format_args_dict(args_dict, model_id):
         f"Arguments for InVEST {model_id} {natcap.invest.__version__}:"
         f"\n{args_string}\n")
     return args_string
-
-
-@gdal_use_exceptions
-def do_execute(model_spec, execute_func, args, generate_metadata=False,
-               save_file_registry=False):
-    """Execute with pre and post processing.
-
-    Args:
-        model_spec (spec.ModelSpec): model spec for the model being run
-        execute_func (callable): the model execute function to call
-        args (dict): the raw user input args dictionary
-        generate_metadata (bool): Defaults to False. If True, generate
-            output metadata files in the workspace.
-        save_file_registry (bool): Defaults to False. If True, save the file
-            registry dictionary to a JSON file in the workspace.
-    """
-    LOGGER.log(
-        ARGS_LOG_LEVEL,
-        'Starting model with parameters: \n' +
-        format_args_dict(args, model_spec.model_id))
-
-    preprocessed_args = model_spec.preprocess_inputs(args)
-
-    # evaluate which outputs we expect to be created, given the
-    # model spec and provided input values
-    outputs_to_be_created = set([
-        output.id for output in model_spec.outputs if bool(
-            evaluate_expression(
-                expression=f'{output.created_if}',
-                variable_map=preprocessed_args
-            )
-        ) is True
-    ])
-
-    # Identify all output subdirectories needed, based on the output
-    # paths, and create them
-    for output in model_spec.outputs:
-        if output.id in outputs_to_be_created:
-            os.makedirs(os.path.join(
-                args['workspace_dir'], os.path.split(output.path)[0]
-            ), exist_ok=True)
-
-    file_registry = FileRegistry(
-        outputs=model_spec.outputs,
-        workspace_dir=preprocessed_args['workspace_dir'],
-        file_suffix=preprocessed_args['results_suffix'])
-
-    execute_func(preprocessed_args, file_registry)
-
-    if outputs_to_be_created != set(file_registry.registry.keys()):
-        print('Missing outputs:',
-            outputs_to_be_created - set(file_registry.registry.keys()))
-        print('Extra outputs:',
-            set(file_registry.registry.keys()) - outputs_to_be_created)
-
-    # optionally create metadata files for the results
-    if generate_metadata:
-        LOGGER.info('Generating metadata for results')
-        try:
-            # If there's an exception from creating metadata
-            # I don't think we want to indicate a model failure
-            model_spec.generate_metadata_for_outputs(preprocessed_args)
-        except Exception as exc:
-            LOGGER.warning(
-                'Something went wrong while generating metadata', exc_info=exc)
-
-    # optionally write the file registry dict to a JSON file in the workspace
-    if save_file_registry:
-        with open(os.path.join(preprocessed_args['workspace_dir'],
-                               'file_registry.json'), "w") as json_file:
-            json.dump(file_registry.registry, json_file, indent=4)
-
-    return file_registry.registry
 
 
 def execute_function(model_spec):
