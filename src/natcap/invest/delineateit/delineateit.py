@@ -18,7 +18,6 @@ from .. import gettext
 from .. import spec
 from .. import utils
 from .. import validation
-from ..file_registry import FileRegistry
 from ..unit_registry import u
 from . import delineateit_core
 
@@ -185,7 +184,8 @@ _WS_ID_OVERWRITE_WARNING = (
     'named "ws_id". Field values will be overwritten.')
 
 
-def execute(args):
+@utils.execute_function(MODEL_SPEC)
+def execute(preprocessed_args, file_registry):
     """DelineateIt: Watershed Delineation.
 
     This 'model' provides an InVEST-based wrapper around the pygeoprocessing
@@ -243,28 +243,14 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    output_directory = args['workspace_dir']
-    utils.make_directories([output_directory])
-
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = FileRegistry(MODEL_SPEC.outputs, output_directory, file_suffix)
-
-    # Manually setting n_workers to be -1 so that everything happens in the
-    # same thread.
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, TypeError, ValueError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1
-    graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'], n_workers=n_workers)
+    graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'],
+                                n_workers=preprocessed_args['n_workers'])
 
     fill_pits_task = graph.add_task(
         pygeoprocessing.routing.fill_pits,
-        args=((args['dem_path'], 1),
+        args=((preprocessed_args['dem_path'], 1),
               file_registry['filled_dem']),
-        kwargs={'working_dir': output_directory},
+        kwargs={'working_dir': preprocessed_args['workspace_dir']},
         target_path_list=[file_registry['filled_dem']],
         task_name='fill_pits')
 
@@ -272,12 +258,12 @@ def execute(args):
         pygeoprocessing.routing.flow_dir_d8,
         args=((file_registry['filled_dem'], 1),
               file_registry['flow_direction']),
-        kwargs={'working_dir': output_directory},
+        kwargs={'working_dir': preprocessed_args['workspace_dir']},
         target_path_list=[file_registry['flow_direction']],
         dependent_task_list=[fill_pits_task],
         task_name='flow_direction')
 
-    if 'detect_pour_points' in args and args['detect_pour_points']:
+    if preprocessed_args['detect_pour_points']:
         # Detect pour points automatically and use them instead of
         # user-provided geometries
         pour_points_task = graph.add_task(
@@ -292,10 +278,10 @@ def execute(args):
     else:
         preprocess_geometries_task = graph.add_task(
             preprocess_geometries,
-            args=(args['outlet_vector_path'],
+            args=(preprocessed_args['outlet_vector_path'],
                   file_registry['filled_dem'],
                   file_registry['preprocessed_geometries'],
-                  args.get('skip_invalid_geometry', True)),
+                  preprocessed_args['skip_invalid_geometry']),
             dependent_task_list=[fill_pits_task],
             target_path_list=[file_registry['preprocessed_geometries']],
             task_name='preprocess_geometries')
@@ -303,7 +289,7 @@ def execute(args):
         geometry_task = preprocess_geometries_task
 
     delineation_dependent_tasks = [flow_dir_task, geometry_task]
-    if 'snap_points' in args and args['snap_points']:
+    if preprocessed_args['snap_points']:
         flow_accumulation_task = graph.add_task(
             pygeoprocessing.routing.flow_accumulation_d8,
             args=((file_registry['flow_direction'], 1),
@@ -313,15 +299,12 @@ def execute(args):
             task_name='flow_accumulation')
         delineation_dependent_tasks.append(flow_accumulation_task)
 
-        snap_distance = int(args['snap_distance'])
-        flow_threshold = int(args['flow_threshold'])
-
         streams_task = graph.add_task(
             pygeoprocessing.routing.extract_streams_d8,
             kwargs={
                 'flow_accum_raster_path_band':
                     (file_registry['flow_accumulation'], 1),
-                'flow_threshold': flow_threshold,
+                'flow_threshold': preprocessed_args['flow_threshold'],
                 'target_stream_raster_path': file_registry['streams'],
             },
             target_path_list=[file_registry['streams']],
@@ -333,7 +316,7 @@ def execute(args):
             args=(outlet_vector_path,
                   file_registry['streams'],
                   file_registry['flow_accumulation'],
-                  snap_distance,
+                  preprocessed_args['snap_distance'],
                   file_registry['snapped_outlets']),
             target_path_list=[file_registry['snapped_outlets']],
             dependent_task_list=[streams_task, geometry_task],
@@ -346,7 +329,7 @@ def execute(args):
         args=((file_registry['flow_direction'], 1),
               outlet_vector_path,
               file_registry['watersheds']),
-        kwargs={'working_dir': output_directory,
+        kwargs={'working_dir': preprocessed_args['workspace_dir'],
                 'target_layer_name':
                     os.path.splitext(
                         os.path.basename(file_registry['watersheds']))[0]},
@@ -356,7 +339,6 @@ def execute(args):
 
     graph.close()
     graph.join()
-    return file_registry.registry
 
 
 def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
