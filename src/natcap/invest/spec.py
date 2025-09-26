@@ -1,3 +1,5 @@
+import contextlib
+import functools
 import importlib
 import json
 import logging
@@ -1808,6 +1810,54 @@ class ModelSpec(BaseModel):
                         LOGGER.debug(error)
 
         _walk_spec(self.outputs, args_dict['workspace_dir'])
+
+
+    def execute_function(self, execute_func):
+        """Decorator intended for an invest model execute function.
+
+        Args:
+            execute_func (callable): the invest model execute function to wrap
+
+        Returns:
+            wrapped execute function
+        """
+        @functools.wraps(execute_func)
+        def wrapper(args, generate_metadata=False, save_file_registry=False,
+                create_logfile=False, log_level=logging.DEBUG):
+            """Invest model execute function wrapper.
+
+            Performs additonal work before and after the execute function runs:
+                - GDAL exceptions are enabled
+                - Optionally,
+
+            Args:
+                args (dict): the raw user input args dictionary
+                generate_metadata (bool): Defaults to False. If True, use
+                    geometamaker to create metadata files in the workspace
+                    after execution completes.
+                save_file_registry (bool): Defaults to False. If True, the
+                    file registry dictionary will be saved to the workspace
+                    as a JSON file after execution completes.
+                create_logfile (bool): Defaults to False. If True, all logging
+                    from the execute function as well as all other pre- and
+                    post-processing will be written to a logfile in the workspace.
+                log_level :
+            """
+            if create_logfile:
+                cm = utils.prepare_workspace(args['workspace_dir'],
+                                       model_id=self.model_id,
+                                       logging_level=log_level)
+            else: # null context manager, has no effect
+                cm = contextlib.nullcontext()
+
+            with cm:
+                return utils.do_execute(
+                    model_spec=self,
+                    execute_func=execute_func,
+                    args=args,
+                    generate_metadata=generate_metadata,
+                    save_file_registry=save_file_registry)
+        return wrapper
 
 
 # Specs for common arg types ##################################################

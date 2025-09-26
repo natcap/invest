@@ -327,7 +327,7 @@ MODEL_SPEC = spec.ModelSpec(
 _CARBON_NODATA = -1.0
 
 
-@utils.execute_function(MODEL_SPEC)
+@MODEL_SPEC.execute_function
 def execute(preprocessed_args, file_registry):
     """Carbon.
 
