@@ -1,10 +1,11 @@
 """InVEST Crop Production Percentile Model."""
-import collections
+from collections import defaultdict, namedtuple
 import logging
 import os
 import re
 
 import numpy
+from pandas import NA
 import pygeoprocessing
 import taskgraph
 from osgeo import gdal
@@ -240,6 +241,14 @@ nutrient_units = {
     "vitk":        u.microgram/u.hectogram,  # vitamin K
 }
 
+CropToPathTables = namedtuple(
+    'CropToPathTables', ['climate_bin', 'observed_yield', 'percentile_yield'])
+CROP_TO_PATH_TABLES = CropToPathTables(
+    climate_bin='climate_bin_raster_table',
+    observed_yield='observed_yield_raster_table',
+    percentile_yield='percentile_yield_csv_table',
+)
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="crop_production_percentile",
     model_title=gettext("Crop Production: Percentile"),
@@ -249,7 +258,10 @@ MODEL_SPEC = spec.ModelSpec(
     aliases=("cpp",),
     input_field_order=[
         ["workspace_dir", "results_suffix"],
-        ["model_data_path", "landcover_raster_path", "landcover_to_crop_table_path",
+        [CROP_TO_PATH_TABLES.percentile_yield,
+         CROP_TO_PATH_TABLES.observed_yield,
+         CROP_TO_PATH_TABLES.climate_bin, "crop_nutrient_table"],
+        ["landcover_raster_path", "landcover_to_crop_table_path",
          "aggregate_polygon_path"]
     ],
     inputs=[
@@ -272,8 +284,9 @@ MODEL_SPEC = spec.ModelSpec(
             id="landcover_to_crop_table_path",
             name=gettext("LULC to Crop Table"),
             about=gettext(
-                "A table that maps each LULC code from the LULC map to one of the 175"
-                " canonical crop names representing the crop grown in that LULC class."
+                "A table that maps each LULC code from the LULC map to one of"
+                " the 172 canonical crop names representing the crop grown in"
+                " that LULC class."
             ),
             columns=[
                 spec.IntegerInput(id="lucode", about=None),
@@ -290,95 +303,118 @@ MODEL_SPEC = spec.ModelSpec(
             required=False,
             projected=True
         )),
-        spec.DirectoryInput(
-            id="model_data_path",
-            name=gettext("model data directory"),
-            about=gettext("Path to the InVEST Crop Production Data directory."),
-            contents=[
-                spec.DirectoryInput(
-                    id="climate_percentile_yield_tables",
-                    about=gettext(
-                        "Table mapping each climate bin to yield percentiles for each"
-                        " crop."
-                    ),
-                    contents=[
-                        spec.CSVInput(
-                            id="[CROP]_percentile_yield_table.csv",
-                            about=None,
-                            columns=[
-                                spec.IntegerInput(id="climate_bin", about=None),
-                                spec.NumberInput(
-                                    id="yield_25th",
-                                    about=None,
-                                    units=u.metric_ton / u.hectare
-                                ),
-                                spec.NumberInput(
-                                    id="yield_50th",
-                                    about=None,
-                                    units=u.metric_ton / u.hectare
-                                ),
-                                spec.NumberInput(
-                                    id="yield_75th",
-                                    about=None,
-                                    units=u.metric_ton / u.hectare
-                                ),
-                                spec.NumberInput(
-                                    id="yield_95th",
-                                    about=None,
-                                    units=u.metric_ton / u.hectare
-                                )
-                            ],
-                            index_col="climate_bin"
-                        )
-                    ]
+        spec.CSVInput(
+            id=CROP_TO_PATH_TABLES.climate_bin,
+            name=gettext("Climate Bin Raster Table"),
+            about=gettext(
+                "A table that maps each crop name to the corresponding"
+                " climate bin raster."
+            ),
+            columns=[
+                spec.OptionStringInput(
+                    id="crop_name",
+                    about=None,
+                    options=CROP_OPTIONS
                 ),
-                spec.DirectoryInput(
-                    id="extended_climate_bin_maps",
-                    about=gettext("Maps of climate bins for each crop."),
-                    contents=[
-                        spec.SingleBandRasterInput(
-                            id="extendedclimatebins[CROP]",
-                            about=None,
-                            data_type=int,
-                            units=None,
-                            projected=None
-                        )
-                    ]
+                spec.SingleBandRasterInput(
+                    id="path",
+                    about=None,
+                    data_type=int,
+                    units=None,
+                    projected=None
+                )
+            ],
+            index_col="crop_name"
+        ),
+        spec.CSVInput(
+            id=CROP_TO_PATH_TABLES.observed_yield,
+            name=gettext("Observed Yield Raster Table"),
+            about=gettext(
+                "A table that maps each crop name to the corresponding"
+                " observed yield raster."
+            ),
+            columns=[
+                spec.OptionStringInput(
+                    id="crop_name",
+                    about=None,
+                    options=CROP_OPTIONS
                 ),
-                spec.DirectoryInput(
-                    id="observed_yield",
-                    about=gettext("Maps of actual observed yield for each crop."),
-                    contents=[
-                        spec.SingleBandRasterInput(
-                            id="[CROP]_observed_yield.tif",
-                            about=None,
-                            data_type=float,
-                            units=u.metric_ton / u.hectare,
-                            projected=None
-                        )
-                    ]
+                spec.SingleBandRasterInput(
+                    id="path",
+                    about=None,
+                    data_type=float,
+                    units=u.metric_ton / u.hectare,
+                    projected=None
+                )
+            ],
+            index_col="crop_name"
+        ),
+        spec.CSVInput(
+            id=CROP_TO_PATH_TABLES.percentile_yield,
+            name=gettext("Percentile Yield CSV Table"),
+            about=gettext(
+                "A table that maps each crop name to the corresponding"
+                " percentile yield table."
+            ),
+            columns=[
+                spec.OptionStringInput(
+                    id="crop_name",
+                    about=None,
+                    options=CROP_OPTIONS
                 ),
                 spec.CSVInput(
-                    id="crop_nutrient.csv",
+                    id="path",
                     about=None,
                     columns=[
-                        spec.OptionStringInput(
-                            id="crop",
+                        spec.IntegerInput(id="climate_bin", about=None),
+                        spec.NumberInput(
+                            id="yield_25th",
                             about=None,
-                            options=CROP_OPTIONS
+                            units=u.metric_ton / u.hectare
                         ),
-                        spec.PercentInput(
-                            id="percentrefuse",
+                        spec.NumberInput(
+                            id="yield_50th",
                             about=None,
-                            units=None,
-                            expression="0 <= value <= 100"),
-                        *[spec.NumberInput(id=nutrient, units=units)
-                            for nutrient, units in nutrient_units.items()]
+                            units=u.metric_ton / u.hectare
+                        ),
+                        spec.NumberInput(
+                            id="yield_75th",
+                            about=None,
+                            units=u.metric_ton / u.hectare
+                        ),
+                        spec.NumberInput(
+                            id="yield_95th",
+                            about=None,
+                            units=u.metric_ton / u.hectare
+                        ),
                     ],
-                    index_col="crop"
+                    index_col="climate_bin"
                 )
-            ]
-        )
+            ],
+            index_col="crop_name"
+        ),
+        spec.CSVInput(
+            id="crop_nutrient_table",
+            name=gettext("Crop Nutrient Table"),
+            about=gettext(
+                "A table that lists amounts of nutrients in each crop."
+            ),
+            columns=[
+                spec.OptionStringInput(
+                    id="crop_name",
+                    about=None,
+                    options=CROP_OPTIONS
+                ),
+                spec.PercentInput(
+                    id="percentrefuse",
+                    about=None,
+                    units=None,
+                    expression="0 <= value <= 100"),
+                *[spec.NumberInput(id=nutrient, units=units)
+                    for nutrient, units in nutrient_units.items()]
+            ],
+            index_col="crop_name"
+        ),
     ],
     outputs=[
         spec.CSVOutput(
@@ -427,7 +463,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="result_table.csv",
             about=gettext("Model results aggregated by crop"),
             columns=[
-                spec.StringOutput(id="crop", about=gettext("Name of the crop")),
+                spec.StringOutput(id="crop_name", about=gettext("Name of the crop")),
                 spec.NumberOutput(
                     id="area (ha)",
                     about=gettext("Area covered by the crop"),
@@ -460,7 +496,7 @@ MODEL_SPEC = spec.ModelSpec(
                     ) for nutrient_code, nutrient, units in NUTRIENTS
                 ]
             ],
-            index_col="crop"
+            index_col="crop_name"
         ),
         spec.SingleBandRasterOutput(
             id="[CROP]_observed_production",
@@ -489,8 +525,8 @@ MODEL_SPEC = spec.ModelSpec(
             id="[CROP]_clipped_observed_yield",
             path="intermediate_output/[CROP]_clipped_observed_yield.tif",
             about=gettext(
-                "Observed yield for the given crop, clipped to the extend of the"
-                " landcover map"
+                "Observed yield for the given crop, clipped to the extent of"
+                " the landcover map"
             ),
             data_type=float,
             units=u.metric_ton / u.hectare
@@ -578,17 +614,9 @@ MODEL_SPEC = spec.ModelSpec(
     ]
 )
 
-
 _INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
 
 _YIELD_PERCENTILE_FIELD_PATTERN = 'yield_([^_]+)'
-_GLOBAL_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
-    'observed_yield', '%s_yield_map.tif')  # crop_name
-_EXTENDED_CLIMATE_BIN_FILE_PATTERN = os.path.join(
-    'extended_climate_bin_maps', 'extendedclimatebins%s.tif')  # crop_name
-_CLIMATE_PERCENTILE_TABLE_PATTERN = os.path.join(
-    'climate_percentile_yield_tables',
-    '%s_percentile_yield_table.csv')  # crop_name
 
 _EXPECTED_NUTRIENT_TABLE_HEADERS = list(nutrient_units.keys())
 _EXPECTED_LUCODE_TABLE_HEADER = 'lucode'
@@ -612,24 +640,25 @@ def execute(args):
             converts landcover types to crop names that has two headers:
 
             * lucode: integer value corresponding to a landcover code in
-              `args['landcover_raster_path']`.
+                `args['landcover_raster_path']`.
             * crop_name: a string that must match one of the crops in
-              args['model_data_path']/climate_bin_maps/[cropname]_*
-              A ValueError is raised if strings don't match.
+                CROP_OPTIONS. A ValueError is raised if no corresponding
+                climate bin raster path is found in the Climate Bin Raster
+                Table.
 
         args['aggregate_polygon_path'] (string): path to polygon shapefile
             that will be used to aggregate crop yields and total nutrient
             value. (optional, if value is None, then skipped)
-        args['model_data_path'] (string): path to the InVEST Crop Production
-            global data directory.  This model expects that the following
-            directories are subdirectories of this path:
-
-            * climate_bin_maps (contains [cropname]_climate_bin.tif files)
-            * climate_percentile_yield (contains
-              [cropname]_percentile_yield_table.csv files)
-
-            Please see the InVEST user's guide chapter on crop production for
-            details about how to download these data.
+        args['percentile_yield_csv_table'] (string): path to a table that maps
+            each crop name to a path to its corresponding percentile yield
+            table.
+        args['climate_bin_raster_table'] (string): path to a table that maps
+            each crop name to a path to its corresponding climate bin raster.
+        args['observed_yield_raster_table'] (string): path to a table that maps
+            each crop name to a path to its corresponding observed yield
+            raster.
+        args['crop_nutrient_table'] (string): path to a table that lists
+            amounts of nutrients in each crop.
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process.
@@ -638,6 +667,10 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
+    # It might seem backwards to read the landcover_to_crop_table into a
+    # DataFrame called crop_to_landcover_df, but since the table is indexed
+    # by crop_name, it makes sense for the code to treat it as a mapping from
+    # crop name to LULC code.
     crop_to_landcover_df = MODEL_SPEC.get_input(
         'landcover_to_crop_table_path').get_validated_dataframe(
             args['landcover_to_crop_table_path'])
@@ -669,17 +702,19 @@ def execute(args):
             f"in the landcover to crop table: {lucodes_missing_from_table}")
 
     bad_crop_name_list = []
+
     for crop_name in crop_to_landcover_df.index:
-        crop_climate_bin_raster_path = os.path.join(
-            args['model_data_path'],
-            _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
-        if not os.path.exists(crop_climate_bin_raster_path):
+        crop_climate_bin_raster_path = _get_full_path_from_table(
+            CROP_TO_PATH_TABLES.climate_bin,
+            args[CROP_TO_PATH_TABLES.climate_bin],
+            crop_name)
+        if crop_climate_bin_raster_path is None:
             bad_crop_name_list.append(crop_name)
     if bad_crop_name_list:
         raise ValueError(
-            "The following crop names were provided in %s but no such crops "
-            "exist for this model: %s" % (
-                args['landcover_to_crop_table_path'], bad_crop_name_list))
+            "'The following crop names were provided in "
+            f"{args['landcover_to_crop_table_path']} but no corresponding "
+            f"climate bin raster path could be found: {bad_crop_name_list}")
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = os.path.join(args['workspace_dir'])
@@ -721,10 +756,11 @@ def execute(args):
     observed_yield_nodata = None
     for crop_name, row in crop_to_landcover_df.iterrows():
         crop_lucode = row[_EXPECTED_LUCODE_TABLE_HEADER]
-        LOGGER.info("Processing crop %s", crop_name)
-        crop_climate_bin_raster_path = os.path.join(
-            args['model_data_path'],
-            _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
+        LOGGER.info(f'Processing crop {crop_name}')
+        crop_climate_bin_raster_path = _get_full_path_from_table(
+            CROP_TO_PATH_TABLES.climate_bin,
+            args[CROP_TO_PATH_TABLES.climate_bin],
+            crop_name)
 
         LOGGER.info(
             "Clipping global climate bin raster to landcover bounding box.")
@@ -742,14 +778,16 @@ def execute(args):
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
-        climate_percentile_yield_table_path = os.path.join(
-            args['model_data_path'],
-            _CLIMATE_PERCENTILE_TABLE_PATTERN % crop_name)
+        climate_percentile_yield_table_path = _get_full_path_from_table(
+            CROP_TO_PATH_TABLES.percentile_yield,
+            args[CROP_TO_PATH_TABLES.percentile_yield],
+            crop_name)
+
         crop_climate_percentile_df = MODEL_SPEC.get_input(
-            'model_data_path').get_contents(
-            'climate_percentile_yield_tables').get_contents(
-            '[CROP]_percentile_yield_table.csv').get_validated_dataframe(
-            climate_percentile_yield_table_path)
+            CROP_TO_PATH_TABLES.percentile_yield).get_column(
+                'path').get_validated_dataframe(
+                    climate_percentile_yield_table_path)
+
         yield_percentile_headers = [
             x for x in crop_climate_percentile_df.columns if x != 'climate_bin']
 
@@ -823,10 +861,11 @@ def execute(args):
                     crop_name, yield_percentile_id))
             dependent_task_list.append(create_percentile_production_task)
 
-        LOGGER.info("Calculate observed yield for %s", crop_name)
-        global_observed_yield_raster_path = os.path.join(
-            args['model_data_path'],
-            _GLOBAL_OBSERVED_YIELD_FILE_PATTERN % crop_name)
+        LOGGER.info(f'Calculate observed yield for {crop_name}')
+        global_observed_yield_raster_path = _get_full_path_from_table(
+            CROP_TO_PATH_TABLES.observed_yield,
+            args[CROP_TO_PATH_TABLES.observed_yield],
+            crop_name)
         global_observed_yield_raster_info = (
             pygeoprocessing.get_raster_info(
                 global_observed_yield_raster_path))
@@ -888,12 +927,14 @@ def execute(args):
             task_name='calculate_observed_production_%s' % crop_name)
         dependent_task_list.append(calculate_observed_production_task)
 
-    # both 'crop_nutrient.csv' and 'crop' are known data/header values for
-    # this model data.
+    nutrient_gdal_path = utils._GDALPath.from_uri(args['crop_nutrient_table'])
+    if nutrient_gdal_path.is_local:
+        nutrient_table_path = os.path.join(args['crop_nutrient_table'])
+    else:
+        nutrient_table_path = nutrient_gdal_path.to_normalized_path()
+
     nutrient_df = MODEL_SPEC.get_input(
-        'model_data_path').get_contents(
-        'crop_nutrient.csv').get_validated_dataframe(
-            os.path.join(args['model_data_path'], 'crop_nutrient.csv'))
+        'crop_nutrient_table').get_validated_dataframe(nutrient_table_path)
 
     crop_names = crop_to_landcover_df.index.to_list()
     _ = task_graph.add_task(
@@ -1054,7 +1095,7 @@ def tabulate_results(
 
     with open(target_table_path, 'w') as result_table:
         result_table.write(
-            'crop,area (ha),' + 'production_observed,' +
+            'crop_name,area (ha),' + 'production_observed,' +
             ','.join(production_percentile_headers) + ',' + ','.join(
                 nutrient_headers) + '\n')
         for crop_name in sorted(crop_names):
@@ -1173,9 +1214,8 @@ def aggregate_to_polygons(
 
     # loop over every crop and query with pgp function
     total_yield_lookup = {}
-    total_nutrient_table = collections.defaultdict(
-        lambda: collections.defaultdict(lambda: collections.defaultdict(
-            float)))
+    total_nutrient_table = defaultdict(
+        lambda: defaultdict(lambda: defaultdict(float)))
     for crop_name in crop_names:
         # convert 100g to Mg and fraction left over from refuse
         nutrient_factor = 1e4 * (
@@ -1247,6 +1287,43 @@ def aggregate_to_polygons(
                         ',%s' % total_nutrient_table[
                             nutrient_id][model_type][id_index])
             aggregate_table.write('\n')
+
+
+def _get_full_path_from_table(
+        table_id: str, table_path: str, crop_name: str) -> str | None:
+    """Given a crop-to-path table, look up a path and expand it if appropriate.
+
+    Args:
+        table_id (str): the id of the table as defined in the model spec.
+            One of ``CROP_TO_PATH_TABLES``.
+        table_path (str): the path to the table as defined in the model args.
+        crop_name (str): the name of the crop to look up in the table.
+            One of ``CROP_OPTIONS``.
+
+    Returns:
+        One of the following:
+            The full path (str), as an absolute path if it's local, or
+                normalized if it's remote.
+            ``None`` if ``crop_name`` is not in the table, or if the path
+                found in the table is empty or not a string.
+
+    Raises:
+        ``KeyError`` if ``table_id`` is not one of ``CROP_TO_PATH_TABLES``.
+    """
+    if table_id not in CROP_TO_PATH_TABLES:
+        raise KeyError(f'table_id {table_id} is not valid')
+    df = MODEL_SPEC.get_input(table_id).get_validated_dataframe(table_path)
+    try:
+        path_str = df.at[crop_name, 'path']
+    except KeyError:
+        return None
+    if (path_str is NA) or (not path_str) or (type(path_str) is not str):
+        return None
+    gdal_path = utils._GDALPath.from_uri(path_str)
+    if gdal_path.is_local:
+        return utils.expand_path(path_str, table_path)
+    else:
+        return gdal_path.to_normalized_path()
 
 
 # This decorator ensures the input arguments are formatted for InVEST
