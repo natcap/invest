@@ -811,7 +811,8 @@ def format_args_dict(args_dict, model_id):
 
     args_string = '\n'.join([format_str % (arg) for arg in sorted_args])
     args_string = (
-        f"Arguments for InVEST {model_id} {__version__}:\n{args_string}\n")
+        f"Arguments for InVEST {model_id} {natcap.invest.__version__}:"
+        f"\n{args_string}\n")
     return args_string
 
 

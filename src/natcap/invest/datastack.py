@@ -38,17 +38,6 @@ from . import spec
 from . import utils
 from . import models
 
-try:
-    from . import __version__
-except ImportError:
-    # The only known case where this will be triggered is when building the API
-    # documentation because natcap.invest is not installed into the
-    # environment.
-    __version__ = 'UNKNOWN'
-    warnings.warn(
-        '__version__ attribute of natcap.invest could not be imported.',
-        RuntimeWarning)
-
 
 LOGGER = logging.getLogger(__name__)
 DATASTACK_EXTENSION = '.invest.tar.gz'
