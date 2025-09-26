@@ -1180,6 +1180,16 @@ class IntegerInput(Input):
         return int(float(value))
 
 
+class NWorkersInput(NumberInput):
+
+    def preprocess(self, value):
+        # unlike other numeric inputs, we allow n_workers to be None or an
+        # empty string, and default to single process mode in that case
+        if value is None or value == '':
+            return -1
+        return super().preprocess(value)
+
+
 class RatioInput(NumberInput):
     """A ratio input, or parameter, of an invest model.
 
@@ -1343,6 +1353,16 @@ class StringInput(Input):
             string
         """
         return str(value)
+
+
+class ResultsSuffixInput(StringInput):
+
+    def preprocess(self, value):
+        value = super().preprocess(value)
+        # suffix should always start with an underscore
+        if (value and not value.startswith('_')):
+            value = '_' + value
+        return value
 
 
 class Option(BaseModel):
@@ -1766,16 +1786,6 @@ class ModelSpec(BaseModel):
                 values[_input.id] = _input.preprocess(input_values[_input.id])
             else:
                 values[_input.id] = None
-
-        # default to single process mode
-        if values['n_workers'] is None:
-            values['n_workers'] = -1
-
-        # suffix should always start with an underscore
-        if (values['results_suffix'] and not
-                values['results_suffix'].startswith('_')):
-            values['results_suffix'] = '_' + values['results_suffix']
-
         return values
 
     def generate_metadata_for_outputs(self, args_dict):
@@ -1944,7 +1954,7 @@ WORKSPACE = DirectoryInput(
     permissions="rwx",
     must_exist=False,
 )
-SUFFIX = StringInput(
+SUFFIX = ResultsSuffixInput(
     id="results_suffix",
     name=gettext("file suffix"),
     about=gettext(
@@ -1954,7 +1964,7 @@ SUFFIX = StringInput(
     required=False,
     regexp="[a-zA-Z0-9_-]*"
 )
-N_WORKERS = NumberInput(
+N_WORKERS = NWorkersInput(
     id="n_workers",
     name=gettext("taskgraph n_workers parameter"),
     about=gettext(
