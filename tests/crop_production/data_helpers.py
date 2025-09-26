@@ -5,8 +5,8 @@ import pandas
 def sample_nutrient_df():
     """Generate a sample nutrient DataFrame for crops.
 
-    This function creates a small DataFrame containing example nutrient 
-    and production data for crops such as corn and soybean. It can be 
+    This function creates a small DataFrame containing example nutrient
+    and production data for crops such as corn and soybean. It can be
     used for testing nutrient calculations and validating model outputs.
 
     Returns:
@@ -15,7 +15,7 @@ def sample_nutrient_df():
     """
 
     return pandas.DataFrame([
-        {'crop': 'corn', 'area (ha)': 21.0, 'production_observed': 0.2,
+        {'crop_name': 'corn', 'area (ha)': 21.0, 'production_observed': 0.2,
          'percentrefuse': 7, 'protein': 42., 'lipid': 8, 'energy': 476.,
          'ca': 27.0, 'fe': 15.7, 'mg': 280.0, 'ph': 704.0, 'k': 1727.0,
          'na': 2.0, 'zn': 4.9, 'cu': 1.9, 'fl': 8, 'mn': 2.9, 'se': 0.1,
@@ -25,7 +25,7 @@ def sample_nutrient_df():
          'riboflavin': 1.8, 'niacin': 8.2, 'pantothenic': 0.9,
          'vitb6': 1.4, 'folate': 385.0, 'vitb12': 2.0, 'vitk': 41.0},
 
-        {'crop': 'soybean', 'area (ha)': 5., 'production_observed': 4.,
+        {'crop_name': 'soybean', 'area (ha)': 5., 'production_observed': 4.,
          'percentrefuse': 9, 'protein': 33., 'lipid': 2., 'energy': 99.,
          'ca': 257., 'fe': 15.7, 'mg': 280., 'ph': 704.0, 'k': 197.0,
          'na': 2., 'zn': 4.9, 'cu': 1.6, 'fl': 3., 'mn': 5.2, 'se': 0.3,
@@ -34,7 +34,7 @@ def sample_nutrient_df():
          'gammat': 2.3, 'deltat': 1.2, 'vitc': 3.0, 'thiamin': 0.42,
          'riboflavin': 0.82, 'niacin': 12.2, 'pantothenic': 0.92,
          'vitb6': 5.4, 'folate': 305., 'vitb12': 3., 'vitk': 42.},
-         ]).set_index('crop')
+         ]).set_index('crop_name')
 
 
 def tabulate_regr_results_table():
@@ -50,7 +50,7 @@ def tabulate_regr_results_table():
     """
 
     return pandas.DataFrame([
-        {'crop': 'corn', 'area (ha)': 20.0,
+        {'crop_name': 'corn', 'area (ha)': 20.0,
          'production_observed': 80.0, 'production_modeled': 40.0,
          'protein_modeled': 15624000.0, 'protein_observed': 31248000.0,
          'lipid_modeled': 2976000.0, 'lipid_observed': 5952000.0,
@@ -85,7 +85,7 @@ def tabulate_regr_results_table():
          'folate_modeled': 143220000.0, 'folate_observed': 286440000.0,
          'vitb12_modeled': 744000.0, 'vitb12_observed': 1488000.0,
          'vitk_modeled': 15252000.0, 'vitk_observed': 30504000.0},
-        {'crop': 'soybean', 'area (ha)': 40.0,
+        {'crop_name': 'soybean', 'area (ha)': 40.0,
          'production_observed': 120.0, 'production_modeled': 70.0,
          'protein_modeled': 21021000.0, 'protein_observed': 36036000.0,
          'lipid_modeled': 1274000.0, 'lipid_observed': 2184000.0,
@@ -135,7 +135,7 @@ def tabulate_pctl_results_table():
     """
 
     return pandas.DataFrame({
-        "crop": ["corn", "soybean"], "area (ha)": [2, 4],
+        "crop_name": ["corn", "soybean"], "area (ha)": [2, 4],
         "production_observed": [4, 7], "production_25": [1.25, 2.25],
         "production_50": [2.5, 4.5], "production_75": [3.75, 6.75],
         "protein_25": [488250, 675675], "protein_50": [976500, 1351350],
