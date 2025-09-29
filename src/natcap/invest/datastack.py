@@ -374,7 +374,7 @@ def build_datastack_archive(args, model_id, datastack_path):
     logging.getLogger().removeHandler(archive_filehandler)
 
     # archive the workspace.
-    with utils.sandbox_tempdir() as temp_dir:
+    with tempfile.TemporaryDirectory() as temp_dir:
         temp_archive = os.path.join(temp_dir, 'invest_archive')
         archive_name = shutil.make_archive(
             temp_archive, 'gztar', root_dir=temp_workspace,
