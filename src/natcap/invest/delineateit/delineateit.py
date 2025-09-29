@@ -184,7 +184,7 @@ _WS_ID_OVERWRITE_WARNING = (
     'named "ws_id". Field values will be overwritten.')
 
 
-@utils.execute_function(MODEL_SPEC)
+@MODEL_SPEC.execute_function
 def execute(preprocessed_args, file_registry):
     """DelineateIt: Watershed Delineation.
 

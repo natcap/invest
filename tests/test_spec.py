@@ -368,21 +368,17 @@ class TestMetadataFromSpec(unittest.TestCase):
         # running an invest model.
         _generate_files_from_spec(output_spec, self.workspace_dir)
 
-        model_module = types.SimpleNamespace(
-            __name__='urban_nature_access',
-            execute=lambda: None,
-            MODEL_SPEC=spec.ModelSpec(
-                model_id='urban_nature_access',
-                model_title='Urban Nature Access',
-                userguide='',
-                aliases=[],
-                input_field_order=[],
-                inputs=[],
-                outputs=output_spec
-            )
+        model_spec=spec.ModelSpec(
+            model_id='urban_nature_access',
+            model_title='Urban Nature Access',
+            userguide='',
+            aliases=[],
+            input_field_order=[],
+            inputs=[],
+            outputs=output_spec
         )
         args_dict = {'workspace_dir': self.workspace_dir}
-        spec.generate_metadata_for_outputs(model_module, args_dict)
+        model_spec.generate_metadata_for_outputs(args_dict)
 
         files, messages = geometamaker.validate_dir(self.workspace_dir)
         self.assertEqual(len(files), 4)
@@ -392,4 +388,26 @@ class TestMetadataFromSpec(unittest.TestCase):
             os.path.join(args_dict['workspace_dir'], 'output',
                          'urban_nature_supply_percapita.tif'))
         self.assertCountEqual(resource.get_keywords(),
-                              [model_module.MODEL_SPEC.model_id, 'InVEST'])
+                              [model_spec.model_id, 'InVEST'])
+
+
+
+class ResultsSuffixTests(unittest.TestCase):
+    """Tests for natcap.invest.spec.ResultsSuffixInput."""
+
+    def test_suffix_string(self):
+        """Utils: test suffix_string."""
+        self.assertEqual(spec.SUFFIX.preprocess('suff'), '_suff')
+
+    def test_suffix_string_underscore(self):
+        """Utils: test suffix_string underscore."""
+        self.assertEqual(spec.SUFFIX.preprocess('_suff'), '_suff')
+
+    def test_suffix_string_empty(self):
+        """Utils: test empty suffix_string."""
+        self.assertEqual(spec.SUFFIX.preprocess(''), '')
+
+    def test_suffix_string_no_entry(self):
+        """Utils: test no suffix entry in args."""
+        self.assertEqual(spec.SUFFIX.preprocess(None), '')
+

@@ -546,7 +546,7 @@ MODEL_SPEC = spec.ModelSpec(
 )
 
 
-@utils.execute_function(MODEL_SPEC)
+@MODEL_SPEC.execute_function
 def execute(preprocessed_args, file_registry):
     """Habitat Risk Assessment.
 

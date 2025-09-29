@@ -52,6 +52,85 @@ GDAL_ERROR_LEVELS = {
 DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
 
 
+def _log_gdal_errors(*args, **kwargs):
+    """Log error messages to osgeo.
+
+    All error messages are logged with reasonable ``logging`` levels based
+    on the GDAL error level. While we are now using ``gdal.UseExceptions()``,
+    we still need this to handle GDAL logging that does not get raised as
+    an exception.
+
+    Note:
+        This function is designed to accept any number of positional and
+        keyword arguments because of some odd forums questions where this
+        function was being called with an unexpected number of arguments.
+        With this catch-all function signature, we can at least guarantee
+        that in the off chance this function is called with the wrong
+        parameters, we can at least log what happened.  See the issue at
+        https://github.com/natcap/invest/issues/630 for details.
+
+    Args:
+        err_level (int): The GDAL error level (e.g. ``gdal.CE_Failure``)
+        err_no (int): The GDAL error number.  For a full listing of error
+            codes, see: http://www.gdal.org/cpl__error_8h.html
+        err_msg (string): The error string.
+
+    Returns:
+        ``None``
+    """
+    if len(args) + len(kwargs) != 3:
+        LOGGER.error(
+            '_log_gdal_errors was called with an incorrect number of '
+            f'arguments.  args: {args}, kwargs: {kwargs}')
+
+    try:
+        gdal_args = {}
+        for index, key in enumerate(('err_level', 'err_no', 'err_msg')):
+            try:
+                parameter = args[index]
+            except IndexError:
+                parameter = kwargs[key]
+            gdal_args[key] = parameter
+    except KeyError as missing_key:
+        LOGGER.exception(
+            f'_log_gdal_errors called without the argument {missing_key}. '
+            f'Called with args: {args}, kwargs: {kwargs}')
+
+        # Returning from the function because we don't have enough
+        # information to call the ``osgeo_logger`` in the way we intended.
+        return
+
+    err_level = gdal_args['err_level']
+    err_no = gdal_args['err_no']
+    err_msg = gdal_args['err_msg'].replace('\n', '')
+    _OSGEO_LOGGER.log(
+        level=GDAL_ERROR_LEVELS[err_level],
+        msg=f'[errno {err_no}] {err_msg}')
+
+
+@contextlib.contextmanager
+def capture_gdal_logging():
+    """Context manager for logging GDAL errors with python logging.
+
+    While we are now using ``gdal.UseExceptions()``, we still need this to
+    handle GDAL logging that does not get raised as an exception.
+    GDAL error messages are logged via python's logging system, at a severity
+    that corresponds to a log level in ``logging``.  Error messages are logged
+    with the ``osgeo.gdal`` logger.
+
+    Args:
+        ``None``
+
+    Returns:
+        ``None``
+    """
+    gdal.PushErrorHandler(_log_gdal_errors)
+    try:
+        yield
+    finally:
+        gdal.PopErrorHandler()
+
+
 def _format_time(seconds):
     """Render the integer number of seconds as a string. Returns a string."""
     hours, remainder = divmod(seconds, 3600)
@@ -79,8 +158,9 @@ def prepare_workspace(
         workspace,
         f'InVEST-{model_id}-log-{datetime.now().strftime("%Y-%m-%d--%H_%M_%S")}.txt')
 
-    with log_to_file(logfile, exclude_threads=exclude_threads,
-                     logging_level=logging_level):
+    with capture_gdal_logging(), log_to_file(logfile,
+                                             exclude_threads=exclude_threads,
+                                             logging_level=logging_level):
         logging.captureWarnings(True)
         # If invest is launched as a subprocess (e.g. the Workbench)
         # the parent process can rely on this announcement to know the

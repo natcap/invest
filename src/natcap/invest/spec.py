@@ -442,9 +442,11 @@ class RasterInput(FileInput):
             value (string): path to normalize
 
         Returns:
-            normalized path string
+            normalized path string or None
         """
-        return utils._GDALPath.from_uri(value).to_normalized_path()
+        if value:
+            return utils._GDALPath.from_uri(value).to_normalized_path()
+        return None  # if None or empty string, return None
 
 
 class SingleBandRasterInput(FileInput):
@@ -519,9 +521,11 @@ class SingleBandRasterInput(FileInput):
             value (string): path to normalize
 
         Returns:
-            normalized path string
+            normalized path string or None
         """
-        return utils._GDALPath.from_uri(value).to_normalized_path()
+        if value:
+            return utils._GDALPath.from_uri(value).to_normalized_path()
+        return None  # if None or empty string, return None
 
 
 class VectorInput(FileInput):
@@ -665,9 +669,11 @@ class VectorInput(FileInput):
             value (string): path to normalize
 
         Returns:
-            normalized path string
+            normalized path string or None
         """
-        return utils._GDALPath.from_uri(value).to_normalized_path()
+        if value:
+            return utils._GDALPath.from_uri(value).to_normalized_path()
+        return None  # if None or empty string, return None
 
 
 class RasterOrVectorInput(FileInput):
@@ -1127,9 +1133,9 @@ class NumberInput(Input):
             value: value to preprocess
 
         Returns:
-            float
+            float or None
         """
-        return float(value)
+        return None if value is None else float(value)
 
 
 class IntegerInput(Input):
@@ -1174,18 +1180,20 @@ class IntegerInput(Input):
             value: value to preprocess
 
         Returns:
-            int
+            int or None
         """
         # cast to float first to handle strings and floats
-        return int(float(value))
+        return None if value is None else int(float(value))
 
 
 class NWorkersInput(NumberInput):
 
     def preprocess(self, value):
+        print('preprocess nworkers', value)
         # unlike other numeric inputs, we allow n_workers to be None or an
         # empty string, and default to single process mode in that case
         if value is None or value == '':
+            print('return -1')
             return -1
         return super().preprocess(value)
 
@@ -1286,9 +1294,9 @@ class BooleanInput(Input):
             value: value to preprocess
 
         Returns:
-            bool
+            bool or None
         """
-        return bool(value)
+        return None if value is None else bool(value)
 
 
 class StringInput(Input):
@@ -1350,15 +1358,17 @@ class StringInput(Input):
             value: value to preprocess
 
         Returns:
-            string
+            string or None
         """
-        return str(value)
+        return None if value is None else str(value)
 
 
 class ResultsSuffixInput(StringInput):
 
     def preprocess(self, value):
         value = super().preprocess(value)
+        if value is None:
+            return ''
         # suffix should always start with an underscore
         if (value and not value.startswith('_')):
             value = '_' + value
@@ -1476,7 +1486,7 @@ class OptionStringInput(Input):
         Returns:
             string
         """
-        return str(value).lower()
+        return None if value is None else str(value).lower()
 
 
 class FileOutput(Output):
@@ -1782,10 +1792,9 @@ class ModelSpec(BaseModel):
         """
         values = {}
         for _input in self.inputs:
-            if _input.id in input_values:
-                values[_input.id] = _input.preprocess(input_values[_input.id])
-            else:
-                values[_input.id] = None
+            print(_input.id)
+            values[_input.id] = _input.preprocess(
+                input_values.get(_input.id, None))
         return values
 
     def generate_metadata_for_outputs(self, args_dict):
@@ -1799,7 +1808,7 @@ class ModelSpec(BaseModel):
             None
         """
         from natcap.invest import models
-        file_suffix = utils.make_suffix_string(args_dict, 'results_suffix')
+        file_suffix = SUFFIX.preprocess(args_dict.get('results_suffix', None))
         formatted_args = pprint.pformat(args_dict)
         lineage_statement = (
             f'Created by {self.model_id} execute('
