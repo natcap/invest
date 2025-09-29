@@ -176,7 +176,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=None,
             projected=None,
-            required="scenario=='tcc_ndvi'", #  TODO: check this is correct
+            required="scenario=='tcc_ndvi'",
             allowed="scenario=='tcc_ndvi'"
         ),
         spec.SingleBandRasterInput(
@@ -203,7 +203,7 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=None,
             projected=True,
-            required="scenario=='ndvi'", # TODO add allowed key for this and all keys below
+            required="scenario=='ndvi'",
             allowed="scenario=='ndvi'"
         ),
         spec.SingleBandRasterInput(
@@ -465,7 +465,6 @@ def execute(args):
         pixel_size = base_ndvi_raster_info['pixel_size']
         target_projection = base_ndvi_raster_info['projection_wkt']
         ndvi_bbox = base_ndvi_raster_info['bounding_box']
-        #TODO: at end, clip preventable cases/costs 
         # alternative option is to have mode='intersection' and use AOI vector to clip rasters during align/resize task
         # however, this would mean that edge pixels would be less accurate/lack spatial context
 
@@ -652,7 +651,7 @@ def check_raster_bounds_against_aoi(aoi_bbox, raster_bbox):
             print(errors_dict)
             #TODO or do we just want to issue a warning?
             errors = [k for k, v in errors_dict.items() if v]
-            raise ValueError("The extent of bounding box of the AOI buffered by "
+            raise UserWarning("The extent of bounding box of the AOI buffered by "
                              "the search radius exceeds that of the raster input. "
                              f"The issue is with the following dimensions: {errors}. "
                              f"For reference, the buffered AOI bounding box is: {aoi_bbox}, "
@@ -880,8 +879,10 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
     Args:
         delta_ndvi (str): path to raster representing change in NDVI from
             baseline to alternate/counterfactural scenario
-        baseline_cases (str): path to raster of number of baseline cases 
-        effect_size (str): risk_ratio #TODO: expand this desc
+        baseline_cases (str): path to raster of number of baseline cases
+        effect_size (float): health indicator-specific effect size, given
+            as a risk ratio, representing the relationship between nature
+            exposure and mental health outcomes.
         target_preventable_cases (str): path to output preventable cases raster
         aoi (str): path to area of interest
         work_dir (str): path to create a temp folder for saving files.
