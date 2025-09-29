@@ -9,7 +9,7 @@ from osgeo import gdal, ogr, osr
 import pandas
 import pygeoprocessing
 from shapely.geometry import Polygon
-from natcap.invest.crop_production_percentile import CROP_TO_PATH_TABLES
+from natcap.invest.crop_production_regression import CROP_TO_PATH_TABLES
 
 gdal.UseExceptions()
 MODEL_DATA_PATH = os.path.join(

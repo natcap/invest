@@ -1,5 +1,5 @@
 """InVEST Crop Production Regression Model."""
-import collections
+from collections import defaultdict, namedtuple
 import logging
 import os
 
@@ -8,6 +8,7 @@ import pygeoprocessing
 import taskgraph
 from osgeo import gdal
 from osgeo import osr
+from pandas import NA
 
 from . import gettext
 from . import spec
@@ -66,6 +67,16 @@ NUTRIENTS = [
     ("vitb12", "vitamin B12", u.microgram/u.hectogram),
     ("vitk", "vitamin K", u.microgram/u.hectogram)
 ]
+
+CropToPathTables = namedtuple(
+    'CropToPathTables', ['climate_bin', 'observed_yield',
+                         'percentile_yield', 'regression_yield'])
+CROP_TO_PATH_TABLES = CropToPathTables(
+    climate_bin='climate_bin_raster_table',
+    observed_yield='observed_yield_raster_table',
+    percentile_yield='percentile_yield_csv_table',
+    regression_yield='regression_yield_csv_table',
+)
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="crop_production_regression",
@@ -1037,9 +1048,8 @@ def aggregate_regression_results_to_polygons(
 
     # loop over every crop and query with pgp function
     total_yield_lookup = {}
-    total_nutrient_table = collections.defaultdict(
-        lambda: collections.defaultdict(lambda: collections.defaultdict(
-            float)))
+    total_nutrient_table = defaultdict(
+        lambda: defaultdict(lambda: defaultdict(float)))
     for crop_name in crop_names:
         # convert 100g to Mg and fraction left over from refuse
         nutrient_factor = 1e4 * (
@@ -1105,6 +1115,44 @@ def aggregate_regression_results_to_polygons(
                         ',%s' % total_nutrient_table[
                             nutrient_id][model_type][id_index])
             aggregate_table.write('\n')
+
+
+def get_full_path_from_crop_table(
+        model_spec: spec.ModelSpec, table_id: str, table_path: str,
+        crop_name: str) -> str | None:
+    """Given a crop-to-path table, look up a path and expand it if appropriate.
+
+    Args:
+        table_id (str): the id of the table as defined in the model spec.
+            One of ``CROP_TO_PATH_TABLES``.
+        table_path (str): the path to the table as defined in the model args.
+        crop_name (str): the name of the crop to look up in the table.
+            One of ``CROP_OPTIONS``.
+
+    Returns:
+        One of the following:
+            The full path (str), as an absolute path if it's local, or
+                normalized if it's remote.
+            ``None`` if ``crop_name`` is not in the table, or if the path
+                found in the table is empty or not a string.
+
+    Raises:
+        ``KeyError`` if ``table_id`` is not one of ``CROP_TO_PATH_TABLES``.
+    """
+    if table_id not in CROP_TO_PATH_TABLES:
+        raise KeyError(f'table_id {table_id} is not valid')
+    df = model_spec.get_input(table_id).get_validated_dataframe(table_path)
+    try:
+        path_str = df.at[crop_name, 'path']
+    except KeyError:
+        return None
+    if (path_str is NA) or (not path_str) or (type(path_str) is not str):
+        return None
+    gdal_path = utils._GDALPath.from_uri(path_str)
+    if gdal_path.is_local:
+        return utils.expand_path(path_str, table_path)
+    else:
+        return gdal_path.to_normalized_path()
 
 
 @validation.invest_validator

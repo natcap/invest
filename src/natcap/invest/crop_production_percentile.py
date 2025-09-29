@@ -1,11 +1,10 @@
 """InVEST Crop Production Percentile Model."""
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 import logging
 import os
 import re
 
 import numpy
-from pandas import NA
 import pygeoprocessing
 import taskgraph
 from osgeo import gdal
@@ -15,7 +14,7 @@ from . import gettext
 from . import spec
 from . import utils
 from . import validation
-from .crop_production_regression import NUTRIENTS
+from .crop_production_regression import NUTRIENTS, CROP_TO_PATH_TABLES, get_full_path_from_crop_table
 from .file_registry import FileRegistry
 from .unit_registry import u
 
@@ -241,13 +240,6 @@ nutrient_units = {
     "vitk":        u.microgram/u.hectogram,  # vitamin K
 }
 
-CropToPathTables = namedtuple(
-    'CropToPathTables', ['climate_bin', 'observed_yield', 'percentile_yield'])
-CROP_TO_PATH_TABLES = CropToPathTables(
-    climate_bin='climate_bin_raster_table',
-    observed_yield='observed_yield_raster_table',
-    percentile_yield='percentile_yield_csv_table',
-)
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="crop_production_percentile",
@@ -704,7 +696,8 @@ def execute(args):
     bad_crop_name_list = []
 
     for crop_name in crop_to_landcover_df.index:
-        crop_climate_bin_raster_path = _get_full_path_from_table(
+        crop_climate_bin_raster_path = get_full_path_from_crop_table(
+            MODEL_SPEC,
             CROP_TO_PATH_TABLES.climate_bin,
             args[CROP_TO_PATH_TABLES.climate_bin],
             crop_name)
@@ -757,7 +750,8 @@ def execute(args):
     for crop_name, row in crop_to_landcover_df.iterrows():
         crop_lucode = row[_EXPECTED_LUCODE_TABLE_HEADER]
         LOGGER.info(f'Processing crop {crop_name}')
-        crop_climate_bin_raster_path = _get_full_path_from_table(
+        crop_climate_bin_raster_path = get_full_path_from_crop_table(
+            MODEL_SPEC,
             CROP_TO_PATH_TABLES.climate_bin,
             args[CROP_TO_PATH_TABLES.climate_bin],
             crop_name)
@@ -778,7 +772,8 @@ def execute(args):
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
-        climate_percentile_yield_table_path = _get_full_path_from_table(
+        climate_percentile_yield_table_path = get_full_path_from_crop_table(
+            MODEL_SPEC,
             CROP_TO_PATH_TABLES.percentile_yield,
             args[CROP_TO_PATH_TABLES.percentile_yield],
             crop_name)
@@ -862,7 +857,8 @@ def execute(args):
             dependent_task_list.append(create_percentile_production_task)
 
         LOGGER.info(f'Calculate observed yield for {crop_name}')
-        global_observed_yield_raster_path = _get_full_path_from_table(
+        global_observed_yield_raster_path = get_full_path_from_crop_table(
+            MODEL_SPEC,
             CROP_TO_PATH_TABLES.observed_yield,
             args[CROP_TO_PATH_TABLES.observed_yield],
             crop_name)
@@ -1287,43 +1283,6 @@ def aggregate_to_polygons(
                         ',%s' % total_nutrient_table[
                             nutrient_id][model_type][id_index])
             aggregate_table.write('\n')
-
-
-def _get_full_path_from_table(
-        table_id: str, table_path: str, crop_name: str) -> str | None:
-    """Given a crop-to-path table, look up a path and expand it if appropriate.
-
-    Args:
-        table_id (str): the id of the table as defined in the model spec.
-            One of ``CROP_TO_PATH_TABLES``.
-        table_path (str): the path to the table as defined in the model args.
-        crop_name (str): the name of the crop to look up in the table.
-            One of ``CROP_OPTIONS``.
-
-    Returns:
-        One of the following:
-            The full path (str), as an absolute path if it's local, or
-                normalized if it's remote.
-            ``None`` if ``crop_name`` is not in the table, or if the path
-                found in the table is empty or not a string.
-
-    Raises:
-        ``KeyError`` if ``table_id`` is not one of ``CROP_TO_PATH_TABLES``.
-    """
-    if table_id not in CROP_TO_PATH_TABLES:
-        raise KeyError(f'table_id {table_id} is not valid')
-    df = MODEL_SPEC.get_input(table_id).get_validated_dataframe(table_path)
-    try:
-        path_str = df.at[crop_name, 'path']
-    except KeyError:
-        return None
-    if (path_str is NA) or (not path_str) or (type(path_str) is not str):
-        return None
-    gdal_path = utils._GDALPath.from_uri(path_str)
-    if gdal_path.is_local:
-        return utils.expand_path(path_str, table_path)
-    else:
-        return gdal_path.to_normalized_path()
 
 
 # This decorator ensures the input arguments are formatted for InVEST
