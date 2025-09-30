@@ -466,16 +466,8 @@ MODEL_SPEC = spec.ModelSpec(
 
 _INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
 
-_REGRESSION_TABLE_PATTERN = os.path.join(
-    'climate_regression_yield_tables', '%s_regression_yield_table.csv')
-
 _EXPECTED_REGRESSION_TABLE_HEADERS = [
     'yield_ceiling', 'b_nut', 'b_k2o', 'c_n', 'c_p2o5', 'c_k2o']
-
-_GLOBAL_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
-    'observed_yield', '%s_yield_map.tif')  # crop_name
-_EXTENDED_CLIMATE_BIN_FILE_PATTERN = os.path.join(
-    'extended_climate_bin_maps', 'extendedclimatebins%s.tif')  # crop_name
 
 _EXPECTED_NUTRIENT_TABLE_HEADERS = [
     'protein', 'lipid', 'energy', 'ca', 'fe', 'mg', 'ph', 'k', 'na', 'zn',
