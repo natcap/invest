@@ -14,7 +14,7 @@ from . import gettext
 from . import spec
 from . import utils
 from . import validation
-from .crop_production_regression import NUTRIENTS, CROP_TO_PATH_TABLES, get_full_path_from_crop_table
+from .crop_production_regression import NUTRIENTS, NUTRIENT_UNITS, CROP_TO_PATH_TABLES, get_full_path_from_crop_table
 from .file_registry import FileRegistry
 from .unit_registry import u
 
@@ -204,43 +204,6 @@ CROP_OPTIONS = [
     spec.Option(key="yautia", about=gettext("Yautia"))
 ]
 
-nutrient_units = {
-    "protein":     u.gram/u.hectogram,
-    "lipid":       u.gram/u.hectogram,       # total lipid
-    "energy":      u.kilojoule/u.hectogram,
-    "ca":          u.milligram/u.hectogram,  # calcium
-    "fe":          u.milligram/u.hectogram,  # iron
-    "mg":          u.milligram/u.hectogram,  # magnesium
-    "ph":          u.milligram/u.hectogram,  # phosphorus
-    "k":           u.milligram/u.hectogram,  # potassium
-    "na":          u.milligram/u.hectogram,  # sodium
-    "zn":          u.milligram/u.hectogram,  # zinc
-    "cu":          u.milligram/u.hectogram,  # copper
-    "fl":          u.microgram/u.hectogram,  # fluoride
-    "mn":          u.milligram/u.hectogram,  # manganese
-    "se":          u.microgram/u.hectogram,  # selenium
-    "vita":        u.IU/u.hectogram,         # vitamin A
-    "betac":       u.microgram/u.hectogram,  # beta carotene
-    "alphac":      u.microgram/u.hectogram,  # alpha carotene
-    "vite":        u.milligram/u.hectogram,  # vitamin e
-    "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
-    "lycopene":    u.microgram/u.hectogram,  # lycopene
-    "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
-    "betat":       u.milligram/u.hectogram,  # beta tocopherol
-    "gammat":      u.milligram/u.hectogram,  # gamma tocopherol
-    "deltat":      u.milligram/u.hectogram,  # delta tocopherol
-    "vitc":        u.milligram/u.hectogram,  # vitamin C
-    "thiamin":     u.milligram/u.hectogram,
-    "riboflavin":  u.milligram/u.hectogram,
-    "niacin":      u.milligram/u.hectogram,
-    "pantothenic": u.milligram/u.hectogram,  # pantothenic acid
-    "vitb6":       u.milligram/u.hectogram,  # vitamin B6
-    "folate":      u.microgram/u.hectogram,
-    "vitb12":      u.microgram/u.hectogram,  # vitamin B12
-    "vitk":        u.microgram/u.hectogram,  # vitamin K
-}
-
-
 MODEL_SPEC = spec.ModelSpec(
     model_id="crop_production_percentile",
     model_title=gettext("Crop Production: Percentile"),
@@ -400,10 +363,9 @@ MODEL_SPEC = spec.ModelSpec(
                 spec.PercentInput(
                     id="percentrefuse",
                     about=None,
-                    units=None,
                     expression="0 <= value <= 100"),
                 *[spec.NumberInput(id=nutrient, units=units)
-                    for nutrient, units in nutrient_units.items()]
+                    for nutrient, units in NUTRIENT_UNITS.items()]
             ],
             index_col="crop_name"
         ),
@@ -610,7 +572,7 @@ _INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
 
 _YIELD_PERCENTILE_FIELD_PATTERN = 'yield_([^_]+)'
 
-_EXPECTED_NUTRIENT_TABLE_HEADERS = list(nutrient_units.keys())
+_EXPECTED_NUTRIENT_TABLE_HEADERS = list(NUTRIENT_UNITS.keys())
 _EXPECTED_LUCODE_TABLE_HEADER = 'lucode'
 _NODATA_YIELD = -1
 
