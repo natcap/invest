@@ -311,8 +311,8 @@ MODEL_SPEC = spec.ModelSpec(
                 ]
             ),
             spec.CSVOutput(
-                id="prevantable_cases_cost_sum_table",
-                path="output/prevantable_cases_cost_sum.csv",
+                id="preventable_cases_cost_sum_table",
+                path="output/preventable_cases_cost_sum.csv",
                 about=gettext(
                     "Aggregated total preventable cases and total preventable "
                     "costs by sub-region (e.g., census tract or zip code) "
@@ -402,7 +402,8 @@ MODEL_SPEC = spec.ModelSpec(
                 about=gettext("Aligned and resampled population raster"),
                 data_type=float,
                 units=u.people
-            )
+            ),
+            spec.TASKGRAPH_CACHE
         ]
 )
 
@@ -667,6 +668,23 @@ def execute(args):
                 dependent_task_list=[preventable_cases_task],
                 task_name="calculate preventable cost"
             )
+
+        task_graph.join() 
+        # TODO ^ is this best way to require prev cost task done? 
+        # Can't add as dependent task below as not done if not health_cost_rate
+        
+        zonal_stats_task = task_graph.add_task(
+            func=zonal_stats_preventable_cases_cost,
+            args=(
+                args['aoi_vector_path'],
+                file_registry['preventable_cases_cost_sum_table'],
+                file_registry['preventable_cases'],
+                file_registry['preventable_cost']
+            ),
+            target_path_list=[file_registry['preventable_cases_cost_sum_table']],
+            dependent_task_list=[preventable_cases_task],
+            task_name = 'calculate zonal statistics'
+        )
 
 
     elif args['scenario'] == 'tc_ndvi':
@@ -985,8 +1003,41 @@ def calc_preventable_cost(preventable_cases, health_cost_rate,
         target_preventable_cost, gdal.GDT_Float32, nodata_target=FLOAT32_NODATA)
 
 
-def vectorize_preventable_cases_cost():
-    return 
+def zonal_stats_preventable_cases_cost(base_vector_path, target_stats_csv,
+                                       preventable_cases_raster, preventable_costs_raster):
+    """Calculate zonal statistics for each polygon in the AOI
+    and write results to a file.
+
+    Args:
+        base_vector_path (string): Path to the AOI shapefile.
+        target_stats_csv (string): Path to pickle file to store dictionary
+            returned by zonal stats.
+        preventable_cases_raster (string): Path to preventable cases raster which
+            is aggregated by AOI polygon.
+        preventable_costs_raster (string): Path to preventable costs raster
+            which is aggregated by AOI polygon.
+        
+
+    Returns:
+        None
+
+    """
+    cases_stats_dict = pygeoprocessing.zonal_statistics(
+        (preventable_cases_raster, 1), base_vector_path, ignore_nodata=True)
+    
+    output_dict = {k:{"sum_prev_cases": v['sum']} for k,v in cases_stats_dict.items()}
+    
+    if os.path.exists(preventable_costs_raster):
+        cost_stats_dict = pygeoprocessing.zonal_statistics(
+            (preventable_costs_raster, 1), base_vector_path, ignore_nodata=True)
+        
+        cost_stats_dict = {k:{"sum_cost": v['sum']} for k,v in cost_stats_dict.items()}
+
+        # merge the dicts
+        output_dict = {fid: output_dict[fid] | cost_stats_dict.get(fid, None) for fid in output_dict.keys()}
+
+    pandas.DataFrame(output_dict).T.to_csv(target_stats_csv)
+
 
 @validation.invest_validator
 def validate(args, limit_to=None):
