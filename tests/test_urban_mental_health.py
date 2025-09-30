@@ -156,7 +156,7 @@ class UMHTests(unittest.TestCase):
         args = make_synthetic_data_and_params(self.workspace_dir)
         urban_mental_health.execute(args)
 
-        intermediate = os.path.join(self.workspace_dir, "intermediate_outputs")
+        intermediate = os.path.join(self.workspace_dir, "intermediate")
         suffix = args['results_suffix']
         # Assert that top row was removed as its outside of search_radius distance of AOI
         expected_base_aligned = numpy.array( #this is copied from base_ndvi without top row
@@ -203,7 +203,7 @@ class UMHTests(unittest.TestCase):
         urban_mental_health.execute(args)
 
         # expected_kernel = numpy.array([[0, 0.2, 0], [0.2, 0.2, 0.2], [0, 0.2, 0]])
-        # kernel_path = os.path.join(self.workspace_dir, "intermediate_outputs",
+        # kernel_path = os.path.join(self.workspace_dir, "intermediate",
         #                            f"kernel_{args['results_suffix']}.tif")
         # actual_kernel = pygeoprocessing.raster_to_numpy_array(kernel_path)
         # numpy.testing.assert_allclose(actual_kernel, expected_kernel)
@@ -211,7 +211,7 @@ class UMHTests(unittest.TestCase):
                             [200, 300, 800],
                             [900, 140, 140],
                             [FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA]])
-        actual_baseline_cases_path = os.path.join(self.workspace_dir, "intermediate_outputs",
+        actual_baseline_cases_path = os.path.join(self.workspace_dir, "intermediate",
                                                   f"baseline_cases_{args['results_suffix']}.tif")
         actual_baseline_cases = pygeoprocessing.raster_to_numpy_array(actual_baseline_cases_path)
         numpy.testing.assert_allclose(actual_baseline_cases, expected_baseline_cases, atol=1e-6)
@@ -227,68 +227,11 @@ class UMHTests(unittest.TestCase):
             [FLOAT32_NODATA, -15.914164, FLOAT32_NODATA],
             [FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA]])
         actual_preventable_cases_path = os.path.join(self.workspace_dir,
-                                                     f"preventable_cases_{args['results_suffix']}.tif")
+                                                     f"output/preventable_cases_{args['results_suffix']}.tif")
         actual_preventable_cases = pygeoprocessing.raster_to_numpy_array(actual_preventable_cases_path)
 
         numpy.testing.assert_allclose(actual_preventable_cases, expected_preventable_cases, atol=1e-5)
 
-    # def test_resample_population_raster(self):
-    #     """UNA: Test population raster resampling."""
-    #     from natcap.invest import urban_mental_health
-
-    #     random.seed(-1)  # for our random number generation
-
-    #     source_population_raster_path = os.path.join(
-    #         self.workspace_dir, 'population.tif')
-    #     population_pixel_size = (90, -90)
-    #     population_array_shape = (10, 10)
-
-    #     array_of_100s = numpy.full(
-    #         population_array_shape, 100, dtype=numpy.uint32)
-    #     array_of_random_ints = numpy.array(
-    #         random.choices(range(0, 100), k=100),
-    #         dtype=numpy.uint32).reshape(population_array_shape)
-
-    #     for population_array in (
-    #             array_of_100s, array_of_random_ints):
-    #         population_srs = osr.SpatialReference()
-    #         population_srs.ImportFromEPSG(_DEFAULT_EPSG)
-    #         population_wkt = population_srs.ExportToWkt()
-    #         pygeoprocessing.numpy_array_to_raster(
-    #             base_array=population_array,
-    #             target_nodata=-1,
-    #             pixel_size=population_pixel_size,
-    #             origin=_DEFAULT_ORIGIN,
-    #             projection_wkt=population_wkt,
-    #             target_path=source_population_raster_path)
-
-    #         for target_pixel_size in (
-    #                 (30, -30),  # 1/3 the pixel size
-    #                 (4, -4),  # way smaller
-    #                 (100, -100)):  # bigger
-    #             target_population_raster_path = os.path.join(
-    #                 self.workspace_dir, 'resampled_population.tif')
-    #             urban_mental_health._resample_population_raster(
-    #                 source_population_raster_path,
-    #                 target_population_raster_path,
-    #                 target_pixel_size=target_pixel_size,
-    #                 target_bb=pygeoprocessing.get_raster_info(
-    #                     source_population_raster_path)['bounding_box'],
-    #                 target_projection_wkt=population_wkt,
-    #                 working_dir=os.path.join(self.workspace_dir, 'working'))
-
-    #             resampled_population_array = (
-    #                 pygeoprocessing.raster_to_numpy_array(
-    #                     target_population_raster_path))
-
-    #             # There should be no significant loss or gain of population due
-    #             # to warping, but the fact that this is aggregating across the
-    #             # whole raster (lots of pixels) means we need to lower the
-    #             # relative tolerance.
-    #             numpy.testing.assert_allclose(
-    #                 population_array.sum(), resampled_population_array.sum(),
-    #                 rtol=1e-3)
-                
     
     def test_diff_prj_inputs(self):
         """Test model option 3 given inputs of different projections.
