@@ -43,6 +43,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=["aoi_vector_path", "lulc_raster_path"],
     different_projections_ok=False,
     aliases=("fc",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["lulc_raster_path", "biophysical_table_path", "pools_to_calculate"],
@@ -347,8 +348,7 @@ MODEL_SPEC = spec.ModelSpec(
 )
 
 
-@MODEL_SPEC.execute_function
-def execute(preprocessed_args, file_registry):
+def execute(args):
     """Forest Carbon Edge Effect.
 
     InVEST Carbon Edge Model calculates the carbon due to edge effects in
@@ -437,33 +437,36 @@ def execute(preprocessed_args, file_registry):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
+    args = MODEL_SPEC.preprocess_inputs(args)
+    MODEL_SPEC.create_output_directories(args)
+    file_registry = MODEL_SPEC.create_file_registry(args)
+    task_graph = taskgraph.TaskGraph(
+        file_registry['taskgraph_cache'], args['n_workers'])
+
     # just check that the AOI exists since it wouldn't crash until the end of
     # the whole model run if it didn't.
-    if preprocessed_args['aoi_vector_path']:
+    if args['aoi_vector_path']:
         lulc_raster_bb = pygeoprocessing.get_raster_info(
-            preprocessed_args['lulc_raster_path'])['bounding_box']
+            args['lulc_raster_path'])['bounding_box']
         aoi_vector_bb = pygeoprocessing.get_vector_info(
-            preprocessed_args['aoi_vector_path'])['bounding_box']
+            args['aoi_vector_path'])['bounding_box']
         try:
             merged_bb = pygeoprocessing.merge_bounding_box_list(
                 [lulc_raster_bb, aoi_vector_bb], 'intersection')
             LOGGER.debug(f"merged bounding boxes: {merged_bb}")
         except ValueError:
             raise ValueError(
-                f"The landcover raster {preprocessed_args['lulc_raster_path']} and AOI "
-                f"{preprocessed_args['aoi_vector_path']} do not touch each other.")
-
-    task_graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], preprocessed_args['n_workers'])
+                f"The landcover raster {args['lulc_raster_path']} and AOI "
+                f"{args['aoi_vector_path']} do not touch each other.")
 
     # Map non-forest landcover codes to carbon biomasses
     LOGGER.info('Calculating direct mapped carbon stocks')
     carbon_maps = []
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
-        preprocessed_args['biophysical_table_path'])
+        args['biophysical_table_path'])
     pool_list = [('c_above', True)]
-    if preprocessed_args['pools_to_calculate'] == 'all':
+    if args['pools_to_calculate'] == 'all':
         pool_list.extend([
             ('c_below', False), ('c_soil', False), ('c_dead', False)])
     for carbon_pool_type, ignore_tropical_type in pool_list:
@@ -472,23 +475,23 @@ def execute(preprocessed_args, file_registry):
                 file_registry[f'{carbon_pool_type}_carbon_stocks'])
             task_graph.add_task(
                 func=_calculate_lulc_carbon_map,
-                args=(preprocessed_args['lulc_raster_path'],
-                      preprocessed_args['biophysical_table_path'],
+                args=(args['lulc_raster_path'],
+                      args['biophysical_table_path'],
                       carbon_pool_type, ignore_tropical_type,
-                      preprocessed_args['compute_forest_edge_effects'],
+                      args['compute_forest_edge_effects'],
                       file_registry[f'{carbon_pool_type}_carbon_stocks']),
                 target_path_list=[
                     file_registry[f'{carbon_pool_type}_carbon_stocks']],
                 task_name=f'calculate_lulc_{carbon_pool_type}_map')
 
-    if preprocessed_args['compute_forest_edge_effects']:
+    if args['compute_forest_edge_effects']:
         # generate a map of pixel distance to forest edge from the landcover
         # map
         LOGGER.info('Calculating distance from forest edge')
         map_distance_task = task_graph.add_task(
             func=_map_distance_from_tropical_forest_edge,
-            args=(preprocessed_args['lulc_raster_path'],
-                  preprocessed_args['biophysical_table_path'],
+            args=(args['lulc_raster_path'],
+                  args['biophysical_table_path'],
                   file_registry['edge_distance'],
                   file_registry['non_forest_mask']),
             target_path_list=[file_registry['edge_distance'],
@@ -499,8 +502,8 @@ def execute(preprocessed_args, file_registry):
         LOGGER.info('Clipping global forest carbon edge regression models vector')
         clip_forest_edge_carbon_vector_task = task_graph.add_task(
             func=_clip_global_regression_models_vector,
-            args=(preprocessed_args['lulc_raster_path'],
-                  preprocessed_args['tropical_forest_edge_carbon_model_vector_path'],
+            args=(args['lulc_raster_path'],
+                  args['tropical_forest_edge_carbon_model_vector_path'],
                   file_registry['regression_model_params_clipped']),
             target_path_list=[file_registry['regression_model_params_clipped']],
             task_name='clip_forest_edge_carbon_vector')
@@ -509,7 +512,7 @@ def execute(preprocessed_args, file_registry):
         LOGGER.info('Building spatial index for forest edge models.')
         build_spatial_index_task = task_graph.add_task(
             func=_build_spatial_index,
-            args=(preprocessed_args['lulc_raster_path'],
+            args=(args['lulc_raster_path'],
                   file_registry['local_carbon_shape'],
                   file_registry['regression_model_params_clipped'],
                   file_registry['spatial_index_pickle']),
@@ -523,8 +526,8 @@ def execute(preprocessed_args, file_registry):
             func=_calculate_tropical_forest_edge_carbon_map,
             args=(file_registry['edge_distance'],
                   file_registry['spatial_index_pickle'],
-                  preprocessed_args['n_nearest_model_points'],
-                  preprocessed_args['biomass_to_carbon_conversion_factor'],
+                  args['n_nearest_model_points'],
+                  args['biomass_to_carbon_conversion_factor'],
                   file_registry['tropical_forest_edge_carbon_stocks']),
             target_path_list=[
                 file_registry['tropical_forest_edge_carbon_stocks']],
@@ -552,11 +555,11 @@ def execute(preprocessed_args, file_registry):
         task_name='combine_carbon_maps')
 
     # generate report (optional) by aoi if they exist
-    if preprocessed_args['aoi_vector_path']:
+    if args['aoi_vector_path']:
         LOGGER.info('aggregating carbon map by aoi')
         task_graph.add_task(
             func=_aggregate_carbon_map,
-            args=(preprocessed_args['aoi_vector_path'],
+            args=(args['aoi_vector_path'],
                   file_registry['carbon_map'],
                   file_registry['aggregated_carbon_stocks']),
             target_path_list=[
