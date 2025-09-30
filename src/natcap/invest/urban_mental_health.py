@@ -20,6 +20,7 @@ from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
+from .file_registry import FileRegistry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "resolution https://hub.worldpop.org/project/categories?id=3"
             ),
             data_type=int,
-            units=None,
+            units=u.people,
             projected=True,
             projection_units=u.meter
         ),
@@ -136,7 +137,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "urban nature scenarios. Cost can be specified at national, "
                 "regional, or local levels depending on data availability."
             ),
-            units=None,
+            units=u.currency,
             expression="value > 0",
             required=False
         ),
@@ -264,7 +265,6 @@ MODEL_SPEC = spec.ModelSpec(
                     id="ndvi",
                     about=gettext("NDVI value"),
                     units=None,
-                    # type=float
                 )
             ],
             required="scenario=='lulc' and not ndvi_base",
@@ -274,21 +274,24 @@ MODEL_SPEC = spec.ModelSpec(
     outputs=[
             spec.SingleBandRasterOutput(
                 id="preventable_cases",
-                path="preventable_cases.tif",
+                path="output/preventable_cases.tif",
                 about=gettext("Preventable cases at pixel level"),
                 data_type=int,
+                units=u.count,
+
             ),
             spec.SingleBandRasterOutput(
                 id="preventable_cost",
-                path="preventable_cost.tif",
+                path="output/preventable_cost.tif",
                 about=gettext(
                     "Preventable cost at pixel level. The currency unit will "
                     "be the same as that in the health cost rate table."),
                 data_type=int,
+                units=u.currency
             ),
             spec.VectorOutput(
                 id="preventable_cases_cost_sum_vector",
-                path="preventable_cases_cost_sum.shp",
+                path="output/preventable_cases_cost_sum.shp",
                 about=gettext(
                     "Aggregated total preventable cases, and total "
                     "preventable costs by sub-region (e.g., census tract or "
@@ -298,18 +301,18 @@ MODEL_SPEC = spec.ModelSpec(
                     spec.IntegerOutput(
                         id="total_preventable_cases",
                         about=gettext("Aggregated total preventable cases"),
-                        units=None
+                        units=u.count
                     ),
                     spec.IntegerOutput(
                         id="preventable_costs_by_subregion",
                         about=gettext("Total preventable costs by subregion"),
-                        units=None
+                        units=u.currency
                     )
                 ]
             ),
             spec.CSVOutput(
                 id="prevantable_cases_cost_sum_table",
-                path="prevantable_cases_cost_sum.csv",
+                path="output/prevantable_cases_cost_sum.csv",
                 about=gettext(
                     "Aggregated total preventable cases and total preventable "
                     "costs by sub-region (e.g., census tract or zip code) "
@@ -320,43 +323,89 @@ MODEL_SPEC = spec.ModelSpec(
                     spec.IntegerOutput(
                         id="total_preventable_cases",
                         about=gettext("Aggregated total preventable cases"),
+                        units=u.count
                     ),
                     spec.IntegerOutput(
                         id="preventable_costs_by_subregion",
                         about=gettext("Total preventable costs by subregion"),
+                        units=u.currency
                     ),
                     spec.IntegerOutput(
                         id="total_cases",
                         about=gettext(
                             "Total cases for the entire area (e.g., a city)."),
+                        units=u.count
                     )
                 ]
+            ),
+            spec.SingleBandRasterOutput(
+                id="baseline_cases",
+                path="intermediate/baseline_cases.tif",
+                about=gettext("Baseline cases raster"),
+                data_type=float,
+                units=u.count
+            ),
+            spec.SingleBandRasterOutput(
+                id="baseline_prevalence_raster",
+                path="intermediate/baseline_prevalence.tif",
+                about=gettext("Baseline prevalence raster"),
+                data_type=float,
+                units=None
+            ),
+            spec.SingleBandRasterOutput(
+                id="delta_ndvi",
+                path="intermediate/delta_ndvi.tif",
+                about=gettext("Difference between baseline and alternate NDVI raster"),
+                data_type=float,
+                units=None
+            ),
+            spec.SingleBandRasterOutput(
+                id="kernel",
+                path="intermediate/kernel.tif",
+                about=gettext("Normalized dichotomous kernel raster with radius search_distance"),
+                data_type=int,
+                units=None
+            ),
+            spec.SingleBandRasterOutput(
+                id="ndvi_alt_aligned",
+                path="intermediate/ndvi_alt_aligned.tif",
+                about=gettext("Aligned and resampled alternate NDVI raster"),
+                data_type=float,
+                units=None
+            ),
+            spec.SingleBandRasterOutput(
+                id="ndvi_base_aligned",
+                path="intermediate/ndvi_base_aligned.tif",
+                about=gettext("Aligned and resampled baseline NDVI raster"),
+                data_type=float,
+                units=None
+            ),
+            spec.SingleBandRasterOutput(
+                id="ndvi_alt_buffer_mean",
+                path="intermediate/ndvi_alt_buffer_mean.tif",
+                about=gettext("Alternate NDVI raster convolved with a mean circular kernel of "
+                              "radius search_distance"),
+                data_type=float,
+                units=None
+            ),
+            spec.SingleBandRasterOutput(
+                id="ndvi_base_buffer_mean",
+                path="intermediate/ndvi_base_buffer_mean.tif",
+                about=gettext("Baseline NDVI raster convolved with a mean circular kernel of "
+                              "radius search_distance"),
+                data_type=float,
+                units=None
+            ),
+            spec.SingleBandRasterOutput(
+                id="population_aligned",
+                path="intermediate/population_aligned.tif",
+                about=gettext("Aligned and resampled population raster"),
+                data_type=float,
+                units=u.people
             )
         ]
 )
 
-# TODO: use FileRegistry
-_OUTPUT_BASE_FILES = {
-    "preventable_cases_path": "preventable_cases.tif",
-    "preventable_cost_path": "preventable_cost.tif",
-    "preventable_cases_cost_sum_vector_path":"preventable_cases_cost_sum.shp",
-    "prevantable_cases_cost_sum_table_path":"prevantable_cases_cost_sum.csv",
-}
-
-_INTERMEDIATE_BASE_FILES = {
-    "tc_aligned": "tc_aligned.tif",
-    "lulc_base_aligned": "lulc_base_aligned.tif",
-    "lulc_alt_aligned": "lulc_alt_aligned.tif",
-    "ndvi_base_aligned": "ndvi_base_aligned.tif",
-    "ndvi_alt_aligned": "ndvi_alt_aligned.tif",
-    "population_aligned": "population_aligned.tif",
-    "kernel": "kernel.tif",
-    "ndvi_base_buffer_mean": "ndvi_base_buffer_mean.tif", #mean NDVI within a circular buffer
-    "ndvi_alt_buffer_mean": "ndvi_alt_buffer_mean.tif",
-    "delta_ndvi": "delta_ndvi.tif",
-    "baseline_prevalence_raster": "baseline_prevalence.tif",
-    "baseline_cases": "baseline_cases.tif"
-}
 
 def execute(args):
     """Urban Mental Health.
@@ -370,7 +419,8 @@ def execute(args):
 
     Args:
         args['workspace_dir'] (str): (required) a path to the directory that
-            will write output and other temporary files during calculation.
+            will write output, intermediate, and other temporary files during
+            calculation.
         args['results_suffix'] (str): (optional) appended to any output
             filename.
         args['aoi_vector_path'] (str): (required) path to a polygon vector
@@ -429,20 +479,20 @@ def execute(args):
             'ndvi' (float): NDVI value of the LULC class
             'exclude' (bool): 0 for keeping, 1 for excluding the LULC class
 
+    Returns:
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
+
     """        
+    LOGGER.info("Starting Urban Mental Health Model")
     search_radius = float(args['search_radius'])
 
-    LOGGER.info("Make directories")
+    LOGGER.info("Making directories")
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate_outputs')
+        args['workspace_dir'], 'intermediate')
     output_dir = args['workspace_dir']
     utils.make_directories([intermediate_output_dir, output_dir])
-
-    LOGGER.info('Building file registry')
-    file_registry = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
+    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], file_suffix)
     
     try:
         n_workers = int(args['n_workers'])
@@ -453,8 +503,7 @@ def execute(args):
         n_workers = -1  # Synchronous mode.
     LOGGER.debug('n_workers: %s', n_workers)
     task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
-        n_workers, reporting_interval=5)
+        file_registry['taskgraph_cache'], n_workers, reporting_interval=5)
 
     # preprocessing
     LOGGER.info("Start preprocessing")
@@ -600,10 +649,10 @@ def execute(args):
             args=(file_registry['delta_ndvi'],
                   file_registry['baseline_cases'],
                   args['effect_size'],
-                  file_registry['preventable_cases_path'],
+                  file_registry['preventable_cases'],
                   args["aoi_vector_path"],
                   intermediate_output_dir),
-            target_path_list=[file_registry['preventable_cases_path']],
+            target_path_list=[file_registry['preventable_cases']],
             dependent_task_list=[delta_ndvi_task, baseline_cases_task],
             task_name="calculate preventable cases"
         )
@@ -611,10 +660,10 @@ def execute(args):
         if args['health_cost_rate']:
             preventable_cost_task = task_graph.add_task(
                 func=calc_preventable_cost,
-                args=(file_registry['preventable_cases_path'],
+                args=(file_registry['preventable_cases'],
                         args['health_cost_rate'],
-                        file_registry['preventable_cost_path']),
-                target_path_list=[file_registry['preventable_cost_path']],
+                        file_registry['preventable_cost']),
+                target_path_list=[file_registry['preventable_cost']],
                 dependent_task_list=[preventable_cases_task],
                 task_name="calculate preventable cost"
             )
@@ -935,6 +984,9 @@ def calc_preventable_cost(preventable_cases, health_cost_rate,
         [(preventable_cases, 1), (float(health_cost_rate), "raw")], _preventable_cost_op,
         target_preventable_cost, gdal.GDT_Float32, nodata_target=FLOAT32_NODATA)
 
+
+def vectorize_preventable_cases_cost():
+    return 
 
 @validation.invest_validator
 def validate(args, limit_to=None):
