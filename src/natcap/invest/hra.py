@@ -55,6 +55,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=("hra",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["info_table_path", "criteria_table_path"],
@@ -546,8 +547,7 @@ MODEL_SPEC = spec.ModelSpec(
 )
 
 
-@MODEL_SPEC.execute_function
-def execute(preprocessed_args, file_registry):
+def execute(args, preprocess_args=True):
     """Habitat Risk Assessment.
 
     Args:
@@ -595,33 +595,38 @@ def execute(preprocessed_args, file_registry):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    target_srs_wkt = pygeoprocessing.get_vector_info(
-        preprocessed_args['aoi_vector_path'])['projection_wkt']
+    if preprocess_args:
+        args = MODEL_SPEC.preprocess_inputs(args)
+    MODEL_SPEC.create_output_directories(args)
+    file_registry = MODEL_SPEC.create_file_registry(args)
 
-    if preprocessed_args['risk_eq'] == 'multiplicative':
-        max_pairwise_risk = preprocessed_args['max_rating'] * preprocessed_args['max_rating']
-    elif preprocessed_args['risk_eq'] == 'euclidean':
+    target_srs_wkt = pygeoprocessing.get_vector_info(
+        args['aoi_vector_path'])['projection_wkt']
+
+    if args['risk_eq'] == 'multiplicative':
+        max_pairwise_risk = args['max_rating'] * args['max_rating']
+    elif args['risk_eq'] == 'euclidean':
         max_pairwise_risk = math.sqrt(
-            ((preprocessed_args['max_rating'] - 1) ** 2) +
-            ((preprocessed_args['max_rating'] - 1) ** 2))
+            ((args['max_rating'] - 1) ** 2) +
+            ((args['max_rating'] - 1) ** 2))
     else:
         raise ValueError(
             "args['risk_eq'] must be either 'Multiplicative' or 'Euclidean' "
-            f"not {preprocessed_args['risk_eq']}")
+            f"not {args['risk_eq']}")
     LOGGER.info(
-        f"The maximum pairwise risk score for {preprocessed_args['risk_eq']} "
+        f"The maximum pairwise risk score for {args['risk_eq']} "
         f"risk is {max_pairwise_risk}")
 
     graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], preprocessed_args['n_workers'])
+        file_registry['taskgraph_cache'], args['n_workers'])
 
     # parse the info table and get info dicts for habitats, stressors.
     habitats_info, stressors_info = _parse_info_table(
-        preprocessed_args['info_table_path'])
+        args['info_table_path'])
 
     # parse the criteria table to get the composite table
     criteria_habitats, criteria_stressors = _parse_criteria_table(
-        preprocessed_args['criteria_table_path'], file_registry['composite_criteria'])
+        args['criteria_table_path'], file_registry['composite_criteria'])
 
     # Validate that habitats and stressors match precisely.
     for label, info_table_set, criteria_table_set in [
@@ -750,7 +755,7 @@ def execute(preprocessed_args, file_registry):
                 func=_simplify,
                 kwargs={
                     'source_vector_path': source_filepath,
-                    'tolerance': preprocessed_args['resolution'] / 2,  # by the nyquist theorem.
+                    'tolerance': args['resolution'] / 2,  # by the nyquist theorem.
                     'target_vector_path': file_registry['simplified_[KEY]', name],
                     'preserve_columns': fields_to_preserve,
                 },
@@ -765,7 +770,7 @@ def execute(preprocessed_args, file_registry):
             'raster_path_map': alignment_source_raster_paths,
             'vector_path_map': alignment_source_vector_paths,
             'target_pixel_size': (
-                preprocessed_args['resolution'], -preprocessed_args['resolution']),
+                args['resolution'], -args['resolution']),
             'target_srs_wkt': target_srs_wkt,
             'all_touched_vectors': [
                 file_registry['simplified_[KEY]', key] for key in
@@ -798,7 +803,7 @@ def execute(preprocessed_args, file_registry):
             _calculate_decayed_distance,
             kwargs={
                 'stressor_raster_path': file_registry['aligned_[KEY]', stressor],
-                'decay_type': preprocessed_args['decay_eq'],
+                'decay_type': args['decay_eq'],
                 'buffer_distance': stressors_info[stressor]['buffer'],
                 'target_edt_path': file_registry['decayed_edt_[STRESSOR]', stressor],
             },
@@ -893,7 +898,7 @@ def execute(preprocessed_args, file_registry):
                         file_registry['aligned_[KEY]', habitat],
                     'exposure_raster_path': file_registry['e_[HABITAT]_[STRESSOR]', habitat, stressor],
                     'consequence_raster_path': file_registry['c_[HABITAT]_[STRESSOR]', habitat, stressor],
-                    'risk_equation': preprocessed_args['risk_eq'],
+                    'risk_equation': args['risk_eq'],
                     'target_risk_raster_path': file_registry[
                         'risk_[HABITAT]_[STRESSOR]', habitat, stressor],
                 },
@@ -946,7 +951,7 @@ def execute(preprocessed_args, file_registry):
             kwargs={
                 'base_raster_path_band_const_list': [
                     (file_registry['aligned_[KEY]', habitat], 1),
-                    (max_pairwise_risk * preprocessed_args['n_overlapping_stressors'], 'raw'),
+                    (max_pairwise_risk * args['n_overlapping_stressors'], 'raw'),
                     (file_registry['total_risk_[HABITAT]', habitat], 1)],
                 'local_op': _reclassify_score,
                 'target_raster_path': file_registry['reclass_total_risk_[HABITAT]', habitat],
@@ -1061,8 +1066,8 @@ def execute(preprocessed_args, file_registry):
     aoi_simplify_task = graph.add_task(
         func=_simplify,
         kwargs={
-            'source_vector_path': preprocessed_args['aoi_vector_path'],
-            'tolerance': preprocessed_args['resolution'] / 2,  # by the nyquist theorem
+            'source_vector_path': args['aoi_vector_path'],
+            'tolerance': args['resolution'] / 2,  # by the nyquist theorem
             'target_vector_path': file_registry['simplified_aoi'],
             'preserve_columns': ['name'],
         },
@@ -1091,10 +1096,10 @@ def execute(preprocessed_args, file_registry):
     )
 
     graph.join()
-    if not preprocessed_args['visualize_outputs']:
+    if not args['visualize_outputs']:
         LOGGER.info('HRA complete!')
         graph.close()
-        return
+        return file_registry.registry
 
     # Although the generation of visualization outputs could have more precise
     # task dependencies, the effort involved in tracking them precisely doesn't

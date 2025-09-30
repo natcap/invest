@@ -472,9 +472,12 @@ def main(user_args=None):
             # Exceptions will already be logged to the logfile but will ALSO be
             # written to stdout if this exception is uncaught.  This is by
             # design.
-            model_module.execute(
-                parsed_datastack.args, generate_metadata=True,
-                save_file_registry=True, create_logfile=True)
+            model_module.MODEL_SPEC.execute(
+                parsed_datastack.args,
+                create_logfile=True,
+                generate_metadata=True,
+                save_file_registry=True,
+                check_outputs=False)
 
         if args.subcommand == 'serve':
             ui_server.app.run(port=args.port)
