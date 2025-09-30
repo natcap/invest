@@ -113,6 +113,18 @@ Coastal Vulnerability
   percent; this has been corrected to show that it is a numeric input with
   units of meters/second.
 
+Crop Production
+===============
+* The inputs to both Crop Production models have changed in order to support
+  remote datasets. Instead of a Model Data Directory, the models now expect
+  multiple tables, each of which maps each crop name to its corresponding
+  climate bin raster, observed yield raster, nutrient table, percentile yield
+  table, or regression yield table.
+  (`#2095 <https://github.com/natcap/invest/issues/2095>`_)
+* The ``crop`` column headers in both models' result tables have been renamed
+  to ``crop_name`` for consistency with model inputs.
+  (`#2095 <https://github.com/natcap/invest/issues/2095>`_)
+
 Habitat Quality
 ===============
 * The aligned LULC outputs are no longer named after the original LULC files.
