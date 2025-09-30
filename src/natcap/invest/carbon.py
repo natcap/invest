@@ -26,6 +26,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["lulc_bas_path", "carbon_pools_path"],
@@ -327,8 +328,7 @@ MODEL_SPEC = spec.ModelSpec(
 _CARBON_NODATA = -1.0
 
 
-@MODEL_SPEC.execute_function
-def execute(preprocessed_args, file_registry):
+def execute(args):
     """Carbon.
 
     Calculate the amount of carbon stocks given a landscape, or the difference
@@ -377,17 +377,20 @@ def execute(preprocessed_args, file_registry):
     Returns:
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
-    if (preprocessed_args['do_valuation'] and
-            preprocessed_args['lulc_bas_year'] >= preprocessed_args['lulc_alt_year']):
+    args = MODEL_SPEC.preprocess_inputs(args)
+    MODEL_SPEC.create_output_directories(args)
+    file_registry = MODEL_SPEC.create_file_registry(args)
+    if (args['do_valuation'] and
+            args['lulc_bas_year'] >= args['lulc_alt_year']):
         raise ValueError(
             "Invalid input for lulc_bas_year or lulc_alt_year. The Alternate "
-            f"LULC Year ({preprocessed_args['lulc_alt_year']}) must be greater "
-            f"than the Baseline LULC Year ({preprocessed_args['lulc_bas_year']}). "
+            f"LULC Year ({args['lulc_alt_year']}) must be greater "
+            f"than the Baseline LULC Year ({args['lulc_bas_year']}). "
             "Ensure that the Baseline LULC Year is earlier than the Alternate LULC Year."
         )
 
     graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], preprocessed_args['n_workers'])
+        file_registry['taskgraph_cache'], args['n_workers'])
 
     cell_size_set = set()
     raster_size_set = set()
@@ -397,8 +400,8 @@ def execute(preprocessed_args, file_registry):
 
     for scenario_type in ['bas', 'alt']:
         lulc_key = "lulc_%s_path" % (scenario_type)
-        if preprocessed_args[lulc_key]:
-            raster_info = pygeoprocessing.get_raster_info(preprocessed_args[lulc_key])
+        if args[lulc_key]:
+            raster_info = pygeoprocessing.get_raster_info(args[lulc_key])
             cell_size_set.add(raster_info['pixel_size'])
             raster_size_set.add(raster_info['raster_size'])
             valid_lulc_keys.append(lulc_key)
@@ -420,7 +423,7 @@ def execute(preprocessed_args, file_registry):
     sum_rasters_task_lookup = {}
     carbon_pool_df = MODEL_SPEC.get_input(
         'carbon_pools_path').get_validated_dataframe(
-        preprocessed_args['carbon_pools_path'])
+        args['carbon_pools_path'])
     for scenario_type in valid_scenarios:
         carbon_map_task_lookup[scenario_type] = []
         storage_path_list = []
@@ -434,7 +437,7 @@ def execute(preprocessed_args, file_registry):
 
             carbon_map_task = graph.add_task(
                 _generate_carbon_map,
-                args=(preprocessed_args[lulc_key], carbon_pool_by_type,
+                args=(args[lulc_key], carbon_pool_by_type,
                       file_registry[storage_key]),
                 target_path_list=[file_registry[storage_key]],
                 task_name=f'carbon_map_{storage_key}')
@@ -482,14 +485,14 @@ def execute(preprocessed_args, file_registry):
 
     # calculate net present value
     calculate_npv_tasks = []
-    if preprocessed_args['do_valuation']:
+    if args['do_valuation']:
         LOGGER.info('Constructing valuation formula.')
         valuation_constant = _calculate_valuation_constant(
-            preprocessed_args['lulc_bas_year'],
-            preprocessed_args['lulc_alt_year'],
-            preprocessed_args['discount_rate'],
-            preprocessed_args['rate_change'],
-            preprocessed_args['price_per_metric_ton_of_c'])
+            args['lulc_bas_year'],
+            args['lulc_alt_year'],
+            args['discount_rate'],
+            args['rate_change'],
+            args['price_per_metric_ton_of_c'])
 
         if 'alt' in valid_scenarios:
             output_key = 'npv_alt'
@@ -511,7 +514,7 @@ def execute(preprocessed_args, file_registry):
                        + calculate_npv_tasks)
     _ = graph.add_task(
         _generate_report,
-        args=(tifs_to_summarize, preprocessed_args, file_registry),
+        args=(tifs_to_summarize, args, file_registry),
         target_path_list=[file_registry['html_report']],
         dependent_task_list=tasks_to_report,
         task_name='generate_report')
