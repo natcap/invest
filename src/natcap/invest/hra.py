@@ -547,7 +547,7 @@ MODEL_SPEC = spec.ModelSpec(
 )
 
 
-def execute(args, preprocess_args=True):
+def execute(args):
     """Habitat Risk Assessment.
 
     Args:
@@ -595,10 +595,11 @@ def execute(args, preprocess_args=True):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    if preprocess_args:
-        args = MODEL_SPEC.preprocess_inputs(args)
+    args = MODEL_SPEC.preprocess_inputs(args)
     MODEL_SPEC.create_output_directories(args)
     file_registry = MODEL_SPEC.create_file_registry(args)
+    graph = taskgraph.TaskGraph(
+        file_registry['taskgraph_cache'], args['n_workers'])
 
     target_srs_wkt = pygeoprocessing.get_vector_info(
         args['aoi_vector_path'])['projection_wkt']
@@ -616,9 +617,6 @@ def execute(args, preprocess_args=True):
     LOGGER.info(
         f"The maximum pairwise risk score for {args['risk_eq']} "
         f"risk is {max_pairwise_risk}")
-
-    graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], args['n_workers'])
 
     # parse the info table and get info dicts for habitats, stressors.
     habitats_info, stressors_info = _parse_info_table(
