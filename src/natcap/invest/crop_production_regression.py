@@ -2,6 +2,7 @@
 from collections import defaultdict, namedtuple
 import logging
 import os
+import typing
 
 import numpy
 import pygeoprocessing
@@ -1204,7 +1205,7 @@ def aggregate_regression_results_to_polygons(
 
 def get_full_path_from_crop_table(
         model_spec: spec.ModelSpec, table_id: str, table_path: str,
-        crop_name: str) -> str | None:
+        crop_name: str) -> typing.Union[str, None]:
     """Given a crop-to-path table, look up a path and expand it if appropriate.
 
     Args:
