@@ -1,11 +1,8 @@
 """InVEST Urban Mental Health model."""
 import logging
-import math
 import os
-import pickle
 import shutil
 import tempfile
-
 
 import numpy
 import pandas
@@ -59,12 +56,11 @@ MODEL_SPEC = spec.ModelSpec(
         spec.AOI.model_copy(update=dict(  #  TODO: potentially want to have this req to be census tract pop. shp? or only req that if opt 1 but optional for opts 2-3?
             id="aoi_vector_path",
             about=gettext(
-                "Map of the area over which to run the model. The AOI "
-                "must be smaller than the raster inputs "
-                "by at least the search radius to ensure correct edge pixel "
-                "calculation, as InVEST will buffer your AOI by the "
-                "`search_radius` to determine the processing area. Final"
-                "outputs will be clipped to this AOI."),
+                "Map of the area over which to run the model. The AOI must be "
+                "smaller than the raster inputs by at least the search radius "
+                "to ensure correct edge pixel calculation, as InVEST will "
+                "buffer your AOI by the `search_radius` to determine the "
+                "processing area. Final outputs will be clipped to this AOI."),
             projected=True,
             projection_units=u.meter
         )),
@@ -89,9 +85,9 @@ MODEL_SPEC = spec.ModelSpec(
             id="search_radius",
             name=gettext("search radius"),
             about=gettext(
-                "Distance used to define the surrounding area of a "
-                "person's residence that best represents daily exposure "
-                "to nearby nature."),
+                "Distance used to define the surrounding area of a person's "
+                "residence that best represents daily exposure to nearby "
+                "nature."),
             units=u.meter,
             expression="value > 0"
         ),
@@ -151,7 +147,8 @@ MODEL_SPEC = spec.ModelSpec(
                 "baseline and alternate NDVI."
             ),
             options=[
-                spec.Option(key="", display_name=gettext("--Select a scenario--"))
+                spec.Option(key="",
+                            display_name=gettext("--Select a scenario--"))
             ] + SCENARIO_OPTIONS
         ),
         spec.PercentInput(
@@ -232,9 +229,8 @@ MODEL_SPEC = spec.ModelSpec(
                 "counterfactual conditions. Each land use/land cover type "
                 "must be assigned a unique integer code. If an LULC attribute "
                 "table is used, all values in this raster must have "
-                "corresponding entries. "
-                "This raster should extend beyond the AOI by at least the "
-                "search radius distance"
+                "corresponding entries. This raster should extend beyond the "
+                "AOI by at least the search radius distance"
             ),
             data_type=int,
             units=None,
@@ -300,12 +296,14 @@ MODEL_SPEC = spec.ModelSpec(
                 fields=[
                     spec.IntegerOutput(
                         id="sum_cases",
-                        about=gettext("Aggregated total preventable cases by polygon"),
+                        about=gettext(
+                            "Aggregated total preventable cases by polygon"),
                         units=u.count
                     ),
                     spec.IntegerOutput(
                         id="sum_cost",
-                        about=gettext("Total preventable costs by subregion/polygon"),
+                        about=gettext(
+                            "Total preventable costs by subregion/polygon"),
                         units=u.currency
                     )
                 ]
@@ -320,20 +318,26 @@ MODEL_SPEC = spec.ModelSpec(
                     "showing the total cases for the entire area (e.g., city)."
                 ),
                 columns=[
-                    spec.IntegerOutput(
-                        id="total_preventable_cases",
+                    spec.NumberOutput(
+                        id="sum_cases",
                         about=gettext("Aggregated total preventable cases"),
                         units=u.count
                     ),
-                    spec.IntegerOutput(
-                        id="preventable_costs_by_subregion",
+                    spec.NumberOutput(
+                        id="sum_cost",
                         about=gettext("Total preventable costs by subregion"),
                         units=u.currency
                     ),
-                    spec.IntegerOutput(
+                    spec.NumberOutput(
                         id="total_cases",
                         about=gettext(
-                            "Total cases for the entire area (e.g., a city)."),
+                            "Total cases for the entire AOI"),
+                        units=u.count
+                    ),
+                    spec.NumberOutput(
+                        id="total_cost",
+                        about=gettext(
+                            "Total cost for the entire AOI"),
                         units=u.count
                     )
                 ]
@@ -355,14 +359,17 @@ MODEL_SPEC = spec.ModelSpec(
             spec.SingleBandRasterOutput(
                 id="delta_ndvi",
                 path="intermediate/delta_ndvi.tif",
-                about=gettext("Difference between baseline and alternate NDVI raster"),
+                about=gettext(
+                    "Difference between baseline and alternate NDVI raster"),
                 data_type=float,
                 units=None
             ),
             spec.SingleBandRasterOutput(
                 id="kernel",
                 path="intermediate/kernel.tif",
-                about=gettext("Normalized dichotomous kernel raster with radius search_distance"),
+                about=gettext(
+                    "Normalized dichotomous kernel raster with radius "
+                    "search_distance"),
                 data_type=int,
                 units=None
             ),
@@ -383,16 +390,18 @@ MODEL_SPEC = spec.ModelSpec(
             spec.SingleBandRasterOutput(
                 id="ndvi_alt_buffer_mean",
                 path="intermediate/ndvi_alt_buffer_mean.tif",
-                about=gettext("Alternate NDVI raster convolved with a mean circular kernel of "
-                              "radius search_distance"),
+                about=gettext(
+                    "Alternate NDVI raster convolved with a mean circular "
+                    "kernel of radius search_distance"),
                 data_type=float,
                 units=None
             ),
             spec.SingleBandRasterOutput(
                 id="ndvi_base_buffer_mean",
                 path="intermediate/ndvi_base_buffer_mean.tif",
-                about=gettext("Baseline NDVI raster convolved with a mean circular kernel of "
-                              "radius search_distance"),
+                about=gettext(
+                    "Baseline NDVI raster convolved with a mean circular "
+                    "kernel of radius search_distance"),
                 data_type=float,
                 units=None
             ),
@@ -429,14 +438,14 @@ def execute(args):
             The polygon should intersect the baseline prevalence vector and
             the population raster.
         args['population_raster] (str): (required) a path to a raster of
-            gridded population data representing the number of people per pixel,
-            ideally at the pixel level.
+            gridded population data representing the number of people per
+            pixel.
         args['search_radius'] (float): (required) the distance used to define
             the surrounding area of a person's residence that best represents
             daily exposure to nearby nature.
         args['effect_size'] (float): (required) Health indicator-specific
-            effect size representing the relationship between nature 
-            exposure and the mental health outcome, given as relative 
+            effect size representing the relationship between nature
+            exposure and the mental health outcome, given as relative
             risk associated with a 0.1 increase in NDVI.
         args['baseline_prevalence_vector'] (str): (required) a path to a
             vector providing the baseline prevalence (or incidence) rate of
@@ -451,8 +460,8 @@ def execute(args):
             to estimate the economic value of preventable cases under
             different urban nature scenarios. Costs can be specified at
             national, regional, or local levels depending on data availability.
-        args['scenario'] (str): (required) which of the three land use scenarios
-            to model.
+        args['scenario'] (str): (required) which of the three land use
+            scenarios to model.
         args['tc_raster'] (str): required if args['scenario'] == 'tc_ndvi',
             a path to a raster providing tree canopy cover under current or
             baseline conditions.
@@ -462,28 +471,30 @@ def execute(args):
             compare against the baseline tree cover to estimate potential
             health benefits.
         args['ndvi_base'] (str): required if args['scenario'] != 'lulc' or
-            not args['lulc_attr_csv'], a path to a Normalized Difference Vegetation
-            Index raster representing current or baseline conditions, which gives
-            the greenness of vegetation in a given cell.
+            not args['lulc_attr_csv'], a path to a Normalized Difference
+            Vegetation Index raster representing current or baseline
+            conditions, which gives the greenness of vegetation in a given
+            cell.
         args['ndvi_alt'] (str): required if args['scenario'] == 'ndvi', a path
             to an NDVI raster under future or counterfactual conditions.
         args['lulc_base'] (str): required if args['scenario'] == 'lulc', a path
-            to a Land Use/Land Cover raster showing current or baseline conditions
+            to a Land Use/Land Cover raster showing current or baseline
+            conditions
         args['lulc_alt'] (str): required if args['scenario'] == 'lulc', a path
             to a Land Use/Land Cover raster showing a future or counterfactural
             scenario.
         args['lulc_attr_csv'] (str): required if args['scenario'] == 'lulc' and
-            not args['ndvi_base'], a path to a CSV table that maps LULC codes to
-            corresponding NDVI values and specifies whether to exclude the LULC
-            class from analysis. The following fields are required: 
-            'lucode' (int): unique LULC class identifier
-            'ndvi' (float): NDVI value of the LULC class
-            'exclude' (bool): 0 for keeping, 1 for excluding the LULC class
+            not args['ndvi_base'], a path to a CSV table that maps LULC codes
+            to corresponding NDVI values and specifies whether to exclude the
+            LULC class from analysis. The following fields are required:
+                'lucode' (int): unique LULC class identifier
+                'ndvi' (float): NDVI value of the LULC class
+                'exclude' (bool): 0 for keeping, 1 for excluding the LULC class
 
     Returns:
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
-    """        
+    """
     LOGGER.info("Starting Urban Mental Health Model")
     search_radius = float(args['search_radius'])
 
@@ -493,8 +504,9 @@ def execute(args):
         args['workspace_dir'], 'intermediate')
     output_dir = args['workspace_dir']
     utils.make_directories([intermediate_output_dir, output_dir])
-    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], file_suffix)
-    
+    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'],
+                                 file_suffix)
+
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -520,7 +532,7 @@ def execute(args):
 
         # Users should input the AOI to which they want outputs clipped
         # InVEST will take care of buffering the processing AOI to ensure
-        # correct edge pixel calculation 
+        # correct edge pixel calculation
         aoi_info = pygeoprocessing.get_vector_info(args['aoi_vector_path'])
         if aoi_info["projection_wkt"] != target_projection:
             aoi_bbox = pygeoprocessing.transform_bounding_box(
@@ -528,7 +540,7 @@ def execute(args):
                 target_projection)
         else:
             aoi_bbox = aoi_info["bounding_box"]
-        
+
         # Expand target bounding box to ensure correct edge pixel calculation
         aoi_bbox+=numpy.array([-search_radius, -search_radius,
                                 search_radius, search_radius])
@@ -537,18 +549,19 @@ def execute(args):
         # Quick check to see if buffered AOI bbox is larger than input base and alt NDVI
         check_raster_bounds_against_aoi(aoi_bbox, ndvi_bbox)
         check_raster_bounds_against_aoi(
-            aoi_bbox, pygeoprocessing.get_raster_info(args['ndvi_alt'])['bounding_box'])
-        
+            aoi_bbox,
+            pygeoprocessing.get_raster_info(args['ndvi_alt'])['bounding_box'])
+
         input_align_list = [args['ndvi_base'], args['ndvi_alt']]
         output_align_list = [file_registry['ndvi_base_aligned'],
                              file_registry['ndvi_alt_aligned']]
-        
+
         ndvi_align_task = task_graph.add_task(
             func=pygeoprocessing.align_and_resize_raster_stack,
             args=(input_align_list, output_align_list,
-                ['cubicspline', 'cubicspline'],
-                pixel_size,
-                aoi_bbox),
+                  ['cubicspline', 'cubicspline'],
+                  pixel_size,
+                  aoi_bbox),
             kwargs={
                 'raster_align_index': 0,  # align to base_ndvi
                 'target_projection_wkt': target_projection},
@@ -565,9 +578,10 @@ def execute(args):
             pop_raster_info['bounding_box'] = transformed_bounding_box
 
         target_bounding_box = pygeoprocessing.merge_bounding_box_list(
-            [pygeoprocessing.get_raster_info(output_align_list[0])['bounding_box'],
+            [pygeoprocessing.get_raster_info(
+                output_align_list[0])['bounding_box'],
              pop_raster_info['bounding_box']], 'intersection')
-        
+
         population_align_task = task_graph.add_task(
             func=_resample_population_raster,
             kwargs={
@@ -583,7 +597,8 @@ def execute(args):
             task_name='Resample population to NDVI resolution')
 
         pixel_radius = int(round(search_radius/pixel_size[0]))
-        LOGGER.info(f"Search radius {search_radius} results in buffer of {pixel_radius} pixels")
+        LOGGER.info(f"Search radius {search_radius} results in "
+                    f"buffer of {pixel_radius} pixels")
         kernel_task = task_graph.add_task(
             func=pygeoprocessing.kernels.dichotomous_kernel,
             kwargs={
@@ -591,12 +606,13 @@ def execute(args):
                 'max_distance': pixel_radius,
                 'normalize': True},
             target_path_list=[file_registry['kernel']],
-            task_name=f'create kernel raster',)
+            task_name='create kernel raster',)
 
         mean_buffer_base_ndvi_task = task_graph.add_task(
             func=pygeoprocessing.convolve_2d,
             args=(
-                (file_registry['ndvi_base_aligned'], 1), (file_registry['kernel'], 1),
+                (file_registry['ndvi_base_aligned'], 1),
+                (file_registry['kernel'], 1),
                 file_registry['ndvi_base_buffer_mean']),
             kwargs={
                 'ignore_nodata_and_edges': True,
@@ -607,22 +623,23 @@ def execute(args):
             dependent_task_list=[ndvi_align_task, kernel_task],
             target_path_list=[file_registry['ndvi_base_buffer_mean']],
             task_name="calculate mean baseline NDVI within buffer")
-        
+
         mean_buffer_alt_ndvi_task = task_graph.add_task(
             func=pygeoprocessing.convolve_2d,
             args=(
-                (file_registry['ndvi_alt_aligned'], 1), (file_registry['kernel'], 1),
+                (file_registry['ndvi_alt_aligned'], 1),
+                (file_registry['kernel'], 1),
                 file_registry['ndvi_alt_buffer_mean']),
             kwargs={
                 'ignore_nodata_and_edges': True,
                 'mask_nodata': True,
                 'normalize_kernel': True,
-                'target_datatype':gdal.GDT_Float32,
+                'target_datatype': gdal.GDT_Float32,
                 'target_nodata': FLOAT32_NODATA},
             dependent_task_list=[ndvi_align_task, kernel_task], #TODO: should this task depend on mean_buffer_base_ndvi_task in case both try to open kernel raster simultaneously?
             target_path_list=[file_registry['ndvi_alt_buffer_mean']],
             task_name="calculate mean alternate NDVI within buffer")
-        
+
         # TODO mask out water
         delta_ndvi_task = task_graph.add_task(
             func=calc_delta_ndvi,
@@ -630,7 +647,8 @@ def execute(args):
                   file_registry['ndvi_alt_buffer_mean'],
                   file_registry['delta_ndvi']),
             target_path_list=[file_registry['delta_ndvi']],
-            dependent_task_list=[mean_buffer_base_ndvi_task, mean_buffer_alt_ndvi_task],
+            dependent_task_list=[mean_buffer_base_ndvi_task,
+                                 mean_buffer_alt_ndvi_task],
             task_name="calculate delta ndvi"
         )
 
@@ -662,17 +680,17 @@ def execute(args):
             preventable_cost_task = task_graph.add_task(
                 func=calc_preventable_cost,
                 args=(file_registry['preventable_cases'],
-                        args['health_cost_rate'],
-                        file_registry['preventable_cost']),
+                      args['health_cost_rate'],
+                      file_registry['preventable_cost']),
                 target_path_list=[file_registry['preventable_cost']],
                 dependent_task_list=[preventable_cases_task],
                 task_name="calculate preventable cost"
             )
 
-        task_graph.join() 
+        task_graph.join()
         # TODO ^ is this best way to require prev cost task done? 
         # Can't add as dependent task below as not done if not health_cost_rate
-        
+
         zonal_stats_task = task_graph.add_task(
             func=zonal_stats_preventable_cases_cost,
             args=(
@@ -682,11 +700,11 @@ def execute(args):
                 file_registry['preventable_cases'],
                 file_registry['preventable_cost']
             ),
-            target_path_list=[file_registry['preventable_cases_cost_sum_table']],
+            target_path_list=[
+                file_registry['preventable_cases_cost_sum_table']],
             dependent_task_list=[preventable_cases_task],
-            task_name = 'calculate zonal statistics'
+            task_name='calculate zonal statistics'
         )
-
 
     elif args['scenario'] == 'tc_ndvi':
         tc_target = float(args['tc_target'])
@@ -700,30 +718,32 @@ def check_raster_bounds_against_aoi(aoi_bbox, raster_bbox):
     Check if the bounds of the raster extend at least search_radius
     meters beyond the bounds of the AOI vector. If True, return the
     "buffered" AOI bounding box.
-    
+
     Args:
         aoi_bbox (list): aoi bounds in format [xmin, ymin, xmax, ymax],
             calculated by extending the input vector AOI bounds by
             `search_radius` meters (in the case of TCC, NDVI or LULC rasters)
         raster_bbox (list): raster bounds in format [xmin, ymin, xmax, ymax]
-    
+
     Returns:
         None
 
     """
 
-    errors_dict = {"xmin":aoi_bbox[0]<raster_bbox[0], "ymin": aoi_bbox[1]<raster_bbox[1], 
-        "xmax": aoi_bbox[2]>raster_bbox[2], "ymax": aoi_bbox[3]>raster_bbox[3]}
+    errors_dict = {"xmin": aoi_bbox[0] < raster_bbox[0],
+                   "ymin": aoi_bbox[1] < raster_bbox[1],
+                   "xmax": aoi_bbox[2] > raster_bbox[2],
+                   "ymax": aoi_bbox[3] > raster_bbox[3]}
 
     if any(errors_dict.values()):
-            print(errors_dict)
-            #TODO or do we just want to issue a warning?
-            errors = [k for k, v in errors_dict.items() if v]
-            raise UserWarning("The extent of bounding box of the AOI buffered by "
-                             "the search radius exceeds that of the raster input. "
-                             f"The issue is with the following dimensions: {errors}. "
-                             f"For reference, the buffered AOI bounding box is: {aoi_bbox}, "
-                             f"and the raster bbox is: {raster_bbox}")
+        errors = [k for k, v in errors_dict.items() if v]
+        raise UserWarning(
+            "The extent of bounding box of the AOI buffered by the search "
+            "radius exceeds that of the raster input. The issue is with the "
+            f"following coordinates: {errors}. For reference, the buffered "
+            f"AOI bounding box is: {aoi_bbox}, and the raster bbox is: "
+            f"{raster_bbox}")
+
 
 def _resample_population_raster(
         source_population_raster_path, target_population_raster_path,
@@ -840,10 +860,9 @@ def _resample_population_raster(
     shutil.rmtree(tmp_working_dir, ignore_errors=True)
 
 
-
 def calc_delta_ndvi(base_ndvi, alt_ndvi, target_path):
     """Calculate the change in nature exposure (NE)
-    
+
     Args:
         base_ndvi (str): path to baseline NDVI raster 
         alt_ndvi (str): path to future or counterfactual NDVI raster
@@ -851,21 +870,23 @@ def calc_delta_ndvi(base_ndvi, alt_ndvi, target_path):
 
     Returns:
         None.
-    
+
     """
     def _subtract_op(base_ndvi, alt_ndvi, base_nodata, alt_nodata):
         """operation to subtract alt ndvi from base ndvi and mask nodata"""
-        mask = pygeoprocessing.array_equals_nodata(base_ndvi, base_nodata) | pygeoprocessing.array_equals_nodata(alt_ndvi, alt_nodata)
+        mask = pygeoprocessing.array_equals_nodata(base_ndvi, base_nodata) | (
+            pygeoprocessing.array_equals_nodata(alt_ndvi, alt_nodata))
         delta_ndvi = alt_ndvi - base_ndvi
         delta_ndvi[mask] = FLOAT32_NODATA
-        
+
         return delta_ndvi
 
     base_nodata = pygeoprocessing.get_raster_info(base_ndvi)['nodata']
     alt_nodata = pygeoprocessing.get_raster_info(alt_ndvi)['nodata']
     base_raster_path_band_const_list = [(base_ndvi, 1), (alt_ndvi, 1),
-                                        (base_nodata, "raw"), (alt_nodata, "raw")]
-   
+                                        (base_nodata, "raw"),
+                                        (alt_nodata, "raw")]
+
     pygeoprocessing.raster_calculator(
         base_raster_path_band_const_list, _subtract_op, target_path,
         gdal.GDT_Float32, nodata_target=FLOAT32_NODATA)
@@ -888,14 +909,15 @@ def calc_baseline_cases(population_raster, base_prevalence_vector,
             rasterized baseline prevalence
         target_base_cases (str): target output path for baseline
             cases raster
-        
+
     Returns:
         None.
 
     """
     def _multiply_op(prevalence, pop, prevalence_nodata, pop_nodata):
-        """Mulitply baseline prevalence raster (float) by population raster (int)"""
-        valid_mask = (~pygeoprocessing.array_equals_nodata(prevalence, prevalence_nodata) &
+        """Mulitply baseline prevalence raster by population raster"""
+        valid_mask = (~pygeoprocessing.array_equals_nodata(prevalence,
+                                                           prevalence_nodata) &
                       ~pygeoprocessing.array_equals_nodata(pop, pop_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = FLOAT32_NODATA
@@ -905,15 +927,16 @@ def calc_baseline_cases(population_raster, base_prevalence_vector,
     pygeoprocessing.new_raster_from_base(
         population_raster, target_base_prevalence_raster,
         gdal.GDT_Float32, [FLOAT32_NODATA])
-    
+
     pygeoprocessing.rasterize(base_prevalence_vector,
                               target_base_prevalence_raster,
                               option_list=[
                                   "ATTRIBUTE=risk_rate", "ALL_TOUCHED=TRUE",
                                   "MERGE_ALG=REPLACE"])
-    
+
     # don't need to dynamically get target_base_prevalence_raster's nodata as we defined it above
-    population_nodata = pygeoprocessing.get_raster_info(population_raster)['nodata'][0]
+    population_nodata = pygeoprocessing.get_raster_info(
+        population_raster)['nodata'][0]
     base_raster_path_band_const_list = [(target_base_prevalence_raster, 1),
                                         (population_raster, 1),
                                         (FLOAT32_NODATA, "raw"),
@@ -939,10 +962,10 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
     RR: relative risk or risk ratio
     NE: nature exposure, as approimated by NDVI
     RR0.1NE: RR per 0.1 NE increase.
-        By default, the model uses the relative risk associated with a 
-        0.1 increase in NDVI-based nature exposure. This value must be 
-        provided by users in the effect size table, based on empirical 
-        studies or meta-analyses relevant to the selected health outcome. 
+        By default, the model uses the relative risk associated with a
+        0.1 increase in NDVI-based nature exposure. This value must be
+        provided by users in the effect size table, based on empirical
+        studies or meta-analyses relevant to the selected health outcome.
 
     Args:
         delta_ndvi (str): path to raster representing change in NDVI from
@@ -954,24 +977,27 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
         target_preventable_cases (str): path to output preventable cases raster
         aoi (str): path to area of interest
         work_dir (str): path to create a temp folder for saving files.
-    
+
     Returns:
         None.
-        
+
     """
     def _preventable_cases_op(delta_ndvi, baseline_cases, effect_size_val):
-        valid_mask = (~pygeoprocessing.array_equals_nodata(delta_ndvi, FLOAT32_NODATA) &
-                      ~pygeoprocessing.array_equals_nodata(baseline_cases, FLOAT32_NODATA))
+        valid_mask = (~pygeoprocessing.array_equals_nodata(delta_ndvi,
+                                                           FLOAT32_NODATA) &
+                      ~pygeoprocessing.array_equals_nodata(baseline_cases,
+                                                           FLOAT32_NODATA))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = FLOAT32_NODATA
-        result[valid_mask] = 1 - numpy.exp(numpy.log(effect_size_val) * 10 * delta_ndvi[valid_mask])
-        result[valid_mask] *= baseline_cases[valid_mask] #preventable cases
+        result[valid_mask] = 1 - numpy.exp(numpy.log(
+            effect_size_val) * 10 * delta_ndvi[valid_mask])
+        result[valid_mask] *= baseline_cases[valid_mask]  # preventable cases
         return result
-    
+
     # make temporary directory to save unclipped file
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='unclipped')
 
-    effect_size_val = float(effect_size)#previously called 'rr0'?
+    effect_size_val = float(effect_size)  # previously called 'rr0'
 
     base_raster_path_band_const_list = [(delta_ndvi, 1),
                                         (baseline_cases, 1),
@@ -981,17 +1007,19 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
     pygeoprocessing.raster_calculator(
         base_raster_path_band_const_list, _preventable_cases_op,
         intermediate_raster, gdal.GDT_Float32, nodata_target=FLOAT32_NODATA)
-    
+
     pygeoprocessing.mask_raster(
         (intermediate_raster, 1), aoi, target_preventable_cases)
-    
+
     shutil.rmtree(temp_dir, ignore_errors=True)
+
 
 def calc_preventable_cost(preventable_cases, health_cost_rate,
                           target_preventable_cost):
     """Calculate preventable cost"""
     def _preventable_cost_op(preventable_cases, cost):
-        valid_mask = ~pygeoprocessing.array_equals_nodata(preventable_cases, FLOAT32_NODATA)
+        valid_mask = ~pygeoprocessing.array_equals_nodata(
+            preventable_cases, FLOAT32_NODATA)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = FLOAT32_NODATA
         result[valid_mask] = preventable_cases[valid_mask]*cost
@@ -1000,13 +1028,14 @@ def calc_preventable_cost(preventable_cases, health_cost_rate,
     health_cost_rate = float(health_cost_rate)
 
     pygeoprocessing.raster_calculator(
-        [(preventable_cases, 1), (float(health_cost_rate), "raw")], _preventable_cost_op,
-        target_preventable_cost, gdal.GDT_Float32, nodata_target=FLOAT32_NODATA)
+        [(preventable_cases, 1), (float(health_cost_rate), "raw")],
+        _preventable_cost_op, target_preventable_cost, gdal.GDT_Float32,
+        nodata_target=FLOAT32_NODATA)
 
 
-def zonal_stats_preventable_cases_cost(base_vector_path, target_stats_csv,
-                                       target_aggregate_vector_path,
-                                       preventable_cases_raster, preventable_costs_raster):
+def zonal_stats_preventable_cases_cost(
+        base_vector_path, target_stats_csv, target_aggregate_vector_path,
+        preventable_cases_raster, preventable_cost_raster):
     """Calculate zonal statistics for each polygon in the AOI
     and write results to a csv and vector file.
 
@@ -1014,32 +1043,21 @@ def zonal_stats_preventable_cases_cost(base_vector_path, target_stats_csv,
         base_vector_path (string): Path to the AOI shapefile.
         target_stats_csv (string): Path to csv file to store dictionary
             returned by zonal stats.
-        target_aggregate_vector_path (string): Path to vector to store zonal stats
-        preventable_cases_raster (string): Path to preventable cases raster which
-            is aggregated by AOI polygon.
-        preventable_costs_raster (string): Path to preventable costs raster
+        target_aggregate_vector_path (string): Path to vector to store zonal
+            stats
+        preventable_cases_raster (string): Path to preventable cases raster
             which is aggregated by AOI polygon.
-        
+        preventable_cost_raster (string): Path to preventable cost raster
+            which is aggregated by AOI polygon.
 
     Returns:
         None
 
     """
-
-    # calculate zonal stats for cases and cost
-    cases_stats_dict = pygeoprocessing.zonal_statistics(
-        (preventable_cases_raster, 1), base_vector_path, ignore_nodata=True)
-    
-    output_dict = {k:{"sum_prev_cases": v['sum']} for k,v in cases_stats_dict.items()}
-    
-    if os.path.exists(preventable_costs_raster):
-        cost_stats_dict = pygeoprocessing.zonal_statistics(
-            (preventable_costs_raster, 1), base_vector_path, ignore_nodata=True)
-        
-        cost_stats_dict = {k:{"sum_cost": v['sum']} for k,v in cost_stats_dict.items()}
-
-        # merge the dicts
-        output_dict = {fid: output_dict[fid] | cost_stats_dict.get(fid, None) for fid in output_dict.keys()}
+    if os.path.exists(preventable_cost_raster):
+        calculate_cost = True
+    else:
+        calculate_cost = False
 
     # write zonal stats to new vector
     aoi_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
@@ -1054,34 +1072,57 @@ def zonal_stats_preventable_cases_cost(base_vector_path, target_stats_csv,
     cases_sum_field.SetWidth(24)
     cases_sum_field.SetPrecision(11)
 
-    cost_sum_field = ogr.FieldDefn('sum_cost', ogr.OFTReal)
-    cost_sum_field.SetWidth(24)
-    cost_sum_field.SetPrecision(11)
+    # calculate zonal stats for cases and cost
+    cases_stats_dict = pygeoprocessing.zonal_statistics(
+        (preventable_cases_raster, 1), base_vector_path, ignore_nodata=True)
+
+    output_dict = {k: {"sum_cases": v['sum']}
+                   for k, v in cases_stats_dict.items()}
 
     target_aggregate_vector = gdal.OpenEx(
         target_aggregate_vector_path, gdal.OF_UPDATE)
     target_aggregate_layer = target_aggregate_vector.GetLayer()
     target_aggregate_layer.CreateField(cases_sum_field)
-    target_aggregate_layer.CreateField(cost_sum_field)
+
+    if calculate_cost:
+        cost_stats_dict = pygeoprocessing.zonal_statistics(
+            (preventable_cost_raster, 1), base_vector_path, ignore_nodata=True)
+
+        cost_stats_dict = {k: {"sum_cost": v['sum']}
+                           for k, v in cost_stats_dict.items()}
+
+        # merge the dicts
+        output_dict = {fid: output_dict[fid] | cost_stats_dict.get(fid, None)
+                       for fid in output_dict.keys()}
+
+        cost_sum_field = ogr.FieldDefn('sum_cost', ogr.OFTReal)
+        cost_sum_field.SetWidth(24)
+        cost_sum_field.SetPrecision(11)
+        target_aggregate_layer.CreateField(cost_sum_field)
 
     target_aggregate_layer.ResetReading()
     target_aggregate_layer.StartTransaction()
 
     for poly_feat in target_aggregate_layer:
         poly_fid = poly_feat.GetFID()
-        poly_feat.SetField('sum_cases', float(output_dict[poly_fid]['sum_prev_cases']))
-        poly_feat.SetField('sum_cost', float(output_dict[poly_fid]['sum_cost']))
+        poly_feat.SetField('sum_cases',
+                           float(output_dict[poly_fid]['sum_cases']))
+        if calculate_cost:
+            poly_feat.SetField('sum_cost',
+                               float(output_dict[poly_fid]['sum_cost']))
         target_aggregate_layer.SetFeature(poly_feat)
 
     target_aggregate_layer.CommitTransaction()
     target_aggregate_layer, target_aggregate_vector = None, None
 
     # Calculate total cases and cost for all polygons in AOI
-    tot_sum_prev_cases = numpy.sum([v['sum_prev_cases'] for v in output_dict.values()])
-    tot_sum_cost = numpy.sum([v['sum_cost'] for v in output_dict.values()])
+    tot_sum_prev_cases = numpy.sum([v['sum_cases'] for v in output_dict.values()])
     output_dict["ALL"] = {}
-    output_dict["ALL"]["tot_sum_prev_cases"]=tot_sum_prev_cases
-    output_dict["ALL"]["tot_sum_cost"]=tot_sum_cost
+    output_dict["ALL"]["total_cases"] = tot_sum_prev_cases
+
+    if calculate_cost:
+        tot_sum_cost = numpy.sum([v['sum_cost'] for v in output_dict.values()])
+        output_dict["ALL"]["total_cost"] = tot_sum_cost
 
     output_df = pandas.DataFrame(output_dict).T
     output_df.index.name = "FID"
