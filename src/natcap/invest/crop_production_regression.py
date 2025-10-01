@@ -114,6 +114,13 @@ CROP_TO_PATH_TABLES = CropToPathTables(
     regression_yield='regression_yield_csv_table',
 )
 
+CROP_TO_PATH_TABLE_PATH_DESC = ("Each ``path`` may be either a *relative*"
+                                " path pointing to a local file, or a URL"
+                                " pointing to a remote file.")
+
+TABLE_PROVIDED_MSG = ("You do not need to create this table; it is provided"
+                      " for you in the sample data.")
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="crop_production_regression",
     model_title=gettext("Crop Production: Regression"),
@@ -196,7 +203,8 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("Climate Bin Raster Table"),
             about=gettext(
                 "A table that maps each crop name to the corresponding"
-                " climate bin raster."
+                f" climate bin raster. {CROP_TO_PATH_TABLE_PATH_DESC}"
+                f" {TABLE_PROVIDED_MSG}"
             ),
             columns=[
                 spec.OptionStringInput(
@@ -219,7 +227,8 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("Observed Yield Raster Table"),
             about=gettext(
                 "A table that maps each crop name to the corresponding"
-                " observed yield raster."
+                f" observed yield raster. {CROP_TO_PATH_TABLE_PATH_DESC}"
+                f" {TABLE_PROVIDED_MSG}"
             ),
             columns=[
                 spec.OptionStringInput(
@@ -242,7 +251,8 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("Regression Yield CSV Table"),
             about=gettext(
                 "A table that maps each crop name to the corresponding"
-                " regression yield table."
+                f" regression yield table. {CROP_TO_PATH_TABLE_PATH_DESC}"
+                f" {TABLE_PROVIDED_MSG}"
             ),
             columns=[
                 spec.OptionStringInput(
@@ -276,6 +286,7 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("Crop Nutrient Table"),
             about=gettext(
                 "A table that lists amounts of nutrients in each crop."
+                f" {TABLE_PROVIDED_MSG}"
             ),
             columns=[
                 spec.OptionStringInput(

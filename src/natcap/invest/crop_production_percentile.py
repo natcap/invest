@@ -14,7 +14,10 @@ from . import gettext
 from . import spec
 from . import utils
 from . import validation
-from .crop_production_regression import NUTRIENTS, NUTRIENT_UNITS, CROP_TO_PATH_TABLES, get_full_path_from_crop_table
+from .crop_production_regression import (
+    NUTRIENTS, NUTRIENT_UNITS, CROP_TO_PATH_TABLES,
+    CROP_TO_PATH_TABLE_PATH_DESC, TABLE_PROVIDED_MSG,
+    get_full_path_from_crop_table)
 from .file_registry import FileRegistry
 from .unit_registry import u
 
@@ -263,7 +266,8 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("Climate Bin Raster Table"),
             about=gettext(
                 "A table that maps each crop name to the corresponding"
-                " climate bin raster."
+                f" climate bin raster. {CROP_TO_PATH_TABLE_PATH_DESC}"
+                f" {TABLE_PROVIDED_MSG}"
             ),
             columns=[
                 spec.OptionStringInput(
@@ -286,7 +290,8 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("Observed Yield Raster Table"),
             about=gettext(
                 "A table that maps each crop name to the corresponding"
-                " observed yield raster."
+                f" observed yield raster. {CROP_TO_PATH_TABLE_PATH_DESC}"
+                f" {TABLE_PROVIDED_MSG}."
             ),
             columns=[
                 spec.OptionStringInput(
@@ -309,7 +314,8 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("Percentile Yield CSV Table"),
             about=gettext(
                 "A table that maps each crop name to the corresponding"
-                " percentile yield table."
+                f" percentile yield table. {CROP_TO_PATH_TABLE_PATH_DESC}"
+                f" {TABLE_PROVIDED_MSG}"
             ),
             columns=[
                 spec.OptionStringInput(
@@ -353,6 +359,7 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("Crop Nutrient Table"),
             about=gettext(
                 "A table that lists amounts of nutrients in each crop."
+                f" {TABLE_PROVIDED_MSG}"
             ),
             columns=[
                 spec.OptionStringInput(
