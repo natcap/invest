@@ -454,7 +454,7 @@ def execute(args):
             the model to estimate preventable cases by comparing current rates
             with those projected under improved nature exposure scenarios. The
             vector must contain field `risk_rate`.
-        args['health_cost_rate'] (str): (optional) the societal cost per case
+        args['health_cost_rate'] (float): (optional) the societal cost per case
             (e.g., in USD PPP) for the mental health outcome described by
             the `baseline_prevalence_vector`. This data enables the model
             to estimate the economic value of preventable cases under
@@ -521,6 +521,7 @@ def execute(args):
     # preprocessing
     LOGGER.info("Start preprocessing")
     if args['scenario'] == 'ndvi':
+        # will rearrage whats in if/else block when implementing scenarios 1-2
         LOGGER.info("Using scenario option 3: NDVI")
         base_ndvi_raster_info = pygeoprocessing.get_raster_info(
             args['ndvi_base'])
@@ -676,11 +677,14 @@ def execute(args):
             task_name="calculate preventable cases"
         )
 
-        if args['health_cost_rate']:
+        health_cost = args.get("health_cost_rate")
+        health_cost = float(health_cost) if health_cost else None
+
+        if health_cost:
+            LOGGER.info("Calculating preventable cost")
             preventable_cost_task = task_graph.add_task(
                 func=calc_preventable_cost,
-                args=(file_registry['preventable_cases'],
-                      args['health_cost_rate'],
+                args=(file_registry['preventable_cases'], health_cost,
                       file_registry['preventable_cost']),
                 target_path_list=[file_registry['preventable_cost']],
                 dependent_task_list=[preventable_cases_task],
@@ -688,21 +692,28 @@ def execute(args):
             )
 
         task_graph.join()
-        # TODO ^ is this best way to require prev cost task done? 
+        # TODO ^ is this best way to require prev cost task done?
         # Can't add as dependent task below as not done if not health_cost_rate
+
+        zonal_stats_inputs = [
+            args['aoi_vector_path'],
+            file_registry['preventable_cases_cost_sum_table'],
+            file_registry['preventable_cases_cost_sum_vector'],
+            file_registry['preventable_cases']]
+
+        zonal_stats_dependent_tasks = [preventable_cases_task]
+
+        if health_cost:
+            LOGGER.info("Calculating sum preventable cases and cost by polygon")
+            zonal_stats_inputs.append(file_registry['preventable_cost'])
+            zonal_stats_dependent_tasks.append(preventable_cost_task)
 
         zonal_stats_task = task_graph.add_task(
             func=zonal_stats_preventable_cases_cost,
-            args=(
-                args['aoi_vector_path'],
-                file_registry['preventable_cases_cost_sum_table'],
-                file_registry['preventable_cases_cost_sum_vector'],
-                file_registry['preventable_cases'],
-                file_registry['preventable_cost']
-            ),
+            args=zonal_stats_inputs,
             target_path_list=[
                 file_registry['preventable_cases_cost_sum_table']],
-            dependent_task_list=[preventable_cases_task],
+            dependent_task_list=zonal_stats_dependent_tasks,
             task_name='calculate zonal statistics'
         )
 
@@ -1016,7 +1027,17 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
 
 def calc_preventable_cost(preventable_cases, health_cost_rate,
                           target_preventable_cost):
-    """Calculate preventable cost"""
+    """Calculate preventable cost
+
+    Args:
+        preventable_cases (str): path to preventable cases raster
+        health_cost_rate (float): health cost
+        target_preventable_cost (str): path to output preventable cost raster
+
+    Returns:
+        None
+
+    """
     def _preventable_cost_op(preventable_cases, cost):
         valid_mask = ~pygeoprocessing.array_equals_nodata(
             preventable_cases, FLOAT32_NODATA)
@@ -1025,39 +1046,33 @@ def calc_preventable_cost(preventable_cases, health_cost_rate,
         result[valid_mask] = preventable_cases[valid_mask]*cost
         return result
 
-    health_cost_rate = float(health_cost_rate)
-
     pygeoprocessing.raster_calculator(
-        [(preventable_cases, 1), (float(health_cost_rate), "raw")],
+        [(preventable_cases, 1), (health_cost_rate, "raw")],
         _preventable_cost_op, target_preventable_cost, gdal.GDT_Float32,
         nodata_target=FLOAT32_NODATA)
 
 
 def zonal_stats_preventable_cases_cost(
         base_vector_path, target_stats_csv, target_aggregate_vector_path,
-        preventable_cases_raster, preventable_cost_raster):
+        preventable_cases_raster, preventable_cost_raster=None):
     """Calculate zonal statistics for each polygon in the AOI
     and write results to a csv and vector file.
 
     Args:
-        base_vector_path (string): Path to the AOI shapefile.
-        target_stats_csv (string): Path to csv file to store dictionary
+        base_vector_path (string): path to the AOI shapefile.
+        target_stats_csv (string): path to csv file to store dictionary
             returned by zonal stats.
-        target_aggregate_vector_path (string): Path to vector to store zonal
+        target_aggregate_vector_path (string): path to vector to store zonal
             stats
-        preventable_cases_raster (string): Path to preventable cases raster
-            which is aggregated by AOI polygon.
-        preventable_cost_raster (string): Path to preventable cost raster
-            which is aggregated by AOI polygon.
+        preventable_cases_raster (string): path to preventable cases raster,
+            which gets aggregated by AOI polygon(s).
+        preventable_cost_raster (string): (optional) path to preventable cost
+            raster, which gets aggregated by AOI polygon(s).
 
     Returns:
         None
 
     """
-    if os.path.exists(preventable_cost_raster):
-        calculate_cost = True
-    else:
-        calculate_cost = False
 
     # write zonal stats to new vector
     aoi_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
@@ -1084,7 +1099,7 @@ def zonal_stats_preventable_cases_cost(
     target_aggregate_layer = target_aggregate_vector.GetLayer()
     target_aggregate_layer.CreateField(cases_sum_field)
 
-    if calculate_cost:
+    if preventable_cost_raster:
         cost_stats_dict = pygeoprocessing.zonal_statistics(
             (preventable_cost_raster, 1), base_vector_path, ignore_nodata=True)
 
@@ -1107,7 +1122,7 @@ def zonal_stats_preventable_cases_cost(
         poly_fid = poly_feat.GetFID()
         poly_feat.SetField('sum_cases',
                            float(output_dict[poly_fid]['sum_cases']))
-        if calculate_cost:
+        if preventable_cost_raster:
             poly_feat.SetField('sum_cost',
                                float(output_dict[poly_fid]['sum_cost']))
         target_aggregate_layer.SetFeature(poly_feat)
@@ -1116,12 +1131,14 @@ def zonal_stats_preventable_cases_cost(
     target_aggregate_layer, target_aggregate_vector = None, None
 
     # Calculate total cases and cost for all polygons in AOI
-    tot_sum_prev_cases = numpy.sum([v['sum_cases'] for v in output_dict.values()])
+    tot_sum_prev_cases = numpy.sum([v['sum_cases']
+                                    for v in output_dict.values()])
     output_dict["ALL"] = {}
     output_dict["ALL"]["total_cases"] = tot_sum_prev_cases
 
-    if calculate_cost:
-        tot_sum_cost = numpy.sum([v['sum_cost'] for v in output_dict.values()])
+    if preventable_cost_raster:
+        tot_sum_cost = numpy.sum([v['sum_cost'] for k, v in output_dict.items()
+                                  if k != "ALL"])
         output_dict["ALL"]["total_cost"] = tot_sum_cost
 
     output_df = pandas.DataFrame(output_dict).T
