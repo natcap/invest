@@ -299,13 +299,13 @@ MODEL_SPEC = spec.ModelSpec(
                 ),
                 fields=[
                     spec.IntegerOutput(
-                        id="total_preventable_cases",
-                        about=gettext("Aggregated total preventable cases"),
+                        id="sum_cases",
+                        about=gettext("Aggregated total preventable cases by polygon"),
                         units=u.count
                     ),
                     spec.IntegerOutput(
-                        id="preventable_costs_by_subregion",
-                        about=gettext("Total preventable costs by subregion"),
+                        id="sum_cost",
+                        about=gettext("Total preventable costs by subregion/polygon"),
                         units=u.currency
                     )
                 ]
@@ -678,6 +678,7 @@ def execute(args):
             args=(
                 args['aoi_vector_path'],
                 file_registry['preventable_cases_cost_sum_table'],
+                file_registry['preventable_cases_cost_sum_vector'],
                 file_registry['preventable_cases'],
                 file_registry['preventable_cost']
             ),
@@ -1004,14 +1005,16 @@ def calc_preventable_cost(preventable_cases, health_cost_rate,
 
 
 def zonal_stats_preventable_cases_cost(base_vector_path, target_stats_csv,
+                                       target_aggregate_vector_path,
                                        preventable_cases_raster, preventable_costs_raster):
     """Calculate zonal statistics for each polygon in the AOI
-    and write results to a file.
+    and write results to a csv and vector file.
 
     Args:
         base_vector_path (string): Path to the AOI shapefile.
-        target_stats_csv (string): Path to pickle file to store dictionary
+        target_stats_csv (string): Path to csv file to store dictionary
             returned by zonal stats.
+        target_aggregate_vector_path (string): Path to vector to store zonal stats
         preventable_cases_raster (string): Path to preventable cases raster which
             is aggregated by AOI polygon.
         preventable_costs_raster (string): Path to preventable costs raster
@@ -1022,6 +1025,8 @@ def zonal_stats_preventable_cases_cost(base_vector_path, target_stats_csv,
         None
 
     """
+
+    # calculate zonal stats for cases and cost
     cases_stats_dict = pygeoprocessing.zonal_statistics(
         (preventable_cases_raster, 1), base_vector_path, ignore_nodata=True)
     
@@ -1036,7 +1041,51 @@ def zonal_stats_preventable_cases_cost(base_vector_path, target_stats_csv,
         # merge the dicts
         output_dict = {fid: output_dict[fid] | cost_stats_dict.get(fid, None) for fid in output_dict.keys()}
 
-    pandas.DataFrame(output_dict).T.to_csv(target_stats_csv)
+    # write zonal stats to new vector
+    aoi_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+
+    if os.path.exists(target_aggregate_vector_path):
+        os.remove(target_aggregate_vector_path)
+    driver.CreateCopy(target_aggregate_vector_path, aoi_vector)
+    aoi_vector = None
+
+    cases_sum_field = ogr.FieldDefn('sum_cases', ogr.OFTReal)
+    cases_sum_field.SetWidth(24)
+    cases_sum_field.SetPrecision(11)
+
+    cost_sum_field = ogr.FieldDefn('sum_cost', ogr.OFTReal)
+    cost_sum_field.SetWidth(24)
+    cost_sum_field.SetPrecision(11)
+
+    target_aggregate_vector = gdal.OpenEx(
+        target_aggregate_vector_path, gdal.OF_UPDATE)
+    target_aggregate_layer = target_aggregate_vector.GetLayer()
+    target_aggregate_layer.CreateField(cases_sum_field)
+    target_aggregate_layer.CreateField(cost_sum_field)
+
+    target_aggregate_layer.ResetReading()
+    target_aggregate_layer.StartTransaction()
+
+    for poly_feat in target_aggregate_layer:
+        poly_fid = poly_feat.GetFID()
+        poly_feat.SetField('sum_cases', float(output_dict[poly_fid]['sum_prev_cases']))
+        poly_feat.SetField('sum_cost', float(output_dict[poly_fid]['sum_cost']))
+        target_aggregate_layer.SetFeature(poly_feat)
+
+    target_aggregate_layer.CommitTransaction()
+    target_aggregate_layer, target_aggregate_vector = None, None
+
+    # Calculate total cases and cost for all polygons in AOI
+    tot_sum_prev_cases = numpy.sum([v['sum_prev_cases'] for v in output_dict.values()])
+    tot_sum_cost = numpy.sum([v['sum_cost'] for v in output_dict.values()])
+    output_dict["ALL"] = {}
+    output_dict["ALL"]["tot_sum_prev_cases"]=tot_sum_prev_cases
+    output_dict["ALL"]["tot_sum_cost"]=tot_sum_cost
+
+    output_df = pandas.DataFrame(output_dict).T
+    output_df.index.name = "FID"
+    output_df.to_csv(target_stats_csv)
 
 
 @validation.invest_validator
