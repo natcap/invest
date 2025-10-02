@@ -188,6 +188,8 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=None,
             projected=True,
+            # require ndvi_base unless scenario is `lulc`` and user enters
+            # an attribute table
             required="scenario!='lulc' or not lulc_attr_csv",
         ),
         spec.SingleBandRasterInput(
@@ -243,7 +245,7 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("LULC Attribute Table"),
             about=gettext(
                 "A table mapping LULC codes to NDVI values and stating "
-                "whether the LULC class should be exluded (0 for keeping, and "
+                "whether the LULC class should be excluded (0 for keeping, and "
                 "1 for excluding)."
             ),
             columns=[
@@ -272,7 +274,7 @@ MODEL_SPEC = spec.ModelSpec(
                 id="preventable_cases",
                 path="output/preventable_cases.tif",
                 about=gettext("Preventable cases at pixel level"),
-                data_type=int,
+                data_type=float,
                 units=u.count,
 
             ),
@@ -281,8 +283,8 @@ MODEL_SPEC = spec.ModelSpec(
                 path="output/preventable_cost.tif",
                 about=gettext(
                     "Preventable cost at pixel level. The currency unit will "
-                    "be the same as that in the health cost rate table."),
-                data_type=int,
+                    "be the same as that in the health cost rate input."),
+                data_type=float,
                 units=u.currency
             ),
             spec.VectorOutput(
@@ -303,7 +305,8 @@ MODEL_SPEC = spec.ModelSpec(
                     spec.IntegerOutput(
                         id="sum_cost",
                         about=gettext(
-                            "Total preventable costs by subregion/polygon"),
+                            "Total preventable costs by subregion/polygon in "
+                            "same currency as input health cost rate"),
                         units=u.currency
                     )
                 ]
@@ -315,7 +318,8 @@ MODEL_SPEC = spec.ModelSpec(
                     "Aggregated total preventable cases and total preventable "
                     "costs by sub-region (e.g., census tract or zip code) "
                     "within the area of interest, with an additional row "
-                    "showing the total cases for the entire area (e.g., city)."
+                    "showing the total cases for the entire area (e.g., city). "
+                    "Cost units are same as input health_cost_rate."
                 ),
                 columns=[
                     spec.NumberOutput(
@@ -370,7 +374,7 @@ MODEL_SPEC = spec.ModelSpec(
                 about=gettext(
                     "Normalized dichotomous kernel raster with radius "
                     "search_distance"),
-                data_type=int,
+                data_type=float,
                 units=None
             ),
             spec.SingleBandRasterOutput(
@@ -481,7 +485,7 @@ def execute(args):
             to a Land Use/Land Cover raster showing current or baseline
             conditions
         args['lulc_alt'] (str): required if args['scenario'] == 'lulc', a path
-            to a Land Use/Land Cover raster showing a future or counterfactural
+            to a Land Use/Land Cover raster showing a future or counterfactual
             scenario.
         args['lulc_attr_csv'] (str): required if args['scenario'] == 'lulc' and
             not args['ndvi_base'], a path to a CSV table that maps LULC codes
@@ -600,12 +604,16 @@ def execute(args):
         pixel_radius = int(round(search_radius/pixel_size[0]))
         LOGGER.info(f"Search radius {search_radius} results in "
                     f"buffer of {pixel_radius} pixels")
+        if pixel_radius == 0:
+            raise ValueError(
+                f"Search radius {search_radius} yielded pixel_radius of zero. "
+                "Please increase search radius.")
         kernel_task = task_graph.add_task(
             func=pygeoprocessing.kernels.dichotomous_kernel,
             kwargs={
                 'target_kernel_path': file_registry['kernel'],
                 'max_distance': pixel_radius,
-                'normalize': True},
+                'normalize': True}, #TODO do i need to normalize both this and in convolve2d op?
             target_path_list=[file_registry['kernel']],
             task_name='create kernel raster',)
 
@@ -637,7 +645,7 @@ def execute(args):
                 'normalize_kernel': True,
                 'target_datatype': gdal.GDT_Float32,
                 'target_nodata': FLOAT32_NODATA},
-            dependent_task_list=[ndvi_align_task, kernel_task], #TODO: should this task depend on mean_buffer_base_ndvi_task in case both try to open kernel raster simultaneously?
+            dependent_task_list=[ndvi_align_task, kernel_task],
             target_path_list=[file_registry['ndvi_alt_buffer_mean']],
             task_name="calculate mean alternate NDVI within buffer")
 
@@ -712,23 +720,30 @@ def execute(args):
             func=zonal_stats_preventable_cases_cost,
             args=zonal_stats_inputs,
             target_path_list=[
-                file_registry['preventable_cases_cost_sum_table']],
+                file_registry['preventable_cases_cost_sum_table'],
+                file_registry['preventable_cases_cost_sum_vector']],
             dependent_task_list=zonal_stats_dependent_tasks,
             task_name='calculate zonal statistics'
         )
 
-    elif args['scenario'] == 'tc_ndvi':
+    elif args['scenario'] == 'tcc_ndvi':
         tc_target = float(args['tc_target'])
+        raise NotImplementedError
 
-    return True
+    elif args['scenario'] == 'lulc':
+        raise NotImplementedError
+
+    task_graph.close()
+    task_graph.join()
+    LOGGER.info('Finished Urban Mental Health Model')
+    return file_registry.registry
 
 
 def check_raster_bounds_against_aoi(aoi_bbox, raster_bbox):
     """Check if raster bounds are >= bounds of AOI + search_radius.
 
     Check if the bounds of the raster extend at least search_radius
-    meters beyond the bounds of the AOI vector. If True, return the
-    "buffered" AOI bounding box.
+    meters beyond the bounds of the AOI vector.
 
     Args:
         aoi_bbox (list): aoi bounds in format [xmin, ymin, xmax, ymax],
@@ -926,7 +941,7 @@ def calc_baseline_cases(population_raster, base_prevalence_vector,
 
     """
     def _multiply_op(prevalence, pop, prevalence_nodata, pop_nodata):
-        """Mulitply baseline prevalence raster by population raster"""
+        """Multiply baseline prevalence raster by population raster"""
         valid_mask = (~pygeoprocessing.array_equals_nodata(prevalence,
                                                            prevalence_nodata) &
                       ~pygeoprocessing.array_equals_nodata(pop, pop_nodata))
@@ -980,7 +995,7 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
 
     Args:
         delta_ndvi (str): path to raster representing change in NDVI from
-            baseline to alternate/counterfactural scenario
+            baseline to alternate/counterfactual scenario
         baseline_cases (str): path to raster of number of baseline cases
         effect_size (float): health indicator-specific effect size, given
             as a risk ratio, representing the relationship between nature
@@ -1079,7 +1094,7 @@ def zonal_stats_preventable_cases_cost(
     driver = gdal.GetDriverByName('ESRI Shapefile')
 
     if os.path.exists(target_aggregate_vector_path):
-        os.remove(target_aggregate_vector_path)
+        driver.Delete(target_aggregate_vector_path)
     driver.CreateCopy(target_aggregate_vector_path, aoi_vector)
     aoi_vector = None
 
@@ -1106,7 +1121,7 @@ def zonal_stats_preventable_cases_cost(
         cost_stats_dict = {k: {"sum_cost": v['sum']}
                            for k, v in cost_stats_dict.items()}
 
-        # merge the dicts
+        # merge the dicts - TODO check this always works
         output_dict = {fid: output_dict[fid] | cost_stats_dict.get(fid, None)
                        for fid in output_dict.keys()}
 
