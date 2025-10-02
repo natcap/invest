@@ -70,6 +70,9 @@ General
 * Added a `ModelSpec.get_output` method to access items in `ModelSpec.outputs`
   using the `id` property of the `Output`.
   (`#2138 <https://github.com/natcap/invest/issues/2138>`_)
+* Added a page to the API documentation describing how to run InVEST through
+  the supplied docker container, and also through Apptainer/Singularity.
+  *`#2171 <https://github.com/natcap/invest/issues/2171>`_)
 
 Plugins
 =======
