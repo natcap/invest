@@ -115,12 +115,18 @@ CROP_TO_PATH_TABLES = CropToPathTables(
     regression_yield='regression_yield_csv_table',
 )
 
-CROP_TO_PATH_TABLE_PATH_DESC = ("Each ``path`` may be either a *relative*"
-                                " path pointing to a local file, or a URL"
-                                " pointing to a remote file.")
-
-TABLE_PROVIDED_MSG = ("You do not need to create this table; it is provided"
-                      " for you in the sample data.")
+LULC_RASTER_INPUT = spec.SingleBandRasterInput(
+    id="landcover_raster_path",
+    name=gettext("land use/land cover"),
+    about=gettext(
+        "Map of land use/land cover codes. Each land use/land cover type must"
+        " be assigned a unique integer code."
+    ),
+    data_type=int,
+    units=None,
+    projected=True,
+    projection_units=u.meter
+)
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="crop_production_regression",
@@ -138,18 +144,7 @@ MODEL_SPEC = spec.ModelSpec(
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.SingleBandRasterInput(
-            id="landcover_raster_path",
-            name=gettext("land use/land cover"),
-            about=gettext(
-                "Map of land use/land cover codes. Each land use/land cover type must be"
-                " assigned a unique integer code."
-            ),
-            data_type=int,
-            units=None,
-            projected=True,
-            projection_units=u.meter
-        ),
+        LULC_RASTER_INPUT,
         spec.CSVInput(
             id="landcover_to_crop_table_path",
             name=gettext("LULC to crop table"),
@@ -204,8 +199,11 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("Climate Bin Raster Table"),
             about=gettext(
                 "A table that maps each crop name to the corresponding"
-                f" climate bin raster. {CROP_TO_PATH_TABLE_PATH_DESC}"
-                f" {TABLE_PROVIDED_MSG}"
+                " climate bin raster."
+                " Each path may be either a relative path pointing to a local"
+                " file, or a URL pointing to a remote file."
+                " You do not need to create this table; it is provided for you"
+                " in the sample data."
             ),
             columns=[
                 spec.OptionStringInput(
@@ -228,8 +226,11 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("Observed Yield Raster Table"),
             about=gettext(
                 "A table that maps each crop name to the corresponding"
-                f" observed yield raster. {CROP_TO_PATH_TABLE_PATH_DESC}"
-                f" {TABLE_PROVIDED_MSG}"
+                " observed yield raster."
+                " Each path may be either a relative path pointing to a local"
+                " file, or a URL pointing to a remote file."
+                " You do not need to create this table; it is provided for you"
+                " in the sample data."
             ),
             columns=[
                 spec.OptionStringInput(
@@ -252,8 +253,11 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("Regression Yield CSV Table"),
             about=gettext(
                 "A table that maps each crop name to the corresponding"
-                f" regression yield table. {CROP_TO_PATH_TABLE_PATH_DESC}"
-                f" {TABLE_PROVIDED_MSG}"
+                " regression yield table."
+                " Each path may be either a relative path pointing to a local"
+                " file, or a URL pointing to a remote file."
+                " You do not need to create this table; it is provided for you"
+                " in the sample data."
             ),
             columns=[
                 spec.OptionStringInput(
@@ -287,7 +291,8 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("Crop Nutrient Table"),
             about=gettext(
                 "A table that lists amounts of nutrients in each crop."
-                f" {TABLE_PROVIDED_MSG}"
+                " You do not need to create this table; it is provided for you"
+                " in the sample data."
             ),
             columns=[
                 spec.OptionStringInput(
