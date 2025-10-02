@@ -20,7 +20,6 @@ from .. import gettext
 from .. import spec
 from .. import utils
 from .. import validation
-from ..file_registry import FileRegistry
 from ..unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -39,6 +38,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("sq",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["aoi_path", "structure_path", "dem_path", "refraction"],
@@ -299,40 +299,9 @@ def execute(args):
 
     """
     LOGGER.info("Starting Scenic Quality Model")
+    args, file_registry, graph = MODEL_SPEC.setup(args)
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
 
-    try:
-        do_valuation = bool(args['do_valuation'])
-    except KeyError:
-        do_valuation = False
-
-    if do_valuation:
-        valuation_coefficients = {
-            'a': float(args['a_coef']),
-            'b': float(args['b_coef']),
-        }
-        max_valuation_radius = float(args['max_valuation_radius'])
-
-    # Create output and intermediate directory
-    output_dir = os.path.join(args['workspace_dir'], 'output')
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    utils.make_directories([output_dir, intermediate_dir])
-
-    file_suffix = utils.make_suffix_string(
-        args, 'results_suffix')
-
-    LOGGER.info('Building file registry')
-    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], file_suffix)
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous execution
-    graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'], n_workers)
-    print(file_registry['aoi_reprojected'])
     reprojected_aoi_task = graph.add_task(
         pygeoprocessing.reproject_vector,
         args=(args['aoi_path'],
@@ -364,7 +333,7 @@ def execute(args):
         args=(args['dem_path'],
               file_registry['aoi_reprojected'],
               file_registry['dem_clipped'],
-              intermediate_dir),
+              args['workspace_dir']),
         target_path_list=[file_registry['dem_clipped']],
         dependent_task_list=[reprojected_aoi_task],
         task_name='clip_dem_to_aoi')
@@ -410,7 +379,7 @@ def execute(args):
                   viewpoint,
                   file_registry['visibility_[FEATURE_ID]', feature_index]),
             kwargs={'curved_earth': True,  # SQ model always assumes this.
-                    'refraction_coeff': float(args['refraction']),
+                    'refraction_coeff': args['refraction'],
                     'max_distance': max_radius,
                     'viewpoint_height': viewpoint_height,
                     'aux_filepath': None},  # Remove aux filepath after run
@@ -420,7 +389,7 @@ def execute(args):
             task_name='calculate_visibility_%s' % feature_index)
         viewshed_tasks.append(viewshed_task)
 
-        if do_valuation:
+        if args['do_valuation']:
             # calculate valuation
             viewshed_valuation_path = file_registry['value_[FEATURE_ID]', feature_index]
             valuation_task = graph.add_task(
@@ -429,8 +398,9 @@ def execute(args):
                       viewpoint,
                       weight,  # user defined, from WEIGHT field in vector
                       args['valuation_function'],
-                      valuation_coefficients,  # a, b from args, a dict.
-                      max_valuation_radius,
+                      args['a_coef'],
+                      args['b_coef'],
+                      args['max_valuation_radius'],
                       viewshed_valuation_path),
                 target_path_list=[viewshed_valuation_path],
                 dependent_task_list=[viewshed_task],
@@ -454,7 +424,7 @@ def execute(args):
     # If we're not doing valuation, we can still compute visual quality,
     # we'll just use the weighted visible structures raster instead of the
     # sum of the valuation rasters.
-    if not do_valuation:
+    if not args['do_valuation']:
         parent_visual_quality_task = weighted_visible_structures_task
         parent_visual_quality_raster_path = file_registry['vshed']
     else:
@@ -472,7 +442,7 @@ def execute(args):
     graph.add_task(
         _calculate_visual_quality,
         args=(parent_visual_quality_raster_path,
-              intermediate_dir,
+              args['workspace_dir'],
               file_registry['vshed_qual']),
         dependent_task_list=[parent_visual_quality_task],
         target_path_list=[file_registry['vshed_qual']],
@@ -761,7 +731,7 @@ def _sum_valuation_rasters(dem_path, valuation_filepaths, target_path):
 
 
 def _calculate_valuation(visibility_path, viewpoint, weight,
-                         valuation_method, valuation_coefficients,
+                         valuation_method, a, b,
                          max_valuation_radius,
                          valuation_raster_path):
     """Calculate valuation with one of the defined methods.
@@ -775,9 +745,8 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
         weight (number): The numeric weight of the visibility.
         valuation_method (string): The valuation method to use, one of
             ('linear', 'logarithmic', 'exponential').
-        valuation_coefficients (dict): A dictionary mapping string coefficient
-            letters to numeric coefficient values. Keys 'a' and 'b' are
-            required.
+        a (float): the A valuation coefficient
+        b (float): the B valuation coefficient
         max_valuation_radius (number): Past this distance (in meters),
             valuation values will be set to 0.
         valuation_raster_path (string): The path to where the valuation raster
@@ -787,14 +756,9 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
         ``None``
 
     """
-    LOGGER.info('Calculating valuation with %s method. Coefficients: %s',
-                valuation_method,
-                ' '.join(['%s=%g' % (k, v) for (k, v) in
-                          sorted(valuation_coefficients.items())]))
-
-    # All valuation functions use coefficients a, b
-    a = valuation_coefficients['a']
-    b = valuation_coefficients['b']
+    LOGGER.info(
+        f'Calculating valuation with {valuation_method} method. '
+        f'Coefficients: a={a} b={b}')
 
     if valuation_method == 'linear':
 

@@ -24,6 +24,7 @@ import pygeoprocessing
 from pygeoprocessing.geoprocessing_core import GDALUseExceptions
 from pydantic import AfterValidator, BaseModel, ConfigDict, \
     field_validator, model_validator, ValidationError
+import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
 from natcap.invest import utils
@@ -1138,9 +1139,11 @@ class NumberInput(Input):
         return None if value in {None, ''} else float(value)
 
 
-class IntegerInput(Input):
+class IntegerInput(NumberInput):
     """An integer input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'integer'
+
+    units: typing.Union[pint.Unit, None] = None
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1151,13 +1154,16 @@ class IntegerInput(Input):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        try:
-            # must first cast to float, to handle both string and float inputs
-            as_float = float(value)
-            if not as_float.is_integer():
-                return get_message('NOT_AN_INTEGER').format(value=value)
-        except (TypeError, ValueError):
-            return get_message('NOT_A_NUMBER').format(value=value)
+        message = super().validate(value)
+        if message:
+            return message
+
+        # must first cast to float, to handle both string and float inputs
+        # since we already called super().validate, we know that the value
+        # can be cast to float
+        if not float(value).is_integer():
+            return get_message('NOT_AN_INTEGER').format(value=value)
+
 
     @staticmethod
     def format_column(col, *args):
@@ -1186,7 +1192,7 @@ class IntegerInput(Input):
         return None if value in {None, ''} else int(float(value))
 
 
-class NWorkersInput(NumberInput):
+class NWorkersInput(IntegerInput):
 
     def preprocess(self, value):
         print('preprocess nworkers', value)
@@ -1859,6 +1865,14 @@ class ModelSpec(BaseModel):
                 os.makedirs(os.path.join(
                     args['workspace_dir'], os.path.split(output.path)[0]
                 ), exist_ok=True)
+
+    def setup(self, args, taskgraph_key='taskgraph_cache'):
+        args = self.preprocess_inputs(args)
+        self.create_output_directories(args)
+        file_registry = self.create_file_registry(args)
+        graph = taskgraph.TaskGraph(file_registry[taskgraph_key],
+                                    n_workers=args['n_workers'])
+        return args, file_registry, graph
 
     def execute(self, args, create_logfile=False, log_level=logging.DEBUG,
             generate_metadata=False, save_file_registry=False,

@@ -242,11 +242,7 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    args = MODEL_SPEC.preprocess_inputs(args)
-    MODEL_SPEC.create_output_directories(args)
-    file_registry = MODEL_SPEC.create_file_registry(args)
-    graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'],
-                                n_workers=args['n_workers'])
+    args, file_registry, graph = MODEL_SPEC.setup(args)
 
     fill_pits_task = graph.add_task(
         pygeoprocessing.routing.fill_pits,

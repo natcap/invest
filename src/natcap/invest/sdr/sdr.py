@@ -22,7 +22,6 @@ from .. import spec
 from .. import urban_nature_access
 from .. import utils
 from .. import validation
-from ..file_registry import FileRegistry
 from ..unit_registry import u
 from . import sdr_core
 
@@ -35,6 +34,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["dem_path", "erosivity_path", "erodibility_path"],
@@ -627,7 +627,8 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    args, f_reg, task_graph = MODEL_SPEC.setup(args)
+
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
         args['biophysical_table_path'])
@@ -642,23 +643,6 @@ def execute(args):
                     f'column "{key}", lucode row "{lulc_code}", '
                     f'and has value "{row[key]}"')
 
-    intermediate_output_dir = os.path.join(
-        args['workspace_dir'], INTERMEDIATE_DIR_NAME)
-    output_dir = os.path.join(args['workspace_dir'])
-    utils.make_directories([output_dir, intermediate_output_dir])
-
-    f_reg = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    task_graph = taskgraph.TaskGraph(
-        f_reg['taskgraph_cache'], n_workers, reporting_interval=5.0)
-
     base_list = []
     aligned_list = []
     masked_list = []
@@ -670,9 +654,7 @@ def execute(args):
     # all continuous rasters can use bilinear, but lulc should be mode
     interpolation_list = ['bilinear', 'mode', 'bilinear', 'bilinear']
 
-    drainage_present = False
-    if 'drainage_path' in args and args['drainage_path'] != '':
-        drainage_present = True
+    if args['drainage_path']:
         input_raster_key_list.append('drainage')
         base_list.append(args['drainage_path'])
         aligned_list.append(f_reg['aligned_drainage'])
@@ -683,20 +665,18 @@ def execute(args):
     min_pixel_size = numpy.min(numpy.abs(dem_raster_info['pixel_size']))
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
-    target_sr_wkt = dem_raster_info['projection_wkt']
-    vector_mask_options = {
-        'mask_vector_path': args['watersheds_path'],
-    }
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
             base_list, aligned_list, interpolation_list,
             target_pixel_size, 'intersection'),
         kwargs={
-            'target_projection_wkt': target_sr_wkt,
+            'target_projection_wkt': dem_raster_info['projection_wkt'],
             'base_vector_path_list': (args['watersheds_path'],),
             'raster_align_index': 0,
-            'vector_mask_options': vector_mask_options,
+            'vector_mask_options': {
+                'mask_vector_path': args['watersheds_path'],
+            },
         },
         target_path_list=aligned_list,
         task_name='align input rasters')
@@ -779,7 +759,7 @@ def execute(args):
             args=(
                 (f_reg['flow_accumulation'], 1),
                 (f_reg['flow_direction'], 1),
-                float(args['threshold_flow_accumulation']),
+                args['threshold_flow_accumulation'],
                 f_reg['stream']),
             kwargs={'trace_threshold_proportion': 0.7},
             target_path_list=[f_reg['stream']],
@@ -811,7 +791,7 @@ def execute(args):
             func=pygeoprocessing.routing.extract_streams_d8,
             kwargs=dict(
                 flow_accum_raster_path_band=(f_reg['flow_accumulation'], 1),
-                flow_threshold=float(args['threshold_flow_accumulation']),
+                flow_threshold=args['threshold_flow_accumulation'],
                 target_stream_raster_path=f_reg['stream']),
             target_path_list=[f_reg['stream']],
             dependent_task_list=[flow_accumulation_task],
@@ -823,14 +803,14 @@ def execute(args):
         args=(
             f_reg['flow_accumulation'],
             f_reg['slope'],
-            float(args['l_max']),
+            args['l_max'],
             f_reg['ls']),
         target_path_list=[f_reg['ls']],
         dependent_task_list=[
             flow_accumulation_task, slope_task],
         task_name='ls factor calculation')
 
-    if drainage_present:
+    if args['drainage_path']:
         drainage_task = task_graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
@@ -962,8 +942,8 @@ def execute(args):
     sdr_task = task_graph.add_task(
         func=_calculate_sdr,
         args=(
-            float(args['k_param']), float(args['ic_0_param']),
-            float(args['sdr_max']), f_reg['ic'],
+            args['k_param'], args['ic_0_param'],
+            args['sdr_max'], f_reg['ic'],
             drainage_raster_path_task[0], f_reg['sdr_factor']),
         target_path_list=[f_reg['sdr_factor']],
         dependent_task_list=[ic_task],

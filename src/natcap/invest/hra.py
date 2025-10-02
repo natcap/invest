@@ -20,7 +20,6 @@ from . import gettext
 from . import spec
 from . import utils
 from . import validation
-from .file_registry import FileRegistry
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -595,11 +594,7 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    args = MODEL_SPEC.preprocess_inputs(args)
-    MODEL_SPEC.create_output_directories(args)
-    file_registry = MODEL_SPEC.create_file_registry(args)
-    graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], args['n_workers'])
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     target_srs_wkt = pygeoprocessing.get_vector_info(
         args['aoi_vector_path'])['projection_wkt']

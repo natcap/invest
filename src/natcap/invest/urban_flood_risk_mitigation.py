@@ -29,6 +29,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("ufrm",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["aoi_watersheds_path", "rainfall_depth"],
@@ -306,24 +307,7 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-
-    intermediate_dir = os.path.join(
-        args['workspace_dir'], 'intermediate_files')
-    utils.make_directories([
-        args['workspace_dir'], intermediate_dir])
-
-    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], file_suffix)
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    task_graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], n_workers)
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     # Align LULC with soils
     lulc_raster_info = pygeoprocessing.get_raster_info(
@@ -401,7 +385,7 @@ def execute(args):
     q_pi_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
-            [(float(args['rainfall_depth']), 'raw'), (file_registry['s_max'], 1),
+            [(args['rainfall_depth'], 'raw'), (file_registry['s_max'], 1),
              (s_max_nodata, 'raw'), (q_pi_nodata, 'raw')], _q_pi_op,
             file_registry['q_mm'], gdal.GDT_Float32, q_pi_nodata),
         target_path_list=[file_registry['q_mm']],
@@ -413,7 +397,7 @@ def execute(args):
     runoff_retention_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
-            (file_registry['q_mm'], 1), (float(args['rainfall_depth']), 'raw'),
+            (file_registry['q_mm'], 1), (args['rainfall_depth'], 'raw'),
             (q_pi_nodata, 'raw'), (runoff_retention_nodata, 'raw')],
             _runoff_retention_op, file_registry['runoff_retention_index'],
             gdal.GDT_Float32, runoff_retention_nodata),
@@ -427,7 +411,7 @@ def execute(args):
         args=([
             (file_registry['runoff_retention_index'], 1),
             (runoff_retention_nodata, 'raw'),
-            (float(args['rainfall_depth']), 'raw'),
+            (args['rainfall_depth'], 'raw'),
             (abs(target_pixel_size[0]*target_pixel_size[1]), 'raw'),
             (runoff_retention_nodata, 'raw')], _runoff_retention_vol_op,
             file_registry['runoff_retention_m3'], gdal.GDT_Float32,
@@ -493,8 +477,7 @@ def execute(args):
         flood_volume_in_aoi_task,
         runoff_retention_stats_task,
         runoff_retention_volume_stats_task]
-    if 'built_infrastructure_vector_path' in args and (
-            args['built_infrastructure_vector_path'] not in ('', None)):
+    if args['built_infrastructure_vector_path']:
         # Reproject the built infrastructure vector to the target SRS.
         reproject_built_infrastructure_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,

@@ -17,7 +17,6 @@ from .. import gettext
 from .. import spec
 from .. import utils
 from .. import validation
-from ..file_registry import FileRegistry
 from ..unit_registry import u
 from . import seasonal_water_yield_core
 
@@ -36,6 +35,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("swy",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["lulc_raster_path", "biophysical_table_path"],
@@ -650,6 +650,8 @@ def execute(args):
     Returns:
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
+
     LOGGER.info('prepare and test inputs for common errors')
 
     # fail early on a missing required rain events table
@@ -676,26 +678,9 @@ def execute(args):
 
     beta_i = float(fractions.Fraction(args['beta_i']))
     gamma = float(fractions.Fraction(args['gamma']))
-    threshold_flow_accumulation = float(args['threshold_flow_accumulation'])
+    threshold_flow_accumulation = args['threshold_flow_accumulation']
     pixel_size = pygeoprocessing.get_raster_info(
         args['dem_raster_path'])['pixel_size']
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate_outputs')
-    output_dir = args['workspace_dir']
-    utils.make_directories([intermediate_output_dir, output_dir])
-    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    LOGGER.debug('n_workers: %s', n_workers)
-    task_graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], n_workers, reporting_interval=5)
 
     LOGGER.info('Checking that the AOI is not the output aggregate vector')
     LOGGER.debug("aoi_path: %s", args['aoi_path'])
@@ -769,7 +754,7 @@ def execute(args):
         args=(
             (file_registry['dem_aligned'], 1),
             file_registry['pit_filled_dem']),
-        kwargs={'working_dir': intermediate_output_dir},
+        kwargs={'working_dir': args['workspace_dir']},
         target_path_list=[file_registry['pit_filled_dem']],
         dependent_task_list=[align_task],
         task_name='fill dem pits')
@@ -780,7 +765,7 @@ def execute(args):
             args=(
                 (file_registry['pit_filled_dem'], 1),
                 file_registry['flow_dir']),
-            kwargs={'working_dir': intermediate_output_dir},
+            kwargs={'working_dir': args['workspace_dir']},
             target_path_list=[file_registry['flow_dir']],
             dependent_task_list=[fill_pit_task],
             task_name='flow direction - MFD')
@@ -810,7 +795,7 @@ def execute(args):
             args=(
                 (file_registry['pit_filled_dem'], 1),
                 file_registry['flow_dir']),
-            kwargs={'working_dir': intermediate_output_dir},
+            kwargs={'working_dir': args['workspace_dir']},
             target_path_list=[file_registry['flow_dir']],
             dependent_task_list=[fill_pit_task],
             task_name='flow direction - D8')

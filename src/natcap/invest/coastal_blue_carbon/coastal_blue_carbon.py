@@ -137,6 +137,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=("cbc",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["landcover_snapshot_csv", "biophysical_table_path",
@@ -174,7 +175,7 @@ MODEL_SPEC = spec.ModelSpec(
             ],
             index_col="snapshot_year"
         ),
-        spec.NumberInput(
+        spec.IntegerInput(
             id="analysis_year",
             name=gettext("analysis year"),
             about=gettext(
@@ -647,28 +648,22 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    task_graph, n_workers, intermediate_dir, output_dir, suffix, file_registry = (
-        _set_up_workspace(args))
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     snapshots = MODEL_SPEC.get_input(
         'landcover_snapshot_csv').get_validated_dataframe(
             args['landcover_snapshot_csv'])['raster_path'].to_dict()
 
     # Phase 1: alignment and preparation of inputs
-    baseline_lulc_year = min(snapshots.keys())
+    baseline_lulc_year = int(min(snapshots.keys()))
     baseline_lulc_path = snapshots[baseline_lulc_year]
     baseline_lulc_info = pygeoprocessing.get_raster_info(
         baseline_lulc_path)
     min_pixel_size = numpy.min(numpy.abs(baseline_lulc_info['pixel_size']))
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
-    try:
-        analysis_year = int(args['analysis_year'])
-    except (KeyError, TypeError, ValueError):
-        # KeyError when not present in args
-        # ValueError when an empty string.
-        # TypeError when is None.
-        analysis_year = max(snapshots.keys())
+    if args['analysis_year'] is None:
+        args['analysis_year'] = max(snapshots.keys())
 
     # We're assuming that the LULC initial variables and the carbon pool
     # transient table are combined into a single lookup table.
@@ -704,9 +699,9 @@ def execute(args):
     # There are no emissions, so net sequestration is only from accumulation.
     # Value can still be calculated from the net sequestration.
     if transition_years:
-        end_of_baseline_period = min(transition_years)
+        end_of_baseline_period = int(min(transition_years))
     else:
-        end_of_baseline_period = analysis_year
+        end_of_baseline_period = args['analysis_year']
 
     yearly_accum_tasks = {
         baseline_lulc_year: {}
@@ -896,7 +891,7 @@ def execute(args):
     total_accumulation_tasks = {}
     prior_transition_year = baseline_lulc_year
     for current_transition_year in sorted(
-            transition_years.union([analysis_year])):
+            transition_years.union([args['analysis_year']])):
         total_accumulation_tasks[current_transition_year] = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(file_registry['accumulation-[POOL]-[YEAR]', POOL_BIOMASS, prior_transition_year], 1),
@@ -939,11 +934,11 @@ def execute(args):
 
     transition_analysis_args = {
         'workspace_dir': args['workspace_dir'],
-        'results_suffix': suffix,
-        'n_workers': n_workers,
+        'results_suffix': args['results_suffix'],
+        'n_workers': args['n_workers'],
         'transition_years': transition_years,
         'file_registry': file_registry,
-        'analysis_year': analysis_year,
+        'analysis_year': args['analysis_year'],
         'do_economic_analysis': args.get('do_economic_analysis', False),
         'baseline_lulc_raster': file_registry['aligned-lulc-[YEAR]', baseline_lulc_year],
         'baseline_lulc_year': baseline_lulc_year,
@@ -967,21 +962,20 @@ def execute(args):
                 'price_table_path').get_validated_dataframe(
                     args['price_table_path'])['price'].to_dict()
         else:
-            inflation_rate = float(args['inflation_rate']) * 0.01
-            annual_price = float(args['price'])
+            inflation_rate = args['inflation_rate'] * 0.01
 
             if transition_years:
-                max_year = max(transition_years.union(set([analysis_year])))
+                max_year = max(transition_years.union(set([args['analysis_year']])))
             else:
-                max_year = analysis_year
+                max_year = args['analysis_year']
 
             prices = {}
             for timestep_index, year in enumerate(
                     range(baseline_lulc_year, max_year + 1)):
                 prices[year] = (
                     ((1 + inflation_rate) ** timestep_index) *
-                    annual_price)
-        discount_rate = float(args['discount_rate']) * 0.01
+                    args['price'])
+        discount_rate = args['discount_rate'] * 0.01
 
         _ = task_graph.add_task(
             func=_calculate_npv,
@@ -1023,62 +1017,6 @@ def execute(args):
     task_graph.close()
     task_graph.join()
     return file_registry.registry
-
-
-def _set_up_workspace(args):
-    """Set up the workspce for a Coastal Blue Carbon model run.
-
-    Since the CBC model has two intended entrypoints, this allows for us to
-    have consistent workspace layouts without duplicating the configuration
-    between the two functions.
-
-    Args:
-        args (dict): A dict containing containing the necessary keys.
-        args['workspace_dir'] (string): the path to a workspace directory where
-            outputs should be written.
-        args['results_suffix'] (string): Optional.  If provided, this string
-            will be inserted into all filenames produced, just before the file
-            extension.
-        args['n_workers'] (int): (optional) If provided, the number of workers
-            to pass to ``taskgraph``.
-
-    Returns:
-        A 5-element tuple containing:
-
-            * ``task_graph`` - a ``taskgraph.TaskGraph`` object.
-            * ``n_workers`` - the int ``n_workers`` parameter used
-            * ``intermediate_dir`` - the path to the intermediate directory on
-                disk.  This directory is created in this function if it does
-                not already exist.
-            * ``output_dir`` - the path to the output directory on disk.  This
-                directory is created in this function if it does not already
-                exist.
-            * ``suffix`` - the suffix string, derived from the user-provided
-                suffix, if it was provided.
-            * ``file_registry`` - a ``utils.FileRegistry`` object that can be used to
-                look up paths to files in the intermediate and output
-                directories.
-    """
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-
-    suffix = utils.make_suffix_string(args, 'results_suffix')
-    intermediate_dir = os.path.join(
-        args['workspace_dir'], INTERMEDIATE_DIR_NAME)
-    output_dir = os.path.join(
-        args['workspace_dir'], OUTPUT_DIR_NAME)
-
-    utils.make_directories([output_dir, intermediate_dir])
-    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], suffix)
-    task_graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'],
-                                    n_workers, reporting_interval=5.0)
-
-    return task_graph, n_workers, intermediate_dir, output_dir, suffix, file_registry
 
 
 def execute_transition_analysis(args):
@@ -1148,21 +1086,20 @@ def execute_transition_analysis(args):
         ``None``.
 
     """
-    task_graph, n_workers, intermediate_dir, output_dir, suffix, file_registry = (
-        _set_up_workspace(args))
+    file_registry = args['file_registry']
+    task_graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'],
+                                     n_workers=args['n_workers'])
 
     transition_years = set([int(year) for year in args['transition_years']])
-    file_registry = args['file_registry']
 
     prices = None
     discount_rate = None
     do_economic_analysis = args.get('do_economic_analysis', False)
     if do_economic_analysis:
-        if args.get('carbon_prices_per_year', None):
+        if args['carbon_prices_per_year']:
             prices = {int(year): float(price)
                       for (year, price) in args['carbon_prices_per_year'].items()}
-        discount_rate = float(args['discount_rate'])
-    baseline_lulc_year = int(args['baseline_lulc_year'])
+        discount_rate = args['discount_rate']
 
     # Net sequestration across the baseline period is, in fact, just the
     # accumulation across the baseline period.  Therefore, the annual rate of
@@ -1171,11 +1108,11 @@ def execute_transition_analysis(args):
     net_sequestration_rasters = {
         (min(transition_years) - 1): {
             POOL_SOIL: file_registry[
-                'accumulation-[POOL]-[YEAR]', POOL_SOIL, baseline_lulc_year],
+                'accumulation-[POOL]-[YEAR]', POOL_SOIL, args['baseline_lulc_year']],
             POOL_BIOMASS: file_registry[
-                'accumulation-[POOL]-[YEAR]', POOL_BIOMASS, baseline_lulc_year],
+                'accumulation-[POOL]-[YEAR]', POOL_BIOMASS, args['baseline_lulc_year']],
             POOL_LITTER: file_registry[
-                'accumulation-[POOL]-[YEAR]', POOL_LITTER, baseline_lulc_year],
+                'accumulation-[POOL]-[YEAR]', POOL_LITTER, args['baseline_lulc_year']],
         }
     }
     emissions_rasters = {}
@@ -1189,13 +1126,12 @@ def execute_transition_analysis(args):
     current_disturbance_vol_and_year_tasks = {}
 
     first_transition_year = min(transition_years)
-    final_year = int(args['analysis_year'])
 
     summary_net_sequestration_tasks = []
     summary_net_sequestration_raster_paths = {
         first_transition_year: args['sequestration_since_baseline_raster']}
 
-    for year in range(first_transition_year, final_year+1):
+    for year in range(first_transition_year, args['analysis_year']+1):
         current_stock_tasks = {}
         net_sequestration_rasters[year] = {}
         emissions_rasters[year] = {}
@@ -1315,7 +1251,7 @@ def execute_transition_analysis(args):
             target_path_list=[file_registry['total-carbon-stocks-[YEAR]', year]],
             task_name=f'Calculating total carbon stocks in {year}')
 
-        if year in transition_years.union(set([final_year])):
+        if year in transition_years.union(set([args['analysis_year']])):
             # Copy the current stock raster into the outputs directory.
             _ = task_graph.add_task(
                 func=shutil.copyfile,
@@ -1332,7 +1268,7 @@ def execute_transition_analysis(args):
         #  * sum emissions since last transition
         #  * sum accumulation since last transition
         #  * sum net sequestration since last transition
-        if (year + 1) in transition_years or (year + 1) == final_year:
+        if (year + 1) in transition_years or (year + 1) == args['analysis_year']:
             emissions_rasters_since_transition = []
             emissions_tasks_since_transition = []
             net_seq_rasters_since_transition = []
@@ -1397,7 +1333,7 @@ def execute_transition_analysis(args):
         # the baseline.
         target_npv_paths = {}
         for transition_year in (
-                sorted(set(transition_years).union(set([final_year])))[1:]):
+                sorted(set(transition_years).union(set([args['analysis_year']])))[1:]):
             target_npv_paths[transition_year] = file_registry[
                 'net-present-value-at-[YEAR]', transition_year]
         _ = task_graph.add_task(
@@ -1405,7 +1341,7 @@ def execute_transition_analysis(args):
             args=(summary_net_sequestration_raster_paths,
                   prices,
                   discount_rate,
-                  baseline_lulc_year,
+                  args['baseline_lulc_year'],
                   target_npv_paths),
             dependent_task_list=summary_net_sequestration_tasks,
             target_path_list=list(target_npv_paths.values()),
@@ -2118,7 +2054,7 @@ def validate(args, limit_to=None):
 
         if ("analysis_year" not in invalid_keys
                 and "analysis_year" in sufficient_keys):
-            if max(snapshot_years) >= int(args['analysis_year']):
+            if max(snapshot_years) >= args['analysis_year']:
                 validation_warnings.append((
                     ['analysis_year'],
                     INVALID_ANALYSIS_YEAR_MSG.format(

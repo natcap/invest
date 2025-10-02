@@ -15,7 +15,6 @@ from . import utils
 from . import spec
 from .unit_registry import u
 from . import gettext
-from .file_registry import FileRegistry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -377,9 +376,8 @@ def execute(args):
     Returns:
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
-    args = MODEL_SPEC.preprocess_inputs(args)
-    MODEL_SPEC.create_output_directories(args)
-    file_registry = MODEL_SPEC.create_file_registry(args)
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
+
     if (args['do_valuation'] and
             args['lulc_bas_year'] >= args['lulc_alt_year']):
         raise ValueError(
@@ -388,9 +386,6 @@ def execute(args):
             f"than the Baseline LULC Year ({args['lulc_bas_year']}). "
             "Ensure that the Baseline LULC Year is earlier than the Alternate LULC Year."
         )
-
-    graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], args['n_workers'])
 
     cell_size_set = set()
     raster_size_set = set()

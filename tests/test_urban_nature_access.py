@@ -156,7 +156,7 @@ class UNATests(unittest.TestCase):
                     lulc_bb=pygeoprocessing.get_raster_info(
                         source_population_raster_path)['bounding_box'],
                     lulc_projection_wkt=population_wkt,
-                    working_dir=os.path.join(self.workspace_dir, 'working'))
+                    working_dir=self.workspace_dir)
 
                 resampled_population_array = (
                     pygeoprocessing.raster_to_numpy_array(

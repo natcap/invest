@@ -20,7 +20,6 @@ from . import gettext
 from . import spec
 from . import utils
 from . import validation
-from .file_registry import FileRegistry
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -36,6 +35,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=("sgp",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["base_lulc_path", "aoi_path"],
@@ -87,7 +87,7 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             regexp="[0-9 ]+"
         ),
-        spec.NumberInput(
+        spec.IntegerInput(
             id="n_fragmentation_steps",
             name=gettext("number of conversion steps"),
             about=gettext(
@@ -341,31 +341,11 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
+
     if (not args['convert_farthest_from_edge'] and
             not args['convert_nearest_to_edge']):
         raise ValueError("Neither scenario was selected.")
-
-    # append a _ to the suffix if it's not empty and doesn't already have one
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    output_dir = args['workspace_dir']
-    intermediate_output_dir = os.path.join(output_dir, 'intermediate_outputs')
-    tmp_dir = os.path.join(output_dir, 'tmp')
-    utils.make_directories([output_dir, intermediate_output_dir, tmp_dir])
-
-    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Single process mode.
-    task_graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], n_workers)
-
-    area_to_convert = float(args['area_to_convert'])
-    replacement_lucode = int(args['replacement_lucode'])
 
     # convert all the input strings to lists of ints
     convertible_type_list = numpy.array([
@@ -374,12 +354,13 @@ def execute(args):
         int(x) for x in args['focal_landcover_codes'].split()])
 
     aoi_mask_task_list = []
-    if 'aoi_path' in args and args['aoi_path'] != '':
+    if args['aoi_path']:
         working_lulc_path = file_registry['aoi_masked_lulc']
         aoi_mask_task_list.append(task_graph.add_task(
             func=_mask_raster_by_vector,
-            args=((args['base_lulc_path'], 1), args['aoi_path'], tmp_dir,
-                  working_lulc_path, file_registry['tmp_mask']),
+            args=((args['base_lulc_path'], 1), args['aoi_path'],
+                  args['workspace_dir'], working_lulc_path,
+                  file_registry['tmp_mask']),
             target_path_list=[working_lulc_path],
             task_name='aoi_mask'))
     else:
@@ -395,12 +376,13 @@ def execute(args):
         LOGGER.info('executing %s scenario', basename)
         task_graph.add_task(
             func=_convert_landscape,
-            args=(working_lulc_path, replacement_lucode, area_to_convert,
-                  focal_landcover_codes, convertible_type_list, score_weight,
-                  int(args['n_fragmentation_steps']),
+            args=(working_lulc_path, args['replacement_lucode'],
+                  args['area_to_convert'], focal_landcover_codes,
+                  convertible_type_list, score_weight,
+                  args['n_fragmentation_steps'],
                   file_registry[f"{basename}_distance"],
                   file_registry[basename], file_registry[f"{basename}_csv"],
-                  output_dir, file_registry),
+                  args['workspace_dir'], file_registry),
             target_path_list=[
                 file_registry[f"{basename}_distance"],
                 file_registry[basename],
