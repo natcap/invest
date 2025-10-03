@@ -43,7 +43,7 @@ gdal.UseExceptions()
 def model_spec_with_defaults(model_id='', model_title='', userguide='', aliases=set(),
                  inputs=[], outputs=[]):
     return ModelSpec(model_id=model_id, model_title=model_title, userguide=userguide,
-            aliases=aliases, inputs=inputs, outputs=outputs, moudle_name='',
+            aliases=aliases, inputs=inputs, outputs=outputs, module_name='',
             input_field_order=[[i.id for i in inputs if not i.hidden]])
 
 def number_input_spec_with_defaults(id='', units=u.none, expression='', **kwargs):

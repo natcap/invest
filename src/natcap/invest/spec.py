@@ -1195,11 +1195,9 @@ class IntegerInput(NumberInput):
 class NWorkersInput(IntegerInput):
 
     def preprocess(self, value):
-        print('preprocess nworkers', value)
         # unlike other numeric inputs, we allow n_workers to be None or an
         # empty string, and default to single process mode in that case
         if value is None or value == '':
-            print('return -1')
             return -1
         return super().preprocess(value)
 
@@ -1801,7 +1799,6 @@ class ModelSpec(BaseModel):
         """
         values = {}
         for _input in self.inputs:
-            print(_input.id)
             values[_input.id] = _input.preprocess(
                 input_values.get(_input.id, None))
         return values
@@ -1916,7 +1913,6 @@ class ModelSpec(BaseModel):
 
             model_module = importlib.import_module(self.module_name)
             registry = model_module.execute(args)
-            print('registry', registry)
 
             preprocessed_args = self.preprocess_inputs(args)
 

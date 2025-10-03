@@ -291,7 +291,7 @@ MODEL_SPEC = spec.ModelSpec(
                     ),
                     units=u.kilometer
                 ),
-                spec.NumberInput(
+                spec.IntegerInput(
                     id="time_period",
                     about=gettext("The expected lifetime of the facility"),
                     units=u.year
@@ -921,13 +921,9 @@ def execute(args):
 
     LOGGER.debug(f'Biophysical Turbine Parameters: {parameters_dict}')
 
-    if not args['valuation_container']:
-        LOGGER.info('Valuation Not Selected')
-        run_valuation = False
-    else:
+    if args['valuation_container']:
         LOGGER.info(
             'Valuation Selected. Checking required parameters from CSV files.')
-        run_valuation = True
 
         # If Price Table provided use that for price of energy, validate inputs
         time = parameters_dict['time_period']
@@ -947,14 +943,13 @@ def execute(args):
             # indicate the time steps for the lifespan of the wind farm
             price_list = wind_price_df['price'].tolist()
         else:
-            change_rate = float(args["rate_change"])
-            wind_price = float(args["wind_price"])
             # Build up a list of price values where the indices of the list
             # are the time steps for the lifespan of the farm and values
             # are adjusted based on the rate of change
             price_list = []
             for time_step in range(int(time) + 1):
-                price_list.append(wind_price * (1 + change_rate)**(time_step))
+                price_list.append(
+                    args["wind_price"] * (1 + args["rate_change"])**(time_step))
 
     compute_density_harvested_task = task_graph.add_task(
         func=_compute_density_harvested_fields,
@@ -998,16 +993,11 @@ def execute(args):
         task_name='clip_wind_point_by_aoi',
         dependent_task_list=[wind_data_to_vector_task])
 
-    # Handle distance constraints:
-    min_distance = float(args['min_distance'])
-    max_distance = float(args['max_distance'])
-    land_polygon_vector_path = args['land_polygon_vector_path']
-
     # Clip and project the land polygon shapefile to AOI
     LOGGER.info('Clip and project land polygon to AOI')
     clip_reproject_land_poly_task = task_graph.add_task(
         func=_clip_and_reproject_vector,
-        args=(land_polygon_vector_path, aoi_vector_path,
+        args=(args['land_polygon_vector_path'], aoi_vector_path,
               file_registry['land_poly_proj_vector_path'],
               args['workspace_dir']),
         target_path_list=[file_registry['land_poly_proj_vector_path']],
@@ -1028,8 +1018,8 @@ def execute(args):
     LOGGER.info('Creating Distance Mask')
     create_dist_mask_task = task_graph.add_task(
         func=_mask_by_distance,
-        args=(file_registry['dist_trans_path'], min_distance,
-              max_distance, _TARGET_NODATA,
+        args=(file_registry['dist_trans_path'], args['min_distance'],
+              args['max_distance'], _TARGET_NODATA,
               file_registry['dist_mask_path']),
         target_path_list=[file_registry['dist_mask_path']],
         task_name='mask_raster_by_distance',
@@ -1038,8 +1028,8 @@ def execute(args):
     # Create a mask for values that are out of the range of the depth values:
     # Get the min and max depth values from the arguments and set to a negative
     # value indicating below sea level
-    min_depth = abs(float(args['min_depth'])) * -1
-    max_depth = abs(float(args['max_depth'])) * -1
+    min_depth = abs(args['min_depth']) * -1
+    max_depth = abs(args['max_depth']) * -1
 
     LOGGER.info('Creating Depth Mask')
     create_depth_mask_task = task_graph.add_task(
@@ -1052,7 +1042,7 @@ def execute(args):
         task_name='mask_depth_on_bathymetry',
         dependent_task_list=[reproject_bathy_task])
 
-    if not run_valuation:
+    if not args['valuation_container']:
         # Write Depth and Distance mask values to Wind Points Shapefile
         LOGGER.info("Adding mask values to shapefile")
         raster_field_to_vector_list = [
@@ -1121,7 +1111,7 @@ def execute(args):
         dependent_task_list=[rasterize_harvested_task,
             create_dist_mask_task])
 
-    if 'grid_points_path' in args and args['grid_points_path']:
+    if args['grid_points_path']:
         # Handle Grid Points
         LOGGER.info('Grid Points Provided. Reading in the grid points')
 
@@ -1258,13 +1248,14 @@ def execute(args):
         # Since the grid points were not provided use the land polygon to get
         # near shore distances
         # The average land cable distance in km converted to meters
-        avg_grid_distance = float(args['avg_grid_distance']) * 1000
+        avg_grid_distance = args['avg_grid_distance'] * 1000
 
         land_poly_dist_raster_task = task_graph.add_task(
             func=_create_distance_raster,
             args=(file_registry['harvested_masked_path'],
                   file_registry['land_poly_proj_vector_path'],
-                  file_registry['land_poly_dist_raster_path'], args['workspace_dir']),
+                  file_registry['land_poly_dist_raster_path'],
+                  args['workspace_dir']),
             target_path_list=[file_registry['land_poly_dist_raster_path']],
             dependent_task_list=[mask_harvested_task],
             task_name='create_land_poly_dist_raster')
@@ -1284,7 +1275,7 @@ def execute(args):
     # Include foundation_cost, discount_rate, number_of_turbines with
     # parameters_dict to pass for NPV calculation
     for key in ['foundation_cost', 'discount_rate', 'number_of_turbines']:
-        parameters_dict[key] = float(args[key])
+        parameters_dict[key] = args[key]
 
     npv_levelized_task = task_graph.add_task(
         func=_calculate_npv_levelized_rasters,
