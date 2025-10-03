@@ -72,7 +72,7 @@ General
   (`#2138 <https://github.com/natcap/invest/issues/2138>`_)
 * Added a page to the API documentation describing how to run InVEST through
   the supplied docker container, and also through Apptainer/Singularity.
-  *`#2171 <https://github.com/natcap/invest/issues/2171>`_)
+  (`#2171 <https://github.com/natcap/invest/issues/2171>`_)
 
 Plugins
 =======
