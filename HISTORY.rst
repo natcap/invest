@@ -131,6 +131,13 @@ Visitation: Recreation and Tourism
 ==================================
 * The intermediate predictor JSON outputs now include the file suffix, if provided.
 
+Wave Energy
+===========
+* The model now expects the base data to be provided as a CSV table that points
+  to the vector and binary filepaths, rather than a directory. The sample data
+  has been updated to include this table.
+  (`#2166 <https://github.com/natcap/invest/issues/2166>`_)
+
 Wind Energy
 ===========
 * Updated Wind Energy model to always require an AOI, Land Polygon, and Minimum
