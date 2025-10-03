@@ -17,6 +17,7 @@ from .. import spec
 from .. import utils
 from .. import validation
 from ..sdr import sdr
+from ..file_registry import FileRegistry
 from ..unit_registry import u
 from . import ndr_core
 
@@ -876,7 +877,7 @@ def execute(args):
         dependent_task_list=[calculate_slope_task],
         task_name='threshold slope')
 
-    if args['flow_dir_algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'mfd':
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_mfd,
             args=(
@@ -991,7 +992,7 @@ def execute(args):
         dependent_task_list=[threshold_slope_task],
         task_name='s inv')
 
-    if args['flow_dir_algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'mfd':
         d_dn_task = task_graph.add_task(
             func=pygeoprocessing.routing.distance_to_channel_mfd,
             args=(
