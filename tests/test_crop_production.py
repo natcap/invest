@@ -195,7 +195,7 @@ class CropProductionTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_crop_production_percentile(self):
-        """Crop Production: test crop production percentile regression."""
+        """Crop Production Percentile: validate results."""
         from natcap.invest import crop_production_percentile
 
         args = _get_default_args_percentile()
@@ -259,7 +259,7 @@ class CropProductionTests(unittest.TestCase):
                                           rtol=0, atol=0.1)
 
     def test_crop_production_percentile_no_nodata(self):
-        """Crop Production: test percentile model with undefined nodata raster.
+        """Crop Production Percentile: landcover raster without defined nodata.
 
         Test with a landcover raster input that has no nodata value
         defined.
@@ -308,20 +308,24 @@ class CropProductionTests(unittest.TestCase):
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
 
-    def test_crop_production_percentile_bad_crop(self):
-        """Crop Production: test crop production with a bad crop name."""
+    def test_crop_production_percentile_invalid_crop_name(self):
+        """Crop Production Percentile: invalid user-specified crop name."""
         from natcap.invest import crop_production_percentile
 
         args = _get_default_args_percentile()
         args['workspace_dir'] = self.workspace_dir
         args['landcover_to_crop_table_path'] = os.path.join(
-                TEST_INPUTS_PATH, 'landcover_to_badcrop_table.csv')
+                TEST_INPUTS_PATH, 'landcover_to_invalid_crop_percentile.csv')
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as context:
             crop_production_percentile.execute(args)
+        self.assertTrue("The following crop names were provided in "
+                        f"{args['landcover_to_crop_table_path']} but "
+                        "are not supported by the model: {'durian'}"
+                        in str(context.exception))
 
     def test_crop_production_percentile_missing_climate_bin(self):
-        """Crop Production: test crop percentile with a missing climate bin."""
+        """Crop Production Percentile: missing climate bin path."""
         from natcap.invest import crop_production_percentile
 
         args = _get_default_args_percentile()
@@ -331,23 +335,27 @@ class CropProductionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             crop_production_percentile.execute(args)
-        self.assertTrue("no corresponding climate bin raster path"
-                        " could be found: ['wheat']" in str(context.exception))
+        self.assertTrue('No climate bin raster path could be found for wheat'
+                        in str(context.exception))
 
-    def test_crop_production_regression_bad_crop(self):
-        """Crop Production: test crop regression with a bad crop name."""
+    def test_crop_production_regression_invalid_crop_name(self):
+        """Crop Production Regression: invalid user-specified crop name."""
         from natcap.invest import crop_production_regression
 
         args = _get_default_args_regression()
         args['workspace_dir'] = self.workspace_dir
         args['landcover_to_crop_table_path'] = os.path.join(
-                TEST_INPUTS_PATH, 'landcover_to_badcrop_table.csv')
+                TEST_INPUTS_PATH, 'landcover_to_invalid_crop_regression.csv')
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as context:
             crop_production_regression.execute(args)
+        self.assertTrue("The following crop names were provided in "
+                        f"{args['landcover_to_crop_table_path']} but "
+                        "are not supported by the model: {'avocado'}"
+                        in str(context.exception))
 
     def test_crop_production_regression_missing_climate_bin(self):
-        """Crop Production: test crop regression with a missing climate bin."""
+        """Crop Production Regression: missing climate bin path."""
         from natcap.invest import crop_production_regression
 
         args = _get_default_args_regression()
@@ -357,11 +365,11 @@ class CropProductionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             crop_production_regression.execute(args)
-        self.assertTrue("no corresponding climate bin raster path"
-                        " could be found: ['wheat']" in str(context.exception))
+        self.assertTrue('No climate bin raster path could be found for wheat'
+                        in str(context.exception))
 
     def test_crop_production_regression(self):
-        """Crop Production: test crop production regression model."""
+        """Crop Production Regression: validate results."""
         from natcap.invest import crop_production_regression
 
         args = _get_default_args_regression()
@@ -422,7 +430,7 @@ class CropProductionTests(unittest.TestCase):
                                           rtol=0, atol=0.001)
 
     def test_crop_production_regression_no_nodata(self):
-        """Crop Production: test regression model with undefined nodata raster.
+        """Crop Production Regression: landcover raster without defined nodata.
 
         Test with a landcover raster input that has no nodata value
         defined.

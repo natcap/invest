@@ -602,21 +602,15 @@ def execute(args):
             "The following lucodes are in the landcover raster but aren't "
             f"in the landcover to crop table: {lucodes_missing_from_table}")
 
-    LOGGER.info("Checking that crops correspond to known types.")
-    bad_crop_name_list = []
-    for crop_name in crop_to_landcover_df.index:
-        crop_climate_bin_raster_path = get_full_path_from_crop_table(
-            MODEL_SPEC,
-            CROP_TO_PATH_TABLES.climate_bin,
-            args[CROP_TO_PATH_TABLES.climate_bin],
-            crop_name)
-        if crop_climate_bin_raster_path is None:
-            bad_crop_name_list.append(crop_name)
-    if bad_crop_name_list:
+    LOGGER.info("Checking that crops are supported by the model.")
+    user_provided_crop_names = set(list(crop_to_landcover_df.index))
+    valid_crop_names = set([crop.key for crop in CROP_OPTIONS])
+    invalid_crop_names = user_provided_crop_names.difference(valid_crop_names)
+    if invalid_crop_names:
         raise ValueError(
-            "'The following crop names were provided in "
-            f"{args['landcover_to_crop_table_path']} but no corresponding "
-            f"climate bin raster path could be found: {bad_crop_name_list}")
+            "The following crop names were provided in "
+            f"{args['landcover_to_crop_table_path']} but are not supported "
+            f"by the model: {invalid_crop_names}")
 
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
@@ -648,6 +642,10 @@ def execute(args):
             CROP_TO_PATH_TABLES.climate_bin,
             args[CROP_TO_PATH_TABLES.climate_bin],
             crop_name)
+
+        if not crop_climate_bin_raster_path:
+            raise ValueError(
+                f'No climate bin raster path could be found for {crop_name}')
 
         # Use file_registry for clipped climate bin raster path
         crop_climate_bin_raster_info = pygeoprocessing.get_raster_info(
