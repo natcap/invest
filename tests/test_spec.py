@@ -375,6 +375,7 @@ class TestMetadataFromSpec(unittest.TestCase):
             aliases=[],
             input_field_order=[],
             inputs=[],
+            module_name='',
             outputs=output_spec
         )
         args_dict = {'workspace_dir': self.workspace_dir}

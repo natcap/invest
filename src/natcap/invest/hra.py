@@ -594,7 +594,7 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    args, file_registry, task_graph = MODEL_SPEC.setup(args)
+    args, file_registry, graph = MODEL_SPEC.setup(args)
 
     target_srs_wkt = pygeoprocessing.get_vector_info(
         args['aoi_vector_path'])['projection_wkt']

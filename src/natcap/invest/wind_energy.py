@@ -130,6 +130,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["wind_data_path", "aoi_vector_path", "bathymetry_path",
@@ -872,24 +873,7 @@ def execute(args):
 
     """
     LOGGER.info('Starting the Wind Energy Model')
-    workspace = args['workspace_dir']
-    inter_dir = os.path.join(workspace, 'intermediate')
-    out_dir = os.path.join(workspace, 'output')
-    utils.make_directories([inter_dir, out_dir])
-
-    # Append a _ to the suffix if it's not empty and doesn't already have one
-    suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = FileRegistry(MODEL_SPEC.outputs, workspace, suffix)
-
-    # Initialize a TaskGraph
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'], n_workers)
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     # Resample the bathymetry raster if it does not have square pixel size
     try:
@@ -922,8 +906,6 @@ def execute(args):
         # Build the task list when clipping and reprojecting bathymetry later.
         bathy_dependent_task_list = [resample_bathymetry_task]
 
-    number_of_turbines = int(args['number_of_turbines'])
-
     # Read the biophysical turbine parameters into a dictionary
     turbine_dict = MODEL_SPEC.get_input(
         'turbine_parameters_path').get_validated_dataframe(
@@ -939,7 +921,7 @@ def execute(args):
 
     LOGGER.debug(f'Biophysical Turbine Parameters: {parameters_dict}')
 
-    if ('valuation_container' not in args or args['valuation_container'] is False):
+    if not args['valuation_container']:
         LOGGER.info('Valuation Not Selected')
         run_valuation = False
     else:
@@ -976,7 +958,8 @@ def execute(args):
 
     compute_density_harvested_task = task_graph.add_task(
         func=_compute_density_harvested_fields,
-        args=(args['wind_data_path'], parameters_dict, number_of_turbines,
+        args=(args['wind_data_path'], parameters_dict,
+              args['number_of_turbines'],
               file_registry['wind_data_pickle_path']),
         target_path_list=[file_registry['wind_data_pickle_path']],
         task_name='compute_density_harvested_fields')
@@ -1009,7 +992,8 @@ def execute(args):
     clip_wind_vector_task = task_graph.add_task(
         func=_clip_vector_by_vector,
         args=(file_registry['wind_point_vector_path'], aoi_vector_path,
-              file_registry['unmasked_wind_point_vector_path'], inter_dir),
+              file_registry['unmasked_wind_point_vector_path'],
+              args['workspace_dir']),
         target_path_list=[file_registry['unmasked_wind_point_vector_path']],
         task_name='clip_wind_point_by_aoi',
         dependent_task_list=[wind_data_to_vector_task])
@@ -1024,7 +1008,8 @@ def execute(args):
     clip_reproject_land_poly_task = task_graph.add_task(
         func=_clip_and_reproject_vector,
         args=(land_polygon_vector_path, aoi_vector_path,
-              file_registry['land_poly_proj_vector_path'], inter_dir),
+              file_registry['land_poly_proj_vector_path'],
+              args['workspace_dir']),
         target_path_list=[file_registry['land_poly_proj_vector_path']],
         task_name='clip_and_reproject_land_poly_to_aoi')
 
@@ -1033,7 +1018,7 @@ def execute(args):
         func=_create_distance_raster,
         args=(file_registry['bathymetry_proj_raster_path'],
               file_registry['land_poly_proj_vector_path'],
-              file_registry['dist_trans_path'], inter_dir),
+              file_registry['dist_trans_path'], args['workspace_dir']),
         target_path_list=[file_registry['dist_trans_path']],
         task_name='create_distance_raster',
         dependent_task_list=[reproject_bathy_task,
@@ -1162,7 +1147,7 @@ def execute(args):
         task_graph.add_task(
             func=_clip_and_reproject_vector,
             args=(file_registry['grid_point_vector_path'], aoi_vector_path,
-                  file_registry['grid_projected_vector_path'], inter_dir),
+                  file_registry['grid_projected_vector_path'], args['workspace_dir']),
             target_path_list=[file_registry['grid_projected_vector_path']],
             task_name='clip_and_reproject_grid_vector',
             dependent_task_list=[grid_dict_to_vector_task])
@@ -1194,7 +1179,8 @@ def execute(args):
                 task_graph.add_task(
                     func=_clip_and_reproject_vector,
                     args=(file_registry['land_point_vector_path'], aoi_vector_path,
-                          file_registry['land_projected_vector_path'], inter_dir),
+                          file_registry['land_projected_vector_path'],
+                          args['workspace_dir']),
                     target_path_list=[file_registry['land_projected_vector_path']],
                     task_name='clip_and_reproject_land_vector',
                     dependent_task_list=[land_dict_to_vector_task])
@@ -1231,7 +1217,7 @@ def execute(args):
                         args=(file_registry['land_to_grid_vector_path'],
                               file_registry['harvested_masked_path'],
                               file_registry['final_dist_raster_path'],
-                              inter_dir),
+                              args['workspace_dir']),
                         target_path_list=[file_registry['final_dist_raster_path']],
                         task_name='calculate_distances_land_grid',
                         dependent_task_list=[land_to_grid_task,
@@ -1256,7 +1242,7 @@ def execute(args):
                     args=(file_registry['harvested_masked_path'],
                           file_registry['grid_projected_vector_path'],
                           file_registry['final_dist_raster_path'],
-                          inter_dir),
+                          args['workspace_dir']),
                     target_path_list=[file_registry['final_dist_raster_path']],
                     task_name='calculate_grid_distance')
 
@@ -1278,7 +1264,7 @@ def execute(args):
             func=_create_distance_raster,
             args=(file_registry['harvested_masked_path'],
                   file_registry['land_poly_proj_vector_path'],
-                  file_registry['land_poly_dist_raster_path'], inter_dir),
+                  file_registry['land_poly_dist_raster_path'], args['workspace_dir']),
             target_path_list=[file_registry['land_poly_dist_raster_path']],
             dependent_task_list=[mask_harvested_task],
             task_name='create_land_poly_dist_raster')
@@ -1731,7 +1717,7 @@ def _calculate_npv_levelized_rasters(
 
     # The total mega watt capacity of the wind farm where mega watt is the
     # turbines rated power
-    number_of_turbines = int(parameters_dict['number_of_turbines'])
+    number_of_turbines = parameters_dict['number_of_turbines']
     total_mega_watt = mega_watt * number_of_turbines
 
     # Total infield cable cost

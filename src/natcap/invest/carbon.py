@@ -376,7 +376,7 @@ def execute(args):
     Returns:
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
-    args, file_registry, task_graph = MODEL_SPEC.setup(args)
+    args, file_registry, graph = MODEL_SPEC.setup(args)
 
     if (args['do_valuation'] and
             args['lulc_bas_year'] >= args['lulc_alt_year']):
