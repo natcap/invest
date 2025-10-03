@@ -20,7 +20,7 @@ pypiwin32; sys_platform == 'win32'  # pip-only
 
 # 60.7.0 exception because of https://github.com/pyinstaller/pyinstaller/issues/6564
 setuptools>=8.0,!=60.7.0
-PyInstaller>=6.9.0
+pyinstaller>=6.9.0
 setuptools_scm>=6.4.0
 requests
 coverage

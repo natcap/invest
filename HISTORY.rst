@@ -64,11 +64,6 @@
 Unreleased Changes
 ------------------
 
-Coastal Blue Carbon
-===================
-* The intermediate outputs ``aligned-lulc-baseline-[YEAR].tif`` and
-  ``aligned-lulc-snapshot-[YEAR].tif`` have been renamed to ``aligned-lulc-[YEAR].tif``.
-
 General
 =======
 * Added a ``ModelSpec.get_output`` method to access items in ``ModelSpec.outputs``
@@ -95,6 +90,29 @@ Plugins
   leftover, unusable micromamba environments.
   (`#2104 <https://github.com/natcap/invest/issues/2104>`_)
 
+Annual Water Yield
+==================
+* The discount rate parameter was previously incorrectly restricted to the
+  range [0, 100]. Now there is no minimum or maximum value.
+
+Carbon
+======
+* The discount rate and price change parameters were previously incorrectly
+  restricted to the range [0, 100]. Now there is no minimum or maximum value.
+
+Coastal Blue Carbon
+===================
+* The intermediate outputs ``aligned-lulc-baseline-[YEAR].tif`` and
+  ``aligned-lulc-snapshot-[YEAR].tif`` have been renamed to ``aligned-lulc-[YEAR].tif``.
+* The discount rate and price change parameters were previously incorrectly
+  restricted to the range [0, 100]. Now there is no minimum or maximum value.
+
+Coastal Vulnerability
+=====================
+* The WWIII ``v10pct_[SECTOR]`` field was incorrectly documented as a unitless
+  percent; this has been corrected to show that it is a numeric input with
+  units of meters/second.
+
 Habitat Quality
 ===============
 * The aligned LULC outputs are no longer named after the original LULC files.
@@ -112,6 +130,15 @@ Seasonal Water Yield
 Visitation: Recreation and Tourism
 ==================================
 * The intermediate predictor JSON outputs now include the file suffix, if provided.
+
+Wind Energy
+===========
+* Updated Wind Energy model to always require an AOI, Land Polygon, and Minimum
+  and Maximum Distance values. Since model outputs should only be provided for valid
+  wind farm locations, distance-from-shore constraints should always be taken into
+  account. (`#1944 <https://github.com/natcap/invest/issues/1944>`_)
+* Fixed units for Turbine Rated Power, which were incorrectly listed as kilowatt when
+  the model expected megwatt. (`#1944 <https://github.com/natcap/invest/issues/1944>`_)
 
 3.16.2 (2025-08-13)
 -------------------
