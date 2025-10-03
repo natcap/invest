@@ -82,32 +82,40 @@ MODEL_SPEC = spec.ModelSpec(
                     id="cn_a",
                     about=gettext(
                         "The curve number value for this LULC type in the soil group"
-                        " code A."
+                        " code A. Curve numbers must be greater than 0 and less than"
+                        " or equal to 100."
                     ),
+                    expression="0 < value <= 100",
                     units=u.none
                 ),
                 spec.NumberInput(
                     id="cn_b",
                     about=gettext(
                         "The curve number value for this LULC type in the soil group"
-                        " code B."
+                        " code B. Curve numbers must be greater than 0 and less than"
+                        " or equal to 100."
                     ),
+                    expression="0 < value <= 100",
                     units=u.none
                 ),
                 spec.NumberInput(
                     id="cn_c",
                     about=gettext(
                         "The curve number value for this LULC type in the soil group"
-                        " code C."
+                        " code C. Curve numbers must be greater than 0 and less than"
+                        " or equal to 100."
                     ),
+                    expression="0 < value <= 100",
                     units=u.none
                 ),
                 spec.NumberInput(
                     id="cn_d",
                     about=gettext(
                         "The curve number value for this LULC type in the soil group"
-                        " code D."
+                        " code D. Curve numbers must be greater than 0 and less than"
+                        " or equal to 100."
                     ),
+                    expression="0 < value <= 100",
                     units=u.none
                 )
             ],

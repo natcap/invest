@@ -126,6 +126,15 @@ Seasonal Water Yield
   These CSVs must have the columns ``month`` and ``path``, mapping month indexes
   (1-12) to raster paths.
   (`#2096 <https://github.com/natcap/invest/issues/2096>`_)
+* Documentation has been updated to reflect that curve number values must be
+  greater than 0 and less than or equal to 100.
+  (`#2164 <https://github.com/natcap/invest/issues/2164>`_)
+
+Urban Flood Risk Mitigation
+===========================
+* Documentation has been updated to reflect that curve number values must be
+  greater than 0 and less than or equal to 100.
+  (`#2164 <https://github.com/natcap/invest/issues/2164>`_)
 
 Visitation: Recreation and Tourism
 ==================================
