@@ -369,7 +369,7 @@ def execute(args):
     if args['calculate_flow_direction']:
         routing_funcs = _ROUTING_FUNCS[args['algorithm']]
 
-    band_index = 1 if args['algorithm'] is None else args['dem_band_index']
+    band_index = args['dem_band_index'] if args['dem_band_index'] else 1
 
     LOGGER.info('Using DEM band index %s', band_index)
 
