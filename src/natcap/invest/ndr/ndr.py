@@ -98,20 +98,21 @@ MODEL_SPEC = spec.ModelSpec(
                     about=(
                         "Whether the nutrient load in column load_p should be treated as"
                         " nutrient application rate or measured contaminant runoff."
-                        " 'application-rate' | 'measured-runoff'"
+                        " The value for load_type_p may be one of two text strings,"
+                        " either 'application-rate' or 'measured-runoff'."
                     ),
                     required="calc_p",
                     options=[
                         spec.Option(
                             key="application-rate",
                             about=(
-                                "Treat the load values as nutrient application rates"
+                                "Treat the load value as nutrient application rates"
                                 " (e.g. fertilizer, livestock waste, ...).The model will"
                                 " adjust the load using the application rate and"
                                 " retention efficiency: load_p * (1 - eff_p).")),
                         spec.Option(
                             key="measured-runoff",
-                            about="Treat the load values as measured contaminant runoff.")
+                            about="Treat the load value as measured contaminant runoff.")
                     ]
                 ),
                 spec.OptionStringInput(
@@ -119,7 +120,8 @@ MODEL_SPEC = spec.ModelSpec(
                     about=(
                         "Whether the nutrient load in column load_n should be treated as"
                         " nutrient application rate or measured contaminant runoff."
-                        " 'application-rate' | 'measured-runoff'"
+                        " The value for load_type_n may be one of two text strings,"
+                        " either 'application-rate' or 'measured-runoff'."
                     ),
                     required="calc_n",
                     options=[
