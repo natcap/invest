@@ -120,6 +120,11 @@ Habitat Quality
   ``lulc_bas_aligned``. This is consistent with other models and simplifies the
   model spec and documentation. (`#2127 <https://github.com/natcap/invest/issues/2127>`_)
 
+NDR
+===
+* Clarified about text documentation for ``load_type_n|p``.
+  (`#2116 <https://github.com/natcap/invest/issues/2116>`_).
+
 Seasonal Water Yield
 ====================
 * Replaced the model inputs ``et0_dir`` and ``precip_dir`` with CSV inputs.
