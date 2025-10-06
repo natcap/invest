@@ -306,6 +306,10 @@ class FileInput(Input):
 
     type: typing.ClassVar[str] = 'file'
 
+    display_name: typing.ClassVar[str] = gettext('file')
+
+    rst_section: typing.ClassVar[str] = 'file'
+
     @timeout
     def validate(self, filepath: str):
         """Validate a file against the requirements for this input.
@@ -396,6 +400,10 @@ class RasterInput(FileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
+    display_name: typing.ClassVar[str] = gettext('raster')
+
+    rst_section: typing.ClassVar[str] = 'raster'
+
     @model_validator(mode='after')
     def check_projected_projection_units(self):
         if self.projection_units and not self.projected:
@@ -475,6 +483,10 @@ class SingleBandRasterInput(FileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
+    display_name: typing.ClassVar[str] = gettext('raster')
+
+    rst_section: typing.ClassVar[str] = 'raster'
+
     @model_validator(mode='after')
     def check_projected_projection_units(self):
         if self.projection_units and not self.projected:
@@ -553,6 +565,10 @@ class VectorInput(FileInput):
     projection (such as meters) is required, indicate it here."""
 
     type: typing.ClassVar[str] = 'vector'
+
+    display_name: typing.ClassVar[str] = gettext('vector')
+
+    rst_section: typing.ClassVar[str] = 'vector'
 
     _fields_dict: dict[str, Input] = {}
 
@@ -705,6 +721,10 @@ class RasterOrVectorInput(FileInput):
 
     type: typing.ClassVar[str] = 'raster_or_vector'
 
+    display_name: typing.ClassVar[str] = gettext('raster or vector')
+
+    rst_section: typing.ClassVar[str] = 'raster'
+
     _single_band_raster_input: SingleBandRasterInput
     _vector_input: VectorInput
     _fields_dict: dict[str, Input] = {}
@@ -779,6 +799,10 @@ class CSVInput(FileInput):
     CSV file to a dataframe, the dataframe index will be set to this column."""
 
     type: typing.ClassVar[str] = 'csv'
+
+    display_name: typing.ClassVar[str] = gettext('CSV')
+
+    rst_section: typing.ClassVar[str] = 'csv'
 
     _columns_dict: dict[str, Input] = {}
     _fields_dict: dict[str, Input] = {}
@@ -999,6 +1023,10 @@ class DirectoryInput(Input):
 
     type: typing.ClassVar[str] = 'directory'
 
+    display_name: typing.ClassVar[str] = gettext('directory')
+
+    rst_section: typing.ClassVar[str] = 'directory'
+
     _contents_dict: dict[str, Input] = {}
 
     @model_validator(mode='after')
@@ -1096,6 +1124,10 @@ class NumberInput(Input):
 
     type: typing.ClassVar[str] = 'number'
 
+    display_name: typing.ClassVar[str] = gettext('number')
+
+    rst_section: typing.ClassVar[str] = 'number'
+
     def validate(self, value):
         """Validate a numeric value against the requirements for this input.
 
@@ -1153,6 +1185,10 @@ class NumberInput(Input):
 class IntegerInput(NumberInput):
     """An integer input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'integer'
+
+    display_name: typing.ClassVar[str] = gettext('integer')
+
+    rst_section: typing.ClassVar[str] = 'integer'
 
     units: typing.Union[pint.Unit, None] = None
 
@@ -1222,6 +1258,10 @@ class RatioInput(NumberInput):
     """
     type: typing.ClassVar[str] = 'ratio'
 
+    display_name: typing.ClassVar[str] = gettext('ratio')
+
+    rst_section: typing.ClassVar[str] = 'ratio'
+
     units: typing.ClassVar[None] = None
 
     def validate(self, value):
@@ -1253,6 +1293,10 @@ class PercentInput(NumberInput):
     """
     type: typing.ClassVar[str] = 'percent'
 
+    display_name: typing.ClassVar[str] = gettext('percent')
+
+    rst_section: typing.ClassVar[str] = 'percent'
+
     units: typing.ClassVar[None] = None
 
     def validate(self, value):
@@ -1272,6 +1316,10 @@ class PercentInput(NumberInput):
 class BooleanInput(Input):
     """A boolean input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'boolean'
+
+    display_name: typing.ClassVar[str] = gettext('true/false')
+
+    rst_section: typing.ClassVar[str] = 'truefalse'
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1321,6 +1369,10 @@ class StringInput(Input):
     """An optional regex pattern which the text value must match"""
 
     type: typing.ClassVar[str] = 'string'
+
+    display_name: typing.ClassVar[str] = gettext('text')
+
+    rst_section: typing.ClassVar[str] = 'text'
 
     @field_validator('regexp', mode='after')
     @classmethod
@@ -1421,6 +1473,10 @@ class OptionStringInput(Input):
     Use this if the set of options must be dynamically generated."""
 
     type: typing.ClassVar[str] = 'option_string'
+
+    display_name: typing.ClassVar[str] = gettext('option')
+
+    rst_section: typing.ClassVar[str] = 'option'
 
     @model_validator(mode='after')
     def check_options(self):
@@ -2240,43 +2296,11 @@ def format_type_string(arg_type):
     Returns:
         formatted string that links to a description of the input type(s)
     """
-    # some types need a more user-friendly name
-    # all types are listed here so that they can be marked up for translation
-    type_names = {
-        BooleanInput: gettext('true/false'),
-        CSVInput: gettext('CSV'),
-        DirectoryInput: gettext('directory'),
-        FileInput: gettext('file'),
-        StringInput: gettext('text'),
-        IntegerInput: gettext('integer'),
-        NumberInput: gettext('number'),
-        OptionStringInput: gettext('option'),
-        PercentInput: gettext('percent'),
-        SingleBandRasterInput: gettext('raster'),
-        RatioInput: gettext('ratio'),
-        VectorInput: gettext('vector'),
-        RasterOrVectorInput: gettext('raster or vector')
-    }
-    type_sections = {  # names of section headers to link to in the RST
-        BooleanInput: 'truefalse',
-        CSVInput: 'csv',
-        DirectoryInput: 'directory',
-        FileInput: 'file',
-        StringInput: 'text',
-        IntegerInput: 'integer',
-        NumberInput: 'number',
-        OptionStringInput: 'option',
-        PercentInput: 'percent',
-        SingleBandRasterInput: 'raster',
-        RatioInput: 'ratio',
-        VectorInput: 'vector',
-        RasterOrVectorInput: 'raster'
-    }
     if arg_type is RasterOrVectorInput:
         return (
-            f'`{type_names[SingleBandRasterInput]} <{INPUT_TYPES_HTML_FILE}#{type_sections[SingleBandRasterInput]}>`__ or '
-            f'`{type_names[VectorInput]} <{INPUT_TYPES_HTML_FILE}#{type_sections[VectorInput]}>`__')
-    return f'`{type_names[arg_type]} <{INPUT_TYPES_HTML_FILE}#{type_sections[arg_type]}>`__'
+            f'`{SingleBandRasterInput.display_name} <{INPUT_TYPES_HTML_FILE}#{SingleBandRasterInput.rst_section}>`__ or '
+            f'`{VectorInput.display_name} <{INPUT_TYPES_HTML_FILE}#{VectorInput.rst_section}>`__')
+    return f'`{arg_type.display_name} <{INPUT_TYPES_HTML_FILE}#{arg_type.rst_section}>`__'
 
 
 def describe_arg_from_spec(name, spec):
