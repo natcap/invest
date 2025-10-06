@@ -2054,7 +2054,7 @@ def validate(args, limit_to=None):
 
         if ("analysis_year" not in invalid_keys
                 and "analysis_year" in sufficient_keys):
-            if int(max(snapshot_years)) >= args['analysis_year']:
+            if max(snapshot_years) >= int(args['analysis_year']):
                 validation_warnings.append((
                     ['analysis_year'],
                     INVALID_ANALYSIS_YEAR_MSG.format(
