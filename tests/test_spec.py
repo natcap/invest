@@ -410,3 +410,99 @@ class ResultsSuffixTests(unittest.TestCase):
     def test_suffix_string_no_entry(self):
         """Utils: test no suffix entry in args."""
         self.assertEqual(spec.SUFFIX.preprocess(None), '')
+
+
+class InputTests(unittest.TestCase):
+    """Tests for natcap.invest.spec.Input and subclasses."""
+
+    def test_raster_input_preprocess(self):
+        """Test SingleBandRasterInput.preprocess method"""
+        raster_input = spec.RasterInput(
+            id="foo",
+            bands=[spec.RasterBand(units=None)])
+        self.assertEqual(raster_input.preprocess('foo/bar.tif'), 'foo/bar.tif')
+        self.assertEqual(
+            raster_input.preprocess('zip+https://storage.googleapis.com/foo/bar.tif'),
+            '/vsizip/vsicurl/https://storage.googleapis.com/foo/bar.tif')
+        self.assertEqual(raster_input.preprocess(''), None)
+        self.assertEqual(raster_input.preprocess(None), None)
+
+    def test_single_band_raster_input_preprocess(self):
+        """Test SingleBandRasterInput.preprocess method"""
+        raster_input = spec.SingleBandRasterInput(
+            id="foo",
+            data_type=int,
+            units=None)
+        self.assertEqual(raster_input.preprocess('foo/bar.tif'), 'foo/bar.tif')
+        self.assertEqual(
+            raster_input.preprocess('zip+https://storage.googleapis.com/foo/bar.tif'),
+            '/vsizip/vsicurl/https://storage.googleapis.com/foo/bar.tif')
+        self.assertEqual(raster_input.preprocess(''), None)
+        self.assertEqual(raster_input.preprocess(None), None)
+
+    def test_vector_input_preprocess(self):
+        """Test VectorInput.preprocess method"""
+        vector_input = spec.VectorInput(
+            id="foo",
+            geometry_types={"POLYGON"},
+            fields=[])
+        self.assertEqual(vector_input.preprocess('foo/bar.gpkg'), 'foo/bar.gpkg')
+        self.assertEqual(
+            vector_input.preprocess('zip+https://storage.googleapis.com/foo/bar.gpkg'),
+            '/vsizip/vsicurl/https://storage.googleapis.com/foo/bar.gpkg')
+        self.assertEqual(vector_input.preprocess(''), None)
+        self.assertEqual(vector_input.preprocess(None), None)
+
+    def test_csv_input_preprocess(self):
+        """Test CSVInput.preprocess method"""
+        csv_input = spec.CSVInput(
+            id="foo")
+        self.assertEqual(csv_input.preprocess('foo/bar.csv'), 'foo/bar.csv')
+        self.assertEqual(
+            csv_input.preprocess('https://storage.googleapis.com/foo/bar.csv'),
+            'https://storage.googleapis.com/foo/bar.csv')
+        self.assertEqual(csv_input.preprocess(''), None)
+        self.assertEqual(csv_input.preprocess(None), None)
+
+    def test_number_input_preprocess(self):
+        """Test NumberInput.preprocess method"""
+        number_input = spec.NumberInput(id='foo', units=None)
+        self.assertEqual(number_input.preprocess(1.5), 1.5)
+        self.assertEqual(number_input.preprocess('1.5'), 1.5)
+        self.assertEqual(number_input.preprocess(0), 0)
+        self.assertEqual(number_input.preprocess(''), None)
+        self.assertEqual(number_input.preprocess(None), None)
+
+    def test_integer_input_preprocess(self):
+        """Test IntegerInput.preprocess method"""
+        integer_input = spec.IntegerInput(id='foo')
+        self.assertEqual(integer_input.preprocess(1), 1)
+        self.assertEqual(integer_input.preprocess('1'), 1)
+        self.assertEqual(integer_input.preprocess(0), 0)
+        self.assertEqual(integer_input.preprocess(''), None)
+        self.assertEqual(integer_input.preprocess(None), None)
+
+    def test_boolean_input_preprocess(self):
+        """Test BooleanInput.preprocess method"""
+        boolean_input = spec.BooleanInput(id='foo')
+        self.assertEqual(boolean_input.preprocess(False), False)
+        self.assertEqual(boolean_input.preprocess(True), True)
+        self.assertEqual(boolean_input.preprocess(''), None)
+        self.assertEqual(boolean_input.preprocess(None), None)
+
+    def test_string_input_preprocess(self):
+        """Test StringInput.preprocess method"""
+        string_input = spec.StringInput(id='foo')
+        self.assertEqual(string_input.preprocess('foo'), 'foo')
+        self.assertEqual(string_input.preprocess(1), '1')
+        self.assertEqual(string_input.preprocess(''), None)
+        self.assertEqual(string_input.preprocess(None), None)
+
+    def test_option_string_input_preprocess(self):
+        """Test StringInput.preprocess method"""
+        option_string_input = spec.OptionStringInput(
+            id='foo', options=[spec.Option(key='foo'), spec.Option(key='bar')])
+        self.assertEqual(option_string_input.preprocess('foo'), 'foo')
+        self.assertEqual(option_string_input.preprocess('Foo'), 'foo')
+        self.assertEqual(option_string_input.preprocess(''), None)
+        self.assertEqual(option_string_input.preprocess(None), None)

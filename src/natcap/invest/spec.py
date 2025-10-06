@@ -963,6 +963,17 @@ class CSVInput(FileInput):
 
         return df
 
+    def preprocess(self, value):
+        """Preprocess a CSV path.
+
+        Args:
+            value (string): path to process
+
+        Returns:
+            path string or None
+        """
+        return value if value else None
+
 
 class DirectoryInput(Input):
     """A directory input, or parameter, of an invest model.
