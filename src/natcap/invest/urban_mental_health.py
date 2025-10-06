@@ -37,17 +37,13 @@ MODEL_SPEC = spec.ModelSpec(
         ["aoi_vector_path", "population_raster", "search_radius"],
         ["effect_size", "baseline_prevalence_vector",
          "health_cost_rate"],
-        ["scenario", "tc_raster", "tc_target", "ndvi_base", "ndvi_alt",
-         "lulc_base", "lulc_alt", "lulc_attr_csv"]
-
-        #  ["scenario", "ndvi_base"],
-        # ["tc_raster", "tc_target"],
-        # ["lulc_base", "lulc_alt", "lulc_attr_csv"],
-        # ["ndvi_alt"]
-        #  ^ could either be a dropdown menu of scenario options (i.e., "TC + baseline NDVI", "baseline and alternate LULC", "baseline and alternate NDVI")
+        ["scenario"],
+        ["ndvi_base", "ndvi_alt"],
+        ["lulc_base", "lulc_alt", "lulc_attr_csv"],
+        ["tc_raster", "tc_target"]
     ],
-    validate_spatial_overlap=True,  # TODO
-    different_projections_ok=True,  # TODO
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
     aliases=("umh",),
     inputs=[
         spec.WORKSPACE,
@@ -211,17 +207,16 @@ MODEL_SPEC = spec.ModelSpec(
             name=gettext("baseline land use/land cover"),
             about=gettext(
                 "Map of land use/land cover codes under current or baseline "
-                "conditions. Each land use/land cover type must be assigned "
-                "a unique integer code. If an LULC attribute table is used, "
+                "conditions. If scenario is not 'lulc', this is used only for "
+                "water masking. If an LULC attribute table is used, "
                 "all values in this raster must have corresponding entries. "
                 "This raster should extend beyond the AOI by at least the "
-                "search radius distance"
+                "search radius distance."
             ),
             data_type=int,
             units=None,
             projected=True,
-            required="scenario=='lulc'",
-            allowed="scenario=='lulc'"
+            required="scenario=='lulc' or lulc_attr_csv",
         ),
         spec.SingleBandRasterInput(
             id="lulc_alt",
@@ -238,15 +233,17 @@ MODEL_SPEC = spec.ModelSpec(
             units=None,
             projected=True,
             required="scenario=='lulc'",
-            allowed="scenario=='lulc'"
+            allowed="scenario=='lulc' or lulc_base"
         ),
         spec.CSVInput(
             id="lulc_attr_csv",
             name=gettext("LULC Attribute Table"),
             about=gettext(
-                "A table mapping LULC codes to NDVI values and stating "
-                "whether the LULC class should be excluded (0 for keeping, and "
-                "1 for excluding)."
+                "A table mapping unique LULC codes to NDVI values and stating "
+                "whether the LULC class should be excluded (0 for keeping, "
+                "and 1 for excluding). Typically, water is excluded and other "
+                "land cover types are kept. NDVI values are only required if "
+                "scenario is 'lulc' and a base NDVI raster is not provided."
             ),
             columns=[
                 spec.IntegerInput(
@@ -263,10 +260,15 @@ MODEL_SPEC = spec.ModelSpec(
                     id="ndvi",
                     about=gettext("NDVI value"),
                     units=None,
+                    required="scenario=='lulc' and not ndvi_base"
                 )
             ],
-            required="scenario=='lulc' and not ndvi_base",
-            allowed="scenario=='lulc'"
+            # Attr table required if scenario is lulc and ndvi baseline raster
+            # is not provided or scenario isnt lulc and baseline raster is
+            # provided so attribute table is needed for water masking
+            required="(scenario=='lulc' and not ndvi_base) or "
+                     "(scenario!='lulc' and lulc_base)",
+            allowed="scenario=='lulc or 'lulc_base'"
         )
         ],
     outputs=[
@@ -276,7 +278,6 @@ MODEL_SPEC = spec.ModelSpec(
                 about=gettext("Preventable cases at pixel level"),
                 data_type=float,
                 units=u.count,
-
             ),
             spec.SingleBandRasterOutput(
                 id="preventable_cost",
@@ -285,7 +286,8 @@ MODEL_SPEC = spec.ModelSpec(
                     "Preventable cost at pixel level. The currency unit will "
                     "be the same as that in the health cost rate input."),
                 data_type=float,
-                units=u.currency
+                units=u.currency,
+                created_if="health_cost_rate"
             ),
             spec.VectorOutput(
                 id="preventable_cases_cost_sum_vector",
@@ -307,7 +309,8 @@ MODEL_SPEC = spec.ModelSpec(
                         about=gettext(
                             "Total preventable costs by subregion/polygon in "
                             "same currency as input health cost rate"),
-                        units=u.currency
+                        units=u.currency,
+                        created_if="health_cost_rate"
                     )
                 ]
             ),
@@ -330,7 +333,8 @@ MODEL_SPEC = spec.ModelSpec(
                     spec.NumberOutput(
                         id="sum_cost",
                         about=gettext("Total preventable costs by subregion"),
-                        units=u.currency
+                        units=u.currency,
+                        created_if="health_cost_rate"
                     ),
                     spec.NumberOutput(
                         id="total_cases",
@@ -342,7 +346,8 @@ MODEL_SPEC = spec.ModelSpec(
                         id="total_cost",
                         about=gettext(
                             "Total cost for the entire AOI"),
-                        units=u.count
+                        units=u.count,
+                        created_if="health_cost_rate"
                     )
                 ]
             ),
@@ -378,18 +383,67 @@ MODEL_SPEC = spec.ModelSpec(
                 units=None
             ),
             spec.SingleBandRasterOutput(
+                id="lulc_base_aligned",
+                path="intermediate/lulc_base_aligned.tif",
+                about=gettext("Aligned and resampled baseline LULC raster"),
+                data_type=int,
+                units=None,
+                created_if="lulc_base"
+            ),
+            spec.SingleBandRasterOutput(
+                id="lulc_alt_aligned",
+                path="intermediate/lulc_alt_aligned.tif",
+                about=gettext("Aligned and resampled alternate LULC raster"),
+                data_type=int,
+                units=None,
+                created_if="lulc_alt"
+            ),
+            spec.SingleBandRasterOutput(
+                id="lulc_mask",
+                path="intermediate/lulc_mask.tif",
+                about=gettext(
+                    "Binary mask based on LULC raster where 1 indicates "
+                    "pixels to be masked out based on `exclude` field in the "
+                    "LULC attribute table. This is used to mask the input "
+                    "rasters, e.g., baseline and alternate NDVI if "
+                    "scenario is `ndvi`"),
+                data_type=int,
+                units=None,
+                created_if="lulc_base and lulc_attr_csv"
+            ),
+            spec.SingleBandRasterOutput(
                 id="ndvi_alt_aligned",
                 path="intermediate/ndvi_alt_aligned.tif",
                 about=gettext("Aligned and resampled alternate NDVI raster"),
                 data_type=float,
-                units=None
+                units=None,
+                created_if="ndvi_alt"
+            ),
+            spec.SingleBandRasterOutput(
+                id="ndvi_alt_aligned_masked",
+                path="intermediate/ndvi_alt_aligned_masked.tif",
+                about=gettext(
+                    "Masked aligned and resampled alternate NDVI raster"),
+                data_type=float,
+                units=None,
+                created_if="ndvi_alt"
             ),
             spec.SingleBandRasterOutput(
                 id="ndvi_base_aligned",
                 path="intermediate/ndvi_base_aligned.tif",
                 about=gettext("Aligned and resampled baseline NDVI raster"),
                 data_type=float,
-                units=None
+                units=None,
+                created_if="ndvi_base"
+            ),
+            spec.SingleBandRasterOutput(
+                id="ndvi_base_aligned_masked",
+                path="intermediate/ndvi_base_aligned_masked.tif",
+                about=gettext(
+                    "Masked aligned and resampled baseline NDVI raster"),
+                data_type=float,
+                units=None,
+                created_if="ndvi_base"
             ),
             spec.SingleBandRasterOutput(
                 id="ndvi_alt_buffer_mean",
@@ -398,7 +452,8 @@ MODEL_SPEC = spec.ModelSpec(
                     "Alternate NDVI raster convolved with a mean circular "
                     "kernel of radius search_distance"),
                 data_type=float,
-                units=None
+                units=None,
+                created_if="ndvi_alt"
             ),
             spec.SingleBandRasterOutput(
                 id="ndvi_base_buffer_mean",
@@ -407,7 +462,8 @@ MODEL_SPEC = spec.ModelSpec(
                     "Baseline NDVI raster convolved with a mean circular "
                     "kernel of radius search_distance"),
                 data_type=float,
-                units=None
+                units=None,
+                created_if="ndvi_base"
             ),
             spec.SingleBandRasterOutput(
                 id="population_aligned",
@@ -525,7 +581,7 @@ def execute(args):
     # preprocessing
     LOGGER.info("Start preprocessing")
     if args['scenario'] == 'ndvi':
-        # will rearrage whats in if/else block when implementing scenarios 1-2
+        # TODO rearrage whats in if/else block when implementing scenarios 1-2
         LOGGER.info("Using scenario option 3: NDVI")
         base_ndvi_raster_info = pygeoprocessing.get_raster_info(
             args['ndvi_base'])
@@ -547,11 +603,11 @@ def execute(args):
             aoi_bbox = aoi_info["bounding_box"]
 
         # Expand target bounding box to ensure correct edge pixel calculation
-        aoi_bbox+=numpy.array([-search_radius, -search_radius,
-                                search_radius, search_radius])
+        aoi_bbox += numpy.array([-search_radius, -search_radius,
+                                 search_radius, search_radius])
         aoi_bbox = list(aoi_bbox)
 
-        # Quick check to see if buffered AOI bbox is larger than input base and alt NDVI
+        # Check if buffered AOI bbox is larger than input base and alt NDVI
         check_raster_bounds_against_aoi(aoi_bbox, ndvi_bbox)
         check_raster_bounds_against_aoi(
             aoi_bbox,
@@ -560,11 +616,21 @@ def execute(args):
         input_align_list = [args['ndvi_base'], args['ndvi_alt']]
         output_align_list = [file_registry['ndvi_base_aligned'],
                              file_registry['ndvi_alt_aligned']]
+        resample_method_list = ['cubicspline', 'cubicspline']
+
+        if 'lulc_base' in args and args['lulc_base'] not in ["", None]:
+            input_align_list.append(args['lulc_base'])
+            output_align_list.append(file_registry['lulc_base_aligned'])
+            resample_method_list.append('near')
+            check_raster_bounds_against_aoi(
+                aoi_bbox, pygeoprocessing.get_raster_info(
+                    args['lulc_base'])['bounding_box'])
+            #TODO: check if aoi_bbox still works?
 
         ndvi_align_task = task_graph.add_task(
             func=pygeoprocessing.align_and_resize_raster_stack,
             args=(input_align_list, output_align_list,
-                  ['cubicspline', 'cubicspline'],
+                  resample_method_list,
                   pixel_size,
                   aoi_bbox),
             kwargs={
@@ -601,6 +667,49 @@ def execute(args):
             target_path_list=[file_registry['population_aligned']],
             task_name='Resample population to NDVI resolution')
 
+        mask_base_inputs = [file_registry['ndvi_base_aligned'],
+                            file_registry['ndvi_base_aligned_masked']]
+        mask_alt_inputs = [file_registry['ndvi_alt_aligned'],
+                           file_registry['ndvi_alt_aligned_masked']]
+        mask_base_outputs = [file_registry['ndvi_base_aligned_masked']]
+        mask_alt_outputs = [file_registry['ndvi_alt_aligned_masked']]
+        if 'lulc_base' in args and args['lulc_base'] not in ["", None]:
+            LOGGER.info("Masking NDVI using LULC")
+            mask_base_inputs += [file_registry['lulc_base_aligned'],
+                                 args['lulc_attr_csv'],
+                                 file_registry['lulc_mask']]
+            mask_base_outputs.append(file_registry['lulc_mask'])
+
+            # Use lulc_alt to mask if provided. Otherwise, use lulc_base
+            if 'lulc_alt' in args and args['lulc_alt'] not in ["", None]:
+                mask_alt_inputs += [file_registry['lulc_alt_aligned'],
+                                    args['lulc_attr_csv'],
+                                    file_registry['lulc_mask']]
+            else:
+                mask_alt_inputs += [file_registry['lulc_base_aligned'],
+                                    args['lulc_attr_csv'],
+                                    file_registry['lulc_mask']]
+
+            mask_alt_outputs.append(file_registry['lulc_mask'])
+        else:
+            LOGGER.info("Masking NDVI using threshold NDVI<0")
+
+        mask_base_ndvi_task = task_graph.add_task(
+            func=mask_ndvi,
+            args=mask_base_inputs,
+            target_path_list=mask_base_outputs,
+            dependent_task_list=[ndvi_align_task],
+            task_name="Mask baseline NDVI"
+        )
+
+        mask_alt_ndvi_task = task_graph.add_task(
+            func=mask_ndvi,
+            args=mask_alt_inputs,
+            target_path_list=mask_alt_outputs,
+            dependent_task_list=[ndvi_align_task],
+            task_name="Mask alternate NDVI"
+        )
+
         pixel_radius = int(round(search_radius/pixel_size[0]))
         LOGGER.info(f"Search radius {search_radius} results in "
                     f"buffer of {pixel_radius} pixels")
@@ -615,12 +724,12 @@ def execute(args):
                 'max_distance': pixel_radius,
                 'normalize': True}, #TODO do i need to normalize both this and in convolve2d op?
             target_path_list=[file_registry['kernel']],
-            task_name='create kernel raster',)
+            task_name='create kernel raster')
 
         mean_buffer_base_ndvi_task = task_graph.add_task(
             func=pygeoprocessing.convolve_2d,
             args=(
-                (file_registry['ndvi_base_aligned'], 1),
+                (file_registry['ndvi_base_aligned_masked'], 1),
                 (file_registry['kernel'], 1),
                 file_registry['ndvi_base_buffer_mean']),
             kwargs={
@@ -629,14 +738,14 @@ def execute(args):
                 'normalize_kernel': True,
                 'target_datatype': gdal.GDT_Float32,
                 'target_nodata': FLOAT32_NODATA},
-            dependent_task_list=[ndvi_align_task, kernel_task],
+            dependent_task_list=[mask_base_ndvi_task, kernel_task],
             target_path_list=[file_registry['ndvi_base_buffer_mean']],
             task_name="calculate mean baseline NDVI within buffer")
 
         mean_buffer_alt_ndvi_task = task_graph.add_task(
             func=pygeoprocessing.convolve_2d,
             args=(
-                (file_registry['ndvi_alt_aligned'], 1),
+                (file_registry['ndvi_alt_aligned_masked'], 1),
                 (file_registry['kernel'], 1),
                 file_registry['ndvi_alt_buffer_mean']),
             kwargs={
@@ -645,7 +754,7 @@ def execute(args):
                 'normalize_kernel': True,
                 'target_datatype': gdal.GDT_Float32,
                 'target_nodata': FLOAT32_NODATA},
-            dependent_task_list=[ndvi_align_task, kernel_task],
+            dependent_task_list=[mask_alt_ndvi_task, kernel_task],
             target_path_list=[file_registry['ndvi_alt_buffer_mean']],
             task_name="calculate mean alternate NDVI within buffer")
 
@@ -884,6 +993,62 @@ def _resample_population_raster(
         target_path=target_population_raster_path)
 
     shutil.rmtree(tmp_working_dir, ignore_errors=True)
+
+
+def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc=None,
+              lulc_attr_table=None, target_lulc_mask=None):
+    """Mask NDVI using either threshold of NDVI<0 or LULC exclude codes
+
+    Args:
+        input_ndvi (str): path to NDVI raster
+        target_masked_ndvi (str): path to output masked NDVI raster
+        input_lulc (str): (optional) path to LULC raster
+        lulc_attr_table (str): (required if input_lulc) path to lulc attribute
+            table csv
+        target_lulc_mask (str): (required if input_lulc) path to output
+            binary mask
+
+    Returns:
+        None
+
+    """
+
+    def _mask_with_lulc(ndvi, lulc_mask):
+        """Mask NDVI using places where LULC's exclude code = 1"""
+        ndvi[lulc_mask == 1] = FLOAT32_NODATA
+        return ndvi
+
+    def _mask_with_ndvi(ndvi):
+        """Mask NDVI using threshold 0"""
+        ndvi[ndvi < 0] = FLOAT32_NODATA
+        return ndvi
+
+    base_raster_path_band_const_list = [input_ndvi]
+
+    if input_lulc:
+        # create lulc_mask where any lulc code with corresponding 'exclude'
+        # value = 1 get assigned value of 1 and all others are 0
+        lulc_df = pandas.read_csv(lulc_attr_table)
+        codes = list(lulc_df['lucode'])
+        excludes = list(lulc_df['exclude'])
+
+        value_map = {c: e for c, e in zip(codes, excludes) if
+                     numpy.isfinite(c)}
+
+        pygeoprocessing.reclassify_raster(
+            (input_lulc, 1), value_map, target_lulc_mask, gdal.GDT_Byte,
+            255, values_required=True)
+
+        mask_op = _mask_with_lulc
+        base_raster_path_band_const_list.append(target_lulc_mask)
+    else:
+        mask_op = _mask_with_ndvi
+
+    # has to be float64 or error in raster_map bc numpy cannot cast FLOAT32_NODATA to float32:
+    # numpy.can_cast(numpy.min_scalar_type(target_nodata), target_dtype) is False
+    pygeoprocessing.raster_map(
+        mask_op, base_raster_path_band_const_list, target_masked_ndvi,
+        target_dtype=numpy.float64, target_nodata=FLOAT32_NODATA)
 
 
 def calc_delta_ndvi(base_ndvi, alt_ndvi, target_path):
