@@ -1834,14 +1834,15 @@ class ModelSpec(BaseModel):
 
         _walk_spec(self.outputs, args_dict['workspace_dir'])
 
-    def create_file_registry(self, args):
-        return FileRegistry(
-            outputs=self.outputs,
-            workspace_dir=args['workspace_dir'],
-            file_suffix=args['results_suffix'])
-
     def create_output_directories(self, args):
+        """Create the necessary output directories given a set of args.
 
+        Args:
+            args (dict): maps input keys to values
+
+        Returns:
+            None
+        """
         # evaluate which outputs we expect to be created, given the
         # model spec and provided input values
         outputs_to_be_created = set([
@@ -1861,9 +1862,26 @@ class ModelSpec(BaseModel):
                 ), exist_ok=True)
 
     def setup(self, args, taskgraph_key='taskgraph_cache'):
+        """Perform boilerplate setup needed in an invest execute function.
+
+        Args:
+            args (dict): maps input keys to values
+            taskgraph_key (str): Input key that identifies the taskgraph cache.
+                Defaults to 'taskgraph_cache'.
+
+        Returns:
+            Tuple of ``(args, file_registry, graph)`` where ``args`` is the
+            result of passing the input args through ``self.preprocess_inputs``,
+            ``file_registry`` is a ``FileRegistry``, and ``graph`` is a
+            ``TaskGraph``, all instantiated appropriately for the given args
+            and model specification.
+        """
         args = self.preprocess_inputs(args)
         self.create_output_directories(args)
-        file_registry = self.create_file_registry(args)
+        file_registry = FileRegistry(
+            outputs=self.outputs,
+            workspace_dir=args['workspace_dir'],
+            file_suffix=args['results_suffix'])
         graph = taskgraph.TaskGraph(file_registry[taskgraph_key],
                                     n_workers=args['n_workers'])
         return args, file_registry, graph
