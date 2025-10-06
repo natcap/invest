@@ -655,7 +655,7 @@ def execute(args):
             args['landcover_snapshot_csv'])['raster_path'].to_dict()
 
     # Phase 1: alignment and preparation of inputs
-    baseline_lulc_year = int(min(snapshots.keys()))
+    baseline_lulc_year = min(snapshots.keys())
     baseline_lulc_path = snapshots[baseline_lulc_year]
     baseline_lulc_info = pygeoprocessing.get_raster_info(
         baseline_lulc_path)
@@ -699,7 +699,7 @@ def execute(args):
     # There are no emissions, so net sequestration is only from accumulation.
     # Value can still be calculated from the net sequestration.
     if transition_years:
-        end_of_baseline_period = int(min(transition_years))
+        end_of_baseline_period = min(transition_years)
     else:
         end_of_baseline_period = args['analysis_year']
 
