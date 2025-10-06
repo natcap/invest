@@ -735,7 +735,7 @@ def execute(args):
         dependent_task_list=[slope_task],
         task_name='threshold slope')
 
-    if args['flow_dir_algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'mfd':
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_mfd,
             args=(
@@ -1451,7 +1451,7 @@ def _calculate_bar_factor(
     """
     LOGGER.debug(f"doing flow accumulation on {factor_path}")
 
-    if flow_dir_algorithm == 'D8':
+    if flow_dir_algorithm == 'd8':
         flow_accum_func = pygeoprocessing.routing.flow_accumulation_d8
     else:  # MFD
         flow_accum_func = pygeoprocessing.routing.flow_accumulation_mfd

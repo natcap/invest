@@ -759,7 +759,7 @@ def execute(args):
         dependent_task_list=[align_task],
         task_name='fill dem pits')
 
-    if args['flow_dir_algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'mfd':
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_mfd,
             args=(
@@ -996,7 +996,7 @@ def execute(args):
         task_name='aggregate recharge')
 
     LOGGER.info('calculate L_sum')  # Eq. [12]
-    if args['flow_dir_algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'mfd':
         l_sum_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_mfd,
             args=(
