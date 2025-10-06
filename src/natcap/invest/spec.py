@@ -736,7 +736,7 @@ class CSVInput(FileInput):
         allowed_types = {
             BooleanInput, IntegerInput, NumberInput, OptionStringInput,
             PercentInput, RasterOrVectorInput, RatioInput, FileInput,
-            SingleBandRasterInput, StringInput, VectorInput}
+            SingleBandRasterInput, StringInput, VectorInput, CSVInput}
         for row in (self.rows or []):
             if type(row) not in allowed_types:
                 raise ValueError(f'Row {row} is not an allowed type')
