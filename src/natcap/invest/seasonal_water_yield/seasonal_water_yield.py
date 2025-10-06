@@ -144,8 +144,9 @@ MODEL_SPEC = spec.ModelSpec(
                         "Curve number values for each combination of soil group and LULC"
                         " class. Replace [SOIL_GROUP] with each soil group code A, B, C,"
                         " D so that there is one column for each soil group. Curve number"
-                        " values must be greater than 0."
+                        " values must be greater than 0 and less than or equal to 100."
                     ),
+                    expression="0 < value <= 100",
                     units=u.none
                 ),
                 spec.NumberInput(

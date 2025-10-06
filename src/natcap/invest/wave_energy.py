@@ -114,7 +114,7 @@ MODEL_SPEC = spec.ModelSpec(
     module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
-        ["wave_base_data_path", "analysis_area", "aoi_path", "dem_path"],
+        ["wave_base_data_table", "analysis_area", "aoi_path", "dem_path"],
         ["machine_perf_path", "machine_param_path"],
         ["valuation_container", "land_gridPts_path",
          "machine_econ_path", "number_of_machines"]
@@ -123,144 +123,37 @@ MODEL_SPEC = spec.ModelSpec(
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.DirectoryInput(
-            id="wave_base_data_path",
+        spec.CSVInput(
+            id="wave_base_data_table",
             name=gettext("wave base data"),
             about=gettext(
-                "Pre-packaged wave energy data directory. This is provided with the"
-                " sample data."
-            ),
-            contents=[
+                "Table pointing to pre-packaged wave energy data. This is "
+                "provided with the sample data."),
+            columns=[
+                spec.StringInput(
+                    id="analysis_area",
+                    about=gettext("Analysis area")
+                ),
                 spec.VectorInput(
-                    id="NAmerica_WestCoast_4m.shp",
-                    about=gettext(
-                        "Point vector for the west coast of North America and Hawaii."
-                    ),
+                    id="point_vector",
+                    about=gettext("Wave energy point vector for each analysis area"),
                     geometry_types={"POINT"},
                     fields=[],
                     projected=None
                 ),
                 spec.VectorInput(
-                    id="WCNA_extract.shp",
-                    about=gettext(
-                        "Extract vector for the west coast of North America and Hawaii."
-                    ),
+                    id="extract_vector",
+                    about=gettext("Wave energy extract vector for each analysis area"),
                     geometry_types={"POLYGON"},
                     fields=[],
                     projected=None
                 ),
                 spec.FileInput(
-                    id="NAmerica_WestCoast_4m.txt.bin",
-                    about=gettext(
-                        "WaveWatchIII data for the west coast of North America and"
-                        " Hawaii."
-                    )
-                ),
-                spec.VectorInput(
-                    id="NAmerica_EastCoast_4m.shp",
-                    about=gettext(
-                        "Point vector for the East Coast of North America and Puerto"
-                        " Rico."
-                    ),
-                    geometry_types={"POINT"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.VectorInput(
-                    id="ECNA_extract.shp",
-                    about=gettext(
-                        "Extract vector for the East Coast of North America and Puerto"
-                        " Rico."
-                    ),
-                    geometry_types={"POLYGON"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.FileInput(
-                    id="NAmerica_EastCoast_4m.txt.bin",
-                    about=gettext(
-                        "WaveWatchIII data for the East Coast of North America and Puerto"
-                        " Rico."
-                    )
-                ),
-                spec.VectorInput(
-                    id="North_Sea_4m.shp",
-                    about=gettext("Point vector for the North Sea 4 meter resolution."),
-                    geometry_types={"POINT"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.VectorInput(
-                    id="North_Sea_4m_Extract.shp",
-                    about=gettext("Extract vector for the North Sea 4 meter resolution."),
-                    geometry_types={"POLYGON"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.FileInput(
-                    id="North_Sea_4m.bin",
-                    about=gettext(
-                        "WaveWatchIII data for the North Sea 4 meter resolution."
-                    )
-                ),
-                spec.VectorInput(
-                    id="North_Sea_10m.shp",
-                    about=gettext("Point vector for the North Sea 10 meter resolution."),
-                    geometry_types={"POINT"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.VectorInput(
-                    id="North_Sea_10m_Extract.shp",
-                    about=gettext(
-                        "Extract vector for the North Sea 10 meter resolution."
-                    ),
-                    geometry_types={"POLYGON"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.FileInput(
-                    id="North_Sea_10m.bin",
-                    about=gettext(
-                        "WaveWatchIII data for the North Sea 10 meter resolution."
-                    )
-                ),
-                spec.VectorInput(
-                    id="Australia_4m.shp",
-                    about=gettext("Point vector for Australia."),
-                    geometry_types={"POINT"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.VectorInput(
-                    id="Australia_Extract.shp",
-                    about=gettext("Extract vector for Australia."),
-                    geometry_types={"POLYGON"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.FileInput(
-                    id="Australia_4m.bin",
-                    about=gettext("WaveWatchIII data for Australia.")
-                ),
-                spec.VectorInput(
-                    id="Global.shp",
-                    about=gettext("Global point vector."),
-                    geometry_types={"POINT"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.VectorInput(
-                    id="Global_extract.shp",
-                    about=gettext("Global extract vector."),
-                    geometry_types={"POLYGON"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.FileInput(
-                    id="Global_WW3.txt.bin", about=gettext("Global WaveWatchIII data.")
+                    id="binary_wwiii_data",
+                    about=gettext("Binary WaveWatchIII data for each analysis area")
                 )
-            ]
+            ],
+            index_col="analysis_area"
         ),
         spec.OptionStringInput(
             id="analysis_area",
@@ -817,9 +710,8 @@ def execute(args):
     Args:
         workspace_dir (str): Where the intermediate and output folder/files
             will be saved. (required)
-        wave_base_data_path (str): Directory location of wave base data
-            including WAVEWATCH III (WW3) data and analysis area shapefile.
-            (required)
+        wave_base_data_table (str): Path to wave base data table including
+            WAVEWATCH III (WW3) data and analysis area shapefile. (required)
         analysis_area (str): A string identifying the analysis area of
             interest. Used to determine wave data shapefile, wave data text
             file, and analysis area boundary shape. (required)
@@ -906,72 +798,17 @@ def execute(args):
             'machine_econ_path').get_validated_dataframe(
             args['machine_econ_path'])['value'].to_dict()
 
-    # Build up a dictionary of possible analysis areas where the key
-    # is the analysis area selected and the value is a dictionary
-    # that stores the related paths to the needed inputs
-    wave_base_data_path = args['wave_base_data_path']
-    analysis_dict = {
-        'westcoast': {
-            'point_vector':
-            os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.shp'),
-            'extract_vector':
-            os.path.join(wave_base_data_path, 'WCNA_extract.shp'),
-            'ww3_path':
-            os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.txt.bin')
-        },
-        'eastcoast': {
-            'point_vector':
-            os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.shp'),
-            'extract_vector':
-            os.path.join(wave_base_data_path, 'ECNA_extract.shp'),
-            'ww3_path':
-            os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.txt.bin')
-        },
-        'northsea4': {
-            'point_vector':
-            os.path.join(wave_base_data_path, 'North_Sea_4m.shp'),
-            'extract_vector':
-            os.path.join(wave_base_data_path, 'North_Sea_4m_Extract.shp'),
-            'ww3_path':
-            os.path.join(wave_base_data_path, 'North_Sea_4m.bin')
-        },
-        'northsea10': {
-            'point_vector':
-            os.path.join(wave_base_data_path, 'North_Sea_10m.shp'),
-            'extract_vector':
-            os.path.join(wave_base_data_path, 'North_Sea_10m_Extract.shp'),
-            'ww3_path':
-            os.path.join(wave_base_data_path, 'North_Sea_10m.bin')
-        },
-        'australia': {
-            'point_vector':
-            os.path.join(wave_base_data_path, 'Australia_4m.shp'),
-            'extract_vector':
-            os.path.join(wave_base_data_path, 'Australia_Extract.shp'),
-            'ww3_path':
-            os.path.join(wave_base_data_path, 'Australia_4m.bin')
-        },
-        'global': {
-            'point_vector':
-            os.path.join(wave_base_data_path, 'Global.shp'),
-            'extract_vector':
-            os.path.join(wave_base_data_path, 'Global_extract.shp'),
-            'ww3_path':
-            os.path.join(wave_base_data_path, 'Global_WW3.txt.bin')
-        }
-    }
-
     # Get the String value for the analysis area provided from the dropdown
     # menu in the user interface
     analysis_area = args['analysis_area']
+    base_data = MODEL_SPEC.get_input(
+        'wave_base_data_table').get_validated_dataframe(
+        args['wave_base_data_table']).loc[analysis_area]
     # Use the analysis area String to get the path's to the wave seastate data,
     # the wave point shapefile, and the polygon extract shapefile
-    wave_seastate_bins = _binary_wave_data_to_dict(
-        analysis_dict[analysis_area]['ww3_path'])
-    analysis_area_points_path = analysis_dict[analysis_area][
-        'point_vector']
-    analysis_area_extract_path = analysis_dict[analysis_area][
-        'extract_vector']
+    wave_seastate_bins = _binary_wave_data_to_dict(base_data['binary_wwiii_data'])
+    analysis_area_points_path = base_data['point_vector']
+    analysis_area_extract_path = base_data['extract_vector']
     analysis_area_sr = _get_vector_spatial_ref(analysis_area_points_path)
 
     # If AOI is not provided

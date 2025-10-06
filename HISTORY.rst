@@ -125,6 +125,18 @@ Coastal Vulnerability
   percent; this has been corrected to show that it is a numeric input with
   units of meters/second.
 
+Crop Production
+===============
+* The inputs to both Crop Production models have changed in order to support
+  remote datasets. Instead of a Model Data Directory, the models now expect
+  multiple tables, each of which maps each crop name to its corresponding
+  climate bin raster, observed yield raster, nutrient table, percentile yield
+  table, or regression yield table.
+  (`#2095 <https://github.com/natcap/invest/issues/2095>`_)
+* The ``crop`` column headers in both models' result tables have been renamed
+  to ``crop_name`` for consistency with model inputs.
+  (`#2095 <https://github.com/natcap/invest/issues/2095>`_)
+
 Habitat Quality
 ===============
 * The aligned LULC outputs are no longer named after the original LULC files.
@@ -138,10 +150,26 @@ Seasonal Water Yield
   These CSVs must have the columns ``month`` and ``path``, mapping month indexes
   (1-12) to raster paths.
   (`#2096 <https://github.com/natcap/invest/issues/2096>`_)
+* Documentation has been updated to reflect that curve number values must be
+  greater than 0 and less than or equal to 100.
+  (`#2164 <https://github.com/natcap/invest/issues/2164>`_)
+
+Urban Flood Risk Mitigation
+===========================
+* Documentation has been updated to reflect that curve number values must be
+  greater than 0 and less than or equal to 100.
+  (`#2164 <https://github.com/natcap/invest/issues/2164>`_)
 
 Visitation: Recreation and Tourism
 ==================================
 * The intermediate predictor JSON outputs now include the file suffix, if provided.
+
+Wave Energy
+===========
+* The model now expects the base data to be provided as a CSV table that points
+  to the vector and binary filepaths, rather than a directory. The sample data
+  has been updated to include this table.
+  (`#2166 <https://github.com/natcap/invest/issues/2166>`_)
 
 Wind Energy
 ===========
