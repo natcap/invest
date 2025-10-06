@@ -28,7 +28,6 @@ def redirect_stdout():
     sys.stdout = old_stdout
 
 
-
 class CLIHeadlessTests(unittest.TestCase):
     """Headless Tests for CLI."""
     def setUp(self):

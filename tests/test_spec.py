@@ -392,7 +392,6 @@ class TestMetadataFromSpec(unittest.TestCase):
                               [model_spec.model_id, 'InVEST'])
 
 
-
 class ResultsSuffixTests(unittest.TestCase):
     """Tests for natcap.invest.spec.ResultsSuffixInput."""
 
@@ -411,4 +410,3 @@ class ResultsSuffixTests(unittest.TestCase):
     def test_suffix_string_no_entry(self):
         """Utils: test no suffix entry in args."""
         self.assertEqual(spec.SUFFIX.preprocess(None), '')
-
