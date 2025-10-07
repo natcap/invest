@@ -89,6 +89,9 @@ Plugins
 * If plugin installation fails, the Workbench now cleans up any
   leftover, unusable micromamba environments.
   (`#2104 <https://github.com/natcap/invest/issues/2104>`_)
+* In the Workbench, Python log messages emitted by a plugin model will receive
+  the same styling as core invest models.
+  (`#2130 <https://github.com/natcap/invest/issues/2130>`_)
 
 Annual Water Yield
 ==================
