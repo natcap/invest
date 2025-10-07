@@ -116,7 +116,7 @@ ValueError: Values in the LULC raster were found that are not represented under 
   });
 });
 
-describe.only('Unit tests for invest logger message markup', () => {
+describe('Unit tests for invest logger message markup', () => {
   test('Warning from natcap.invest gets primary-warning class attribute', () => {
     const message = '2021-01-15 07:14:37 natcap.invest.carbon WARNING ...';
     const cls = markupMessage(message);
