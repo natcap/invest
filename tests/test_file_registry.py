@@ -6,6 +6,7 @@ import unittest
 from natcap.invest.file_registry import FileRegistry
 from natcap.invest import spec
 
+
 class FileRegistryTests(unittest.TestCase):
 
     def setUp(self):
@@ -112,8 +113,12 @@ class FileRegistryTests(unittest.TestCase):
                 '2': os.path.join(self.workspace_dir, 'foo_2_result.txt')
             },
             '[X]_[Y]_[Z]': {
-                ('foo', 'bar', 'baz'): os.path.join(
-                    self.workspace_dir, 'baz-bar-foo.txt')
+                'foo': {
+                    'bar': {
+                        'baz': os.path.join(
+                            self.workspace_dir, 'baz-bar-foo.txt')
+                    }
+                }
             }
         })
 
