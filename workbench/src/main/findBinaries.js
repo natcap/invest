@@ -62,7 +62,7 @@ export function findInvestBinaries(isDevMode) {
 export function findMicromambaExecutable(isDevMode) {
   let micromambaExe;
   if (isDevMode) {
-    micromambaExe = process.env['MAMBA_EXE'] ?? 'micromamba'
+    micromambaExe = 'micromamba'; // assume that micromamba is available
   } else {
     micromambaExe = `"${upath.join(process.resourcesPath, 'micromamba')}"`;
   }
