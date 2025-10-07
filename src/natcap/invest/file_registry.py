@@ -110,7 +110,7 @@ class FileRegistry:
             # (If only one field_value, it maps directly to path.)
             entry = path
             for i in range(len(field_values) - 1, -1, -1):
-                entry = {field_values[i]: entry}
+                entry = {str(field_values[i]): entry}
 
             self.registry[key].update(entry)
 
