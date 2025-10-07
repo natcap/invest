@@ -540,7 +540,7 @@ def execute(args):
             "Start year must be less than or equal to end year.\n"
             f"start_year: {args['start_year']}\nend_year: {args['end_year']}")
     # in case the user defines a hostname
-    if 'hostname' in args:
+    if args['hostname'] and args['port']:
         server_url = f"PYRO:natcap.invest.recreation@{args['hostname']}:{args['port']}"
     else:
         # else use a well known path to get active server
