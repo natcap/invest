@@ -106,18 +106,13 @@ class FileRegistry:
             if key not in self.registry:
                 self.registry[key] = {}
 
-            # Default case: only one field_value, mapped directly to path.
-            sub_key = field_values[0]
+            # Build nested entry. Last field_value will point to path.
+            # (If only one field_value, it maps directly to path.)
             entry = path
+            for i in range(len(field_values) - 1, -1, -1):
+                entry = {field_values[i]: entry}
 
-            # If more than one field_value, build nested entry.
-            if len(field_values) > 1:
-                # Last field_value will point to path.
-                # First field_value is omitted because it has already been assigned to sub_key.
-                for i in range(len(field_values) - 1, 0, -1):
-                    entry = {field_values[i]: entry}
-
-            self.registry[key][sub_key] = entry
+            self.registry[key].update(entry)
 
         else:
             if field_values:
