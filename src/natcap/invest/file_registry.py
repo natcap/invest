@@ -81,7 +81,8 @@ class FileRegistry:
         and '[BAR]' is replaced with 'b'.
 
         Args:
-            keys (str | tuple(str)): key(s) to index the file registry by.
+            keys (str | tuple(obj)): key(s) to index the file registry by. Must
+                be castable to string.
 
         Returns:
             absolute path (string) for the given key(s)
@@ -90,6 +91,7 @@ class FileRegistry:
         if isinstance(keys, str):
             keys = (keys,)
         key, *field_values = keys
+        field_values = [str(value) for value in field_values]
         if key not in self._keys_to_paths:
             raise KeyError(f'Key not found: {key}')
 
@@ -101,7 +103,7 @@ class FileRegistry:
                     f'Expected exactly {len(fields)} field values but received {len(field_values)}')
 
             for field, val in zip(fields, field_values):
-                path = path.replace(f'[{field.upper()}]', str(val))
+                path = path.replace(f'[{field.upper()}]', val)
 
             if key not in self.registry:
                 self.registry[key] = {}
@@ -110,7 +112,7 @@ class FileRegistry:
             # (If only one field_value, it maps directly to path.)
             entry = path
             for i in range(len(field_values) - 1, -1, -1):
-                entry = {str(field_values[i]): entry}
+                entry = {field_values[i]: entry}
 
             self.registry[key].update(entry)
 
