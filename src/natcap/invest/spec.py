@@ -1953,7 +1953,7 @@ class ModelSpec(BaseModel):
                                     n_workers=args['n_workers'])
         return args, file_registry, graph
 
-    def execute(self, args, create_logfile=False, log_level=logging.DEBUG,
+    def execute(self, args, create_logfile=False, log_level=logging.NOTSET,
             generate_metadata=False, save_file_registry=False,
             check_outputs=False):
         """Invest model execute function wrapper.
@@ -1973,7 +1973,10 @@ class ModelSpec(BaseModel):
             create_logfile (bool): Defaults to False. If True, all logging
                 from the execute function as well as all other pre- and
                 post-processing will be written to a logfile in the workspace.
-            log_level :
+            log_level (int): The logging threshold for the log file (only applies
+                if ``create_logfile`` is true. Log messages with a level less
+                than this will be excluded from the logfile. The default value
+                (``logging.NOTSET``) will cause all logging to be captured.
             check_outputs (bool): Defaults to False. If True, will check that
                 the expected outputs and no others were created based on the
                 given args and the ``created_if`` attribute of each output. An
