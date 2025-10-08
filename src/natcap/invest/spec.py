@@ -2021,9 +2021,9 @@ class ModelSpec(BaseModel):
                 ])
                 if outputs_to_be_created != set(registry.keys()):
                     raise RuntimeError(
-                        'The set of outputs created differs from what was expected.\n')
+                        'The set of outputs created differs from what was expected.\n'
                         f'Missing outputs: {outputs_to_be_created - set(registry.keys())}\n'
-                        f'Extra outputs: {set(registry.keys()) - outputs_to_be_created}'
+                        f'Extra outputs: {set(registry.keys()) - outputs_to_be_created}')
 
             # optionally create metadata files for the results
             if generate_metadata:
