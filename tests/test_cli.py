@@ -163,7 +163,7 @@ class CLIHeadlessTests(unittest.TestCase):
             'snapped_outlets': os.path.join(self.workspace_dir, 'snapped_outlets_gura.gpkg'),
             'watersheds': os.path.join(self.workspace_dir, 'watersheds_gura.gpkg')
         }
-        with open(os.path.join(self.workspace_dir, 'file_registry.json')) as json_file:
+        with open(os.path.join(self.workspace_dir, 'file_registry_gura.json')) as json_file:
             self.assertEqual(json.load(json_file), expected_file_registry)
 
     def test_run_ambiguous_modelname(self):
