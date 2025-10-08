@@ -1978,6 +1978,13 @@ class ModelSpec(BaseModel):
                 the expected outputs and no others were created based on the
                 given args and the ``created_if`` attribute of each output. An
                 error will be raised if a discrepancy is found.
+
+        Returns:
+            file registry dictionary
+
+        Raises:
+            RuntimeError if ``check_outputs`` is ``True`` and a discrepancy is
+            detected between actual and expected outputs
         """
         if create_logfile:
             cm = utils.prepare_workspace(args['workspace_dir'],
@@ -2010,10 +2017,10 @@ class ModelSpec(BaseModel):
                     ) is True
                 ])
                 if outputs_to_be_created != set(registry.keys()):
-                    print('Missing outputs:',
-                        outputs_to_be_created - set(registry.keys()))
-                    print('Extra outputs:',
-                        set(registry.keys()) - outputs_to_be_created)
+                    raise RuntimeError(
+                        'The set of outputs created differs from what was expected.\n')
+                        f'Missing outputs: {outputs_to_be_created - set(registry.keys())}\n'
+                        f'Extra outputs: {set(registry.keys()) - outputs_to_be_created}'
 
             # optionally create metadata files for the results
             if generate_metadata:
