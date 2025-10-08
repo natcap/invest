@@ -2028,8 +2028,10 @@ class ModelSpec(BaseModel):
 
             # optionally write the file registry dict to a JSON file in the workspace
             if save_file_registry:
-                with open(os.path.join(preprocessed_args['workspace_dir'],
-                                       'file_registry.json'), "w") as json_file:
+                file_registry_path = os.path.join(
+                    preprocessed_args['workspace_dir'],
+                    f'file_registry{preprocessed_args["results_suffix"]}.json')
+                with open(file_registry_path, 'w') as json_file:
                     json.dump(registry, json_file, indent=4)
 
             return registry
