@@ -1054,6 +1054,10 @@ def execute_transition_analysis(args):
             and the first transition, not including the year of the first
             transition.
 
+    Note that because this function is called from the main execute function, it
+    expects that the args are already preprocessed (i.e. they all exist in the
+    args dict and have been cast to the correct type).
+
     Args:
         args['workspace_dir'] (string): The path to a workspace directory where
             outputs should be written.
@@ -1081,6 +1085,9 @@ def execute_transition_analysis(args):
         args['stocks_at_first_transition'] (dict): A dict mapping pool strings
             (see above for the valid pool identifiers) to rasters representing
             the carbon stocks at the end of the baseline period.
+        args['file_registry'] (FileRegistry): File registry from the main CBC
+            model, used to look up output file paths.
+
 
     Returns:
         ``None``.
