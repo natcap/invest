@@ -32,6 +32,7 @@ Getting Started
     installing
     cli
     scripting
+    docker
 
 Resources
 -------------
