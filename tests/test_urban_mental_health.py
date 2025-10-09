@@ -1,31 +1,21 @@
 # coding=UTF-8
 """Tests for the Urban Mental Health Model."""
-import itertools
-import math
 import os
-import random
 import shutil
 import tempfile
-import textwrap
 import unittest
 
 import numpy
 import pandas
 import pygeoprocessing
-# import shapely.geometry
 from shapely import Polygon
-from natcap.invest import utils
-from osgeo import gdal
-from osgeo import ogr
-from osgeo import osr
+from osgeo import gdal, ogr, osr
 
+# FLOAT32_NODATA is used as a "custom" nodata vs PGP_FLOAT32_NODATA is
+# pygeoprocessing's default nodata for a float32 raster and is used in the
+# model beginning at the step where delta ndvi is calculated
 FLOAT32_NODATA = float(numpy.finfo(numpy.float32).min)
 PGP_FLOAT32_NODATA = pygeoprocessing.choose_nodata(numpy.float32)
-_DEFAULT_ORIGIN = (444720, 3751320)
-_DEFAULT_PIXEL_SIZE = (30, -30)
-_DEFAULT_EPSG = 3116
-_DEFAULT_SRS = osr.SpatialReference()
-_DEFAULT_SRS.ImportFromEPSG(_DEFAULT_EPSG)
 
 
 def make_simple_vector(path_to_shp, fields={"id": ogr.OFTReal},
@@ -82,60 +72,61 @@ def make_raster_from_array(base_raster_path, array):
     no_data = FLOAT32_NODATA
 
     pygeoprocessing.numpy_array_to_raster(
-        array.astype(numpy.float32), no_data, pixel_size, origin, projection_wkt,
-        base_raster_path)
+        array.astype(numpy.float32), no_data, pixel_size, origin,
+        projection_wkt, base_raster_path)
 
 
 def make_synthetic_data_and_params(workspace_dir):
 
-        # make synthetic input data
-        baseline_prevalence_path = os.path.join(workspace_dir, "baseline_prevalence.shp")
-        fields={"id": ogr.OFTReal, "risk_rate": ogr.OFTReal}
-        attribute_list=[{"id": 0,"risk_rate": 10}]
-        make_simple_vector(baseline_prevalence_path, fields, attribute_list,
-                           shapely_geometry_list=[
-                                Polygon([(461251, 4923195), (461501, 4923195),
-                                         (461501, 4923445), (461251, 4923445),
-                                         (461251, 4923195)])])
+    # make synthetic input data
+    baseline_prevalence_path = os.path.join(
+        workspace_dir, "baseline_prevalence.shp")
+    fields = {"id": ogr.OFTReal, "risk_rate": ogr.OFTReal}
+    attribute_list = [{"id": 0, "risk_rate": 10}]
+    make_simple_vector(baseline_prevalence_path, fields, attribute_list,
+                       shapely_geometry_list=[
+                           Polygon([(461251, 4923195), (461501, 4923195),
+                                    (461501, 4923445), (461251, 4923445),
+                                    (461251, 4923195)])])
 
-        ndvi_base_array = numpy.array([[.1, .2, .35], [.5, .6, .7], [.8, .9, .10], [.11, .12, FLOAT32_NODATA]])
-        ndvi_base_path = os.path.join(workspace_dir, "ndvi_base.tif")
-        make_raster_from_array(ndvi_base_path, ndvi_base_array)
+    ndvi_base_array = numpy.array(
+        [[.1, .2, .35], [.5, .6, .7],
+         [.8, .9, .10], [.11, .12, FLOAT32_NODATA]])
+    ndvi_base_path = os.path.join(workspace_dir, "ndvi_base.tif")
+    make_raster_from_array(ndvi_base_path, ndvi_base_array)
 
-        ndvi_alt_array = numpy.array([[.12, .22, .1],
-                                      [.2, .3, .8],
-                                      [.9, .14, .14],
-                                      [.16, .17, .3]])
-        ndvi_alt_path = os.path.join(workspace_dir, "ndvi_alt.tif")
-        make_raster_from_array(ndvi_alt_path, ndvi_alt_array)
+    ndvi_alt_array = numpy.array(
+        [[.12, .22, .1], [.2, .3, .8], [.9, .14, .14], [.16, .17, .3]])
+    ndvi_alt_path = os.path.join(workspace_dir, "ndvi_alt.tif")
+    make_raster_from_array(ndvi_alt_path, ndvi_alt_array)
 
-        pop_array = ndvi_alt_array*100
-        pop_path = os.path.join(workspace_dir, "population.tif")
-        make_raster_from_array(pop_path, pop_array)
+    pop_array = ndvi_alt_array*100
+    pop_path = os.path.join(workspace_dir, "population.tif")
+    make_raster_from_array(pop_path, pop_array)
 
-        aoi_path = os.path.join(workspace_dir, "aoi.shp")
-        make_simple_vector(aoi_path)
+    aoi_path = os.path.join(workspace_dir, "aoi.shp")
+    make_simple_vector(aoi_path)
 
-        args = {
-            'aoi_vector_path': aoi_path,
-            'baseline_prevalence_vector': baseline_prevalence_path,
-            'effect_size': 0.94,
-            'health_cost_rate': None,
-            'lulc_alt': '',
-            'lulc_attr_csv': '',
-            'lulc_base': '',
-            'ndvi_alt': ndvi_alt_path,
-            'ndvi_base': ndvi_base_path,
-            'population_raster': pop_path,
-            'results_suffix': 'test1',
-            'scenario': 'ndvi',
-            'search_radius': 100, # 1 pixel
-            'tc_raster': '',
-            'tc_target': '',
-            'workspace_dir': workspace_dir,
-        }
+    args = {
+        'aoi_vector_path': aoi_path,
+        'baseline_prevalence_vector': baseline_prevalence_path,
+        'effect_size': 0.94,
+        'health_cost_rate': None,
+        'lulc_alt': '',
+        'lulc_attr_csv': '',
+        'lulc_base': '',
+        'ndvi_alt': ndvi_alt_path,
+        'ndvi_base': ndvi_base_path,
+        'population_raster': pop_path,
+        'results_suffix': 'test1',
+        'scenario': 'ndvi',
+        'search_radius': 100, # 1 pixel
+        'tc_raster': '',
+        'tc_target': '',
+        'workspace_dir': workspace_dir,
+    }
 
-        return args
+    return args
 
 
 gdal.UseExceptions()
@@ -143,7 +134,7 @@ gdal.UseExceptions()
 
 class UMHTests(unittest.TestCase):
     """Tests for the Urban Mental Health Model."""
-   
+
     def setUp(self):
         """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
@@ -215,10 +206,9 @@ class UMHTests(unittest.TestCase):
 
         urban_mental_health.execute(args)
 
-        expected_baseline_cases = numpy.array([
-                            [200, 300, 800],
-                            [900, 140, 140],
-                            [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+        expected_baseline_cases = numpy.array(
+            [[200, 300, 800], [900, 140, 140],
+             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
         actual_baseline_cases_path = os.path.join(
             self.workspace_dir, "intermediate",
             f"baseline_cases_{args['results_suffix']}.tif")
@@ -231,10 +221,13 @@ class UMHTests(unittest.TestCase):
             [-21.72614, -64.55958, -26.8406096],
             [-136.040285, -15.914164, -20.58118],
             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
-        # ^ calculated using (1 - numpy.exp(numpy.log(0.94)*10*actual_delta_ndvi)) * actual_baseline_cases
+        # ^ calculated using:
+        # (1 - numpy.exp(
+        #       numpy.log(0.94)*10*actual_delta_ndvi))*actual_baseline_cases
         # i.e., (1 - (exp(ln(RR0.1NE)10*NE))) * bc
 
-        expected_preventable_cases = numpy.array([ # only center pixel left bc AOI is small
+        # results contains only center pixel left bc AOI is small
+        expected_preventable_cases = numpy.array([
             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA],
             [PGP_FLOAT32_NODATA, -15.914164, PGP_FLOAT32_NODATA],
             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
@@ -374,7 +367,7 @@ class UMHTests(unittest.TestCase):
             "radius exceeds that of the LULC_base raster" in
             str(context.exception))
 
-    def test_no_lulc_mask(self):
+    def test_masking_without_lulc(self):
         """Test NDVI threshold masking (given no lulc input for mask)"""
         from natcap.invest import urban_mental_health
 
@@ -482,5 +475,178 @@ class UMHTests(unittest.TestCase):
 
         numpy.testing.assert_allclose(actual_cases, expected_cases)
 
+    def test_calc_preventable_cases(self):
+        """Test `calc_preventable_cases` correct and handles zeros and nodata
 
+        Test that pixels outside of AOI are nodata and nodata pixels in either
+        baseline_cases or delta_ndvi raster become nodata in the output.
+        Test that anywhere delta_ndvi or baseline_cases are 0, output
+        preventable cases is 0.
+        Test that preventable_cases decreases with negative delta_ndvi and
+        increases with positive delta_ndvi (given effect size < 1).
+        """
+        from natcap.invest import urban_mental_health
 
+        ndvi_array = numpy.array(([FLOAT32_NODATA, .3, .1], [.2, 0, 0],
+                                  [-.1, .3, .1], [-0.2, .5, 1]))
+        delta_ndvi = os.path.join(self.workspace_dir, "ndvi_base.tif")
+        make_raster_from_array(delta_ndvi, ndvi_array)
+
+        bc_array = numpy.array(([5, FLOAT32_NODATA, 0], [1, 100, 10],
+                                [50, 0, 10], [1, 1, 1]))
+        baseline_cases = os.path.join(self.workspace_dir, "baseline_cases.tif")
+        make_raster_from_array(baseline_cases, bc_array)
+
+        aoi_path = os.path.join(self.workspace_dir, "aoi.shp")
+        xmin = 461251  # origin of raster
+        ymax = 4923445  # origin of raster
+        xmax = xmin + 300
+        ymin = ymax - 300  # cut off lowest row
+        make_simple_vector(aoi_path,
+                           shapely_geometry_list=[
+                                Polygon([(xmin, ymin), (xmax, ymin),
+                                         (xmax, ymax), (xmin, ymax),
+                                         (xmin, ymin)])])
+
+        effect_size = .9
+        target_preventable_cases = os.path.join(self.workspace_dir,
+                                                "prev_cases.tif")
+        urban_mental_health.calc_preventable_cases(
+            delta_ndvi, baseline_cases, effect_size,
+            target_preventable_cases, aoi_path, self.workspace_dir)
+
+        actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
+            target_preventable_cases)
+
+        # expected_prev_cases calculated by hand using:
+        # (1 - numpy.exp(numpy.log(effect_size) * 10 * delta_ndvi)) * baseline_cases
+        expected_prev_cases = numpy.array(
+            [[FLOAT32_NODATA, FLOAT32_NODATA, 0],
+             [0.19, 0, 0],
+             [-5.5555555555, 0, 1],
+             [FLOAT32_NODATA, FLOAT32_NODATA, FLOAT32_NODATA]])
+
+        numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases)
+
+    def test_calc_preventable_cost(self):
+        """ Test `calc_preventable_cost`
+
+        prev cost = equals preventable_cases * health_cost_rate for valid
+        pixels; nodata preserved."""
+        from natcap.invest import urban_mental_health
+
+        preventable_cases = os.path.join(self.workspace_dir, "prev_cases.tif")
+        pc_array = numpy.array(([FLOAT32_NODATA, 40, 0], [1, 100, 10],
+                                [50, 0, 10], [1, 1, 1]))
+        make_raster_from_array(preventable_cases, pc_array)
+        health_cost_rate = 90
+        tgt_prev_cost = os.path.join(self.workspace_dir, "prev_cost.tif")
+
+        urban_mental_health.calc_preventable_cost(
+            preventable_cases, health_cost_rate, tgt_prev_cost)
+
+        actual_cost = pygeoprocessing.raster_to_numpy_array(tgt_prev_cost)
+        expected_cost = pc_array*health_cost_rate
+        expected_cost[0, 0] = FLOAT32_NODATA
+
+        numpy.testing.assert_allclose(actual_cost, expected_cost)
+
+    def test_zonal_stats_preventable_cases_cost(self):
+        """Test `zonal_stats_preventable_cases_cost`
+
+          Test that function writes CSV and vector with `sum_cases` and
+          `sum_cost` fields calculated correctly per polygon and calculates
+          the sum total cases and costs aggregated across all polygons in AOI
+
+          """
+        from natcap.invest import urban_mental_health
+
+        aoi_vector = os.path.join(self.workspace_dir, "aoi.shp")
+        fields = {"id": ogr.OFTReal}
+        attribute_list = [{"id": 0}, {"id": 1}]
+        # 2 non-overlapping polygons, first covers upper 3x3 pixels, second
+        # polygon covers bottom left 1x2 pixels
+        make_simple_vector(aoi_vector, fields, attribute_list,
+                           shapely_geometry_list=[
+                               Polygon([(461251, 4923155), (461521, 4923155),
+                                        (461521, 4923445), (461251, 4923445),
+                                        (461251, 4923155)]),
+                               Polygon([(461251, 4922995), (461451, 4922995),
+                                        (461451, 4923125), (461251, 4923125),
+                                        (461251, 4922995)])
+                                ])
+
+        preventable_cases = os.path.join(self.workspace_dir, "prev_cases.tif")
+        pc_array = numpy.array(([FLOAT32_NODATA, 40, 0], [1, 100, 10],
+                                [50, 0, 10], [1, 1, 1]))
+        make_raster_from_array(preventable_cases, pc_array)
+
+        preventable_cost = os.path.join(self.workspace_dir, "prev_cost.tif")
+        cost_array = numpy.array(([FLOAT32_NODATA, 40.5, 0], [121, 100, 10],
+                                  [540, 600, 150], [15, 2, 155]))
+        make_raster_from_array(preventable_cost, cost_array)
+
+        target_stats_csv = os.path.join(self.workspace_dir, "stats.csv")
+        target_agg_vector_path = os.path.join(self.workspace_dir, "stats.gpkg")
+
+        urban_mental_health.zonal_stats_preventable_cases_cost(
+            aoi_vector, target_stats_csv, target_agg_vector_path,
+            preventable_cases, preventable_cost)
+
+        # Check CSV
+        df = pandas.read_csv(target_stats_csv)
+        actual_pc = df["sum_cases"].to_list()[0:2]
+        actual_cost = df["sum_cost"][0:2]
+        # target sum pc calculated via [sum(pc_array[:3, :3], sum(pc_array[3, :2]))]
+        target_sum_pc = [211, 2]
+        numpy.testing.assert_allclose(actual_pc, target_sum_pc)
+        # target cost sum calculated using sum(cost_array[3, :2]) bc last
+        # pixel cropped out by AOI
+        target_sum_cost = [1561.5, 17]
+        numpy.testing.assert_allclose(actual_cost, target_sum_cost)
+
+        # check calculation of total cases in entire AOI
+        actual_total_cases = df["total_cases"][2]
+        actual_total_cost = df["total_cost"][2]
+        numpy.testing.assert_allclose(actual_total_cases, sum(target_sum_pc))
+        numpy.testing.assert_allclose(actual_total_cost, sum(target_sum_cost))
+
+        # Check vector
+        expected_attributes = [
+            {"id": 0, "sum_cases": target_sum_pc[0],
+             "sum_cost": target_sum_cost[0]},
+            {"id": 1, "sum_cases": target_sum_pc[1],
+             "sum_cost": target_sum_cost[1]}]
+
+        # Get actual attributes
+        data_source = ogr.Open(target_agg_vector_path, 0)
+
+        layer = data_source.GetLayer(0)
+
+        # Create a list to hold the data read from the file
+        actual_attributes = []
+        for feature in layer:
+            actual_attributes.append({
+                'id': feature.GetField('id'),
+                'sum_cases': feature.GetField('sum_cases'),
+                'sum_cost': feature.GetField('sum_cost'),
+            })
+
+        self.assertEqual(actual_attributes, expected_attributes)
+
+    def test_execute_without_health_cost_skips_cost_outputs(self):
+        """Test model option 3 without health input
+
+        Test that `execute` runs without health cost input and produces CSV
+        without cost column.
+        """
+        from natcap.invest import urban_mental_health
+
+        args = make_synthetic_data_and_params(self.workspace_dir)
+        urban_mental_health.execute(args)
+        # Check CSV
+        stats_csv = os.path.join(self.workspace_dir, "output",
+                                 "preventable_cases_cost_sum_test1.csv")
+        df = pandas.read_csv(stats_csv)
+        self.assertIn("sum_cases", df.columns)
+        self.assertNotIn("sum_cost", df.columns)
