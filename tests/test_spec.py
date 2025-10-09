@@ -126,10 +126,10 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         out = spec.describe_arg_from_spec(option_spec.name, option_spec)
         expected_rst = ([
             '**Bar** (`option <input_types.html#option>`__, *required*): Description',
-            '\tOptions:',
-            '\t- A',
-            '\t- c: do something else',
-            '\t- Option_b: do something'
+            '\tValues must be one of the following text strings:',
+            '\t- "**A**"',
+            '\t- "**c**": do something else',
+            '\t- "**Option_b**": do something'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
