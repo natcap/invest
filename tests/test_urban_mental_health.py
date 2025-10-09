@@ -243,35 +243,37 @@ class UMHTests(unittest.TestCase):
     def test_diff_prj_inputs(self):
         """Test model option 3 given inputs of different projections.
 
-        Test that creating a target bounding box from inputs with
-        different projections still produce expected target bbox
+        Check that output preventable cases geotiff is clipped
+        correctly given inputs of different projections
         """
         from natcap.invest import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir)
 
-        #create AOI w different projection
+        # create AOI w different projection
         epsg = 5070
-        # (xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax), (xmin, ymin)
-        # xmin = -2151419.7
-        # ymax = 2699283.3
-        # xmax = xmin + 1000
-        # ymin = ymax - 1000
-        #make tiny bbox for AOI
-        xmin = -2151375#-2151419.7 +10
-        ymax = 2699058.8 #2699283.3 +10
-        xmax = xmin + 50
-        ymin = ymax - 50
-        geom = [Polygon([(xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax), (xmin, ymin)])]
+        xmin = -2151375
+        ymax = 2699058.8
+        xmax = xmin + 70
+        ymin = ymax - 70
+        geom = [Polygon([(xmin, ymin), (xmax, ymin), (xmax, ymax),
+                         (xmin, ymax), (xmin, ymin)])]
         new_aoi_path = os.path.join(self.workspace_dir, "AOI_5070.shp")
-
         make_simple_vector(new_aoi_path, epsg=epsg, shapely_geometry_list=geom)
-
         args["aoi_vector_path"] = new_aoi_path
 
         urban_mental_health.execute(args)
 
-        #TODO: add assertion
+        actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(self.workspace_dir, "output",
+                         "preventable_cases_test1.tif"))
+        # most are nodata because AOI is < 1 pixel
+        expected_prev_cases = numpy.array(
+            [[PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, -15.914164, PGP_FLOAT32_NODATA],
+             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+        numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases)
 
     def test_AOI_too_large(self):
         """Test that AOI larger than NDVI raises warning on option 3

@@ -1100,7 +1100,7 @@ def calc_baseline_cases(population_raster, base_prevalence_vector,
 
 def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
                            target_preventable_cases, aoi, work_dir):
-    """Calculate preventable cases
+    """Calculate preventable cases and clip to AOI
 
     PC = PF * BC
     PF = 1 - RR
