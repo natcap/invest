@@ -80,6 +80,18 @@ General
   opened. Additionally, new datastacks created with InVEST will no longer include
   an ``invest_version``, since tying a datastack to a specific version of InVEST is
   unnecessary. (`#2092 <https://github.com/natcap/invest/issues/2092>`_)
+* Added a ``ModelSpec.setup`` method which performs boilerplate setup and
+  preprocessing before a model run. This method is now used in every model's
+  ``execute`` function. (`#1451 <https://github.com/natcap/invest/issues/1451>`_)
+* Added a ``preprocess`` method to each ``spec.Input`` class, which preprocesses
+  values of that type in a standard way.
+  (`#1451 <https://github.com/natcap/invest/issues/1451>`_)
+* Added ``ModelSpec.execute`` that calls the model's ``execute`` function and
+  then optionally performs the setup and post-processing that is done when a
+  model is executed via the CLI. This is to make that functionality (such as
+  setting up a log file in the workspace, and generating metadata for results)
+  available to python API users without going through the CLI.
+  (`#1451 <https://github.com/natcap/invest/issues/1451>`_)
 
 Plugins
 =======

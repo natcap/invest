@@ -7,5 +7,6 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     model_id='vector_model',
     model_title='',
     userguide='',
+    module_name=__name__,
     input_field_order=[['vector']]
 )

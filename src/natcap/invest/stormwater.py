@@ -16,7 +16,6 @@ from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
-from .file_registry import FileRegistry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +32,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["lulc_path", "soil_group_path", "precipitation_path", "biophysical_table"],
@@ -234,7 +234,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of percolation ratio derived by cross-referencing the LULC and soil"
                 " group rasters with the biophysical table."
             ),
-            created_if="percolation",
+            # created_if="percolation",
             data_type=float,
             units=None
         ),
@@ -242,7 +242,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="percolation_volume",
             path="percolation_volume.tif",
             about=gettext("Map of percolation (potential aquifer recharge) volume."),
-            created_if="percolation",
+            # created_if="percolation",
             data_type=float,
             units=u.meter**3 / u.year
         ),
@@ -305,14 +305,14 @@ MODEL_SPEC = spec.ModelSpec(
                     about=gettext(
                         "Average percolation (recharge) ratio over this polygon"
                     ),
-                    created_if="percolation"
+                    # created_if="percolation"
                 ),
                 spec.NumberOutput(
                     id="total_percolation_volume",
                     about=gettext(
                         "Total volume of potential aquifer recharge over this polygon"
                     ),
-                    created_if="percolation",
+                    # created_if="percolation",
                     units=u.meter**3 / u.year
                 ),
                 spec.NumberOutput(
@@ -524,17 +524,7 @@ def execute(args):
     Returns:
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
-    # set up files and directories
-    suffix = utils.make_suffix_string(args, 'results_suffix')
-    output_dir = args['workspace_dir']
-    intermediate_dir = os.path.join(output_dir, 'intermediate')
-    utils.make_directories([output_dir, intermediate_dir])
-
-    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, suffix)
-
-    task_graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'],
-        int(args.get('n_workers', -1)))
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     # get the necessary base raster info
     source_lulc_raster_info = pygeoprocessing.get_raster_info(
@@ -608,9 +598,6 @@ def execute(args):
 
     # (Optional) adjust stormwater retention ratio using roads
     if args['adjust_retention_ratios']:
-        # in raster coord system units
-        radius = float(args['retention_radius'])
-
         reproject_roads_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(
@@ -660,7 +647,7 @@ def execute(args):
             func=is_near,
             args=(
                 file_registry['rasterized_centerlines'],
-                radius / avg_pixel_size,  # convert the radius to pixels
+                args['retention_radius'] / avg_pixel_size,  # convert the radius to pixels
                 file_registry['road_distance'],
                 file_registry['near_road']),
             target_path_list=[
@@ -690,7 +677,7 @@ def execute(args):
             func=is_near,
             args=(
                 file_registry['is_connected_lulc'],
-                radius / avg_pixel_size,  # convert the radius to pixels
+                args['retention_radius'] / avg_pixel_size,  # convert the radius to pixels
                 file_registry['connected_lulc_distance'],
                 file_registry['near_connected_lulc']),
             target_path_list=[
@@ -703,7 +690,7 @@ def execute(args):
             func=raster_average,
             args=(
                 file_registry['retention_ratio'],
-                radius,
+                args['retention_radius'],
                 file_registry['search_kernel'],
                 file_registry['ratio_average']),
             target_path_list=[file_registry['ratio_average']],
@@ -888,13 +875,12 @@ def execute(args):
 
     # (Optional) Do valuation if a replacement cost is defined
     # you could theoretically have a cost of 0 which should be allowed
-    if 'replacement_cost' in args and args['replacement_cost'] not in [
-            None, '']:
+    if args['replacement_cost'] is not None:
         valuation_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([
                 (file_registry['retention_volume'], 1),
-                (float(args['replacement_cost']), 'raw')],
+                (args['replacement_cost'], 'raw')],
                 retention_value_op,
                 file_registry['retention_value'],
                 gdal.GDT_Float32,
@@ -908,7 +894,7 @@ def execute(args):
             (file_registry['retention_value'], 'total_retention_value', 'sum'))
 
     # (Optional) Aggregate to watersheds if an aggregate vector is defined
-    if 'aggregate_areas_path' in args and args['aggregate_areas_path']:
+    if args['aggregate_areas_path']:
         _ = task_graph.add_task(
             func=aggregate_results,
             args=(

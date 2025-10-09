@@ -18,6 +18,7 @@ import shapely.geometry
 from osgeo import gdal
 from osgeo import ogr
 
+
 gdal.UseExceptions()
 _TEST_FILE_CWD = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(_TEST_FILE_CWD,
@@ -784,6 +785,7 @@ class ParameterSetTest(unittest.TestCase):
         """Datastack: test get datastack info logfile new style."""
         import natcap.invest
         from natcap.invest import datastack
+        from natcap.invest import utils
         args = {
             'a': 1,
             'b': 2.7,
@@ -794,7 +796,7 @@ class ParameterSetTest(unittest.TestCase):
 
         logfile_path = os.path.join(self.workspace, 'logfile.txt')
         with open(logfile_path, 'w') as logfile:
-            logfile.write(datastack.format_args_dict(args, 'some_modelname'))
+            logfile.write(utils.format_args_dict(args, 'some_modelname'))
 
         stack_type, stack_info = datastack.get_datastack_info(logfile_path)
         self.assertEqual(stack_type, 'logfile')
@@ -805,6 +807,7 @@ class ParameterSetTest(unittest.TestCase):
         """Datastack: test get datastack info logfile old style."""
         import natcap.invest
         from natcap.invest import datastack
+        from natcap.invest import utils
         args = {
             'a': 1,
             'b': 2.7,
@@ -816,7 +819,7 @@ class ParameterSetTest(unittest.TestCase):
         logfile_path = os.path.join(self.workspace, 'logfile.txt')
         with open(logfile_path, 'w') as logfile:
             # Old style of log files include the pyname instead of model ID
-            logfile.write(datastack.format_args_dict(args, 'natcap.invest.carbon'))
+            logfile.write(utils.format_args_dict(args, 'natcap.invest.carbon'))
 
         stack_type, stack_info = datastack.get_datastack_info(logfile_path)
         self.assertEqual(stack_type, 'logfile')
@@ -909,23 +912,3 @@ class ParameterSetTest(unittest.TestCase):
 
         extracted_paramset = datastack.extract_parameter_set(paramset_path)
         self.assertEqual(extracted_paramset.args, expected_args)
-
-
-class UtilitiesTest(unittest.TestCase):
-    """Datastack Utilities Tests."""
-    def test_print_args(self):
-        """Datastacks: verify that we format args correctly."""
-        from natcap.invest.datastack import __version__
-        from natcap.invest.datastack import format_args_dict
-
-        args_dict = {
-            'some_arg': [1, 2, 3, 4],
-            'foo': 'bar',
-        }
-
-        args_string = format_args_dict(args_dict, 'test_model')
-        expected_string = str(
-            'Arguments for InVEST test_model %s:\n'
-            'foo      bar\n'
-            'some_arg [1, 2, 3, 4]\n') % __version__
-        self.assertEqual(args_string, expected_string)

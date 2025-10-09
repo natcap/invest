@@ -14,7 +14,6 @@ from . import gettext
 from . import spec
 from . import utils
 from . import validation
-from .file_registry import FileRegistry
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -158,6 +157,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=("hwy", "awy"),
+    module_name=__name__,
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
@@ -685,10 +685,12 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
+    args, file_registry, graph = MODEL_SPEC.setup(args)
+
     # valuation_df is passed to create_vector_output()
     # which computes valuation if valuation_df is not None.
     valuation_df = None
-    if 'valuation_table_path' in args and args['valuation_table_path'] != '':
+    if args['valuation_table_path']:
         LOGGER.info(
             'Checking that watersheds have entries for every `ws_id` in the '
             'valuation table.')
@@ -713,46 +715,16 @@ def execute(args):
                 'valuation table to see if they are missing: '
                 f'"{", ".join(str(x) for x in sorted(missing_ws_ids))}"')
 
-    # Construct folder paths
-    workspace_dir = args['workspace_dir']
-    output_dir = os.path.join(workspace_dir, 'output')
-    per_pixel_output_dir = os.path.join(output_dir, 'per_pixel')
-    intermediate_dir = os.path.join(workspace_dir, 'intermediate')
-    pickle_dir = os.path.join(intermediate_dir, '_tmp_zonal_stats')
-    utils.make_directories(
-        [workspace_dir, output_dir, per_pixel_output_dir,
-         intermediate_dir, pickle_dir])
-
-    # Append a _ to the suffix if it's not empty and doesn't already have one
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = FileRegistry(MODEL_SPEC.outputs, workspace_dir, file_suffix)
-
-    watersheds_path = args['watersheds_path']
     watershed_paths_list = [(
-        watersheds_path, 'ws_id',
+        args['watersheds_path'], 'ws_id',
         file_registry['watershed_results_wyield'],
         file_registry['watershed_results_wyield_csv'])]
 
-    sub_watersheds_path = None
-    if 'sub_watersheds_path' in args and args['sub_watersheds_path'] != '':
-        sub_watersheds_path = args['sub_watersheds_path']
+    if args['sub_watersheds_path']:
         watershed_paths_list.append((
-            sub_watersheds_path, 'subws_id',
+            args['sub_watersheds_path'], 'subws_id',
             file_registry['subwatershed_results_wyield'],
             file_registry['subwatershed_results_wyield_csv']))
-
-    seasonality_constant = float(args['seasonality_constant'])
-
-    # Initialize a TaskGraph
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # single process mode.
-    graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], n_workers)
 
     base_raster_path_list = [
         args['eto_path'],
@@ -776,7 +748,7 @@ def execute(args):
               ['near'] * len(base_raster_path_list),
               target_pixel_size, 'intersection'),
         kwargs={'raster_align_index': 4,
-                'base_vector_path_list': [watersheds_path]},
+                'base_vector_path_list': [args['watersheds_path']]},
         target_path_list=aligned_raster_path_list,
         task_name='align_raster_stack')
     # Joining now since this task will always be the root node
@@ -800,7 +772,7 @@ def execute(args):
     bio_lucodes.add(nodata_dict['lulc'])
     LOGGER.debug(f'bio_lucodes: {bio_lucodes}')
 
-    if 'demand_table_path' in args and args['demand_table_path'] != '':
+    if args['demand_table_path']:
         demand_df = MODEL_SPEC.get_input('demand_table_path').get_validated_dataframe(
             args['demand_table_path'])
         demand_reclassify_dict = dict(
@@ -898,7 +870,7 @@ def execute(args):
     calculate_fractp_task = graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(x, 1) for x in raster_list]
-              + [(nodata_dict, 'raw'), (seasonality_constant, 'raw')],
+              + [(nodata_dict, 'raw'), (args['seasonality_constant'], 'raw')],
               fractp_op, file_registry['fractp'], gdal.GDT_Float32,
               nodata_dict['out_nodata']),
         target_path_list=[file_registry['fractp']],
@@ -942,7 +914,7 @@ def execute(args):
         ('AET_mn', file_registry['aet']),
         ('wyield_mn', file_registry['wyield'])]
 
-    if 'demand_table_path' in args and args['demand_table_path'] != '':
+    if args['demand_table_path']:
         reclass_error_details = {
             'raster_name': 'LULC', 'column_name': 'lucode',
             'table_name': 'Demand'}

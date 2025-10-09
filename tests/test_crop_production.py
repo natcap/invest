@@ -564,7 +564,7 @@ class CropProductionTests(unittest.TestCase):
         tabulate_regression_results(
             nutrient_df, crop_names, pixel_area_ha,
             landcover_raster_path, landcover_nodata,
-            output_dir, file_suffix, file_registry, target_table_path
+            file_registry, target_table_path
         )
 
         # Read only the first 2 crop's data (skipping total area)
@@ -618,7 +618,7 @@ class CropProductionTests(unittest.TestCase):
         aggregate_regression_results_to_polygons(
             base_aggregate_vector_path, target_aggregate_vector_path,
             aggregate_table_path, landcover_raster_projection, crop_names,
-            nutrient_df, pixel_area_ha, output_dir, file_suffix, file_registry)
+            nutrient_df, pixel_area_ha, file_registry)
 
         actual_aggregate_table = pandas.read_csv(aggregate_table_path,
                                                  dtype=float)
@@ -666,8 +666,8 @@ class CropProductionTests(unittest.TestCase):
         aggregate_to_polygons(
             base_aggregate_vector_path, target_aggregate_vector_path,
             landcover_raster_projection, crop_names, nutrient_df,
-            yield_percentile_headers, pixel_area_ha, output_dir,
-            file_suffix, file_registry, target_aggregate_table_path)
+            yield_percentile_headers, pixel_area_ha, file_registry,
+            target_aggregate_table_path)
 
         actual_aggregate_pctl_table = pandas.read_csv(
             target_aggregate_table_path, dtype=float)
@@ -704,7 +704,7 @@ class CropProductionTests(unittest.TestCase):
         tabulate_results(nutrient_df, yield_percentile_headers,
                          crop_names, pixel_area_ha,
                          landcover_raster_path, landcover_nodata,
-                         output_dir, file_suffix, file_registry, target_table_path)
+                         file_registry, target_table_path)
 
         actual_table = pandas.read_csv(target_table_path, nrows=2)
         expected_table = tabulate_pctl_results_table()

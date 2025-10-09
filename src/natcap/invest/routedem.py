@@ -24,6 +24,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["dem_path", "dem_band_index"],
@@ -40,7 +41,7 @@ MODEL_SPEC = spec.ModelSpec(
         spec.SUFFIX,
         spec.N_WORKERS,
         spec.DEM.model_copy(update=dict(id="dem_path")),
-        spec.NumberInput(
+        spec.IntegerInput(
             id="dem_band_index",
             name=gettext("band index"),
             about=gettext("Index of the raster band to use, for multi-band rasters."),
@@ -296,13 +297,13 @@ MODEL_SPEC = spec.ModelSpec(
 
 
 _ROUTING_FUNCS = {
-    'D8': {
+    'd8': {
         'flow_accumulation': pygeoprocessing.routing.flow_accumulation_d8,
         'flow_direction': pygeoprocessing.routing.flow_dir_d8,
         'threshold_flow': pygeoprocessing.routing.extract_streams_d8,
         'distance_to_channel': pygeoprocessing.routing.distance_to_channel_d8,
     },
-    'MFD': {
+    'mfd': {
         'flow_accumulation': pygeoprocessing.routing.flow_accumulation_mfd,
         'flow_direction': pygeoprocessing.routing.flow_dir_mfd,
         'threshold_flow': pygeoprocessing.routing.extract_streams_mfd,
@@ -363,38 +364,21 @@ def execute(args):
     Returns:
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    utils.make_directories([args['workspace_dir']])
-    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], file_suffix)
+    args, file_registry, graph = MODEL_SPEC.setup(args)
 
-    if ('calculate_flow_direction' in args and
-            bool(args['calculate_flow_direction'])):
-        algorithm = args['algorithm'].upper()
-        routing_funcs = _ROUTING_FUNCS[algorithm]
+    if args['calculate_flow_direction']:
+        routing_funcs = _ROUTING_FUNCS[args['algorithm']]
 
-    if 'dem_band_index' in args and args['dem_band_index'] not in (None, ''):
-        band_index = int(args['dem_band_index'])
-    else:
-        band_index = 1
+    band_index = args['dem_band_index'] if args['dem_band_index'] else 1
+
     LOGGER.info('Using DEM band index %s', band_index)
 
     dem_raster_path_band = (args['dem_path'], band_index)
 
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-
-    graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], n_workers=n_workers)
-
     # Calculate slope.  This is intentionally on the original DEM, not
     # on the pitfilled DEM.  If the user really wants the slop of the filled
     # DEM, they can pass it back through RouteDEM.
-    if bool(args.get('calculate_slope', False)):
+    if args['calculate_slope']:
         graph.add_task(
             pygeoprocessing.calculate_slope,
             args=(dem_raster_path_band, file_registry['slope']),
@@ -409,7 +393,7 @@ def execute(args):
         task_name='fill_pits',
         target_path_list=[file_registry['filled']])
 
-    if bool(args.get('calculate_flow_direction', False)):
+    if args['calculate_flow_direction']:
         LOGGER.info("calculating flow direction")
         flow_direction_task = graph.add_task(
             routing_funcs['flow_direction'],
@@ -418,25 +402,24 @@ def execute(args):
                   args['workspace_dir']),
             target_path_list=[file_registry['flow_direction']],
             dependent_task_list=[filled_pits_task],
-            task_name='flow_dir_%s' % algorithm)
+            task_name=f'flow_dir_{args["algorithm"]}')
 
-        if bool(args.get('calculate_flow_accumulation', False)):
+        if args['calculate_flow_accumulation']:
             LOGGER.info("calculating flow accumulation")
             flow_accum_task = graph.add_task(
                 routing_funcs['flow_accumulation'],
                 args=((file_registry['flow_direction'], 1), file_registry['flow_accumulation']),
                 target_path_list=[file_registry['flow_accumulation']],
-                task_name='flow_accumulation_%s' % algorithm,
+                task_name=f'flow_accumulation_{args["algorithm"]}',
                 dependent_task_list=[flow_direction_task])
 
-            if bool(args.get('calculate_stream_threshold', False)):
-                stream_threshold = float(args['threshold_flow_accumulation'])
+            if args['calculate_stream_threshold']:
                 stream_extraction_kwargs = {
                     'flow_accum_raster_path_band': (file_registry['flow_accumulation'], 1),
-                    'flow_threshold': stream_threshold,
+                    'flow_threshold': args['threshold_flow_accumulation'],
                     'target_stream_raster_path': file_registry['stream_mask'],
                 }
-                if algorithm == 'MFD':
+                if args['algorithm'] == 'mfd':
                     stream_extraction_kwargs['flow_dir_mfd_path_band'] = (
                         file_registry['flow_direction'], 1)
                 stream_threshold_task = graph.add_task(
@@ -444,19 +427,19 @@ def execute(args):
                     kwargs=stream_extraction_kwargs,
                     target_path_list=[file_registry['stream_mask']],
                     dependent_task_list=[flow_accum_task],
-                    task_name=f'stream_thresholding_{algorithm}')
+                    task_name=f'stream_thresholding_{args["algorithm"]}')
 
-                if bool(args.get('calculate_downslope_distance', False)):
+                if args['calculate_downslope_distance']:
                     graph.add_task(
                         routing_funcs['distance_to_channel'],
                         args=((file_registry['flow_direction'], 1),
                               (file_registry['stream_mask'], 1),
                               file_registry['downslope_distance']),
                         target_path_list=[file_registry['downslope_distance']],
-                        task_name='downslope_distance_%s' % algorithm,
+                        task_name=f'downslope_distance_{args["algorithm"]}',
                         dependent_task_list=[stream_threshold_task])
 
-                if (bool(args.get('calculate_stream_order', False)) and algorithm == 'D8'):
+                if args['calculate_stream_order'] and args['algorithm'] == 'd8':
                     stream_order_task = graph.add_task(
                         pygeoprocessing.routing.extract_strahler_streams_d8,
                         kwargs={
@@ -467,7 +450,7 @@ def execute(args):
                             "dem_raster_path_band":
                                 (file_registry['filled'], 1),
                             "target_stream_vector_path": file_registry['strahler_stream_order'],
-                            "min_flow_accum_threshold": stream_threshold,
+                            "min_flow_accum_threshold": args['threshold_flow_accumulation'],
                             "river_order": 5,  # the default
                         },
                         target_path_list=[file_registry['strahler_stream_order']],
@@ -478,7 +461,7 @@ def execute(args):
                             flow_accum_task
                         ])
 
-                    if bool(args.get('calculate_subwatersheds', False)):
+                    if args['calculate_subwatersheds']:
                         graph.add_task(
                             pygeoprocessing.routing.calculate_subwatershed_boundary,
                             kwargs={

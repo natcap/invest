@@ -22,7 +22,6 @@ from . import spec
 from .unit_registry import u
 from . import validation
 from . import gettext
-from .file_registry import FileRegistry
 
 
 LOGGER = logging.getLogger(__name__)
@@ -112,6 +111,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["wave_base_data_table", "analysis_area", "aoi_path", "dem_path"],
@@ -301,7 +301,7 @@ MODEL_SPEC = spec.ModelSpec(
             ],
             index_col="name"
         ),
-        spec.NumberInput(
+        spec.IntegerInput(
             id="number_of_machines",
             name=gettext("number of machines"),
             about=gettext(
@@ -740,28 +740,7 @@ def execute(args):
 
     """
     LOGGER.info('Starting the Wave Energy Model.')
-    # Create the Output and Intermediate directories if they do not exist.
-    workspace = args['workspace_dir']
-    output_dir = os.path.join(workspace, 'output')
-    intermediate_dir = os.path.join(workspace, 'intermediate')
-    utils.make_directories([intermediate_dir, output_dir])
-
-    # Initialize a TaskGraph
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # single process mode.
-
-    # Append a _ to the suffix if it's not empty and doesn't already have one
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = FileRegistry(MODEL_SPEC.outputs, workspace, file_suffix)
-    task_graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'], n_workers)
-
-    # Get the path for the DEM
-    dem_path = args['dem_path']
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     # Create a dictionary that stores the wave periods and wave heights as
     # arrays. Also store the amount of energy the machine produces
@@ -800,7 +779,7 @@ def execute(args):
         args['machine_param_path'])['value'].to_dict()
 
     # Check if required column fields are entered in the land grid csv file
-    if 'land_gridPts_path' in args:
+    if args['land_gridPts_path']:
         # Create a grid_land_df dataframe for later use in valuation
         grid_land_df = MODEL_SPEC.get_input(
             'land_gridPts_path').get_validated_dataframe(args['land_gridPts_path'])
@@ -814,7 +793,7 @@ def execute(args):
                 'The following column fields are missing from the Grid '
                 'Connection Points File: %s' % missing_grid_land_fields)
 
-    if 'valuation_container' in args and args['valuation_container']:
+    if args['valuation_container']:
         machine_econ_dict = MODEL_SPEC.get_input(
             'machine_econ_path').get_validated_dataframe(
             args['machine_econ_path'])['value'].to_dict()
@@ -833,7 +812,7 @@ def execute(args):
     analysis_area_sr = _get_vector_spatial_ref(analysis_area_points_path)
 
     # If AOI is not provided
-    if 'aoi_path' not in args or not args['aoi_path']:
+    if not args['aoi_path']:
         LOGGER.info('AOI not provided.')
 
         # Make a copy of the wave point shapefile so that the original input is
@@ -845,7 +824,7 @@ def execute(args):
         aoi_vector_path = analysis_area_extract_path
 
         # Set the pixel size to that of DEM, to be used for creating rasters
-        target_pixel_size = pygeoprocessing.get_raster_info(dem_path)[
+        target_pixel_size = pygeoprocessing.get_raster_info(args['dem_path'])[
             'pixel_size']
 
         # Create a coordinate transformation, because it is used below when
@@ -856,18 +835,18 @@ def execute(args):
 
     else:
         LOGGER.info('AOI provided.')
-        aoi_vector_path = args['aoi_path']
         # Create a coordinate transformation from the projection of the given
         # wave energy point shapefile, to the AOI's projection
-        aoi_sr = _get_vector_spatial_ref(aoi_vector_path)
+        aoi_sr = _get_vector_spatial_ref(args['aoi_path'])
         aoi_sr_wkt = aoi_sr.ExportToWkt()
         analysis_area_sr_wkt = analysis_area_sr.ExportToWkt()
 
         # Clip the wave data shapefile by the bounds provided from the AOI
         task_graph.add_task(
             func=_clip_vector_by_vector,
-            args=(analysis_area_points_path, aoi_vector_path,
-                  file_registry['wem_inputoutput_pts'], aoi_sr_wkt, intermediate_dir),
+            args=(analysis_area_points_path, args['aoi_path'],
+                  file_registry['wem_inputoutput_pts'], aoi_sr_wkt,
+                  args['workspace_dir']),
             target_path_list=[file_registry['wem_inputoutput_pts']],
             task_name='clip_wave_points_to_aoi')
 
@@ -875,9 +854,9 @@ def execute(args):
         # not show extrapolated values outside the bounds of the points
         task_graph.add_task(
             func=_clip_vector_by_vector,
-            args=(aoi_vector_path, analysis_area_extract_path,
+            args=(args['aoi_path'], analysis_area_extract_path,
                   file_registry['aoi_clipped_to_extract_path'],
-                  aoi_sr_wkt, intermediate_dir),
+                  aoi_sr_wkt, args['workspace_dir']),
             target_path_list=[file_registry['aoi_clipped_to_extract_path']],
             task_name='clip_aoi_to_extract_data')
 
@@ -895,7 +874,7 @@ def execute(args):
             aoi_sr, analysis_area_sr)
         target_pixel_size = _pixel_size_helper(
             file_registry['wem_inputoutput_pts'], coord_trans,
-            coord_trans_opposite, dem_path)
+            coord_trans_opposite, args['dem_path'])
 
     LOGGER.debug('target_pixel_size: %s, target_projection: %s',
                  target_pixel_size, aoi_sr_wkt)
@@ -907,7 +886,7 @@ def execute(args):
     # Add the depth value to the wave points by indexing into the DEM dataset
     index_depth_to_wave_vector_task = task_graph.add_task(
         func=_index_raster_value_to_point_vector,
-        args=(file_registry['wem_inputoutput_pts'], dem_path,
+        args=(file_registry['wem_inputoutput_pts'], args['dem_path'],
               file_registry['indexed_wem_inputoutput_pts'], _DEPTH_FIELD),
         target_path_list=[file_registry['indexed_wem_inputoutput_pts']],
         task_name='index_depth_to_wave_vector')
@@ -989,7 +968,7 @@ def execute(args):
     task_graph.add_task(
         func=_create_percentile_rasters,
         args=(file_registry['capwe_mwh'], file_registry['capwe_rc'], _CAPWE_UNITS_SHORT,
-              _CAPWE_UNITS_LONG, _PERCENTILES, intermediate_dir),
+              _CAPWE_UNITS_LONG, _PERCENTILES, args['workspace_dir']),
         kwargs={'start_value': _STARTING_PERC_RANGE},
         target_path_list=[file_registry['capwe_rc']],
         task_name='create_energy_percentile_raster',
@@ -998,7 +977,7 @@ def execute(args):
     task_graph.add_task(
         func=_create_percentile_rasters,
         args=(file_registry['wp_kw'], file_registry['wp_rc'], _WP_UNITS_SHORT,
-              _WP_UNITS_LONG, _PERCENTILES, intermediate_dir),
+              _WP_UNITS_LONG, _PERCENTILES, args['workspace_dir']),
         kwargs={'start_value': _STARTING_PERC_RANGE},
         target_path_list=[file_registry['wp_rc']],
         task_name='create_power_percentile_raster',
@@ -1006,14 +985,14 @@ def execute(args):
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
-    if 'valuation_container' not in args or not args['valuation_container']:
+    if not args['valuation_container']:
         # The rest of the function is valuation, so we can quit now
         LOGGER.info('Valuation not selected')
         task_graph.close()
         task_graph.join()
         return
-    else:
-        LOGGER.info('Valuation selected')
+
+    LOGGER.info('Valuation selected')
 
     create_grid_points_vector_task = task_graph.add_task(
         func=_dict_to_point_vector,
@@ -1039,7 +1018,7 @@ def execute(args):
               file_registry['landpts_prj'],
               file_registry['gridpt_prj'],
               file_registry['final_wem_inputoutput_pts'],
-              machine_econ_dict, int(args['number_of_machines'])),
+              machine_econ_dict, args['number_of_machines']),
         target_path_list=[file_registry['final_wem_inputoutput_pts']],
         task_name='add_fields_to_wave_vector',
         dependent_task_list=[create_wave_energy_and_power_raster_task,
@@ -1058,7 +1037,7 @@ def execute(args):
     task_graph.add_task(
         func=_create_percentile_rasters,
         args=(file_registry['npv_usd'], file_registry['npv_rc'], _NPV_UNITS_SHORT,
-              _NPV_UNITS_LONG, _PERCENTILES, intermediate_dir),
+              _NPV_UNITS_LONG, _PERCENTILES, args['workspace_dir']),
         target_path_list=[file_registry['npv_rc']],
         task_name='create_npv_percentile_raster',
         dependent_task_list=[create_npv_raster_task])

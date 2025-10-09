@@ -54,6 +54,7 @@ def ndr_eff_calculation(
         suffix='.tif', prefix='flow_to_process',
         dir=os.path.dirname(effective_retention_path))
     os.close(fp)
+    algorithm = algorithm.lower()
 
     # create direction raster in bytes
     def _mfd_to_flow_dir_op(mfd_array):
@@ -69,7 +70,7 @@ def ndr_eff_calculation(
             result[d8_array == i] = 1 << i
         return result
 
-    flow_dir_op = _mfd_to_flow_dir_op if algorithm == 'MFD' else _d8_to_flow_dir_op
+    flow_dir_op = _mfd_to_flow_dir_op if algorithm == 'mfd' else _d8_to_flow_dir_op
 
     # convert mfd raster to binary mfd
     # each value is an 8-digit binary number
@@ -79,7 +80,7 @@ def ndr_eff_calculation(
         [(flow_direction_path, 1)], flow_dir_op,
         to_process_flow_directions_path, gdal.GDT_Byte, None)
 
-    if algorithm == 'MFD':
+    if algorithm == 'mfd':
         calculate_retention[MFD](
             flow_direction_path.encode('utf-8'),
             stream_path.encode('utf-8'),

@@ -23,7 +23,6 @@ from . import spec
 from . import utils
 from . import validation
 from .spec import u
-from .file_registry import FileRegistry
 
 LOGGER = logging.getLogger(__name__)
 UINT32_NODATA = int(numpy.iinfo(numpy.uint32).max)
@@ -46,6 +45,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("una",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["lulc_raster_path", "lulc_attribute_table"],
@@ -753,23 +753,7 @@ def execute(args):
     #        kernel is KERNEL_LABEL_POWER.
 
     LOGGER.info('Starting Urban Nature Access Model')
-
-    output_dir = os.path.join(args['workspace_dir'], 'output')
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    utils.make_directories([output_dir, intermediate_dir])
-
-    suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'], suffix)
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous execution
-    graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], n_workers)
+    args, file_registry, graph = MODEL_SPEC.setup(args)
 
     kernel_creation_functions = {
         KERNEL_LABEL_GAUSSIAN: _kernel_gaussian,
@@ -783,10 +767,7 @@ def execute(args):
     # kernel_creation_functions[KERNEL_LABEL_POWER].__name__ = (
     #     'functools_partial_decay_power')
 
-    decay_function = args['decay_function']
-    LOGGER.info(f'Using decay function {decay_function}')
-
-    aggregate_by_pop_groups = args.get('aggregate_by_pop_group', False)
+    LOGGER.info(f'Using decay function {args["decay_function"]}')
 
     # Align the population and LULC rasters to the intersection of their
     # bounding boxes.
@@ -820,7 +801,7 @@ def execute(args):
             'lulc_pixel_size': squared_lulc_pixel_size,
             'lulc_bb': target_bounding_box,
             'lulc_projection_wkt': lulc_raster_info['projection_wkt'],
-            'working_dir': intermediate_dir,
+            'working_dir': args['workspace_dir'],
         },
         target_path_list=[file_registry['aligned_population']],
         task_name='Resample population to LULC resolution')
@@ -890,7 +871,7 @@ def execute(args):
     _ = graph.add_task(
         pygeoprocessing.symbolic.evaluate_raster_calculator_expression,
         kwargs={
-            'expression': f"population * {float(args['urban_nature_demand'])}",
+            'expression': f"population * {args['urban_nature_demand']}",
             'symbol_to_path_band_map': {
                 'population': (file_registry['masked_population'], 1),
             },
@@ -907,7 +888,7 @@ def execute(args):
     proportional_population_tasks = {}
     pop_group_proportion_tasks = {}
     if (args['search_radius_mode'] == RADIUS_OPT_POP_GROUP
-            or aggregate_by_pop_groups):
+            or args['aggregate_by_pop_group']):
         split_population_fields = list(
             filter(lambda x: re.match(POP_FIELD_REGEX, x),
                    validation.load_fields_from_vector(
@@ -973,7 +954,7 @@ def execute(args):
     kernel_tasks = {}  # search_radius, kernel task
 
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
-        search_radii = set([float(args['search_radius'])])
+        search_radii = set([args['search_radius']])
     elif args['search_radius_mode'] == RADIUS_OPT_URBAN_NATURE:
         urban_nature_attrs = attr_table[attr_table['urban_nature'] > 0]
         try:
@@ -1003,14 +984,14 @@ def execute(args):
         search_radius_in_pixels = abs(
             search_radius_m / squared_lulc_pixel_size[0])
 
-        if decay_function == KERNEL_LABEL_DICHOTOMY:
+        if args['decay_function'] == KERNEL_LABEL_DICHOTOMY:
             kernel_func = pygeoprocessing.kernels.dichotomous_kernel
             kernel_kwargs = dict(
                 target_kernel_path=file_registry[
                     'kernel_[SEARCH_RADIUS]', search_radius_m],
                 max_distance=search_radius_in_pixels,
                 normalize=False)
-        elif decay_function == KERNEL_LABEL_EXPONENTIAL:
+        elif args['decay_function'] == KERNEL_LABEL_EXPONENTIAL:
             kernel_func = pygeoprocessing.kernels.exponential_decay_kernel
             kernel_kwargs = dict(
                 target_kernel_path=file_registry[
@@ -1018,11 +999,11 @@ def execute(args):
                 max_distance=math.ceil(search_radius_in_pixels) * 2 + 1,
                 expected_distance=search_radius_in_pixels,
                 normalize=False)
-        elif decay_function in [KERNEL_LABEL_GAUSSIAN, KERNEL_LABEL_DENSITY]:
+        elif args['decay_function'] in [KERNEL_LABEL_GAUSSIAN, KERNEL_LABEL_DENSITY]:
             kernel_func = pygeoprocessing.kernels.create_distance_decay_kernel
 
             def decay_func(dist_array):
-                return kernel_creation_functions[decay_function](
+                return kernel_creation_functions[args['decay_function']](
                     dist_array, max_distance=search_radius_in_pixels)
 
             kernel_kwargs = dict(
@@ -1038,7 +1019,7 @@ def execute(args):
             kernel_func,
             kwargs=kernel_kwargs,
             task_name=(
-                f'Create {decay_function} kernel - {search_radius_m}m'),
+                f'Create {args["decay_function"]} kernel - {search_radius_m}m'),
             target_path_list=[file_registry['kernel_[SEARCH_RADIUS]', search_radius_m]])
 
     # Search radius mode 1: the same search radius applies to everything
@@ -1054,7 +1035,7 @@ def execute(args):
                 'kernel_path_band': (file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
                 'target_path': file_registry[
                     'distance_weighted_population_within_[SEARCH_RADIUS]', search_radius_m],
-                'working_dir': intermediate_dir,
+                'working_dir': args['workspace_dir'],
             },
             task_name=f'Convolve population - {search_radius_m}m',
             target_path_list=[
@@ -1081,7 +1062,7 @@ def execute(args):
                 "signal_path_band": (file_registry['urban_nature_area'], 1),
                 "kernel_path_band": (file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
                 "target_path": file_registry['accessible_urban_nature'],
-                "working_dir": intermediate_dir,
+                "working_dir": args['workspace_dir'],
             },
             task_name='Accessible urban nature',
             target_path_list=[file_registry['accessible_urban_nature']],
@@ -1112,7 +1093,7 @@ def execute(args):
                     file_registry['urban_nature_population_ratio'], 1),
                 'kernel_path_band': (file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
                 'target_path': file_registry['urban_nature_supply_percapita'],
-                'working_dir': intermediate_dir,
+                'working_dir': args['workspace_dir'],
             },
             task_name='2SFCA - urban nature supply',
             target_path_list=[file_registry['urban_nature_supply_percapita']],
@@ -1135,7 +1116,7 @@ def execute(args):
                         'kernel_[SEARCH_RADIUS]', search_radius_m], 1),
                     'target_path': file_registry[
                         'distance_weighted_population_within_[SEARCH_RADIUS]', search_radius_m],
-                    'working_dir': intermediate_dir,
+                    'working_dir': args['workspace_dir'],
                 },
                 task_name=f'Convolve population - {search_radius_m}m',
                 target_path_list=[file_registry[
@@ -1164,7 +1145,7 @@ def execute(args):
                     "signal_path_band": (file_registry['urban_nature_area_[LUCODE]', lucode], 1),
                     "kernel_path_band": (file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
                     "target_path": file_registry['accessible_urban_nature_lucode_[LUCODE]', lucode],
-                    "working_dir": intermediate_dir,
+                    "working_dir": args['workspace_dir'],
                 },
                 task_name='Accessible urban nature',
                 target_path_list=[file_registry['accessible_urban_nature_lucode_[LUCODE]', lucode]],
@@ -1198,7 +1179,7 @@ def execute(args):
                         'urban_nature_population_ratio_lucode_[LUCODE]', lucode], 1),
                     'kernel_path_band': (file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
                     'target_path': file_registry['urban_nature_supply_percapita_lucode_[LUCODE]', lucode],
-                    'working_dir': intermediate_dir,
+                    'working_dir': args['workspace_dir'],
                 },
                 task_name=f'2SFCA - urban_nature supply for lucode {lucode}',
                 target_path_list=[file_registry['urban_nature_supply_percapita_lucode_[LUCODE]', lucode]],
@@ -1245,7 +1226,7 @@ def execute(args):
                     "signal_path_band": (file_registry['urban_nature_area'], 1),
                     "kernel_path_band": (file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
                     "target_path": file_registry['accessible_urban_nature_to_[POP_GROUP]', pop_group],
-                    "working_dir": intermediate_dir,
+                    "working_dir": args['workspace_dir'],
                 },
                 task_name='Accessible urban nature',
                 target_path_list=[file_registry['accessible_urban_nature_to_[POP_GROUP]', pop_group]],
@@ -1261,7 +1242,7 @@ def execute(args):
                         file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
                     'target_path': file_registry[
                         'distance_weighted_population_in_[POP_GROUP]', pop_group],
-                    'working_dir': intermediate_dir,
+                    'working_dir': args['workspace_dir'],
                 },
                 task_name=f'Convolve population - {search_radius_m}m',
                 target_path_list=[file_registry[
@@ -1316,7 +1297,7 @@ def execute(args):
                         file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
                     'target_path': file_registry[
                         'urban_nature_supply_percapita_to_[POP_GROUP]', pop_group],
-                    'working_dir': intermediate_dir,
+                    'working_dir': args['workspace_dir'],
                 },
                 task_name=f'2SFCA - urban nature supply for {pop_group}',
                 target_path_list=[file_registry[
@@ -1332,7 +1313,7 @@ def execute(args):
                 kwargs={
                     'urban_nature_supply_path': file_registry[
                         'urban_nature_supply_percapita_to_[POP_GROUP]', pop_group],
-                    'urban_nature_demand': float(args['urban_nature_demand']),
+                    'urban_nature_demand': args['urban_nature_demand'],
                     'target_path': file_registry[
                         'urban_nature_balance_percapita_[POP_GROUP]', pop_group]},
                 task_name=(
@@ -1413,7 +1394,7 @@ def execute(args):
             kwargs={
                 'urban_nature_supply_path':
                     file_registry['urban_nature_supply_percapita'],
-                'urban_nature_demand': float(args['urban_nature_demand']),
+                'urban_nature_demand': args['urban_nature_demand'],
                 'target_path':
                     file_registry['urban_nature_balance_percapita']},
             task_name=(
@@ -1466,7 +1447,7 @@ def execute(args):
             kwargs={
                 'urban_nature_supply_path':
                     file_registry['urban_nature_supply_percapita'],
-                'urban_nature_demand': float(args['urban_nature_demand']),
+                'urban_nature_demand': args['urban_nature_demand'],
                 'target_path':
                     file_registry['urban_nature_balance_percapita']},
             task_name=(
@@ -1498,7 +1479,7 @@ def execute(args):
 
         supply_population_tasks = []
         pop_paths = [(None, file_registry['masked_population'])]
-        if aggregate_by_pop_groups:
+        if args['aggregate_by_pop_group']:
             pop_paths.extend([(pop_group, file_registry['population_in_[POP_GROUP]',
                 pop_group]) for pop_group in split_population_fields])
 
@@ -1546,7 +1527,7 @@ def execute(args):
                     'undersupplied_population'],
                 'oversupplied_populations_path': file_registry[
                     'oversupplied_population'],
-                'include_pop_groups': aggregate_by_pop_groups,
+                'include_pop_groups': args['aggregate_by_pop_group'],
             },
             task_name=(
                 'Aggregate supply-demand to admin units (single rasters)'),
@@ -2335,8 +2316,6 @@ def _resample_population_raster(
     Returns:
         ``None``
     """
-    if not os.path.isdir(working_dir):
-        os.makedirs(working_dir)
     tmp_working_dir = tempfile.mkdtemp(dir=working_dir)
     population_raster_info = pygeoprocessing.get_raster_info(
         source_population_raster_path)

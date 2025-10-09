@@ -1,3 +1,5 @@
+import contextlib
+import functools
 import importlib
 import json
 import logging
@@ -19,11 +21,14 @@ import natcap.invest
 import pandas
 import pint
 import pygeoprocessing
+from pygeoprocessing.geoprocessing_core import GDALUseExceptions
 from pydantic import AfterValidator, BaseModel, ConfigDict, \
     field_validator, model_validator, ValidationError
+import taskgraph
 
+from natcap.invest.file_registry import FileRegistry
 from natcap.invest import utils
-from natcap.invest.validation import get_message, _evaluate_expression
+from natcap.invest.validation import get_message
 from . import gettext
 from .unit_registry import u
 
@@ -124,28 +129,29 @@ def _check_projection(srs, projected, projection_units):
         A string error message if an error was found. ``None`` otherwise.
 
     """
-    empty_srs = osr.SpatialReference()
-    if srs is None or srs.IsSame(empty_srs):
-        return get_message('INVALID_PROJECTION')
+    with GDALUseExceptions():
+        empty_srs = osr.SpatialReference()
+        if srs is None or srs.IsSame(empty_srs):
+            return get_message('INVALID_PROJECTION')
 
-    if projected:
-        if not srs.IsProjected():
-            return get_message('NOT_PROJECTED')
+        if projected:
+            if not srs.IsProjected():
+                return get_message('NOT_PROJECTED')
 
-    if projection_units:
-        # pint uses underscores in multi-word units e.g. 'survey_foot'
-        # it is case-sensitive
-        layer_units_name = srs.GetLinearUnitsName().lower().replace(' ', '_')
-        try:
-            # this will parse common synonyms: m, meter, meters, metre, metres
-            layer_units = u.Unit(layer_units_name)
-            # Compare pint Unit objects
-            if projection_units != layer_units:
+        if projection_units:
+            # pint uses underscores in multi-word units e.g. 'survey_foot'
+            # it is case-sensitive
+            layer_units_name = srs.GetLinearUnitsName().lower().replace(' ', '_')
+            try:
+                # this will parse common synonyms: m, meter, meters, metre, metres
+                layer_units = u.Unit(layer_units_name)
+                # Compare pint Unit objects
+                if projection_units != layer_units:
+                    return get_message('WRONG_PROJECTION_UNIT').format(
+                        unit_a=projection_units, unit_b=layer_units_name)
+            except pint.errors.UndefinedUnitError:
                 return get_message('WRONG_PROJECTION_UNIT').format(
                     unit_a=projection_units, unit_b=layer_units_name)
-        except pint.errors.UndefinedUnitError:
-            return get_message('WRONG_PROJECTION_UNIT').format(
-                unit_a=projection_units, unit_b=layer_units_name)
 
 
 def validate_permissions_string(permissions):
@@ -249,6 +255,19 @@ class Input(BaseModel):
         title = '/'.join([capitalize_word(word) for word in title.split('/')])
         return title
 
+    def preprocess(self, value):
+        """Base preprocessing function.
+
+        Override this when specific preprocessing is needed.
+
+        Args:
+            value (object): value to preprocess
+
+        Returns:
+            unchanged value (object)
+        """
+        return value
+
 
 class Output(BaseModel):
     """A data output, or result, of an invest model.
@@ -286,6 +305,10 @@ class FileInput(Input):
     required for this file."""
 
     type: typing.ClassVar[str] = 'file'
+
+    display_name: typing.ClassVar[str] = gettext('file')
+
+    rst_section: typing.ClassVar[str] = 'file'
 
     @timeout
     def validate(self, filepath: str):
@@ -377,6 +400,10 @@ class RasterInput(FileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
+    display_name: typing.ClassVar[str] = gettext('raster')
+
+    rst_section: typing.ClassVar[str] = 'raster'
+
     @model_validator(mode='after')
     def check_projected_projection_units(self):
         if self.projection_units and not self.projected:
@@ -394,25 +421,41 @@ class RasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        gdal_path = utils._GDALPath.from_uri(filepath)
-        if gdal_path.is_local:
-            file_warning = super().validate(filepath)
-            if file_warning:
-                return file_warning
+        with GDALUseExceptions():
+            gdal_path = utils._GDALPath.from_uri(filepath)
+            if gdal_path.is_local:
+                file_warning = super().validate(filepath)
+                if file_warning:
+                    return file_warning
 
-        try:
-            gdal_dataset = gdal.OpenEx(gdal_path.to_normalized_path(), gdal.OF_RASTER)
-        except RuntimeError:
-            return get_message('NOT_GDAL_RASTER')
+            try:
+                gdal_dataset = gdal.OpenEx(
+                    gdal_path.to_normalized_path(), gdal.OF_RASTER)
+            except RuntimeError:
+                return get_message('NOT_GDAL_RASTER')
 
-        # Check that an overview .ovr file wasn't opened.
-        if os.path.splitext(filepath)[1] == '.ovr':
-            return get_message('OVR_FILE')
+            # Check that an overview .ovr file wasn't opened.
+            if os.path.splitext(filepath)[1] == '.ovr':
+                return get_message('OVR_FILE')
 
-        srs = gdal_dataset.GetSpatialRef()
-        projection_warning = _check_projection(srs, self.projected, self.projection_units)
-        if projection_warning:
-            return projection_warning
+            srs = gdal_dataset.GetSpatialRef()
+            projection_warning = _check_projection(
+                srs, self.projected, self.projection_units)
+            if projection_warning:
+                return projection_warning
+
+    def preprocess(self, value):
+        """Normalize a path to a GDAL-compatible local or remote path.
+
+        Args:
+            value (string): path to normalize
+
+        Returns:
+            normalized path string or None
+        """
+        if value:
+            return utils._GDALPath.from_uri(value).to_normalized_path()
+        return None  # if None or empty string, return None
 
 
 class SingleBandRasterInput(FileInput):
@@ -440,6 +483,10 @@ class SingleBandRasterInput(FileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
+    display_name: typing.ClassVar[str] = gettext('raster')
+
+    rst_section: typing.ClassVar[str] = 'raster'
+
     @model_validator(mode='after')
     def check_projected_projection_units(self):
         if self.projection_units and not self.projected:
@@ -457,25 +504,41 @@ class SingleBandRasterInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        gdal_path = utils._GDALPath.from_uri(filepath)
-        if gdal_path.is_local:
-            file_warning = super().validate(filepath)
-            if file_warning:
-                return file_warning
+        with GDALUseExceptions():
+            gdal_path = utils._GDALPath.from_uri(filepath)
+            if gdal_path.is_local:
+                file_warning = super().validate(filepath)
+                if file_warning:
+                    return file_warning
 
-        try:
-            gdal_dataset = gdal.OpenEx(gdal_path.to_normalized_path(), gdal.OF_RASTER)
-        except RuntimeError:
-            return get_message('NOT_GDAL_RASTER')
+            try:
+                gdal_dataset = gdal.OpenEx(
+                    gdal_path.to_normalized_path(), gdal.OF_RASTER)
+            except RuntimeError:
+                return get_message('NOT_GDAL_RASTER')
 
-        # Check that an overview .ovr file wasn't opened.
-        if os.path.splitext(filepath)[1] == '.ovr':
-            return get_message('OVR_FILE')
+            # Check that an overview .ovr file wasn't opened.
+            if os.path.splitext(filepath)[1] == '.ovr':
+                return get_message('OVR_FILE')
 
-        srs = gdal_dataset.GetSpatialRef()
-        projection_warning = _check_projection(srs, self.projected, self.projection_units)
-        if projection_warning:
-            return projection_warning
+            srs = gdal_dataset.GetSpatialRef()
+            projection_warning = _check_projection(
+                srs, self.projected, self.projection_units)
+            if projection_warning:
+                return projection_warning
+
+    def preprocess(self, value):
+        """Normalize a path to a GDAL-compatible local or remote path.
+
+        Args:
+            value (string): path to normalize
+
+        Returns:
+            normalized path string or None
+        """
+        if value:
+            return utils._GDALPath.from_uri(value).to_normalized_path()
+        return None  # if None or empty string, return None
 
 
 class VectorInput(FileInput):
@@ -502,6 +565,10 @@ class VectorInput(FileInput):
     projection (such as meters) is required, indicate it here."""
 
     type: typing.ClassVar[str] = 'vector'
+
+    display_name: typing.ClassVar[str] = gettext('vector')
+
+    rst_section: typing.ClassVar[str] = 'vector'
 
     _fields_dict: dict[str, Input] = {}
 
@@ -536,65 +603,66 @@ class VectorInput(FileInput):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        gdal_path = utils._GDALPath.from_uri(filepath)
-        if gdal_path.is_local:
-            file_warning = super().validate(filepath)
-            if file_warning:
-                return file_warning
+        with GDALUseExceptions():
+            gdal_path = utils._GDALPath.from_uri(filepath)
+            if gdal_path.is_local:
+                file_warning = super().validate(filepath)
+                if file_warning:
+                    return file_warning
 
-        try:
-            gdal_dataset = gdal.OpenEx(gdal_path.to_normalized_path(), gdal.OF_VECTOR)
-        except RuntimeError:
-            return get_message('NOT_GDAL_VECTOR')
+            try:
+                gdal_dataset = gdal.OpenEx(
+                    gdal_path.to_normalized_path(), gdal.OF_VECTOR)
+            except RuntimeError:
+                return get_message('NOT_GDAL_VECTOR')
 
-        geom_map = {
-            'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM,
-                      ogr.wkbPoint25D],
-            'LINESTRING': [ogr.wkbLineString, ogr.wkbLineStringM,
-                           ogr.wkbLineStringZM, ogr.wkbLineString25D],
-            'POLYGON': [ogr.wkbPolygon, ogr.wkbPolygonM,
-                        ogr.wkbPolygonZM, ogr.wkbPolygon25D],
-            'MULTIPOINT': [ogr.wkbMultiPoint, ogr.wkbMultiPointM,
-                           ogr.wkbMultiPointZM, ogr.wkbMultiPoint25D],
-            'MULTILINESTRING': [ogr.wkbMultiLineString, ogr.wkbMultiLineStringM,
-                                ogr.wkbMultiLineStringZM,
-                                ogr.wkbMultiLineString25D],
-            'MULTIPOLYGON': [ogr.wkbMultiPolygon, ogr.wkbMultiPolygonM,
-                             ogr.wkbMultiPolygonZM, ogr.wkbMultiPolygon25D]
-        }
+            geom_map = {
+                'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM,
+                          ogr.wkbPoint25D],
+                'LINESTRING': [ogr.wkbLineString, ogr.wkbLineStringM,
+                               ogr.wkbLineStringZM, ogr.wkbLineString25D],
+                'POLYGON': [ogr.wkbPolygon, ogr.wkbPolygonM,
+                            ogr.wkbPolygonZM, ogr.wkbPolygon25D],
+                'MULTIPOINT': [ogr.wkbMultiPoint, ogr.wkbMultiPointM,
+                               ogr.wkbMultiPointZM, ogr.wkbMultiPoint25D],
+                'MULTILINESTRING': [ogr.wkbMultiLineString, ogr.wkbMultiLineStringM,
+                                    ogr.wkbMultiLineStringZM,
+                                    ogr.wkbMultiLineString25D],
+                'MULTIPOLYGON': [ogr.wkbMultiPolygon, ogr.wkbMultiPolygonM,
+                                 ogr.wkbMultiPolygonZM, ogr.wkbMultiPolygon25D]
+            }
 
-        allowed_geom_types = []
-        for geom in self.geometry_types:
-            allowed_geom_types += geom_map[geom]
+            allowed_geom_types = []
+            for geom in self.geometry_types:
+                allowed_geom_types += geom_map[geom]
 
-        # NOTE: this only checks the layer geometry type, not the types of the
-        # actual geometries (layer.GetGeometryTypes()). This is probably equivalent
-        # in most cases, and it's more efficient than checking every geometry, but
-        # we might need to change this in the future if it becomes a problem.
-        # Currently not supporting ogr.wkbUnknown which allows mixed types.
-        layer = gdal_dataset.GetLayer()
-        if layer.GetGeomType() not in allowed_geom_types:
-            return get_message('WRONG_GEOM_TYPE').format(allowed=self.geometry_types)
+            # NOTE: this only checks the layer geometry type, not the types of the
+            # actual geometries (layer.GetGeometryTypes()). This is probably equivalent
+            # in most cases, and it's more efficient than checking every geometry, but
+            # we might need to change this in the future if it becomes a problem.
+            # Currently not supporting ogr.wkbUnknown which allows mixed types.
+            layer = gdal_dataset.GetLayer()
+            if layer.GetGeomType() not in allowed_geom_types:
+                return get_message('WRONG_GEOM_TYPE').format(allowed=self.geometry_types)
 
-        if self.fields:
-            field_patterns = []
-            for spec in self.fields:
-                # brackets are a special character for our args spec syntax
-                # they surround the part of the key that's user-defined
-                # user-defined rows/columns/fields are not validated here, so skip
-                if spec.required is True and '[' not in spec.id:
-                    field_patterns.append(spec.id)
+            if self.fields:
+                field_patterns = []
+                for spec in self.fields:
+                    # brackets are a special character for our args spec syntax
+                    # they surround the part of the key that's user-defined
+                    # user-defined rows/columns/fields are not validated here, so skip
+                    if spec.required is True and '[' not in spec.id:
+                        field_patterns.append(spec.id)
 
-            fieldnames = [defn.GetName() for defn in layer.schema]
-            required_field_warning = check_headers(
-                field_patterns, fieldnames, 'field')
-            if required_field_warning:
-                return required_field_warning
+                fieldnames = [defn.GetName() for defn in layer.schema]
+                required_field_warning = check_headers(
+                    field_patterns, fieldnames, 'field')
+                if required_field_warning:
+                    return required_field_warning
 
-        srs = layer.GetSpatialRef()
-        projection_warning = _check_projection(srs, self.projected, self.projection_units)
-        return projection_warning
-
+            srs = layer.GetSpatialRef()
+            projection_warning = _check_projection(srs, self.projected, self.projection_units)
+            return projection_warning
 
     def format_geometry_types_rst(self):
         """Represent self.geometry_types in RST text.
@@ -610,6 +678,19 @@ class VectorInput(FileInput):
             self.geometry_types,
             key=lambda g: GEOMETRY_ORDER.index(g))
         return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
+
+    def preprocess(self, value):
+        """Normalize a path to a GDAL-compatible local or remote path.
+
+        Args:
+            value (string): path to normalize
+
+        Returns:
+            normalized path string or None
+        """
+        if value:
+            return utils._GDALPath.from_uri(value).to_normalized_path()
+        return None  # if None or empty string, return None
 
 
 class RasterOrVectorInput(FileInput):
@@ -639,6 +720,10 @@ class RasterOrVectorInput(FileInput):
     projection (such as meters) is required, indicate it here."""
 
     type: typing.ClassVar[str] = 'raster_or_vector'
+
+    display_name: typing.ClassVar[str] = gettext('raster or vector')
+
+    rst_section: typing.ClassVar[str] = 'raster'
 
     _single_band_raster_input: SingleBandRasterInput
     _vector_input: VectorInput
@@ -714,6 +799,10 @@ class CSVInput(FileInput):
     CSV file to a dataframe, the dataframe index will be set to this column."""
 
     type: typing.ClassVar[str] = 'csv'
+
+    display_name: typing.ClassVar[str] = gettext('CSV')
+
+    rst_section: typing.ClassVar[str] = 'csv'
 
     _columns_dict: dict[str, Input] = {}
     _fields_dict: dict[str, Input] = {}
@@ -898,6 +987,17 @@ class CSVInput(FileInput):
 
         return df
 
+    def preprocess(self, value):
+        """Preprocess a CSV path.
+
+        Args:
+            value (string): path to process
+
+        Returns:
+            path string or None
+        """
+        return value if value else None
+
 
 class DirectoryInput(Input):
     """A directory input, or parameter, of an invest model.
@@ -922,6 +1022,10 @@ class DirectoryInput(Input):
     running the model. Set to False if the directory will be created."""
 
     type: typing.ClassVar[str] = 'directory'
+
+    display_name: typing.ClassVar[str] = gettext('directory')
+
+    rst_section: typing.ClassVar[str] = 'directory'
 
     _contents_dict: dict[str, Input] = {}
 
@@ -1020,6 +1124,10 @@ class NumberInput(Input):
 
     type: typing.ClassVar[str] = 'number'
 
+    display_name: typing.ClassVar[str] = gettext('number')
+
+    rst_section: typing.ClassVar[str] = 'number'
+
     def validate(self, value):
         """Validate a numeric value against the requirements for this input.
 
@@ -1044,7 +1152,7 @@ class NumberInput(Input):
             # Expression is assumed to return a boolean, something like
             # "value > 0" or "(value >= 0) & (value < 1)".  An exception will
             # be raised if asteval can't evaluate the expression.
-            result = _evaluate_expression(self.expression, {'value': float(value)})
+            result = utils.evaluate_expression(self.expression, {'value': float(value)})
             if not result:  # A python bool object is returned.
                 return get_message('INVALID_VALUE').format(condition=self.expression)
 
@@ -1062,10 +1170,27 @@ class NumberInput(Input):
         """
         return col.astype(float)
 
+    def preprocess(self, value):
+        """Normalize a value to a float.
 
-class IntegerInput(Input):
+        Args:
+            value: value to preprocess
+
+        Returns:
+            float or None
+        """
+        return None if value in {None, ''} else float(value)
+
+
+class IntegerInput(NumberInput):
     """An integer input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'integer'
+
+    display_name: typing.ClassVar[str] = gettext('integer')
+
+    rst_section: typing.ClassVar[str] = 'integer'
+
+    units: typing.Union[pint.Unit, None] = None
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1076,13 +1201,16 @@ class IntegerInput(Input):
         Returns:
             A string error message if an error was found.  ``None`` otherwise.
         """
-        try:
-            # must first cast to float, to handle both string and float inputs
-            as_float = float(value)
-            if not as_float.is_integer():
-                return get_message('NOT_AN_INTEGER').format(value=value)
-        except (TypeError, ValueError):
-            return get_message('NOT_A_NUMBER').format(value=value)
+        message = super().validate(value)
+        if message:
+            return message
+
+        # must first cast to float, to handle both string and float inputs
+        # since we already called super().validate, we know that the value
+        # can be cast to float
+        if not float(value).is_integer():
+            return get_message('NOT_AN_INTEGER').format(value=value)
+
 
     @staticmethod
     def format_column(col, *args):
@@ -1098,6 +1226,28 @@ class IntegerInput(Input):
         """
         return col.astype(pandas.Int64Dtype())
 
+    def preprocess(self, value):
+        """Normalize a value to an integer.
+
+        Args:
+            value: value to preprocess
+
+        Returns:
+            int or None
+        """
+        # cast to float first to handle strings and floats
+        return None if value in {None, ''} else int(float(value))
+
+
+class NWorkersInput(IntegerInput):
+
+    def preprocess(self, value):
+        # unlike other numeric inputs, we allow n_workers to be None or an
+        # empty string, and default to single process mode in that case
+        if value is None or value == '':
+            return -1
+        return super().preprocess(value)
+
 
 class RatioInput(NumberInput):
     """A ratio input, or parameter, of an invest model.
@@ -1107,6 +1257,10 @@ class RatioInput(NumberInput):
     range [0, 1].
     """
     type: typing.ClassVar[str] = 'ratio'
+
+    display_name: typing.ClassVar[str] = gettext('ratio')
+
+    rst_section: typing.ClassVar[str] = 'ratio'
 
     units: typing.ClassVar[None] = None
 
@@ -1139,6 +1293,10 @@ class PercentInput(NumberInput):
     """
     type: typing.ClassVar[str] = 'percent'
 
+    display_name: typing.ClassVar[str] = gettext('percent')
+
+    rst_section: typing.ClassVar[str] = 'percent'
+
     units: typing.ClassVar[None] = None
 
     def validate(self, value):
@@ -1158,6 +1316,10 @@ class PercentInput(NumberInput):
 class BooleanInput(Input):
     """A boolean input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'boolean'
+
+    display_name: typing.ClassVar[str] = gettext('true/false')
+
+    rst_section: typing.ClassVar[str] = 'truefalse'
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1185,6 +1347,17 @@ class BooleanInput(Input):
         """
         return col.astype('boolean')
 
+    def preprocess(self, value):
+        """Normalize a value to a boolean.
+
+        Args:
+            value: value to preprocess
+
+        Returns:
+            bool or None
+        """
+        return None if value in {None, ''} else bool(value)
+
 
 class StringInput(Input):
     """A string input, or parameter, of an invest model.
@@ -1196,6 +1369,10 @@ class StringInput(Input):
     """An optional regex pattern which the text value must match"""
 
     type: typing.ClassVar[str] = 'string'
+
+    display_name: typing.ClassVar[str] = gettext('text')
+
+    rst_section: typing.ClassVar[str] = 'text'
 
     @field_validator('regexp', mode='after')
     @classmethod
@@ -1238,6 +1415,29 @@ class StringInput(Input):
             lambda s: s if pandas.isna(s) else str(s).strip().lower()
         ).astype(pandas.StringDtype())
 
+    def preprocess(self, value):
+        """Normalize a value to a string.
+
+        Args:
+            value: value to preprocess
+
+        Returns:
+            string or None
+        """
+        return None if value in {None, ''} else str(value)
+
+
+class ResultsSuffixInput(StringInput):
+
+    def preprocess(self, value):
+        value = super().preprocess(value)
+        if value is None:
+            return ''
+        # suffix should always start with an underscore
+        if (value and not value.startswith('_')):
+            value = '_' + value
+        return value
+
 
 class Option(BaseModel):
     """An option in an OptionStringInput or OptionStringOutput."""
@@ -1273,6 +1473,10 @@ class OptionStringInput(Input):
     Use this if the set of options must be dynamically generated."""
 
     type: typing.ClassVar[str] = 'option_string'
+
+    display_name: typing.ClassVar[str] = gettext('option')
+
+    rst_section: typing.ClassVar[str] = 'option'
 
     @model_validator(mode='after')
     def check_options(self):
@@ -1340,6 +1544,17 @@ class OptionStringInput(Input):
         # casefold() is a more aggressive version of lower() that may work better
         # for some languages to remove all case distinctions
         return sorted(lines, key=lambda line: line.casefold())
+
+    def preprocess(self, value):
+        """Normalize an option string value to a lower cased string.
+
+        Args:
+            value: value to preprocess
+
+        Returns:
+            string
+        """
+        return None if value in {None, ''} else str(value).lower()
 
 
 class FileOutput(Output):
@@ -1556,11 +1771,13 @@ class ModelSpec(BaseModel):
     """Optional. A set of alternative names by which the model can be called
     from the invest command line interface, in addition to the ``model_id``."""
 
+    module_name: str
+    """The importable module name of the model e.g. ``natcap.invest.foo``."""
+
     @model_validator(mode='after')
     def check_inputs_in_field_order(self):
         """Check that all inputs either appear in `input_field_order`,
         or are marked as hidden."""
-
         found_keys = set()
         for group in self.input_field_order:
             for key in group:
@@ -1631,6 +1848,205 @@ class ModelSpec(BaseModel):
         spec_dict['outputs'] = {_output.id: _output for _output in self.outputs}
         return json.dumps(spec_dict, default=fallback_serializer, ensure_ascii=False)
 
+    def preprocess_inputs(self, input_values):
+        """Preprocess a dictionary of input values.
+
+        The resulting dict will contain exactly the input keys in the model spec.
+        Inputs which were not provided will have a value of None. Each provided
+        input value is passed through the corresponding Input.preprocess method.
+
+        Args:
+            input_values (dict): Dict mapping input keys to input values
+
+        Returns:
+            dictionary mapping input keys to preprocessed input values
+        """
+        values = {}
+        for _input in self.inputs:
+            values[_input.id] = _input.preprocess(
+                input_values.get(_input.id, None))
+        return values
+
+    def generate_metadata_for_outputs(self, args_dict):
+        """Create metadata for all items in an invest model output workspace.
+
+        Args:
+            args_dict (dict) - the arguments dictionary passed to the
+                model's ``execute`` function.
+
+        Returns:
+            None
+        """
+        from natcap.invest import models
+        file_suffix = SUFFIX.preprocess(args_dict.get('results_suffix', None))
+        formatted_args = pprint.pformat(args_dict)
+        lineage_statement = (
+            f'Created by {self.model_id} execute('
+            f'\n{formatted_args})\nVersion {natcap.invest.__version__}')
+        keywords = [self.model_id, 'InVEST']
+
+        def _walk_spec(output_spec, workspace):
+            for spec_data in output_spec:
+                if 'taskgraph.db' in spec_data.path:
+                    continue
+                pre, post = os.path.splitext(spec_data.path)
+                full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
+                if os.path.exists(full_path):
+                    try:
+                        write_metadata_file(
+                            full_path, spec_data, keywords, lineage_statement)
+                    except ValueError as error:
+                        # Some unsupported file formats, e.g. html
+                        LOGGER.debug(error)
+
+        _walk_spec(self.outputs, args_dict['workspace_dir'])
+
+    def create_output_directories(self, args):
+        """Create the necessary output directories given a set of args.
+
+        Args:
+            args (dict): maps input keys to values
+
+        Returns:
+            None
+        """
+        # evaluate which outputs we expect to be created, given the
+        # model spec and provided input values
+        outputs_to_be_created = set([
+            output.id for output in self.outputs if bool(
+                utils.evaluate_expression(
+                    expression=f'{output.created_if}',
+                    variable_map=args
+                )
+            ) is True
+        ])
+        # Identify all output subdirectories needed, based on the output
+        # paths, and create them
+        for output in self.outputs:
+            if output.id in outputs_to_be_created:
+                os.makedirs(os.path.join(
+                    args['workspace_dir'], os.path.split(output.path)[0]
+                ), exist_ok=True)
+
+    def setup(self, args, taskgraph_key='taskgraph_cache'):
+        """Perform boilerplate setup needed in an invest execute function.
+
+        Args:
+            args (dict): maps input keys to values
+            taskgraph_key (str): Input key that identifies the taskgraph cache.
+                Defaults to 'taskgraph_cache'.
+
+        Returns:
+            Tuple of ``(args, file_registry, graph)`` where ``args`` is the
+            result of passing the input args through ``self.preprocess_inputs``,
+            ``file_registry`` is a ``FileRegistry``, and ``graph`` is a
+            ``TaskGraph``, all instantiated appropriately for the given args
+            and model specification.
+        """
+        args = self.preprocess_inputs(args)
+        self.create_output_directories(args)
+        file_registry = FileRegistry(
+            outputs=self.outputs,
+            workspace_dir=args['workspace_dir'],
+            file_suffix=args['results_suffix'])
+        graph = taskgraph.TaskGraph(file_registry[taskgraph_key],
+                                    n_workers=args['n_workers'])
+        return args, file_registry, graph
+
+    def execute(self, args, create_logfile=False, log_level=logging.NOTSET,
+            generate_metadata=False, save_file_registry=False,
+            check_outputs=False):
+        """Invest model execute function wrapper.
+
+        Performs additonal work before and after the execute function runs:
+            - GDAL exceptions are enabled
+            - Optionally,
+
+        Args:
+            args (dict): the raw user input args dictionary
+            generate_metadata (bool): Defaults to False. If True, use
+                geometamaker to create metadata files in the workspace
+                after execution completes.
+            save_file_registry (bool): Defaults to False. If True, the
+                file registry dictionary will be saved to the workspace
+                as a JSON file after execution completes.
+            create_logfile (bool): Defaults to False. If True, all logging
+                from the execute function as well as all other pre- and
+                post-processing will be written to a logfile in the workspace.
+            log_level (int): The logging threshold for the log file (only applies
+                if ``create_logfile`` is true. Log messages with a level less
+                than this will be excluded from the logfile. The default value
+                (``logging.NOTSET``) will cause all logging to be captured.
+            check_outputs (bool): Defaults to False. If True, will check that
+                the expected outputs and no others were created based on the
+                given args and the ``created_if`` attribute of each output. An
+                error will be raised if a discrepancy is found.
+
+        Returns:
+            file registry dictionary
+
+        Raises:
+            RuntimeError if ``check_outputs`` is ``True`` and a discrepancy is
+            detected between actual and expected outputs
+        """
+        if create_logfile:
+            cm = utils.prepare_workspace(args['workspace_dir'],
+                                         model_id=self.model_id,
+                                         logging_level=log_level)
+        else: # null context manager, has no effect
+            cm = contextlib.nullcontext()
+
+        with GDALUseExceptions(), cm:
+
+            LOGGER.log(
+                100,  # define high log level so it should always show in logs
+                'Starting model with parameters: \n' +
+                utils.format_args_dict(args, self.model_id))
+
+            model_module = importlib.import_module(self.module_name)
+            registry = model_module.execute(args)
+
+            preprocessed_args = self.preprocess_inputs(args)
+
+            if check_outputs:
+                # evaluate which outputs we expect to be created, given the
+                # model spec and provided input values
+                outputs_to_be_created = set([
+                    output.id for output in self.outputs if bool(
+                        utils.evaluate_expression(
+                            expression=f'{output.created_if}',
+                            variable_map=preprocessed_args
+                        )
+                    ) is True
+                ])
+                if outputs_to_be_created != set(registry.keys()):
+                    raise RuntimeError(
+                        'The set of outputs created differs from what was expected.\n'
+                        f'Missing outputs: {outputs_to_be_created - set(registry.keys())}\n'
+                        f'Extra outputs: {set(registry.keys()) - outputs_to_be_created}')
+
+            # optionally create metadata files for the results
+            if generate_metadata:
+                LOGGER.info('Generating metadata for results')
+                try:
+                    # If there's an exception from creating metadata
+                    # I don't think we want to indicate a model failure
+                    self.generate_metadata_for_outputs(preprocessed_args)
+                except Exception as exc:
+                    LOGGER.warning(
+                        'Something went wrong while generating metadata', exc_info=exc)
+
+            # optionally write the file registry dict to a JSON file in the workspace
+            if save_file_registry:
+                file_registry_path = os.path.join(
+                    preprocessed_args['workspace_dir'],
+                    f'file_registry{preprocessed_args["results_suffix"]}.json')
+                with open(file_registry_path, 'w') as json_file:
+                    json.dump(registry, json_file, indent=4)
+
+            return registry
+
+
 
 # Specs for common arg types ##################################################
 WORKSPACE = DirectoryInput(
@@ -1645,7 +2061,7 @@ WORKSPACE = DirectoryInput(
     permissions="rwx",
     must_exist=False,
 )
-SUFFIX = StringInput(
+SUFFIX = ResultsSuffixInput(
     id="results_suffix",
     name=gettext("file suffix"),
     about=gettext(
@@ -1655,7 +2071,7 @@ SUFFIX = StringInput(
     required=False,
     regexp="[a-zA-Z0-9_-]*"
 )
-N_WORKERS = NumberInput(
+N_WORKERS = NWorkersInput(
     id="n_workers",
     name=gettext("taskgraph n_workers parameter"),
     about=gettext(
@@ -1892,43 +2308,11 @@ def format_type_string(arg_type):
     Returns:
         formatted string that links to a description of the input type(s)
     """
-    # some types need a more user-friendly name
-    # all types are listed here so that they can be marked up for translation
-    type_names = {
-        BooleanInput: gettext('true/false'),
-        CSVInput: gettext('CSV'),
-        DirectoryInput: gettext('directory'),
-        FileInput: gettext('file'),
-        StringInput: gettext('text'),
-        IntegerInput: gettext('integer'),
-        NumberInput: gettext('number'),
-        OptionStringInput: gettext('option'),
-        PercentInput: gettext('percent'),
-        SingleBandRasterInput: gettext('raster'),
-        RatioInput: gettext('ratio'),
-        VectorInput: gettext('vector'),
-        RasterOrVectorInput: gettext('raster or vector')
-    }
-    type_sections = {  # names of section headers to link to in the RST
-        BooleanInput: 'truefalse',
-        CSVInput: 'csv',
-        DirectoryInput: 'directory',
-        FileInput: 'file',
-        StringInput: 'text',
-        IntegerInput: 'integer',
-        NumberInput: 'number',
-        OptionStringInput: 'option',
-        PercentInput: 'percent',
-        SingleBandRasterInput: 'raster',
-        RatioInput: 'ratio',
-        VectorInput: 'vector',
-        RasterOrVectorInput: 'raster'
-    }
     if arg_type is RasterOrVectorInput:
         return (
-            f'`{type_names[SingleBandRasterInput]} <{INPUT_TYPES_HTML_FILE}#{type_sections[SingleBandRasterInput]}>`__ or '
-            f'`{type_names[VectorInput]} <{INPUT_TYPES_HTML_FILE}#{type_sections[VectorInput]}>`__')
-    return f'`{type_names[arg_type]} <{INPUT_TYPES_HTML_FILE}#{type_sections[arg_type]}>`__'
+            f'`{SingleBandRasterInput.display_name} <{INPUT_TYPES_HTML_FILE}#{SingleBandRasterInput.rst_section}>`__ or '
+            f'`{VectorInput.display_name} <{INPUT_TYPES_HTML_FILE}#{VectorInput.rst_section}>`__')
+    return f'`{arg_type.display_name} <{INPUT_TYPES_HTML_FILE}#{arg_type.rst_section}>`__'
 
 
 def describe_arg_from_spec(name, spec):
@@ -2129,40 +2513,3 @@ def write_metadata_file(datasource_path, spec, keywords_list,
             resource.set_band_description(1, units=units)
 
     resource.write(workspace=out_workspace)
-
-
-def generate_metadata_for_outputs(model_module, args_dict):
-    """Create metadata for all items in an invest model output workspace.
-
-    Args:
-        model_module (object) - the natcap.invest module containing
-            the MODEL_SPEC attribute
-        args_dict (dict) - the arguments dictionary passed to the
-            model's ``execute`` function.
-
-    Returns:
-        None
-
-    """
-    file_suffix = utils.make_suffix_string(args_dict, 'results_suffix')
-    formatted_args = pprint.pformat(args_dict)
-    lineage_statement = (
-        f'Created by {model_module.__name__}.execute(\n{formatted_args})\n'
-        f'Version {natcap.invest.__version__}')
-    keywords = [model_module.MODEL_SPEC.model_id, 'InVEST']
-
-    def _walk_spec(output_spec, workspace):
-        for spec_data in output_spec:
-            if 'taskgraph.db' in spec_data.path:
-                continue
-            pre, post = os.path.splitext(spec_data.path)
-            full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
-            if os.path.exists(full_path):
-                try:
-                    write_metadata_file(
-                        full_path, spec_data, keywords, lineage_statement)
-                except ValueError as error:
-                    # Some unsupported file formats, e.g. html
-                    LOGGER.debug(error)
-
-    _walk_spec(model_module.MODEL_SPEC.outputs, args_dict['workspace_dir'])

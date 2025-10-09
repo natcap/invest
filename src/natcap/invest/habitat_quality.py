@@ -15,7 +15,6 @@ from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
-from .file_registry import FileRegistry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,6 +39,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("hq",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["lulc_cur_path", "lulc_fut_path", "lulc_bas_path"],
@@ -625,21 +625,7 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
     LOGGER.info("Starting execute of Habitat Quality model.")
-    # Append a _ to the suffix if it's not empty and doesn't already have one
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-
-    # Check to see if each of the workspace folders exists. If not, create the
-    # folder in the filesystem.
-    LOGGER.info("Creating workspace")
-    output_dir = args['workspace_dir']
-    intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate')
-    utils.make_directories([intermediate_output_dir, output_dir])
-
-    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
-    n_workers = int(args.get('n_workers', -1))
-    task_graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], n_workers)
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     LOGGER.info("Checking Threat and Sensitivity tables for compliance")
     # Get CSVs as dictionaries and ensure the key is a string for threats.
@@ -649,8 +635,6 @@ def execute(args):
     sensitivity_df = MODEL_SPEC.get_input(
         'sensitivity_table_path').get_validated_dataframe(
         args['sensitivity_table_path'])
-
-    half_saturation_constant = float(args['half_saturation_constant'])
 
     # Dictionary for reclassing habitat values
     sensitivity_reclassify_habitat_dict = sensitivity_df['habitat'].to_dict()
@@ -670,7 +654,7 @@ def execute(args):
     # compile all the threat rasters associated with the land cover
     for scenario in ['cur', 'fut', 'bas']:
         lulc_arg = f'lulc_{scenario}_path'
-        if lulc_arg in args and args[lulc_arg] != '':
+        if args[lulc_arg]:
             # save land cover paths in a list for alignment and resize
             lulc_raster_list.append(args[lulc_arg])
             aligned_lulc_raster_list.append(file_registry[f'lulc_{scenario}_aligned'])
@@ -777,7 +761,7 @@ def execute(args):
         task_name='access_raster')
     access_task_list = [create_access_raster_task]
 
-    if 'access_vector_path' in args and args['access_vector_path']:
+    if args['access_vector_path']:
         LOGGER.debug("Reproject and rasterize Access vector")
         reproject_access_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
@@ -935,7 +919,7 @@ def execute(args):
 
         # Compute habitat quality
         # ksq: a term used below to compute habitat quality
-        ksq = half_saturation_constant**_SCALING_PARAM
+        ksq = args['half_saturation_constant']**_SCALING_PARAM
 
         LOGGER.info('Starting raster calculation on quality')
 

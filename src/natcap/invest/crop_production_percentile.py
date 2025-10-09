@@ -213,6 +213,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("cpp",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         [CROP_TO_PATH_TABLES.percentile_yield,
@@ -573,8 +574,6 @@ MODEL_SPEC = spec.ModelSpec(
     ]
 )
 
-_INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
-
 _YIELD_PERCENTILE_FIELD_PATTERN = 'yield_([^_]+)'
 
 _EXPECTED_NUTRIENT_TABLE_HEADERS = list(NUTRIENT_UNITS.keys())
@@ -626,6 +625,8 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
+
     # It might seem backwards to read the landcover_to_crop_table into a
     # DataFrame called crop_to_landcover_df, but since the table is indexed
     # by crop_name, it makes sense for the code to treat it as a mapping from
@@ -670,12 +671,6 @@ def execute(args):
             f"{args['landcover_to_crop_table_path']} but are not supported "
             f"by the model: {invalid_crop_names}")
 
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    output_dir = os.path.join(args['workspace_dir'])
-    utils.make_directories([
-        output_dir, os.path.join(output_dir, _INTERMEDIATE_OUTPUT_DIR)])
-    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
-
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
     pixel_area_ha = numpy.prod([
@@ -695,15 +690,6 @@ def execute(args):
         landcover_raster_info['projection_wkt'], wgs84srs.ExportToWkt(),
         edge_samples=11)
 
-    # Initialize a TaskGraph
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Single process mode.
-    task_graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'], n_workers)
     dependent_task_list = []
 
     crop_lucode = None
@@ -903,14 +889,12 @@ def execute(args):
         args=(nutrient_df, yield_percentile_headers,
               crop_names, pixel_area_ha,
               args['landcover_raster_path'], landcover_nodata,
-              output_dir, file_suffix, file_registry,
-              file_registry['result_table']),
+              file_registry, file_registry['result_table']),
         target_path_list=[file_registry['result_table']],
         dependent_task_list=dependent_task_list,
         task_name='tabulate_results')
 
-    if ('aggregate_polygon_path' in args and
-            args['aggregate_polygon_path'] not in ['', None]):
+    if args['aggregate_polygon_path']:
         LOGGER.info("aggregating result over query polygon")
         _ = task_graph.add_task(
             func=aggregate_to_polygons,
@@ -918,7 +902,7 @@ def execute(args):
                   file_registry['aggregate_vector'],
                   landcover_raster_info['projection_wkt'],
                   crop_names, nutrient_df, yield_percentile_headers,
-                  pixel_area_ha, output_dir, file_suffix, file_registry,
+                  pixel_area_ha, file_registry,
                   file_registry['aggregate_results']),
             target_path_list=[file_registry['aggregate_vector'],
                               file_registry['aggregate_results']],
@@ -1012,8 +996,8 @@ def _mask_observed_yield_op(
 
 def tabulate_results(
         nutrient_df, yield_percentile_headers, crop_names, pixel_area_ha,
-        landcover_raster_path, landcover_nodata, output_dir, file_suffix,
-        file_registry, target_table_path):
+        landcover_raster_path, landcover_nodata, file_registry,
+        target_table_path):
     """Write table with total yield and nutrient results by crop.
 
     This function includes all the operations that write to results_table.csv.
@@ -1026,8 +1010,6 @@ def tabulate_results(
         pixel_area_ha (float): area of lulc raster cells (hectares)
         landcover_raster_path (string): path to landcover raster
         landcover_nodata (float): landcover raster nodata value
-        output_dir (string): the file path to the output workspace.
-        file_suffix (string): string to append to any output filenames.
         file_registry (FileRegistry): used to look up output file paths
         target_table_path (string): path to 'result_table.csv' in the output
             workspace
@@ -1134,8 +1116,8 @@ def tabulate_results(
 def aggregate_to_polygons(
         base_aggregate_vector_path, target_aggregate_vector_path,
         landcover_raster_projection, crop_names, nutrient_df,
-        yield_percentile_headers, pixel_area_ha, output_dir, file_suffix,
-        file_registry, target_aggregate_table_path):
+        yield_percentile_headers, pixel_area_ha, file_registry,
+        target_aggregate_table_path):
     """Write table with aggregate results of yield and nutrient values.
 
     Use zonal statistics to summarize total observed and interpolated
@@ -1152,8 +1134,6 @@ def aggregate_to_polygons(
         yield_percentile_headers (list): list of strings indicating percentiles
             at which yield was calculated.
         pixel_area_ha (float): area of lulc raster cells (hectares)
-        output_dir (string): the file path to the output workspace.
-        file_suffix (string): string to append to any output filenames.
         file_registry (FileRegistry): used to look up output file paths
         target_aggregate_table_path (string): path to 'aggregate_results.csv'
             in the output workspace

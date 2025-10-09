@@ -25,6 +25,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=("cbc_pre",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["lulc_lookup_table_path", "landcover_snapshot_csv"]
@@ -87,7 +88,7 @@ MODEL_SPEC = spec.ModelSpec(
     outputs=[
         spec.CSVOutput(
             id="carbon_biophysical_table_template",
-            path="carbon_biophysical_table_template.csv",
+            path="outputs_preprocessor/carbon_biophysical_table_template.csv",
             about=gettext(
                 "LULC transition matrix. The first column represents the source LULC"
                 " class, and the first row represents the destination LULC classes. Cells"
@@ -123,7 +124,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.CSVOutput(
             id="carbon_pool_transition_template",
-            path="carbon_pool_transition_template.csv",
+            path="outputs_preprocessor/carbon_pool_transition_template.csv",
             about=gettext(
                 "Table mapping each LULC type to impact and accumulation information."
                 " This is a template that you will fill out to create the biophysical"
@@ -247,7 +248,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.SingleBandRasterOutput(
             id="aligned_lulc_[YEAR]",
-            path="aligned_lulc_[YEAR].tif",
+            path="outputs_preprocessor/aligned_lulc_[YEAR].tif",
             about=gettext(
                 "Copy of LULC map for the given year, aligned and resampled to match all"
                 " the other LULC maps."
@@ -281,22 +282,7 @@ def execute(args):
     Returns:
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
-    suffix = utils.make_suffix_string(args, 'results_suffix')
-    output_dir = os.path.join(args['workspace_dir'], 'outputs_preprocessor')
-    utils.make_directories([output_dir])
-
-    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, suffix)
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
-        n_workers, reporting_interval=5.0)
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     snapshots_dict = MODEL_SPEC.get_input(
         'landcover_snapshot_csv').get_validated_dataframe(
