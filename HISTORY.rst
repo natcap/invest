@@ -92,6 +92,9 @@ General
   setting up a log file in the workspace, and generating metadata for results)
   available to python API users without going through the CLI.
   (`#1451 <https://github.com/natcap/invest/issues/1451>`_)
+* Added a page to the API documentation describing how to run InVEST through
+  the supplied docker container, and also through Apptainer/Singularity.
+  (`#2171 <https://github.com/natcap/invest/issues/2171>`_)
 
 Plugins
 =======
