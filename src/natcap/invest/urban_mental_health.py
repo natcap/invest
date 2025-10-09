@@ -8,16 +8,13 @@ import numpy
 import pandas
 import pygeoprocessing
 import pygeoprocessing.kernels
-import taskgraph
 from osgeo import gdal
 from osgeo import ogr, osr
 
 from . import gettext
 from . import spec
-from . import utils
 from . import validation
 from .unit_registry import u
-from .file_registry import FileRegistry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -113,7 +110,7 @@ MODEL_SPEC = spec.ModelSpec(
             geometry_types={"MULTIPOLYGON", "POLYGON"},
             fields=[
                 spec.RatioInput(
-                    id="risk_rate",  # health_risk_rate
+                    id="risk_rate",
                     about=gettext("Health risk rate")
                 )
             ],
@@ -558,7 +555,6 @@ def execute(args):
     LOGGER.info("Starting Urban Mental Health Model")
     args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
-    # preprocessing
     LOGGER.info("Start preprocessing")
     if args['scenario'] == 'ndvi':
         # TODO rearrage whats in if/else block when implementing scenarios 1-2
@@ -568,8 +564,10 @@ def execute(args):
         pixel_size = base_ndvi_raster_info['pixel_size']
         target_projection = base_ndvi_raster_info['projection_wkt']
         ndvi_bbox = base_ndvi_raster_info['bounding_box']
-        # alternative option is to have mode='intersection' and use AOI vector to clip rasters during align/resize task
-        # however, this would mean that edge pixels would be less accurate/lack spatial context
+        # alternative option is to have mode='intersection' and use AOI vector
+        # to clip rasters during align/resize task
+        # however, this would mean that edge pixels would be less accurate/
+        # lack spatial context
 
         # Users should input the AOI to which they want outputs clipped
         # InVEST will take care of buffering the processing AOI to ensure
@@ -607,7 +605,6 @@ def execute(args):
             check_raster_bounds_against_aoi(
                 aoi_bbox, pygeoprocessing.get_raster_info(
                     args['lulc_base'])['bounding_box'], "LULC_base")
-            #TODO: check if aoi_bbox still works?
 
         ndvi_align_task = task_graph.add_task(
             func=pygeoprocessing.align_and_resize_raster_stack,
@@ -716,9 +713,9 @@ def execute(args):
             target_path_list=[file_registry['ndvi_alt_buffer_mean']],
             task_name="calculate mean alternate NDVI within buffer")
 
-        # NOTE: this is the first step where the nodata value of the output raster
-        # is set based on pygeoprocessing default for the raster's datatype (rather
-        # than using the raster's native nodata)
+        # NOTE: this is the first step where the nodata value of the output
+        # raster is set based on pygeoprocessing default for the raster's
+        # datatype (rather than using the raster's native nodata)
         delta_ndvi_task = task_graph.add_task(
             func=pygeoprocessing.raster_map,
             args=(lambda base_ndvi, alt_ndvi: alt_ndvi - base_ndvi,
@@ -808,7 +805,7 @@ def execute(args):
             )
 
         task_graph.join()
-        # TODO ^ is this best way to require prev cost task done?
+        # TODO ^ is this best way to require prev cost task has been completed?
         # Can't add as dependent task below as not done if not health_cost_rate
 
         zonal_stats_inputs = [
@@ -1051,8 +1048,6 @@ def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc=None,
     else:
         mask_op = _mask_with_ndvi
 
-    # has to be float64 or error in raster_map bc numpy cannot cast FLOAT32_NODATA to float32:
-    # numpy.can_cast(numpy.min_scalar_type(target_nodata), target_dtype) is False
     pygeoprocessing.raster_calculator(
         raster_list, mask_op, target_masked_ndvi,
         datatype_target=ndvi_dtype, nodata_target=ndvi_nodata)
@@ -1144,7 +1139,7 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
         result[:] = bc_nodata
         result[valid_mask] = 1 - numpy.exp(numpy.log(
             effect_size_val) * 10 * delta_ndvi[valid_mask])
-        result[valid_mask] *= baseline_cases[valid_mask]  # preventable cases
+        result[valid_mask] *= baseline_cases[valid_mask]  # yields preventable cases
         return result
 
     # make temporary directory to save unclipped file
