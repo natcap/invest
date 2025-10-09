@@ -352,7 +352,7 @@ def main(user_args=None):
         handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
             fmt='%(asctime)s %(name)-18s %(levelname)-8s %(message)s',
-            datefmt='%m/%d/%Y %H:%M:%S ')
+            datefmt='%Y-%m-%d %H:%M:%S ')
         handler.setFormatter(formatter)
 
         # Set the log level based on what the user provides in the available
