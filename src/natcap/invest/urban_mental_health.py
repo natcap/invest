@@ -31,6 +31,10 @@ MODEL_SPEC = spec.ModelSpec(
     model_id="urban_mental_health",
     model_title=gettext("Urban Mental Health"),
     userguide="",  # TODO - add this model to UG
+    validate_spatial_overlap=True,
+    different_projections_ok=True,
+    aliases=("umh",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["aoi_vector_path", "population_raster", "search_radius"],
@@ -41,9 +45,6 @@ MODEL_SPEC = spec.ModelSpec(
         ["lulc_base", "lulc_alt", "lulc_attr_csv"],
         ["tc_raster", "tc_target"]
     ],
-    validate_spatial_overlap=True,
-    different_projections_ok=True,
-    aliases=("umh",),
     inputs=[
         spec.WORKSPACE,
         spec.SUFFIX,
@@ -555,27 +556,7 @@ def execute(args):
 
     """
     LOGGER.info("Starting Urban Mental Health Model")
-    search_radius = float(args['search_radius'])
-
-    LOGGER.info("Making directories")
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate')
-    output_dir = args['workspace_dir']
-    utils.make_directories([intermediate_output_dir, output_dir])
-    file_registry = FileRegistry(MODEL_SPEC.outputs, args['workspace_dir'],
-                                 file_suffix)
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    LOGGER.debug('n_workers: %s', n_workers)
-    task_graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], n_workers, reporting_interval=5)
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     # preprocessing
     LOGGER.info("Start preprocessing")
@@ -602,8 +583,9 @@ def execute(args):
             aoi_bbox = aoi_info["bounding_box"]
 
         # Expand target bounding box to ensure correct edge pixel calculation
-        aoi_bbox += numpy.array([-search_radius, -search_radius,
-                                 search_radius, search_radius])
+        aoi_bbox += numpy.array(
+            [-args['search_radius'], -args['search_radius'],
+             args['search_radius'], args['search_radius']])
         aoi_bbox = list(aoi_bbox)
 
         # Check if buffered AOI bbox is larger than input base and alt NDVI
@@ -618,7 +600,7 @@ def execute(args):
                              file_registry['ndvi_alt_aligned']]
         resample_method_list = ['cubicspline', 'cubicspline']
 
-        if 'lulc_base' in args and args['lulc_base'] not in ["", None]:
+        if args['lulc_base']:
             input_align_list.append(args['lulc_base'])
             output_align_list.append(file_registry['lulc_base_aligned'])
             resample_method_list.append('near')
@@ -645,7 +627,7 @@ def execute(args):
                            file_registry['ndvi_alt_aligned_masked']]
         mask_base_outputs = [file_registry['ndvi_base_aligned_masked']]
         mask_alt_outputs = [file_registry['ndvi_alt_aligned_masked']]
-        if 'lulc_base' in args and args['lulc_base'] not in ["", None]:
+        if args['lulc_base']:
             LOGGER.info("Masking NDVI using LULC")
             mask_base_inputs += [file_registry['lulc_base_aligned'],
                                  args['lulc_attr_csv'],
@@ -653,7 +635,7 @@ def execute(args):
             mask_base_outputs.append(file_registry['lulc_mask'])
 
             # Use lulc_alt to mask if provided. Otherwise, use lulc_base
-            if 'lulc_alt' in args and args['lulc_alt'] not in ["", None]:
+            if args['lulc_alt']:
                 mask_alt_inputs += [file_registry['lulc_alt_aligned'],
                                     args['lulc_attr_csv'],
                                     file_registry['lulc_mask']]
@@ -682,13 +664,13 @@ def execute(args):
             task_name="Mask alternate NDVI"
         )
 
-        pixel_radius = int(round(search_radius/pixel_size[0]))
-        LOGGER.info(f"Search radius {search_radius} results in "
+        pixel_radius = int(round(args['search_radius']/pixel_size[0]))
+        LOGGER.info(f"Search radius {args['search_radius']} results in "
                     f"buffer of {pixel_radius} pixels")
         if pixel_radius == 0:
             raise ValueError(
-                f"Search radius {search_radius} yielded pixel_radius of zero. "
-                "Please increase search radius.")
+                f"Search radius {args['search_radius']} yielded pixel_radius "
+                "of zero. Please increase search radius.")
         kernel_task = task_graph.add_task(
             func=pygeoprocessing.kernels.dichotomous_kernel,
             kwargs={
@@ -775,7 +757,7 @@ def execute(args):
                 'target_pixel_size': pixel_size,
                 'target_bb': target_bounding_box,
                 'target_projection_wkt': target_projection,
-                'working_dir': intermediate_output_dir,
+                'working_dir': args['workspace_dir'],
             },
             target_path_list=[file_registry['population_aligned']],
             task_name='Resample population to NDVI resolution')
@@ -807,20 +789,18 @@ def execute(args):
                   args['effect_size'],
                   file_registry['preventable_cases'],
                   args["aoi_vector_path"],
-                  intermediate_output_dir),
+                  args['workspace_dir']),
             target_path_list=[file_registry['preventable_cases']],
             dependent_task_list=[delta_ndvi_task, baseline_cases_task],
             task_name="calculate preventable cases"
         )
 
-        health_cost = args.get("health_cost_rate")
-        health_cost = float(health_cost) if health_cost else None
-
-        if health_cost:
+        if args['health_cost_rate']:
             LOGGER.info("Calculating preventable cost")
             preventable_cost_task = task_graph.add_task(
                 func=calc_preventable_cost,
-                args=(file_registry['preventable_cases'], health_cost,
+                args=(file_registry['preventable_cases'],
+                      args['health_cost_rate'],
                       file_registry['preventable_cost']),
                 target_path_list=[file_registry['preventable_cost']],
                 dependent_task_list=[preventable_cases_task],
@@ -839,7 +819,7 @@ def execute(args):
 
         zonal_stats_dependent_tasks = [preventable_cases_task]
 
-        if health_cost:
+        if args['health_cost_rate']:
             LOGGER.info("Calculating sum preventable cases and cost by polygon")
             zonal_stats_inputs.append(file_registry['preventable_cost'])
             zonal_stats_dependent_tasks.append(preventable_cost_task)
@@ -855,7 +835,6 @@ def execute(args):
         )
 
     elif args['scenario'] == 'tcc_ndvi':
-        tc_target = float(args['tc_target'])
         raise NotImplementedError
 
     elif args['scenario'] == 'lulc':
@@ -1171,8 +1150,6 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
     # make temporary directory to save unclipped file
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='unclipped')
 
-    effect_size_val = float(effect_size)  # previously called 'rr0'
-
     ndvi_nodata = pygeoprocessing.get_raster_info(delta_ndvi)["nodata"][0]
     bc_info = pygeoprocessing.get_raster_info(baseline_cases)
     bc_nodata = bc_info["nodata"][0]
@@ -1180,7 +1157,7 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
 
     base_raster_path_band_const_list = [(delta_ndvi, 1),
                                         (baseline_cases, 1),
-                                        (effect_size_val, "raw"),
+                                        (effect_size, "raw"),
                                         (ndvi_nodata, "raw"),
                                         (bc_nodata, "raw")]
 
