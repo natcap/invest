@@ -359,6 +359,39 @@ class FileInput(Input):
         return col.apply(format_path).astype(pandas.StringDtype())
 
 
+class SpatialFileInput(FileInput):
+    """Base class for raster and vector spatial inputs."""
+
+    projected: typing.Union[bool, None] = None
+    """Defaults to None, indicating a projected (as opposed to geographic)
+    coordinate system is not required. Set to True if a projected coordinate
+    system is required."""
+
+    projection_units: typing.Union[pint.Unit, None] = None
+    """Defaults to None. If `projected` is `True`, and a specific unit of
+    projection (such as meters) is required, indicate it here."""
+
+    @model_validator(mode='after')
+    def check_projected_projection_units(self):
+        if self.projection_units and not self.projected:
+            raise ValueError(
+                'Cannot specify projection_units when projected is None')
+        return self
+
+    def preprocess(self, value):
+        """Normalize a path to a GDAL-compatible local or remote path.
+
+        Args:
+            value (string): path to normalize
+
+        Returns:
+            normalized path string or None
+        """
+        if value:
+            return utils._GDALPath.from_uri(value).to_normalized_path()
+        return None  # if None or empty string, return None
+
+
 class RasterBand(BaseModel):
     """A single-band raster input, or parameter, of an invest model.
 
@@ -379,7 +412,7 @@ class RasterBand(BaseModel):
     """units of measurement of the raster band values"""
 
 
-class RasterInput(FileInput):
+class RasterInput(SpatialFileInput):
     """A raster input, or parameter, of an invest model.
 
     This represents a raster file input (all GDAL-supported raster file types
@@ -389,27 +422,11 @@ class RasterInput(FileInput):
     """An iterable of `RasterBand` representing the bands expected to be in
     the raster."""
 
-    projected: typing.Union[bool, None] = None
-    """Defaults to None, indicating a projected (as opposed to geographic)
-    coordinate system is not required. Set to True if a projected coordinate
-    system is required."""
-
-    projection_units: typing.Union[pint.Unit, None] = None
-    """Defaults to None. If `projected` is `True`, and a specific unit of
-    projection (such as meters) is required, indicate it here."""
-
     type: typing.ClassVar[str] = 'raster'
 
     display_name: typing.ClassVar[str] = gettext('raster')
 
     rst_section: typing.ClassVar[str] = 'raster'
-
-    @model_validator(mode='after')
-    def check_projected_projection_units(self):
-        if self.projection_units and not self.projected:
-            raise ValueError(
-                'Cannot specify projection_units when projected is None')
-        return self
 
     @timeout
     def validate(self, filepath: str):
@@ -444,21 +461,8 @@ class RasterInput(FileInput):
             if projection_warning:
                 return projection_warning
 
-    def preprocess(self, value):
-        """Normalize a path to a GDAL-compatible local or remote path.
 
-        Args:
-            value (string): path to normalize
-
-        Returns:
-            normalized path string or None
-        """
-        if value:
-            return utils._GDALPath.from_uri(value).to_normalized_path()
-        return None  # if None or empty string, return None
-
-
-class SingleBandRasterInput(FileInput):
+class SingleBandRasterInput(SpatialFileInput):
     """A single-band raster input, or parameter, of an invest model.
 
     This represents a raster file input (all GDAL-supported raster file types
@@ -472,27 +476,11 @@ class SingleBandRasterInput(FileInput):
     units: typing.Union[pint.Unit, None]
     """units of measurement of the raster values"""
 
-    projected: typing.Union[bool, None] = None
-    """Defaults to None, indicating a projected (as opposed to geographic)
-    coordinate system is not required. Set to True if a projected coordinate
-    system is required."""
-
-    projection_units: typing.Union[pint.Unit, None] = None
-    """Defaults to None. If `projected` is `True`, and a specific unit of
-    projection (such as meters) is required, indicate it here."""
-
     type: typing.ClassVar[str] = 'raster'
 
     display_name: typing.ClassVar[str] = gettext('raster')
 
     rst_section: typing.ClassVar[str] = 'raster'
-
-    @model_validator(mode='after')
-    def check_projected_projection_units(self):
-        if self.projection_units and not self.projected:
-            raise ValueError(
-                'Cannot specify projection_units when projected is None')
-        return self
 
     @timeout
     def validate(self, filepath: str):
@@ -527,21 +515,8 @@ class SingleBandRasterInput(FileInput):
             if projection_warning:
                 return projection_warning
 
-    def preprocess(self, value):
-        """Normalize a path to a GDAL-compatible local or remote path.
 
-        Args:
-            value (string): path to normalize
-
-        Returns:
-            normalized path string or None
-        """
-        if value:
-            return utils._GDALPath.from_uri(value).to_normalized_path()
-        return None  # if None or empty string, return None
-
-
-class VectorInput(FileInput):
+class VectorInput(SpatialFileInput):
     """A vector input, or parameter, of an invest model.
 
     This represents a vector file input (all GDAL-supported vector file types
@@ -555,15 +530,6 @@ class VectorInput(FileInput):
     expected to have. The `key` of each input must match the corresponding
     field name."""
 
-    projected: typing.Union[bool, None] = None
-    """Defaults to None, indicating a projected (as opposed to geographic)
-    coordinate system is not required. Set to True if a projected coordinate
-    system is required."""
-
-    projection_units: typing.Union[pint.Unit, None] = None
-    """Defaults to None. If `projected` is `True`, and a specific unit of
-    projection (such as meters) is required, indicate it here."""
-
     type: typing.ClassVar[str] = 'vector'
 
     display_name: typing.ClassVar[str] = gettext('vector')
@@ -571,13 +537,6 @@ class VectorInput(FileInput):
     rst_section: typing.ClassVar[str] = 'vector'
 
     _fields_dict: dict[str, Input] = {}
-
-    @model_validator(mode='after')
-    def check_projected_projection_units(self):
-        if self.projection_units and not self.projected:
-            raise ValueError(
-                'Cannot specify projection_units when projected is None')
-        return self
 
     @model_validator(mode='after')
     def check_field_types(self):
@@ -679,21 +638,8 @@ class VectorInput(FileInput):
             key=lambda g: GEOMETRY_ORDER.index(g))
         return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
 
-    def preprocess(self, value):
-        """Normalize a path to a GDAL-compatible local or remote path.
 
-        Args:
-            value (string): path to normalize
-
-        Returns:
-            normalized path string or None
-        """
-        if value:
-            return utils._GDALPath.from_uri(value).to_normalized_path()
-        return None  # if None or empty string, return None
-
-
-class RasterOrVectorInput(FileInput):
+class RasterOrVectorInput(SpatialFileInput):
     """An invest model input that can be either a single-band raster or a vector."""
 
     data_type: typing.Type = float
@@ -710,15 +656,6 @@ class RasterOrVectorInput(FileInput):
     expected to have. The `key` of each input must match the corresponding
     field name."""
 
-    projected: typing.Union[bool, None] = None
-    """Defaults to None, indicating a projected (as opposed to geographic)
-    coordinate system is not required. Set to True if a projected coordinate
-    system is required."""
-
-    projection_units: typing.Union[pint.Unit, None] = None
-    """Defaults to None. If `projected` is `True`, and a specific unit of
-    projection (such as meters) is required, indicate it here."""
-
     type: typing.ClassVar[str] = 'raster_or_vector'
 
     display_name: typing.ClassVar[str] = gettext('raster or vector')
@@ -728,13 +665,6 @@ class RasterOrVectorInput(FileInput):
     _single_band_raster_input: SingleBandRasterInput
     _vector_input: VectorInput
     _fields_dict: dict[str, Input] = {}
-
-    @model_validator(mode='after')
-    def check_projected_projection_units(self):
-        if self.projection_units and not self.projected:
-            raise ValueError(
-                'Cannot specify projection_units when projected is None')
-        return self
 
     def model_post_init(self, context):
         self._single_band_raster_input = SingleBandRasterInput(
