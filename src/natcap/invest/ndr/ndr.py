@@ -98,8 +98,6 @@ MODEL_SPEC = spec.ModelSpec(
                     about=(
                         "Whether the nutrient load in column load_p should be treated as"
                         " nutrient application rate or measured contaminant runoff."
-                        " The value for load_type_p may be one of two text strings,"
-                        " either 'application-rate' or 'measured-runoff'."
                     ),
                     required="calc_p",
                     options=[
@@ -120,8 +118,6 @@ MODEL_SPEC = spec.ModelSpec(
                     about=(
                         "Whether the nutrient load in column load_n should be treated as"
                         " nutrient application rate or measured contaminant runoff."
-                        " The value for load_type_n may be one of two text strings,"
-                        " either 'application-rate' or 'measured-runoff'."
                     ),
                     required="calc_n",
                     options=[

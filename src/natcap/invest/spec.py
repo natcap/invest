@@ -1332,9 +1332,9 @@ class OptionStringInput(Input):
         for option in self.options:
             display_name = option.display_name if option.display_name else option.key
             if option.about:
-                lines.append(f'- {display_name}: {option.about}')
+                lines.append(f'- "**{display_name}**": {option.about}')
             else:
-                lines.append(f'- {display_name}')
+                lines.append(f'- "**{display_name}**"')
 
         # sort the options alphabetically
         # casefold() is a more aggressive version of lower() that may work better
@@ -1990,7 +1990,8 @@ def describe_arg_from_spec(name, spec):
         # may be either a dict or set. if it's empty, the options are
         # dynamically generated. don't try to document them.
         if spec.options:
-            indented_block.append(gettext('Options:'))
+            indented_block.append(gettext(
+                'Values must be one of the following text strings:'))
             indented_block += spec.format_rst()
 
     elif type(spec) is CSVInput:
