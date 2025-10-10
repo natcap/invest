@@ -327,7 +327,8 @@ class UFRMTests(unittest.TestCase):
         cn_array = numpy.array(
             [[100, 0, 65, 90, 30, cn_nodata]], dtype=numpy.float32)
 
-        smax_result = urban_flood_risk_mitigation._s_max_op(cn_array, cn_nodata, result_nodata)
+        smax_result = urban_flood_risk_mitigation._s_max_op(
+            cn_array, cn_nodata, result_nodata)
 
         smax_expected = numpy.array(
             [[0.0, 100000, 136.769, 28.222, 592.667, result_nodata]],

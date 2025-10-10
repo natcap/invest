@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="urban_flood_risk_mitigation",
-   model_title=gettext("Urban Flood Risk Mitigation"),
+    model_title=gettext("Urban Flood Risk Mitigation"),
     userguide="urban_flood_mitigation.html",
     validate_spatial_overlap=True,
     different_projections_ok=True,
@@ -970,14 +970,5 @@ def validate(args, limit_to=None):
             validation_warnings.append((
                 ['curve_number_table_path'],
                 f'Missing curve numbers for lucode(s) {lucode_list}'))
-        # Check for zero values.
-        zero_mask = cn_df == 0
-        if zero_mask.any(axis=None):
-            zero_lucodes = zero_mask[zero_mask.any(axis=1)].index
-            # Convert numpy dtype values to native python types
-            lucode_list = [i.item() for i in zero_lucodes.values]
-            validation_warnings.append((
-                ['curve_number_table_path'],
-                f'Curve number can not be zero for lucode(s) {lucode_list}'))
 
     return validation_warnings
