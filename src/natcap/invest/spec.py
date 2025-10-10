@@ -416,7 +416,7 @@ class SpatialFileInput(FileInput):
             if utils._GDALPath.from_uri(p).is_local:
                 if not utils._GDALPath.from_uri(base_path).is_local:
                     raise ValueError('Remote CSVs cannot reference local file paths')
-            return utils._GDALPath.from_uri(value).to_normalized_path()
+            return utils._GDALPath.from_uri(p).to_normalized_path()
 
         return col.apply(format_path).astype(pandas.StringDtype())
 
