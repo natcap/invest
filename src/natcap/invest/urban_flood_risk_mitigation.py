@@ -837,14 +837,17 @@ def _s_max_op(cn_array, cn_nodata, result_nodata):
         ndarray of Smax calcualted from curve number.
 
     """
-    result = numpy.empty_like(cn_array)
+    result = numpy.empty_like(cn_array, dtype=numpy.float32)
     result[:] = result_nodata
     zero_mask = cn_array == 0
     valid_mask = ~zero_mask
     if cn_nodata is not None:
         valid_mask[:] &= ~pygeoprocessing.array_equals_nodata(cn_array, cn_nodata)
     result[valid_mask] = 25400 / cn_array[valid_mask] - 254
-    result[zero_mask] = 0
+    # Curve Number of 0 means infitite retention so set s_max to a value
+    # higher than any possible storm depth. Largest storm depth is recorded
+    # at 6,433mm. 
+    result[zero_mask] = 100000
     return result
 
 

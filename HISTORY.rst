@@ -167,6 +167,12 @@ Urban Flood Risk Mitigation
 * Documentation has been updated to reflect that curve number values must be
   greater than 0 and less than or equal to 100.
   (`#2164 <https://github.com/natcap/invest/issues/2164>`_)
+* Fixed a bug where ``s_max`` would be set to 0 if the curve number was 0,
+  causing high runoff values, when a low curve number should indicate lower
+  runoff potential. Now setting ``s_max`` to a very high value (100000) when
+  curve number is 0 to reflect infinite potential retention so that runoff
+  will be 0.
+  (`#2165 <https://github.com/natcap/invest/issues/2165>`_)
 
 Visitation: Recreation and Tourism
 ==================================
