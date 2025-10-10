@@ -397,8 +397,8 @@ MODEL_SPEC = spec.ModelSpec(
                 created_if="lulc_alt"
             ),
             spec.SingleBandRasterOutput(
-                id="lulc_mask_base",
-                path="intermediate/lulc_mask_base.tif",
+                id="lulc_base_mask",
+                path="intermediate/lulc_base_mask.tif",
                 about=gettext(
                     "Binary mask based on baseline LULC raster where 1 "
                     "indicates pixels to be masked out based on `exclude` "
@@ -410,8 +410,8 @@ MODEL_SPEC = spec.ModelSpec(
                 created_if="lulc_base and lulc_attr_csv"
             ),
             spec.SingleBandRasterOutput(
-                id="lulc_mask_alt",
-                path="intermediate/lulc_mask_alt.tif",
+                id="lulc_alt_mask",
+                path="intermediate/lulc_alt_mask.tif",
                 about=gettext(
                     "Binary mask based on alternate LULC raster where 1 "
                     "indicates pixels to be masked out based on `exclude` "
@@ -569,7 +569,14 @@ def execute(args):
     args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     LOGGER.info("Start preprocessing")
-    if args['scenario'] == 'ndvi':
+
+    if args['scenario'] == 'tcc_ndvi':
+        raise NotImplementedError
+
+    elif args['scenario'] == 'lulc':
+        raise NotImplementedError
+
+    elif args['scenario'] == 'ndvi':
         # TODO rearrange whats in if/else block when implementing scenarios 1-2
         LOGGER.info("Using scenario option 3: NDVI")
         base_ndvi_raster_info = pygeoprocessing.get_raster_info(
@@ -844,12 +851,6 @@ def execute(args):
             dependent_task_list=zonal_stats_dependent_tasks,
             task_name='calculate zonal statistics'
         )
-
-    elif args['scenario'] == 'tcc_ndvi':
-        raise NotImplementedError
-
-    elif args['scenario'] == 'lulc':
-        raise NotImplementedError
 
     task_graph.close()
     task_graph.join()
