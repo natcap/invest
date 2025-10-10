@@ -33,7 +33,6 @@ from .. import gettext
 from .. import spec
 from .. import utils
 from .. import validation
-from ..file_registry import FileRegistry
 from ..unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -123,6 +122,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["aoi_path"],
@@ -145,7 +145,7 @@ MODEL_SPEC = spec.ModelSpec(
             hidden=True,
             regexp=None
         ),
-        spec.NumberInput(
+        spec.IntegerInput(
             id="port",
             name=gettext("port"),
             about=gettext(
@@ -156,7 +156,7 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none,
             expression="value >= 0"
         ),
-        spec.NumberInput(
+        spec.IntegerInput(
             id="start_year",
             name=gettext("start year"),
             about=gettext(
@@ -167,7 +167,7 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.year_AD,
             expression="2012 <= value <= 2017"
         ),
-        spec.NumberInput(
+        spec.IntegerInput(
             id="end_year",
             name=gettext("end year"),
             about=gettext(
@@ -533,35 +533,19 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    if int(args['end_year']) < int(args['start_year']):
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
+
+    if args['end_year'] < args['start_year']:
         raise ValueError(
             "Start year must be less than or equal to end year.\n"
             f"start_year: {args['start_year']}\nend_year: {args['end_year']}")
     # in case the user defines a hostname
-    if 'hostname' in args:
+    if args['hostname'] and args['port']:
         server_url = f"PYRO:natcap.invest.recreation@{args['hostname']}:{args['port']}"
     else:
         # else use a well known path to get active server
         server_url = requests.get(SERVER_URL).text.rstrip()
         LOGGER.info(server_url)
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-
-    output_dir = args['workspace_dir']
-    intermediate_dir = os.path.join(output_dir, 'intermediate')
-    scenario_dir = os.path.join(intermediate_dir, 'scenario')
-    utils.make_directories([output_dir, intermediate_dir])
-
-    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
-
-    # Initialize a TaskGraph
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(file_registry['taskgraph_cache'], n_workers)
 
     if args['grid_aoi']:
         prep_aoi_task = task_graph.add_task(
@@ -588,8 +572,8 @@ def execute(args):
         func=_retrieve_user_days,
         args=(file_registry['aoi'],
               file_registry['aoi_zip'],
-              args['start_year'], args['end_year'], file_suffix,
-              output_dir, server_url, file_registry['server_version'],
+              args['start_year'], args['end_year'], args['results_suffix'],
+              args['workspace_dir'], server_url, file_registry['server_version'],
               file_registry['pud_zip'], file_registry['tud_zip']),
         target_path_list=[file_registry['aoi_zip'],
                           file_registry['pud_results'],
@@ -608,7 +592,7 @@ def execute(args):
         dependent_task_list=[calc_user_days_task],
         task_name='assemble userday variables')
 
-    if 'compute_regression' in args and args['compute_regression']:
+    if args['compute_regression']:
         # Prepare the AOI for geoprocessing.
         prepare_response_polygons_task = task_graph.add_task(
             func=_prepare_response_polygons_lookup,
@@ -624,7 +608,7 @@ def execute(args):
             [prepare_response_polygons_task, assemble_userday_variables_task],
             args['predictor_table_path'],
             file_registry['regression_data'],
-            intermediate_dir, task_graph, file_registry)
+            task_graph, file_registry)
 
         # Compute the regression
         predictor_df = MODEL_SPEC.get_input(
@@ -646,8 +630,7 @@ def execute(args):
             dependent_task_list=[assemble_predictor_data_task],
             task_name='compute regression')
 
-        if ('scenario_predictor_table_path' in args and
-                args['scenario_predictor_table_path'] != ''):
+        if args['scenario_predictor_table_path']:
             driver = gdal.GetDriverByName('GPKG')
             if os.path.exists(file_registry['scenario_results']):
                 driver.Delete(file_registry['scenario_results'])
@@ -658,7 +641,6 @@ def execute(args):
             _rename_layer_from_parent(target_layer)
             target_vector = target_layer = None
             aoi_vector = None
-            utils.make_directories([scenario_dir])
 
             build_scenario_data_task = _schedule_predictor_data_processing(
                 file_registry['aoi'],
@@ -666,7 +648,7 @@ def execute(args):
                 [prepare_response_polygons_task],
                 args['scenario_predictor_table_path'],
                 file_registry['scenario_results'],
-                scenario_dir, task_graph, file_registry)
+                task_graph, file_registry)
 
             task_graph.add_task(
                 func=_calculate_scenario,
@@ -972,7 +954,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 def _schedule_predictor_data_processing(
         response_vector_path, response_polygons_pickle_path,
         dependent_task_list, predictor_table_path,
-        target_predictor_vector_path, working_dir, task_graph, file_registry):
+        target_predictor_vector_path, task_graph, file_registry):
     """Summarize spatial predictor data by polygons in the response vector.
 
     Build a shapefile with geometry from the response vector, and tabular
@@ -1006,8 +988,6 @@ def _schedule_predictor_data_processing(
         target_predictor_vector_path (string): path to a copy of
             ``response_vector_path`` with a column for each id in
             predictor_table_path. Overwritten if exists.
-        working_dir (string): path to an intermediate directory to store json
-            files with geoprocessing results.
         task_graph (Taskgraph): the graph that was initialized in execute()
         file_registry (FileRegistry): used to look up predictor json paths
 
@@ -1036,7 +1016,6 @@ def _schedule_predictor_data_processing(
         predictor_type = row['type']
         predictor_target_path = file_registry['[PREDICTOR]_json', predictor_id]
         predictor_ids.append(predictor_id)
-        # predictor_target_path = os.path.join(working_dir, predictor_id + '.json')
         predictor_json_list.append(predictor_target_path)
         if predictor_type.startswith('raster'):
             # type must be one of raster_sum or raster_mean

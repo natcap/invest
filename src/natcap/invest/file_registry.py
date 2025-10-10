@@ -38,7 +38,9 @@ class FileRegistry:
         {
             'aligned_dem': '/.../workspace_dir/aligned_dem_suffix.tif',
             '[CROP]_[PERCENTILE]_coarse_yield': {
-                ('corn', '25th'): '/.../workspace_dir/intermediate_outputs/corn_25th_coarse_yield_suffix.tif''
+                'corn': {
+                    'yield_25th': '/.../workspace_dir/intermediate_outputs/corn_yield_25th_coarse_yield_suffix.tif''
+                }
             }
         }
 
@@ -66,7 +68,6 @@ class FileRegistry:
 
             self._keys_to_paths[output.id] = full_path
 
-
     def __getitem__(self, keys):
         """Return the result of indexing the FileRegistry.
 
@@ -80,16 +81,17 @@ class FileRegistry:
         and '[BAR]' is replaced with 'b'.
 
         Args:
-            keys (str | tuple(str)): key(s) to index the file registry by.
+            keys (str | tuple(obj)): key(s) to index the file registry by. Must
+                be castable to string.
 
         Returns:
             absolute path (string) for the given key(s)
-
 
         """
         if isinstance(keys, str):
             keys = (keys,)
         key, *field_values = keys
+        field_values = [str(value) for value in field_values]
         if key not in self._keys_to_paths:
             raise KeyError(f'Key not found: {key}')
 
@@ -101,12 +103,19 @@ class FileRegistry:
                     f'Expected exactly {len(fields)} field values but received {len(field_values)}')
 
             for field, val in zip(fields, field_values):
-                path = path.replace(f'[{field.upper()}]', str(val))
+                path = path.replace(f'[{field.upper()}]', val)
 
             if key not in self.registry:
                 self.registry[key] = {}
-            sub_key = tuple(field_values) if len(field_values) > 1 else field_values[0]
-            self.registry[key][sub_key] = path
+
+            # Build nested entry. Last field_value will point to path.
+            # (If only one field_value, it maps directly to path.)
+            entry = path
+            for i in range(len(field_values) - 1, -1, -1):
+                entry = {field_values[i]: entry}
+
+            self.registry[key].update(entry)
+
         else:
             if field_values:
                 raise KeyError('Received field values for a key that has no fields')

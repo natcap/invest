@@ -28,6 +28,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["landcover_raster_path", "landcover_biophysical_table_path"],
@@ -555,21 +556,7 @@ def execute(args):
     Returns:
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
-    # create initial working directories and determine file suffixes
-    intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate_outputs')
-    output_dir = os.path.join(args['workspace_dir'])
-    utils.make_directories(
-        [output_dir, intermediate_output_dir])
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
-
-    if 'farm_vector_path' in args and args['farm_vector_path'] != '':
-        # we set the vector path to be the projected vector that we'll create
-        # later
-        farm_vector_path = file_registry['reprojected_farm_vector']
-    else:
-        farm_vector_path = None
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     # parse out the scenario variables from a complicated set of two tables
     # and possibly a farm polygon.  This function will also raise an exception
@@ -578,25 +565,16 @@ def execute(args):
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
 
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    task_graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], n_workers)
-
-    if farm_vector_path is not None:
+    if args['farm_vector_path']:
         # ensure farm vector is in the same projection as the landcover map
         reproject_farm_task = task_graph.add_task(
             task_name='reproject_farm_task',
             func=pygeoprocessing.reproject_vector,
             args=(
                 args['farm_vector_path'],
-                landcover_raster_info['projection_wkt'], farm_vector_path),
-            target_path_list=[farm_vector_path])
+                landcover_raster_info['projection_wkt'],
+                file_registry['reprojected_farm_vector']),
+            target_path_list=[file_registry['reprojected_farm_vector']])
 
     # calculate nesting_substrate_index[substrate] substrate maps
     # N(x, n) = ln(l(x), n)
@@ -621,7 +599,7 @@ def execute(args):
 
     # calculate farm_nesting_substrate_index[substrate] substrate maps
     # dependent on farm substrate rasterized over N(x, n)
-    if farm_vector_path is not None:
+    if args['farm_vector_path']:
         scenario_variables['farm_nesting_substrate_index_path'] = (
             collections.defaultdict(dict))
         farm_substrate_rasterize_task_list = []
@@ -635,7 +613,7 @@ def execute(args):
                     func=_rasterize_vector_onto_base,
                     args=(
                         file_registry['nesting_substrate_index_[SUBSTRATE]', substrate],
-                        farm_vector_path, farm_substrate_id,
+                        file_registry['reprojected_farm_vector'], farm_substrate_id,
                         file_registry['farm_nesting_substrate_index_[SUBSTRATE]', substrate]),
                     target_path_list=[
                         file_registry['farm_nesting_substrate_index_[SUBSTRATE]', substrate]],
@@ -646,7 +624,7 @@ def execute(args):
     habitat_nesting_tasks = {}
     for species in scenario_variables['species_list']:
         # calculate habitat_nesting_index[species] HN(x, s) = max_n(N(x, n) ns(s,n))
-        if farm_vector_path is not None:
+        if args['farm_vector_path']:
             dependent_task_list = farm_substrate_rasterize_task_list
             substrate_path_map = scenario_variables['farm_nesting_substrate_index_path']
         else:
@@ -683,7 +661,7 @@ def execute(args):
                 file_registry['relative_floral_abundance_index_[SEASON]', season]])
 
         # if there's a farm, rasterize floral resources over the top
-        if farm_vector_path is not None:
+        if args['farm_vector_path']:
             farm_floral_resources_id = _FARM_FLORAL_RESOURCES_HEADER_PATTERN % season
             # override the relative floral task because we'll need this one
             relative_floral_abudance_task = task_graph.add_task(
@@ -691,7 +669,7 @@ def execute(args):
                 func=_rasterize_vector_onto_base,
                 args=(
                     file_registry['relative_floral_abundance_index_[SEASON]', season],
-                    farm_vector_path, farm_floral_resources_id,
+                    file_registry['reprojected_farm_vector'], farm_floral_resources_id,
                     file_registry['farm_relative_floral_abundance_index_[SEASON]', season]),
                 target_path_list=[
                     file_registry['farm_relative_floral_abundance_index_[SEASON]', season]],
@@ -703,10 +681,13 @@ def execute(args):
     foraged_flowers_index_task_map = {}
     for species in scenario_variables['species_list']:
         for season in scenario_variables['season_list']:
-            if farm_vector_path is None:
-                relative_abundance_path = file_registry['relative_floral_abundance_index_[SEASON]', season]
+            if args['farm_vector_path']:
+                relative_abundance_path = file_registry[
+                    'farm_relative_floral_abundance_index_[SEASON]', season]
             else:
-                relative_abundance_path = file_registry['farm_relative_floral_abundance_index_[SEASON]', season]
+                relative_abundance_path = file_registry[
+                    'relative_floral_abundance_index_[SEASON]', season]
+
             # calculate foraged_flowers_species_season = RA(l(x),j)*fa(s,j)
             foraged_flowers_index_task_map[(species, season)] = task_graph.add_task(
                 task_name=f'calculate_foraged_flowers_{species}_{season}',
@@ -863,7 +844,7 @@ def execute(args):
                 file_registry['total_pollinator_abundance_[SEASON]', season]])
 
     # next step is farm vector calculation, if no farms then okay to quit
-    if farm_vector_path is None:
+    if not args['farm_vector_path']:
         task_graph.close()
         task_graph.join()
         return
@@ -884,7 +865,8 @@ def execute(args):
             task_name=f'half_saturation_rasterize_{season}',
             func=_rasterize_vector_onto_base,
             args=(
-                file_registry['blank_raster'], farm_vector_path,
+                file_registry['blank_raster'],
+                file_registry['reprojected_farm_vector'],
                 _HALF_SATURATION_FARM_HEADER,
                 file_registry['half_saturation_[SEASON]', season]),
             kwargs={'filter_string': f"{_FARM_SEASON_FIELD}='{season}'"},
@@ -923,7 +905,9 @@ def execute(args):
         task_name='rasterize_managed_pollinators',
         func=_rasterize_vector_onto_base,
         args=(
-            file_registry['blank_raster'], farm_vector_path, _MANAGED_POLLINATORS_FIELD,
+            file_registry['blank_raster'],
+            file_registry['reprojected_farm_vector'],
+            _MANAGED_POLLINATORS_FIELD,
             file_registry['managed_pollinators']),
         dependent_task_list=[reproject_farm_task, blank_raster_task],
         target_path_list=[file_registry['managed_pollinators']])
@@ -961,7 +945,7 @@ def execute(args):
         os.remove(file_registry['farm_results'])
     reproject_farm_task.join()
     _create_farm_result_vector(
-        farm_vector_path, file_registry['farm_results'])
+        file_registry['reprojected_farm_vector'], file_registry['farm_results'])
 
     # aggregate wild pollinator yield over farm
     wild_pollinator_task.join()
@@ -1158,15 +1142,8 @@ def _parse_scenario_variables(args):
             * species_substrate_index[(species, substrate)] (tuple->float)
             * foraging_activity_index[(species, season)] (tuple->float)
     """
-    guild_table_path = args['guild_table_path']
-    landcover_biophysical_table_path = args['landcover_biophysical_table_path']
-    if 'farm_vector_path' in args and args['farm_vector_path'] != '':
-        farm_vector_path = args['farm_vector_path']
-    else:
-        farm_vector_path = None
-
     guild_df = MODEL_SPEC.get_input(
-        'guild_table_path').get_validated_dataframe(guild_table_path)
+        'guild_table_path').get_validated_dataframe(args['guild_table_path'])
 
     LOGGER.info('Checking to make sure guild table has all expected headers')
     for header in _EXPECTED_GUILD_HEADERS:
@@ -1175,11 +1152,12 @@ def _parse_scenario_variables(args):
             raise ValueError(
                 "Expected a header in guild table that matched the pattern "
                 f"'{header}' but was unable to find one. Here are all the "
-                f"headers from {guild_table_path}: {', '.join(guild_df.columns)}")
+                f"headers from {args['guild_table_path']}: "
+                f"{', '.join(guild_df.columns)}")
 
     landcover_biophysical_df = MODEL_SPEC.get_input(
         'landcover_biophysical_table_path').get_validated_dataframe(
-        landcover_biophysical_table_path)
+        args['landcover_biophysical_table_path'])
     biophysical_table_headers = landcover_biophysical_df.columns
     for header in _EXPECTED_BIOPHYSICAL_HEADERS:
         matches = re.findall(header, " ".join(biophysical_table_headers))
@@ -1187,7 +1165,7 @@ def _parse_scenario_variables(args):
             raise ValueError(
                 "Expected a header in biophysical table that matched the "
                 f"pattern '{header}' but was unable to find one. Here are all "
-                f"the headers from {landcover_biophysical_table_path}: "
+                f"the headers from {args['landcover_biophysical_table_path']}: "
                 f"{', '.join(biophysical_table_headers)}")
 
     # this dict to dict will map seasons to guild/biophysical headers
@@ -1207,9 +1185,9 @@ def _parse_scenario_variables(args):
             substrate_to_header[substrate]['guild'] = match.group()
 
     farm_vector = None
-    if farm_vector_path is not None:
+    if args['farm_vector_path']:
         LOGGER.info('Checking that farm polygon has expected headers')
-        farm_vector = gdal.OpenEx(farm_vector_path)
+        farm_vector = gdal.OpenEx(args['farm_vector_path'])
         farm_layer = farm_vector.GetLayer()
         if farm_layer.GetGeomType() not in [
                 ogr.wkbPolygon, ogr.wkbMultiPolygon]:
@@ -1225,7 +1203,7 @@ def _parse_scenario_variables(args):
             if not matches:
                 raise ValueError(
                     f"Missing expected header(s) '{header}' from "
-                    f"{farm_vector_path}.\n"
+                    f"{args['farm_vector_path']}.\n"
                     f"Got these headers instead: {farm_headers}")
 
         for header in farm_headers:
@@ -1264,7 +1242,7 @@ def _parse_scenario_variables(args):
                 "Ensure there are corresponding entries of '{table_type}' in "
                 "both the guilds and biophysical table.")
 
-    if farm_vector_path is not None:
+    if args['farm_vector_path']:
         farm_season_set = set()
         for farm_feature in farm_layer:
             farm_season_set.add(farm_feature.GetField(_FARM_SEASON_FIELD))

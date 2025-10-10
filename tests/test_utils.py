@@ -12,6 +12,7 @@ import tempfile
 import textwrap
 import threading
 import unittest
+import unittest.mock
 import warnings
 
 import numpy
@@ -25,188 +26,6 @@ from shapely.geometry import Point
 from shapely.geometry import Polygon
 
 gdal.UseExceptions()
-
-class SuffixUtilsTests(unittest.TestCase):
-    """Tests for natcap.invest.utils.make_suffix_string."""
-
-    def test_suffix_string(self):
-        """Utils: test suffix_string."""
-        from natcap.invest import utils
-
-        args = {'foo': 'bar', 'file_suffix': 'suff'}
-        suffix = utils.make_suffix_string(args, 'file_suffix')
-        self.assertEqual(suffix, '_suff')
-
-    def test_suffix_string_underscore(self):
-        """Utils: test suffix_string underscore."""
-        from natcap.invest import utils
-
-        args = {'foo': 'bar', 'file_suffix': '_suff'}
-        suffix = utils.make_suffix_string(args, 'file_suffix')
-        self.assertEqual(suffix, '_suff')
-
-    def test_suffix_string_empty(self):
-        """Utils: test empty suffix_string."""
-        from natcap.invest import utils
-
-        args = {'foo': 'bar', 'file_suffix': ''}
-        suffix = utils.make_suffix_string(args, 'file_suffix')
-        self.assertEqual(suffix, '')
-
-    def test_suffix_string_no_entry(self):
-        """Utils: test no suffix entry in args."""
-        from natcap.invest import utils
-
-        args = {'foo': 'bar'}
-        suffix = utils.make_suffix_string(args, 'file_suffix')
-        self.assertEqual(suffix, '')
-
-
-class FileRegistryUtilsTests(unittest.TestCase):
-    """Tests for natcap.invest.utils.file_registry."""
-
-    def test_build_file_registry(self):
-        """Utils: test build_file_registry on simple case."""
-        from natcap.invest import utils
-
-        base_dict = {'foo': 'bar', 'baz': '/bart/bam.txt'}
-        file_registry = utils.build_file_registry([(base_dict, '')], '')
-
-        self.assertEqual(
-            FileRegistryUtilsTests._norm_dict(base_dict),
-            FileRegistryUtilsTests._norm_dict(file_registry))
-
-    def test_build_file_registry_suffix(self):
-        """Utils: test build_file_registry on suffix."""
-        from natcap.invest import utils
-
-        base_dict = {'foo': 'bar', 'baz': '/bart/bam.txt'}
-        file_registry = utils.build_file_registry([
-            (base_dict, '')], '_suff')
-        expected_dict = {
-            'foo': 'bar_suff',
-            'baz': '/bart/bam_suff.txt'
-        }
-
-        self.assertEqual(
-            FileRegistryUtilsTests._norm_dict(expected_dict),
-            FileRegistryUtilsTests._norm_dict(file_registry))
-
-    def test_build_file_registry_list_suffix(self):
-        """Utils: test build_file_registry on list of files w/ suffix."""
-        from natcap.invest import utils
-
-        base_dict = {
-            'foo': ['bar', '/bart/bam.txt']
-        }
-        file_registry = utils.build_file_registry([
-            (base_dict, '')], '_suff')
-        expected_dict = {
-            'foo': ['bar_suff', '/bart/bam_suff.txt']
-        }
-
-        self.assertEqual(
-            FileRegistryUtilsTests._norm_dict(expected_dict),
-            FileRegistryUtilsTests._norm_dict(file_registry))
-
-    def test_build_file_registry_path(self):
-        """Utils: test build_file_registry on path."""
-        from natcap.invest import utils
-
-        base_dict = {
-            'foo': 'bar',
-            'baz': '/bart/bam.txt',
-            'jab': 'jim'
-        }
-        file_registry = utils.build_file_registry([
-            (base_dict, 'newpath')], '')
-        expected_dict = {
-            'foo': 'newpath/bar',
-            'jab': 'newpath/jim',
-            'baz': '/bart/bam.txt',
-        }
-
-        self.assertEqual(
-            FileRegistryUtilsTests._norm_dict(expected_dict),
-            FileRegistryUtilsTests._norm_dict(file_registry))
-
-    def test_build_file_registry_duppath(self):
-        """Utils: test build_file_registry ValueError on duplicate paths."""
-        from natcap.invest import utils
-
-        base_dict = {
-            'foo': 'bar',
-            'jab': 'bar'
-        }
-        with self.assertRaises(ValueError):
-            _ = utils.build_file_registry([
-                (base_dict, 'newpath')], '')
-
-    def test_build_file_registry_dupkeys(self):
-        """Utils: test build_file_registry ValueError on duplicate keys."""
-        from natcap.invest import utils
-
-        base_dict1 = {
-            'foo': 'bar',
-        }
-        base_dict2 = {
-            'foo': 'bar2',
-        }
-        with self.assertRaises(ValueError):
-            _ = utils.build_file_registry([
-                (base_dict1, ''), (base_dict2, '')], '')
-
-    def test_build_file_registry_invalid_value(self):
-        """Utils: test build_file_registry with invalid path type."""
-        from natcap.invest import utils
-
-        base_dict = {
-            'foo': 'bar',
-            'baz': None
-        }
-        with self.assertRaises(ValueError):
-            _ = utils.build_file_registry([(base_dict, 'somepath')], '')
-
-    @staticmethod
-    def _norm_dict(path_dict):
-        """Take a dictionary of paths and normalize the paths."""
-        result_dict = {}
-        for key, path in path_dict.items():
-            if isinstance(path, str):
-                result_dict[key] = os.path.normpath(path)
-            elif isinstance(path, list):
-                result_dict[key] = [
-                    os.path.normpath(list_path) for list_path in path]
-            else:
-                raise ValueError("Unexpected path value: %s", path)
-        return result_dict
-
-
-class SandboxTempdirTests(unittest.TestCase):
-    """Test Sandbox Tempdir."""
-
-    def setUp(self):
-        """Setup workspace."""
-        self.workspace_dir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        """Delete workspace."""
-        shutil.rmtree(self.workspace_dir)
-
-    def test_sandbox_manager(self):
-        """Test sandbox manager."""
-        from natcap.invest import utils
-
-        with utils.sandbox_tempdir(suffix='foo',
-                                   prefix='bar',
-                                   dir=self.workspace_dir) as new_dir:
-            self.assertTrue(new_dir.startswith(self.workspace_dir))
-            basename = os.path.basename(new_dir)
-            self.assertTrue(basename.startswith('bar'))
-            self.assertTrue(basename.endswith('foo'))
-
-            # trigger the exception handling for coverage.
-            shutil.rmtree(new_dir)
 
 
 class TimeFormattingTests(unittest.TestCase):
@@ -346,53 +165,6 @@ class ThreadFilterTests(unittest.TestCase):
 
         # The record comes from the same thread.
         self.assertEqual(filterer.filter(record), True)
-
-
-class MakeDirectoryTests(unittest.TestCase):
-    """Tests for natcap.invest.utils.make_directories."""
-
-    def setUp(self):
-        """Make temporary directory for workspace."""
-        self.workspace_dir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        """Delete workspace."""
-        shutil.rmtree(self.workspace_dir)
-
-    def test_make_directories(self):
-        """utils: test that make directories works as expected."""
-        from natcap.invest import utils
-        directory_list = [
-            os.path.join(self.workspace_dir, x) for x in [
-                'apple', 'apple/pie', 'foo/bar/baz']]
-        utils.make_directories(directory_list)
-        for path in directory_list:
-            self.assertTrue(os.path.isdir(path))
-
-    def test_make_directories_on_existing(self):
-        """utils: test that no error if directory already exists."""
-        from natcap.invest import utils
-        path = os.path.join(self.workspace_dir, 'foo', 'bar', 'baz')
-        os.makedirs(path)
-        utils.make_directories([path])
-        self.assertTrue(os.path.isdir(path))
-
-    def test_make_directories_on_file(self):
-        """utils: test that value error raised if file exists on directory."""
-        from natcap.invest import utils
-        dir_path = os.path.join(self.workspace_dir, 'foo', 'bar')
-        os.makedirs(dir_path)
-        file_path = os.path.join(dir_path, 'baz')
-        file = open(file_path, 'w')
-        file.close()
-        with self.assertRaises(OSError):
-            utils.make_directories([file_path])
-
-    def test_make_directories_wrong_type(self):
-        """utils: test that ValueError raised if value not a list."""
-        from natcap.invest import utils
-        with self.assertRaises(ValueError):
-            utils.make_directories(self.workspace_dir)
 
 
 class GDALWarningsLoggingTests(unittest.TestCase):
@@ -1261,3 +1033,23 @@ class _GDALPathTests(unittest.TestCase):
         self.assertEqual(gdal_path.scheme, 'zip+https')
         self.assertEqual(gdal_path.to_normalized_path(),
                          '/vsizip/vsicurl/https://example.com/foo.zip/foo/bar.tif')
+
+
+class FormatArgsTest(unittest.TestCase):
+    """Args format tests."""
+    def test_print_args(self):
+        """Datastacks: verify that we format args correctly."""
+        from natcap.invest import __version__
+        from natcap.invest.utils import format_args_dict
+
+        args_dict = {
+            'some_arg': [1, 2, 3, 4],
+            'foo': 'bar',
+        }
+
+        args_string = format_args_dict(args_dict, 'test_model')
+        expected_string = str(
+            'Arguments for InVEST test_model %s:\n'
+            'foo      bar\n'
+            'some_arg [1, 2, 3, 4]\n') % __version__
+        self.assertEqual(args_string, expected_string)

@@ -7,5 +7,6 @@ MODEL_SPEC = SimpleNamespace(inputs=[
     model_id='ui_parameters_model',
     model_title='',
     userguide='',
+    module_name=__name__,
     input_field_order=[['foo', 'bar']]
 )

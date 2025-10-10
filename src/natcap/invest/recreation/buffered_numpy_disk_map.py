@@ -11,7 +11,6 @@ import sqlite3
 import numpy
 
 from ._utils import _numpy_dumps, _numpy_loads
-from .. import utils
 
 
 LOGGER = logging.getLogger(
@@ -72,7 +71,7 @@ class BufferedNumpyDiskMap(object):
         self.n_workers = n_workers
         self.manager_filename = manager_filename
         self.manager_directory = os.path.dirname(manager_filename)
-        utils.make_directories([self.manager_directory])
+        os.makedirs(self.manager_directory, exist_ok=True)
         db_connection = sqlite3.connect(
             manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()

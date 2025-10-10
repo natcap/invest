@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import tempfile
@@ -5,6 +6,8 @@ import unittest
 
 from natcap.invest.file_registry import FileRegistry
 from natcap.invest import spec
+import numpy
+
 
 class FileRegistryTests(unittest.TestCase):
 
@@ -112,8 +115,12 @@ class FileRegistryTests(unittest.TestCase):
                 '2': os.path.join(self.workspace_dir, 'foo_2_result.txt')
             },
             '[X]_[Y]_[Z]': {
-                ('foo', 'bar', 'baz'): os.path.join(
-                    self.workspace_dir, 'baz-bar-foo.txt')
+                'foo': {
+                    'bar': {
+                        'baz': os.path.join(
+                            self.workspace_dir, 'baz-bar-foo.txt')
+                    }
+                }
             }
         })
 
@@ -136,5 +143,28 @@ class FileRegistryTests(unittest.TestCase):
         with self.assertRaises(KeyError):
             _ = f_reg['foo_[VAR]', 'x', 'y']
 
-
-
+    def test_file_registry_jsonifiable(self):
+        """Test that file registry dict can be converted to JSON."""
+        f_reg = FileRegistry([
+            spec.FileOutput(
+                id='foo',
+                path='foo_result.txt'
+            ),
+            spec.FileOutput(
+                id='foo_[A]_[B]',
+                path='foo_[A]_[B]_result.txt'
+            )
+        ], self.workspace_dir)
+        # Keys should be cast to strings
+        _ = f_reg['foo']
+        _ = f_reg['foo_[A]_[B]', 'bar', numpy.float32(1.5)]
+        self.assertEqual(
+            json.dumps(f_reg.registry),
+            json.dumps({
+                'foo': os.path.join(self.workspace_dir, 'foo_result.txt'),
+                'foo_[A]_[B]': {
+                    'bar': {
+                        '1.5': os.path.join(self.workspace_dir, 'foo_bar_1.5_result.txt')
+                    }
+                }
+            }))

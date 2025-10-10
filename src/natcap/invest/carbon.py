@@ -15,7 +15,6 @@ from . import utils
 from . import spec
 from .unit_registry import u
 from . import gettext
-from .file_registry import FileRegistry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -26,6 +25,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["lulc_bas_path", "carbon_pools_path"],
@@ -376,35 +376,16 @@ def execute(args):
     Returns:
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate_outputs')
-    output_dir = args['workspace_dir']
-    utils.make_directories([intermediate_output_dir, output_dir])
+    args, file_registry, graph = MODEL_SPEC.setup(args)
 
-    LOGGER.info('Building file registry')
-    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
-
-    if args['do_valuation'] and args['lulc_bas_year'] >= args['lulc_alt_year']:
+    if (args['do_valuation'] and
+            args['lulc_bas_year'] >= args['lulc_alt_year']):
         raise ValueError(
             "Invalid input for lulc_bas_year or lulc_alt_year. The Alternate "
-            f"LULC Year ({args['lulc_alt_year']}) must be greater than the "
-            f"Baseline LULC Year ({args['lulc_bas_year']}). Ensure that the "
-            "Baseline LULC Year is earlier than the Alternate LULC Year."
+            f"LULC Year ({args['lulc_alt_year']}) must be greater "
+            f"than the Baseline LULC Year ({args['lulc_bas_year']}). "
+            "Ensure that the Baseline LULC Year is earlier than the Alternate LULC Year."
         )
-
-    carbon_pool_df = MODEL_SPEC.get_input(
-        'carbon_pools_path').get_validated_dataframe(args['carbon_pools_path'])
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     cell_size_set = set()
     raster_size_set = set()
@@ -414,7 +395,7 @@ def execute(args):
 
     for scenario_type in ['bas', 'alt']:
         lulc_key = "lulc_%s_path" % (scenario_type)
-        if lulc_key in args and args[lulc_key]:
+        if args[lulc_key]:
             raster_info = pygeoprocessing.get_raster_info(args[lulc_key])
             cell_size_set.add(raster_info['pixel_size'])
             raster_size_set.add(raster_info['raster_size'])
@@ -435,6 +416,9 @@ def execute(args):
     LOGGER.info('Map all carbon pools to carbon storage rasters.')
     carbon_map_task_lookup = {}
     sum_rasters_task_lookup = {}
+    carbon_pool_df = MODEL_SPEC.get_input(
+        'carbon_pools_path').get_validated_dataframe(
+        args['carbon_pools_path'])
     for scenario_type in valid_scenarios:
         carbon_map_task_lookup[scenario_type] = []
         storage_path_list = []
@@ -496,12 +480,14 @@ def execute(args):
 
     # calculate net present value
     calculate_npv_tasks = []
-    if 'do_valuation' in args and args['do_valuation']:
+    if args['do_valuation']:
         LOGGER.info('Constructing valuation formula.')
         valuation_constant = _calculate_valuation_constant(
-            int(args['lulc_bas_year']), int(args['lulc_alt_year']),
-            float(args['discount_rate']), float(args['rate_change']),
-            float(args['price_per_metric_ton_of_c']))
+            args['lulc_bas_year'],
+            args['lulc_alt_year'],
+            args['discount_rate'],
+            args['rate_change'],
+            args['price_per_metric_ton_of_c'])
 
         if 'alt' in valid_scenarios:
             output_key = 'npv_alt'

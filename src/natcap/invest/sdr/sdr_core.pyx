@@ -75,7 +75,7 @@ def calculate_sediment_deposition(
         flow_direction_path, f_path,
         gdal.GDT_Float32, [target_nodata])
 
-    if algorithm == 'D8':
+    if algorithm.lower() == 'd8':
         run_sediment_deposition[D8](
             flow_direction_path.encode('utf-8'), e_prime_path.encode('utf-8'),
             f_path.encode('utf-8'), sdr_path.encode('utf-8'),

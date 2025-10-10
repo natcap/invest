@@ -80,6 +80,21 @@ General
   opened. Additionally, new datastacks created with InVEST will no longer include
   an ``invest_version``, since tying a datastack to a specific version of InVEST is
   unnecessary. (`#2092 <https://github.com/natcap/invest/issues/2092>`_)
+* Added a ``ModelSpec.setup`` method which performs boilerplate setup and
+  preprocessing before a model run. This method is now used in every model's
+  ``execute`` function. (`#1451 <https://github.com/natcap/invest/issues/1451>`_)
+* Added a ``preprocess`` method to each ``spec.Input`` class, which preprocesses
+  values of that type in a standard way.
+  (`#1451 <https://github.com/natcap/invest/issues/1451>`_)
+* Added ``ModelSpec.execute`` that calls the model's ``execute`` function and
+  then optionally performs the setup and post-processing that is done when a
+  model is executed via the CLI. This is to make that functionality (such as
+  setting up a log file in the workspace, and generating metadata for results)
+  available to python API users without going through the CLI.
+  (`#1451 <https://github.com/natcap/invest/issues/1451>`_)
+* Added a page to the API documentation describing how to run InVEST through
+  the supplied docker container, and also through Apptainer/Singularity.
+  (`#2171 <https://github.com/natcap/invest/issues/2171>`_)
 
 Plugins
 =======
@@ -89,6 +104,9 @@ Plugins
 * If plugin installation fails, the Workbench now cleans up any
   leftover, unusable micromamba environments.
   (`#2104 <https://github.com/natcap/invest/issues/2104>`_)
+* In the Workbench, Python log messages emitted by a plugin model will receive
+  the same styling as core invest models.
+  (`#2130 <https://github.com/natcap/invest/issues/2130>`_)
 
 Annual Water Yield
 ==================
@@ -113,6 +131,18 @@ Coastal Vulnerability
   percent; this has been corrected to show that it is a numeric input with
   units of meters/second.
 
+Crop Production
+===============
+* The inputs to both Crop Production models have changed in order to support
+  remote datasets. Instead of a Model Data Directory, the models now expect
+  multiple tables, each of which maps each crop name to its corresponding
+  climate bin raster, observed yield raster, nutrient table, percentile yield
+  table, or regression yield table.
+  (`#2095 <https://github.com/natcap/invest/issues/2095>`_)
+* The ``crop`` column headers in both models' result tables have been renamed
+  to ``crop_name`` for consistency with model inputs.
+  (`#2095 <https://github.com/natcap/invest/issues/2095>`_)
+
 Habitat Quality
 ===============
 * The aligned LULC outputs are no longer named after the original LULC files.
@@ -120,16 +150,43 @@ Habitat Quality
   ``lulc_bas_aligned``. This is consistent with other models and simplifies the
   model spec and documentation. (`#2127 <https://github.com/natcap/invest/issues/2127>`_)
 
+NDR
+===
+* Clarified about text documentation for ``load_type_n|p``.
+  (`#2116 <https://github.com/natcap/invest/issues/2116>`_).
+
 Seasonal Water Yield
 ====================
 * Replaced the model inputs ``et0_dir`` and ``precip_dir`` with CSV inputs.
   These CSVs must have the columns ``month`` and ``path``, mapping month indexes
   (1-12) to raster paths.
   (`#2096 <https://github.com/natcap/invest/issues/2096>`_)
+* Documentation has been updated to reflect that curve number values must be
+  greater than 0 and less than or equal to 100.
+  (`#2164 <https://github.com/natcap/invest/issues/2164>`_)
+
+Urban Flood Risk Mitigation
+===========================
+* Documentation has been updated to reflect that curve number values must be
+  greater than 0 and less than or equal to 100.
+  (`#2164 <https://github.com/natcap/invest/issues/2164>`_)
+* Fixed a bug where ``s_max`` would be set to 0 if the curve number was 0,
+  causing high runoff values, when a low curve number should indicate lower
+  runoff potential. Now setting ``s_max`` to a very high value (100000) when
+  curve number is 0 to reflect infinite potential retention so that runoff
+  will be 0.
+  (`#2165 <https://github.com/natcap/invest/issues/2165>`_)
 
 Visitation: Recreation and Tourism
 ==================================
 * The intermediate predictor JSON outputs now include the file suffix, if provided.
+
+Wave Energy
+===========
+* The model now expects the base data to be provided as a CSV table that points
+  to the vector and binary filepaths, rather than a directory. The sample data
+  has been updated to include this table.
+  (`#2166 <https://github.com/natcap/invest/issues/2166>`_)
 
 Wind Energy
 ===========

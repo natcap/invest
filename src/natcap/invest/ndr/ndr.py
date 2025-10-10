@@ -32,6 +32,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["dem_path", "lulc_path", "runoff_proxy_path",
@@ -98,20 +99,19 @@ MODEL_SPEC = spec.ModelSpec(
                     about=(
                         "Whether the nutrient load in column load_p should be treated as"
                         " nutrient application rate or measured contaminant runoff."
-                        " 'application-rate' | 'measured-runoff'"
                     ),
                     required="calc_p",
                     options=[
                         spec.Option(
                             key="application-rate",
                             about=(
-                                "Treat the load values as nutrient application rates"
+                                "Treat the load value as nutrient application rates"
                                 " (e.g. fertilizer, livestock waste, ...).The model will"
                                 " adjust the load using the application rate and"
                                 " retention efficiency: load_p * (1 - eff_p).")),
                         spec.Option(
                             key="measured-runoff",
-                            about="Treat the load values as measured contaminant runoff.")
+                            about="Treat the load value as measured contaminant runoff.")
                     ]
                 ),
                 spec.OptionStringInput(
@@ -119,7 +119,6 @@ MODEL_SPEC = spec.ModelSpec(
                     about=(
                         "Whether the nutrient load in column load_n should be treated as"
                         " nutrient application rate or measured contaminant runoff."
-                        " 'application-rate' | 'measured-runoff'"
                     ),
                     required="calc_n",
                     options=[
@@ -750,23 +749,7 @@ def execute(args):
         File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    # Load all the tables for preprocessing
-    output_dir = os.path.join(args['workspace_dir'])
-    intermediate_output_dir = os.path.join(
-        args['workspace_dir'], INTERMEDIATE_DIR_NAME)
-    utils.make_directories([output_dir, intermediate_output_dir])
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    f_reg = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    task_graph = taskgraph.TaskGraph(
-        f_reg['taskgraph_cache'], n_workers, reporting_interval=5.0)
+    args, f_reg, task_graph = MODEL_SPEC.setup(args)
 
     # Build up a list of nutrients to process based on what's checked on
     nutrients_to_process = []
@@ -870,7 +853,7 @@ def execute(args):
         func=pygeoprocessing.routing.fill_pits,
         args=(
             (f_reg['masked_dem'], 1), f_reg['filled_dem']),
-        kwargs={'working_dir': intermediate_output_dir},
+        kwargs={'working_dir': args['workspace_dir']},
         dependent_task_list=[align_raster_task, mask_dem_task],
         target_path_list=[f_reg['filled_dem']],
         task_name='fill pits')
@@ -892,12 +875,12 @@ def execute(args):
         dependent_task_list=[calculate_slope_task],
         task_name='threshold slope')
 
-    if args['flow_dir_algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'mfd':
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_mfd,
             args=(
                 (f_reg['filled_dem'], 1), f_reg['flow_direction']),
-            kwargs={'working_dir': intermediate_output_dir},
+            kwargs={'working_dir': args['workspace_dir']},
             dependent_task_list=[fill_pits_task],
             target_path_list=[f_reg['flow_direction']],
             task_name='flow dir')
@@ -934,7 +917,7 @@ def execute(args):
             func=pygeoprocessing.routing.flow_dir_d8,
             args=(
                 (f_reg['filled_dem'], 1), f_reg['flow_direction']),
-            kwargs={'working_dir': intermediate_output_dir},
+            kwargs={'working_dir': args['workspace_dir']},
             dependent_task_list=[fill_pits_task],
             target_path_list=[f_reg['flow_direction']],
             task_name='flow dir')
@@ -1007,7 +990,7 @@ def execute(args):
         dependent_task_list=[threshold_slope_task],
         task_name='s inv')
 
-    if args['flow_dir_algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'mfd':
         d_dn_task = task_graph.add_task(
             func=pygeoprocessing.routing.distance_to_channel_mfd,
             args=(

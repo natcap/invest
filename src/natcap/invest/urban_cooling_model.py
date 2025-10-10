@@ -24,7 +24,6 @@ from . import spec
 from . import utils
 from . import validation
 from .unit_registry import u
-from .file_registry import FileRegistry
 
 LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
@@ -37,6 +36,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("ucm",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["lulc_raster_path", "ref_eto_raster_path",
@@ -620,58 +620,34 @@ def execute(args):
 
     """
     LOGGER.info('Starting Urban Cooling Model')
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    output_dir = args['workspace_dir']
-    intermediate_dir = os.path.join(output_dir, 'intermediate')
-    utils.make_directories([output_dir, intermediate_dir])
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
+
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
         args['biophysical_table_path'])
 
-    file_registry = FileRegistry(MODEL_SPEC.outputs, output_dir, file_suffix)
-
-    # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide
     # weights.
-    # TypeError when float(None)
-    # ValueError when float('')
-    # KeyError when the parameter is not present in the args dict.
-    try:
-        cc_weight_shade_raw = float(args['cc_weight_shade'])
-    except (ValueError, TypeError, KeyError):
+    if args['cc_weight_shade'] is None:
         cc_weight_shade_raw = 0.6
+    else:
+        cc_weight_shade_raw = args['cc_weight_shade']
 
-    try:
-        cc_weight_albedo_raw = float(args['cc_weight_albedo'])
-    except (ValueError, TypeError, KeyError):
+    if args['cc_weight_albedo'] is None:
         cc_weight_albedo_raw = 0.2
+    else:
+        cc_weight_albedo_raw = args['cc_weight_albedo']
 
-    try:
-        cc_weight_eti_raw = float(args['cc_weight_eti'])
-    except (ValueError, TypeError, KeyError):
+    if args['cc_weight_eti'] is None:
         cc_weight_eti_raw = 0.2
+    else:
+        cc_weight_eti_raw = args['cc_weight_eti']
 
-    t_ref_raw = float(args['t_ref'])
-    uhi_max_raw = float(args['uhi_max'])
     cc_weight_sum = sum(
         (cc_weight_shade_raw, cc_weight_albedo_raw, cc_weight_eti_raw))
     cc_weight_shade = cc_weight_shade_raw / cc_weight_sum
     cc_weight_albedo = cc_weight_albedo_raw / cc_weight_sum
     cc_weight_eti = cc_weight_eti_raw / cc_weight_sum
-
-    # Cast to a float upfront in case of casting errors.
-    t_air_average_radius_raw = float(args['t_air_average_radius'])
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args.
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-
-    task_graph = taskgraph.TaskGraph(
-        file_registry['taskgraph_cache'], n_workers)
 
     # align all the input rasters.
     lulc_raster_info = pygeoprocessing.get_raster_info(
@@ -790,7 +766,7 @@ def execute(args):
         task_name='Compute green area cooling effect')
 
     green_area_decay_kernel_distance = int(numpy.round(
-        float(args['green_area_cooling_distance']) / cell_size))
+        args['green_area_cooling_distance'] / cell_size))
     cc_park_task = task_graph.add_task(
         func=convolve_2d_by_exponential,
         args=(
@@ -817,7 +793,7 @@ def execute(args):
             (file_registry['area_kernel'], 1),
             file_registry['green_area_sum']),
         kwargs={
-            'working_dir': intermediate_dir,
+            'working_dir': args['workspace_dir'],
             'ignore_nodata_and_edges': True},
         target_path_list=[file_registry['green_area_sum']],
         dependent_task_list=[
@@ -843,9 +819,9 @@ def execute(args):
 
     t_air_nomix_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(t_ref_raw, 'raw'),
+        args=([(args['t_ref'], 'raw'),
                (file_registry['hm'], 1),
-               (uhi_max_raw, 'raw')],
+               (args['uhi_max'], 'raw')],
               calc_t_air_nomix_op, file_registry['t_air_nomix'], gdal.GDT_Float32,
               TARGET_NODATA),
         target_path_list=[file_registry['t_air_nomix']],
@@ -853,7 +829,7 @@ def execute(args):
         task_name='calculate T air nomix')
 
     decay_kernel_distance = int(numpy.round(
-        t_air_average_radius_raw / cell_size))
+        args['t_air_average_radius'] / cell_size))
     t_air_task = task_graph.add_task(
         func=convolve_2d_by_exponential,
         args=(
@@ -896,12 +872,12 @@ def execute(args):
     light_loss_stats_pickle_path = None
     heavy_loss_stats_pickle_path = None
     energy_consumption_vector_path = None
-    if bool(args['do_productivity_valuation']):
+    if args['do_productivity_valuation']:
         LOGGER.info('Starting work productivity valuation')
         wbgt_task = task_graph.add_task(
             func=calculate_wbgt,
             args=(
-                float(args['avg_rel_humidity']), file_registry['t_air'],
+                args['avg_rel_humidity'], file_registry['t_air'],
                 file_registry['wbgt']),
             target_path_list=[file_registry['wbgt']],
             dependent_task_list=[t_air_task],
@@ -981,8 +957,8 @@ def execute(args):
         _ = task_graph.add_task(
             func=calculate_energy_savings,
             args=(
-                file_registry['t_air_stats_pickle'], t_ref_raw,
-                uhi_max_raw, args['energy_consumption_table_path'],
+                file_registry['t_air_stats_pickle'], args['t_ref'],
+                args['uhi_max'], args['energy_consumption_table_path'],
                 file_registry['reprojected_buildings'],
                 file_registry['buildings_with_stats']),
             target_path_list=[file_registry['buildings_with_stats']],
@@ -998,7 +974,7 @@ def execute(args):
         func=calculate_uhi_result_vector,
         args=(
             file_registry['reprojected_aoi'],
-            t_ref_raw,
+            args['t_ref'],
             file_registry['t_air_aoi_stats'],
             file_registry['cc_ref_aoi_stats'],
             wbgt_stats_pickle_path,
