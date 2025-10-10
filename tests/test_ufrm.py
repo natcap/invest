@@ -315,6 +315,24 @@ class UFRMTests(unittest.TestCase):
         # area.
         self.assertEqual(len(aoi_damage_dict), 1)
         numpy.testing.assert_allclose(aoi_damage_dict[0], 5645.787282992962)
+    
+    def test_ufrm_smax(self):
+        """UFRM: test _s_max operation."""
+        from natcap.invest import urban_flood_risk_mitigation
+        
+        cn_nodata = -1
+        result_nodata = -9999
+        # These varying percent slope values should cover all of the slope
+        # factor and slope table cases.
+        cn_array = numpy.array(
+            [[100, 0, 65, 90, 30, cn_nodata]], dtype=numpy.float32)
+
+        smax_result = urban_flood_risk_mitigation._s_max_op(cn_array, cn_nodata, result_nodata)
+
+        smax_expected = numpy.array(
+            [[0.0, 100000, 136.769, 28.222, 592.667, result_nodata]],
+            dtype=numpy.float32)
+        numpy.testing.assert_allclose(smax_result, smax_expected, rtol=1e-5)
 
     def test_validate(self):
         """UFRM: test validate function."""
