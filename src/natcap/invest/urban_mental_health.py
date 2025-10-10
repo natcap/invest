@@ -265,7 +265,7 @@ MODEL_SPEC = spec.ModelSpec(
             # provided so attribute table is needed for water masking
             required="(scenario=='lulc' and not ndvi_base) or "
                      "(scenario!='lulc' and lulc_base)",
-            allowed="scenario=='lulc or lulc_base"
+            allowed="scenario=='lulc' or lulc_base"
         )
         ],
     outputs=[
