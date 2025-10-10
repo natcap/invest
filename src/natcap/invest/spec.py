@@ -350,6 +350,7 @@ class FileInput(Input):
                 return p
             p = str(p).strip()
             # don't expand remote paths
+            # this method is originally for GDAL paths but it works on all file types
             if utils._GDALPath.from_uri(p).is_local:
                 if not utils._GDALPath.from_uri(base_path).is_local:
                     raise ValueError('Remote CSVs cannot reference local file paths')
@@ -390,6 +391,34 @@ class SpatialFileInput(FileInput):
         if value:
             return utils._GDALPath.from_uri(value).to_normalized_path()
         return None  # if None or empty string, return None
+
+    @staticmethod
+    def format_column(col: pandas.Series, base_path: str) -> pandas.Series:
+        """Format a dataframe column that contains spatial file paths.
+
+        File path values are cast to `pandas.StringDtype`. Relative paths are
+        expanded to absolute paths relative to `base_path`. NA values remain NA.
+
+        Args:
+            col: Column of a pandas dataframe to format
+            base_path: Base path of the source CSV. Relative file path values
+                will be expanded relative to this base path.
+
+        Returns:
+            Transformed dataframe column
+        """
+        def format_path(p):
+            if pandas.isna(p):
+                return p
+            p = str(p).strip()
+            # don't expand remote paths
+            # this method is originally for GDAL paths but it works on all file types
+            if utils._GDALPath.from_uri(p).is_local:
+                if not utils._GDALPath.from_uri(base_path).is_local:
+                    raise ValueError('Remote CSVs cannot reference local file paths')
+            return utils._GDALPath.from_uri(value).to_normalized_path()
+
+        return col.apply(format_path).astype(pandas.StringDtype())
 
 
 class RasterBand(BaseModel):
@@ -876,25 +905,15 @@ class CSVInput(FileInput):
                         f'Value(s) in the "{col}" column could not be interpreted '
                         f'as {type(col_spec).__name__}s. Original error: {err}')
 
-                if (isinstance(col_spec, SingleBandRasterInput) or
-                    isinstance(col_spec, VectorInput) or
-                    isinstance(col_spec, RasterOrVectorInput)):
-                    # recursively validate the files within the column
-                    def check_value(value):
-                        if pandas.isna(value):
-                            return
-                        err_msg = col_spec.validate(value)
-                        if err_msg:
-                            raise ValueError(
-                                f'Error in {axis} "{col}", value "{value}": {err_msg}')
-
-                    def normalize_path(value):
-                        if pandas.isna(value):
-                            return value
-                        return utils._GDALPath.from_uri(value).to_normalized_path()
-
-                    df[col].apply(check_value)
-                    df[col] = df[col].apply(normalize_path)
+                # recursively validate the values within the column
+                def check_value(value):
+                    if pandas.isna(value):
+                        return
+                    err_msg = col_spec.validate(value)
+                    if err_msg:
+                        raise ValueError(
+                            f'Error in {axis} "{col}", value "{value}": {err_msg}')
+                df[col].apply(check_value)
 
         if any(df.columns.duplicated()):
             duplicated_columns = df.columns[df.columns.duplicated]
