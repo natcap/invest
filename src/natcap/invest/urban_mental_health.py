@@ -265,7 +265,7 @@ MODEL_SPEC = spec.ModelSpec(
             # provided so attribute table is needed for water masking
             required="(scenario=='lulc' and not ndvi_base) or "
                      "(scenario!='lulc' and lulc_base)",
-            allowed="scenario=='lulc or 'lulc_base'"
+            allowed="scenario=='lulc or lulc_base"
         )
         ],
     outputs=[
@@ -295,13 +295,13 @@ MODEL_SPEC = spec.ModelSpec(
                     "zip code) within the area of interest."
                 ),
                 fields=[
-                    spec.IntegerOutput(
+                    spec.NumberOutput(
                         id="sum_cases",
                         about=gettext(
                             "Aggregated total preventable cases by polygon"),
                         units=u.count
                     ),
-                    spec.IntegerOutput(
+                    spec.NumberOutput(
                         id="sum_cost",
                         about=gettext(
                             "Total preventable costs by subregion/polygon in "
@@ -343,7 +343,7 @@ MODEL_SPEC = spec.ModelSpec(
                         id="total_cost",
                         about=gettext(
                             "Total cost for the entire AOI"),
-                        units=u.count,
+                        units=u.currency,
                         created_if="health_cost_rate"
                     )
                 ]
@@ -374,9 +374,10 @@ MODEL_SPEC = spec.ModelSpec(
                 id="kernel",
                 path="intermediate/kernel.tif",
                 about=gettext(
-                    "Normalized dichotomous kernel raster with radius "
-                    "search_radius"),
-                data_type=float,
+                    "Binary raster representing the dichotomous kernel that"
+                    "is convolved with the NDVI rasters to calculate the "
+                    "average NDVI within search_radius of each pixel."),
+                data_type=int,
                 units=None
             ),
             spec.SingleBandRasterOutput(
@@ -396,17 +397,29 @@ MODEL_SPEC = spec.ModelSpec(
                 created_if="lulc_alt"
             ),
             spec.SingleBandRasterOutput(
-                id="lulc_mask",
-                path="intermediate/lulc_mask.tif",
+                id="lulc_mask_base",
+                path="intermediate/lulc_mask_base.tif",
                 about=gettext(
-                    "Binary mask based on LULC raster where 1 indicates "
-                    "pixels to be masked out based on `exclude` field in the "
-                    "LULC attribute table. This is used to mask the input "
-                    "rasters, e.g., baseline and alternate NDVI if "
-                    "scenario is `ndvi`"),
+                    "Binary mask based on baseline LULC raster where 1 "
+                    "indicates pixels to be masked out based on `exclude` "
+                    "field in the LULC attribute table. This is used to mask "
+                    "the baseline NDVI raster (and the alternate NDVI "
+                    "raster if lulc_alt not provided)."),
                 data_type=int,
                 units=None,
                 created_if="lulc_base and lulc_attr_csv"
+            ),
+            spec.SingleBandRasterOutput(
+                id="lulc_mask_alt",
+                path="intermediate/lulc_mask_alt.tif",
+                about=gettext(
+                    "Binary mask based on alternate LULC raster where 1 "
+                    "indicates pixels to be masked out based on `exclude` "
+                    "field in the LULC attribute table. This is used to mask "
+                    "the alternate NDVI rasters."),
+                data_type=int,
+                units=None,
+                created_if="lulc_alt and lulc_attr_csv"
             ),
             spec.SingleBandRasterOutput(
                 id="ndvi_alt_aligned",
@@ -519,10 +532,10 @@ def execute(args):
             national, regional, or local levels depending on data availability.
         args['scenario'] (str): (required) which of the three land use
             scenarios to model.
-        args['tc_raster'] (str): required if args['scenario'] == 'tc_ndvi',
+        args['tc_raster'] (str): required if args['scenario'] == 'tcc_ndvi',
             a path to a raster providing tree canopy cover under current or
             baseline conditions.
-        args['tc_target'] (float): required if args['scenario'] == 'tc_ndvi',
+        args['tc_target'] (float): required if args['scenario'] == 'tcc_ndvi',
             user-defined target for tree canopy cover within area of interest.
             This value represents a desired scenario and will be used to
             compare against the baseline tree cover to estimate potential
@@ -557,7 +570,7 @@ def execute(args):
 
     LOGGER.info("Start preprocessing")
     if args['scenario'] == 'ndvi':
-        # TODO rearrage whats in if/else block when implementing scenarios 1-2
+        # TODO rearrange whats in if/else block when implementing scenarios 1-2
         LOGGER.info("Using scenario option 3: NDVI")
         base_ndvi_raster_info = pygeoprocessing.get_raster_info(
             args['ndvi_base'])
@@ -628,20 +641,20 @@ def execute(args):
             LOGGER.info("Masking NDVI using LULC")
             mask_base_inputs += [file_registry['lulc_base_aligned'],
                                  args['lulc_attr_csv'],
-                                 file_registry['lulc_mask']]
-            mask_base_outputs.append(file_registry['lulc_mask'])
+                                 file_registry['lulc_base_mask']]
+            mask_base_outputs.append(file_registry['lulc_base_mask'])
 
             # Use lulc_alt to mask if provided. Otherwise, use lulc_base
             if args['lulc_alt']:
                 mask_alt_inputs += [file_registry['lulc_alt_aligned'],
                                     args['lulc_attr_csv'],
-                                    file_registry['lulc_mask']]
+                                    file_registry['lulc_alt_mask']]
             else:
                 mask_alt_inputs += [file_registry['lulc_base_aligned'],
                                     args['lulc_attr_csv'],
-                                    file_registry['lulc_mask']]
+                                    file_registry['lulc_alt_mask']]
 
-            mask_alt_outputs.append(file_registry['lulc_mask'])
+            mask_alt_outputs.append(file_registry['lulc_alt_mask'])
         else:
             LOGGER.info("Masking NDVI using threshold NDVI<0")
 
@@ -673,7 +686,7 @@ def execute(args):
             kwargs={
                 'target_kernel_path': file_registry['kernel'],
                 'max_distance': pixel_radius,
-                'normalize': True}, #TODO do i need to normalize both this and in convolve2d op?
+                'normalize': False},
             target_path_list=[file_registry['kernel']],
             task_name='create kernel raster')
 
@@ -761,7 +774,8 @@ def execute(args):
 
         target_bounding_box = pygeoprocessing.get_raster_info(
             file_registry['population_aligned'])["bounding_box"]
-        if target_bounding_box != delta_ndvi_bbox:
+        if not numpy.allclose(numpy.array(target_bounding_box),
+                              numpy.array(delta_ndvi_bbox), rtol=0, atol=1e-6):
             raise ValueError(
                 "The bounding boxes of the preprocessed population raster and "
                 "delta_ndvi raster are not equal. This occurs when the "
@@ -1107,7 +1121,7 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
     PF: preventable fraction
     BC: baseline cases
     RR: relative risk or risk ratio
-    NE: nature exposure, as approimated by NDVI
+    NE: nature exposure, as approximated by NDVI
     RR0.1NE: RR per 0.1 NE increase.
         By default, the model uses the relative risk associated with a
         0.1 increase in NDVI-based nature exposure. This value must be
