@@ -571,8 +571,11 @@ class VectorInput(SpatialFileInput):
     @model_validator(mode='after')
     def check_field_types(self):
         for field in (self.fields or []):
-            if type(field) not in {IntegerInput, NumberInput, OptionStringInput,
-                                   PercentInput, RatioInput, StringInput}:
+            for input_type in {IntegerInput, NumberInput, OptionStringInput,
+                               PercentInput, RatioInput, StringInput}:
+                if isinstance(field, input_type):
+                    break
+            else:
                 raise ValueError(f'Field {field} is not an allowed type')
         return self
 
@@ -787,10 +790,16 @@ class CSVInput(FileInput):
             PercentInput, RasterOrVectorInput, RatioInput, FileInput,
             SingleBandRasterInput, StringInput, VectorInput, CSVInput}
         for row in (self.rows or []):
-            if type(row) not in allowed_types:
+            for input_type in allowed_types:
+                if isinstance(row, input_type):
+                    break
+            else:
                 raise ValueError(f'Row {row} is not an allowed type')
         for col in (self.columns or []):
-            if type(col) not in allowed_types:
+            for input_type in allowed_types:
+                if isinstance(col, input_type):
+                    break
+            else:
                 raise ValueError(f'Column {col} is not an allowed type')
         return self
 
@@ -985,7 +994,10 @@ class DirectoryInput(Input):
             CSVInput, DirectoryInput, FileInput, RasterOrVectorInput,
             SingleBandRasterInput, VectorInput}
         for content in (self.contents or []):
-            if type(content) not in allowed_types:
+            for input_type in allowed_types:
+                if isinstance(field, input_type):
+                    break
+            else:
                 raise ValueError(
                     f'Directory contents {content} is not an allowed type')
         return self
@@ -1557,8 +1569,11 @@ class VectorOutput(FileOutput):
     @model_validator(mode='after')
     def check_field_types(self):
         for field in (self.fields or []):
-            if type(field) not in {IntegerOutput, NumberOutput, OptionStringOutput,
-                                   PercentOutput, RatioOutput, StringOutput}:
+            for output_type in {IntegerOutput, NumberOutput, OptionStringOutput,
+                                PercentOutput, RatioOutput, StringOutput}:
+                if isinstance(field, output_type):
+                    break
+            else:
                 raise ValueError(f'Field {field} is not an allowed type')
         return self
 
@@ -1597,10 +1612,16 @@ class CSVOutput(FileOutput):
             FileOutput, RatioOutput, SingleBandRasterOutput, StringOutput,
             VectorOutput}
         for row in (self.rows or []):
-            if type(row) not in allowed_types:
+            for output_type in allowed_types:
+                if isinstance(row, output_type):
+                    break
+            else:
                 raise ValueError(f'Row {row} is not an allowed type')
         for col in (self.columns or []):
-            if type(col) not in allowed_types:
+            for output_type in allowed_types:
+                if isinstance(col, output_type):
+                    break
+            else:
                 raise ValueError(f'Column {col} is not an allowed type')
         return self
 
