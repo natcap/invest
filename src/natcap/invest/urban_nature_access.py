@@ -45,6 +45,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("una",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["lulc_raster_path", "lulc_attribute_table"],
@@ -307,6 +308,13 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=u.meter**2
         ),
+        spec.SingleBandRasterOutput(
+            id="urban_nature_balance_percapita",
+            path="output/urban_nature_balance_percapita.tif",
+            about=gettext("The urban nature balance per capita in a pixel."),
+            data_type=float,
+            units=u.meter**2 / u.person
+        ),
         spec.VectorOutput(
             id="admin_boundaries",
             path="output/admin_boundaries.gpkg",
@@ -399,6 +407,16 @@ MODEL_SPEC = spec.ModelSpec(
                 " nature demand. Negative values indicate an undersupply of urban"
                 " nature for the population group POP_GROUP relative to the"
                 " stated urban nature demand."
+            ),
+            created_if="search_radius_mode == 'radius per population group'",
+            data_type=float,
+            units=u.meter**2 / u.person
+        ),
+        spec.SingleBandRasterOutput(
+            id="urban_nature_balance_percapita_[POP_GROUP]",
+            path="output/urban_nature_balance_percapita_[POP_GROUP].tif",
+            about=gettext(
+                "Per-capita urban nature balance for each population group."
             ),
             created_if="search_radius_mode == 'radius per population group'",
             data_type=float,
@@ -622,33 +640,52 @@ MODEL_SPEC = spec.ModelSpec(
             data_type=float,
             units=u.people
         ),
+        spec.SingleBandRasterOutput(
+            id="masked_population",
+            path="intermediate/masked_population.tif",
+            about=gettext("Masked population raster."),
+            data_type=float,
+            units=u.people
+        ),
+        spec.SingleBandRasterOutput(
+            id="masked_lulc",
+            path="intermediate/masked_lulc.tif",
+            about=gettext("Masked LULC raster."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="aligned_mask",
+            path="intermediate/aligned_valid_pixels_mask.tif.tif",
+            about=gettext("Aligned mask raster indicating valid pixels."),
+            data_type=int,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="kernel_[SEARCH_RADIUS]",
+            path="intermediate/kernel_[SEARCH_RADIUS].tif",
+            about=gettext(
+                "The distance decay kernel raster for the given search radius."),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
+            id="admin_boundaries_ids",
+            path="intermediate/admin_boundaries_ids.tif",
+            about=gettext("Raster of admin boundary IDs."),
+            data_type=int,
+            units=None
+        ),
+        spec.VectorOutput(
+            id="reprojected_admin_boundaries",
+            path="intermediate/reprojected_admin_boundaries.gpkg",
+            about=gettext("Reprojected administrative area boundaries vector"),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[],
+        ),
         spec.TASKGRAPH_CACHE
     ]
 )
-
-
-_OUTPUT_BASE_FILES = {
-    'urban_nature_supply_percapita': 'urban_nature_supply_percapita.tif',
-    'admin_boundaries': 'admin_boundaries.gpkg',
-    'urban_nature_balance_percapita': 'urban_nature_balance_percapita.tif',
-    'urban_nature_balance_totalpop': 'urban_nature_balance_totalpop.tif',
-    'urban_nature_demand': 'urban_nature_demand.tif',
-}
-
-_INTERMEDIATE_BASE_FILES = {
-    'aligned_population': 'aligned_population.tif',
-    'masked_population': 'masked_population.tif',
-    'aligned_lulc': 'aligned_lulc.tif',
-    'masked_lulc': 'masked_lulc.tif',
-    'aligned_mask': 'aligned_valid_pixels_mask.tif',
-    'urban_nature_area': 'urban_nature_area.tif',
-    'urban_nature_population_ratio': 'urban_nature_population_ratio.tif',
-    'convolved_population': 'convolved_population.tif',
-    'undersupplied_population': 'undersupplied_population.tif',
-    'oversupplied_population': 'oversupplied_population.tif',
-    'reprojected_admin_boundaries': 'reprojected_admin_boundaries.gpkg',
-    'admin_boundaries_ids': 'admin_boundaries_ids.tif',
-}
 
 
 def execute(args):
@@ -709,33 +746,14 @@ def execute(args):
             RADIUS_OPT_POP_GROUP``
 
     Returns:
-        ``None``
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
     #    args['decay_function_power_beta'] (number): The beta parameter used
     #        during creation of a power kernel. Required when the selected
     #        kernel is KERNEL_LABEL_POWER.
 
     LOGGER.info('Starting Urban Nature Access Model')
-
-    output_dir = os.path.join(args['workspace_dir'], 'output')
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    utils.make_directories([output_dir, intermediate_dir])
-
-    suffix = utils.make_suffix_string(args, 'results_suffix')
-    file_registry = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_dir)],
-        suffix)
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous execution
-    graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
+    args, file_registry, graph = MODEL_SPEC.setup(args)
 
     kernel_creation_functions = {
         KERNEL_LABEL_GAUSSIAN: _kernel_gaussian,
@@ -749,10 +767,7 @@ def execute(args):
     # kernel_creation_functions[KERNEL_LABEL_POWER].__name__ = (
     #     'functools_partial_decay_power')
 
-    decay_function = args['decay_function']
-    LOGGER.info(f'Using decay function {decay_function}')
-
-    aggregate_by_pop_groups = args.get('aggregate_by_pop_group', False)
+    LOGGER.info(f'Using decay function {args["decay_function"]}')
 
     # Align the population and LULC rasters to the intersection of their
     # bounding boxes.
@@ -782,12 +797,11 @@ def execute(args):
         _resample_population_raster,
         kwargs={
             'source_population_raster_path': args['population_raster_path'],
-            'target_population_raster_path': file_registry[
-                'aligned_population'],
+            'target_population_raster_path': file_registry['aligned_population'],
             'lulc_pixel_size': squared_lulc_pixel_size,
             'lulc_bb': target_bounding_box,
             'lulc_projection_wkt': lulc_raster_info['projection_wkt'],
-            'working_dir': intermediate_dir,
+            'working_dir': args['workspace_dir'],
         },
         target_path_list=[file_registry['aligned_population']],
         task_name='Resample population to LULC resolution')
@@ -857,7 +871,7 @@ def execute(args):
     _ = graph.add_task(
         pygeoprocessing.symbolic.evaluate_raster_calculator_expression,
         kwargs={
-            'expression': f"population * {float(args['urban_nature_demand'])}",
+            'expression': f"population * {args['urban_nature_demand']}",
             'symbol_to_path_band_map': {
                 'population': (file_registry['masked_population'], 1),
             },
@@ -871,12 +885,10 @@ def execute(args):
 
     # If we're doing anything with population groups, rasterize the AOIs and
     # create the proportional population rasters.
-    proportional_population_paths = {}
     proportional_population_tasks = {}
-    pop_group_proportion_paths = {}
     pop_group_proportion_tasks = {}
     if (args['search_radius_mode'] == RADIUS_OPT_POP_GROUP
-            or aggregate_by_pop_groups):
+            or args['aggregate_by_pop_group']):
         split_population_fields = list(
             filter(lambda x: re.match(POP_FIELD_REGEX, x),
                    validation.load_fields_from_vector(
@@ -907,27 +919,20 @@ def execute(args):
             field_value_map = _read_field_from_vector(
                 file_registry['reprojected_admin_boundaries'], ID_FIELDNAME,
                 pop_group)
-            proportional_population_path = os.path.join(
-                intermediate_dir, f'population_in_{pop_group}{suffix}.tif')
-            proportional_population_paths[
-                pop_group] = proportional_population_path
             proportional_population_tasks[pop_group] = graph.add_task(
                 _reclassify_and_multiply,
                 kwargs={
                     'aois_raster_path': file_registry['admin_boundaries_ids'],
                     'reclassification_map': field_value_map,
                     'supply_raster_path': file_registry['masked_population'],
-                    'target_raster_path': proportional_population_path,
+                    'target_raster_path': file_registry['population_in_[POP_GROUP]', pop_group],
                 },
                 task_name=f"Population proportion in pop group {pop_group}",
-                target_path_list=[proportional_population_path],
+                target_path_list=[file_registry['population_in_[POP_GROUP]', pop_group]],
                 dependent_task_list=[
                     aois_rasterization_task, population_mask_task]
             )
 
-            pop_group_proportion_paths[pop_group] = os.path.join(
-                intermediate_dir,
-                f'proportion_of_population_in_{pop_group}{suffix}.tif')
             pop_group_proportion_tasks[pop_group] = graph.add_task(
                 _rasterize_aois,
                 kwargs={
@@ -935,22 +940,21 @@ def execute(args):
                     'aois_vector_path':
                         file_registry['reprojected_admin_boundaries'],
                     'target_raster_path':
-                        pop_group_proportion_paths[pop_group],
+                        file_registry['proportion_of_population_in_[POP_GROUP]', pop_group],
                     'id_fieldname': pop_group,
                 },
                 task_name=f'Rasterize proportion of admin units as {pop_group}',
-                target_path_list=[pop_group_proportion_paths[pop_group]],
+                target_path_list=[file_registry['proportion_of_population_in_[POP_GROUP]', pop_group]],
                 dependent_task_list=[
                     aoi_reprojection_task, lulc_mask_task]
             )
 
     attr_table = MODEL_SPEC.get_input(
         'lulc_attribute_table').get_validated_dataframe(args['lulc_attribute_table'])
-    kernel_paths = {}  # search_radius, kernel path
     kernel_tasks = {}  # search_radius, kernel task
 
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
-        search_radii = set([float(args['search_radius'])])
+        search_radii = set([args['search_radius']])
     elif args['search_radius_mode'] == RADIUS_OPT_URBAN_NATURE:
         urban_nature_attrs = attr_table[attr_table['urban_nature'] > 0]
         try:
@@ -979,32 +983,32 @@ def execute(args):
     for search_radius_m in search_radii:
         search_radius_in_pixels = abs(
             search_radius_m / squared_lulc_pixel_size[0])
-        kernel_path = os.path.join(
-            intermediate_dir, f'kernel_{search_radius_m}{suffix}.tif')
-        kernel_paths[search_radius_m] = kernel_path
 
-        if decay_function == KERNEL_LABEL_DICHOTOMY:
+        if args['decay_function'] == KERNEL_LABEL_DICHOTOMY:
             kernel_func = pygeoprocessing.kernels.dichotomous_kernel
             kernel_kwargs = dict(
-                target_kernel_path=kernel_path,
+                target_kernel_path=file_registry[
+                    'kernel_[SEARCH_RADIUS]', search_radius_m],
                 max_distance=search_radius_in_pixels,
                 normalize=False)
-        elif decay_function == KERNEL_LABEL_EXPONENTIAL:
+        elif args['decay_function'] == KERNEL_LABEL_EXPONENTIAL:
             kernel_func = pygeoprocessing.kernels.exponential_decay_kernel
             kernel_kwargs = dict(
-                target_kernel_path=kernel_path,
+                target_kernel_path=file_registry[
+                    'kernel_[SEARCH_RADIUS]', search_radius_m],
                 max_distance=math.ceil(search_radius_in_pixels) * 2 + 1,
                 expected_distance=search_radius_in_pixels,
                 normalize=False)
-        elif decay_function in [KERNEL_LABEL_GAUSSIAN, KERNEL_LABEL_DENSITY]:
+        elif args['decay_function'] in [KERNEL_LABEL_GAUSSIAN, KERNEL_LABEL_DENSITY]:
             kernel_func = pygeoprocessing.kernels.create_distance_decay_kernel
 
             def decay_func(dist_array):
-                return kernel_creation_functions[decay_function](
+                return kernel_creation_functions[args['decay_function']](
                     dist_array, max_distance=search_radius_in_pixels)
 
             kernel_kwargs = dict(
-                target_kernel_path=kernel_path,
+                target_kernel_path=file_registry[
+                    'kernel_[SEARCH_RADIUS]', search_radius_m],
                 distance_decay_function=decay_func,
                 max_distance=search_radius_in_pixels,
                 normalize=False)
@@ -1015,8 +1019,8 @@ def execute(args):
             kernel_func,
             kwargs=kernel_kwargs,
             task_name=(
-                f'Create {decay_function} kernel - {search_radius_m}m'),
-            target_path_list=[kernel_path])
+                f'Create {args["decay_function"]} kernel - {search_radius_m}m'),
+            target_path_list=[file_registry['kernel_[SEARCH_RADIUS]', search_radius_m]])
 
     # Search radius mode 1: the same search radius applies to everything
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
@@ -1024,64 +1028,60 @@ def execute(args):
         LOGGER.info("Running model with search radius mode "
                     f"{RADIUS_OPT_UNIFORM}, radius {search_radius_m}")
 
-        decayed_population_path = os.path.join(
-            intermediate_dir,
-            f'distance_weighted_population_within_{search_radius_m}{suffix}.tif')
         decayed_population_task = graph.add_task(
             _convolve_and_set_lower_bound,
             kwargs={
                 'signal_path_band': (file_registry['masked_population'], 1),
-                'kernel_path_band': (kernel_paths[search_radius_m], 1),
-                'target_path': decayed_population_path,
-                'working_dir': intermediate_dir,
+                'kernel_path_band': (file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
+                'target_path': file_registry[
+                    'distance_weighted_population_within_[SEARCH_RADIUS]', search_radius_m],
+                'working_dir': args['workspace_dir'],
             },
             task_name=f'Convolve population - {search_radius_m}m',
-            target_path_list=[decayed_population_path],
+            target_path_list=[
+                file_registry['distance_weighted_population_within_[SEARCH_RADIUS]',
+                search_radius_m]],
             dependent_task_list=[
                 kernel_tasks[search_radius_m], population_mask_task])
 
-        urban_nature_pixels_path = os.path.join(
-            intermediate_dir, f'urban_nature_area{suffix}.tif')
         urban_nature_reclassification_task = graph.add_task(
             _reclassify_urban_nature_area,
             kwargs={
                 'lulc_raster_path': file_registry['masked_lulc'],
                 'lulc_attribute_table': args['lulc_attribute_table'],
-                'target_raster_path': urban_nature_pixels_path,
+                'target_raster_path': file_registry['urban_nature_area'],
             },
-            target_path_list=[urban_nature_pixels_path],
+            target_path_list=[file_registry['urban_nature_area']],
             task_name='Identify urban nature areas',
             dependent_task_list=[lulc_mask_task]
         )
 
-        accessible_urban_nature_path = os.path.join(
-            output_dir, f'accessible_urban_nature{suffix}.tif')
         _ = graph.add_task(
             _convolve_and_set_lower_bound,
             kwargs={
-                "signal_path_band": (urban_nature_pixels_path, 1),
-                "kernel_path_band": (kernel_paths[search_radius_m], 1),
-                "target_path": accessible_urban_nature_path,
-                "working_dir": intermediate_dir,
+                "signal_path_band": (file_registry['urban_nature_area'], 1),
+                "kernel_path_band": (file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
+                "target_path": file_registry['accessible_urban_nature'],
+                "working_dir": args['workspace_dir'],
             },
             task_name='Accessible urban nature',
-            target_path_list=[accessible_urban_nature_path],
+            target_path_list=[file_registry['accessible_urban_nature']],
             dependent_task_list=[urban_nature_reclassification_task]
         )
 
-        urban_nature_population_ratio_path = os.path.join(
-            intermediate_dir,
-            f'urban_nature_population_ratio{suffix}.tif')
         urban_nature_population_ratio_task = graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=_urban_nature_population_ratio,
-                rasters=[urban_nature_pixels_path, decayed_population_path],
-                target_path=urban_nature_population_ratio_path),
+                rasters=[
+                    file_registry['urban_nature_area'],
+                    file_registry['distance_weighted_population_within_[SEARCH_RADIUS]',
+                                  search_radius_m]],
+                target_path=file_registry['urban_nature_population_ratio']),
             task_name=(
                 '2SFCA: Calculate R_j urban nature/population ratio - '
                 f'{search_radius_m}'),
-            target_path_list=[urban_nature_population_ratio_path],
+            target_path_list=[file_registry['urban_nature_population_ratio']],
             dependent_task_list=[
                 urban_nature_reclassification_task, decayed_population_task
             ])
@@ -1090,10 +1090,10 @@ def execute(args):
             _convolve_and_set_lower_bound,
             kwargs={
                 'signal_path_band': (
-                    urban_nature_population_ratio_path, 1),
-                'kernel_path_band': (kernel_path, 1),
+                    file_registry['urban_nature_population_ratio'], 1),
+                'kernel_path_band': (file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
                 'target_path': file_registry['urban_nature_supply_percapita'],
-                'working_dir': intermediate_dir,
+                'working_dir': args['workspace_dir'],
             },
             task_name='2SFCA - urban nature supply',
             target_path_list=[file_registry['urban_nature_supply_percapita']],
@@ -1106,94 +1106,83 @@ def execute(args):
         LOGGER.info("Running model with search radius mode "
                     f"{RADIUS_OPT_URBAN_NATURE}")
         decayed_population_tasks = {}
-        decayed_population_paths = {}
         for search_radius_m in search_radii:
-            decayed_population_paths[search_radius_m] = os.path.join(
-                intermediate_dir,
-                f'distance_weighted_population_within_{search_radius_m}{suffix}.tif')
             decayed_population_tasks[search_radius_m] = graph.add_task(
                 _convolve_and_set_lower_bound,
                 kwargs={
                     'signal_path_band': (
                         file_registry['masked_population'], 1),
-                    'kernel_path_band': (kernel_paths[search_radius_m], 1),
-                    'target_path': decayed_population_paths[search_radius_m],
-                    'working_dir': intermediate_dir,
+                    'kernel_path_band': (file_registry[
+                        'kernel_[SEARCH_RADIUS]', search_radius_m], 1),
+                    'target_path': file_registry[
+                        'distance_weighted_population_within_[SEARCH_RADIUS]', search_radius_m],
+                    'working_dir': args['workspace_dir'],
                 },
                 task_name=f'Convolve population - {search_radius_m}m',
-                target_path_list=[decayed_population_paths[search_radius_m]],
+                target_path_list=[file_registry[
+                    'distance_weighted_population_within_[SEARCH_RADIUS]', search_radius_m]],
                 dependent_task_list=[
                     kernel_tasks[search_radius_m], population_mask_task])
 
-        partial_urban_nature_supply_percapita_paths = []
         partial_urban_nature_supply_percapita_tasks = []
         for lucode, search_radius_m in lucode_to_search_radii:
-            urban_nature_pixels_path = os.path.join(
-                intermediate_dir,
-                f'urban_nature_area_lucode_{lucode}{suffix}.tif')
             urban_nature_reclassification_task = graph.add_task(
                 _reclassify_urban_nature_area,
                 kwargs={
                     'lulc_raster_path': file_registry['masked_lulc'],
                     'lulc_attribute_table': args['lulc_attribute_table'],
-                    'target_raster_path': urban_nature_pixels_path,
+                    'target_raster_path': file_registry['urban_nature_area_[LUCODE]', lucode],
                     'only_these_urban_nature_codes': set([lucode]),
                 },
-                target_path_list=[urban_nature_pixels_path],
+                target_path_list=[file_registry['urban_nature_area_[LUCODE]', lucode]],
                 task_name=f'Identify urban nature areas with lucode {lucode}',
                 dependent_task_list=[lulc_mask_task]
             )
 
-            accessible_urban_nature_path = os.path.join(
-                output_dir,
-                f'accessible_urban_nature_lucode_{lucode}{suffix}.tif')
             _ = graph.add_task(
                 _convolve_and_set_lower_bound,
                 kwargs={
-                    "signal_path_band": (urban_nature_pixels_path, 1),
-                    "kernel_path_band": (kernel_paths[search_radius_m], 1),
-                    "target_path": accessible_urban_nature_path,
-                    "working_dir": intermediate_dir,
+                    "signal_path_band": (file_registry['urban_nature_area_[LUCODE]', lucode], 1),
+                    "kernel_path_band": (file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
+                    "target_path": file_registry['accessible_urban_nature_lucode_[LUCODE]', lucode],
+                    "working_dir": args['workspace_dir'],
                 },
                 task_name='Accessible urban nature',
-                target_path_list=[accessible_urban_nature_path],
+                target_path_list=[file_registry['accessible_urban_nature_lucode_[LUCODE]', lucode]],
                 dependent_task_list=[urban_nature_reclassification_task]
             )
 
-            urban_nature_population_ratio_path = os.path.join(
-                intermediate_dir,
-                f'urban_nature_population_ratio_lucode_{lucode}{suffix}.tif')
             urban_nature_population_ratio_task = graph.add_task(
                 func=pygeoprocessing.raster_map,
                 kwargs=dict(
                     op=_urban_nature_population_ratio,
-                    rasters=[urban_nature_pixels_path, decayed_population_paths[search_radius_m]],
-                    target_path=urban_nature_population_ratio_path),
+                    rasters=[
+                        file_registry['urban_nature_area_[LUCODE]', lucode],
+                        file_registry['distance_weighted_population_within_[SEARCH_RADIUS]',
+                            search_radius_m]],
+                    target_path=file_registry[
+                        'urban_nature_population_ratio_lucode_[LUCODE]', lucode]),
                 task_name=(
                     '2SFCA: Calculate R_j urban nature/population ratio - '
                     f'{search_radius_m}'),
-                target_path_list=[urban_nature_population_ratio_path],
+                target_path_list=[file_registry[
+                    'urban_nature_population_ratio_lucode_[LUCODE]', lucode]],
                 dependent_task_list=[
                     urban_nature_reclassification_task,
                     decayed_population_tasks[search_radius_m]
                 ])
 
-            urban_nature_supply_percapita_path = os.path.join(
-                intermediate_dir,
-                f'urban_nature_supply_percapita_lucode_{lucode}{suffix}.tif')
-            partial_urban_nature_supply_percapita_paths.append(
-                urban_nature_supply_percapita_path)
             partial_urban_nature_supply_percapita_tasks.append(graph.add_task(
                 pygeoprocessing.convolve_2d,
                 kwargs={
-                    'signal_path_band': (
-                        urban_nature_population_ratio_path, 1),
-                    'kernel_path_band': (kernel_paths[search_radius_m], 1),
-                    'target_path': urban_nature_supply_percapita_path,
-                    'working_dir': intermediate_dir,
+                    'signal_path_band': (file_registry[
+                        'urban_nature_population_ratio_lucode_[LUCODE]', lucode], 1),
+                    'kernel_path_band': (file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
+                    'target_path': file_registry['urban_nature_supply_percapita_lucode_[LUCODE]', lucode],
+                    'working_dir': args['workspace_dir'],
                 },
                 task_name=f'2SFCA - urban_nature supply for lucode {lucode}',
-                target_path_list=[urban_nature_supply_percapita_path],
+                target_path_list=[file_registry['urban_nature_supply_percapita_lucode_[LUCODE]', lucode]],
                 dependent_task_list=[
                     kernel_tasks[search_radius_m],
                     urban_nature_population_ratio_task]))
@@ -1202,7 +1191,9 @@ def execute(args):
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=_sum_op,
-                rasters=partial_urban_nature_supply_percapita_paths,
+                rasters=[file_registry[
+                    'urban_nature_supply_percapita_lucode_[LUCODE]', lucode
+                ] for lucode, _ in lucode_to_search_radii],
                 target_path=file_registry['urban_nature_supply_percapita']),
             task_name='2SFCA - urban nature supply total',
             target_path_list=[file_registry['urban_nature_supply_percapita']],
@@ -1213,74 +1204,64 @@ def execute(args):
     elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
         LOGGER.info("Running model with search radius mode "
                     f"{RADIUS_OPT_POP_GROUP}")
-        urban_nature_pixels_path = os.path.join(
-            intermediate_dir, f'urban_nature_area{suffix}.tif')
         urban_nature_reclassification_task = graph.add_task(
             _reclassify_urban_nature_area,
             kwargs={
                 'lulc_raster_path': file_registry['masked_lulc'],
                 'lulc_attribute_table': args['lulc_attribute_table'],
-                'target_raster_path': urban_nature_pixels_path,
+                'target_raster_path': file_registry['urban_nature_area'],
             },
-            target_path_list=[urban_nature_pixels_path],
+            target_path_list=[file_registry['urban_nature_area']],
             task_name='Identify urban nature areas',
             dependent_task_list=[lulc_mask_task]
         )
 
-        decayed_population_in_group_paths = []
         decayed_population_in_group_tasks = []
         for pop_group in split_population_fields:
             search_radius_m = search_radii_by_pop_group[pop_group]
 
-            accessible_urban_nature_path = os.path.join(
-                output_dir,
-                f'accessible_urban_nature_to_{pop_group}{suffix}.tif')
             _ = graph.add_task(
                 _convolve_and_set_lower_bound,
                 kwargs={
-                    "signal_path_band": (urban_nature_pixels_path, 1),
-                    "kernel_path_band": (kernel_paths[search_radius_m], 1),
-                    "target_path": accessible_urban_nature_path,
-                    "working_dir": intermediate_dir,
+                    "signal_path_band": (file_registry['urban_nature_area'], 1),
+                    "kernel_path_band": (file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
+                    "target_path": file_registry['accessible_urban_nature_to_[POP_GROUP]', pop_group],
+                    "working_dir": args['workspace_dir'],
                 },
                 task_name='Accessible urban nature',
-                target_path_list=[accessible_urban_nature_path],
+                target_path_list=[file_registry['accessible_urban_nature_to_[POP_GROUP]', pop_group]],
                 dependent_task_list=[urban_nature_reclassification_task]
             )
 
-            decayed_population_in_group_path = os.path.join(
-                intermediate_dir,
-                f'distance_weighted_population_in_{pop_group}{suffix}.tif')
-            decayed_population_in_group_paths.append(
-                decayed_population_in_group_path)
             decayed_population_in_group_tasks.append(graph.add_task(
                 _convolve_and_set_lower_bound,
                 kwargs={
                     'signal_path_band': (
-                        proportional_population_paths[pop_group], 1),
+                        file_registry['population_in_[POP_GROUP]', pop_group], 1),
                     'kernel_path_band': (
-                        kernel_paths[search_radius_m], 1),
-                    'target_path': decayed_population_in_group_path,
-                    'working_dir': intermediate_dir,
+                        file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
+                    'target_path': file_registry[
+                        'distance_weighted_population_in_[POP_GROUP]', pop_group],
+                    'working_dir': args['workspace_dir'],
                 },
                 task_name=f'Convolve population - {search_radius_m}m',
-                target_path_list=[decayed_population_in_group_path],
+                target_path_list=[file_registry[
+                    'distance_weighted_population_in_[POP_GROUP]', pop_group]],
                 dependent_task_list=[
                     kernel_tasks[search_radius_m],
                     proportional_population_tasks[pop_group]]
             ))
 
-        sum_of_decayed_population_path = os.path.join(
-            intermediate_dir,
-            f'distance_weighted_population_all_groups{suffix}.tif')
         sum_of_decayed_population_task = graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=_sum_op,
-                rasters=decayed_population_in_group_paths,
-                target_path=sum_of_decayed_population_path),
+                rasters=[file_registry[
+                    'distance_weighted_population_in_[POP_GROUP]', pop_group
+                ] for pop_group in split_population_fields],
+                target_path=file_registry['distance_weighted_population_all_groups']),
             task_name='2SFCA - urban nature supply total',
-            target_path_list=[sum_of_decayed_population_path],
+            target_path_list=[file_registry['distance_weighted_population_all_groups']],
             dependent_task_list=decayed_population_in_group_tasks
         )
 
@@ -1288,7 +1269,9 @@ def execute(args):
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=_urban_nature_population_ratio,
-                rasters=[urban_nature_pixels_path, sum_of_decayed_population_path],
+                rasters=[
+                    file_registry['urban_nature_area'],
+                    file_registry['distance_weighted_population_all_groups']],
                 target_path=file_registry['urban_nature_population_ratio']),
             task_name=(
                 '2SFCA: Calculate R_j urban nature/population ratio - '
@@ -1300,74 +1283,61 @@ def execute(args):
                 sum_of_decayed_population_task
             ])
 
-        urban_nature_supply_percapita_by_group_paths = {}
         urban_nature_supply_percapita_by_group_tasks = []
-        urban_nature_balance_totalpop_by_group_paths = {}
         urban_nature_balance_totalpop_by_group_tasks = []
-        supply_population_paths = {'over': {}, 'under': {}}
         supply_population_tasks = {'over': {}, 'under': {}}
-        for pop_group, proportional_pop_path in (
-                proportional_population_paths.items()):
+        for pop_group in split_population_fields:
             search_radius_m = search_radii_by_pop_group[pop_group]
-            urban_nature_supply_percapita_to_group_path = os.path.join(
-                intermediate_dir,
-                f'urban_nature_supply_percapita_to_{pop_group}{suffix}.tif')
-            urban_nature_supply_percapita_by_group_paths[
-                pop_group] = urban_nature_supply_percapita_to_group_path
             urban_nature_supply_percapita_by_group_task = graph.add_task(
                 _convolve_and_set_lower_bound,
                 kwargs={
                     'signal_path_band': (
                         file_registry['urban_nature_population_ratio'], 1),
-                    'kernel_path_band': (kernel_paths[search_radius_m], 1),
-                    'target_path': urban_nature_supply_percapita_to_group_path,
-                    'working_dir': intermediate_dir,
+                    'kernel_path_band': (
+                        file_registry['kernel_[SEARCH_RADIUS]', search_radius_m], 1),
+                    'target_path': file_registry[
+                        'urban_nature_supply_percapita_to_[POP_GROUP]', pop_group],
+                    'working_dir': args['workspace_dir'],
                 },
                 task_name=f'2SFCA - urban nature supply for {pop_group}',
-                target_path_list=[urban_nature_supply_percapita_to_group_path],
+                target_path_list=[file_registry[
+                    'urban_nature_supply_percapita_to_[POP_GROUP]', pop_group]],
                 dependent_task_list=[
                     kernel_tasks[search_radius_m],
                     urban_nature_population_ratio_task])
             urban_nature_supply_percapita_by_group_tasks.append(
                 urban_nature_supply_percapita_by_group_task)
 
-            # Calculate SUP_DEMi_cap for each population group.
-            per_cap_urban_nature_balance_pop_group_path = os.path.join(
-                output_dir,
-                f'urban_nature_balance_percapita_{pop_group}{suffix}.tif')
             per_cap_urban_nature_balance_pop_group_task = graph.add_task(
                 _calculate_urban_nature_balance_percapita,
                 kwargs={
-                    'urban_nature_supply_path':
-                        urban_nature_supply_percapita_to_group_path,
-                    'urban_nature_demand': float(args['urban_nature_demand']),
-                    'target_path':
-                        per_cap_urban_nature_balance_pop_group_path},
+                    'urban_nature_supply_path': file_registry[
+                        'urban_nature_supply_percapita_to_[POP_GROUP]', pop_group],
+                    'urban_nature_demand': args['urban_nature_demand'],
+                    'target_path': file_registry[
+                        'urban_nature_balance_percapita_[POP_GROUP]', pop_group]},
                 task_name=(
                     f'Calculate per-capita urban nature balance-{pop_group}'),
-                target_path_list=[
-                    per_cap_urban_nature_balance_pop_group_path],
+                target_path_list=[file_registry[
+                    'urban_nature_balance_percapita_[POP_GROUP]', pop_group]],
                 dependent_task_list=[
                     urban_nature_supply_percapita_by_group_task
                 ])
 
-            urban_nature_balance_totalpop_by_group_path = os.path.join(
-                intermediate_dir,
-                f'urban_nature_balance_totalpop_{pop_group}{suffix}.tif')
-            urban_nature_balance_totalpop_by_group_paths[
-                pop_group] = urban_nature_balance_totalpop_by_group_path
             urban_nature_balance_totalpop_by_group_tasks.append(graph.add_task(
                 pygeoprocessing.raster_map,
                 kwargs=dict(
                     op=_urban_nature_balance_totalpop_op,
                     rasters=[
-                        per_cap_urban_nature_balance_pop_group_path,
-                        proportional_pop_path
+                        file_registry['urban_nature_balance_percapita_[POP_GROUP]',
+                                      pop_group],
+                        file_registry['population_in_[POP_GROUP]', pop_group]
                     ],
-                    target_path=urban_nature_balance_totalpop_by_group_path),
+                    target_path=file_registry[
+                        'urban_nature_balance_[POP_GROUP]', pop_group]),
                 task_name='Calculate per-capita urban nature supply-demand',
-                target_path_list=[
-                    urban_nature_balance_totalpop_by_group_path],
+                target_path_list=[file_registry[
+                    'urban_nature_balance_[POP_GROUP]', pop_group]],
                 dependent_task_list=[
                     per_cap_urban_nature_balance_pop_group_task,
                     proportional_population_tasks[pop_group]
@@ -1375,29 +1345,27 @@ def execute(args):
 
             for supply_type, op in [('under', numpy.less),
                                     ('over', numpy.greater)]:
-                supply_population_path = os.path.join(
-                    intermediate_dir,
-                    f'{supply_type}supplied_population_{pop_group}{suffix}.tif')
-                supply_population_paths[
-                    supply_type][pop_group] = supply_population_path
                 supply_population_tasks[
                     supply_type][pop_group] = graph.add_task(
                     pygeoprocessing.raster_calculator,
                     kwargs={
                         'base_raster_path_band_const_list': [
-                            (proportional_pop_path, 1),
-                            (per_cap_urban_nature_balance_pop_group_path, 1),
+                            (file_registry['population_in_[POP_GROUP]', pop_group], 1),
+                            (file_registry[
+                                'urban_nature_balance_percapita_[POP_GROUP]', pop_group], 1),
                             (op, 'raw'),  # numpy element-wise comparator
                         ],
                         'local_op': _filter_population,
-                        'target_raster_path': supply_population_path,
+                        'target_raster_path': file_registry[
+                            f'{supply_type}supplied_population_[POP_GROUP]', pop_group],
                         'datatype_target': gdal.GDT_Float32,
                         'nodata_target': FLOAT32_NODATA,
                     },
                     task_name=(
                         f'Determine {supply_type}supplied populations to '
                         f'{pop_group}'),
-                    target_path_list=[supply_population_path],
+                    target_path_list=[file_registry[
+                        f'{supply_type}supplied_population_[POP_GROUP]', pop_group]],
                     dependent_task_list=[
                         per_cap_urban_nature_balance_pop_group_task,
                         proportional_population_tasks[pop_group]
@@ -1406,12 +1374,12 @@ def execute(args):
         urban_nature_supply_percapita_task = graph.add_task(
             _weighted_sum,
             kwargs={
-                'raster_path_list':
-                    [urban_nature_supply_percapita_by_group_paths[group] for group in
-                     sorted(split_population_fields)],
-                'weight_raster_list':
-                    [pop_group_proportion_paths[group] for group in
-                     sorted(split_population_fields)],
+                'raster_path_list': [file_registry[
+                    'urban_nature_supply_percapita_to_[POP_GROUP]', group
+                ] for group in sorted(split_population_fields)],
+                'weight_raster_list': [file_registry[
+                    'proportion_of_population_in_[POP_GROUP]', group
+                ] for group in sorted(split_population_fields)],
                 'target_path': file_registry['urban_nature_supply_percapita'],
             },
             task_name='2SFCA - urban nature supply total',
@@ -1426,7 +1394,7 @@ def execute(args):
             kwargs={
                 'urban_nature_supply_path':
                     file_registry['urban_nature_supply_percapita'],
-                'urban_nature_demand': float(args['urban_nature_demand']),
+                'urban_nature_demand': args['urban_nature_demand'],
                 'target_path':
                     file_registry['urban_nature_balance_percapita']},
             task_name=(
@@ -1441,7 +1409,8 @@ def execute(args):
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=_sum_op,
-                rasters=list(urban_nature_balance_totalpop_by_group_paths.values()),
+                rasters=[file_registry['urban_nature_balance_[POP_GROUP]', pop_group]
+                    for pop_group in split_population_fields],
                 target_path=file_registry['urban_nature_balance_totalpop']),
             task_name='2SFCA - urban nature - total population',
             target_path_list=[
@@ -1455,12 +1424,7 @@ def execute(args):
             kwargs={
                 'source_aoi_vector_path': file_registry['reprojected_admin_boundaries'],
                 'target_aoi_vector_path': file_registry['admin_boundaries'],
-                'urban_nature_sup_dem_paths_by_pop_group':
-                    urban_nature_balance_totalpop_by_group_paths,
-                'proportional_pop_paths_by_pop_group':
-                    proportional_population_paths,
-                'undersupply_by_pop_group': supply_population_paths['under'],
-                'oversupply_by_pop_group': supply_population_paths['over'],
+                'file_registry': file_registry
             },
             task_name=(
                 'Aggregate supply-demand to admin units (by pop groups)'),
@@ -1483,7 +1447,7 @@ def execute(args):
             kwargs={
                 'urban_nature_supply_path':
                     file_registry['urban_nature_supply_percapita'],
-                'urban_nature_demand': float(args['urban_nature_demand']),
+                'urban_nature_demand': args['urban_nature_demand'],
                 'target_path':
                     file_registry['urban_nature_balance_percapita']},
             task_name=(
@@ -1515,8 +1479,9 @@ def execute(args):
 
         supply_population_tasks = []
         pop_paths = [(None, file_registry['masked_population'])]
-        if aggregate_by_pop_groups:
-            pop_paths.extend(list(proportional_population_paths.items()))
+        if args['aggregate_by_pop_group']:
+            pop_paths.extend([(pop_group, file_registry['population_in_[POP_GROUP]',
+                pop_group]) for pop_group in split_population_fields])
 
         for pop_group, proportional_pop_path in pop_paths:
             if pop_group is not None:
@@ -1524,13 +1489,10 @@ def execute(args):
             for supply_type, op in [('under', numpy.less),
                                     ('over', numpy.greater)]:
                 if pop_group is None:
-                    supply_population_path = os.path.join(
-                        intermediate_dir,
-                        f'{supply_type}supplied_population{suffix}.tif')
+                    supply_population_path = file_registry[f'{supply_type}supplied_population']
                 else:
-                    supply_population_path = os.path.join(
-                        intermediate_dir,
-                        f'{supply_type}supplied_population_{pop_group}{suffix}.tif')
+                    supply_population_path = file_registry[
+                        f'{supply_type}supplied_population_[POP_GROUP]', pop_group]
 
                 supply_population_tasks.append(graph.add_task(
                     pygeoprocessing.raster_calculator,
@@ -1565,7 +1527,7 @@ def execute(args):
                     'undersupplied_population'],
                 'oversupplied_populations_path': file_registry[
                     'oversupplied_population'],
-                'include_pop_groups': aggregate_by_pop_groups,
+                'include_pop_groups': args['aggregate_by_pop_group'],
             },
             task_name=(
                 'Aggregate supply-demand to admin units (single rasters)'),
@@ -1580,6 +1542,7 @@ def execute(args):
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+    return file_registry.registry
 
 
 # Sum a list of arrays element-wise
@@ -1917,26 +1880,13 @@ def _filter_population(population, urban_nature_budget, numpy_filter_op):
 
 
 def _supply_demand_vector_for_pop_groups(
-        source_aoi_vector_path,
-        target_aoi_vector_path,
-        urban_nature_sup_dem_paths_by_pop_group,
-        proportional_pop_paths_by_pop_group,
-        undersupply_by_pop_group,
-        oversupply_by_pop_group):
+        source_aoi_vector_path, target_aoi_vector_path, file_registry):
     """Write a supply-demand vector when rasters are by population group.
 
     Args:
         source_aoi_vector_path (str): The source AOI vector path.
         target_aoi_vector_path (str): The target AOI vector path.
-        urban_nature_sup_dem_paths_by_pop_group (dict): A dict mapping population
-            group names to rasters of urban nature supply/demand for the given
-            group.
-        proportional_pop_paths_by_pop_group (dict): A dict mapping population
-            group names to rasters of the population of that group.
-        undersupply_by_pop_group (dict): A dict mapping population group names
-            to rasters of undersupplied populations per pixel.
-        oversupply_by_pop_group (dict): A dict mapping population group names
-            to rasters of oversupplied populations per pixel.
+        file_registry (FileRegistry): used to look up raster paths to aggregate
 
     Returns:
         ``None``
@@ -1972,13 +1922,13 @@ def _supply_demand_vector_for_pop_groups(
         groupname = re.sub(POP_FIELD_REGEX, '', pop_group_field)
 
         urban_nature_sup_dem_stats = _get_zonal_stats(
-            urban_nature_sup_dem_paths_by_pop_group[pop_group_field])
+            file_registry['urban_nature_balance_[POP_GROUP]', pop_group_field])
         proportional_pop_stats = _get_zonal_stats(
-            proportional_pop_paths_by_pop_group[pop_group_field])
+            file_registry['population_in_[POP_GROUP]', pop_group_field])
         undersupply_stats = _get_zonal_stats(
-            undersupply_by_pop_group[pop_group_field])
+            file_registry['undersupplied_population_[POP_GROUP]', pop_group_field])
         oversupply_stats = _get_zonal_stats(
-            oversupply_by_pop_group[pop_group_field])
+            file_registry['oversupplied_population_[POP_GROUP]', pop_group_field])
 
         for feature_id in feature_ids:
             group_population_in_region = proportional_pop_stats[
@@ -2366,8 +2316,6 @@ def _resample_population_raster(
     Returns:
         ``None``
     """
-    if not os.path.isdir(working_dir):
-        os.makedirs(working_dir)
     tmp_working_dir = tempfile.mkdtemp(dir=working_dir)
     population_raster_info = pygeoprocessing.get_raster_info(
         source_population_raster_path)

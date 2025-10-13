@@ -46,7 +46,7 @@ class EndpointFunctionTests(unittest.TestCase):
             set(spec),
             {'model_id', 'model_title', 'userguide', 'aliases',
              'input_field_order', 'different_projections_ok',
-             'validate_spatial_overlap', 'args', 'outputs'})
+             'validate_spatial_overlap', 'args', 'outputs', 'module_name'})
 
     def test_get_invest_validate(self):
         """UI server: get_invest_validate endpoint."""
@@ -86,7 +86,7 @@ class EndpointFunctionTests(unittest.TestCase):
         response_data = json.loads(response.get_data(as_text=True))
         self.assertEqual(
             set(response_data),
-            {'type', 'args', 'model_id', 'invest_version'})
+            {'type', 'args', 'model_id'})
 
     def test_write_parameter_set_file(self):
         """UI server: write_parameter_set_file endpoint."""
@@ -110,7 +110,7 @@ class EndpointFunctionTests(unittest.TestCase):
             actual_data = json.loads(file.read())
         self.assertEqual(
             set(actual_data),
-            {'args', 'invest_version', 'model_id'})
+            {'args', 'model_id'})
 
     def test_write_parameter_set_file_error_handling(self):
         """UI server: write_parameter_set_file endpoint

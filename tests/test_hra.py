@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import textwrap
 import unittest
+import unittest.mock
 
 import numpy
 import pandas
@@ -449,6 +450,41 @@ class HRAUnitTests(unittest.TestCase):
                       str(cm.exception))
         self.assertIn('HABITAT NAME', str(cm.exception))
         self.assertIn('HABITAT RESILIENCE ATTRIBUTES', str(cm.exception))
+
+    def test_criteria_table_remote_filepath(self):
+        """HRA: correctly parse a remote path in criteria table."""
+        from natcap.invest import hra
+
+        criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
+        with open(criteria_table_path, 'w') as criteria_table:
+            criteria_table.write(
+                textwrap.dedent(  # NOTE: also checking whitespace around
+                    """\
+                    HABITAT NAME,Eelgrass,,,Hardbottom,,,CRITERIA TYPE
+                    HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    recruitment rate,2,2,2,2,2,2,C
+                    connectivity rate,https://example.com/raster.tif,2,2,2,2,2,C
+                    ,,,,,,,
+                    HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
+                    Oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
+                    ,,,,,,,
+                    Fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
+                    """
+                ))
+        target_composite_csv_path = os.path.join(self.workspace_dir,
+                                                 'composite.csv')
+        with unittest.mock.patch('pygeoprocessing.get_gis_type',
+                                 lambda path: pygeoprocessing.RASTER_TYPE):
+            habitats, stressors = hra._parse_criteria_table(
+                criteria_table_path, target_composite_csv_path)
+        parsed_table = pandas.read_csv(target_composite_csv_path)
+        self.assertEqual(parsed_table['rating'][2],
+                        '/vsicurl/https://example.com/raster.tif')
+
 
     def test_maximum_reclassified_score(self):
         """HRA: check maximum reclassed score given a stack of scores."""
@@ -983,55 +1019,41 @@ class HRAUnitTests(unittest.TestCase):
 
     def test_summary_stats(self):
         """HRA: test summary stats table."""
-        from natcap.invest import hra
+        from natcap.invest import hra, file_registry
         e_array = numpy.array([[0, 1, 2, 3]], dtype=numpy.float32)
         c_array = numpy.array([[0.5, 1.5, 2.5, 3.5]], dtype=numpy.float32)
         risk_array = numpy.array([[0, 1.1, 2.2, 3.3]], dtype=numpy.float32)
         pairwise_classes_array = numpy.array([[0, 1, 2, 3]], dtype=numpy.int8)
-
-        pairwise_raster_dicts = [{
-            'habitat': 'life',
-            'stressor': 'industry',
-            'e_path': os.path.join(self.workspace_dir, 'e.tif'),
-            'c_path': os.path.join(self.workspace_dir, 'c.tif'),
-            'risk_path': os.path.join(self.workspace_dir, 'risk.tif'),
-            'classification_path': os.path.join(self.workspace_dir,
-                                                'classes.tif'),
-        }]
-        nodata = -1
-        for array, key in [
-                (e_array, 'e_path'),
-                (c_array, 'c_path'),
-                (risk_array, 'risk_path'),
-                (pairwise_classes_array, 'classification_path')]:
-            pygeoprocessing.numpy_array_to_raster(
-                array, nodata, (10, -10), ORIGIN, SRS_WKT,
-                pairwise_raster_dicts[0][key])
-
-        # For the sake of testing this function more rigorously, creating a new
-        # classification path for the per-habitat summary classification
-        # raster.
-        #
         # NOTE that if we were running this in the real world with only 1
         # pairwise risk raster, the cumulative risk would match the pairwise
         # risk.  I'm providing a different cumulative risk raster here for the
         # sole purpose of checking table construction, not to provide
         # real-world model results.
-        per_habitat_classifications = {
-            pairwise_raster_dicts[0]['habitat']: os.path.join(
-                self.workspace_dir, 'cumulative_classes.tif')
-        }
-        cumulative_classes_array = numpy.array(
-            [[2, 3, 2, 3]], dtype=numpy.uint8)
-        pygeoprocessing.numpy_array_to_raster(
-            cumulative_classes_array, nodata, (10, -10), ORIGIN, SRS_WKT,
-            list(per_habitat_classifications.values())[0])
+        cumulative_classes_array = numpy.array([[2, 3, 2, 3]], dtype=numpy.uint8)
+
+        habitats = ['life']
+        stressors = ['industry']
+
+        os.mkdir(os.path.join(self.workspace_dir, 'intermediate_outputs'))
+        file_registry = file_registry.FileRegistry(
+            hra.MODEL_SPEC.outputs, self.workspace_dir, '')
+        nodata = -1
+        for array, path in [
+                (e_array, 'E_life_industry.tif'),
+                (c_array, 'C_life_industry.tif'),
+                (risk_array, 'RISK_life_industry.tif'),
+                (pairwise_classes_array, 'reclass_life_industry.tif'),
+                (cumulative_classes_array, 'reclass_total_risk_life.tif')]:
+            pygeoprocessing.numpy_array_to_raster(
+                array, nodata, (10, -10), ORIGIN, SRS_WKT,
+                os.path.join(self.workspace_dir, 'intermediate_outputs', path))
 
         target_summary_csv_path = os.path.join(
             self.workspace_dir, 'summary.csv')
         aoi_vector_path = os.path.join(self.workspace_dir, 'aoi.shp')
         subregion_bounding_box = pygeoprocessing.get_raster_info(
-            list(per_habitat_classifications.values())[0])['bounding_box']
+            os.path.join(self.workspace_dir, 'intermediate_outputs',
+                'reclass_total_risk_life.tif'))['bounding_box']
         subregion_geom = shapely.geometry.box(*subregion_bounding_box)
 
         def percent_with_risk_class(array, risk_class):
@@ -1050,8 +1072,8 @@ class HRAUnitTests(unittest.TestCase):
         # This is a standard record in the summary table, used in both subtests
         # below.
         std_record = {
-            'HABITAT': pairwise_raster_dicts[0]['habitat'],
-            'STRESSOR': pairwise_raster_dicts[0]['stressor'],
+            'HABITAT': 'life',
+            'STRESSOR': 'industry',
             'E_MIN': numpy.min(e_array),
             'E_MAX': numpy.max(e_array),
             'E_MEAN': numpy.sum(e_array) / 4,
@@ -1079,8 +1101,8 @@ class HRAUnitTests(unittest.TestCase):
                     {'name': 'second region'}
                 ])
             hra._create_summary_statistics_file(
-                aoi_vector_path, pairwise_raster_dicts,
-                per_habitat_classifications, target_summary_csv_path)
+                aoi_vector_path, habitats, stressors, file_registry,
+                target_summary_csv_path)
             expected_records = [
                 {**std_record,
                  **{'SUBREGION': 'first region',
@@ -1128,8 +1150,8 @@ class HRAUnitTests(unittest.TestCase):
                 [subregion_geom] * 3, aoi_vector_path, SRS_WKT,
                 'ESRI Shapefile')
             hra._create_summary_statistics_file(
-                aoi_vector_path, pairwise_raster_dicts,
-                per_habitat_classifications, target_summary_csv_path)
+                aoi_vector_path, habitats, stressors, file_registry,
+                target_summary_csv_path)
             expected_records = [
                 {**std_record,
                  **{'SUBREGION': 'Total Region',

@@ -13,5 +13,6 @@ MODEL_SPEC = spec.ModelSpec(inputs=[
     model_id='simple_model',
     model_title='',
     userguide='',
+    module_name=__name__,
     input_field_order=[['a', 'b', 'c', 'd', 'workspace_dir']]
 )

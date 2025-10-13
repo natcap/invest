@@ -43,7 +43,7 @@ gdal.UseExceptions()
 def model_spec_with_defaults(model_id='', model_title='', userguide='', aliases=set(),
                  inputs=[], outputs=[]):
     return ModelSpec(model_id=model_id, model_title=model_title, userguide=userguide,
-            aliases=aliases, inputs=inputs, outputs=outputs,
+            aliases=aliases, inputs=inputs, outputs=outputs, module_name='',
             input_field_order=[[i.id for i in inputs if not i.hidden]])
 
 def number_input_spec_with_defaults(id='', units=u.none, expression='', **kwargs):
@@ -1006,6 +1006,22 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(df.columns[0], 'header')
         self.assertEqual(df['header'][0], 'a')
         self.assertEqual(df['header'][1], 'b')
+
+    def test_remote_csv_with_local_path(self):
+        """validation: an error is raised if a remote csv reference local paths."""
+        from natcap.invest import validation
+
+        input_spec = CSVInput(id='foo', columns=[spec.VectorInput(
+            id='path', geometry_types=set(), fields=[])])
+
+        def read_csv(*args, **kwargs):
+            return pandas.DataFrame({'path': ['raster.tif']})
+
+        with unittest.mock.patch('pandas.read_csv', read_csv):
+            with self.assertRaises(ValueError) as cm:
+                input_spec.get_validated_dataframe('https://example.com/table.csv')
+        self.assertIn('Remote CSVs cannot reference local file paths',
+                      str(cm.exception))
 
     def test_unique_key_not_first_column(self):
         """validation: test success when key field is not first column."""

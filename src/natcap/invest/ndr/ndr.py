@@ -17,6 +17,7 @@ from .. import spec
 from .. import utils
 from .. import validation
 from ..sdr import sdr
+from ..file_registry import FileRegistry
 from ..unit_registry import u
 from . import ndr_core
 
@@ -31,6 +32,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["dem_path", "lulc_path", "runoff_proxy_path",
@@ -97,20 +99,19 @@ MODEL_SPEC = spec.ModelSpec(
                     about=(
                         "Whether the nutrient load in column load_p should be treated as"
                         " nutrient application rate or measured contaminant runoff."
-                        " 'application-rate' | 'measured-runoff'"
                     ),
                     required="calc_p",
                     options=[
                         spec.Option(
                             key="application-rate",
                             about=(
-                                "Treat the load values as nutrient application rates"
+                                "Treat the load value as nutrient application rates"
                                 " (e.g. fertilizer, livestock waste, ...).The model will"
                                 " adjust the load using the application rate and"
                                 " retention efficiency: load_p * (1 - eff_p).")),
                         spec.Option(
                             key="measured-runoff",
-                            about="Treat the load values as measured contaminant runoff.")
+                            about="Treat the load value as measured contaminant runoff.")
                     ]
                 ),
                 spec.OptionStringInput(
@@ -118,7 +119,6 @@ MODEL_SPEC = spec.ModelSpec(
                     about=(
                         "Whether the nutrient load in column load_n should be treated as"
                         " nutrient application rate or measured contaminant runoff."
-                        " 'application-rate' | 'measured-runoff'"
                     ),
                     required="calc_n",
                     options=[
@@ -362,6 +362,13 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.kilogram / u.hectare
         ),
         spec.STREAM,
+        spec.SingleBandRasterOutput(
+            id="mask",
+            path="intermediate_outputs/watersheds_mask.tif",
+            about=gettext("Watersheds mask raster"),
+            data_type=int,
+            units=u.none
+        ),
         spec.SingleBandRasterOutput(
             id="crit_len_n",
             path="intermediate_outputs/crit_len_n.tif",
@@ -681,64 +688,7 @@ MODEL_SPEC = spec.ModelSpec(
     ]
 )
 
-_OUTPUT_BASE_FILES = {
-    'n_surface_export_path': 'n_surface_export.tif',
-    'n_subsurface_export_path': 'n_subsurface_export.tif',
-    'n_total_export_path': 'n_total_export.tif',
-    'p_surface_export_path': 'p_surface_export.tif',
-    'watershed_results_ndr_path': 'watershed_results_ndr.gpkg',
-    'stream_path': 'stream.tif'
-}
-
 INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
-
-_INTERMEDIATE_BASE_FILES = {
-    'mask_path': 'watersheds_mask.tif',
-    'ic_factor_path': 'ic_factor.tif',
-    'load_n_path': 'load_n.tif',
-    'load_p_path': 'load_p.tif',
-    'modified_load_n_path': 'modified_load_n.tif',
-    'modified_load_p_path': 'modified_load_p.tif',
-    'ndr_n_path': 'ndr_n.tif',
-    'ndr_p_path': 'ndr_p.tif',
-    'runoff_proxy_index_path': 'runoff_proxy_index.tif',
-    's_accumulation_path': 's_accumulation.tif',
-    's_bar_path': 's_bar.tif',
-    's_factor_inverse_path': 's_factor_inverse.tif',
-    'sub_load_n_path': 'sub_load_n.tif',
-    'surface_load_n_path': 'surface_load_n.tif',
-    'surface_load_p_path': 'surface_load_p.tif',
-    'sub_ndr_n_path': 'sub_ndr_n.tif',
-    'crit_len_n_path': 'crit_len_n.tif',
-    'crit_len_p_path': 'crit_len_p.tif',
-    'd_dn_path': 'd_dn.tif',
-    'd_up_path': 'd_up.tif',
-    'eff_n_path': 'eff_n.tif',
-    'eff_p_path': 'eff_p.tif',
-    'effective_retention_n_path': 'effective_retention_n.tif',
-    'effective_retention_p_path': 'effective_retention_p.tif',
-    'flow_accumulation_path': 'flow_accumulation.tif',
-    'flow_direction_path': 'flow_direction.tif',
-    'thresholded_slope_path': 'thresholded_slope.tif',
-    'dist_to_channel_path': 'dist_to_channel.tif',
-    'drainage_mask': 'what_drains_to_stream.tif',
-    'filled_dem_path': 'filled_dem.tif',
-    'aligned_dem_path': 'aligned_dem.tif',
-    'masked_dem_path': 'masked_dem.tif',
-    'slope_path': 'slope.tif',
-    'aligned_lulc_path': 'aligned_lulc.tif',
-    'masked_lulc_path': 'masked_lulc.tif',
-    'aligned_runoff_proxy_path': 'aligned_runoff_proxy.tif',
-    'masked_runoff_proxy_path': 'masked_runoff_proxy.tif',
-    'surface_load_n_pickle_path': 'surface_load_n.pickle',
-    'surface_load_p_pickle_path': 'surface_load_p.pickle',
-    'subsurface_load_n_pickle_path': 'subsurface_load_n.pickle',
-    'surface_export_n_pickle_path': 'surface_export_n.pickle',
-    'surface_export_p_pickle_path': 'surface_export_p.pickle',
-    'subsurface_export_n_pickle_path': 'subsurface_export_n.pickle',
-    'total_export_n_pickle_path': 'total_export_n.pickle'
-}
-
 _TARGET_NODATA = -1
 
 
@@ -796,30 +746,10 @@ def execute(args):
             and >= 1 is number of processes.
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    # Load all the tables for preprocessing
-    output_dir = os.path.join(args['workspace_dir'])
-    intermediate_output_dir = os.path.join(
-        args['workspace_dir'], INTERMEDIATE_DIR_NAME)
-    utils.make_directories([output_dir, intermediate_output_dir])
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
-        n_workers, reporting_interval=5.0)
-
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    f_reg = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
+    args, f_reg, task_graph = MODEL_SPEC.setup(args)
 
     # Build up a list of nutrients to process based on what's checked on
     nutrients_to_process = []
@@ -841,8 +771,8 @@ def execute(args):
 
     create_vector_task = task_graph.add_task(
         func=create_vector_copy,
-        args=(args['watersheds_path'], f_reg['watershed_results_ndr_path']),
-        target_path_list=[f_reg['watershed_results_ndr_path']],
+        args=(args['watersheds_path'], f_reg['watershed_results_ndr']),
+        target_path_list=[f_reg['watershed_results_ndr']],
         task_name='create target vector')
 
     dem_info = pygeoprocessing.get_raster_info(args['dem_path'])
@@ -850,8 +780,8 @@ def execute(args):
     base_raster_list = [
         args['dem_path'], args['lulc_path'], args['runoff_proxy_path']]
     aligned_raster_list = [
-        f_reg['aligned_dem_path'], f_reg['aligned_lulc_path'],
-        f_reg['aligned_runoff_proxy_path']]
+        f_reg['aligned_dem'], f_reg['aligned_lulc'],
+        f_reg['aligned_runoff_proxy']]
     align_raster_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
@@ -871,67 +801,67 @@ def execute(args):
     mask_task = task_graph.add_task(
         func=_create_mask_raster,
         kwargs={
-            'source_raster_path': f_reg['aligned_dem_path'],
+            'source_raster_path': f_reg['aligned_dem'],
             'source_vector_path': args['watersheds_path'],
-            'target_raster_path': f_reg['mask_path']
+            'target_raster_path': f_reg['mask']
         },
-        target_path_list=[f_reg['mask_path']],
+        target_path_list=[f_reg['mask']],
         dependent_task_list=[align_raster_task],
         task_name='create watersheds mask'
     )
     mask_runoff_proxy_task = task_graph.add_task(
         func=_mask_raster,
         kwargs={
-            'source_raster_path': f_reg['aligned_runoff_proxy_path'],
-            'mask_raster_path': f_reg['mask_path'],
-            'target_masked_raster_path': f_reg['masked_runoff_proxy_path'],
+            'source_raster_path': f_reg['aligned_runoff_proxy'],
+            'mask_raster_path': f_reg['mask'],
+            'target_masked_raster_path': f_reg['masked_runoff_proxy'],
             'target_dtype': gdal.GDT_Float32,
             'target_nodata': _TARGET_NODATA,
         },
         dependent_task_list=[mask_task, align_raster_task],
-        target_path_list=[f_reg['masked_runoff_proxy_path']],
+        target_path_list=[f_reg['masked_runoff_proxy']],
         task_name='mask runoff proxy raster'
     )
     mask_dem_task = task_graph.add_task(
         func=_mask_raster,
         kwargs={
-            'source_raster_path': f_reg['aligned_dem_path'],
-            'mask_raster_path': f_reg['mask_path'],
-            'target_masked_raster_path': f_reg['masked_dem_path'],
+            'source_raster_path': f_reg['aligned_dem'],
+            'mask_raster_path': f_reg['mask'],
+            'target_masked_raster_path': f_reg['masked_dem'],
             'target_dtype': gdal.GDT_Float32,
             'target_nodata': float(numpy.finfo(numpy.float32).min),
         },
         dependent_task_list=[mask_task, align_raster_task],
-        target_path_list=[f_reg['masked_dem_path']],
+        target_path_list=[f_reg['masked_dem']],
         task_name='mask dem raster'
     )
     mask_lulc_task = task_graph.add_task(
         func=_mask_raster,
         kwargs={
-            'source_raster_path': f_reg['aligned_lulc_path'],
-            'mask_raster_path': f_reg['mask_path'],
-            'target_masked_raster_path': f_reg['masked_lulc_path'],
+            'source_raster_path': f_reg['aligned_lulc'],
+            'mask_raster_path': f_reg['mask'],
+            'target_masked_raster_path': f_reg['masked_lulc'],
             'target_dtype': gdal.GDT_Int32,
             'target_nodata': numpy.iinfo(numpy.int32).min,
         },
         dependent_task_list=[mask_task, align_raster_task],
-        target_path_list=[f_reg['masked_lulc_path']],
+        target_path_list=[f_reg['masked_lulc']],
         task_name='mask lulc raster'
     )
 
     fill_pits_task = task_graph.add_task(
         func=pygeoprocessing.routing.fill_pits,
         args=(
-            (f_reg['masked_dem_path'], 1), f_reg['filled_dem_path']),
-        kwargs={'working_dir': intermediate_output_dir},
+            (f_reg['masked_dem'], 1), f_reg['filled_dem']),
+        kwargs={'working_dir': args['workspace_dir']},
         dependent_task_list=[align_raster_task, mask_dem_task],
-        target_path_list=[f_reg['filled_dem_path']],
+        target_path_list=[f_reg['filled_dem']],
         task_name='fill pits')
 
     calculate_slope_task = task_graph.add_task(
         func=pygeoprocessing.calculate_slope,
-        args=((f_reg['filled_dem_path'], 1), f_reg['slope_path']),
-        target_path_list=[f_reg['slope_path']],
+        args=((f_reg['filled_dem'], 1), f_reg['slope']),
+        target_path_list=[f_reg['slope']],
         dependent_task_list=[fill_pits_task],
         task_name='calculate slope')
 
@@ -939,93 +869,93 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=_slope_proportion_and_threshold_op,
-            rasters=[f_reg['slope_path']],
-            target_path=f_reg['thresholded_slope_path']),
-        target_path_list=[f_reg['thresholded_slope_path']],
+            rasters=[f_reg['slope']],
+            target_path=f_reg['thresholded_slope']),
+        target_path_list=[f_reg['thresholded_slope']],
         dependent_task_list=[calculate_slope_task],
         task_name='threshold slope')
 
-    if args['flow_dir_algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'mfd':
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_mfd,
             args=(
-                (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
-            kwargs={'working_dir': intermediate_output_dir},
+                (f_reg['filled_dem'], 1), f_reg['flow_direction']),
+            kwargs={'working_dir': args['workspace_dir']},
             dependent_task_list=[fill_pits_task],
-            target_path_list=[f_reg['flow_direction_path']],
+            target_path_list=[f_reg['flow_direction']],
             task_name='flow dir')
 
         flow_accum_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_mfd,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                f_reg['flow_accumulation_path']),
-            target_path_list=[f_reg['flow_accumulation_path']],
+                (f_reg['flow_direction'], 1),
+                f_reg['flow_accumulation']),
+            target_path_list=[f_reg['flow_accumulation']],
             dependent_task_list=[flow_dir_task],
             task_name='flow accum')
 
         stream_extraction_task = task_graph.add_task(
             func=pygeoprocessing.routing.extract_streams_mfd,
             args=(
-                (f_reg['flow_accumulation_path'], 1),
-                (f_reg['flow_direction_path'], 1),
+                (f_reg['flow_accumulation'], 1),
+                (f_reg['flow_direction'], 1),
                 float(args['threshold_flow_accumulation']),
-                f_reg['stream_path']),
-            target_path_list=[f_reg['stream_path']],
+                f_reg['stream']),
+            target_path_list=[f_reg['stream']],
             dependent_task_list=[flow_accum_task],
             task_name='stream extraction')
         s_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_mfd,
-            args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
+            args=((f_reg['flow_direction'], 1), f_reg['s_accumulation']),
             kwargs={
-                'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
-            target_path_list=[f_reg['s_accumulation_path']],
+                'weight_raster_path_band': (f_reg['thresholded_slope'], 1)},
+            target_path_list=[f_reg['s_accumulation']],
             dependent_task_list=[flow_dir_task, threshold_slope_task],
             task_name='route s')
     else:  # D8
         flow_dir_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_dir_d8,
             args=(
-                (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
-            kwargs={'working_dir': intermediate_output_dir},
+                (f_reg['filled_dem'], 1), f_reg['flow_direction']),
+            kwargs={'working_dir': args['workspace_dir']},
             dependent_task_list=[fill_pits_task],
-            target_path_list=[f_reg['flow_direction_path']],
+            target_path_list=[f_reg['flow_direction']],
             task_name='flow dir')
 
         flow_accum_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_d8,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                f_reg['flow_accumulation_path']),
-            target_path_list=[f_reg['flow_accumulation_path']],
+                (f_reg['flow_direction'], 1),
+                f_reg['flow_accumulation']),
+            target_path_list=[f_reg['flow_accumulation']],
             dependent_task_list=[flow_dir_task],
             task_name='flow accum')
 
         stream_extraction_task = task_graph.add_task(
             func=pygeoprocessing.routing.extract_streams_d8,
             kwargs=dict(
-                flow_accum_raster_path_band=(f_reg['flow_accumulation_path'], 1),
+                flow_accum_raster_path_band=(f_reg['flow_accumulation'], 1),
                 flow_threshold=float(args['threshold_flow_accumulation']),
-                target_stream_raster_path=f_reg['stream_path']),
-            target_path_list=[f_reg['stream_path']],
+                target_stream_raster_path=f_reg['stream']),
+            target_path_list=[f_reg['stream']],
             dependent_task_list=[flow_accum_task],
             task_name='stream extraction')
 
         s_task = task_graph.add_task(
             func=pygeoprocessing.routing.flow_accumulation_d8,
-            args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
+            args=((f_reg['flow_direction'], 1), f_reg['s_accumulation']),
             kwargs={
-                'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
-            target_path_list=[f_reg['s_accumulation_path']],
+                'weight_raster_path_band': (f_reg['thresholded_slope'], 1)},
+            target_path_list=[f_reg['s_accumulation']],
             dependent_task_list=[flow_dir_task, threshold_slope_task],
             task_name='route s')
 
     runoff_proxy_index_task = task_graph.add_task(
         func=_normalize_raster,
-        args=((f_reg['masked_runoff_proxy_path'], 1),
-              f_reg['runoff_proxy_index_path']),
+        args=((f_reg['masked_runoff_proxy'], 1),
+              f_reg['runoff_proxy_index']),
         kwargs={'user_provided_mean': runoff_proxy_av},
-        target_path_list=[f_reg['runoff_proxy_index_path']],
+        target_path_list=[f_reg['runoff_proxy_index']],
         dependent_task_list=[align_raster_task, mask_runoff_proxy_task],
         task_name='runoff proxy mean')
 
@@ -1033,19 +963,19 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=numpy.divide,  # s_bar = s_accum / flow_accum
-            rasters=[f_reg['s_accumulation_path'], f_reg['flow_accumulation_path']],
-            target_path=f_reg['s_bar_path'],
+            rasters=[f_reg['s_accumulation'], f_reg['flow_accumulation']],
+            target_path=f_reg['s_bar'],
             target_dtype=numpy.float32,
             target_nodata=_TARGET_NODATA),
-        target_path_list=[f_reg['s_bar_path']],
+        target_path_list=[f_reg['s_bar']],
         dependent_task_list=[s_task, flow_accum_task],
         task_name='calculate s bar')
 
     d_up_task = task_graph.add_task(
         func=d_up_calculation,
-        args=(f_reg['s_bar_path'], f_reg['flow_accumulation_path'],
-              f_reg['d_up_path']),
-        target_path_list=[f_reg['d_up_path']],
+        args=(f_reg['s_bar'], f_reg['flow_accumulation'],
+              f_reg['d_up']),
+        target_path_list=[f_reg['d_up']],
         dependent_task_list=[s_bar_task, flow_accum_task],
         task_name='d up')
 
@@ -1053,78 +983,76 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs=dict(
             op=_inverse_op,
-            rasters=[f_reg['thresholded_slope_path']],
-            target_path=f_reg['s_factor_inverse_path'],
+            rasters=[f_reg['thresholded_slope']],
+            target_path=f_reg['s_factor_inverse'],
             target_nodata=_TARGET_NODATA),
-        target_path_list=[f_reg['s_factor_inverse_path']],
+        target_path_list=[f_reg['s_factor_inverse']],
         dependent_task_list=[threshold_slope_task],
         task_name='s inv')
 
-    if args['flow_dir_algorithm'] == 'MFD':
+    if args['flow_dir_algorithm'] == 'mfd':
         d_dn_task = task_graph.add_task(
             func=pygeoprocessing.routing.distance_to_channel_mfd,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                (f_reg['stream_path'], 1),
-                f_reg['d_dn_path']),
+                (f_reg['flow_direction'], 1),
+                (f_reg['stream'], 1),
+                f_reg['d_dn']),
             kwargs={'weight_raster_path_band': (
-                f_reg['s_factor_inverse_path'], 1)},
+                f_reg['s_factor_inverse'], 1)},
             dependent_task_list=[stream_extraction_task, s_inv_task],
-            target_path_list=[f_reg['d_dn_path']],
+            target_path_list=[f_reg['d_dn']],
             task_name='d dn')
 
         dist_to_channel_task = task_graph.add_task(
             func=pygeoprocessing.routing.distance_to_channel_mfd,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                (f_reg['stream_path'], 1),
-                f_reg['dist_to_channel_path']),
+                (f_reg['flow_direction'], 1),
+                (f_reg['stream'], 1),
+                f_reg['dist_to_channel']),
             dependent_task_list=[stream_extraction_task],
-            target_path_list=[f_reg['dist_to_channel_path']],
+            target_path_list=[f_reg['dist_to_channel']],
             task_name='dist to channel')
     else: # D8
         d_dn_task = task_graph.add_task(
             func=pygeoprocessing.routing.distance_to_channel_d8,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                (f_reg['stream_path'], 1),
-                f_reg['d_dn_path']),
+                (f_reg['flow_direction'], 1),
+                (f_reg['stream'], 1),
+                f_reg['d_dn']),
             kwargs={'weight_raster_path_band': (
-                f_reg['s_factor_inverse_path'], 1)},
+                f_reg['s_factor_inverse'], 1)},
             dependent_task_list=[stream_extraction_task, s_inv_task],
-            target_path_list=[f_reg['d_dn_path']],
+            target_path_list=[f_reg['d_dn']],
             task_name='d dn')
 
         dist_to_channel_task = task_graph.add_task(
             func=pygeoprocessing.routing.distance_to_channel_d8,
             args=(
-                (f_reg['flow_direction_path'], 1),
-                (f_reg['stream_path'], 1),
-                f_reg['dist_to_channel_path']),
+                (f_reg['flow_direction'], 1),
+                (f_reg['stream'], 1),
+                f_reg['dist_to_channel']),
             dependent_task_list=[stream_extraction_task],
-            target_path_list=[f_reg['dist_to_channel_path']],
+            target_path_list=[f_reg['dist_to_channel']],
             task_name='dist to channel')
 
     _ = task_graph.add_task(
         func=sdr._calculate_what_drains_to_stream,
-        args=(f_reg['flow_direction_path'],
-              f_reg['dist_to_channel_path'],
-              f_reg['drainage_mask']),
-        target_path_list=[f_reg['drainage_mask']],
+        args=(f_reg['flow_direction'],
+              f_reg['dist_to_channel'],
+              f_reg['what_drains_to_stream']),
+        target_path_list=[f_reg['what_drains_to_stream']],
         dependent_task_list=[flow_dir_task, dist_to_channel_task],
         task_name='write mask of what drains to stream')
 
     ic_task = task_graph.add_task(
         func=calculate_ic,
         args=(
-            f_reg['d_up_path'], f_reg['d_dn_path'], f_reg['ic_factor_path']),
-        target_path_list=[f_reg['ic_factor_path']],
+            f_reg['d_up'], f_reg['d_dn'], f_reg['ic_factor']),
+        target_path_list=[f_reg['ic_factor']],
         dependent_task_list=[d_dn_task, d_up_task],
         task_name='calc ic')
 
     for nutrient in nutrients_to_process:
-        load_path = f_reg[f'load_{nutrient}_path']
-        modified_load_path = f_reg[f'modified_load_{nutrient}_path']
         # Perrine says that 'n' is the only case where we could consider a
         # prop subsurface component.  So there's a special case for that.
         if nutrient == 'n':
@@ -1135,98 +1063,95 @@ def execute(args):
         load_task = task_graph.add_task(
             func=_calculate_load,
             args=(
-                f_reg['masked_lulc_path'],
+                f_reg['masked_lulc'],
                 biophysical_df[
                     [f'load_{nutrient}', f'eff_{nutrient}',
                      f'load_type_{nutrient}']].to_dict('index'),
                 nutrient,
-                load_path),
+                f_reg[f'load_{nutrient}']),
             dependent_task_list=[align_raster_task, mask_lulc_task],
-            target_path_list=[load_path],
+            target_path_list=[f_reg[f'load_{nutrient}']],
             task_name=f'{nutrient} load')
 
         modified_load_task = task_graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=_mult_op,
-                rasters=[load_path, f_reg['runoff_proxy_index_path']],
-                target_path=modified_load_path,
+                rasters=[f_reg[f'load_{nutrient}'], f_reg['runoff_proxy_index']],
+                target_path=f_reg[f'modified_load_{nutrient}'],
                 target_nodata=_TARGET_NODATA),
-            target_path_list=[modified_load_path],
+            target_path_list=[f_reg[f'modified_load_{nutrient}']],
             dependent_task_list=[load_task, runoff_proxy_index_task],
             task_name=f'modified load {nutrient}')
 
-        surface_load_path = f_reg[f'surface_load_{nutrient}_path']
         surface_load_task = task_graph.add_task(
             func=_map_surface_load,
-            args=(modified_load_path, f_reg['masked_lulc_path'],
-                  subsurface_proportion_map, surface_load_path),
-            target_path_list=[surface_load_path],
+            args=(f_reg[f'modified_load_{nutrient}'], f_reg['masked_lulc'],
+                  subsurface_proportion_map, f_reg[f'surface_load_{nutrient}']),
+            target_path_list=[f_reg[f'surface_load_{nutrient}']],
             dependent_task_list=[modified_load_task, align_raster_task],
             task_name=f'map surface load {nutrient}')
 
-        eff_path = f_reg[f'eff_{nutrient}_path']
         eff_task = task_graph.add_task(
             func=_map_lulc_to_val_mask_stream,
             args=(
-                f_reg['masked_lulc_path'], f_reg['stream_path'],
-                biophysical_df[f'eff_{nutrient}'].to_dict(), eff_path),
-            target_path_list=[eff_path],
+                f_reg['masked_lulc'], f_reg['stream'],
+                biophysical_df[f'eff_{nutrient}'].to_dict(),
+                f_reg[f'eff_{nutrient}']),
+            target_path_list=[f_reg[f'eff_{nutrient}']],
             dependent_task_list=[align_raster_task, stream_extraction_task],
             task_name=f'ret eff {nutrient}')
 
-        crit_len_path = f_reg[f'crit_len_{nutrient}_path']
         crit_len_task = task_graph.add_task(
             func=_map_lulc_to_val_mask_stream,
             args=(
-                f_reg['masked_lulc_path'], f_reg['stream_path'],
+                f_reg['masked_lulc'], f_reg['stream'],
                 biophysical_df[f'crit_len_{nutrient}'].to_dict(),
-                crit_len_path),
-            target_path_list=[crit_len_path],
+                f_reg[f'crit_len_{nutrient}']),
+            target_path_list=[f_reg[f'crit_len_{nutrient}']],
             dependent_task_list=[align_raster_task, stream_extraction_task],
             task_name=f'ret eff {nutrient}')
 
-        effective_retention_path = (
-            f_reg[f'effective_retention_{nutrient}_path'])
         ndr_eff_task = task_graph.add_task(
             func=ndr_core.ndr_eff_calculation,
             args=(
-                f_reg['flow_direction_path'],
-                f_reg['stream_path'], eff_path,
-                crit_len_path, effective_retention_path,
+                f_reg['flow_direction'],
+                f_reg['stream'], f_reg[f'eff_{nutrient}'],
+                f_reg[f'crit_len_{nutrient}'],
+                f_reg[f'effective_retention_{nutrient}'],
                 args['flow_dir_algorithm']),
-            target_path_list=[effective_retention_path],
+            target_path_list=[f_reg[f'effective_retention_{nutrient}']],
             dependent_task_list=[
                 stream_extraction_task, eff_task, crit_len_task],
             task_name=f'eff ret {nutrient}')
 
-        ndr_path = f_reg[f'ndr_{nutrient}_path']
         ndr_task = task_graph.add_task(
             func=_calculate_ndr,
             args=(
-                effective_retention_path, f_reg['ic_factor_path'],
-                float(args['k_param']), ndr_path),
-            target_path_list=[ndr_path],
+                f_reg[f'effective_retention_{nutrient}'], f_reg['ic_factor'],
+                float(args['k_param']), f_reg[f'ndr_{nutrient}']),
+            target_path_list=[f_reg[f'ndr_{nutrient}']],
             dependent_task_list=[ndr_eff_task, ic_task],
             task_name=f'calc ndr {nutrient}')
 
-        surface_export_path = f_reg[f'{nutrient}_surface_export_path']
         surface_export_task = task_graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
                 op=numpy.multiply,  # export = load * ndr
-                rasters=[surface_load_path, ndr_path],
-                target_path=surface_export_path,
+                rasters=[
+                    f_reg[f'surface_load_{nutrient}'],
+                    f_reg[f'ndr_{nutrient}']],
+                target_path=f_reg[f'{nutrient}_surface_export'],
                 target_nodata=_TARGET_NODATA),
-            target_path_list=[surface_export_path],
+            target_path_list=[f_reg[f'{nutrient}_surface_export']],
             dependent_task_list=[
                 load_task, ndr_task, surface_load_task],
             task_name=f'surface export {nutrient}')
 
         field_pickle_map[f'{nutrient}_surface_load'] = (
-            f_reg[f'surface_load_{nutrient}_pickle_path'])
+            f_reg[f'surface_load_{nutrient}_pickle'])
         field_pickle_map[f'{nutrient}_surface_export'] = (
-            f_reg[f'surface_export_{nutrient}_pickle_path'])
+            f_reg[f'surface_export_{nutrient}_pickle'])
 
         # only calculate subsurface things for nitrogen
         if nutrient == 'n':
@@ -1234,9 +1159,9 @@ def execute(args):
                 biophysical_df['proportion_subsurface_n'].to_dict())
             subsurface_load_task = task_graph.add_task(
                 func=_map_subsurface_load,
-                args=(modified_load_path, f_reg['masked_lulc_path'],
-                      proportion_subsurface_map, f_reg['sub_load_n_path']),
-                target_path_list=[f_reg['sub_load_n_path']],
+                args=(f_reg[f'modified_load_{nutrient}'], f_reg['masked_lulc'],
+                      proportion_subsurface_map, f_reg['sub_load_n']),
+                target_path_list=[f_reg['sub_load_n']],
                 dependent_task_list=[modified_load_task, align_raster_task],
                 task_name='map subsurface load n')
 
@@ -1245,8 +1170,8 @@ def execute(args):
                 args=(
                     float(args['subsurface_eff_n']),
                     float(args['subsurface_critical_length_n']),
-                    f_reg['dist_to_channel_path'], f_reg['sub_ndr_n_path']),
-                target_path_list=[f_reg['sub_ndr_n_path']],
+                    f_reg['dist_to_channel'], f_reg['sub_ndr_n']),
+                target_path_list=[f_reg['sub_ndr_n']],
                 dependent_task_list=[dist_to_channel_task],
                 task_name='sub ndr n')
 
@@ -1254,10 +1179,10 @@ def execute(args):
                 func=pygeoprocessing.raster_map,
                 kwargs=dict(
                     op=numpy.multiply,  # export = load * ndr
-                    rasters=[f_reg['sub_load_n_path'], f_reg['sub_ndr_n_path']],
-                    target_path=f_reg['n_subsurface_export_path'],
+                    rasters=[f_reg['sub_load_n'], f_reg['sub_ndr_n']],
+                    target_path=f_reg['n_subsurface_export'],
                     target_nodata=_TARGET_NODATA),
-                target_path_list=[f_reg['n_subsurface_export_path']],
+                target_path_list=[f_reg['n_subsurface_export']],
                 dependent_task_list=[
                     subsurface_load_task, subsurface_ndr_task],
                 task_name='subsurface export n')
@@ -1268,10 +1193,10 @@ def execute(args):
                 func=pygeoprocessing.raster_map,
                 kwargs=dict(
                     op=_sum_op,
-                    rasters=[surface_export_path, f_reg['n_subsurface_export_path']],
-                    target_path=f_reg['n_total_export_path'],
+                    rasters=[f_reg[f'{nutrient}_surface_export'], f_reg['n_subsurface_export']],
+                    target_path=f_reg['n_total_export'],
                     target_nodata=_TARGET_NODATA),
-                target_path_list=[f_reg['n_total_export_path']],
+                target_path_list=[f_reg['n_total_export']],
                 dependent_task_list=[
                     surface_export_task, subsurface_export_task],
                 task_name='total export n')
@@ -1279,10 +1204,10 @@ def execute(args):
             _ = task_graph.add_task(
                 func=_aggregate_and_pickle_total,
                 args=(
-                    (f_reg['n_subsurface_export_path'], 1),
-                    f_reg['watershed_results_ndr_path'],
-                    f_reg['subsurface_export_n_pickle_path']),
-                target_path_list=[f_reg['subsurface_export_n_pickle_path']],
+                    (f_reg['n_subsurface_export'], 1),
+                    f_reg['watershed_results_ndr'],
+                    f_reg['subsurface_export_n_pickle']),
+                target_path_list=[f_reg['subsurface_export_n_pickle']],
                 dependent_task_list=[
                     subsurface_export_task, create_vector_task],
                 task_name='aggregate n subsurface export')
@@ -1290,47 +1215,47 @@ def execute(args):
             _ = task_graph.add_task(
                 func=_aggregate_and_pickle_total,
                 args=(
-                    (f_reg['n_total_export_path'], 1),
-                    f_reg['watershed_results_ndr_path'],
-                    f_reg['total_export_n_pickle_path']),
+                    (f_reg['n_total_export'], 1),
+                    f_reg['watershed_results_ndr'],
+                    f_reg['total_export_n_pickle']),
                 target_path_list=[
-                    f_reg[f'total_export_{nutrient}_pickle_path']],
+                    f_reg[f'total_export_{nutrient}_pickle']],
                 dependent_task_list=[total_export_task, create_vector_task],
                 task_name='aggregate n total export')
 
             _ = task_graph.add_task(
                 func=_aggregate_and_pickle_total,
                 args=(
-                    (f_reg['sub_load_n_path'], 1),
-                    f_reg['watershed_results_ndr_path'],
-                    f_reg[f'subsurface_load_{nutrient}_pickle_path']),
+                    (f_reg['sub_load_n'], 1),
+                    f_reg['watershed_results_ndr'],
+                    f_reg[f'subsurface_load_{nutrient}_pickle']),
                 target_path_list=[
-                    f_reg[f'subsurface_load_{nutrient}_pickle_path']],
+                    f_reg[f'subsurface_load_{nutrient}_pickle']],
                 dependent_task_list=[subsurface_load_task, create_vector_task],
                 task_name=f'aggregate {nutrient} subsurface load')
 
             field_pickle_map['n_subsurface_export'] = f_reg[
-                'subsurface_export_n_pickle_path']
+                'subsurface_export_n_pickle']
             field_pickle_map['n_total_export'] = f_reg[
-                'total_export_n_pickle_path']
+                'total_export_n_pickle']
             field_pickle_map['n_subsurface_load'] = f_reg[
-                'subsurface_load_n_pickle_path']
+                'subsurface_load_n_pickle']
 
         _ = task_graph.add_task(
             func=_aggregate_and_pickle_total,
             args=(
-                (surface_export_path, 1), f_reg['watershed_results_ndr_path'],
-                f_reg[f'surface_export_{nutrient}_pickle_path']),
-            target_path_list=[f_reg[f'surface_export_{nutrient}_pickle_path']],
+                (f_reg[f'{nutrient}_surface_export'], 1), f_reg['watershed_results_ndr'],
+                f_reg[f'surface_export_{nutrient}_pickle']),
+            target_path_list=[f_reg[f'surface_export_{nutrient}_pickle']],
             dependent_task_list=[surface_export_task, create_vector_task],
             task_name=f'aggregate {nutrient} export')
 
         _ = task_graph.add_task(
             func=_aggregate_and_pickle_total,
             args=(
-                (surface_load_path, 1), f_reg['watershed_results_ndr_path'],
-                f_reg[f'surface_load_{nutrient}_pickle_path']),
-            target_path_list=[f_reg[f'surface_load_{nutrient}_pickle_path']],
+                (f_reg[f'surface_load_{nutrient}'], 1), f_reg['watershed_results_ndr'],
+                f_reg[f'surface_load_{nutrient}_pickle']),
+            target_path_list=[f_reg[f'surface_load_{nutrient}_pickle']],
             dependent_task_list=[surface_load_task, create_vector_task],
             task_name=f'aggregate {nutrient} surface load')
 
@@ -1339,7 +1264,7 @@ def execute(args):
 
     LOGGER.info('Writing summaries to output shapefile')
     _add_fields_to_shapefile(
-        field_pickle_map, f_reg['watershed_results_ndr_path'])
+        field_pickle_map, f_reg['watershed_results_ndr'])
 
     LOGGER.info(r'NDR complete!')
     LOGGER.info(r'  _   _    ____    ____     ')
@@ -1349,6 +1274,8 @@ def execute(args):
     LOGGER.info(r' |_| \_|  |____/ u|_| \_\   ')
     LOGGER.info(r' ||   \\,-.|||_   //   \\_  ')
     LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
+
+    return f_reg.registry
 
 
 # raster_map equation: Multiply a series of arrays element-wise

@@ -25,6 +25,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["lulc_bas_path", "carbon_pools_path"],
@@ -181,7 +182,7 @@ MODEL_SPEC = spec.ModelSpec(
     ],
     outputs=[
         spec.FileOutput(
-            id="report",
+            id="html_report",
             path="report.html",
             about=gettext(
                 "This file presents a summary of all data computed by the model. It also"
@@ -322,26 +323,6 @@ MODEL_SPEC = spec.ModelSpec(
     ]
 )
 
-
-_OUTPUT_BASE_FILES = {
-    'c_storage_bas': 'c_storage_bas.tif',
-    'c_storage_alt': 'c_storage_alt.tif',
-    'c_change_bas_alt': 'c_change_bas_alt.tif',
-    'npv_alt': 'npv_alt.tif',
-    'html_report': 'report.html',
-}
-
-_INTERMEDIATE_BASE_FILES = {
-    'c_above_bas': 'c_above_bas.tif',
-    'c_below_bas': 'c_below_bas.tif',
-    'c_soil_bas': 'c_soil_bas.tif',
-    'c_dead_bas': 'c_dead_bas.tif',
-    'c_above_alt': 'c_above_alt.tif',
-    'c_below_alt': 'c_below_alt.tif',
-    'c_soil_alt': 'c_soil_alt.tif',
-    'c_dead_alt': 'c_dead_alt.tif',
-}
-
 # -1.0 since carbon stocks are 0 or greater
 _CARBON_NODATA = -1.0
 
@@ -393,39 +374,18 @@ def execute(args):
             place in the current process.
 
     Returns:
-        None.
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate_outputs')
-    output_dir = args['workspace_dir']
-    utils.make_directories([intermediate_output_dir, output_dir])
+    args, file_registry, graph = MODEL_SPEC.setup(args)
 
-    LOGGER.info('Building file registry')
-    file_registry = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),], file_suffix)
-
-    if args['do_valuation'] and args['lulc_bas_year'] >= args['lulc_alt_year']:
+    if (args['do_valuation'] and
+            args['lulc_bas_year'] >= args['lulc_alt_year']):
         raise ValueError(
             "Invalid input for lulc_bas_year or lulc_alt_year. The Alternate "
-            f"LULC Year ({args['lulc_alt_year']}) must be greater than the "
-            f"Baseline LULC Year ({args['lulc_bas_year']}). Ensure that the "
-            "Baseline LULC Year is earlier than the Alternate LULC Year."
+            f"LULC Year ({args['lulc_alt_year']}) must be greater "
+            f"than the Baseline LULC Year ({args['lulc_bas_year']}). "
+            "Ensure that the Baseline LULC Year is earlier than the Alternate LULC Year."
         )
-
-    carbon_pool_df = MODEL_SPEC.get_input(
-        'carbon_pools_path').get_validated_dataframe(args['carbon_pools_path'])
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-    graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     cell_size_set = set()
     raster_size_set = set()
@@ -435,7 +395,7 @@ def execute(args):
 
     for scenario_type in ['bas', 'alt']:
         lulc_key = "lulc_%s_path" % (scenario_type)
-        if lulc_key in args and args[lulc_key]:
+        if args[lulc_key]:
             raster_info = pygeoprocessing.get_raster_info(args[lulc_key])
             cell_size_set.add(raster_info['pixel_size'])
             raster_size_set.add(raster_info['raster_size'])
@@ -456,24 +416,26 @@ def execute(args):
     LOGGER.info('Map all carbon pools to carbon storage rasters.')
     carbon_map_task_lookup = {}
     sum_rasters_task_lookup = {}
+    carbon_pool_df = MODEL_SPEC.get_input(
+        'carbon_pools_path').get_validated_dataframe(
+        args['carbon_pools_path'])
     for scenario_type in valid_scenarios:
         carbon_map_task_lookup[scenario_type] = []
         storage_path_list = []
         for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
             carbon_pool_by_type = carbon_pool_df[pool_type].to_dict()
 
-            lulc_key = 'lulc_%s_path' % scenario_type
-            storage_key = '%s_%s' % (pool_type, scenario_type)
+            lulc_key = f'lulc_{scenario_type}_path'
+            storage_key = f'{pool_type}_{scenario_type}'
             LOGGER.info(
-                "Mapping carbon from '%s' to '%s' scenario.",
-                lulc_key, storage_key)
+                f"Mapping carbon from '{lulc_key}' to '{storage_key}' scenario.")
 
             carbon_map_task = graph.add_task(
                 _generate_carbon_map,
                 args=(args[lulc_key], carbon_pool_by_type,
                       file_registry[storage_key]),
                 target_path_list=[file_registry[storage_key]],
-                task_name='carbon_map_%s' % storage_key)
+                task_name=f'carbon_map_{storage_key}')
             storage_path_list.append(file_registry[storage_key])
             carbon_map_task_lookup[scenario_type].append(carbon_map_task)
 
@@ -518,12 +480,14 @@ def execute(args):
 
     # calculate net present value
     calculate_npv_tasks = []
-    if 'do_valuation' in args and args['do_valuation']:
+    if args['do_valuation']:
         LOGGER.info('Constructing valuation formula.')
         valuation_constant = _calculate_valuation_constant(
-            int(args['lulc_bas_year']), int(args['lulc_alt_year']),
-            float(args['discount_rate']), float(args['rate_change']),
-            float(args['price_per_metric_ton_of_c']))
+            args['lulc_bas_year'],
+            args['lulc_alt_year'],
+            args['discount_rate'],
+            args['rate_change'],
+            args['price_per_metric_ton_of_c'])
 
         if 'alt' in valid_scenarios:
             output_key = 'npv_alt'
@@ -550,6 +514,7 @@ def execute(args):
         dependent_task_list=tasks_to_report,
         task_name='generate_report')
     graph.join()
+    return file_registry.registry
 
 
 # element-wise sum function to pass to raster_map
@@ -660,8 +625,7 @@ def _generate_report(raster_file_set, model_args, file_registry):
     Returns:
         None.
     """
-    html_report_path = file_registry['html_report']
-    with codecs.open(html_report_path, 'w', encoding='utf-8') as report_doc:
+    with codecs.open(file_registry['html_report'], 'w', encoding='utf-8') as report_doc:
         # Boilerplate header that defines style and intro header.
         header = (
             """

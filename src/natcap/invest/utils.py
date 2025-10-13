@@ -1,13 +1,18 @@
 """InVEST specific code utils."""
+import ast
 import codecs
 import contextlib
+import functools
+import json
 import logging
 import os
 import platform
 import re
 import shutil
+import sys
 import tempfile
 import time
+from urllib.parse import urlparse
 from datetime import datetime
 
 import natcap.invest
@@ -107,6 +112,8 @@ def _log_gdal_errors(*args, **kwargs):
 def capture_gdal_logging():
     """Context manager for logging GDAL errors with python logging.
 
+    While we are now using ``gdal.UseExceptions()``, we still need this to
+    handle GDAL logging that does not get raised as an exception.
     GDAL error messages are logged via python's logging system, at a severity
     that corresponds to a log level in ``logging``.  Error messages are logged
     with the ``osgeo.gdal`` logger.
@@ -122,25 +129,6 @@ def capture_gdal_logging():
         yield
     finally:
         gdal.PopErrorHandler()
-
-
-@contextlib.contextmanager
-def _set_gdal_configuration(opt, value):
-    """Temporarily set a GDAL configuration option.
-
-    Args:
-        opt (string): The GDAL configuration option to set.
-        value (string): The value to set the option to.
-
-    Returns:
-        ``None``
-    """
-    prior_value = gdal.GetConfigOption(opt)
-    gdal.SetConfigOption(opt, value)
-    try:
-        yield
-    finally:
-        gdal.SetConfigOption(opt, prior_value)
 
 
 def _format_time(seconds):
@@ -173,23 +161,22 @@ def prepare_workspace(
     with capture_gdal_logging(), log_to_file(logfile,
                                              exclude_threads=exclude_threads,
                                              logging_level=logging_level):
-        with sandbox_tempdir(dir=workspace):
-            logging.captureWarnings(True)
-            # If invest is launched as a subprocess (e.g. the Workbench)
-            # the parent process can rely on this announcement to know the
-            # logfile path (within []), and to know the invest process started.
-            LOGGER.log(100, 'Writing log messages to [%s]', logfile)
-            start_time = time.time()
-            try:
-                yield
-            except Exception:
-                LOGGER.exception(f'Exception while executing {model_id}')
-                raise
-            finally:
-                LOGGER.info('Elapsed time: %s',
-                            _format_time(round(time.time() - start_time, 2)))
-                logging.captureWarnings(False)
-                LOGGER.info(f'Execution finished; version: {natcap.invest.__version__}')
+        logging.captureWarnings(True)
+        # If invest is launched as a subprocess (e.g. the Workbench)
+        # the parent process can rely on this announcement to know the
+        # logfile path (within []), and to know the invest process started.
+        LOGGER.log(100, f'Writing log messages to [{logfile}]', )
+        start_time = time.time()
+        try:
+            yield
+        except Exception:
+            LOGGER.exception(f'Exception while executing {model_id}')
+            raise
+        finally:
+            LOGGER.info(
+                f'Elapsed time: {_format_time(round(time.time() - start_time, 2))}')
+            logging.captureWarnings(False)
+            LOGGER.info(f'Execution finished; version: {natcap.invest.__version__}')
 
 
 class ThreadFilter(logging.Filter):
@@ -254,8 +241,8 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
     """
     try:
         if os.path.exists(logfile):
-            LOGGER.warning('Logfile %s exists and will be overwritten',
-                           logfile)
+            LOGGER.warning(
+                f'Logfile {logfile} exists and will be overwritten')
     except SystemError:
         # This started happening in Windows tests:
         #  SystemError: <built-in function stat> returned NULL without
@@ -272,7 +259,7 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
     handler.setFormatter(formatter)
     handler.setLevel(logging_level)
 
-    if exclude_threads is not None:
+    if exclude_threads:
         for threadname in exclude_threads:
             thread_filter = ThreadFilter(threadname)
             handler.addFilter(thread_filter)
@@ -282,135 +269,6 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
     finally:
         handler.close()
         root_logger.removeHandler(handler)
-
-
-@contextlib.contextmanager
-def sandbox_tempdir(suffix='', prefix='tmp', dir=None):
-    """Create a temporary directory for this context and clean it up on exit.
-
-    Parameters are identical to those for :py:func:`tempfile.mkdtemp`.
-
-    When the context manager exits, the created temporary directory is
-    recursively removed.
-
-    Args:
-        suffix='' (string): a suffix for the name of the directory.
-        prefix='tmp' (string): the prefix to use for the directory name.
-        dir=None (string or None): If a string, a directory that should be
-            the parent directory of the new temporary directory.  If None,
-            tempfile will determine the appropriate tempdir to use as the
-            parent folder.
-
-    Yields:
-        ``sandbox`` (string): The path to the new folder on disk.
-
-    Returns:
-        ``None``
-    """
-    sandbox = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
-
-    try:
-        yield sandbox
-    finally:
-        try:
-            shutil.rmtree(sandbox)
-        except OSError:
-            LOGGER.exception('Could not remove sandbox %s', sandbox)
-
-
-def make_suffix_string(args, suffix_key):
-    """Make an InVEST appropriate suffix string.
-
-    Creates an InVEST appropriate suffix string  given the args dictionary and
-    suffix key.  In general, prepends an '_' when necessary and generates an
-    empty string when necessary.
-
-    Args:
-        args (dict): the classic InVEST model parameter dictionary that is
-            passed to `execute`.
-        suffix_key (string): the key used to index the base suffix.
-
-    Returns:
-        If `suffix_key` is not in `args`, or `args['suffix_key']` is ""
-            return "",
-        If `args['suffix_key']` starts with '_' return `args['suffix_key']`
-            else return '_'+`args['suffix_key']`
-    """
-    try:
-        file_suffix = args[suffix_key]
-        if file_suffix != "" and not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
-
-    return file_suffix
-
-
-def build_file_registry(base_file_path_list, file_suffix):
-    """Combine file suffixes with key names, base filenames, and directories.
-
-    Args:
-        base_file_tuple_list (list): a list of (dict, path) tuples where
-            the dictionaries have a 'file_key': 'basefilename' pair, or
-            'file_key': list of 'basefilename's.  'path'
-            indicates the file directory path to prepend to the basefile name.
-        file_suffix (string): a string to append to every filename, can be
-            empty string
-
-    Returns:
-        dictionary of 'file_keys' from the dictionaries in
-        `base_file_tuple_list` mapping to full file paths with suffixes or
-        lists of file paths with suffixes depending on the original type of
-        the 'basefilename' pair.
-
-    Raises:
-        ValueError if there are duplicate file keys or duplicate file paths.
-        ValueError if a path is not a string or a list of strings.
-    """
-    all_paths = set()
-    duplicate_keys = set()
-    duplicate_paths = set()
-    f_reg = {}
-
-    def _build_path(base_filename, path):
-        """Internal helper to avoid code duplication."""
-        pre, post = os.path.splitext(base_filename)
-        full_path = os.path.join(path, pre+file_suffix+post)
-
-        # Check for duplicate keys or paths
-        if full_path in all_paths:
-            duplicate_paths.add(full_path)
-        else:
-            all_paths.add(full_path)
-        return full_path
-
-    for base_file_dict, path in base_file_path_list:
-        for file_key, file_payload in base_file_dict.items():
-            # check for duplicate keys
-            if file_key in f_reg:
-                duplicate_keys.add(file_key)
-            else:
-                # handle the case whether it's a filename or a list of strings
-                if isinstance(file_payload, str):
-                    full_path = _build_path(file_payload, path)
-                    f_reg[file_key] = full_path
-                elif isinstance(file_payload, list):
-                    f_reg[file_key] = []
-                    for filename in file_payload:
-                        full_path = _build_path(filename, path)
-                        f_reg[file_key].append(full_path)
-                else:
-                    raise ValueError(
-                        "Unknown type in base_file_dict[%s]=%s" % (
-                            file_key, path))
-
-    if len(duplicate_paths) > 0 or len(duplicate_keys):
-        raise ValueError(
-            "Cannot consolidate because of duplicate paths or keys: "
-            "duplicate_keys: %s duplicate_paths: %s" % (
-                duplicate_keys, duplicate_paths))
-
-    return f_reg
 
 
 def expand_path(path, base_path):
@@ -476,22 +334,6 @@ def read_csv_to_dataframe(path, **kwargs):
     df.columns = df.columns.astype(str).str.strip().str.lower()
 
     return df
-
-
-def make_directories(directory_list):
-    """Create directories in `directory_list` if they do not already exist."""
-    if not isinstance(directory_list, list):
-        raise ValueError(
-            "Expected `directory_list` to be an instance of `list` instead "
-            "got type %s instead", type(directory_list))
-
-    for path in directory_list:
-        # From http://stackoverflow.com/a/14364249/42897
-        try:
-            os.makedirs(path)
-        except OSError:
-            if not os.path.isdir(path):
-                raise
 
 
 def mean_pixel_size_and_area(pixel_size_tuple):
@@ -849,3 +691,203 @@ def copy_spatial_files(spatial_filepath, target_dir):
         return_filepath = target_filepath
 
     return return_filepath
+
+
+class _GDALPath:
+    """Result of parsing a dataset URI/Path
+
+    This class is largely copied from rasterio._path.
+
+    In this context, "scheme" refers to the first part of a URL in the format
+    scheme://netloc/path;parameters?query#fragment
+
+    Attributes
+    ----------
+    path : str
+        Parsed path. Includes the hostname and query string in the case
+        of a URI.
+    archive : str
+        Parsed archive path.
+    scheme : str
+        URI scheme such as "https" or "zip+s3".
+    """
+    
+    def __init__(self, path, archive, scheme):
+        self.path = path
+        self.archive = archive
+        self.scheme = scheme
+
+        # Supported URI schemes and their mapping to GDAL's VSI suffix.
+        self.schemes = {
+            'ftp': 'curl',
+            'gzip': 'gzip',
+            'http': 'curl',
+            'https': 'curl',
+            's3': 's3',
+            'tar': 'tar',
+            'zip': 'zip',
+            'file': 'file',
+            'oss': 'oss',
+            'gs': 'gs',
+            'az': 'az',
+        }
+        self.curlschemes = {k for k, v in self.schemes.items() if v == "curl"}
+
+        self.remoteschemes = {
+            k for k, v in self.schemes.items() if v in (
+                "curl",
+                "s3",
+                "oss",
+                "gs",
+                "az",
+            )
+        }
+
+    @classmethod
+    def from_uri(cls, uri):
+        """Instantiate a _GDALPath for a given URI.
+
+        Args:
+            uri: URI string to parse
+
+        Returns:
+            _GDALPath object
+        """
+        parts = urlparse(uri)
+        if sys.platform == "win32" and re.match(r"^[a-zA-Z]\:", uri):
+            parsed_path = uri
+            parsed_netloc = None
+            scheme = None
+        else:
+            parsed_path = parts.path
+            parsed_netloc = parts.netloc
+            scheme = parts.scheme or None
+
+        path = parsed_path
+
+        if parts.query:
+            path += "?" + parts.query
+
+        if scheme and scheme.startswith(("gzip", "tar", "zip")):
+            path_parts = path.split('!')
+            path = path_parts.pop() if path_parts else None
+            archive = path_parts.pop() if path_parts else None
+        else:
+            archive = None
+
+        if scheme and parsed_netloc:
+            if archive:
+                archive = parsed_netloc + archive
+            else:
+                path = parsed_netloc + path
+
+        return _GDALPath(path, archive, scheme)
+
+    def to_normalized_path(self):
+        """Return path represented as a string normalized to a gdal-ready scheme.
+
+        This means that URI schemes are converted to gdal /vsi prefixes,
+        for example "zip+https" -> "/vsizip/vsicurl/".
+        """
+        if not self.scheme:
+            return self.path
+
+        if self.scheme.split('+')[-1] in self.curlschemes:
+            suffix = f'{self.scheme.split("+")[-1]}://'
+        else:
+            suffix = ''
+
+        vsi_prefix = '/'.join(
+            f'vsi{self.schemes[p]}' for p in self.scheme.split('+') if p != 'file'
+        )
+
+        if vsi_prefix:
+            if self.archive:
+                result = f'/{vsi_prefix}/{suffix}{self.archive}/{self.path.lstrip("/")}'
+            else:
+                result = f'/{vsi_prefix}/{suffix}{self.path}'
+        else:
+            result = self.path
+        return result
+
+    @property
+    def is_remote(self):
+        """Test if the path is a remote, network URI"""
+        return bool(self.scheme) and self.scheme.split("+")[-1] in self.remoteschemes
+
+    @property
+    def is_local(self):
+        """Test if the path is a local URI"""
+        return not self.is_remote
+
+
+def evaluate_expression(expression, variable_map):
+    """Evaluate a python expression.
+
+    The expression must be able to be evaluated as a python expression.
+
+    Args:
+        expression (string): A string expression that returns a value.
+        variable_map (dict): A dict mapping string variable names to their
+            python object values.  This is the variable map that will be used
+            when evaluating the expression.
+
+    Returns:
+        Whatever value is returned from evaluating ``expression`` with the
+        variables stored in ``variable_map``.
+
+    """
+    # __builtins__ can be either a dict or a module.  We need its contents as a
+    # dict in order to use ``eval``.
+    if not isinstance(__builtins__, dict):
+        builtins = __builtins__.__dict__
+    else:
+        builtins = __builtins__
+    builtin_symbols = set(builtins.keys())
+
+    active_symbols = set()
+    for tree_node in ast.walk(ast.parse(expression)):
+        if isinstance(tree_node, ast.Name):
+            active_symbols.add(tree_node.id)
+
+    # This should allow any builtin functions, exceptions, etc. to be handled
+    # correctly within an expression.
+    missing_symbols = (active_symbols -
+                       set(variable_map.keys()).union(builtin_symbols))
+    if missing_symbols:
+        raise AssertionError(
+            'Identifiers expected in the expression "%s" are missing: %s' % (
+                expression, ', '.join(missing_symbols)))
+
+    # The usual warnings should go with this call to eval:
+    # Don't run untrusted code!!!
+    return eval(expression, builtins, variable_map)
+
+
+def format_args_dict(args_dict, model_id):
+    """Nicely format an arguments dictionary for writing to a stream.
+
+    If printed to a console, the returned string will be aligned in two columns
+    representing each key and value in the arg dict.  Keys are in ascending,
+    sorted order.  Both columns are left-aligned.
+
+    Args:
+        args_dict (dict): The args dictionary to format.
+        model_id (string): The model ID (e.g. carbon)
+
+    Returns:
+        A formatted, unicode string.
+    """
+    sorted_args = sorted(args_dict.items(), key=lambda x: x[0])
+
+    max_key_width = 0
+    if len(sorted_args) > 0:
+        max_key_width = max(len(x[0]) for x in sorted_args)
+
+    format_str = f"%-{max_key_width}s %s"
+
+    args_string = '\n'.join([format_str % (arg) for arg in sorted_args])
+    args_string = (
+        f"Arguments for InVEST {model_id} {natcap.invest.__version__}:"
+        f"\n{args_string}\n")
+    return args_string

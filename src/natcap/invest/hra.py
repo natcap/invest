@@ -22,7 +22,6 @@ from . import utils
 from . import validation
 from .unit_registry import u
 
-
 LOGGER = logging.getLogger(__name__)
 
 # RESILIENCE stressor shorthand to use when parsing tables
@@ -55,6 +54,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=False,
     aliases=("hra",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["info_table_path", "criteria_table_path"],
@@ -365,7 +365,7 @@ MODEL_SPEC = spec.ModelSpec(
             ]
         ),
         spec.VectorOutput(
-            id="stressor_[STRESSOR]",
+            id="stressor_[STRESSOR]_viz",
             path="visualization_outputs/STRESSOR_[STRESSOR].geojson",
             about=gettext("Map of stressor extent visualized in orange color."),
             created_if="visualize_outputs",
@@ -386,25 +386,20 @@ MODEL_SPEC = spec.ModelSpec(
             index_col=None
         ),
         spec.SingleBandRasterOutput(
-            id="aligned_[HABITAT/STRESSOR/CRITERIA]",
-            path="intermediate_outputs/aligned_[HABITAT/STRESSOR/CRITERIA].tif",
+            id="aligned_[KEY]",
+            path="intermediate_outputs/aligned_[KEY].tif",
             about=gettext(
-                "Copy of the input, aligned to the same projection and extent"
-            ),
+                "A copy of each habitat, stressor, and criteria input, aligned "
+                "to the same projection and extent"),
             data_type=float,
             units=u.none
         ),
-        spec.SingleBandRasterOutput(
-            id="subregion_set_[N]",
-            path="intermediate_outputs/aoi_subregions/subregion_set_[N].tif",
-            about=gettext("The Nth non-intersecting set of subregions"),
-            data_type=int,
-            units=None
-        ),
-        spec.FileOutput(
-            id="subregions",
-            path="intermediate_outputs/aoi_subregions/subregions.json",
-            about=gettext("Subregion data")
+        spec.VectorOutput(
+            id="simplified_aoi",
+            path="intermediate_outputs/simplified_aoi.gpkg",
+            about=gettext("Simplified version of the input AOI vector"),
+            geometry_types={"POLYGON", "MULTIPOLYGON"},
+            fields=[]
         ),
         spec.SingleBandRasterOutput(
             id="c_[HABITAT]_[STRESSOR]",
@@ -464,18 +459,20 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="polygonize_mask_[HABITAT/STRESSOR]",
-            path="intermediate_outputs/polygonize_mask_[HABITAT/STRESSOR].tif",
-            about=gettext("Map of which pixels to polygonize."),
+            id="polygonize_mask_[KEY]",
+            path="intermediate_outputs/polygonize_mask_[KEY].tif",
+            about=gettext("Map of which pixels to polygonize for each habitat or stressor."),
             data_type=int,
-            units=None
+            units=None,
+            created_if="visualize_outputs"
         ),
         spec.VectorOutput(
-            id="polygonized_[HABITAT/STRESSOR]",
-            path="intermediate_outputs/polygonized_[HABITAT/STRESSOR].gpkg",
+            id="polygonized_[KEY]",
+            path="intermediate_outputs/polygonized_[KEY].gpkg",
             about=gettext("Polygonized habitat or stressor map"),
             geometry_types={"POLYGON"},
-            fields=[]
+            fields=[],
+            created_if="visualize_outputs"
         ),
         spec.SingleBandRasterOutput(
             id="reclass_[HABITAT]_[STRESSOR]",
@@ -504,8 +501,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.VectorOutput(
-            id="reprojected_[HABITAT/STRESSOR/CRITERIA]",
-            path="intermediate_outputs/reprojected_[HABITAT/STRESSOR/CRITERIA].shp",
+            id="reprojected_[KEY]",
+            path="intermediate_outputs/reprojected_[KEY].shp",
             about=gettext(
                 "If any habitat, stressor or spatial criteria layers were"
                 " provided in a spatial vector format, it will be reprojected to"
@@ -515,8 +512,8 @@ MODEL_SPEC = spec.ModelSpec(
             fields=[]
         ),
         spec.SingleBandRasterOutput(
-            id="rewritten_[HABITAT/STRESSOR/CRITERIA]",
-            path="intermediate_outputs/rewritten_[HABITAT/STRESSOR/CRITERIA].tif",
+            id="rewritten_[KEY]",
+            path="intermediate_outputs/rewritten_[KEY].tif",
             about=gettext(
                 "If any habitat, stressor or spatial criteria layers were"
                 " provided in a spatial raster format, it will be reprojected to"
@@ -534,8 +531,8 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.VectorOutput(
-            id="simplified_[HABITAT/STRESSOR/CRITERIA]",
-            path="intermediate_outputs/simplified_[HABITAT/STRESSOR/CRITERIA].gpkg",
+            id="simplified_[KEY]",
+            path="intermediate_outputs/simplified_[KEY].gpkg",
             about=gettext(
                 "Any habitat, stressor or spatial criteria layers provided are"
                 " simplified to 1/2 the user-defined raster resolution in order"
@@ -594,52 +591,35 @@ def execute(args):
             (optional)
 
     Returns:
-        None.
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
-    intermediate_dir = os.path.join(args['workspace_dir'],
-                                    'intermediate_outputs')
-    output_dir = os.path.join(args['workspace_dir'], 'outputs')
-    utils.make_directories([intermediate_dir, output_dir])
-    suffix = utils.make_suffix_string(args, 'results_suffix')
+    args, file_registry, graph = MODEL_SPEC.setup(args)
 
-    resolution = float(args['resolution'])
-    max_rating = float(args['max_rating'])
-    max_n_stressors = float(args['n_overlapping_stressors'])
     target_srs_wkt = pygeoprocessing.get_vector_info(
         args['aoi_vector_path'])['projection_wkt']
 
-    if args['risk_eq'].lower() == 'multiplicative':
-        max_pairwise_risk = max_rating * max_rating
-    elif args['risk_eq'].lower() == 'euclidean':
+    if args['risk_eq'] == 'multiplicative':
+        max_pairwise_risk = args['max_rating'] * args['max_rating']
+    elif args['risk_eq'] == 'euclidean':
         max_pairwise_risk = math.sqrt(
-            ((max_rating - 1) ** 2) + ((max_rating - 1) ** 2))
+            ((args['max_rating'] - 1) ** 2) +
+            ((args['max_rating'] - 1) ** 2))
     else:
         raise ValueError(
             "args['risk_eq'] must be either 'Multiplicative' or 'Euclidean' "
             f"not {args['risk_eq']}")
     LOGGER.info(
-        f"The maximum pairwise risk score for {args['risk_eq'].lower()} "
+        f"The maximum pairwise risk score for {args['risk_eq']} "
         f"risk is {max_pairwise_risk}")
 
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # single process mode.
-    graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
-
     # parse the info table and get info dicts for habitats, stressors.
-    habitats_info, stressors_info = _parse_info_table(args['info_table_path'])
+    habitats_info, stressors_info = _parse_info_table(
+        args['info_table_path'])
 
     # parse the criteria table to get the composite table
-    composite_criteria_table_path = os.path.join(
-        intermediate_dir, f'composite_criteria{suffix}.csv')
     criteria_habitats, criteria_stressors = _parse_criteria_table(
-        args['criteria_table_path'], composite_criteria_table_path)
+        args['criteria_table_path'], file_registry['composite_criteria'])
 
     # Validate that habitats and stressors match precisely.
     for label, info_table_set, criteria_table_set in [
@@ -656,7 +636,7 @@ def execute(args):
                 f"  Missing from criteria table: {missing_from_criteria_table}"
             )
 
-    criteria_df = utils.read_csv_to_dataframe(composite_criteria_table_path)
+    criteria_df = utils.read_csv_to_dataframe(file_registry['composite_criteria'])
     # Because criteria may be spatial, we need to prepare those spatial inputs
     # as well.
     spatial_criteria_attrs = {}
@@ -686,26 +666,20 @@ def execute(args):
     alignment_source_raster_paths = {}
     alignment_source_vector_paths = {}
     alignment_dependent_tasks = []
-    aligned_habitat_raster_paths = {}
-    aligned_stressor_raster_paths = {}
-    habitat_stressor_vectors = set([])
     for name, attributes in itertools.chain(habitats_info.items(),
                                             stressors_info.items(),
                                             spatial_criteria_attrs.items()):
         source_filepath = attributes['path']
         gis_type = pygeoprocessing.get_gis_type(source_filepath)
-        aligned_raster_path = os.path.join(
-            intermediate_dir, f'aligned_{name}{suffix}.tif')
         user_files_to_aligned_raster_paths[
-            source_filepath] = aligned_raster_path
+            source_filepath] = file_registry['aligned_[KEY]', name]
 
         # If the input is already a raster, run it through raster_calculator to
         # ensure we know the nodata value and pixel values.
         if gis_type == pygeoprocessing.RASTER_TYPE:
-            rewritten_raster_path = os.path.join(
-                intermediate_dir, f'rewritten_{name}{suffix}.tif')
             alignment_source_raster_paths[
-                rewritten_raster_path] = aligned_raster_path
+                file_registry['rewritten_[KEY]', name]] = (
+                    file_registry['aligned_[KEY]', name])
             # Habitats/stressors must have pixel values of 0 or 1.
             # Criteria may be between [0, max_criteria_score]
             if name in spatial_criteria_attrs:
@@ -716,11 +690,11 @@ def execute(args):
                     func=_prep_input_criterion_raster,
                     kwargs={
                         'source_raster_path': source_filepath,
-                        'target_filepath': rewritten_raster_path,
+                        'target_filepath': file_registry['rewritten_[KEY]', name],
                     },
                     task_name=(
                         f'Rewrite {name} criteria raster for consistency'),
-                    target_path_list=[rewritten_raster_path],
+                    target_path_list=[file_registry['rewritten_[KEY]', name]],
                     dependent_task_list=[]
                 )
             else:
@@ -730,12 +704,12 @@ def execute(args):
                     func=_mask_binary_presence_absence_rasters,
                     kwargs={
                         'source_raster_paths': [source_filepath],
-                        'target_mask_path': rewritten_raster_path,
+                        'target_mask_path': file_registry['rewritten_[KEY]', name],
                     },
                     task_name=(
                         f'Rewrite {name} habitat/stressor raster for '
                         'consistency'),
-                    target_path_list=[rewritten_raster_path],
+                    target_path_list=[file_registry['rewritten_[KEY]', name]],
                     dependent_task_list=[]
                 )
             alignment_dependent_tasks.append(prep_raster_task)
@@ -747,17 +721,15 @@ def execute(args):
             # warning if a MultiPolygon geometry is inserted into a Polygon
             # layer, which was happening on a real-world sample dataset while
             # in development.
-            target_reprojected_vector = os.path.join(
-                intermediate_dir, f'reprojected_{name}{suffix}.shp')
             reprojected_vector_task = graph.add_task(
                 pygeoprocessing.reproject_vector,
                 kwargs={
                     'base_vector_path': source_filepath,
                     'target_projection_wkt': target_srs_wkt,
-                    'target_path': target_reprojected_vector,
+                    'target_path': file_registry['reprojected_[KEY]', name],
                 },
                 task_name=f'Reproject {name} to AOI',
-                target_path_list=[target_reprojected_vector],
+                target_path_list=[file_registry['reprojected_[KEY]', name]],
                 dependent_task_list=[]
             )
 
@@ -769,42 +741,33 @@ def execute(args):
                 # numeric rating that needs to be rasterized.
                 fields_to_preserve = ['rating']
 
-            target_simplified_vector = os.path.join(
-                intermediate_dir, f'simplified_{name}{suffix}.gpkg')
             alignment_source_vector_paths[
-                target_simplified_vector] = aligned_raster_path
+                file_registry['simplified_[KEY]', name]] = (
+                    file_registry['aligned_[KEY]', name])
             alignment_dependent_tasks.append(graph.add_task(
                 func=_simplify,
                 kwargs={
                     'source_vector_path': source_filepath,
-                    'tolerance': resolution / 2,  # by the nyquist theorem.
-                    'target_vector_path': target_simplified_vector,
+                    'tolerance': args['resolution'] / 2,  # by the nyquist theorem.
+                    'target_vector_path': file_registry['simplified_[KEY]', name],
                     'preserve_columns': fields_to_preserve,
                 },
                 task_name=f'Simplify {name}',
-                target_path_list=[target_simplified_vector],
+                target_path_list=[file_registry['simplified_[KEY]', name]],
                 dependent_task_list=[reprojected_vector_task]
             ))
-
-            # Habitats and stressors are rasterized with ALL_TOUCHED=TRUE
-            if name in habitats_info or name in stressors_info:
-                habitat_stressor_vectors.add(target_simplified_vector)
-
-        # Later operations make use of the habitats rasters or the stressors
-        # rasters, so it's useful to collect those here now.
-        if name in habitats_info:
-            aligned_habitat_raster_paths[name] = aligned_raster_path
-        elif name in stressors_info:
-            aligned_stressor_raster_paths[name] = aligned_raster_path
 
     alignment_task = graph.add_task(
         func=_align,
         kwargs={
             'raster_path_map': alignment_source_raster_paths,
             'vector_path_map': alignment_source_vector_paths,
-            'target_pixel_size': (resolution, -resolution),
+            'target_pixel_size': (
+                args['resolution'], -args['resolution']),
             'target_srs_wkt': target_srs_wkt,
-            'all_touched_vectors': habitat_stressor_vectors,
+            'all_touched_vectors': [
+                file_registry['simplified_[KEY]', key] for key in
+                habitats_info | stressors_info],
         },
         task_name='Align raster stack',
         target_path_list=list(itertools.chain(
@@ -814,47 +777,40 @@ def execute(args):
     )
 
     # --> Create a binary mask of habitat pixels.
-    all_habitats_mask_path = os.path.join(
-        intermediate_dir, f'habitat_mask{suffix}.tif')
     all_habitats_mask_task = graph.add_task(
         _mask_binary_presence_absence_rasters,
         kwargs={
-            'source_raster_paths':
-                list(aligned_habitat_raster_paths.values()),
-            'target_mask_path': all_habitats_mask_path,
+            'source_raster_paths':[
+                file_registry['aligned_[KEY]', habitat] for habitat in habitats_info],
+            'target_mask_path': file_registry['habitat_mask'],
         },
         task_name='Create mask of all habitats',
-        target_path_list=[all_habitats_mask_path],
+        target_path_list=[file_registry['habitat_mask']],
         dependent_task_list=[alignment_task]
     )
 
     # --> for stressor in stressors, do a decayed EDT.
-    decayed_edt_paths = {}  # {stressor name: decayed EDT raster}
     decayed_edt_tasks = {}  # {stressor name: decayed EDT task}
-    for stressor, stressor_path in aligned_stressor_raster_paths.items():
-        decayed_edt_paths[stressor] = os.path.join(
-            intermediate_dir, f'decayed_edt_{stressor}{suffix}.tif')
+    for stressor in stressors_info:
         decayed_edt_tasks[stressor] = graph.add_task(
             _calculate_decayed_distance,
             kwargs={
-                'stressor_raster_path': stressor_path,
+                'stressor_raster_path': file_registry['aligned_[KEY]', stressor],
                 'decay_type': args['decay_eq'],
                 'buffer_distance': stressors_info[stressor]['buffer'],
-                'target_edt_path': decayed_edt_paths[stressor],
+                'target_edt_path': file_registry['decayed_edt_[STRESSOR]', stressor],
             },
             task_name=f'Make decayed EDT for {stressor}',
-            target_path_list=[decayed_edt_paths[stressor]],
+            target_path_list=[file_registry['decayed_edt_[STRESSOR]', stressor]],
             dependent_task_list=[alignment_task]
         )
 
     # Save this dataframe to make indexing in this loop a little cheaper
     # Resilience/recovery calculations are only done for Consequence criteria.
-    reclassed_habitat_risk_paths = {}
     reclassed_habitat_risk_tasks = []
     cumulative_risk_to_habitat_paths = []
     cumulative_risk_to_habitat_tasks = []
-    reclassified_rasters = []  # For visualization geojson, if requested
-    pairwise_summary_data = []  # for the later summary statistics.
+    habitat_stressor_pairs = []
     all_pairwise_risk_tasks = []
     for habitat in habitats_info:
         pairwise_risk_tasks = []
@@ -863,21 +819,10 @@ def execute(args):
         reclassified_pairwise_risk_tasks = []
 
         for stressor in stressors_info:
-            criteria_tasks = {}  # {criteria type: task}
-            criteria_rasters = {}  # {criteria type: score raster path}
-            summary_data = {
-                'habitat': habitat,
-                'stressor': stressor,
-            }
+            criteria_tasks = []
+            habitat_stressor_pairs.append((habitat, stressor))
 
-            for criteria_type in ['E', 'C']:
-                criteria_raster_path = os.path.join(
-                    intermediate_dir,
-                    f'{criteria_type}_{habitat}_{stressor}{suffix}.tif')
-                criteria_rasters[criteria_type] = criteria_raster_path
-                summary_data[
-                    f'{criteria_type.lower()}_path'] = criteria_raster_path
-
+            for criteria_type in ['e', 'c']:
                 # This rather complicated filter just grabs the rows matching
                 # this habitat, stressor and criteria type.  It's the pandas
                 # equivalent of SELECT * FROM criteria_df WHERE the habitat,
@@ -886,14 +831,14 @@ def execute(args):
                 local_criteria_df = criteria_df[
                     (criteria_df['habitat'] == habitat) &
                     (criteria_df['stressor'] == stressor) &
-                    (criteria_df['e/c'] == criteria_type)]
+                    (criteria_df['e/c'] == criteria_type.upper())]
 
                 # If we are doing consequence calculations, add in the
                 # resilience/recovery parameters for this habitat as additional
                 # criteria.
                 # Note that if a user provides an E-type RESILIENCE criterion,
                 # it will be ignored in all criteria calculations.
-                if criteria_type == 'C':
+                if criteria_type == 'c':
                     local_resilience_df = criteria_df[
                         (criteria_df['habitat'] == habitat) &
                         (criteria_df['stressor'] == _RESILIENCE_STRESSOR) &
@@ -916,121 +861,109 @@ def execute(args):
                             attrs['rating']]
                     attributes_list.append(attrs)
 
-                criteria_tasks[criteria_type] = graph.add_task(
+                criteria_tasks.append(graph.add_task(
                     _calc_criteria,
                     kwargs={
                         'attributes_list': attributes_list,
                         'habitat_mask_raster_path':
-                            aligned_habitat_raster_paths[habitat],
+                            file_registry['aligned_[KEY]', habitat],
                         'target_criterion_path':
-                            criteria_rasters[criteria_type],
+                            file_registry[f'{criteria_type}_[HABITAT]_[STRESSOR]', habitat, stressor],
                         'decayed_edt_raster_path':
-                            decayed_edt_paths[stressor],
+                            file_registry['decayed_edt_[STRESSOR]', stressor],
                     },
                     task_name=(
                         f'Calculate {criteria_type} score for '
                         f'{habitat} / {stressor}'),
-                    target_path_list=[criteria_rasters[criteria_type]],
+                    target_path_list=[file_registry[
+                        f'{criteria_type}_[HABITAT]_[STRESSOR]', habitat, stressor]],
                     dependent_task_list=[
                         decayed_edt_tasks[stressor],
                         all_habitats_mask_task
-                    ])
+                    ]))
 
-            pairwise_risk_path = os.path.join(
-                intermediate_dir, f'RISK_{habitat}_{stressor}{suffix}.tif')
-            pairwise_risk_paths.append(pairwise_risk_path)
-            summary_data['risk_path'] = pairwise_risk_path
+            pairwise_risk_paths.append(file_registry['risk_[HABITAT]_[STRESSOR]', habitat, stressor])
 
             pairwise_risk_task = graph.add_task(
                 _calculate_pairwise_risk,
                 kwargs={
                     'habitat_mask_raster_path':
-                        aligned_habitat_raster_paths[habitat],
-                    'exposure_raster_path': criteria_rasters['E'],
-                    'consequence_raster_path': criteria_rasters['C'],
+                        file_registry['aligned_[KEY]', habitat],
+                    'exposure_raster_path': file_registry['e_[HABITAT]_[STRESSOR]', habitat, stressor],
+                    'consequence_raster_path': file_registry['c_[HABITAT]_[STRESSOR]', habitat, stressor],
                     'risk_equation': args['risk_eq'],
-                    'target_risk_raster_path': pairwise_risk_path,
+                    'target_risk_raster_path': file_registry[
+                        'risk_[HABITAT]_[STRESSOR]', habitat, stressor],
                 },
                 task_name=f'Calculate pairwise risk for {habitat}/{stressor}',
-                target_path_list=[pairwise_risk_path],
-                dependent_task_list=sorted(criteria_tasks.values())
+                target_path_list=[file_registry['risk_[HABITAT]_[STRESSOR]', habitat, stressor]],
+                dependent_task_list=criteria_tasks
             )
             pairwise_risk_tasks.append(pairwise_risk_task)
 
-            reclassified_pairwise_risk_path = os.path.join(
-                intermediate_dir, f'reclass_{habitat}_{stressor}{suffix}.tif')
-            reclassified_pairwise_risk_paths.append(
-                reclassified_pairwise_risk_path)
+            reclassified_pairwise_risk_paths.append(file_registry[
+                'reclass_[HABITAT]_[STRESSOR]', habitat, stressor])
             reclassified_pairwise_risk_tasks.append(graph.add_task(
                 pygeoprocessing.raster_calculator,
                 kwargs={
                     'base_raster_path_band_const_list': [
-                        (aligned_habitat_raster_paths[habitat], 1),
+                        (file_registry['aligned_[KEY]', habitat], 1),
                         (max_pairwise_risk, 'raw'),
-                        (pairwise_risk_path, 1)],
+                        (file_registry['risk_[HABITAT]_[STRESSOR]', habitat, stressor], 1)],
                     'local_op': _reclassify_score,
-                    'target_raster_path': reclassified_pairwise_risk_path,
+                    'target_raster_path': file_registry[
+                        'reclass_[HABITAT]_[STRESSOR]', habitat, stressor],
                     'datatype_target': _TARGET_GDAL_TYPE_BYTE,
                     'nodata_target': _TARGET_NODATA_BYTE
                 },
                 task_name=f'Reclassify risk for {habitat}/{stressor}',
-                target_path_list=[reclassified_pairwise_risk_path],
+                target_path_list=[file_registry[
+                    'reclass_[HABITAT]_[STRESSOR]', habitat, stressor]],
                 dependent_task_list=[pairwise_risk_task]
             ))
-            summary_data['classification_path'] = (
-                reclassified_pairwise_risk_path)
-            pairwise_summary_data.append(summary_data)
 
         # Sum the pairwise risk scores to get cumulative risk to the habitat.
-        cumulative_risk_path = os.path.join(
-            output_dir, f'TOTAL_RISK_{habitat}{suffix}.tif')
-        cumulative_risk_to_habitat_paths.append(cumulative_risk_path)
+        cumulative_risk_to_habitat_paths.append(file_registry['total_risk_[HABITAT]', habitat])
         cumulative_risk_task = graph.add_task(
             _sum_rasters,
             kwargs={
                 'raster_path_list': pairwise_risk_paths,
                 'target_nodata': _TARGET_NODATA_FLOAT32,
                 'target_datatype': _TARGET_GDAL_TYPE_FLOAT32,
-                'target_result_path': cumulative_risk_path,
+                'target_result_path': file_registry['total_risk_[HABITAT]', habitat],
                 'normalize': False,
             },
             task_name=f'Cumulative risk to {habitat}',
-            target_path_list=[cumulative_risk_path],
+            target_path_list=[file_registry['total_risk_[HABITAT]', habitat]],
             dependent_task_list=pairwise_risk_tasks
         )
         cumulative_risk_to_habitat_tasks.append(cumulative_risk_task)
 
-        reclassified_cumulative_risk_path = os.path.join(
-            intermediate_dir, f'reclass_total_risk_{habitat}{suffix}.tif')
-        reclassed_habitat_risk_paths[
-            habitat] = reclassified_cumulative_risk_path
         reclassified_cumulative_risk_task = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (aligned_habitat_raster_paths[habitat], 1),
-                    (max_pairwise_risk * max_n_stressors, 'raw'),
-                    (cumulative_risk_path, 1)],
+                    (file_registry['aligned_[KEY]', habitat], 1),
+                    (max_pairwise_risk * args['n_overlapping_stressors'], 'raw'),
+                    (file_registry['total_risk_[HABITAT]', habitat], 1)],
                 'local_op': _reclassify_score,
-                'target_raster_path': reclassified_cumulative_risk_path,
+                'target_raster_path': file_registry['reclass_total_risk_[HABITAT]', habitat],
                 'datatype_target': _TARGET_GDAL_TYPE_BYTE,
                 'nodata_target': _TARGET_NODATA_BYTE,
             },
             task_name=f'Reclassify risk for {habitat}/{stressor}',
-            target_path_list=[reclassified_cumulative_risk_path],
+            target_path_list=[file_registry['reclass_total_risk_[HABITAT]', habitat]],
             dependent_task_list=[cumulative_risk_task]
         )
         reclassed_habitat_risk_tasks.append(reclassified_cumulative_risk_task)
 
-        max_risk_classification_path = os.path.join(
-            output_dir, f'RECLASS_RISK_{habitat}{suffix}.tif')
-        reclassified_rasters.append(max_risk_classification_path)
+        max_risk_classification_path = file_registry['reclass_risk_[HABITAT]', habitat]
         _ = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (aligned_habitat_raster_paths[habitat], 1),
-                    (reclassified_cumulative_risk_path, 1)
+                    (file_registry['aligned_[KEY]', habitat], 1),
+                    (file_registry['reclass_total_risk_[HABITAT]', habitat], 1)
                 ] + [(path, 1) for path in reclassified_pairwise_risk_paths],
                 'local_op': _maximum_reclassified_score,
                 'target_raster_path': max_risk_classification_path,
@@ -1052,8 +985,7 @@ def execute(args):
     # InVEST 3.3.3 has this as the cumulative risk (a straight sum).
     # InVEST 3.10.2 has this as the mean risk per habitat.
     # This is currently implemented as mean risk per habitat.
-    ecosystem_risk_path = os.path.join(
-        output_dir, f'TOTAL_RISK_Ecosystem{suffix}.tif')
+    ecosystem_risk_path = file_registry['total_risk_ecosystem']
     ecosystem_risk_task = graph.add_task(
         _sum_rasters,
         kwargs={
@@ -1075,22 +1007,20 @@ def execute(args):
     # I'm guessing about the risk break to use here, but since the
     # `ecosystem_risk_path` here is the sum across habitats, it makes sense to
     # use max_pairwise_risk * n_habitats.
-    reclassified_ecosystem_risk_path = os.path.join(
-        output_dir, f'RECLASS_RISK_Ecosystem{suffix}.tif')
     _ = graph.add_task(
         pygeoprocessing.raster_calculator,
         kwargs={
             'base_raster_path_band_const_list': [
-                (all_habitats_mask_path, 1),
+                (file_registry['habitat_mask'], 1),
                 (max_pairwise_risk * len(habitats_info), 'raw'),
                 (ecosystem_risk_path, 1)],
             'local_op': _reclassify_score,
-            'target_raster_path': reclassified_ecosystem_risk_path,
+            'target_raster_path': file_registry['reclass_risk_ecosystem'],
             'datatype_target': _TARGET_GDAL_TYPE_BYTE,
             'nodata_target': _TARGET_NODATA_BYTE,
         },
         task_name='Reclassify risk to the Ecosystem',
-        target_path_list=[reclassified_cumulative_risk_path],
+        target_path_list=[file_registry['reclass_total_risk_[HABITAT]', habitat]],
         dependent_task_list=[all_habitats_mask_task, ecosystem_risk_task]
     )
 
@@ -1112,45 +1042,41 @@ def execute(args):
                     attrs['rating']]
             criteria_attributes_list.append(attrs)
 
-        recovery_score_path = os.path.join(
-            intermediate_dir, f'RECOVERY_{habitat}{suffix}.tif')
         _ = graph.add_task(
             _calc_criteria,
             kwargs={
                 'attributes_list': criteria_attributes_list,
                 'habitat_mask_raster_path':
-                    aligned_habitat_raster_paths[habitat],
-                'target_criterion_path': recovery_score_path,
+                    file_registry['aligned_[KEY]', habitat],
+                'target_criterion_path': file_registry['recovery_[HABITAT]', habitat],
                 'decayed_edt_raster_path': None,  # not a stressor so no EDT
             },
             task_name=f'Calculate recovery score for {habitat}',
-            target_path_list=[recovery_score_path],
+            target_path_list=[file_registry['recovery_[HABITAT]', habitat]],
             dependent_task_list=[all_habitats_mask_task]
         )
 
-    simplified_aoi_path = os.path.join(
-        intermediate_dir, 'simplified_aoi.gpkg')
     aoi_simplify_task = graph.add_task(
         func=_simplify,
         kwargs={
             'source_vector_path': args['aoi_vector_path'],
-            'tolerance': resolution / 2,  # by the nyquist theorem
-            'target_vector_path': simplified_aoi_path,
+            'tolerance': args['resolution'] / 2,  # by the nyquist theorem
+            'target_vector_path': file_registry['simplified_aoi'],
             'preserve_columns': ['name'],
         },
         task_name='Simplify AOI',
-        target_path_list=[simplified_aoi_path],
+        target_path_list=[file_registry['simplified_aoi']],
         dependent_task_list=[]
     )
 
-    summary_csv_path = os.path.join(
-        output_dir, f'SUMMARY_STATISTICS{suffix}.csv')
+    summary_csv_path = file_registry['summary_statistics']
     _ = graph.add_task(
         func=_create_summary_statistics_file,
         kwargs={
-            'subregions_vector_path': simplified_aoi_path,
-            'pairwise_raster_dicts': pairwise_summary_data,
-            'per_habitat_classification_dict': reclassed_habitat_risk_paths,
+            'subregions_vector_path': file_registry['simplified_aoi'],
+            'habitats': list(habitats_info.keys()),
+            'stressors': list(stressors_info.keys()),
+            'file_registry': file_registry,
             'target_summary_csv_path': summary_csv_path,
         },
         task_name='Create summary statistics table',
@@ -1163,10 +1089,10 @@ def execute(args):
     )
 
     graph.join()
-    if not args.get('visualize_outputs', False):
+    if not args['visualize_outputs']:
         LOGGER.info('HRA complete!')
         graph.close()
-        return
+        return file_registry.registry
 
     # Although the generation of visualization outputs could have more precise
     # task dependencies, the effort involved in tracking them precisely doesn't
@@ -1174,72 +1100,66 @@ def execute(args):
     # component and it isn't clear if we'll end up keeping this in HRA or
     # refactoring it out (should we end up doing more such visualizations).
     LOGGER.info('Generating visualization outputs')
-    visualization_dir = os.path.join(args['workspace_dir'],
-                                     'visualization_outputs')
-    utils.make_directories([visualization_dir])
     shutil.copy(  # copy in the summary table.
         summary_csv_path,
-        os.path.join(visualization_dir, os.path.basename(summary_csv_path)))
+        file_registry['summary_statistics_viz'])
 
-    # For each raster in reclassified risk rasters + Reclass ecosystem risk:
-    #   convert to geojson with fieldname "Risk Score"
-    reclassified_rasters.append(reclassified_ecosystem_risk_path)
-    for raster_paths, fieldname, geojson_prefix in [
-            (reclassified_rasters, 'Risk Score', 'RECLASS_RISK'),
-            (aligned_stressor_raster_paths.values(), 'Stressor', 'STRESSOR')]:
-        for source_raster_path in raster_paths:
-            basename = os.path.splitext(
-                os.path.basename(source_raster_path))[0]
+    for key, type in ([(habitat, 'habitat') for habitat in habitats_info] +
+                      [('ecosystem', 'habitat')] +
+                      [(stressor, 'stressor') for stressor in stressors_info]):
+        if type == 'habitat':
+            if key == 'ecosystem':
+                source_raster_path = file_registry['reclass_risk_ecosystem']
+                target_geojson_path = file_registry[f'reclass_risk_ecosystem_viz']
+            else:
+                source_raster_path = file_registry['reclass_risk_[HABITAT]', key]
+                target_geojson_path = file_registry[f'reclass_risk_[HABITAT]_viz', key]
+            field_name = 'Risk Score'
+            layer_name = f'RECLASS_RISK_{key}'
+        else:  # type == 'stressor'
+            source_raster_path = file_registry['aligned_[KEY]', key]
+            target_geojson_path = file_registry[f'stressor_[STRESSOR]_viz', key]
+            field_name = 'Stressor'
+            layer_name = f'STRESSOR_{key}'
 
-            # clean up the filename to what the viz webapp expects.
-            for pattern in (f'^{geojson_prefix}_',
-                            '^aligned_'):
-                basename = re.sub(pattern, '', basename)
+        rewrite_for_polygonize_task = graph.add_task(
+            func=_create_mask_for_polygonization,
+            kwargs={
+                'source_raster_path': source_raster_path,
+                'target_raster_path': file_registry['polygonize_mask_[KEY]', key],
+            },
+            task_name=f'Rewrite {key} for polygonization',
+            target_path_list=[file_registry['polygonize_mask_[KEY]', key]],
+            dependent_task_list=[]
+        )
 
-            polygonize_mask_raster_path = os.path.join(
-                intermediate_dir, f'polygonize_mask_{basename}.tif')
-            rewrite_for_polygonize_task = graph.add_task(
-                func=_create_mask_for_polygonization,
-                kwargs={
-                    'source_raster_path': source_raster_path,
-                    'target_raster_path': polygonize_mask_raster_path,
-                },
-                task_name=f'Rewrite {basename} for polygonization',
-                target_path_list=[polygonize_mask_raster_path],
-                dependent_task_list=[]
-            )
+        polygonize_task = graph.add_task(
+            func=_polygonize,
+            kwargs={
+                'source_raster_path': source_raster_path,
+                'mask_raster_path': file_registry['polygonize_mask_[KEY]', key],
+                'target_polygonized_vector': file_registry['polygonized_[KEY]', key],
+                'field_name': field_name,
+                'layer_name': layer_name
+            },
+            task_name=f'Polygonizing {key}',
+            target_path_list=[file_registry['polygonized_[KEY]', key]],
+            dependent_task_list=[rewrite_for_polygonize_task]
+        )
 
-            polygonized_gpkg = os.path.join(
-                intermediate_dir, f'polygonized_{basename}.gpkg')
-            polygonize_task = graph.add_task(
-                func=_polygonize,
-                kwargs={
-                    'source_raster_path': source_raster_path,
-                    'mask_raster_path': polygonize_mask_raster_path,
-                    'target_polygonized_vector': polygonized_gpkg,
-                    'field_name': fieldname,
-                    'layer_name': f'{geojson_prefix}_{basename}',
-                },
-                task_name=f'Polygonizing {basename}',
-                target_path_list=[polygonized_gpkg],
-                dependent_task_list=[rewrite_for_polygonize_task]
-            )
+        _ = graph.add_task(
+            pygeoprocessing.reproject_vector,
+            kwargs={
+                'base_vector_path': file_registry['polygonized_[KEY]', key],
+                'target_projection_wkt': _WGS84_WKT,
+                'target_path': target_geojson_path,
+                'driver_name': 'GeoJSON',
+            },
+            task_name=f'Reproject {key} to AOI',
+            target_path_list=[target_geojson_path],
+            dependent_task_list=[polygonize_task]
+        )
 
-            target_geojson_path = os.path.join(
-                visualization_dir,
-                f'{geojson_prefix}_{basename}.geojson')
-            _ = graph.add_task(
-                pygeoprocessing.reproject_vector,
-                kwargs={
-                    'base_vector_path': polygonized_gpkg,
-                    'target_projection_wkt': _WGS84_WKT,
-                    'target_path': target_geojson_path,
-                    'driver_name': 'GeoJSON',
-                },
-                task_name=f'Reproject {name} to AOI',
-                target_path_list=[target_geojson_path],
-                dependent_task_list=[polygonize_task]
-            )
     LOGGER.info(
         'HRA model completed. Please visit http://marineapps.'
         'naturalcapitalproject.org/ to visualize your outputs.')
@@ -1247,6 +1167,7 @@ def execute(args):
     graph.close()
     graph.join()
     LOGGER.info('HRA complete!')
+    return file_registry.registry
 
 
 def _create_mask_for_polygonization(source_raster_path, target_raster_path):
@@ -1347,8 +1268,9 @@ def _polygonize(source_raster_path, mask_raster_path,
 
 def _create_summary_statistics_file(
         subregions_vector_path,
-        pairwise_raster_dicts,
-        per_habitat_classification_dict,
+        habitats,
+        stressors,
+        file_registry,
         target_summary_csv_path):
     """Create summary statistics table.
 
@@ -1365,23 +1287,9 @@ def _create_summary_statistics_file(
         subregions_vector_path (string): The path to a vector of subregions.
             If this vector has a ``"NAME"`` column (case-insensitive), it will
             be used to uniquely identify the subregion.
-        pairwise_raster_dicts (list): A list of dicts, each of which containing
-            the following keys:
-
-                * ``habitat`` - the string habitat name
-                * ``stressor`` - the string stressor name
-                * ``e_path`` - absolute path to the raster of exposure scores
-                    for this habitat/stressor pair.
-                * ``c_path`` - absolute path to the raster of criteria scores
-                    for this habitat/stressor pair.
-                * ``risk_path`` - absolute path to the raster of risk scores
-                    for this habitat/stressor pair.
-                * ``classification_path`` - absolute path to the raster of
-                    classified risk scores for this habitat/stressor pair.
-        per_habitat_classification_dict (dict): A dictionary mapping string
-            habitat names to a raster of risk classifications that have been
-            classified from rasters of cumulative risk scores across all
-            stressors for the given habitat.
+        habitats (list): list of habitats
+        stressors (list): list of stressors
+        file_registry (FileRegistry): used to look up raster paths to summarize
         target_summary_csv_path (string): The path to where the target CSV
             should be written on disk.
 
@@ -1406,22 +1314,13 @@ def _create_summary_statistics_file(
     subregions_layer = None
     subregions_vector = None
 
-    pairwise_data = {}
-    habitats = set()
-    stressors = set()
-    for info_dict in pairwise_raster_dicts:
-        pairwise_data[info_dict['habitat'], info_dict['stressor']] = info_dict
-        habitats.add(info_dict['habitat'])
-        stressors.add(info_dict['stressor'])
-
     records = []
     for habitat, stressor in itertools.product(sorted(habitats),
                                                sorted(stressors)):
-        e_raster = pairwise_data[habitat, stressor]['e_path']
-        c_raster = pairwise_data[habitat, stressor]['c_path']
-        r_raster = pairwise_data[habitat, stressor]['risk_path']
-        classes_raster = (
-            pairwise_data[habitat, stressor]['classification_path'])
+        e_raster = file_registry[f'e_[HABITAT]_[STRESSOR]', habitat, stressor]
+        c_raster = file_registry[f'c_[HABITAT]_[STRESSOR]', habitat, stressor]
+        r_raster = file_registry[f'risk_[HABITAT]_[STRESSOR]', habitat, stressor]
+        classes_raster = file_registry[f'reclass_[HABITAT]_[STRESSOR]', habitat, stressor]
 
         subregion_stats_by_name = collections.defaultdict(
             lambda: {
@@ -1507,10 +1406,10 @@ def _create_summary_statistics_file(
     pairwise_df = pandas.DataFrame.from_records(records)
 
     all_stressors_id = '(FROM ALL STRESSORS)'
-    for habitat, classified_path in per_habitat_classification_dict.items():
+    for habitat in habitats:
         stats = pygeoprocessing.zonal_statistics(
-            (classified_path, 1), subregions_vector_path,
-            include_value_counts=True)
+            (file_registry['reclass_total_risk_[HABITAT]', habitat], 1),
+            subregions_vector_path, include_value_counts=True)
         subregion_stats_by_name = collections.defaultdict(
             lambda: {0: 0, 1: 0, 2: 0, 3: 0})
         for feature_id, stats_under_feature in stats.items():
@@ -1884,8 +1783,6 @@ def _parse_info_table(info_table_path):
                   ``{stressor_name: {'path': path to spatial layer, 'buffer':
                       buffer distance}}``
     """
-    info_table_path = os.path.abspath(info_table_path)
-
     try:
         table = MODEL_SPEC.get_input(
             'info_table_path').get_validated_dataframe(info_table_path)
@@ -2042,11 +1939,14 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                     # It's OK if it stays an int.
                     float(attribute_value)
                 except ValueError:
+                    gdal_path = utils._GDALPath.from_uri(attribute_value)
                     # If we can't cast it to a float, assume it's a string path
-                    # to a raster or vector.
-                    attribute_value = utils.expand_path(
-                        attribute_value, criteria_table_path)
-
+                    # to a raster or vector. Don't expand remote paths.
+                    if gdal_path.is_local:
+                        attribute_value = utils.expand_path(
+                            attribute_value, criteria_table_path)
+                    else:
+                        attribute_value = gdal_path.to_normalized_path()
                     try:
                         _ = pygeoprocessing.get_gis_type(attribute_value)
                     except ValueError:

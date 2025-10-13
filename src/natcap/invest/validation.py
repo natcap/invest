@@ -1,5 +1,4 @@
 """Common validation utilities for InVEST models."""
-import ast
 import copy
 import functools
 import importlib
@@ -66,50 +65,9 @@ MESSAGES = {
     'WRONG_GEOM_TYPE': gettext('Geometry type must be one of {allowed}')
 }
 
+
 def get_message(key):
     return gettext(MESSAGES[key])
-
-def _evaluate_expression(expression, variable_map):
-    """Evaluate a python expression.
-
-    The expression must be able to be evaluated as a python expression.
-
-    Args:
-        expression (string): A string expression that returns a value.
-        variable_map (dict): A dict mapping string variable names to their
-            python object values.  This is the variable map that will be used
-            when evaluating the expression.
-
-    Returns:
-        Whatever value is returned from evaluating ``expression`` with the
-        variables stored in ``variable_map``.
-
-    """
-    # __builtins__ can be either a dict or a module.  We need its contents as a
-    # dict in order to use ``eval``.
-    if not isinstance(__builtins__, dict):
-        builtins = __builtins__.__dict__
-    else:
-        builtins = __builtins__
-    builtin_symbols = set(builtins.keys())
-
-    active_symbols = set()
-    for tree_node in ast.walk(ast.parse(expression)):
-        if isinstance(tree_node, ast.Name):
-            active_symbols.add(tree_node.id)
-
-    # This should allow any builtin functions, exceptions, etc. to be handled
-    # correctly within an expression.
-    missing_symbols = (active_symbols -
-                       set(variable_map.keys()).union(builtin_symbols))
-    if missing_symbols:
-        raise AssertionError(
-            'Identifiers expected in the expression "%s" are missing: %s' % (
-                expression, ', '.join(missing_symbols)))
-
-    # The usual warnings should go with this call to eval:
-    # Don't run untrusted code!!!
-    return eval(expression, builtins, variable_map)
 
 
 def get_invalid_keys(validation_warnings):
@@ -165,9 +123,6 @@ def load_fields_from_vector(filepath, layer_id=0):
         A list of string fieldnames within the target layer.
 
     """
-    if not os.path.exists(filepath):
-        raise ValueError('File not found: %s' % filepath)
-
     vector = gdal.OpenEx(filepath, gdal.OF_VECTOR)
     layer = vector.GetLayer(layer_id)
     fieldnames = [defn.GetName() for defn in layer.schema]
@@ -198,6 +153,7 @@ def check_spatial_overlap(spatial_filepaths_list,
     bounding_boxes = []
     checked_file_list = []
     for filepath in spatial_filepaths_list:
+        filepath = utils._GDALPath.from_uri(filepath).to_normalized_path()
         try:
             info = pygeoprocessing.get_raster_info(filepath)
         except (ValueError, RuntimeError):
@@ -279,7 +235,7 @@ def validate(args, model_spec):
         required = parameter_spec.required
 
         if isinstance(required, str):
-            required = bool(_evaluate_expression(
+            required = bool(utils.evaluate_expression(
                 expression=f'{parameter_spec.required}',
                 variable_map=expression_values))
 
@@ -327,7 +283,7 @@ def validate(args, model_spec):
                 for nested_spec in getattr(parameter_spec, axis_key):
                     if (isinstance(nested_spec.required, str)):
                         nested_spec.required = (
-                            bool(_evaluate_expression(
+                            bool(utils.evaluate_expression(
                                 nested_spec.required, expression_values)))
         try:
             # pass the entire arg spec into the validation function as kwargs
@@ -481,7 +437,7 @@ def args_enabled(args, model_spec):
         arg_spec.id: args.get(arg_spec.id, False) for arg_spec in model_spec.inputs}
     for arg_spec in model_spec.inputs:
         if isinstance(arg_spec.allowed, str):
-            enabled[arg_spec.id] = bool(_evaluate_expression(
+            enabled[arg_spec.id] = bool(utils.evaluate_expression(
                 arg_spec.allowed, expression_values))
         else:
             enabled[arg_spec.id] = True

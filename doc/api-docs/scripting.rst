@@ -169,6 +169,13 @@ Elements to note:
   executes the nutrient model end-to-end.  If the user wishes to make batch
   calls to InVEST, this line will likely be placed inside a loop.
 
+* *The file registry dictionary*: As of version 3.17.0, the ``execute``
+  function of each invest model returns a dictionary summarizing all output
+  files produced by the model. It maps output IDs (found in the model's
+  ``MODEL_SPEC``) to the absolute paths where those outputs were created. This
+  may be used to access model results programmatically for subsequent data
+  processing.
+
 ====================================================
 Example: Threshold Flow Accumulation Parameter Study
 ====================================================

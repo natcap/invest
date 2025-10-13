@@ -84,7 +84,6 @@ export function setupInvestRunHandlers() {
         n_workers: nWorkers,
       }),
     };
-    await writeInvestParameters(payload);
     let cmd;
     let cmdArgs;
     let port;
@@ -114,6 +113,9 @@ export function setupInvestRunHandlers() {
         `-d "${datastackPath}"`];
       port = settingsStore.get('core.port');
     }
+    // Ensure we use the same invest to write the datastack
+    // as will get used to read it when the model runs.
+    await writeInvestParameters(payload, port);
 
     logger.debug(`about to run model with command: ${cmd} ${cmdArgs}`);
 

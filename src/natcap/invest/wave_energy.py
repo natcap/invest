@@ -111,9 +111,10 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
-        ["wave_base_data_path", "analysis_area", "aoi_path", "dem_path"],
+        ["wave_base_data_table", "analysis_area", "aoi_path", "dem_path"],
         ["machine_perf_path", "machine_param_path"],
         ["valuation_container", "land_gridPts_path",
          "machine_econ_path", "number_of_machines"]
@@ -122,144 +123,37 @@ MODEL_SPEC = spec.ModelSpec(
         spec.WORKSPACE,
         spec.SUFFIX,
         spec.N_WORKERS,
-        spec.DirectoryInput(
-            id="wave_base_data_path",
+        spec.CSVInput(
+            id="wave_base_data_table",
             name=gettext("wave base data"),
             about=gettext(
-                "Pre-packaged wave energy data directory. This is provided with the"
-                " sample data."
-            ),
-            contents=[
+                "Table pointing to pre-packaged wave energy data. This is "
+                "provided with the sample data."),
+            columns=[
+                spec.StringInput(
+                    id="analysis_area",
+                    about=gettext("Analysis area")
+                ),
                 spec.VectorInput(
-                    id="NAmerica_WestCoast_4m.shp",
-                    about=gettext(
-                        "Point vector for the west coast of North America and Hawaii."
-                    ),
+                    id="point_vector",
+                    about=gettext("Wave energy point vector for each analysis area"),
                     geometry_types={"POINT"},
                     fields=[],
                     projected=None
                 ),
                 spec.VectorInput(
-                    id="WCNA_extract.shp",
-                    about=gettext(
-                        "Extract vector for the west coast of North America and Hawaii."
-                    ),
+                    id="extract_vector",
+                    about=gettext("Wave energy extract vector for each analysis area"),
                     geometry_types={"POLYGON"},
                     fields=[],
                     projected=None
                 ),
                 spec.FileInput(
-                    id="NAmerica_WestCoast_4m.txt.bin",
-                    about=gettext(
-                        "WaveWatchIII data for the west coast of North America and"
-                        " Hawaii."
-                    )
-                ),
-                spec.VectorInput(
-                    id="NAmerica_EastCoast_4m.shp",
-                    about=gettext(
-                        "Point vector for the East Coast of North America and Puerto"
-                        " Rico."
-                    ),
-                    geometry_types={"POINT"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.VectorInput(
-                    id="ECNA_extract.shp",
-                    about=gettext(
-                        "Extract vector for the East Coast of North America and Puerto"
-                        " Rico."
-                    ),
-                    geometry_types={"POLYGON"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.FileInput(
-                    id="NAmerica_EastCoast_4m.txt.bin",
-                    about=gettext(
-                        "WaveWatchIII data for the East Coast of North America and Puerto"
-                        " Rico."
-                    )
-                ),
-                spec.VectorInput(
-                    id="North_Sea_4m.shp",
-                    about=gettext("Point vector for the North Sea 4 meter resolution."),
-                    geometry_types={"POINT"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.VectorInput(
-                    id="North_Sea_4m_Extract.shp",
-                    about=gettext("Extract vector for the North Sea 4 meter resolution."),
-                    geometry_types={"POLYGON"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.FileInput(
-                    id="North_Sea_4m.bin",
-                    about=gettext(
-                        "WaveWatchIII data for the North Sea 4 meter resolution."
-                    )
-                ),
-                spec.VectorInput(
-                    id="North_Sea_10m.shp",
-                    about=gettext("Point vector for the North Sea 10 meter resolution."),
-                    geometry_types={"POINT"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.VectorInput(
-                    id="North_Sea_10m_Extract.shp",
-                    about=gettext(
-                        "Extract vector for the North Sea 10 meter resolution."
-                    ),
-                    geometry_types={"POLYGON"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.FileInput(
-                    id="North_Sea_10m.bin",
-                    about=gettext(
-                        "WaveWatchIII data for the North Sea 10 meter resolution."
-                    )
-                ),
-                spec.VectorInput(
-                    id="Australia_4m.shp",
-                    about=gettext("Point vector for Australia."),
-                    geometry_types={"POINT"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.VectorInput(
-                    id="Australia_Extract.shp",
-                    about=gettext("Extract vector for Australia."),
-                    geometry_types={"POLYGON"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.FileInput(
-                    id="Australia_4m.bin",
-                    about=gettext("WaveWatchIII data for Australia.")
-                ),
-                spec.VectorInput(
-                    id="Global.shp",
-                    about=gettext("Global point vector."),
-                    geometry_types={"POINT"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.VectorInput(
-                    id="Global_extract.shp",
-                    about=gettext("Global extract vector."),
-                    geometry_types={"POLYGON"},
-                    fields=[],
-                    projected=None
-                ),
-                spec.FileInput(
-                    id="Global_WW3.txt.bin", about=gettext("Global WaveWatchIII data.")
+                    id="binary_wwiii_data",
+                    about=gettext("Binary WaveWatchIII data for each analysis area")
                 )
-            ]
+            ],
+            index_col="analysis_area"
         ),
         spec.OptionStringInput(
             id="analysis_area",
@@ -407,7 +301,7 @@ MODEL_SPEC = spec.ModelSpec(
             ],
             index_col="name"
         ),
-        spec.NumberInput(
+        spec.IntegerInput(
             id="number_of_machines",
             name=gettext("number of machines"),
             about=gettext(
@@ -459,7 +353,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.VectorOutput(
             id="gridpt_prj",
-            path="output/GridPt_prj.shp",
+            path="output/GridPts_prj.shp",
             about=gettext("Vector map of the provided grid points"),
             created_if="valuation_container",
             geometry_types={"POINT"},
@@ -816,9 +710,8 @@ def execute(args):
     Args:
         workspace_dir (str): Where the intermediate and output folder/files
             will be saved. (required)
-        wave_base_data_path (str): Directory location of wave base data
-            including WAVEWATCH III (WW3) data and analysis area shapefile.
-            (required)
+        wave_base_data_table (str): Path to wave base data table including
+            WAVEWATCH III (WW3) data and analysis area shapefile. (required)
         analysis_area (str): A string identifying the analysis area of
             interest. Used to determine wave data shapefile, wave data text
             file, and analysis area boundary shape. (required)
@@ -847,28 +740,7 @@ def execute(args):
 
     """
     LOGGER.info('Starting the Wave Energy Model.')
-    # Create the Output and Intermediate directories if they do not exist.
-    workspace = args['workspace_dir']
-    output_dir = os.path.join(workspace, 'output')
-    intermediate_dir = os.path.join(workspace, 'intermediate')
-    utils.make_directories([intermediate_dir, output_dir])
-
-    # Initialize a TaskGraph
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
-
-    # Append a _ to the suffix if it's not empty and doesn't already have one
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-
-    # Get the path for the DEM
-    dem_path = args['dem_path']
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     # Create a dictionary that stores the wave periods and wave heights as
     # arrays. Also store the amount of energy the machine produces
@@ -907,7 +779,7 @@ def execute(args):
         args['machine_param_path'])['value'].to_dict()
 
     # Check if required column fields are entered in the land grid csv file
-    if 'land_gridPts_path' in args:
+    if args['land_gridPts_path']:
         # Create a grid_land_df dataframe for later use in valuation
         grid_land_df = MODEL_SPEC.get_input(
             'land_gridPts_path').get_validated_dataframe(args['land_gridPts_path'])
@@ -921,102 +793,38 @@ def execute(args):
                 'The following column fields are missing from the Grid '
                 'Connection Points File: %s' % missing_grid_land_fields)
 
-    if 'valuation_container' in args and args['valuation_container']:
+    if args['valuation_container']:
         machine_econ_dict = MODEL_SPEC.get_input(
             'machine_econ_path').get_validated_dataframe(
             args['machine_econ_path'])['value'].to_dict()
 
-    # Build up a dictionary of possible analysis areas where the key
-    # is the analysis area selected and the value is a dictionary
-    # that stores the related paths to the needed inputs
-    wave_base_data_path = args['wave_base_data_path']
-    analysis_dict = {
-        'westcoast': {
-            'point_vector':
-            os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.shp'),
-            'extract_vector':
-            os.path.join(wave_base_data_path, 'WCNA_extract.shp'),
-            'ww3_path':
-            os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.txt.bin')
-        },
-        'eastcoast': {
-            'point_vector':
-            os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.shp'),
-            'extract_vector':
-            os.path.join(wave_base_data_path, 'ECNA_extract.shp'),
-            'ww3_path':
-            os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.txt.bin')
-        },
-        'northsea4': {
-            'point_vector':
-            os.path.join(wave_base_data_path, 'North_Sea_4m.shp'),
-            'extract_vector':
-            os.path.join(wave_base_data_path, 'North_Sea_4m_Extract.shp'),
-            'ww3_path':
-            os.path.join(wave_base_data_path, 'North_Sea_4m.bin')
-        },
-        'northsea10': {
-            'point_vector':
-            os.path.join(wave_base_data_path, 'North_Sea_10m.shp'),
-            'extract_vector':
-            os.path.join(wave_base_data_path, 'North_Sea_10m_Extract.shp'),
-            'ww3_path':
-            os.path.join(wave_base_data_path, 'North_Sea_10m.bin')
-        },
-        'australia': {
-            'point_vector':
-            os.path.join(wave_base_data_path, 'Australia_4m.shp'),
-            'extract_vector':
-            os.path.join(wave_base_data_path, 'Australia_Extract.shp'),
-            'ww3_path':
-            os.path.join(wave_base_data_path, 'Australia_4m.bin')
-        },
-        'global': {
-            'point_vector':
-            os.path.join(wave_base_data_path, 'Global.shp'),
-            'extract_vector':
-            os.path.join(wave_base_data_path, 'Global_extract.shp'),
-            'ww3_path':
-            os.path.join(wave_base_data_path, 'Global_WW3.txt.bin')
-        }
-    }
-
     # Get the String value for the analysis area provided from the dropdown
     # menu in the user interface
     analysis_area = args['analysis_area']
+    base_data = MODEL_SPEC.get_input(
+        'wave_base_data_table').get_validated_dataframe(
+        args['wave_base_data_table']).loc[analysis_area]
     # Use the analysis area String to get the path's to the wave seastate data,
     # the wave point shapefile, and the polygon extract shapefile
-    wave_seastate_bins = _binary_wave_data_to_dict(
-        analysis_dict[analysis_area]['ww3_path'])
-    analysis_area_points_path = analysis_dict[analysis_area][
-        'point_vector']
-    analysis_area_extract_path = analysis_dict[analysis_area][
-        'extract_vector']
-
-    # Remove the wave point shapefile if it exists
-    wave_vector_path = os.path.join(intermediate_dir,
-                                    'WEM_InputOutput_Pts%s.shp' % file_suffix)
-    if os.path.isfile(wave_vector_path):
-        os.remove(wave_vector_path)
-
-    # Set the source projection for a coordinate transformation
-    # to the input projection from the wave watch point shapefile
+    wave_seastate_bins = _binary_wave_data_to_dict(base_data['binary_wwiii_data'])
+    analysis_area_points_path = base_data['point_vector']
+    analysis_area_extract_path = base_data['extract_vector']
     analysis_area_sr = _get_vector_spatial_ref(analysis_area_points_path)
 
-    # This if/else statement differentiates between having an AOI or doing
-    # a broad run on all the wave points specified by args['analysis_area'].
-    if 'aoi_path' not in args or not args['aoi_path']:
+    # If AOI is not provided
+    if not args['aoi_path']:
         LOGGER.info('AOI not provided.')
 
         # Make a copy of the wave point shapefile so that the original input is
         # not corrupted when we clip the vector
-        _copy_vector_or_raster(analysis_area_points_path, wave_vector_path)
+        _copy_vector_or_raster(
+            analysis_area_points_path, file_registry['wem_inputoutput_pts'])
 
         # The path to a polygon shapefile that specifies the broader AOI
         aoi_vector_path = analysis_area_extract_path
 
         # Set the pixel size to that of DEM, to be used for creating rasters
-        target_pixel_size = pygeoprocessing.get_raster_info(dem_path)[
+        target_pixel_size = pygeoprocessing.get_raster_info(args['dem_path'])[
             'pixel_size']
 
         # Create a coordinate transformation, because it is used below when
@@ -1027,35 +835,33 @@ def execute(args):
 
     else:
         LOGGER.info('AOI provided.')
-        aoi_vector_path = args['aoi_path']
         # Create a coordinate transformation from the projection of the given
         # wave energy point shapefile, to the AOI's projection
-        aoi_sr = _get_vector_spatial_ref(aoi_vector_path)
+        aoi_sr = _get_vector_spatial_ref(args['aoi_path'])
         aoi_sr_wkt = aoi_sr.ExportToWkt()
         analysis_area_sr_wkt = analysis_area_sr.ExportToWkt()
 
         # Clip the wave data shapefile by the bounds provided from the AOI
         task_graph.add_task(
             func=_clip_vector_by_vector,
-            args=(analysis_area_points_path, aoi_vector_path, wave_vector_path,
-                  aoi_sr_wkt, intermediate_dir),
-            target_path_list=[wave_vector_path],
+            args=(analysis_area_points_path, args['aoi_path'],
+                  file_registry['wem_inputoutput_pts'], aoi_sr_wkt,
+                  args['workspace_dir']),
+            target_path_list=[file_registry['wem_inputoutput_pts']],
             task_name='clip_wave_points_to_aoi')
 
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
-        aoi_clipped_to_extract_path = os.path.join(
-            intermediate_dir,
-            'aoi_clipped_to_extract_path%s.shp' % file_suffix)
         task_graph.add_task(
             func=_clip_vector_by_vector,
-            args=(aoi_vector_path, analysis_area_extract_path,
-                  aoi_clipped_to_extract_path, aoi_sr_wkt, intermediate_dir),
-            target_path_list=[aoi_clipped_to_extract_path],
+            args=(args['aoi_path'], analysis_area_extract_path,
+                  file_registry['aoi_clipped_to_extract_path'],
+                  aoi_sr_wkt, args['workspace_dir']),
+            target_path_list=[file_registry['aoi_clipped_to_extract_path']],
             task_name='clip_aoi_to_extract_data')
 
         # Replace the AOI path with the clipped AOI path
-        aoi_vector_path = aoi_clipped_to_extract_path
+        aoi_vector_path = file_registry['aoi_clipped_to_extract_path']
 
         # Join here since we need pixel size for creating output rasters
         task_graph.join()
@@ -1066,8 +872,9 @@ def execute(args):
             analysis_area_sr, aoi_sr)
         coord_trans_opposite = utils.create_coordinate_transformer(
             aoi_sr, analysis_area_sr)
-        target_pixel_size = _pixel_size_helper(wave_vector_path, coord_trans,
-                                               coord_trans_opposite, dem_path)
+        target_pixel_size = _pixel_size_helper(
+            file_registry['wem_inputoutput_pts'], coord_trans,
+            coord_trans_opposite, args['dem_path'])
 
     LOGGER.debug('target_pixel_size: %s, target_projection: %s',
                  target_pixel_size, aoi_sr_wkt)
@@ -1077,13 +884,11 @@ def execute(args):
     # from the raster DEM
     LOGGER.info('Adding DEPTH_M field to the wave shapefile from the DEM')
     # Add the depth value to the wave points by indexing into the DEM dataset
-    indexed_wave_vector_path = os.path.join(
-        intermediate_dir, 'Indexed_WEM_InputOutput_Pts%s.shp' % file_suffix)
     index_depth_to_wave_vector_task = task_graph.add_task(
         func=_index_raster_value_to_point_vector,
-        args=(wave_vector_path, dem_path, indexed_wave_vector_path,
-              _DEPTH_FIELD),
-        target_path_list=[indexed_wave_vector_path],
+        args=(file_registry['wem_inputoutput_pts'], args['dem_path'],
+              file_registry['indexed_wem_inputoutput_pts'], _DEPTH_FIELD),
+        target_path_list=[file_registry['indexed_wem_inputoutput_pts']],
         task_name='index_depth_to_wave_vector')
 
     # Generate an interpolate object for wave_energy_capacity
@@ -1098,132 +903,103 @@ def execute(args):
     # Add wave energy and wave power fields to the shapefile for the
     # corresponding points
     LOGGER.info('Adding wave energy and power fields to the wave vector.')
-    wave_energy_power_vector_path = os.path.join(
-        intermediate_dir, 'Captured_WEM_InputOutput_Pts%s.shp' % file_suffix)
     create_wave_energy_and_power_raster_task = task_graph.add_task(
         func=_energy_and_power_to_wave_vector,
-        args=(energy_cap, indexed_wave_vector_path,
-              wave_energy_power_vector_path),
-        target_path_list=[wave_energy_power_vector_path],
+        args=(energy_cap, file_registry['indexed_wem_inputoutput_pts'],
+              file_registry['captured_wem_inputoutput_pts']),
+        target_path_list=[file_registry['captured_wem_inputoutput_pts']],
         task_name='get_wave_energy_and_power',
         dependent_task_list=[index_depth_to_wave_vector_task])
 
-    # Intermediate/final output paths for wave energy and wave power rasters
-    unclipped_energy_raster_path = os.path.join(
-        intermediate_dir, 'unclipped_capwe_mwh%s.tif' % file_suffix)
-    unclipped_power_raster_path = os.path.join(
-        intermediate_dir, 'unclipped_wp_kw%s.tif' % file_suffix)
-    interpolated_energy_raster_path = os.path.join(
-        intermediate_dir, 'interpolated_capwe_mwh%s.tif' % file_suffix)
-    interpolated_power_raster_path = os.path.join(
-        intermediate_dir, 'interpolated_wp_kw%s.tif' % file_suffix)
-    energy_raster_path = os.path.join(output_dir,
-                                      'capwe_mwh%s.tif' % file_suffix)
-    wave_power_raster_path = os.path.join(output_dir,
-                                          'wp_kw%s.tif' % file_suffix)
-
-    # Create blank rasters bounded by the vector of analysis area (AOI)
-    LOGGER.info('Create wave power and energy rasters from AOI extent')
     create_unclipped_energy_raster_task = task_graph.add_task(
         func=pygeoprocessing.create_raster_from_vector_extents,
-        args=(aoi_vector_path, unclipped_energy_raster_path, target_pixel_size,
-              _TARGET_PIXEL_TYPE, _NODATA),
-        target_path_list=[unclipped_energy_raster_path],
+        args=(aoi_vector_path, file_registry['unclipped_capwe_mwh'],
+              target_pixel_size, _TARGET_PIXEL_TYPE, _NODATA),
+        target_path_list=[file_registry['unclipped_capwe_mwh']],
         task_name='create_unclipped_energy_raster')
 
     create_unclipped_power_raster_task = task_graph.add_task(
         func=pygeoprocessing.create_raster_from_vector_extents,
-        args=(aoi_vector_path, unclipped_power_raster_path, target_pixel_size,
-              _TARGET_PIXEL_TYPE, _NODATA),
-        target_path_list=[unclipped_power_raster_path],
+        args=(aoi_vector_path, file_registry['unclipped_wp_kw'],
+              target_pixel_size, _TARGET_PIXEL_TYPE, _NODATA),
+        target_path_list=[file_registry['unclipped_wp_kw']],
         task_name='create_unclipped_power_raster')
 
     # Interpolate wave energy and power from the wave vector over the rasters
     LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
     interpolate_energy_points_task = task_graph.add_task(
         func=_interpolate_vector_field_onto_raster,
-        args=(wave_energy_power_vector_path, unclipped_energy_raster_path,
-              interpolated_energy_raster_path, _CAP_WE_FIELD),
-        target_path_list=[interpolated_energy_raster_path],
+        args=(file_registry['captured_wem_inputoutput_pts'],
+              file_registry['unclipped_capwe_mwh'],
+              file_registry['interpolated_capwe_mwh'], _CAP_WE_FIELD),
+        target_path_list=[file_registry['interpolated_capwe_mwh']],
         task_name='interpolate_energy_points',
         dependent_task_list=[create_wave_energy_and_power_raster_task,
                              create_unclipped_energy_raster_task])
 
     interpolate_power_points_task = task_graph.add_task(
         func=_interpolate_vector_field_onto_raster,
-        args=(wave_energy_power_vector_path, unclipped_power_raster_path,
-              interpolated_power_raster_path, _WAVE_POWER_FIELD),
-        target_path_list=[interpolated_power_raster_path],
+        args=(file_registry['captured_wem_inputoutput_pts'],
+              file_registry['unclipped_wp_kw'],
+              file_registry['interpolated_wp_kw'], _WAVE_POWER_FIELD),
+        target_path_list=[file_registry['interpolated_wp_kw']],
         task_name='interpolate_power_points',
         dependent_task_list=[create_wave_energy_and_power_raster_task,
                              create_unclipped_power_raster_task])
 
     clip_energy_raster_task = task_graph.add_task(
         func=pygeoprocessing.mask_raster,
-        args=((interpolated_energy_raster_path, 1), aoi_vector_path,
-              energy_raster_path,),
+        args=((file_registry['interpolated_capwe_mwh'], 1), aoi_vector_path,
+              file_registry['capwe_mwh'],),
         kwargs={'all_touched': True},
-        target_path_list=[energy_raster_path],
+        target_path_list=[file_registry['capwe_mwh']],
         task_name='clip_energy_raster',
         dependent_task_list=[interpolate_energy_points_task])
 
     clip_power_raster_task = task_graph.add_task(
         func=pygeoprocessing.mask_raster,
-        args=((interpolated_power_raster_path, 1), aoi_vector_path,
-              wave_power_raster_path,),
+        args=((file_registry['interpolated_wp_kw'], 1), aoi_vector_path,
+              file_registry['wp_kw'],),
         kwargs={'all_touched': True},
-        target_path_list=[wave_power_raster_path],
+        target_path_list=[file_registry['wp_kw']],
         task_name='clip_power_raster',
         dependent_task_list=[interpolate_power_points_task])
 
-    # Paths for wave energy and wave power percentile rasters
-    wp_rc_path = os.path.join(output_dir, 'wp_rc%s.tif' % file_suffix)
-    capwe_rc_path = os.path.join(output_dir, 'capwe_rc%s.tif' % file_suffix)
-
-    # Create the percentile rasters for wave energy and wave power
     task_graph.add_task(
         func=_create_percentile_rasters,
-        args=(energy_raster_path, capwe_rc_path, _CAPWE_UNITS_SHORT,
-              _CAPWE_UNITS_LONG, _PERCENTILES, intermediate_dir),
+        args=(file_registry['capwe_mwh'], file_registry['capwe_rc'], _CAPWE_UNITS_SHORT,
+              _CAPWE_UNITS_LONG, _PERCENTILES, args['workspace_dir']),
         kwargs={'start_value': _STARTING_PERC_RANGE},
-        target_path_list=[capwe_rc_path],
+        target_path_list=[file_registry['capwe_rc']],
         task_name='create_energy_percentile_raster',
         dependent_task_list=[clip_energy_raster_task])
 
     task_graph.add_task(
         func=_create_percentile_rasters,
-        args=(wave_power_raster_path, wp_rc_path, _WP_UNITS_SHORT,
-              _WP_UNITS_LONG, _PERCENTILES, intermediate_dir),
+        args=(file_registry['wp_kw'], file_registry['wp_rc'], _WP_UNITS_SHORT,
+              _WP_UNITS_LONG, _PERCENTILES, args['workspace_dir']),
         kwargs={'start_value': _STARTING_PERC_RANGE},
-        target_path_list=[wp_rc_path],
+        target_path_list=[file_registry['wp_rc']],
         task_name='create_power_percentile_raster',
         dependent_task_list=[clip_power_raster_task])
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
-    if 'valuation_container' not in args or not args['valuation_container']:
+    if not args['valuation_container']:
         # The rest of the function is valuation, so we can quit now
         LOGGER.info('Valuation not selected')
         task_graph.close()
         task_graph.join()
         return
-    else:
-        LOGGER.info('Valuation selected')
 
-    # Output path for landing point shapefile
-    land_vector_path = os.path.join(
-        output_dir, 'LandPts_prj%s.shp' % file_suffix)
-    # Output path for grid point shapefile
-    grid_vector_path = os.path.join(
-        output_dir, 'GridPts_prj%s.shp' % file_suffix)
+    LOGGER.info('Valuation selected')
 
-    # Make a point shapefile for grid points
-    LOGGER.info('Creating Grid Points Vector.')
     create_grid_points_vector_task = task_graph.add_task(
         func=_dict_to_point_vector,
         args=(grid_land_df[grid_land_df['type'] == 'grid'].to_dict('index'),
-              grid_vector_path, 'grid_points', analysis_area_sr_wkt, aoi_sr_wkt),
-        target_path_list=[grid_vector_path],
+              file_registry['gridpt_prj'], 'grid_points',
+              analysis_area_sr_wkt, aoi_sr_wkt),
+        target_path_list=[file_registry['gridpt_prj']],
         task_name='create_grid_points_vector')
 
     # Make a point shapefile for landing points.
@@ -1231,56 +1007,45 @@ def execute(args):
     create_land_points_vector_task = task_graph.add_task(
         func=_dict_to_point_vector,
         args=(grid_land_df[grid_land_df['type'] == 'land'].to_dict('index'),
-              land_vector_path, 'land_points', analysis_area_sr_wkt, aoi_sr_wkt),
-        target_path_list=[land_vector_path],
+              file_registry['landpts_prj'], 'land_points',
+              analysis_area_sr_wkt, aoi_sr_wkt),
+        target_path_list=[file_registry['landpts_prj']],
         task_name='create_land_points_vector')
 
-    # Add new fields to the wave vector.
-    final_wave_energy_power_vector_path = os.path.join(
-        intermediate_dir, 'Final_WEM_InputOutput_Pts%s.shp' % file_suffix)
     add_target_fields_to_wave_vector_task = task_graph.add_task(
         func=_add_target_fields_to_wave_vector,
-        args=(wave_energy_power_vector_path, land_vector_path,
-              grid_vector_path, final_wave_energy_power_vector_path,
-              machine_econ_dict, int(args['number_of_machines'])),
-        target_path_list=[final_wave_energy_power_vector_path],
+        args=(file_registry['captured_wem_inputoutput_pts'],
+              file_registry['landpts_prj'],
+              file_registry['gridpt_prj'],
+              file_registry['final_wem_inputoutput_pts'],
+              machine_econ_dict, args['number_of_machines']),
+        target_path_list=[file_registry['final_wem_inputoutput_pts']],
         task_name='add_fields_to_wave_vector',
         dependent_task_list=[create_wave_energy_and_power_raster_task,
                              create_land_points_vector_task,
                              create_grid_points_vector_task])
 
-    # Intermediate path for the projected net present value raster
-    inter_npv_raster_path = os.path.join(
-        intermediate_dir, 'npv_not_clipped%s.tif' % file_suffix)
-    # Path for the net present value percentile raster
-    target_npv_rc_path = os.path.join(output_dir, 'npv_rc%s.tif' % file_suffix)
-    # Output path for the projected net present value raster
-    target_npv_raster_path = os.path.join(
-        output_dir, 'npv_usd%s.tif' % file_suffix)
-
-    LOGGER.info('Create NPV raster from wave vector and AOI extents.')
     create_npv_raster_task = task_graph.add_task(
         func=_create_npv_raster,
-        args=(final_wave_energy_power_vector_path, aoi_vector_path,
-              inter_npv_raster_path, target_npv_raster_path,
+        args=(file_registry['final_wem_inputoutput_pts'], aoi_vector_path,
+              file_registry['npv_not_clipped'], file_registry['npv_usd'],
               target_pixel_size),
-        target_path_list=[inter_npv_raster_path, target_npv_raster_path],
+        target_path_list=[file_registry['npv_not_clipped'], file_registry['npv_usd']],
         task_name='create_npv_raster',
         dependent_task_list=[add_target_fields_to_wave_vector_task])
 
-    LOGGER.info('Create percentile NPV raster.')
     task_graph.add_task(
         func=_create_percentile_rasters,
-        args=(target_npv_raster_path, target_npv_rc_path, _NPV_UNITS_SHORT,
-              _NPV_UNITS_LONG, _PERCENTILES, intermediate_dir),
-        target_path_list=[target_npv_rc_path],
+        args=(file_registry['npv_usd'], file_registry['npv_rc'], _NPV_UNITS_SHORT,
+              _NPV_UNITS_LONG, _PERCENTILES, args['workspace_dir']),
+        target_path_list=[file_registry['npv_rc']],
         task_name='create_npv_percentile_raster',
         dependent_task_list=[create_npv_raster_task])
 
-    # Close Taskgraph
     task_graph.close()
     task_graph.join()
     LOGGER.info('End of Wave Energy Valuation.')
+    return file_registry.registry
 
 
 def _copy_vector_or_raster(base_file_path, target_file_path):
@@ -1292,7 +1057,7 @@ def _copy_vector_or_raster(base_file_path, target_file_path):
         target_file_path (str): a path to the target copied vector or raster.
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     Raises:
         ValueError if the base file can't be opened by GDAL.

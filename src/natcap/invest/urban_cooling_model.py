@@ -36,6 +36,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=("ucm",),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["lulc_raster_path", "ref_eto_raster_path",
@@ -382,6 +383,13 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
+            id="cc_park",
+            path="intermediate/cc_park.tif",
+            about=gettext("Map of cooling capacity decayed by proximity to greenspace"),
+            data_type=float,
+            units=None
+        ),
+        spec.SingleBandRasterOutput(
             id="cc_masked_green_areas",
             path="intermediate/cc_masked_green_areas.tif",
             about=gettext("Cooling capacity map masked by non-green areas"),
@@ -468,6 +476,20 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.none
         ),
         spec.SingleBandRasterOutput(
+            id="green_area",
+            path="intermediate/green_area.tif",
+            about=gettext("Map of green area."),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
+            id="building_intensity",
+            path="intermediate/building_intensity.tif",
+            about=gettext("Map of building intensity."),
+            data_type=float,
+            units=u.none
+        ),
+        spec.SingleBandRasterOutput(
             id="lulc",
             path="intermediate/lulc.tif",
             about=gettext("Map of land use/land cover."),
@@ -500,6 +522,40 @@ MODEL_SPEC = spec.ModelSpec(
             id="t_air_aoi_stats",
             path="intermediate/t_air_aoi_stats.pickle",
             about=gettext("Air temperature zonal statistics for aoi.")
+        ),
+        spec.SingleBandRasterOutput(
+            id="light_work_loss_percent",
+            path="intermediate/light_work_loss_percent.tif",
+            about=gettext("Map of percent work productivity loss for light work."),
+            data_type=float,
+            units=u.percent
+        ),
+        spec.SingleBandRasterOutput(
+            id="heavy_work_loss_percent",
+            path="intermediate/heavy_work_loss_percent.tif",
+            about=gettext("Map of percent work productivity loss for heavy work."),
+            data_type=float,
+            units=u.percent
+        ),
+        spec.FileOutput(
+            id="wbgt_stats_pickle",
+            path="intermediate/wbgt_stats.pickle",
+            about=gettext("Pickled zonal statistics for WBGT.")
+        ),
+        spec.FileOutput(
+            id="light_loss_stats_pickle",
+            path="intermediate/light_loss_stats.pickle",
+            about=gettext("Pickled zonal statistics for light work loss.")
+        ),
+        spec.FileOutput(
+            id="heavy_loss_stats_pickle",
+            path="intermediate/heavy_loss_stats.pickle",
+            about=gettext("Pickled zonal statistics for heavy work loss.")
+        ),
+        spec.FileOutput(
+            id="t_air_stats_pickle",
+            path="intermediate/t_air_stats.pickle",
+            about=gettext("Pickled zonal statistics for air temperature.")
         ),
         spec.TASKGRAPH_CACHE
     ]
@@ -560,67 +616,40 @@ def execute(args):
 
 
     Returns:
-        None.
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
 
     """
     LOGGER.info('Starting Urban Cooling Model')
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    intermediate_dir = os.path.join(
-        args['workspace_dir'], 'intermediate')
-    utils.make_directories([args['workspace_dir'], intermediate_dir])
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
+
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
         args['biophysical_table_path'])
 
-    # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide
     # weights.
-    # TypeError when float(None)
-    # ValueError when float('')
-    # KeyError when the parameter is not present in the args dict.
-    try:
-        cc_weight_shade_raw = float(args['cc_weight_shade'])
-    except (ValueError, TypeError, KeyError):
+    if args['cc_weight_shade'] is None:
         cc_weight_shade_raw = 0.6
+    else:
+        cc_weight_shade_raw = args['cc_weight_shade']
 
-    try:
-        cc_weight_albedo_raw = float(args['cc_weight_albedo'])
-    except (ValueError, TypeError, KeyError):
+    if args['cc_weight_albedo'] is None:
         cc_weight_albedo_raw = 0.2
+    else:
+        cc_weight_albedo_raw = args['cc_weight_albedo']
 
-    try:
-        cc_weight_eti_raw = float(args['cc_weight_eti'])
-    except (ValueError, TypeError, KeyError):
+    if args['cc_weight_eti'] is None:
         cc_weight_eti_raw = 0.2
+    else:
+        cc_weight_eti_raw = args['cc_weight_eti']
 
-    t_ref_raw = float(args['t_ref'])
-    uhi_max_raw = float(args['uhi_max'])
     cc_weight_sum = sum(
         (cc_weight_shade_raw, cc_weight_albedo_raw, cc_weight_eti_raw))
     cc_weight_shade = cc_weight_shade_raw / cc_weight_sum
     cc_weight_albedo = cc_weight_albedo_raw / cc_weight_sum
     cc_weight_eti = cc_weight_eti_raw / cc_weight_sum
 
-    # Cast to a float upfront in case of casting errors.
-    t_air_average_radius_raw = float(args['t_air_average_radius'])
-
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args.
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # Synchronous mode.
-
-    task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
-
     # align all the input rasters.
-    aligned_lulc_raster_path = os.path.join(
-        intermediate_dir, f'lulc{file_suffix}.tif')
-    aligned_ref_eto_raster_path = os.path.join(
-        intermediate_dir, f'ref_eto{file_suffix}.tif')
-
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_raster_path'])
     # ensure raster has square pixels by picking the smallest dimension
@@ -628,8 +657,7 @@ def execute(args):
 
     # Reproject and align inputs to the intersection of the AOI, ET0 and LULC,
     # with target raster sizes matching those of the LULC.
-    aligned_raster_path_list = [
-        aligned_lulc_raster_path, aligned_ref_eto_raster_path]
+    aligned_raster_path_list = [file_registry['lulc'], file_registry['ref_eto']]
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=([args['lulc_raster_path'], args['ref_eto_raster_path']],
@@ -655,26 +683,23 @@ def execute(args):
         'raster_name': 'LULC', 'column_name': 'lucode',
         'table_name': 'Biophysical'}
     for prop in reclassification_props:
-        prop_raster_path = os.path.join(
-            intermediate_dir, f'{prop}{file_suffix}.tif')
         prop_task = task_graph.add_task(
             func=utils.reclassify_raster,
             args=(
-                (aligned_lulc_raster_path, 1),
-                biophysical_df[prop].to_dict(), prop_raster_path,
+                (file_registry['lulc'], 1),
+                biophysical_df[prop].to_dict(), file_registry[prop],
                 gdal.GDT_Float32, TARGET_NODATA, reclass_error_details),
-            target_path_list=[prop_raster_path],
+            target_path_list=[file_registry[prop]],
             dependent_task_list=[align_task],
             task_name=f'reclassify to {prop}')
-        task_path_prop_map[prop] = (prop_task, prop_raster_path)
+        task_path_prop_map[prop] = (prop_task, file_registry[prop])
 
     align_task.join()
 
-    cc_raster_path = os.path.join(intermediate_dir, f'cc{file_suffix}.tif')
     if args['cc_method'] == 'factors':
         LOGGER.info('Calculating Cooling Coefficient from factors')
         # Evapotranspiration index (Equation #1)
-        ref_eto_raster = gdal.OpenEx(aligned_ref_eto_raster_path,
+        ref_eto_raster = gdal.OpenEx(file_registry['ref_eto'],
                                      gdal.OF_RASTER)
         ref_eto_band = ref_eto_raster.GetRasterBand(1)
         _, ref_eto_max, _, _ = ref_eto_band.GetStatistics(0, 1)
@@ -684,31 +709,28 @@ def execute(args):
 
         eto_nodata = pygeoprocessing.get_raster_info(
             args['ref_eto_raster_path'])['nodata'][0]
-        eti_raster_path = os.path.join(
-            intermediate_dir, f'eti{file_suffix}.tif')
         eti_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
                 [(task_path_prop_map['kc'][1], 1), (TARGET_NODATA, 'raw'),
-                 (aligned_ref_eto_raster_path, 1), (eto_nodata, 'raw'),
+                 (file_registry['ref_eto'], 1), (eto_nodata, 'raw'),
                  (ref_eto_max, 'raw'), (TARGET_NODATA, 'raw')],
-                calc_eti_op, eti_raster_path, gdal.GDT_Float32, TARGET_NODATA),
-            target_path_list=[eti_raster_path],
+                calc_eti_op, file_registry['eti'], gdal.GDT_Float32, TARGET_NODATA),
+            target_path_list=[file_registry['eti']],
             dependent_task_list=[task_path_prop_map['kc'][0]],
             task_name='calculate eti')
 
-        # Cooling Capacity calculations (Equation #2)
         cc_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(task_path_prop_map['shade'][1], 1),
                    (task_path_prop_map['albedo'][1], 1),
-                   (eti_raster_path, 1),
+                   (file_registry['eti'], 1),
                    (cc_weight_shade, 'raw'),
                    (cc_weight_albedo, 'raw'),
                    (cc_weight_eti, 'raw')],
-                  calc_cc_op_factors, cc_raster_path,
+                  calc_cc_op_factors, file_registry['cc'],
                   gdal.GDT_Float32, TARGET_NODATA),
-            target_path_list=[cc_raster_path],
+            target_path_list=[file_registry['cc']],
             dependent_task_list=[
                 task_path_prop_map['shade'][0],
                 task_path_prop_map['albedo'][0],
@@ -724,67 +746,58 @@ def execute(args):
             kwargs=dict(
                 op=calc_cc_op_intensity,
                 rasters=[task_path_prop_map['building_intensity'][1]],
-                target_path=cc_raster_path,
+                target_path=file_registry['cc'],
                 target_nodata=TARGET_NODATA),
-            target_path_list=[cc_raster_path],
+            target_path_list=[file_registry['cc']],
             dependent_task_list=[
                 task_path_prop_map['building_intensity'][0]],
             task_name='calculate cc index (intensity)')
-
-    cc_masked_green_area_raster_path = os.path.join(
-        intermediate_dir, f'cc_masked_green_areas{file_suffix}.tif')
 
     green_area_cc_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
             [(task_path_prop_map['green_area'][1], 1),
-             (cc_raster_path, 1)],
+             (file_registry['cc'], 1)],
             mask_cc_green_areas_op,
-            cc_masked_green_area_raster_path, gdal.GDT_Float32, TARGET_NODATA),
-        target_path_list=[cc_masked_green_area_raster_path],
+            file_registry['cc_masked_green_areas'],
+            gdal.GDT_Float32, TARGET_NODATA),
+        target_path_list=[file_registry['cc_masked_green_areas']],
         dependent_task_list=[task_path_prop_map['green_area'][0], cc_task],
         task_name='Compute green area cooling effect')
 
     green_area_decay_kernel_distance = int(numpy.round(
-        float(args['green_area_cooling_distance']) / cell_size))
-    cc_park_raster_path = os.path.join(
-        intermediate_dir, f'cc_park{file_suffix}.tif')
+        args['green_area_cooling_distance'] / cell_size))
     cc_park_task = task_graph.add_task(
         func=convolve_2d_by_exponential,
         args=(
             green_area_decay_kernel_distance,
-            cc_masked_green_area_raster_path,
-            cc_park_raster_path),
-        target_path_list=[cc_park_raster_path],
+            file_registry['cc_masked_green_areas'],
+            file_registry['cc_park']),
+        target_path_list=[file_registry['cc_park']],
         dependent_task_list=[green_area_cc_task],
         task_name='calculate CC park')
 
-    # Calculate the area of greenspace within a search radius of each pixel.
-    area_kernel_path = os.path.join(
-        intermediate_dir, f'area_kernel{file_suffix}.tif')
     area_kernel_task = task_graph.add_task(
         func=pygeoprocessing.kernels.dichotomous_kernel,
         kwargs=dict(
-            target_kernel_path=area_kernel_path,
+            target_kernel_path=file_registry['area_kernel'],
             max_distance=green_area_decay_kernel_distance,
             normalize=False),
-        target_path_list=[area_kernel_path],
+        target_path_list=[file_registry['area_kernel']],
         task_name='area kernel')
 
-    green_area_sum_raster_path = os.path.join(
-        intermediate_dir, f'green_area_sum{file_suffix}.tif')
     green_area_sum_task = task_graph.add_task(
         func=pygeoprocessing.convolve_2d,
         args=(
-            (task_path_prop_map['green_area'][1], 1),  # green area path
-            (area_kernel_path, 1),
-            green_area_sum_raster_path),
+            (task_path_prop_map['green_area'][1], 1),
+            (file_registry['area_kernel'], 1),
+            file_registry['green_area_sum']),
         kwargs={
-            'working_dir': intermediate_dir,
+            'working_dir': args['workspace_dir'],
             'ignore_nodata_and_edges': True},
-        target_path_list=[green_area_sum_raster_path],
+        target_path_list=[file_registry['green_area_sum']],
         dependent_task_list=[
-            task_path_prop_map['green_area'][0],  # reclassed green area task
+            task_path_prop_map['green_area'][0],
             area_kernel_task],
         task_name='calculate green area')
 
@@ -792,77 +805,66 @@ def execute(args):
     #
     # convert 2 hectares to number of pixels
     green_area_threshold = 2e4 / cell_size**2
-    hm_raster_path = os.path.join(
-        args['workspace_dir'], f'hm{file_suffix}.tif')
     hm_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
-            (cc_raster_path, 1),
-            (green_area_sum_raster_path, 1),
-            (cc_park_raster_path, 1),
+            (file_registry['cc'], 1),
+            (file_registry['green_area_sum'], 1),
+            (file_registry['cc_park'], 1),
             (green_area_threshold, 'raw')
-        ], hm_op, hm_raster_path, gdal.GDT_Float32, TARGET_NODATA),
-        target_path_list=[hm_raster_path],
+        ], hm_op, file_registry['hm'], gdal.GDT_Float32, TARGET_NODATA),
+        target_path_list=[file_registry['hm']],
         dependent_task_list=[cc_task, green_area_sum_task, cc_park_task],
         task_name='calculate HM index')
 
-    t_air_nomix_raster_path = os.path.join(
-        intermediate_dir, f'T_air_nomix{file_suffix}.tif')
     t_air_nomix_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(t_ref_raw, 'raw'),
-               (hm_raster_path, 1),
-               (uhi_max_raw, 'raw')],
-              calc_t_air_nomix_op, t_air_nomix_raster_path, gdal.GDT_Float32,
+        args=([(args['t_ref'], 'raw'),
+               (file_registry['hm'], 1),
+               (args['uhi_max'], 'raw')],
+              calc_t_air_nomix_op, file_registry['t_air_nomix'], gdal.GDT_Float32,
               TARGET_NODATA),
-        target_path_list=[t_air_nomix_raster_path],
+        target_path_list=[file_registry['t_air_nomix']],
         dependent_task_list=[hm_task, align_task],
         task_name='calculate T air nomix')
 
     decay_kernel_distance = int(numpy.round(
-        t_air_average_radius_raw / cell_size))
-    t_air_raster_path = os.path.join(
-        intermediate_dir, f'T_air{file_suffix}.tif')
+        args['t_air_average_radius'] / cell_size))
     t_air_task = task_graph.add_task(
         func=convolve_2d_by_exponential,
         args=(
             decay_kernel_distance,
-            t_air_nomix_raster_path,
-            t_air_raster_path),
-        target_path_list=[t_air_raster_path],
+            file_registry['t_air_nomix'],
+            file_registry['t_air']),
+        target_path_list=[file_registry['t_air']],
         dependent_task_list=[t_air_nomix_task],
         task_name='calculate T air')
 
-    intermediate_aoi_vector_path = os.path.join(
-        intermediate_dir, f'reprojected_aoi{file_suffix}.shp')
     intermediate_uhi_result_vector_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
             args['aoi_vector_path'], lulc_raster_info['projection_wkt'],
-            intermediate_aoi_vector_path),
+            file_registry['reprojected_aoi']),
         kwargs={'driver_name': 'ESRI Shapefile'},
-        target_path_list=[intermediate_aoi_vector_path],
+        target_path_list=[file_registry['reprojected_aoi']],
         task_name='reproject and label aoi')
 
-    cc_aoi_stats_pickle_path = os.path.join(
-        intermediate_dir, 'cc_ref_aoi_stats.pickle')
     _ = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
-            intermediate_aoi_vector_path,
-            cc_raster_path, cc_aoi_stats_pickle_path),
-        target_path_list=[cc_aoi_stats_pickle_path],
+            file_registry['reprojected_aoi'],
+            file_registry['cc'],
+            file_registry['cc_ref_aoi_stats']),
+        target_path_list=[file_registry['cc_ref_aoi_stats']],
         dependent_task_list=[cc_task, intermediate_uhi_result_vector_task],
         task_name='pickle cc ref stats')
 
-    t_air_aoi_stats_pickle_path = os.path.join(
-        intermediate_dir, 't_air_aoi_stats.pickle')
     _ = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
-            intermediate_aoi_vector_path,
-            t_air_raster_path, t_air_aoi_stats_pickle_path),
-        target_path_list=[t_air_aoi_stats_pickle_path],
+            file_registry['reprojected_aoi'],
+            file_registry['t_air'], file_registry['t_air_aoi_stats']),
+        target_path_list=[file_registry['t_air_aoi_stats']],
         dependent_task_list=[t_air_task, intermediate_uhi_result_vector_task],
         task_name='pickle t-air over stats over AOI')
 
@@ -870,60 +872,46 @@ def execute(args):
     light_loss_stats_pickle_path = None
     heavy_loss_stats_pickle_path = None
     energy_consumption_vector_path = None
-    if bool(args['do_productivity_valuation']):
+    if args['do_productivity_valuation']:
         LOGGER.info('Starting work productivity valuation')
-        # work productivity
-        wbgt_raster_path = os.path.join(
-            intermediate_dir, f'wbgt{file_suffix}.tif')
         wbgt_task = task_graph.add_task(
             func=calculate_wbgt,
             args=(
-                float(args['avg_rel_humidity']), t_air_raster_path,
-                wbgt_raster_path),
-            target_path_list=[wbgt_raster_path],
+                args['avg_rel_humidity'], file_registry['t_air'],
+                file_registry['wbgt']),
+            target_path_list=[file_registry['wbgt']],
             dependent_task_list=[t_air_task],
             task_name='vapor pressure')
-
-        light_work_loss_raster_path = os.path.join(
-            intermediate_dir,
-            f'light_work_loss_percent{file_suffix}.tif')
-        heavy_work_loss_raster_path = os.path.join(
-            intermediate_dir,
-            f'heavy_work_loss_percent{file_suffix}.tif')
 
         loss_task_path_map = {}
         for loss_type, temp_map, loss_raster_path in [
                 # Breaks here are described in the UG chapter and are the
                 # result of a literature review.
-                ('light', [31.5, 32.0, 32.5], light_work_loss_raster_path),
-                ('heavy', [27.5, 29.5, 31.5], heavy_work_loss_raster_path)]:
+                ('light', [31.5, 32.0, 32.5], file_registry['light_work_loss_percent']),
+                ('heavy', [27.5, 29.5, 31.5], file_registry['heavy_work_loss_percent'])]:
             work_loss_task = task_graph.add_task(
                 func=map_work_loss,
-                args=(temp_map, wbgt_raster_path, loss_raster_path),
+                args=(temp_map, file_registry['wbgt'], loss_raster_path),
                 target_path_list=[loss_raster_path],
                 dependent_task_list=[wbgt_task],
                 task_name=f'work loss: {os.path.basename(loss_raster_path)}')
             loss_task_path_map[loss_type] = (work_loss_task, loss_raster_path)
 
-        # pickle WBGT
-        wbgt_stats_pickle_path = os.path.join(
-            intermediate_dir, 'wbgt_stats.pickle')
+        wbgt_stats_pickle_path = file_registry['wbgt_stats_pickle']
         _ = task_graph.add_task(
             func=pickle_zonal_stats,
             args=(
-                intermediate_aoi_vector_path,
-                wbgt_raster_path, wbgt_stats_pickle_path),
+                file_registry['reprojected_aoi'],
+                file_registry['wbgt'], wbgt_stats_pickle_path),
             target_path_list=[wbgt_stats_pickle_path],
             dependent_task_list=[
                 wbgt_task, intermediate_uhi_result_vector_task],
             task_name='pickle WBgt stats')
-        # pickle light loss
-        light_loss_stats_pickle_path = os.path.join(
-            intermediate_dir, 'light_loss_stats.pickle')
+        light_loss_stats_pickle_path = file_registry['light_loss_stats_pickle']
         _ = task_graph.add_task(
             func=pickle_zonal_stats,
             args=(
-                intermediate_aoi_vector_path,
+                file_registry['reprojected_aoi'],
                 loss_task_path_map['light'][1], light_loss_stats_pickle_path),
             target_path_list=[light_loss_stats_pickle_path],
             dependent_task_list=[
@@ -931,12 +919,11 @@ def execute(args):
                 intermediate_uhi_result_vector_task],
             task_name='pickle light_loss stats')
 
-        heavy_loss_stats_pickle_path = os.path.join(
-            intermediate_dir, 'heavy_loss_stats.pickle')
+        heavy_loss_stats_pickle_path = file_registry['heavy_loss_stats_pickle']
         _ = task_graph.add_task(
             func=pickle_zonal_stats,
             args=(
-                intermediate_aoi_vector_path,
+                file_registry['reprojected_aoi'],
                 loss_task_path_map['heavy'][1], heavy_loss_stats_pickle_path),
             target_path_list=[heavy_loss_stats_pickle_path],
             dependent_task_list=[
@@ -946,42 +933,35 @@ def execute(args):
 
     if bool(args['do_energy_valuation']):
         LOGGER.info('Starting energy savings valuation')
-        intermediate_building_vector_path = os.path.join(
-            intermediate_dir,
-            f'reprojected_buildings{file_suffix}.shp')
         intermediate_building_vector_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(
                 args['building_vector_path'],
                 lulc_raster_info['projection_wkt'],
-                intermediate_building_vector_path),
+                file_registry['reprojected_buildings']),
             kwargs={'driver_name': 'ESRI Shapefile'},
-            target_path_list=[intermediate_building_vector_path],
+            target_path_list=[file_registry['reprojected_buildings']],
             task_name='reproject building vector')
 
-        # zonal stats over buildings for t_air
-        t_air_stats_pickle_path = os.path.join(
-            intermediate_dir, 't_air_stats.pickle')
         pickle_t_air_task = task_graph.add_task(
             func=pickle_zonal_stats,
             args=(
-                intermediate_building_vector_path,
-                t_air_raster_path, t_air_stats_pickle_path),
-            target_path_list=[t_air_stats_pickle_path],
+                file_registry['reprojected_buildings'],
+                file_registry['t_air'], file_registry['t_air_stats_pickle']),
+            target_path_list=[file_registry['t_air_stats_pickle']],
             dependent_task_list=[
                 t_air_task, intermediate_building_vector_task],
             task_name='pickle t-air stats over buildings')
 
-        energy_consumption_vector_path = os.path.join(
-            args['workspace_dir'], f'buildings_with_stats{file_suffix}.shp')
+        energy_consumption_vector_path = file_registry['buildings_with_stats']
         _ = task_graph.add_task(
             func=calculate_energy_savings,
             args=(
-                t_air_stats_pickle_path, t_ref_raw,
-                uhi_max_raw, args['energy_consumption_table_path'],
-                intermediate_building_vector_path,
-                energy_consumption_vector_path),
-            target_path_list=[energy_consumption_vector_path],
+                file_registry['t_air_stats_pickle'], args['t_ref'],
+                args['uhi_max'], args['energy_consumption_table_path'],
+                file_registry['reprojected_buildings'],
+                file_registry['buildings_with_stats']),
+            target_path_list=[file_registry['buildings_with_stats']],
             dependent_task_list=[
                 pickle_t_air_task, intermediate_building_vector_task],
             task_name='calculate energy savings task')
@@ -990,25 +970,25 @@ def execute(args):
     # stop here
     task_graph.join()
 
-    target_uhi_vector_path = os.path.join(
-        args['workspace_dir'], f'uhi_results{file_suffix}.shp')
     _ = task_graph.add_task(
         func=calculate_uhi_result_vector,
         args=(
-            intermediate_aoi_vector_path,
-            t_ref_raw, t_air_aoi_stats_pickle_path,
-            cc_aoi_stats_pickle_path,
+            file_registry['reprojected_aoi'],
+            args['t_ref'],
+            file_registry['t_air_aoi_stats'],
+            file_registry['cc_ref_aoi_stats'],
             wbgt_stats_pickle_path,
             light_loss_stats_pickle_path,
             heavy_loss_stats_pickle_path,
             energy_consumption_vector_path,
-            target_uhi_vector_path),
-        target_path_list=[target_uhi_vector_path],
+            file_registry['uhi_results']),
+        target_path_list=[file_registry['uhi_results']],
         task_name='calculate uhi results')
 
     task_graph.close()
     task_graph.join()
     LOGGER.info('Urban Cooling Model complete.')
+    return file_registry.registry
 
 
 def calculate_uhi_result_vector(

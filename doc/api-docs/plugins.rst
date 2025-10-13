@@ -149,7 +149,8 @@ Here is an example ``MODEL_SPEC`` taken from the demo plugin. It describes a mod
         ],
         outputs=[
             spec.SingleBandRasterOutput(
-                id="result.tif",
+                id="result",
+                path="result.tif",
                 about="Raster multiplied by factor",
                 data_type=float,
                 units=None
@@ -163,27 +164,31 @@ This function executes the model. When a user runs the model, this function is i
 
 Arguments: ``args`` (dictionary). Maps input ids (matching the ``id`` of each ``Input`` in ``MODEL_SPEC.inputs``) to their values to run the model on.
 
-Returns: ``None``
+Returns: Dictionary mapping output IDs to the absolute file paths where those outputs were created. All invest models use ``natcap.invest.file_registry.FileRegistry`` to manage and track file paths throughout the model. Returning the ``registry`` attribute of the ``FileRegistry`` satisfies this requirement.
 
 Here is an example implementation of ``execute`` corresponding to the example ``MODEL_SPEC`` above. It multiplies a raster pixelwise by an integer value, and writes out the result to a new raster file: ::
 
     import os
     from natcap.invest import utils
+    from natcap.invest.file_registry import FileRegistry
+
+    MODEL_SPEC = ... # see above
 
     def execute(args):
         utils.make_directories([args['workspace_dir']])
-        target_path = os.path.join(args['workspace_dir'], 'result.tif')
+        file_registry = FileRegistry(MODEL_SPEC, args['workspace_dir'])
         graph = taskgraph.TaskGraph(args['workspace_dir'], -1)
         graph.add_task(
             func=multiply_op,
             kwargs={
                 'raster_path': args['raster_path'],
                 'factor': int(args['factor']),
-                'target_path': target_path
+                'target_path': file_registry['result']
             },
-            target_path_list=[target_path],
+            target_path_list=[file_registry['result']],
             task_name='multiply raster by factor')
         graph.join()
+        return file_registry.registry
 
 .. note::
     All core InVEST models use `taskgraph <https://github.com/natcap/taskgraph>`_ to organize the steps of execution. This is optional, but ``taskgraph`` has several benefits including avoided recomputation, distributing tasks over multiple CPUs, and logically organizing the model as a workflow of tasks that process data. See the InVEST source code for many examples of using ``taskgraph``.

@@ -32,6 +32,7 @@ MODEL_SPEC = spec.ModelSpec(
     validate_spatial_overlap=True,
     different_projections_ok=True,
     aliases=(),
+    module_name=__name__,
     input_field_order=[
         ["workspace_dir", "results_suffix"],
         ["lulc_path", "soil_group_path", "precipitation_path", "biophysical_table"],
@@ -233,7 +234,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of percolation ratio derived by cross-referencing the LULC and soil"
                 " group rasters with the biophysical table."
             ),
-            created_if="percolation",
+            # created_if="percolation",
             data_type=float,
             units=None
         ),
@@ -241,7 +242,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="percolation_volume",
             path="percolation_volume.tif",
             about=gettext("Map of percolation (potential aquifer recharge) volume."),
-            created_if="percolation",
+            # created_if="percolation",
             data_type=float,
             units=u.meter**3 / u.year
         ),
@@ -272,7 +273,7 @@ MODEL_SPEC = spec.ModelSpec(
         ),
         spec.VectorOutput(
             id="aggregate",
-            path="aggregate.gpkg",
+            path="aggregate_data.gpkg",
             about=gettext(
                 "Map of aggregate data. This is identical to the aggregate areas input"
                 " vector, but each polygon is given additional fields with the aggregate"
@@ -304,14 +305,14 @@ MODEL_SPEC = spec.ModelSpec(
                     about=gettext(
                         "Average percolation (recharge) ratio over this polygon"
                     ),
-                    created_if="percolation"
+                    # created_if="percolation"
                 ),
                 spec.NumberOutput(
                     id="total_percolation_volume",
                     about=gettext(
                         "Total volume of potential aquifer recharge over this polygon"
                     ),
-                    created_if="percolation",
+                    # created_if="percolation",
                     units=u.meter**3 / u.year
                 ),
                 spec.NumberOutput(
@@ -337,6 +338,20 @@ MODEL_SPEC = spec.ModelSpec(
                     units=u.currency / u.year
                 )
             ]
+        ),
+        spec.SingleBandRasterOutput(
+            id="avoided_pollutant_load_[POLLUTANT]",
+            path="avoided_pollutant_load_[POLLUTANT].tif",
+            about=gettext("Avoided load of each pollutant"),
+            data_type=float,
+            units=u.kilogram / u.year
+        ),
+        spec.SingleBandRasterOutput(
+            id="actual_pollutant_load_[POLLUTANT]",
+            path="actual_pollutant_load_[POLLUTANT].tif",
+            about=gettext("Actual load of each pollutant"),
+            data_type=float,
+            units=u.kilogram / u.year
         ),
         spec.SingleBandRasterOutput(
             id="lulc_aligned",
@@ -473,34 +488,6 @@ MODEL_SPEC = spec.ModelSpec(
 )
 
 
-INTERMEDIATE_OUTPUTS = {
-    'lulc_aligned_path': 'lulc_aligned.tif',
-    'soil_group_aligned_path': 'soil_group_aligned.tif',
-    'precipitation_aligned_path': 'precipitation_aligned.tif',
-    'reprojected_centerlines_path': 'reprojected_centerlines.gpkg',
-    'rasterized_centerlines_path': 'rasterized_centerlines.tif',
-    'connected_lulc_path': 'is_connected_lulc.tif',
-    'road_distance_path': 'road_distance.tif',
-    'search_kernel_path': 'search_kernel.tif',
-    'connected_lulc_distance_path': 'connected_lulc_distance.tif',
-    'near_connected_lulc_path': 'near_connected_lulc.tif',
-    'near_road_path': 'near_road.tif',
-    'ratio_average_path': 'ratio_average.tif'
-}
-
-FINAL_OUTPUTS = {
-    'reprojected_aggregate_areas_path': 'aggregate_data.gpkg',
-    'retention_ratio_path': 'retention_ratio.tif',
-    'adjusted_retention_ratio_path': 'adjusted_retention_ratio.tif',
-    'runoff_ratio_path': 'runoff_ratio.tif',
-    'retention_volume_path': 'retention_volume.tif',
-    'runoff_volume_path': 'runoff_volume.tif',
-    'percolation_ratio_path': 'percolation_ratio.tif',
-    'percolation_volume_path': 'percolation_volume.tif',
-    'retention_value_path': 'retention_value.tif'
-}
-
-
 def execute(args):
     """Execute the urban stormwater retention model.
 
@@ -535,20 +522,9 @@ def execute(args):
             devices in units currency per cubic meter
 
     Returns:
-        None
+        File registry dictionary mapping MODEL_SPEC output ids to absolute paths
     """
-    # set up files and directories
-    suffix = utils.make_suffix_string(args, 'results_suffix')
-    output_dir = args['workspace_dir']
-    intermediate_dir = os.path.join(output_dir, 'intermediate')
-    utils.make_directories([args['workspace_dir'], intermediate_dir])
-    files = utils.build_file_registry(
-        [(INTERMEDIATE_OUTPUTS, intermediate_dir),
-         (FINAL_OUTPUTS, output_dir)], suffix)
-
-    task_graph = taskgraph.TaskGraph(
-        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
-        int(args.get('n_workers', -1)))
+    args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     # get the necessary base raster info
     source_lulc_raster_info = pygeoprocessing.get_raster_info(
@@ -569,9 +545,9 @@ def execute(args):
     align_inputs = [args['lulc_path'],
                     args['soil_group_path'], args['precipitation_path']]
     align_outputs = [
-        files['lulc_aligned_path'],
-        files['soil_group_aligned_path'],
-        files['precipitation_aligned_path']]
+        file_registry['lulc_aligned'],
+        file_registry['soil_group_aligned'],
+        file_registry['precipitation_aligned']]
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
@@ -610,29 +586,26 @@ def execute(args):
     retention_ratio_task = task_graph.add_task(
         func=lookup_ratios,
         args=(
-            files['lulc_aligned_path'],
-            files['soil_group_aligned_path'],
+            file_registry['lulc_aligned'],
+            file_registry['soil_group_aligned'],
             retention_ratio_array,
             sorted_lucodes,
-            files['retention_ratio_path']),
-        target_path_list=[files['retention_ratio_path']],
+            file_registry['retention_ratio']),
+        target_path_list=[file_registry['retention_ratio']],
         dependent_task_list=[align_task],
         task_name='calculate stormwater retention ratio'
     )
 
     # (Optional) adjust stormwater retention ratio using roads
     if args['adjust_retention_ratios']:
-        # in raster coord system units
-        radius = float(args['retention_radius'])
-
         reproject_roads_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(
                 args['road_centerlines_path'],
                 source_lulc_raster_info['projection_wkt'],
-                files['reprojected_centerlines_path']),
+                file_registry['reprojected_centerlines']),
             kwargs={'driver_name': 'GPKG'},
-            target_path_list=[files['reprojected_centerlines_path']],
+            target_path_list=[file_registry['reprojected_centerlines']],
             task_name='reproject road centerlines vector to match rasters',
             dependent_task_list=[])
 
@@ -646,25 +619,25 @@ def execute(args):
         make_raster_task = task_graph.add_task(
             func=pygeoprocessing.new_raster_from_base,
             args=(
-                files['lulc_aligned_path'],
-                files['rasterized_centerlines_path'],
+                file_registry['lulc_aligned'],
+                file_registry['rasterized_centerlines'],
                 gdal.GDT_Byte,
                 [UINT8_NODATA]),
             kwargs={
                 'raster_driver_creation_tuple': (
                     'GTIFF', unsigned_byte_creation_opts)
             },
-            target_path_list=[files['rasterized_centerlines_path']],
+            target_path_list=[file_registry['rasterized_centerlines']],
             task_name='create raster to pass to pygeoprocessing.rasterize',
             dependent_task_list=[align_task])
 
         rasterize_centerlines_task = task_graph.add_task(
             func=pygeoprocessing.rasterize,
             args=(
-                files['reprojected_centerlines_path'],
-                files['rasterized_centerlines_path'],
+                file_registry['reprojected_centerlines'],
+                file_registry['rasterized_centerlines'],
                 [1]),
-            target_path_list=[files['rasterized_centerlines_path']],
+            target_path_list=[file_registry['rasterized_centerlines']],
             task_name='rasterize road centerlines vector',
             dependent_task_list=[make_raster_task, reproject_roads_task])
 
@@ -673,13 +646,13 @@ def execute(args):
         near_road_task = task_graph.add_task(
             func=is_near,
             args=(
-                files['rasterized_centerlines_path'],
-                radius / avg_pixel_size,  # convert the radius to pixels
-                files['road_distance_path'],
-                files['near_road_path']),
+                file_registry['rasterized_centerlines'],
+                args['retention_radius'] / avg_pixel_size,  # convert the radius to pixels
+                file_registry['road_distance'],
+                file_registry['near_road']),
             target_path_list=[
-                files['road_distance_path'],
-                files['near_road_path']],
+                file_registry['road_distance'],
+                file_registry['near_road']],
             task_name='find pixels within radius of road centerlines',
             dependent_task_list=[rasterize_centerlines_task])
 
@@ -688,12 +661,12 @@ def execute(args):
         connected_lulc_task = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=(
-                (files['lulc_aligned_path'], 1),
+                (file_registry['lulc_aligned'], 1),
                 biophysical_df['is_connected'].astype(int).to_dict(),
-                files['connected_lulc_path'],
+                file_registry['is_connected_lulc'],
                 gdal.GDT_Byte,
                 UINT8_NODATA),
-            target_path_list=[files['connected_lulc_path']],
+            target_path_list=[file_registry['is_connected_lulc']],
             task_name='calculate binary connected lulc raster',
             dependent_task_list=[align_task]
         )
@@ -703,24 +676,24 @@ def execute(args):
         near_connected_lulc_task = task_graph.add_task(
             func=is_near,
             args=(
-                files['connected_lulc_path'],
-                radius / avg_pixel_size,  # convert the radius to pixels
-                files['connected_lulc_distance_path'],
-                files['near_connected_lulc_path']),
+                file_registry['is_connected_lulc'],
+                args['retention_radius'] / avg_pixel_size,  # convert the radius to pixels
+                file_registry['connected_lulc_distance'],
+                file_registry['near_connected_lulc']),
             target_path_list=[
-                files['connected_lulc_distance_path'],
-                files['near_connected_lulc_path']],
+                file_registry['connected_lulc_distance'],
+                file_registry['near_connected_lulc']],
             task_name='find pixels within radius of connected lulc',
             dependent_task_list=[connected_lulc_task])
 
         average_ratios_task = task_graph.add_task(
             func=raster_average,
             args=(
-                files['retention_ratio_path'],
-                radius,
-                files['search_kernel_path'],
-                files['ratio_average_path']),
-            target_path_list=[files['ratio_average_path']],
+                file_registry['retention_ratio'],
+                args['retention_radius'],
+                file_registry['search_kernel'],
+                file_registry['ratio_average']),
+            target_path_list=[file_registry['ratio_average']],
             task_name='average retention ratios within radius',
             dependent_task_list=[retention_ratio_task])
 
@@ -731,21 +704,21 @@ def execute(args):
             kwargs=dict(
                 op=adjust_op,
                 rasters=[
-                    files['retention_ratio_path'],
-                    files['ratio_average_path'],
-                    files['near_connected_lulc_path'],
-                    files['near_road_path']],
-                target_path=files['adjusted_retention_ratio_path'],
+                    file_registry['retention_ratio'],
+                    file_registry['ratio_average'],
+                    file_registry['near_connected_lulc'],
+                    file_registry['near_road']],
+                target_path=file_registry['adjusted_retention_ratio'],
                 target_nodata=FLOAT_NODATA),
-            target_path_list=[files['adjusted_retention_ratio_path']],
+            target_path_list=[file_registry['adjusted_retention_ratio']],
             task_name='adjust stormwater retention ratio',
             dependent_task_list=[retention_ratio_task, average_ratios_task,
                                  near_connected_lulc_task, near_road_task])
 
-        final_retention_ratio_path = files['adjusted_retention_ratio_path']
+        final_retention_ratio_path = file_registry['adjusted_retention_ratio']
         final_retention_ratio_task = adjust_retention_ratio_task
     else:
-        final_retention_ratio_path = files['retention_ratio_path']
+        final_retention_ratio_path = file_registry['retention_ratio']
         final_retention_ratio_task = retention_ratio_task
 
     # Calculate stormwater retention volume from ratios and precipitation
@@ -753,14 +726,14 @@ def execute(args):
         func=pygeoprocessing.raster_calculator,
         args=([
             (final_retention_ratio_path, 1),
-            (files['precipitation_aligned_path'], 1),
+            (file_registry['precipitation_aligned'], 1),
             (precipitation_nodata, 'raw'),
             (pixel_area, 'raw')],
             volume_op,
-            files['retention_volume_path'],
+            file_registry['retention_volume'],
             gdal.GDT_Float32,
             FLOAT_NODATA),
-        target_path_list=[files['retention_volume_path']],
+        target_path_list=[file_registry['retention_volume']],
         dependent_task_list=[align_task, final_retention_ratio_task],
         task_name='calculate stormwater retention volume'
     )
@@ -771,9 +744,9 @@ def execute(args):
         kwargs=dict(
             op=retention_to_runoff_op,
             rasters=[final_retention_ratio_path],
-            target_path=files['runoff_ratio_path'],
+            target_path=file_registry['runoff_ratio'],
             target_nodata=FLOAT_NODATA),
-        target_path_list=[files['runoff_ratio_path']],
+        target_path_list=[file_registry['runoff_ratio']],
         dependent_task_list=[final_retention_ratio_task],
         task_name='calculate stormwater runoff ratio'
     )
@@ -781,15 +754,15 @@ def execute(args):
     runoff_volume_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
-            (files['runoff_ratio_path'], 1),
-            (files['precipitation_aligned_path'], 1),
+            (file_registry['runoff_ratio'], 1),
+            (file_registry['precipitation_aligned'], 1),
             (precipitation_nodata, 'raw'),
             (pixel_area, 'raw')],
             volume_op,
-            files['runoff_volume_path'],
+            file_registry['runoff_volume'],
             gdal.GDT_Float32,
             FLOAT_NODATA),
-        target_path_list=[files['runoff_volume_path']],
+        target_path_list=[file_registry['runoff_volume']],
         dependent_task_list=[align_task, runoff_ratio_task],
         task_name='calculate stormwater runoff volume'
     )
@@ -797,9 +770,9 @@ def execute(args):
     data_to_aggregate = [
         # tuple of (raster path, output field name, op) for aggregation
         (final_retention_ratio_path, 'mean_retention_ratio', 'mean'),
-        (files['retention_volume_path'], 'total_retention_volume', 'sum'),
-        (files['runoff_ratio_path'], 'mean_runoff_ratio', 'mean'),
-        (files['runoff_volume_path'], 'total_runoff_volume', 'sum')]
+        (file_registry['retention_volume'], 'total_retention_volume', 'sum'),
+        (file_registry['runoff_ratio'], 'mean_runoff_ratio', 'mean'),
+        (file_registry['runoff_volume'], 'total_runoff_volume', 'sum')]
 
     # (Optional) Calculate stormwater percolation ratio and volume from
     # LULC, soil groups, biophysical table, and precipitation
@@ -812,34 +785,34 @@ def execute(args):
         percolation_ratio_task = task_graph.add_task(
             func=lookup_ratios,
             args=(
-                files['lulc_aligned_path'],
-                files['soil_group_aligned_path'],
+                file_registry['lulc_aligned'],
+                file_registry['soil_group_aligned'],
                 percolation_ratio_array,
                 sorted_lucodes,
-                files['percolation_ratio_path']),
-            target_path_list=[files['percolation_ratio_path']],
+                file_registry['percolation_ratio']),
+            target_path_list=[file_registry['percolation_ratio']],
             dependent_task_list=[align_task],
             task_name='calculate stormwater percolation ratio')
 
         percolation_volume_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([
-                (files['percolation_ratio_path'], 1),
-                (files['precipitation_aligned_path'], 1),
+                (file_registry['percolation_ratio'], 1),
+                (file_registry['precipitation_aligned'], 1),
                 (precipitation_nodata, 'raw'),
                 (pixel_area, 'raw')],
                 volume_op,
-                files['percolation_volume_path'],
+                file_registry['percolation_volume'],
                 gdal.GDT_Float32,
                 FLOAT_NODATA),
-            target_path_list=[files['percolation_volume_path']],
+            target_path_list=[file_registry['percolation_volume']],
             dependent_task_list=[align_task, percolation_ratio_task],
             task_name='calculate stormwater retention volume'
         )
         aggregation_task_dependencies.append(percolation_volume_task)
-        data_to_aggregate.append((files['percolation_ratio_path'],
+        data_to_aggregate.append((file_registry['percolation_ratio'],
                                  'mean_percolation_ratio', 'mean'))
-        data_to_aggregate.append((files['percolation_volume_path'],
+        data_to_aggregate.append((file_registry['percolation_volume'],
                                  'total_percolation_volume', 'sum'))
 
     # get all EMC columns from an arbitrary row in the dictionary
@@ -854,12 +827,8 @@ def execute(args):
     actual_load_paths = []
     for pollutant in pollutants:
         # two output rasters for each pollutant
-        avoided_pollutant_load_path = os.path.join(
-            output_dir, f'avoided_pollutant_load_{pollutant}{suffix}.tif')
-        avoided_load_paths.append(avoided_pollutant_load_path)
-        actual_pollutant_load_path = os.path.join(
-            output_dir, f'actual_pollutant_load_{pollutant}{suffix}.tif')
-        actual_load_paths.append(actual_pollutant_load_path)
+        avoided_load_paths.append(file_registry['avoided_pollutant_load_[POLLUTANT]', pollutant])
+        actual_load_paths.append(file_registry['actual_pollutant_load_[POLLUTANT]', pollutant])
         # make an array mapping each LULC code to the pollutant EMC value
         emc_array = biophysical_df[f'emc_{pollutant}'].to_numpy(dtype=numpy.float32)
 
@@ -867,16 +836,16 @@ def execute(args):
         avoided_load_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([
-                (files['lulc_aligned_path'], 1),
+                (file_registry['lulc_aligned'], 1),
                 (lulc_nodata, 'raw'),
-                (files['retention_volume_path'], 1),
+                (file_registry['retention_volume'], 1),
                 (sorted_lucodes, 'raw'),
                 (emc_array, 'raw')],
                 pollutant_load_op,
-                avoided_pollutant_load_path,
+                file_registry['avoided_pollutant_load_[POLLUTANT]', pollutant],
                 gdal.GDT_Float32,
                 FLOAT_NODATA),
-            target_path_list=[avoided_pollutant_load_path],
+            target_path_list=[file_registry['avoided_pollutant_load_[POLLUTANT]', pollutant]],
             dependent_task_list=[retention_volume_task],
             task_name=f'calculate avoided pollutant {pollutant} load'
         )
@@ -884,62 +853,63 @@ def execute(args):
         actual_load_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([
-                (files['lulc_aligned_path'], 1),
+                (file_registry['lulc_aligned'], 1),
                 (lulc_nodata, 'raw'),
-                (files['runoff_volume_path'], 1),
+                (file_registry['runoff_volume'], 1),
                 (sorted_lucodes, 'raw'),
                 (emc_array, 'raw')],
                 pollutant_load_op,
-                actual_pollutant_load_path,
+                file_registry['actual_pollutant_load_[POLLUTANT]', pollutant],
                 gdal.GDT_Float32,
                 FLOAT_NODATA),
-            target_path_list=[actual_pollutant_load_path],
+            target_path_list=[file_registry['actual_pollutant_load_[POLLUTANT]', pollutant]],
             dependent_task_list=[runoff_volume_task],
             task_name=f'calculate actual pollutant {pollutant} load'
         )
         aggregation_task_dependencies += [avoided_load_task, actual_load_task]
-        data_to_aggregate.append((avoided_pollutant_load_path,
+        data_to_aggregate.append((file_registry['avoided_pollutant_load_[POLLUTANT]', pollutant],
                                  f'{pollutant}_total_avoided_load', 'sum'))
         data_to_aggregate.append(
-            (actual_pollutant_load_path, f'{pollutant}_total_load', 'sum'))
+            (file_registry['actual_pollutant_load_[POLLUTANT]', pollutant],
+                f'{pollutant}_total_load', 'sum'))
 
     # (Optional) Do valuation if a replacement cost is defined
     # you could theoretically have a cost of 0 which should be allowed
-    if 'replacement_cost' in args and args['replacement_cost'] not in [
-            None, '']:
+    if args['replacement_cost'] is not None:
         valuation_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([
-                (files['retention_volume_path'], 1),
-                (float(args['replacement_cost']), 'raw')],
+                (file_registry['retention_volume'], 1),
+                (args['replacement_cost'], 'raw')],
                 retention_value_op,
-                files['retention_value_path'],
+                file_registry['retention_value'],
                 gdal.GDT_Float32,
                 FLOAT_NODATA),
-            target_path_list=[files['retention_value_path']],
+            target_path_list=[file_registry['retention_value']],
             dependent_task_list=[retention_volume_task],
             task_name='calculate stormwater retention value'
         )
         aggregation_task_dependencies.append(valuation_task)
         data_to_aggregate.append(
-            (files['retention_value_path'], 'total_retention_value', 'sum'))
+            (file_registry['retention_value'], 'total_retention_value', 'sum'))
 
     # (Optional) Aggregate to watersheds if an aggregate vector is defined
-    if 'aggregate_areas_path' in args and args['aggregate_areas_path']:
+    if args['aggregate_areas_path']:
         _ = task_graph.add_task(
             func=aggregate_results,
             args=(
                 args['aggregate_areas_path'],
-                files['reprojected_aggregate_areas_path'],
+                file_registry['aggregate'],
                 source_lulc_raster_info['projection_wkt'],
                 data_to_aggregate),
-            target_path_list=[files['reprojected_aggregate_areas_path']],
+            target_path_list=[file_registry['aggregate']],
             dependent_task_list=aggregation_task_dependencies,
             task_name='aggregate data over polygons'
         )
 
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 def lookup_ratios(lulc_path, soil_group_path, ratio_lookup, sorted_lucodes,

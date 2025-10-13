@@ -61,15 +61,68 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
-
 Unreleased Changes
 ------------------
 
+Highlights
+==========
+* InVEST now supports remote path inputs for publicly accessible data. When a
+  geospatial remote path is input into an InVEST model the model will stream
+  only the necessary extents. Supporting remote paths across InVEST required
+  the following model changes:
+
+  * **Wave Energy** now expects the base data to be provided as a CSV table
+    that points to the vector and binary filepaths, rather than a directory.
+  * **SWY** replaced the model inputs ``et0_dir`` and ``precip_dir`` with
+    CSV inputs.
+  * **Crop Production** now takes multiple CSV tables instead of a model
+    data directory. These tables map each crop name to the corresponding
+    data input.
+* The Wind Energy model now requires an AOI, land polygon, and minimum and
+  maximum distance values. This greatly simplifies the User Interface
+  experience and the model code.
+* Each InVEST model's ``execute`` function now returns a dictionary summarizing all
+  output files produced by the model. This is standardized by each model
+  using the new ``FileRegistry`` class to create and track the filepaths
+  of their outputs, as defined in the ``ModelSpec``. This may be used to
+  access model results programmatically for subsequent data processing.
+
 General
 =======
-* Added a `ModelSpec.get_output` method to access items in `ModelSpec.outputs`
-  using the `id` property of the `Output`.
+* Added support for remote paths to raster, vector, and CSVs inputs. URI
+  schemes like ``https://``, ``gs://``, ``s3://`` are mapped to GDAL VSI
+  handlers. Archive schemes (zip, gzip, tar) can be prefixed onto the scheme
+  with a ``+``, for instance, ``zip+https://``. Input paths get converted to
+  GDAL-compatible VSI paths (e.g. ``/vsizip//vsicurl/``) before validating
+  or executing the model.
+  (`#2077 <https://github.com/natcap/invest/issues/2077>`_)
+* Added a ``ModelSpec.get_output`` method to access items in ``ModelSpec.outputs``
+  using the ``id`` property of the ``Output``.
   (`#2138 <https://github.com/natcap/invest/issues/2138>`_)
+* A new module ``natcap.invest.file_registry`` exposes the ``FileRegistry`` class.
+  All models now use this to create and track the filepaths of their outputs.
+  (`#2124 <https://github.com/natcap/invest/issues/2124>`_)
+* The ``execute`` function of each invest model now returns a dictionary
+  summarizing all output files produced by the model. It maps output IDs (found
+  in the model's ``MODEL_SPEC``) to the absolute paths where those outputs were
+  created. This may be used to access model results programmatically for subsequent
+  data processing. (`#2124 <https://github.com/natcap/invest/issues/2124>`_)
+* Fixed a bug where datastacks missing the ``invest_version`` attribute could not be
+  opened. Additionally, new datastacks created with InVEST will no longer include
+  an ``invest_version``, since tying a datastack to a specific version of InVEST is
+  unnecessary. (`#2092 <https://github.com/natcap/invest/issues/2092>`_)
+* Added a ``ModelSpec.setup`` method which performs boilerplate setup and
+  preprocessing before a model run. This method is now used in every model's
+  ``execute`` function. (`#1451 <https://github.com/natcap/invest/issues/1451>`_)
+* Added a ``preprocess`` method to each ``spec.Input`` class, which preprocesses
+  values of that type in a standard way.
+  (`#1451 <https://github.com/natcap/invest/issues/1451>`_)
+* Added ``ModelSpec.execute`` that calls the model's ``execute`` function and
+  then optionally performs the setup and post-processing that is done when a
+  model is executed via the CLI. This is to make that functionality (such as
+  setting up a log file in the workspace, and generating metadata for results)
+  available to python API users without going through the CLI.
+  (`#1451 <https://github.com/natcap/invest/issues/1451>`_)
 * Added a page to the API documentation describing how to run InVEST through
   the supplied docker container, and also through Apptainer/Singularity.
   (`#2171 <https://github.com/natcap/invest/issues/2171>`_)
@@ -82,21 +135,29 @@ Plugins
 * If plugin installation fails, the Workbench now cleans up any
   leftover, unusable micromamba environments.
   (`#2104 <https://github.com/natcap/invest/issues/2104>`_)
+* In the Workbench, Python log messages emitted by a plugin model will receive
+  the same styling as core invest models.
+  (`#2130 <https://github.com/natcap/invest/issues/2130>`_)
 
 Annual Water Yield
 ==================
 * The discount rate parameter was previously incorrectly restricted to the
   range [0, 100]. Now there is no minimum or maximum value.
+  (`#2160 <https://github.com/natcap/invest/issues/2160>`_)
 
 Carbon
 ======
 * The discount rate and price change parameters were previously incorrectly
   restricted to the range [0, 100]. Now there is no minimum or maximum value.
+  (`#2160 <https://github.com/natcap/invest/issues/2160>`_)
 
 Coastal Blue Carbon
 ===================
+* The intermediate outputs ``aligned-lulc-baseline-[YEAR].tif`` and
+  ``aligned-lulc-snapshot-[YEAR].tif`` have been renamed to ``aligned-lulc-[YEAR].tif``.
 * The discount rate and price change parameters were previously incorrectly
   restricted to the range [0, 100]. Now there is no minimum or maximum value.
+  (`#2160 <https://github.com/natcap/invest/issues/2160>`_)
 
 Coastal Vulnerability
 =====================
@@ -104,6 +165,71 @@ Coastal Vulnerability
   percent; this has been corrected to show that it is a numeric input with
   units of meters/second.
 
+Crop Production
+===============
+* The inputs to both Crop Production models have changed in order to support
+  remote datasets. Instead of a Model Data Directory, the models now expect
+  multiple tables, each of which maps each crop name to its corresponding
+  climate bin raster, observed yield raster, nutrient table, percentile yield
+  table, or regression yield table.
+  (`#2095 <https://github.com/natcap/invest/issues/2095>`_)
+* The ``crop`` column headers in both models' result tables have been renamed
+  to ``crop_name`` for consistency with model inputs.
+  (`#2095 <https://github.com/natcap/invest/issues/2095>`_)
+
+Habitat Quality
+===============
+* The aligned LULC outputs are no longer named after the original LULC files.
+  Instead they are named ``lulc_cur_aligned``, ``lulc_fut_aligned``, and
+  ``lulc_bas_aligned``. This is consistent with other models and simplifies the
+  model spec and documentation. (`#2127 <https://github.com/natcap/invest/issues/2127>`_)
+
+NDR
+===
+* Clarified about text documentation for ``load_type_n|p``.
+  (`#2116 <https://github.com/natcap/invest/issues/2116>`_).
+
+Seasonal Water Yield
+====================
+* Replaced the model inputs ``et0_dir`` and ``precip_dir`` with CSV inputs.
+  These CSVs must have the columns ``month`` and ``path``, mapping month indexes
+  (1-12) to raster paths.
+  (`#2096 <https://github.com/natcap/invest/issues/2096>`_)
+* Documentation has been updated to reflect that curve number values must be
+  greater than 0 and less than or equal to 100.
+  (`#2164 <https://github.com/natcap/invest/issues/2164>`_)
+
+Urban Flood Risk Mitigation
+===========================
+* Documentation has been updated to reflect that curve number values must be
+  greater than 0 and less than or equal to 100.
+  (`#2164 <https://github.com/natcap/invest/issues/2164>`_)
+* Fixed a bug where ``s_max`` would be set to 0 if the curve number was 0,
+  causing high runoff values, when a low curve number should indicate lower
+  runoff potential. Now setting ``s_max`` to a very high value (100000) when
+  curve number is 0 to reflect infinite potential retention so that runoff
+  will be 0.
+  (`#2165 <https://github.com/natcap/invest/issues/2165>`_)
+
+Visitation: Recreation and Tourism
+==================================
+* The intermediate predictor JSON outputs now include the file suffix, if provided.
+
+Wave Energy
+===========
+* The model now expects the base data to be provided as a CSV table that points
+  to the vector and binary filepaths, rather than a directory. The sample data
+  has been updated to include this table.
+  (`#2166 <https://github.com/natcap/invest/issues/2166>`_)
+
+Wind Energy
+===========
+* Updated Wind Energy model to always require an AOI, Land Polygon, and Minimum
+  and Maximum Distance values. Since model outputs should only be provided for valid
+  wind farm locations, distance-from-shore constraints should always be taken into
+  account. (`#1944 <https://github.com/natcap/invest/issues/1944>`_)
+* Fixed units for Turbine Rated Power, which were incorrectly listed as kilowatt when
+  the model expected megwatt. (`#1944 <https://github.com/natcap/invest/issues/1944>`_)
 
 3.16.2 (2025-08-13)
 -------------------
@@ -116,7 +242,6 @@ General
 * Fixed a bug in ``build_datastack_archive`` where the raster filepath
   included in a datastack JSON for an ArcGIS GRID would be unusable.
   (`#2103 <https://github.com/natcap/invest/issues/2103>`_)
-
 
 Workbench
 =========
