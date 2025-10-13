@@ -1906,7 +1906,7 @@ class TestValidationFromSpec(unittest.TestCase):
             csv_file.write(textwrap.dedent(
                 """\
                 "field_a","field_b"
-                1,2"""))
+                1,1"""))
         args = {
             'some_number': 2,  # field_b is present, no validation warning now
             'csv': csv_path,
@@ -1966,7 +1966,7 @@ class TestValidationFromSpec(unittest.TestCase):
             csv_file.write(textwrap.dedent(
                 """\
                 "field_a",1
-                "field_b",2"""))
+                "field_b",1"""))
         args = {
             'some_number': 2,  # field_b is present, no validation warning now
             'csv': csv_path,
