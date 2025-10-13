@@ -81,7 +81,7 @@ Highlights
 * The Wind Energy model now requires an AOI, land polygon, and minimum and
   maximum distance values. This greatly simplifies the User Interface
   experience and the model code.
-* InVEST models now return a dictionary (from ``execute``) summarizing all
+* Each InVEST models ``execute`` function now returns a dictionary summarizing all
   output files produced by the model. This is standardized by each model
   using the new ``FileRegistry`` class to create and track the filepaths
   of their outputs, as defined in the ``ModelSpec``. This may be used to
