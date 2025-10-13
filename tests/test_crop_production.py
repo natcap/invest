@@ -319,10 +319,8 @@ class CropProductionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             crop_production_percentile.execute(args)
-        self.assertTrue("The following crop names were provided in "
-                        f"{args['landcover_to_crop_table_path']} but "
-                        "are not supported by the model: {'durian'}"
-                        in str(context.exception))
+        self.assertIn('Error in column "crop_name", value "durian"',
+                      str(context.exception))
 
     def test_crop_production_percentile_missing_climate_bin(self):
         """Crop Production Percentile: missing climate bin path."""
@@ -335,8 +333,8 @@ class CropProductionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             crop_production_percentile.execute(args)
-        self.assertTrue('No climate bin raster path could be found for wheat'
-                        in str(context.exception))
+        self.assertIn('No climate bin raster path could be found for wheat',
+                      str(context.exception))
 
     def test_crop_production_regression_invalid_crop_name(self):
         """Crop Production Regression: invalid user-specified crop name."""
@@ -349,10 +347,8 @@ class CropProductionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             crop_production_regression.execute(args)
-        self.assertTrue("The following crop names were provided in "
-                        f"{args['landcover_to_crop_table_path']} but "
-                        "are not supported by the model: {'avocado'}"
-                        in str(context.exception))
+        self.assertIn('Error in column "crop_name", value "avocado"',
+                      str(context.exception))
 
     def test_crop_production_regression_missing_climate_bin(self):
         """Crop Production Regression: missing climate bin path."""
@@ -365,8 +361,8 @@ class CropProductionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             crop_production_regression.execute(args)
-        self.assertTrue('No climate bin raster path could be found for wheat'
-                        in str(context.exception))
+        self.assertIn('No climate bin raster path could be found for wheat',
+                      str(context.exception))
 
     def test_crop_production_regression(self):
         """Crop Production Regression: validate results."""

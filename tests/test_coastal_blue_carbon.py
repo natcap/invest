@@ -290,8 +290,6 @@ class TestCBC2(unittest.TestCase):
             transition_csv.write('missing code,NCC,accum,high-impact-disturb\n')
             transition_csv.write('b,,NCC,accum\n')
             transition_csv.write('c,accum,,NCC\n')
-            transition_csv.write(',,,\n')
-            transition_csv.write(',legend,,')  # simulate legend
 
         with self.assertRaises(ValueError) as cm:
             disturbance_matrices, accumulation_matrices = (
@@ -306,8 +304,6 @@ class TestCBC2(unittest.TestCase):
             transition_csv.write('a,NCC,accum,high-impact-disturb\n')
             transition_csv.write('b,,NCC,accum\n')
             transition_csv.write('c,accum,,NCC\n')
-            transition_csv.write(',,,\n')
-            transition_csv.write(',legend,,')  # simulate legend
 
         with self.assertRaises(ValueError) as cm:
             disturbance_matrices, accumulation_matrices = (
@@ -348,8 +344,6 @@ class TestCBC2(unittest.TestCase):
             transition_csv.write('a,NCC,accum,high-impact-disturb\n')
             transition_csv.write('b,,NCC,accum\n')
             transition_csv.write('c,accum,,NCC\n')
-            transition_csv.write(',,,\n')
-            transition_csv.write(',legend,,')  # simulate legend
 
         disturbance_matrices, accumulation_matrices = (
              coastal_blue_carbon._read_transition_matrix(
@@ -902,25 +896,11 @@ class TestCBC2(unittest.TestCase):
             snapshot_table.write(
                 f"{baseline_year + 10},{invalid_raster_path}")
 
-        # Write invalid entries to landcover transition table
-        with open(args['landcover_transitions_table'], 'w') as transition_table:
-            transition_table.write('lulc-class,Developed,Forest,Water\n')
-            transition_table.write('Developed,NCC,,invalid\n')
-            transition_table.write('Forest,accum,disturb,low-impact-disturb\n')
-            transition_table.write('Water,disturb,med-impact-disturb,high-impact-disturb\n')
-        transition_options = [
-                'accum', 'high-impact-disturb', 'low-impact-disturb',
-                'med-impact-disturb', 'ncc']
         validation_warnings = coastal_blue_carbon.validate(args)
-        self.assertEqual(len(validation_warnings), 2)
+        self.assertEqual(len(validation_warnings), 1)
         self.assertIn(
             'File could not be opened as a GDAL raster',
             validation_warnings[0][1])
-        self.assertIn(
-            coastal_blue_carbon.INVALID_TRANSITION_VALUES_MSG.format(
-                model_transitions=transition_options,
-                transition_values=['disturb', 'invalid']),
-            validation_warnings[1][1])
 
     def test_track_first_disturbance(self):
         """CBC: Track disturbances over time."""

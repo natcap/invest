@@ -1847,30 +1847,6 @@ def _validate_same_projection(base_vector_path, table_path):
             f"match the projection of the base vector ({base_vector_path})")
 
 
-def _validate_predictor_types(table_path):
-    """Validate the type values in a predictor table.
-
-    Args:
-        table_path (string): path to a csv table that has at least
-            the field 'type'
-
-    Returns:
-        string message if any value in the ``type`` column does not match a
-        valid type, ignoring leading/trailing whitespace.
-    """
-    df = MODEL_SPEC.get_input(
-        'predictor_table_path').get_validated_dataframe(table_path)
-    # ignore leading/trailing whitespace because it will be removed
-    # when the type values are used
-    valid_types = set({'raster_mean', 'raster_sum', 'point_count',
-                       'point_nearest_distance', 'line_intersect_length',
-                       'polygon_area_coverage', 'polygon_percent_coverage'})
-    difference = set(df['type']).difference(valid_types)
-    if difference:
-        return (f'The table contains invalid type value(s): {difference}. '
-                f'The allowed types are: {valid_types}')
-
-
 def delay_op(last_time, time_delay, func):
     """Execute ``func`` if last_time + time_delay >= current time.
 
@@ -1924,9 +1900,8 @@ def validate(args, limit_to=None):
 
     validation_tuples = []
     if 'predictor_table_path' in sufficient_valid_keys:
-        validation_tuples += [
-            (_validate_same_id_lengths, ['predictor_table_path']),
-            (_validate_predictor_types, ['predictor_table_path'])]
+        validation_tuples.append(
+           (_validate_same_id_lengths, ['predictor_table_path']))
         if 'aoi_path' in sufficient_valid_keys:
             validation_tuples.append(
                 (_validate_same_projection, ['aoi_path', 'predictor_table_path']))
@@ -1934,10 +1909,8 @@ def validate(args, limit_to=None):
             validation_tuples.append((
                 _validate_same_ids_and_types,
                 ['predictor_table_path', 'scenario_predictor_table_path']))
-    if 'scenario_predictor_table_path' in sufficient_valid_keys:
-        validation_tuples.append((
-            _validate_predictor_types, ['scenario_predictor_table_path']))
-        if 'aoi_path' in sufficient_valid_keys:
+    if ('scenario_predictor_table_path' in sufficient_valid_keys and
+                'aoi_path' in sufficient_valid_keys):
             validation_tuples.append((_validate_same_projection,
                 ['aoi_path', 'scenario_predictor_table_path']))
 

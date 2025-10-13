@@ -1491,7 +1491,7 @@ class RecreationValidationTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
         }
         msgs = recmodel_client.validate(args)
-        self.assertIn('The table contains invalid type value(s)', msgs[0][1])
+        self.assertIn('Error in column "type", value "raster?mean"', msgs[0][1])
 
 
 class RecreationProductionServerHealth(unittest.TestCase):

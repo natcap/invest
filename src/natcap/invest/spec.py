@@ -995,7 +995,7 @@ class DirectoryInput(Input):
             SingleBandRasterInput, VectorInput}
         for content in (self.contents or []):
             for input_type in allowed_types:
-                if isinstance(field, input_type):
+                if isinstance(content, input_type):
                     break
             else:
                 raise ValueError(

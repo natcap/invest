@@ -661,16 +661,6 @@ def execute(args):
             "The following lucodes are in the landcover raster but aren't "
             f"in the landcover to crop table: {lucodes_missing_from_table}")
 
-    LOGGER.info("Checking that crops are supported by the model.")
-    user_provided_crop_names = set(list(crop_to_landcover_df.index))
-    valid_crop_names = set([crop.key for crop in CROP_OPTIONS])
-    invalid_crop_names = user_provided_crop_names.difference(valid_crop_names)
-    if invalid_crop_names:
-        raise ValueError(
-            "The following crop names were provided in "
-            f"{args['landcover_to_crop_table_path']} but are not supported "
-            f"by the model: {invalid_crop_names}")
-
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
     pixel_area_ha = numpy.prod([

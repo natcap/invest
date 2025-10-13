@@ -127,6 +127,16 @@ LULC_RASTER_INPUT = spec.SingleBandRasterInput(
     projection_units=u.meter
 )
 
+class CropNameColumnInput(spec.OptionStringInput):
+    """Represents the 'crop_name' column in the crop nutrient table."""
+
+    def validate(self, value): return
+    """Overriding the validate method to skip checking values against the set
+    of valid options. Because this is the index column, it's okay if there are
+    extra crops included, they just won't be used. And we want to allow reusing
+    the table from the percentile model, which includes more crops."""
+
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="crop_production_regression",
     model_title=gettext("Crop Production: Regression"),
@@ -298,7 +308,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " in the sample data."
             ),
             columns=[
-                spec.OptionStringInput(
+                CropNameColumnInput(
                     id="crop_name",
                     about=None,
                     options=CROP_OPTIONS
@@ -584,16 +594,6 @@ def execute(args):
         LOGGER.warning(
             "The following lucodes are in the landcover raster but aren't "
             f"in the landcover to crop table: {lucodes_missing_from_table}")
-
-    LOGGER.info("Checking that crops are supported by the model.")
-    user_provided_crop_names = set(list(crop_to_landcover_df.index))
-    valid_crop_names = set([crop.key for crop in CROP_OPTIONS])
-    invalid_crop_names = user_provided_crop_names.difference(valid_crop_names)
-    if invalid_crop_names:
-        raise ValueError(
-            "The following crop names were provided in "
-            f"{args['landcover_to_crop_table_path']} but are not supported "
-            f"by the model: {invalid_crop_names}")
 
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
