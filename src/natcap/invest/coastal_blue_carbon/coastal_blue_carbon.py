@@ -232,9 +232,11 @@ MODEL_SPEC = spec.ModelSpec(
                 ),
                 spec.NumberInput(
                     id="biomass-half-life",
-                    about=gettext("The half-life of carbon in the biomass pool."),
+                    about=gettext(
+                        "The half-life of carbon in the biomass pool. A value of 0 "
+                        "indicates no emissions."),
                     units=u.year,
-                    expression="value > 0"
+                    expression="value >= 0"
                 ),
                 spec.RatioInput(
                     id="biomass-low-impact-disturb",
@@ -272,9 +274,11 @@ MODEL_SPEC = spec.ModelSpec(
                 ),
                 spec.NumberInput(
                     id="soil-half-life",
-                    about=gettext("The half-life of carbon in the soil pool."),
+                    about=gettext(
+                        "The half-life of carbon in the soil pool. A value of 0 "
+                        "indicates no emissions."),
                     units=u.year,
-                    expression="value > 0"
+                    expression="value >= 0"
                 ),
                 spec.RatioInput(
                     id="soil-low-impact-disturb",
