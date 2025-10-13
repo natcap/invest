@@ -70,6 +70,7 @@ Highlights
   geospatial remote path is input into an InVEST model the model will stream
   only the necessary extents. Supporting remote paths across InVEST required
   the following model changes:
+
   * **Wave Energy** now expects the base data to be provided as a CSV table
     that points to the vector and binary filepaths, rather than a directory.
   * **SWY** replaced the model inputs ``et0_dir`` and ``precip_dir`` with
