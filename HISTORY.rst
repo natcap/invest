@@ -77,7 +77,7 @@ Highlights
     CSV inputs.
   * **Crop Production** now takes multiple CSV tables instead of a model
     data directory. These tables map each crop name to the corresponding
-    data input. 
+    data input.
 * The Wind Energy model now requires an AOI, land polygon, and minimum and
   maximum distance values. This greatly simplifies the User Interface
   experience and the model code.
