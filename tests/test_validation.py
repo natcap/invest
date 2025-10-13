@@ -1007,6 +1007,30 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(df['header'][0], 'a')
         self.assertEqual(df['header'][1], 'b')
 
+    def test_remote_csv_paths(self):
+        """validation: remote spatial paths in columns are expanded."""
+        from natcap.invest import validation
+
+        input_spec = CSVInput(id='foo', columns=[spec.VectorInput(
+            id='path', geometry_types=set(), fields=[])])
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                id,path
+                a,https://example.com/vector_a.gpkg
+                b,vector_b.gpkg
+                """
+            ))
+        with unittest.mock.patch('natcap.invest.spec.VectorInput.validate',
+                                 lambda x, y : None):
+            df = input_spec.get_validated_dataframe(csv_file)
+        self.assertEqual(df['path'][0],
+                         '/vsicurl/https://example.com/vector_a.gpkg')
+        self.assertEqual(df['path'][1], os.path.join(self.workspace_dir,
+                         'vector_b.gpkg'))
+
     def test_remote_csv_with_local_path(self):
         """validation: an error is raised if a remote csv reference local paths."""
         from natcap.invest import validation
