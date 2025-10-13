@@ -1865,17 +1865,6 @@ def _read_transition_matrix(transition_csv_path, biophysical_df):
     # maps of the spatial values per transition to the timeseries analysis
     # function.
     for index, row in table.iterrows():
-        # If the user is using the template, all rows have some sort of values
-        # in them until the blank row before the legend.  If we find that row,
-        # we can break out of the loop.
-        if row.isnull().all():
-            LOGGER.info(f"Halting transition table parsing on row {index}; "
-                        "blank line encountered.")
-            break
-
-        # skip rows starting with a blank cell, these are part of the legend
-        if pandas.isna(row['lulc-class']):
-            continue
 
         try:
             from_lucode = lulc_class_to_lucode[row['lulc-class']]
@@ -2071,25 +2060,5 @@ def validate(args, limit_to=None):
                     INVALID_ANALYSIS_YEAR_MSG.format(
                         analysis_year=args['analysis_year'],
                         latest_year=max(snapshots.keys()))))
-
-    # check for invalid options in the translation table
-    if ("landcover_transitions_table" not in invalid_keys and
-            "landcover_transitions_table" in sufficient_keys):
-        transitions_spec = MODEL_SPEC.get_input('landcover_transitions_table')
-        transition_options = transitions_spec.get_column(
-            '[LULC CODE]').list_options()
-        transitions_df = transitions_spec.get_validated_dataframe(
-            args['landcover_transitions_table'])
-        transitions_mask = ~transitions_df.isin(transition_options) & ~transitions_df.isna()
-        if transitions_mask.any(axis=None):
-            transition_numpy_mask = transitions_mask.values
-            transition_numpy_values = transitions_df.to_numpy()
-            bad_transition_values = list(
-                numpy.unique(transition_numpy_values[transition_numpy_mask]))
-            validation_warnings.append((
-                ['landcover_transitions_table'],
-                INVALID_TRANSITION_VALUES_MSG.format(
-                    model_transitions=(transition_options),
-                    transition_values=bad_transition_values)))
 
     return validation_warnings
