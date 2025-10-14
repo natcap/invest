@@ -355,8 +355,7 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            'A value in the biophysical table is not a number '
-            'within range 0..1.', str(context.exception))
+            'Error in column "usle_p", value "1000.0"', str(context.exception))
 
     def test_base_usle_p_nan(self):
         """SDR test expected exception for USLE_P not a number."""
