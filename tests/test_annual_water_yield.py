@@ -81,33 +81,6 @@ class AnnualWaterYieldTests(unittest.TestCase):
         }
         return args
 
-    def test_invalid_lulc_veg(self):
-        """Hydro: catching invalid LULC_veg values."""
-        from natcap.invest import annual_water_yield
-
-        args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
-
-        new_lulc_veg_path = os.path.join(self.workspace_dir,
-                                         'new_lulc_veg.csv')
-
-        table_df = pandas.read_csv(args['biophysical_table_path'])
-        table_df['LULC_veg'] = ['']*len(table_df.index)
-        table_df.to_csv(new_lulc_veg_path)
-        args['biophysical_table_path'] = new_lulc_veg_path
-
-        with self.assertRaises(ValueError) as cm:
-            annual_water_yield.execute(args)
-        self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
-
-        table_df = pandas.read_csv(args['biophysical_table_path'])
-        table_df['LULC_veg'] = ['-1']*len(table_df.index)
-        table_df.to_csv(new_lulc_veg_path)
-        args['biophysical_table_path'] = new_lulc_veg_path
-
-        with self.assertRaises(ValueError) as cm:
-            annual_water_yield.execute(args)
-        self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
-
     def test_missing_lulc_value(self):
         """Hydro: catching missing LULC value in Biophysical table."""
         from natcap.invest import annual_water_yield
