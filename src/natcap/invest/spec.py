@@ -761,6 +761,9 @@ class CSVInput(FileInput):
     """The header name of the column to use as the index. When processing a
     CSV file to a dataframe, the dataframe index will be set to this column."""
 
+    na_allowed: list[str] = []
+    """List of header names of columns in which NA values are allowed."""
+
     type: typing.ClassVar[str] = 'csv'
 
     display_name: typing.ClassVar[str] = gettext('CSV')
@@ -915,15 +918,16 @@ class CSVInput(FileInput):
                         f'Value(s) in the "{col}" column could not be interpreted '
                         f'as {type(col_spec).__name__}s. Original error: {err}')
 
+                if col not in self.na_allowed and any(df[col].isna()):
+                    raise ValueError(f'Null value(s) found in column "{col}"')
+
                 # recursively validate the values within the column
                 def check_value(value):
-                    if pandas.isna(value):
-                        return
                     err_msg = col_spec.validate(value)
                     if err_msg:
                         raise ValueError(
                             f'Error in {axis} "{col}", value "{value}": {err_msg}')
-                df[col].apply(check_value)
+                df[col][df[col].notna()].apply(check_value)
 
         if any(df.columns.duplicated()):
             duplicated_columns = df.columns[df.columns.duplicated]
@@ -935,14 +939,15 @@ class CSVInput(FileInput):
         # set the index column, if specified
         if self.index_col is not None:
             index_col = self.index_col.lower()
-            try:
-                df = df.set_index(index_col, verify_integrity=True)
-            except KeyError:
-                # If 'index_col' is not a column then KeyError is raised for using
-                # it as the index column
-                LOGGER.error(f"The column '{index_col}' could not be found "
-                             f"in the table {csv_path}")
-                raise
+            if index_col not in df.columns:
+                # If 'index_col' is not a column then KeyError is raised for
+                # using it as the index column
+                raise KeyError(f"The column '{index_col}' could not be found "
+                               f"in the table {csv_path}")
+            if any(df[index_col].duplicated()):
+                raise ValueError(
+                    f"Duplicates found in the index column '{index_col}'")
+            df = df.set_index(index_col)
 
         return df
 

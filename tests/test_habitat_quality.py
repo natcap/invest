@@ -809,7 +809,7 @@ class HabitatQualityTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             habitat_quality.execute(args)
 
-        self.assertIn("max distance for threat: 'threat_1' is less",
+        self.assertIn('Error in column "max_dist", value "0.0"',
                       str(cm.exception))
 
     def test_habitat_quality_invalid_decay_type(self):
@@ -1377,8 +1377,10 @@ class HabitatQualityTests(unittest.TestCase):
 
         # At least one threat header is expected, so there should be a message
         validate_result = habitat_quality.validate(args, limit_to=None)
+        print(validate_result)
         self.assertEqual(len(validate_result), 1)
         self.assertEqual(validate_result[0][0], ['sensitivity_table_path'])
+
         self.assertTrue(utils.matches_format_string(
             validate_result[0][1],
             habitat_quality.MISSING_SENSITIVITY_TABLE_THREATS_MSG))
@@ -1430,9 +1432,8 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         self.assertEqual(len(validate_result), 1)
         self.assertEqual(validate_result[0][0], ['threats_table_path'])
-        self.assertTrue(utils.matches_format_string(
-            validate_result[0][1],
-            habitat_quality.INVALID_MAX_DIST_MSG))
+        self.assertIn('Error in column "max_dist", value "0.0"',
+                      validate_result[0][1])
 
     def test_habitat_quality_validation_missing_max_dist(self):
         """Habitat Quality: test validation for missing max_dist."""
@@ -1481,9 +1482,10 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         self.assertEqual(len(validate_result), 1)
         self.assertEqual(validate_result[0][0], ['threats_table_path'])
-        self.assertTrue(utils.matches_format_string(
-            validate_result[0][1],
-            habitat_quality.MISSING_MAX_DIST_MSG))
+        print(validate_result)
+        self.assertIn(
+            'Null value(s) found in column "max_dist"',
+            validate_result[0][1])
 
     def test_habitat_quality_validation_missing_weight(self):
         """Habitat Quality: test validation for missing weight."""
@@ -1532,9 +1534,9 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         self.assertEqual(len(validate_result), 1)
         self.assertEqual(validate_result[0][0], ['threats_table_path'])
-        self.assertTrue(utils.matches_format_string(
-            validate_result[0][1],
-            habitat_quality.MISSING_WEIGHT_MSG))
+        self.assertIn(
+            'Null value(s) found in column "weight"',
+            validate_result[0][1])
 
     def test_habitat_quality_validation_bad_threat_path(self):
         """Habitat Quality: test validation for bad threat paths."""

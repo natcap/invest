@@ -267,7 +267,8 @@ MODEL_SPEC = spec.ModelSpec(
                         " vegetated classes except wetlands, and 0 for all"
                         " other classes, including wetlands, urban areas, water"
                         " bodies, etc."
-                    )
+                    ),
+                    expression="value in {0, 1}"
                 ),
                 spec.NumberInput(
                     id="root_depth",
@@ -791,13 +792,6 @@ def execute(args):
 
     for lulc_code, row in bio_df.iterrows():
         Kc_dict[lulc_code] = row['kc']
-
-        # Catch invalid LULC_veg values with an informative error.
-        if row['lulc_veg'] not in set([0, 1]):
-            # If the user provided an invalid LULC_veg value, raise an
-            # informative error.
-            raise ValueError(
-                f'LULC_veg value must be either 1 or 0, not {row["lulc_veg"]}')
         vegetated_dict[lulc_code] = row['lulc_veg']
 
         # If LULC_veg value is 1 get root depth value

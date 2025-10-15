@@ -1508,16 +1508,6 @@ def _calculate_load(
     eff_key = f'eff_{nutrient_type}'
     load_type_key = f'load_type_{nutrient_type}'
 
-    # Raise ValueError if unknown load_type
-    for key, value in lucode_to_load.items():
-        load_type = value[load_type_key]
-        if not load_type in [app_rate, measured_runoff]:
-            # unknown load type, raise ValueError
-            raise ValueError(
-                'nutrient load type must be: '
-                f'"{app_rate}" | "{measured_runoff}". Instead '
-                f'found value of: "{load_type}".')
-
     def _map_load_op(lucode_array):
         """Convert unit load to total load."""
         result = numpy.empty(lucode_array.shape)
