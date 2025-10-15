@@ -371,7 +371,8 @@ MODEL_SPEC = spec.ModelSpec(
                     ]
                 )
             ],
-            index_col="lulc-class"
+            index_col="lulc-class",
+            na_allowed=["[LULC CODE]"]
         ),
         spec.BooleanInput(
             id="do_economic_analysis",

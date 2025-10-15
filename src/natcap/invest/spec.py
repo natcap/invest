@@ -917,8 +917,7 @@ class CSVInput(FileInput):
                     raise ValueError(
                         f'Value(s) in the "{col}" column could not be interpreted '
                         f'as {type(col_spec).__name__}s. Original error: {err}')
-
-                if col not in self.na_allowed and any(df[col].isna()):
+                if col_spec.id not in self.na_allowed and any(df[col].isna()):
                     raise ValueError(f'Null value(s) found in column "{col}"')
 
                 # recursively validate the values within the column

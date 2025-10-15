@@ -134,10 +134,6 @@ class TestPreprocessor(unittest.TestCase):
                 transition_table.readline(),
                 'parkinglot,,NCC\n')
 
-            # After the above lines is a blank line, then the legend.
-            # Deliberately not testing the legend.
-            self.assertEqual(transition_table.readline(), '\n')
-
     def test_sample_data(self):
         """CBC Preprocessor: Test on sample data."""
         from natcap.invest.coastal_blue_carbon import preprocessor
@@ -242,10 +238,6 @@ class TestPreprocessor(unittest.TestCase):
             self.assertEqual(
                 transition_table.readline(),
                 'parking lot,accum,NCC\n')
-
-            # After the above lines is a blank line, then the legend.
-            # Deliberately not testing the legend.
-            self.assertEqual(transition_table.readline(), '\n')
 
 
 class TestCBC2(unittest.TestCase):

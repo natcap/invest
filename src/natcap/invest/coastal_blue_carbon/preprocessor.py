@@ -454,15 +454,6 @@ def _create_transition_table(landcover_df, lulc_snapshot_list,
                 row.append(column_value)
             csv_file.write(','.join(row) + '\n')
 
-        # Append legend
-        csv_file.write("\n,legend")
-        csv_file.write(
-            "\n,empty cells indicate that no transitions occur of that type")
-        csv_file.write("\n,disturb (disturbance): change to low- med- or "
-                       "high-impact-disturb")
-        csv_file.write("\n,accum (accumulation)")
-        csv_file.write("\n,NCC (no-carbon-change)")
-
 
 def _create_biophysical_table(landcover_df, target_biophysical_table_path):
     """Write the biophysical table template to disk.
