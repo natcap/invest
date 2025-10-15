@@ -384,4 +384,4 @@ class UFRMTests(unittest.TestCase):
         self.assertEqual(
             result,
             [(['curve_number_table_path'],
-              'Missing curve numbers for lucode(s) [0]')])
+              'Null value(s) found in column "cn_a"')])

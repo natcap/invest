@@ -950,25 +950,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC)
-
-    sufficient_keys = validation.get_sufficient_keys(args)
-    invalid_keys = validation.get_invalid_keys(validation_warnings)
-
-    if ("curve_number_table_path" not in invalid_keys and
-            "curve_number_table_path" in sufficient_keys):
-        # Load CN table. Resulting DF has index and CN_X columns only.
-        cn_df = MODEL_SPEC.get_input(
-            'curve_number_table_path').get_validated_dataframe(
-            args['curve_number_table_path'])
-        # Check for NaN values.
-        nan_mask = cn_df.isna()
-        if nan_mask.any(axis=None):
-            nan_lucodes = nan_mask[nan_mask.any(axis=1)].index
-            # Convert numpy dtype values to native python types
-            lucode_list = [i.item() for i in nan_lucodes.values]
-            validation_warnings.append((
-                ['curve_number_table_path'],
-                f'Missing curve numbers for lucode(s) {lucode_list}'))
-
-    return validation_warnings
+    return validation.validate(args, MODEL_SPEC)
