@@ -172,7 +172,8 @@ MODEL_SPEC = spec.ModelSpec(
                     projected=None
                 )
             ],
-            index_col="threat"
+            index_col="threat",
+            na_allowed=["fut_path", "base_path"]
         ),
         spec.VectorInput(
             id="access_vector_path",

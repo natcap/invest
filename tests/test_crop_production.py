@@ -333,7 +333,7 @@ class CropProductionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             crop_production_percentile.execute(args)
-        self.assertIn('No climate bin raster path could be found for wheat',
+        self.assertIn('Null value(s) found in column "path"',
                       str(context.exception))
 
     def test_crop_production_regression_invalid_crop_name(self):
@@ -361,7 +361,7 @@ class CropProductionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             crop_production_regression.execute(args)
-        self.assertIn('No climate bin raster path could be found for wheat',
+        self.assertIn('Null value(s) found in column "path"',
                       str(context.exception))
 
     def test_crop_production_regression(self):

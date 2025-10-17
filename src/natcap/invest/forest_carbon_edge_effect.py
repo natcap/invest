@@ -129,7 +129,8 @@ MODEL_SPEC = spec.ModelSpec(
                     units=u.metric_ton / u.hectare
                 )
             ],
-            index_col="lucode"
+            index_col="lucode",
+            na_allowed=["c_above"]
         ),
         spec.SingleBandRasterInput(
             id="lulc_raster_path",

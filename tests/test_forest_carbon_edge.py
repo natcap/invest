@@ -232,9 +232,9 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             forest_carbon_edge_effect.execute(args)
-        expected_message = 'Could not interpret carbon pool value'
+        expected_message = 'Null value(s) found in column "c_below"'
         actual_message = str(cm.exception)
-        self.assertTrue(expected_message in actual_message, actual_message)
+        self.assertIn(expected_message, actual_message)
 
     def test_missing_lulc_value(self):
         """Forest Carbon Edge: test with missing LULC value."""
@@ -265,7 +265,6 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         bio_df = pandas.read_csv(args['biophysical_table_path'])
         bio_df = bio_df[bio_df['lucode'] != 4]
         bio_df.to_csv(bad_biophysical_table_path)
-        bio_df = None
 
         args['biophysical_table_path'] = bad_biophysical_table_path
         with self.assertRaises(ValueError) as cm:

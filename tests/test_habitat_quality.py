@@ -670,7 +670,7 @@ class HabitatQualityTests(unittest.TestCase):
                 '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ValueError):
             habitat_quality.execute(args)
 
     def test_habitat_quality_missing_threat(self):
@@ -1636,8 +1636,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         actual_message = str(cm.exception)
         self.assertIn(
-            'There was an Error locating a threat raster from '
-            'the path in CSV for column: cur_path and threat: threat_1',
+            'Null value(s) found in column "cur_path"',
             actual_message)
 
     def test_habitat_quality_missing_fut_threat_path(self):
@@ -1792,8 +1791,7 @@ class HabitatQualityTests(unittest.TestCase):
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertEqual(
-            habitat_quality.MISSING_THREAT_RASTER_MSG.format(
-                threat_list=[('threat_1', 'cur_path')]),
+            'Null value(s) found in column "cur_path"',
             validate_result[0][1])
 
     def test_habitat_quality_validate_missing_fut_threat_path(self):
@@ -2342,7 +2340,7 @@ class HabitatQualityTests(unittest.TestCase):
                 '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             habitat_quality.execute(args)
 
     def test_compute_rarity_operation(self):

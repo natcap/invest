@@ -693,10 +693,6 @@ def execute(args):
             args[CROP_TO_PATH_TABLES.climate_bin],
             crop_name)
 
-        if not crop_climate_bin_raster_path:
-            raise ValueError(
-                f'No climate bin raster path could be found for {crop_name}')
-
         LOGGER.info(
             "Clipping global climate bin raster to landcover bounding box.")
         crop_climate_bin_raster_info = pygeoprocessing.get_raster_info(

@@ -294,7 +294,9 @@ MODEL_SPEC = spec.ModelSpec(
                         spec.NumberInput(id="c_p2o5", about=None, units=u.none),
                         spec.NumberInput(id="c_k2o", about=None, units=u.none)
                     ],
-                    index_col="climate_bin"
+                    index_col="climate_bin",
+                    na_allowed=["yield_ceiling", "b_nut", "b_k2o", "c_n",
+                                "c_p2o5", "c_k2o"]
                 )
             ],
             index_col="crop_name"
@@ -625,10 +627,6 @@ def execute(args):
             CROP_TO_PATH_TABLES.climate_bin,
             args[CROP_TO_PATH_TABLES.climate_bin],
             crop_name)
-
-        if not crop_climate_bin_raster_path:
-            raise ValueError(
-                f'No climate bin raster path could be found for {crop_name}')
 
         # Use file_registry for clipped climate bin raster path
         crop_climate_bin_raster_info = pygeoprocessing.get_raster_info(

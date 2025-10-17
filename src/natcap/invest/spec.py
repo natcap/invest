@@ -905,10 +905,15 @@ class CSVInput(FileInput):
 
         for col_spec, pattern in zip(columns, patterns):
             matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
-            if col_spec.required is True and '[' not in col_spec.id and not matching_cols:
-                raise ValueError(get_message('MATCHED_NO_HEADERS').format(
-                    header=axis,
-                    header_name=col_spec.id))
+            if col_spec.required is True and not matching_cols:
+                if '[' in col_spec.id:
+                    raise ValueError(get_message('PATTERN_MATCHED_NONE').format(
+                        header=axis,
+                        header_name=col_spec.id))
+                else:
+                    raise ValueError(get_message('MATCHED_NO_HEADERS').format(
+                        header=axis,
+                        header_name=col_spec.id))
             available_cols -= set(matching_cols)
             for col in matching_cols:
                 try:
@@ -930,10 +935,10 @@ class CSVInput(FileInput):
 
         if any(df.columns.duplicated()):
             duplicated_columns = df.columns[df.columns.duplicated]
-            return get_message('DUPLICATE_HEADER').format(
+            raise ValueError(get_message('DUPLICATE_HEADER').format(
                 header=header_type,
                 header_name=expected,
-                number=count)
+                number=count))
 
         # set the index column, if specified
         if self.index_col is not None:
