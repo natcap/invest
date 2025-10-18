@@ -1261,7 +1261,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         input_spec = CSVInput(id='foo', columns=[
                 IntegerInput(id='id'),
-                IntegerInput(id='header')])
+                IntegerInput(id='header')], na_allowed=['header'])
         df = input_spec.get_validated_dataframe(csv_file)
         self.assertIsInstance(df['header'][0], numpy.int64)
         self.assertIsInstance(df['header'][1], numpy.int64)
@@ -1284,7 +1284,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             NumberInput(id='h1', units=None),
             RatioInput(id='h2'),
             PercentInput(id='h3')
-        ])
+        ], na_allowed=['h3'])
         df = input_spec.get_validated_dataframe(csv_file)
         self.assertEqual(df['h1'].dtype, float)
         self.assertEqual(df['h2'].dtype, float)
@@ -1308,7 +1308,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             StringInput(id='h1'),
             OptionStringInput(id='h2', options=[Option(key='a'), Option(key='b')]),
             StringInput(id='h3')
-        ])
+        ], na_allowed=['h3'])
         df = input_spec.get_validated_dataframe(csv_file)
         self.assertEqual(df['h1'][0], '1')
         self.assertEqual(df['h2'][1], 'b')
@@ -1330,7 +1330,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
             ))
         input_spec = CSVInput(id='foo', columns=[
             StringInput(id='index'),
-            BooleanInput(id='h1')])
+            BooleanInput(id='h1')], na_allowed=['h1'])
         df = input_spec.get_validated_dataframe(csv_file)
         self.assertEqual(df['h1'][0], True)
         self.assertEqual(df['h1'][1], False)
@@ -1358,7 +1358,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
         input_spec = CSVInput(id='foo', columns=[
             IntegerInput(id='bar'),
             FileInput(id='path')
-        ])
+        ], na_allowed=['path'])
         df = input_spec.get_validated_dataframe(csv_file)
 
         self.assertEqual(

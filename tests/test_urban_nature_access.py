@@ -383,11 +383,13 @@ class UNATests(unittest.TestCase):
         # The split urban_nature feature requires an extra column in the
         # attribute table.
         attribute_table = pandas.read_csv(args['lulc_attribute_table'])
+        print(attribute_table)
         new_search_radius_values = {
             value: 30*value for value in range(1, 10, 2)}
         new_search_radius_values[7] = 30 * 9  # make one a duplicate distance.
         attribute_table['search_radius_m'] = attribute_table['lucode'].map(
             new_search_radius_values)
+        print(attribute_table)
         attribute_table.to_csv(args['lulc_attribute_table'], index=False)
 
         urban_nature_access.execute(args)

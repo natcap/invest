@@ -371,7 +371,7 @@ class PollinationTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             pollination.execute(args)
         self.assertIn(
-            'Expected a header in guild table that matched the pattern',
+            'Expected to find at least one column matching the pattern',
             str(cm.exception))
 
     def test_pollination_bad_biophysical_headers(self):
@@ -400,7 +400,7 @@ class PollinationTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             pollination.execute(args)
         self.assertIn(
-            'Expected a header in biophysical table that matched the pattern',
+            'Expected to find at least one column matching the pattern',
             str(cm.exception))
 
     def test_pollination_missing_lulc_values(self):

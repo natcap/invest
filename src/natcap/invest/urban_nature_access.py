@@ -112,7 +112,8 @@ MODEL_SPEC = spec.ModelSpec(
                     expression="value >= 0"
                 )
             ],
-            index_col="lucode"
+            index_col="lucode",
+            na_allowed=["search_radius_m"]
         ),
         spec.SingleBandRasterInput(
             id="population_raster_path",
