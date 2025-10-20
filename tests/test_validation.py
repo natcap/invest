@@ -1496,6 +1496,21 @@ class TestGetValidatedDataframe(unittest.TestCase):
             "Geometry type must be one of {'POLYGON'}",
             str(cm.exception))
 
+    def test_csv_number_column_validation(self):
+        """validation: validate numeric values in csv column."""
+        csv_path = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_path, 'w') as file_obj:
+            file_obj.write('col1,\n')
+            file_obj.write(f'not a number,\n')
+        input_spec = CSVInput(id='foo', columns=[
+            NumberInput(id='col1', units=None)
+        ])
+        with self.assertRaises(ValueError) as cm:
+            input_spec.get_validated_dataframe(csv_path)
+        self.assertIn(
+            'Value(s) in the "col1" column could not be interpreted as NumberInputs',
+            str(cm.exception))
+
 
 class TestValidationFromSpec(unittest.TestCase):
     """Test Validation From Spec."""

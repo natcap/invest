@@ -821,7 +821,7 @@ class CSVInput(FileInput):
         return self._rows_dict[key]
 
     @timeout
-    def validate(self, filepath: str, args=None):
+    def validate(self, filepath: str):
         """Validate a CSV file against the requirements for this input.
 
         Args:
@@ -838,11 +838,11 @@ class CSVInput(FileInput):
 
         if self.columns or self.rows:
             try:
-                self.get_validated_dataframe(filepath, args=args)
+                self.get_validated_dataframe(filepath)
             except Exception as e:
                 return str(e)
 
-    def get_validated_dataframe(self, csv_path: str, read_csv_kwargs={}, args=None):
+    def get_validated_dataframe(self, csv_path: str, read_csv_kwargs={}):
         """Read a CSV into a dataframe that is guaranteed to match the spec.
 
         This is only supported when `columns` or `rows` is provided. Each
@@ -906,12 +906,12 @@ class CSVInput(FileInput):
 
         for col_spec, pattern in zip(columns, patterns):
             matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
-            required = col_spec.required
-            if args:
-                required = bool(utils.evaluate_expression(
-                    expression=f'{col_spec.required}',
-                    variable_map=args))
-            if required is True and not matching_cols:
+            if not isinstance(col_spec.required, bool):
+                raise ValueError(
+                    'get_validated_dataframe called with spec that contains a '
+                    'conditional "required" string. The "required" attribute must '
+                    'be evaluated to a bool before calling this method.')
+            if col_spec.required and not matching_cols:
                 if '[' in col_spec.id:
                     raise ValueError(validation_messages.PATTERN_MATCHED_NONE.format(
                         header=axis,

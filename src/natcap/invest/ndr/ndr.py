@@ -1,5 +1,4 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
-import copy
 import logging
 import os
 import pickle
@@ -1420,23 +1419,12 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    spec_copy = copy.deepcopy(MODEL_SPEC)
     # Check required fields given the state of ``calc_n`` and ``calc_p``
+    validation_warnings = validation.validate(args, MODEL_SPEC)
     nutrients_selected = []
     for nutrient_letter in ('n', 'p'):
         if f'calc_{nutrient_letter}' in args and args[f'calc_{nutrient_letter}']:
             nutrients_selected.append(nutrient_letter)
-
-    for param in ['load', 'eff', 'crit_len']:
-        for nutrient in nutrients_selected:
-            spec_copy.get_input('biophysical_table_path').get_column(
-                f'{param}_{nutrient}').required = True
-
-    if 'n' in nutrients_selected:
-        spec_copy.get_input('biophysical_table_path').get_column(
-            'proportion_subsurface_n').required = True
-
-    validation_warnings = validation.validate(args, spec_copy)
 
     if not nutrients_selected:
         validation_warnings.append(

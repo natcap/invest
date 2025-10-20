@@ -241,10 +241,7 @@ def validate(args, model_spec):
                             bool(utils.evaluate_expression(
                                 nested_spec.required, expression_values)))
         try:
-            if isinstance(parameter_spec, spec.CSVInput):
-                warning_msg = parameter_spec.validate(args[key], args=args)
-            else:
-                warning_msg = parameter_spec.validate(args[key])
+            warning_msg = parameter_spec.validate(args[key])
             if warning_msg:
                 validation_warnings.append(([key], warning_msg))
                 invalid_keys.add(key)
