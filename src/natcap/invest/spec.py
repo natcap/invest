@@ -28,12 +28,14 @@ import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
 from natcap.invest import utils
-from natcap.invest.validation import get_message
 from . import gettext
 from .unit_registry import u
+from . import validation_messages
 
 
 LOGGER = logging.getLogger(__name__)
+
+
 
 # accessing a file could take a long time if it's in a file streaming service
 # to prevent the UI from hanging due to slow validation,
@@ -105,11 +107,11 @@ def check_headers(expected_headers, actual_headers, header_type='header'):
     for expected in expected_headers:
         count = actual_headers.count(expected)
         if count == 0:
-            return get_message('MATCHED_NO_HEADERS').format(
+            return validation_messages.MATCHED_NO_HEADERS.format(
                 header=header_type,
                 header_name=expected)
         elif count > 1:
-            return get_message('DUPLICATE_HEADER').format(
+            return validation_messages.DUPLICATE_HEADER.format(
                 header=header_type,
                 header_name=expected,
                 number=count)
@@ -132,11 +134,11 @@ def _check_projection(srs, projected, projection_units):
     with GDALUseExceptions():
         empty_srs = osr.SpatialReference()
         if srs is None or srs.IsSame(empty_srs):
-            return get_message('INVALID_PROJECTION')
+            return validation_messages.INVALID_PROJECTION
 
         if projected:
             if not srs.IsProjected():
-                return get_message('NOT_PROJECTED')
+                return validation_messages.NOT_PROJECTED
 
         if projection_units:
             # pint uses underscores in multi-word units e.g. 'survey_foot'
@@ -147,10 +149,10 @@ def _check_projection(srs, projected, projection_units):
                 layer_units = u.Unit(layer_units_name)
                 # Compare pint Unit objects
                 if projection_units != layer_units:
-                    return get_message('WRONG_PROJECTION_UNIT').format(
+                    return validation_messages.WRONG_PROJECTION_UNIT.format(
                         unit_a=projection_units, unit_b=layer_units_name)
             except pint.errors.UndefinedUnitError:
-                return get_message('WRONG_PROJECTION_UNIT').format(
+                return validation_messages.WRONG_PROJECTION_UNIT.format(
                     unit_a=projection_units, unit_b=layer_units_name)
 
 
@@ -321,14 +323,14 @@ class FileInput(Input):
             A string error message if an error was found.  ``None`` otherwise.
         """
         if not os.path.exists(filepath):
-            return get_message('FILE_NOT_FOUND')
+            return validation_messages.FILE_NOT_FOUND
 
         for letter, mode, descriptor in (
                 ('r', os.R_OK, 'read'),
                 ('w', os.W_OK, 'write'),
                 ('x', os.X_OK, 'execute')):
             if letter in self.permissions and not os.access(filepath, mode):
-                return get_message('NEED_PERMISSION_FILE').format(permission=descriptor)
+                return validation_messages.NEED_PERMISSION_FILE.format(permission=descriptor)
 
     @staticmethod
     def format_column(col: pandas.Series, base_path: str) -> pandas.Series:
@@ -479,11 +481,11 @@ class RasterInput(SpatialFileInput):
                 gdal_dataset = gdal.OpenEx(
                     gdal_path.to_normalized_path(), gdal.OF_RASTER)
             except RuntimeError:
-                return get_message('NOT_GDAL_RASTER')
+                return validation_messages.NOT_GDAL_RASTER
 
             # Check that an overview .ovr file wasn't opened.
             if os.path.splitext(filepath)[1] == '.ovr':
-                return get_message('OVR_FILE')
+                return validation_messages.OVR_FILE
 
             srs = gdal_dataset.GetSpatialRef()
             projection_warning = _check_projection(
@@ -533,11 +535,11 @@ class SingleBandRasterInput(SpatialFileInput):
                 gdal_dataset = gdal.OpenEx(
                     gdal_path.to_normalized_path(), gdal.OF_RASTER)
             except RuntimeError:
-                return get_message('NOT_GDAL_RASTER')
+                return validation_messages.NOT_GDAL_RASTER
 
             # Check that an overview .ovr file wasn't opened.
             if os.path.splitext(filepath)[1] == '.ovr':
-                return get_message('OVR_FILE')
+                return validation_messages.OVR_FILE
 
             srs = gdal_dataset.GetSpatialRef()
             projection_warning = _check_projection(
@@ -606,7 +608,7 @@ class VectorInput(SpatialFileInput):
                 gdal_dataset = gdal.OpenEx(
                     gdal_path.to_normalized_path(), gdal.OF_VECTOR)
             except RuntimeError:
-                return get_message('NOT_GDAL_VECTOR')
+                return validation_messages.NOT_GDAL_VECTOR
 
             geom_map = {
                 'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM,
@@ -635,7 +637,7 @@ class VectorInput(SpatialFileInput):
             # Currently not supporting ogr.wkbUnknown which allows mixed types.
             layer = gdal_dataset.GetLayer()
             if layer.GetGeomType() not in allowed_geom_types:
-                return get_message('WRONG_GEOM_TYPE').format(allowed=self.geometry_types)
+                return validation_messages.WRONG_GEOM_TYPE.format(allowed=self.geometry_types)
 
             if self.fields:
                 field_patterns = []
@@ -819,7 +821,7 @@ class CSVInput(FileInput):
         return self._rows_dict[key]
 
     @timeout
-    def validate(self, filepath: str):
+    def validate(self, filepath: str, args=None):
         """Validate a CSV file against the requirements for this input.
 
         Args:
@@ -836,11 +838,11 @@ class CSVInput(FileInput):
 
         if self.columns or self.rows:
             try:
-                self.get_validated_dataframe(filepath)
+                self.get_validated_dataframe(filepath, args=args)
             except Exception as e:
                 return str(e)
 
-    def get_validated_dataframe(self, csv_path: str, read_csv_kwargs={}):
+    def get_validated_dataframe(self, csv_path: str, read_csv_kwargs={}, args=None):
         """Read a CSV into a dataframe that is guaranteed to match the spec.
 
         This is only supported when `columns` or `rows` is provided. Each
@@ -887,7 +889,6 @@ class CSVInput(FileInput):
             column = column.id.lower()
             match = re.match(r'(.*)\[(.+)\](.*)', column)
             if match:
-                # for column name patterns, convert it to a regex pattern
                 groups = match.groups()
                 patterns.append(f'{groups[0]}(.+){groups[2]}')
             else:
@@ -905,13 +906,18 @@ class CSVInput(FileInput):
 
         for col_spec, pattern in zip(columns, patterns):
             matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
-            if col_spec.required is True and not matching_cols:
+            required = col_spec.required
+            if args:
+                required = bool(utils.evaluate_expression(
+                    expression=f'{col_spec.required}',
+                    variable_map=args))
+            if required is True and not matching_cols:
                 if '[' in col_spec.id:
-                    raise ValueError(get_message('PATTERN_MATCHED_NONE').format(
+                    raise ValueError(validation_messages.PATTERN_MATCHED_NONE.format(
                         header=axis,
                         header_name=col_spec.id))
                 else:
-                    raise ValueError(get_message('MATCHED_NO_HEADERS').format(
+                    raise ValueError(validation_messages.MATCHED_NO_HEADERS.format(
                         header=axis,
                         header_name=col_spec.id))
             available_cols -= set(matching_cols)
@@ -935,7 +941,7 @@ class CSVInput(FileInput):
 
         if any(df.columns.duplicated()):
             duplicated_columns = df.columns[df.columns.duplicated]
-            raise ValueError(get_message('DUPLICATE_HEADER').format(
+            raise ValueError(validation_messages.DUPLICATE_HEADER.format(
                 header=header_type,
                 header_name=expected,
                 number=count))
@@ -1032,11 +1038,11 @@ class DirectoryInput(Input):
 
         if self.must_exist:
             if not os.path.exists(dirpath):
-                return get_message('DIR_NOT_FOUND')
+                return validation_messages.DIR_NOT_FOUND
 
         if os.path.exists(dirpath):
             if not os.path.isdir(dirpath):
-                return get_message('NOT_A_DIR')
+                return validation_messages.NOT_A_DIR
         else:
             # find the parent directory that does exist and check permissions
             child = dirpath
@@ -1049,13 +1055,11 @@ class DirectoryInput(Input):
                     dirpath = parent
                     break
 
-        MESSAGE_KEY = 'NEED_PERMISSION_DIRECTORY'
-
         if 'r' in self.permissions:
             try:
                 os.scandir(dirpath).close()
             except OSError:
-                return get_message(MESSAGE_KEY).format(permission='read')
+                return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='read')
 
         # Check for x access before checking for w,
         # since w operations to a dir are dependent on x access
@@ -1064,7 +1068,7 @@ class DirectoryInput(Input):
                 cwd = os.getcwd()
                 os.chdir(dirpath)
             except OSError:
-                return get_message(MESSAGE_KEY).format(permission='execute')
+                return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='execute')
             finally:
                 os.chdir(cwd)
 
@@ -1075,7 +1079,7 @@ class DirectoryInput(Input):
                     temp.close()
                     os.remove(temp_path)
             except OSError:
-                return get_message(MESSAGE_KEY).format(permission='write')
+                return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='write')
 
 
 class NumberInput(Input):
@@ -1111,7 +1115,7 @@ class NumberInput(Input):
         try:
             float(value)
         except (TypeError, ValueError):
-            return get_message('NOT_A_NUMBER').format(value=value)
+            return validation_messages.NOT_A_NUMBER.format(value=value)
 
         if self.expression:
             # Check to make sure that 'value' is in the expression.
@@ -1125,7 +1129,7 @@ class NumberInput(Input):
             # be raised if asteval can't evaluate the expression.
             result = utils.evaluate_expression(self.expression, {'value': float(value)})
             if not result:  # A python bool object is returned.
-                return get_message('INVALID_VALUE').format(condition=self.expression)
+                return validation_messages.INVALID_VALUE.format(condition=self.expression)
 
     @staticmethod
     def format_column(col, *args):
@@ -1180,7 +1184,7 @@ class IntegerInput(NumberInput):
         # since we already called super().validate, we know that the value
         # can be cast to float
         if not float(value).is_integer():
-            return get_message('NOT_AN_INTEGER').format(value=value)
+            return validation_messages.NOT_AN_INTEGER.format(value=value)
 
 
     @staticmethod
@@ -1249,7 +1253,7 @@ class RatioInput(NumberInput):
             return message
         as_float = float(value)
         if as_float < 0 or as_float > 1:
-            return get_message('NOT_WITHIN_RANGE').format(
+            return validation_messages.NOT_WITHIN_RANGE.format(
                 value=as_float,
                 range='[0, 1]')
 
@@ -1302,7 +1306,7 @@ class BooleanInput(Input):
             A string error message if an error was found.  ``None`` otherwise.
         """
         if not isinstance(value, bool):
-            return get_message('NOT_BOOLEAN').format(value=value)
+            return validation_messages.NOT_BOOLEAN.format(value=value)
 
     @staticmethod
     def format_column(col, *args):
@@ -1367,7 +1371,7 @@ class StringInput(Input):
         if self.regexp:
             matches = re.fullmatch(self.regexp, str(value))
             if not matches:
-                return get_message('REGEXP_MISMATCH').format(regexp=self.regexp)
+                return validation_messages.REGEXP_MISMATCH.format(regexp=self.regexp)
 
     @staticmethod
     def format_column(col, *args):
@@ -1470,7 +1474,7 @@ class OptionStringInput(Input):
         if self.options:
             option_keys = self.list_options()
             if str(value).lower() not in option_keys:
-                return get_message('INVALID_OPTION').format(option_list=option_keys)
+                return validation_messages.INVALID_OPTION.format(option_list=option_keys)
 
     @staticmethod
     def format_column(col, *args):

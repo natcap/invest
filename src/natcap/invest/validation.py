@@ -15,59 +15,14 @@ from osgeo import ogr
 from osgeo import osr
 
 from . import gettext
+from . import spec
 from . import utils
+from . import validation_messages
 
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.
 CHECK_ALL_KEYS = None
 LOGGER = logging.getLogger(__name__)
-
-MESSAGES = {
-    'MISSING_KEY': gettext('Key is missing from the args dict'),
-    'MISSING_VALUE': gettext('Input is required but has no value'),
-    'MATCHED_NO_HEADERS': gettext(
-        'Expected the {header} "{header_name}" but did not find it'),
-    'PATTERN_MATCHED_NONE': gettext(
-        'Expected to find at least one {header} matching '
-        'the pattern "{header_name}" but found none'),
-    'DUPLICATE_HEADER': gettext(
-        'Expected the {header} "{header_name}" only once '
-        'but found it {number} times'),
-    'NOT_A_NUMBER': gettext(
-        'Value "{value}" could not be interpreted as a number'),
-    'WRONG_PROJECTION_UNIT': gettext(
-        'Layer must be projected in this unit: '
-        '"{unit_a}" but found this unit: "{unit_b}"'),
-    'UNEXPECTED_ERROR': gettext('An unexpected error occurred in validation'),
-    'DIR_NOT_FOUND': gettext('Directory not found'),
-    'NOT_A_DIR': gettext('Path must be a directory'),
-    'FILE_NOT_FOUND': gettext('File not found'),
-    'INVALID_PROJECTION': gettext('Dataset must have a valid projection.'),
-    'NOT_PROJECTED': gettext('Dataset must be projected in linear units.'),
-    'NOT_GDAL_RASTER': gettext('File could not be opened as a GDAL raster'),
-    'OVR_FILE': gettext('File found to be an overview ".ovr" file.'),
-    'NOT_GDAL_VECTOR': gettext('File could not be opened as a GDAL vector'),
-    'REGEXP_MISMATCH': gettext(
-        "Value did not match expected pattern {regexp}"),
-    'INVALID_OPTION': gettext("Value must be one of: {option_list}"),
-    'INVALID_VALUE': gettext('Value does not meet condition {condition}'),
-    'NOT_WITHIN_RANGE': gettext('Value {value} is not in the range {range}'),
-    'NOT_AN_INTEGER': gettext('Value "{value}" does not represent an integer'),
-    'NOT_BOOLEAN': gettext("Value must be either True or False, not {value}"),
-    'NO_PROJECTION': gettext('Spatial file {filepath} has no projection'),
-    'BBOX_NOT_INTERSECT': gettext(
-        'Not all of the spatial layers overlap each '
-        'other. All bounding boxes must intersect: {bboxes}'),
-    'NEED_PERMISSION_DIRECTORY': gettext(
-        'You must have {permission} access to this directory'),
-    'NEED_PERMISSION_FILE': gettext(
-        'You must have {permission} access to this file'),
-    'WRONG_GEOM_TYPE': gettext('Geometry type must be one of {allowed}')
-}
-
-
-def get_message(key):
-    return gettext(MESSAGES[key])
 
 
 def get_invalid_keys(validation_warnings):
@@ -164,7 +119,7 @@ def check_spatial_overlap(spatial_filepaths_list,
             info = pygeoprocessing.get_vector_info(filepath)
 
         if info['projection_wkt'] is None:
-            return get_message('NO_PROJECTION').format(filepath=filepath)
+            return validation_messages.NO_PROJECTION.format(filepath=filepath)
 
         if different_projections_ok:
             try:
@@ -194,7 +149,7 @@ def check_spatial_overlap(spatial_filepaths_list,
     except ValueError as error:
         LOGGER.debug(error)
         formatted_lists = _format_bbox_list(checked_file_list, bounding_boxes)
-        return get_message('BBOX_NOT_INTERSECT').format(bboxes=formatted_lists)
+        return validation_messages.BBOX_NOT_INTERSECT.format(bboxes=formatted_lists)
     return None
 
 
@@ -252,11 +207,11 @@ def validate(args, model_spec):
 
     if missing_keys:
         validation_warnings.append(
-            (sorted(missing_keys), get_message('MISSING_KEY')))
+            (sorted(missing_keys), validation_messages.MISSING_KEY))
 
     if required_keys_with_no_value:
         validation_warnings.append(
-            (sorted(required_keys_with_no_value), get_message('MISSING_VALUE')))
+            (sorted(required_keys_with_no_value), validation_messages.MISSING_VALUE))
 
     # Phase 2: Check whether any input with a value validates with its
     # type-specific check function.
@@ -286,15 +241,16 @@ def validate(args, model_spec):
                             bool(utils.evaluate_expression(
                                 nested_spec.required, expression_values)))
         try:
-            # pass the entire arg spec into the validation function as kwargs
-            # each type validation function allows extra kwargs with **kwargs
-            warning_msg = parameter_spec.validate(args[key])
+            if isinstance(parameter_spec, spec.CSVInput):
+                warning_msg = parameter_spec.validate(args[key], args=args)
+            else:
+                warning_msg = parameter_spec.validate(args[key])
             if warning_msg:
                 validation_warnings.append(([key], warning_msg))
                 invalid_keys.add(key)
         except Exception:
             LOGGER.exception(f'Error when validating key {key} with value {args[key]}')
-            validation_warnings.append(([key], get_message('UNEXPECTED_ERROR')))
+            validation_warnings.append(([key], validation_messages.UNEXPECTED_ERROR))
 
     # Phase 3: Check spatial overlap if applicable
     if model_spec.validate_spatial_overlap:
