@@ -35,8 +35,6 @@ from . import validation_messages
 
 LOGGER = logging.getLogger(__name__)
 
-
-
 # accessing a file could take a long time if it's in a file streaming service
 # to prevent the UI from hanging due to slow validation,
 # set a timeout for these functions.
