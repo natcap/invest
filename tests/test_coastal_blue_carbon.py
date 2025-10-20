@@ -888,11 +888,21 @@ class TestCBC2(unittest.TestCase):
             snapshot_table.write(
                 f"{baseline_year + 10},{invalid_raster_path}")
 
+        # Write invalid entries to landcover transition table
+        with open(args['landcover_transitions_table'], 'w') as transition_table:
+            transition_table.write('lulc-class,Developed,Forest,Water\n')
+            transition_table.write('Developed,NCC,accum,NCC\n')
+            transition_table.write('Forest,accum,med-impact-disturb,low-impact-disturb\n')
+            transition_table.write('Water,disturb,med-impact-disturb,high-impact-disturb\n')
+
         validation_warnings = coastal_blue_carbon.validate(args)
-        self.assertEqual(len(validation_warnings), 1)
+        self.assertEqual(len(validation_warnings), 2)
         self.assertIn(
             'File could not be opened as a GDAL raster',
             validation_warnings[0][1])
+        self.assertIn(
+            'Error in column "developed", value "disturb"',
+            validation_warnings[1][1])
 
     def test_track_first_disturbance(self):
         """CBC: Track disturbances over time."""
