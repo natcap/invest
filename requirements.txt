@@ -28,3 +28,4 @@ flask_cors
 requests
 geometamaker>=0.2.0
 pydantic
+certifi

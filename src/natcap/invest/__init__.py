@@ -6,6 +6,7 @@ import sys
 from gettext import translation
 
 import babel
+import certifi
 
 LOGGER = logging.getLogger('natcap.invest')
 LOGGER.addHandler(logging.NullHandler())
@@ -20,6 +21,11 @@ except importlib.metadata.PackageNotFoundError:
         # package is not installed.  Log the exception for debugging.
         LOGGER.exception(
             'Could not load natcap.invest (or natcap_invest) version information')
+
+# Needed to reliably open datasets over HTTPS across different
+# systems when running in a pyinstaller frozen environment
+# https://github.com/natcap/invest/issues/2200
+os.environ['SSL_CERT_FILE'] = certifi.where()
 
 # location of our translation message catalog directory
 LOCALE_DIR = os.path.join(

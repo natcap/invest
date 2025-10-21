@@ -31,7 +31,10 @@ function spawnWithLogging(cmd, args, options) {
   logger.info(cmd, args);
   const cmdProcess = spawn(
     cmd, args, { ...options, shell: true, windowsHide: true });
-  let errMessage;
+  // There was a rare case where the promise rejected with undefined
+  // errMessage, so here's a generic default message for that case.
+  // https://github.com/natcap/invest/issues/2207
+  let errMessage = `${cmd} closed unexpectedly`;
   if (cmdProcess.stdout) {
     cmdProcess.stderr.on('data', (data) => {
       errMessage = data.toString();
@@ -45,10 +48,11 @@ function spawnWithLogging(cmd, args, options) {
       reject(err);
     });
     cmdProcess.on('close', (code) => {
+      logger.info(`${cmd} closed with code ${code}`);
       if (code === 0) {
         resolve(code);
       } else {
-        reject(errMessage);
+        reject(new Error(errMessage));
       }
     });
   });

@@ -61,21 +61,56 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.17.0 (2025-10-16)
+-------------------
+
+Highlights
+==========
+* InVEST now supports remote path inputs for publicly accessible data. When a
+  geospatial remote path is input into an InVEST model the model will stream
+  only the necessary extents. Supporting remote paths across InVEST required
+  the following model changes:
+
+  * **Wave Energy** now expects the base data to be provided as a CSV table
+    that points to the vector and binary filepaths, rather than a directory.
+  * **SWY** replaced the model inputs ``et0_dir`` and ``precip_dir`` with
+    CSV inputs.
+  * **Crop Production** now takes multiple CSV tables instead of a model
+    data directory. These tables map each crop name to the corresponding
+    data input.
+* The Wind Energy model now requires an AOI, land polygon, and minimum and
+  maximum distance values. This greatly simplifies the User Interface
+  experience and the model code.
+* Each InVEST model's ``execute`` function now returns a dictionary summarizing all
+  output files produced by the model. This is standardized by each model
+  using the new ``FileRegistry`` class to create and track the filepaths
+  of their outputs, as defined in the ``ModelSpec``. This may be used to
+  access model results programmatically for subsequent data processing.
 
 General
 =======
+* Added support for remote paths to raster, vector, and CSVs inputs. URI
+  schemes like ``https://``, ``gs://``, ``s3://`` are mapped to GDAL VSI
+  handlers. Archive schemes (zip, gzip, tar) can be prefixed onto the scheme
+  with a ``+``, for instance, ``zip+https://``. Input paths get converted to
+  GDAL-compatible VSI paths (e.g. ``/vsizip//vsicurl/``) before validating
+  or executing the model.
+  (`#2077 <https://github.com/natcap/invest/issues/2077>`_)
 * Added a ``ModelSpec.get_output`` method to access items in ``ModelSpec.outputs``
   using the ``id`` property of the ``Output``.
   (`#2138 <https://github.com/natcap/invest/issues/2138>`_)
 * A new module ``natcap.invest.file_registry`` exposes the ``FileRegistry`` class.
   All models now use this to create and track the filepaths of their outputs.
+  (`#2124 <https://github.com/natcap/invest/issues/2124>`_)
 * The ``execute`` function of each invest model now returns a dictionary
   summarizing all output files produced by the model. It maps output IDs (found
   in the model's ``MODEL_SPEC``) to the absolute paths where those outputs were
   created. This may be used to access model results programmatically for subsequent
-  data processing.
+  data processing. (`#2124 <https://github.com/natcap/invest/issues/2124>`_)
 * Fixed a bug where datastacks missing the ``invest_version`` attribute could not be
   opened. Additionally, new datastacks created with InVEST will no longer include
   an ``invest_version``, since tying a datastack to a specific version of InVEST is
@@ -98,9 +133,10 @@ General
 
 Plugins
 =======
-* Fixed a bug where some errors during plugin installation would crash
+* Fixed bugs where some errors during plugin installation would crash
   the Workbench. Specifically, if the plugin was installed but could not
   import. (`#2071 <https://github.com/natcap/invest/issues/2071>`_)
+  (`#2207 <https://github.com/natcap/invest/issues/2207>`_)
 * If plugin installation fails, the Workbench now cleans up any
   leftover, unusable micromamba environments.
   (`#2104 <https://github.com/natcap/invest/issues/2104>`_)
@@ -112,11 +148,13 @@ Annual Water Yield
 ==================
 * The discount rate parameter was previously incorrectly restricted to the
   range [0, 100]. Now there is no minimum or maximum value.
+  (`#2160 <https://github.com/natcap/invest/issues/2160>`_)
 
 Carbon
 ======
 * The discount rate and price change parameters were previously incorrectly
   restricted to the range [0, 100]. Now there is no minimum or maximum value.
+  (`#2160 <https://github.com/natcap/invest/issues/2160>`_)
 
 Coastal Blue Carbon
 ===================
@@ -124,6 +162,7 @@ Coastal Blue Carbon
   ``aligned-lulc-snapshot-[YEAR].tif`` have been renamed to ``aligned-lulc-[YEAR].tif``.
 * The discount rate and price change parameters were previously incorrectly
   restricted to the range [0, 100]. Now there is no minimum or maximum value.
+  (`#2160 <https://github.com/natcap/invest/issues/2160>`_)
 
 Coastal Vulnerability
 =====================
