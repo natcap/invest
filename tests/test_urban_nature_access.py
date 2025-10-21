@@ -1008,28 +1008,18 @@ class UNATests(unittest.TestCase):
         args = _build_model_args(self.workspace_dir)
 
         # Rewrite the lulc attribute table to use proportions of urban nature.
-        with open(args['lulc_attribute_table'], 'w') as attr_table:
-            attr_table.write(textwrap.dedent(
-                """\
-                lucode,urban_nature,search_radius_m
-                0,0,100
-                1,0.1,100
-                2,0,100
-                3,0.3,100
-                4,0,100
-                5,0.5,100
-                6,0,100
-                7,0.7,100
-                8,0,100
-                9,0.9,100
-                """))
+        attr_table = pandas.DataFrame({
+            'lucode': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            'urban_nature': [0, 0.1, 0, 0.3, 0, 0.5, 0, 0.7, 0, 0.9],
+            'search_radius_m': [100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
+        })
 
         urban_nature_area_path = os.path.join(
             self.workspace_dir, 'urban_nature_area.tif')
 
         for limit_to_lucodes in (None, set([1, 3])):
             urban_nature_access._reclassify_urban_nature_area(
-                args['lulc_raster_path'], args['lulc_attribute_table'],
+                args['lulc_raster_path'], attr_table,
                 urban_nature_area_path,
                 only_these_urban_nature_codes=limit_to_lucodes)
 

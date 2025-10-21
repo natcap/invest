@@ -460,7 +460,7 @@ def execute(args):
     carbon_maps = []
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
-        args['biophysical_table_path'])
+        args['biophysical_table_path'], args=args)
     pool_list = [('c_above', True)]
     if args['pools_to_calculate'] == 'all':
         pool_list.extend([
@@ -472,7 +472,7 @@ def execute(args):
             task_graph.add_task(
                 func=_calculate_lulc_carbon_map,
                 args=(args['lulc_raster_path'],
-                      args['biophysical_table_path'],
+                      biophysical_df,
                       carbon_pool_type, ignore_tropical_type,
                       args['compute_forest_edge_effects'],
                       file_registry[f'{carbon_pool_type}_carbon_stocks']),
@@ -487,7 +487,7 @@ def execute(args):
         map_distance_task = task_graph.add_task(
             func=_map_distance_from_tropical_forest_edge,
             args=(args['lulc_raster_path'],
-                  args['biophysical_table_path'],
+                  biophysical_df,
                   file_registry['edge_distance'],
                   file_registry['non_forest_mask']),
             target_path_list=[file_registry['edge_distance'],
@@ -666,7 +666,7 @@ def _aggregate_carbon_map(
 
 
 def _calculate_lulc_carbon_map(
-        lulc_raster_path, biophysical_table_path, carbon_pool_type,
+        lulc_raster_path, biophysical_df, carbon_pool_type,
         ignore_tropical_type, compute_forest_edge_effects, carbon_map_path):
     """Calculates the carbon on the map from non-forest landcover types only.
 
@@ -693,9 +693,6 @@ def _calculate_lulc_carbon_map(
 
     """
     # classify forest pixels from lulc
-    biophysical_df = MODEL_SPEC.get_input(
-        'biophysical_table_path').get_validated_dataframe(biophysical_table_path)
-
     lucode_to_per_cell_carbon = {}
 
     # Build a lookup table
@@ -728,7 +725,7 @@ def _calculate_lulc_carbon_map(
 
 
 def _map_distance_from_tropical_forest_edge(
-        base_lulc_raster_path, biophysical_table_path, edge_distance_path,
+        base_lulc_raster_path, biophysical_df, edge_distance_path,
         target_non_forest_mask_path):
     """Generates a raster of forest edge distances.
 
@@ -753,9 +750,6 @@ def _map_distance_from_tropical_forest_edge(
 
     """
     # Build a list of forest lucodes
-    biophysical_df = MODEL_SPEC.get_input(
-        'biophysical_table_path').get_validated_dataframe(
-        biophysical_table_path)
     forest_codes = biophysical_df[biophysical_df['is_tropical_forest']].index.values
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest

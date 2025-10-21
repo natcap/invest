@@ -355,14 +355,10 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         lulc_array = numpy.array([[1, 2, 3], [3, 2, 1]], dtype=numpy.int16)
         make_simple_raster(lulc_raster_path, lulc_array)
 
-        biophysical_table_path = os.path.join(self.workspace_dir,
-                                              "biophysical_table.csv")
-
         data = {"lucode": [1, 2, 3]}
         df = pandas.DataFrame(data).set_index("lucode")
         df["is_tropical_forest"] = [0, 1, 0]
         df["c_above"] = [100, 500, 200]
-        df.to_csv(biophysical_table_path)
 
         carbon_pool_type = 'c_above'
         ignore_tropical_type = False
@@ -370,7 +366,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         carbon_map_path = os.path.join(self.workspace_dir, "output_carbon.tif")
 
         _calculate_lulc_carbon_map(
-            lulc_raster_path, biophysical_table_path, carbon_pool_type,
+            lulc_raster_path, df, carbon_pool_type,
             ignore_tropical_type, compute_forest_edge_effects,
             carbon_map_path)
 
@@ -395,22 +391,19 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         ], dtype=numpy.int16)
         make_simple_raster(base_lulc_raster_path, lulc_array)
 
-        biophysical_table_path = os.path.join(self.workspace_dir,
-                                              "biophysical_table.csv")
-
-        data = {"lucode": [1, 2, 3]}
+        data = {
+            "lucode": [1, 2, 3],
+            "is_tropical_forest": [True, False, False],
+            "c_above": [100, 500, 200]
+        }
         df = pandas.DataFrame(data).set_index("lucode")
-        df["is_tropical_forest"] = [1, 0, 0]
-        df["c_above"] = [100, 500, 200]
-        df.to_csv(biophysical_table_path)
-
         target_edge_distance_path = os.path.join(self.workspace_dir,
                                                  "edge_distance.tif")
         target_mask_path = os.path.join(self.workspace_dir,
                                         "non_forest_mask.tif")
 
         _map_distance_from_tropical_forest_edge(
-            base_lulc_raster_path, biophysical_table_path,
+            base_lulc_raster_path, df,
             target_edge_distance_path, target_mask_path)
 
         # check forest mask

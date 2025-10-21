@@ -1,4 +1,5 @@
 import contextlib
+import copy
 import functools
 import importlib
 import json
@@ -840,7 +841,7 @@ class CSVInput(FileInput):
             except Exception as e:
                 return str(e)
 
-    def get_validated_dataframe(self, csv_path: str, read_csv_kwargs={}):
+    def get_validated_dataframe(self, csv_path: str, read_csv_kwargs={}, args=None):
         """Read a CSV into a dataframe that is guaranteed to match the spec.
 
         This is only supported when `columns` or `rows` is provided. Each
@@ -901,6 +902,13 @@ class CSVInput(FileInput):
         df = df.dropna(how="all").reset_index(drop=True)
 
         available_cols = set(df.columns)
+
+        if args:
+            columns = copy.deepcopy(columns)
+            for col_spec in columns:
+                if isinstance(col_spec.required, str):
+                    col_spec.required = bool(utils.evaluate_expression(
+                        col_spec.required, args))
 
         for col_spec, pattern in zip(columns, patterns):
             matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]

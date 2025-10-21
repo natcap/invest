@@ -623,7 +623,7 @@ def execute(args):
 
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
-        args['biophysical_table_path'])
+        args['biophysical_table_path'], args=args)
 
     # Use default weights for shade, albedo, eti if the user didn't provide
     # weights.

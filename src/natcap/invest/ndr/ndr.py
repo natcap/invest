@@ -758,7 +758,7 @@ def execute(args):
 
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
-        args['biophysical_table_path'])
+        args['biophysical_table_path'], args=args)
 
     # Ensure that if user doesn't explicitly assign a value,
     # runoff_proxy_av = None
@@ -1481,7 +1481,7 @@ def _calculate_load(
         lulc_raster_path (string): path to integer landcover raster.
         lucode_to_load (dict): a mapping of landcover IDs to nutrient load,
             efficiency, and load type. The load type value can be one of:
-            [ 'measured-runoff' | 'appliation-rate' ].
+            [ 'measured-runoff' | 'application-rate' ].
         nutrient_type (str): the nutrient type key ('p' | 'n').
         target_load_raster (string): path to target raster that will have
             load values (kg/ha) mapped to pixels based on LULC.

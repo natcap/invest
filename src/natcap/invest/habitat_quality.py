@@ -627,7 +627,7 @@ def execute(args):
     # Get CSVs as dictionaries and ensure the key is a string for threats.
     threat_df = MODEL_SPEC.get_input(
         'threats_table_path').get_validated_dataframe(
-        args['threats_table_path']).fillna('')
+        args['threats_table_path'], args=args).fillna('')
     sensitivity_df = MODEL_SPEC.get_input(
         'sensitivity_table_path').get_validated_dataframe(
         args['sensitivity_table_path'])
@@ -1253,7 +1253,7 @@ def validate(args, limit_to=None):
         # Get CSVs as dictionaries and ensure the key is a string for threats.
         threat_df = MODEL_SPEC.get_input(
             'threats_table_path').get_validated_dataframe(
-            args['threats_table_path']).fillna('')
+            args['threats_table_path'], args=MODEL_SPEC.preprocess_inputs(args)).fillna('')
         sensitivity_df = MODEL_SPEC.get_input(
             'sensitivity_table_path').get_validated_dataframe(
             args['sensitivity_table_path'])
