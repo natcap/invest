@@ -15,8 +15,7 @@ from . import spec
 from . import utils
 from . import validation
 from .crop_production_regression import (
-    NUTRIENTS, NUTRIENT_UNITS, CROP_TO_PATH_TABLES, LULC_RASTER_INPUT,
-    get_full_path_from_crop_table)
+    NUTRIENTS, NUTRIENT_UNITS, CROP_TO_PATH_TABLES, LULC_RASTER_INPUT)
 from .file_registry import FileRegistry
 from .unit_registry import u
 
@@ -687,11 +686,9 @@ def execute(args):
     for crop_name, row in crop_to_landcover_df.iterrows():
         crop_lucode = row[_EXPECTED_LUCODE_TABLE_HEADER]
         LOGGER.info(f'Processing crop {crop_name}')
-        crop_climate_bin_raster_path = get_full_path_from_crop_table(
-            MODEL_SPEC,
-            CROP_TO_PATH_TABLES.climate_bin,
-            args[CROP_TO_PATH_TABLES.climate_bin],
-            crop_name)
+        crop_climate_bin_raster_path = MODEL_SPEC.get_input(
+            CROP_TO_PATH_TABLES.climate_bin).get_validated_dataframe(
+            args[CROP_TO_PATH_TABLES.climate_bin]).at[crop_name, 'path']
 
         LOGGER.info(
             "Clipping global climate bin raster to landcover bounding box.")
@@ -709,11 +706,9 @@ def execute(args):
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
-        climate_percentile_yield_table_path = get_full_path_from_crop_table(
-            MODEL_SPEC,
-            CROP_TO_PATH_TABLES.percentile_yield,
-            args[CROP_TO_PATH_TABLES.percentile_yield],
-            crop_name)
+        climate_percentile_yield_table_path = MODEL_SPEC.get_input(
+            CROP_TO_PATH_TABLES.percentile_yield).get_validated_dataframe(
+            args[CROP_TO_PATH_TABLES.percentile_yield]).at[crop_name, 'path']
 
         crop_climate_percentile_df = MODEL_SPEC.get_input(
             CROP_TO_PATH_TABLES.percentile_yield).get_column(
@@ -794,11 +789,10 @@ def execute(args):
             dependent_task_list.append(create_percentile_production_task)
 
         LOGGER.info(f'Calculate observed yield for {crop_name}')
-        global_observed_yield_raster_path = get_full_path_from_crop_table(
-            MODEL_SPEC,
-            CROP_TO_PATH_TABLES.observed_yield,
-            args[CROP_TO_PATH_TABLES.observed_yield],
-            crop_name)
+        global_observed_yield_raster_path = MODEL_SPEC.get_input(
+            CROP_TO_PATH_TABLES.observed_yield).get_validated_dataframe(
+            args[CROP_TO_PATH_TABLES.observed_yield]).at[crop_name, 'path']
+
         global_observed_yield_raster_info = (
             pygeoprocessing.get_raster_info(
                 global_observed_yield_raster_path))
