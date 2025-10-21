@@ -673,7 +673,7 @@ def _calculate_lulc_carbon_map(
     Args:
         lulc_raster_path (string): a filepath to the landcover map that
             contains integer landcover codes
-        biophysical_table_path (string): a filepath to a csv table that indexes
+        biophysical_df (pandas.DataFrame): a dataframe that indexes
             landcover codes to surface carbon, contains at least the fields
             'lucode' (landcover integer code), 'is_tropical_forest' (0 or 1
             depending on landcover code type), and 'c_above' (carbon density in
@@ -735,7 +735,7 @@ def _map_distance_from_tropical_forest_edge(
     Args:
         base_lulc_raster_path (string): path to the landcover raster that
             contains integer landcover codes
-        biophysical_table_path (string): path to a csv table that indexes
+        biophysical_df (pandas.DataFrame): a dataframe that indexes
             landcover codes to forest type, contains at least the fields
             'lucode' (landcover integer code) and 'is_tropical_forest' (0 or 1
             depending on landcover code type)

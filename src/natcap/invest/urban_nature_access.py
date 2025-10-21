@@ -1793,7 +1793,7 @@ def _reclassify_urban_nature_area(
 
     Args:
         lulc_raster_path (string): The path to a land-use/land-cover raster.
-        lulc_attribute_table (string): The path to a CSV table representing
+        lulc_attribute_df (pandas.DataFrame): a dataframe representing
             LULC attributes.  Must have "lucode" and "urban_nature" columns.
             The "urban_nature" column represents a proportion 0-1 of how much
             of the pixel's area represents urban nature.
