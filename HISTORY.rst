@@ -61,9 +61,15 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+General
+=======
+* All columns in CSV inputs are now validated, not just the columns that
+  contain spatial filepaths. This may result in changes to the error messages
+  that are shown when invalid data is provided.
+  (`#2175 <https://github.com/natcap/invest/issues/2175>`_)
 
 3.17.0 (2025-10-16)
 -------------------
