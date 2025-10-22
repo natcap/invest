@@ -346,7 +346,8 @@ MODEL_SPEC = spec.ModelSpec(
                             units=u.metric_ton / u.hectare
                         ),
                     ],
-                    index_col="climate_bin"
+                    index_col="climate_bin",
+                    na_allowed=["yield_25th", "yield_50th", "yield_75th", "yield_95th"]
                 )
             ],
             index_col="crop_name"

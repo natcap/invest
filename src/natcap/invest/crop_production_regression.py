@@ -219,7 +219,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " in the sample data."
             ),
             columns=[
-                spec.OptionStringInput(
+                CropNameColumnInput(
                     id="crop_name",
                     about=None,
                     options=CROP_OPTIONS
@@ -246,7 +246,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " in the sample data."
             ),
             columns=[
-                spec.OptionStringInput(
+                CropNameColumnInput(
                     id="crop_name",
                     about=None,
                     options=CROP_OPTIONS
@@ -273,7 +273,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " in the sample data."
             ),
             columns=[
-                spec.OptionStringInput(
+                CropNameColumnInput(
                     id="crop_name",
                     about=None,
                     options=CROP_OPTIONS
