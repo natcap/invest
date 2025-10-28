@@ -368,7 +368,7 @@ class TestMetadataFromSpec(unittest.TestCase):
         # running an invest model.
         _generate_files_from_spec(output_spec, self.workspace_dir)
 
-        model_spec=spec.ModelSpec(
+        model_spec = spec.ModelSpec(
             model_id='urban_nature_access',
             model_title='Urban Nature Access',
             userguide='',
@@ -385,12 +385,22 @@ class TestMetadataFromSpec(unittest.TestCase):
         self.assertEqual(len(files), 4)
         self.assertFalse(any(messages))
 
+        # resource = geometamaker.describe(
+        #     os.path.join(args_dict['workspace_dir'], 'output',
+        #                  'urban_nature_supply_percapita.tif'))
+        # Test some specific content of the metadata
+        vector_spec = model_spec.get_output('admin_boundaries')
         resource = geometamaker.describe(
-            os.path.join(args_dict['workspace_dir'], 'output',
-                         'urban_nature_supply_percapita.tif'))
-        self.assertCountEqual(resource.get_keywords(),
-                              [model_spec.model_id, 'InVEST'])
-
+            os.path.join(self.workspace_dir, vector_spec.path))
+        self.assertCountEqual(
+            resource.get_keywords(),
+            [model_spec.model_id, 'InVEST'])
+        self.assertEqual(
+            resource.get_field_description('SUP_DEMadm_cap').description,
+            vector_spec.fields[0].about)
+        self.assertEqual(
+            resource.get_field_description('SUP_DEMadm_cap').units,
+            spec.format_unit(vector_spec.fields[0].units))
 
 class ResultsSuffixTests(unittest.TestCase):
     """Tests for natcap.invest.spec.ResultsSuffixInput."""
