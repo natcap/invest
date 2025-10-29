@@ -2420,14 +2420,14 @@ def write_metadata_file(datasource_path, spec, keywords_list,
     if hasattr(spec, 'fields') and spec.fields:
         attr_specs = spec.fields
     if attr_specs:
-        # field names in attr_spec are always lowercase, but the
-        # actual fieldname in the data could be any case because
+        # field names in attr_spec might not match the case of the
+        # actual fieldname in the data because
         # invest does not require case-sensitive fieldnames
         field_lookup = {
             field.name.lower(): field for field in resource._get_fields()}
         for nested_spec in attr_specs:
             try:
-                field_metadata = field_lookup[nested_spec.id]
+                field_metadata = field_lookup[nested_spec.id.lower()]
                 # Field description only gets set if its empty, i.e. ''
                 if len(field_metadata.description.strip()) < 1:
                     resource.set_field_description(
