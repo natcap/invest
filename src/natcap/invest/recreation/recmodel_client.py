@@ -1657,7 +1657,6 @@ def _build_regression(
         # have been observed on some platforms.
         var_est[var_est < 0] = 0
         se_est = numpy.sqrt(var_est)
-
     else:
         LOGGER.warning(f"Linear model is under constrained with DOF={dof}")
         std_err = sigma2 = numpy.nan

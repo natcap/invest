@@ -724,7 +724,7 @@ class TestRecClientServer(unittest.TestCase):
             'start_year': recmodel_client.MIN_YEAR,
             'end_year': recmodel_client.MAX_YEAR,
             'grid_aoi': True,
-            'cell_size': 30000,
+            'cell_size': 40000,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
@@ -749,13 +749,13 @@ class TestRecClientServer(unittest.TestCase):
         # the individual values.
         actual_sums = sum_vector_columns(out_regression_vector_path, field_list)
         expected_sums = {
-            'ports': 11.0,
-            'airdist': 875291.8190812231,
-            'bonefish_a': 4630187907.293639,
-            'bathy': 47.16540460441528,
+            'ports': 10.0,
+            'airdist': 435104.4350759008,
+            'bonefish_a': 4446728168.518886,
+            'bathy': 25.671171724309264,
             'roads': 5072.707571235277,
-            'bonefish_p': 792.0711806443292,
-            'bathy_sum': 348.04177433624864,
+            'bonefish_p': 427.8866175179059,
+            'bathy_sum': 326.41848224774003,
             'pr_TUD': 1.0,
             'pr_PUD': 1.0,
             'avg_pr_UD': 1.0
@@ -769,14 +769,14 @@ class TestRecClientServer(unittest.TestCase):
         field_list = list(predictor_df.index) + ['pr_UD_EST']
         actual_scenario_sums = sum_vector_columns(out_scenario_path, field_list)
         expected_scenario_sums = {
-            'ports': 11.0,
-            'airdist': 875291.8190812231,
-            'bonefish_a': 4630187907.293639,
-            'bathy': 47.16540460441528,
+            'ports': 10.0,
+            'airdist': 435104.4350759008,
+            'bonefish_a': 4446728168.518886,
+            'bathy': 25.671171724309264,
             'roads': 5072.707571235277,
-            'bonefish_p': 792.0711806443292,
-            'bathy_sum': 348.04177433624864,
-            'pr_UD_EST': 0.996366808597374
+            'bonefish_p': 427.8866175179059,
+            'bathy_sum': 326.41848224774003,
+            'pr_UD_EST': 0.9977378451225828
         }
         for key in expected_scenario_sums:
             numpy.testing.assert_almost_equal(
