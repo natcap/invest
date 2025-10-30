@@ -61,9 +61,16 @@
   7. InVEST model Z (model names should be sorted A-Z)
 
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+
+General
+=======
+* Fixed bugs in incomplete metadata creation.
+  (`#2118 <https://github.com/natcap/invest/issues/2118>`_)
+  (`#2217 <https://github.com/natcap/invest/issues/2217>`_)
+
 
 3.17.0 (2025-10-16)
 -------------------
