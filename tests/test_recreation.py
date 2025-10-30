@@ -27,7 +27,6 @@ import pandas
 import pygeoprocessing
 import Pyro5
 import shapely
-import taskgraph
 import warnings
 
 from natcap.invest import utils
@@ -714,7 +713,6 @@ class TestRecClientServer(unittest.TestCase):
     def test_all_metrics_local_server(self):
         """Recreation test with all but trivial predictor metrics."""
         from natcap.invest.recreation import recmodel_client
-        from natcap.invest import validation
 
         suffix = 'foo'
         args = {
@@ -724,7 +722,7 @@ class TestRecClientServer(unittest.TestCase):
             'start_year': recmodel_client.MIN_YEAR,
             'end_year': recmodel_client.MAX_YEAR,
             'grid_aoi': True,
-            'cell_size': 40000,
+            'cell_size': 20000,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
@@ -749,13 +747,13 @@ class TestRecClientServer(unittest.TestCase):
         # the individual values.
         actual_sums = sum_vector_columns(out_regression_vector_path, field_list)
         expected_sums = {
-            'ports': 10.0,
-            'airdist': 435104.4350759008,
-            'bonefish_a': 4446728168.518886,
-            'bathy': 25.671171724309264,
+            'ports': 14.0,
+            'airdist': 3029055.682466906,
+            'bonefish_a': 4897832270.825192,
+            'bathy': 111.37382235447876,
             'roads': 5072.707571235277,
-            'bonefish_p': 427.8866175179059,
-            'bathy_sum': 326.41848224774003,
+            'bonefish_p': 1885.1765200043753,
+            'bathy_sum': 357.32470071315765,
             'pr_TUD': 1.0,
             'pr_PUD': 1.0,
             'avg_pr_UD': 1.0
@@ -769,14 +767,14 @@ class TestRecClientServer(unittest.TestCase):
         field_list = list(predictor_df.index) + ['pr_UD_EST']
         actual_scenario_sums = sum_vector_columns(out_scenario_path, field_list)
         expected_scenario_sums = {
-            'ports': 10.0,
-            'airdist': 435104.4350759008,
-            'bonefish_a': 4446728168.518886,
-            'bathy': 25.671171724309264,
+            'ports': 14.0,
+            'airdist': 3029055.682466906,
+            'bonefish_a': 4897832270.825192,
+            'bathy': 111.37382235447876,
             'roads': 5072.707571235277,
-            'bonefish_p': 427.8866175179059,
-            'bathy_sum': 326.41848224774003,
-            'pr_UD_EST': 0.9977378451225828
+            'bonefish_p': 1885.1765200043753,
+            'bathy_sum': 357.32470071315765,
+            'pr_UD_EST': 0.9895786442563214
         }
         for key in expected_scenario_sums:
             numpy.testing.assert_almost_equal(
