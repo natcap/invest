@@ -32,7 +32,8 @@ MODEL_SPEC = spec.ModelSpec(
     aliases=(),
     module_name=__name__,
     input_field_order=[
-        ["workspace_dir", "results_suffix"],
+        [
+        "workspace_dir", "results_suffix"],
         ["dem_path", "detect_pour_points", "outlet_vector_path", "skip_invalid_geometry"],
         ["snap_points", "flow_threshold", "snap_distance"]
     ],
@@ -172,6 +173,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="pour_points",
             path="pour_points.gpkg",
             about=gettext("Points where water flows off the defined area of the map."),
+            created_if="detect_pour_points",
             geometry_types={"POINT"},
             fields=[]
         ),

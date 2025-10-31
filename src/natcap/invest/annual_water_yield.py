@@ -467,6 +467,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="demand",
             path="intermediate/demand.tif",
             about=gettext("Water demand per pixel."),
+            created_if="demand_table_path",
             data_type=float,
             units=u.meter ** 3 / u.year
         ),
@@ -475,8 +476,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="output/per_pixel/wyield.tif",
             about=gettext("Estimated water yield per pixel."),
             data_type=float,
-            units=u.millimeter,
-            created_if="demand_table_path"
+            units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
             id="clipped_lulc",

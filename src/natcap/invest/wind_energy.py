@@ -600,6 +600,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Distance to shore, masked to show only the pixels that fall"
                 " within the allowed distance range"
             ),
+            created_if="valuation_container and grid_points_path",
             data_type=float,
             units=u.meter,
         ),
@@ -610,6 +611,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Rasterized harvested values from the wind data point vector,"
                 " not masked by depth or distance constraints"
             ),
+            created_if="valuation_container",
             data_type=float,
             units=u.megawatt_hour / u.year,
         ),
@@ -620,6 +622,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Rasterized harvested values from the wind data point vector,"
                 " masked by depth and distance constraints"
             ),
+            created_if="valuation_container",
             data_type=float,
             units=u.megawatt_hour / u.year,
         ),
@@ -629,6 +632,7 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext(
                 "Map of offset carbon emissions for a farm centered on each pixel"
             ),
+            created_if="valuation_container",
             data_type=float,
             units=u.metric_ton / u.year,
         ),
@@ -639,6 +643,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of the energy price that would be required to set the"
                 " present value of a farm centered on each pixel equal to zero."
             ),
+            created_if="valuation_container",
             data_type=float,
             units=u.currency / u.kilowatt_hour,
         ),
@@ -648,6 +653,7 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext(
                 "Map of the net present value of a farm centered on each pixel."
             ),
+            created_if="valuation_container",
             data_type=float,
             units=u.currency,
         ),
@@ -657,6 +663,7 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Point vector created from the grid point data provided"
                 " in the Grid Connection Points CSV. Contains all connection points"
                 " of type 'GRID.'"),
+            created_if="grid_points_path",
             geometry_types={"POINT"},
             fields=[],
         ),
@@ -666,6 +673,7 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Point vector created from the grid point data provided"
                 " in the Grid Connection Points CSV, clipped to the AOI. Contains"
                 " all connection points of type 'GRID' that fall within the AOI"),
+            created_if="valuation_container and grid_points_path",
             geometry_types={"POINT"},
             fields=[],
         ),
@@ -675,6 +683,7 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Point vector created from the grid point data provided"
                 " in the Grid Connection Points CSV. Contains all connection points"
                 " of type 'LAND.'"),
+            created_if="valuation_container and grid_points_path",
             geometry_types={"POINT"},
             fields=[],
         ),
@@ -684,6 +693,7 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Point vector created from the grid point data provided"
                 " in the Grid Connection Points CSV, clipped to the AOI. Contains"
                 " all connection points of type 'LAND' that fall within the AOI"),
+            created_if="valuation_container and grid_points_path",
             geometry_types={"POINT"},
             fields=[],
         ),
@@ -693,6 +703,7 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Point vector containing shortest distances from each"
                 " land point within the AOI to the grid points. Only created if"
                 " there are both LAND and GRID connection points within the AOI."),
+            created_if="grid_points_path",
             geometry_types={"POINT"},
             fields=[
                 spec.StringOutput(
@@ -721,6 +732,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate/land_poly_dist.tif",
             about=gettext("Map of distance to shore, calculated using the land"
                 " polygon when no grid points are provided."),
+            created_if="valuation_container and not grid_points_path",
             data_type=float,
             units=u.meter,
         ),
@@ -876,9 +888,9 @@ def execute(args):
     args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     # Resample the bathymetry raster if it does not have square pixel size
-    try:
-        bathy_pixel_size = pygeoprocessing.get_raster_info(
+    bathy_pixel_size = pygeoprocessing.get_raster_info(
             args['bathymetry_path'])['pixel_size']
+    try:
         mean_pixel_size, _ = utils.mean_pixel_size_and_area(bathy_pixel_size)
         target_pixel_size = (mean_pixel_size, -mean_pixel_size)
         LOGGER.debug(f'Target pixel size: {target_pixel_size}')
@@ -1067,7 +1079,7 @@ def execute(args):
         task_graph.close()
         task_graph.join()
         LOGGER.info('Valuation Not Selected. Model completed')
-        return
+        return file_registry.registry
 
     # Begin the valuation model run:
     LOGGER.info('Starting Wind Energy Valuation Model')

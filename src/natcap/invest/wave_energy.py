@@ -429,6 +429,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " lifespan of a wave energy facility, reclassified by quantiles"
                 " (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%)."
             ),
+            created_if="valuation_container",
             data_type=int,
             units=None
         ),
@@ -439,6 +440,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Table of value ranges for each net present value quantile group"
                 " as well as the number of pixels for each group."
             ),
+            created_if="valuation_container",
             columns=[
                 *PERCENTILE_TABLE_FIELDS,
                 spec.NumberOutput(
@@ -458,6 +460,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Map of net present value over the 25-year lifespan of a wave"
                 " energy facility."
             ),
+            created_if="valuation_container",
             data_type=float,
             units=u.kilocurrency
         ),
@@ -519,6 +522,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="final_wem_inputoutput_pts",
             path="intermediate/Final_WEM_InputOutput_Pts.shp",
             about=gettext("Map of wave data points."),
+            created_if="valuation_container",
             geometry_types={"POINT"},
             fields=[
                 *CAPTURED_WEM_FIELDS,
@@ -590,6 +594,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="npv_not_clipped",
             path="intermediate/npv_not_clipped.tif",
             about=gettext("Interpolated net present value"),
+            created_if="valuation_container",
             data_type=float,
             units=u.kilocurrency
         ),
@@ -613,22 +618,6 @@ MODEL_SPEC = spec.ModelSpec(
             about=gettext("Map of wave data points."),
             geometry_types={"POINT"},
             fields=WEM_FIELDS
-        ),
-        spec.FileOutput(
-            id="gridpt",
-            path="intermediate/GridPt.txt",
-            about=gettext(
-                "This text file logs records of the grid point coordinates."
-            ),
-            created_if="valuation_container"
-        ),
-        spec.FileOutput(
-            id="landpts",
-            path="intermediate/LandPts.txt",
-            about=gettext(
-                "This text file logs records of the landing point coordinates."
-            ),
-            created_if="valuation_container"
         ),
         spec.TASKGRAPH_CACHE
     ]
@@ -967,7 +956,8 @@ def execute(args):
 
     task_graph.add_task(
         func=_create_percentile_rasters,
-        args=(file_registry['capwe_mwh'], file_registry['capwe_rc'], _CAPWE_UNITS_SHORT,
+        args=(file_registry['capwe_mwh'], file_registry['capwe_rc'],
+              file_registry['capwe_rc_csv'], _CAPWE_UNITS_SHORT,
               _CAPWE_UNITS_LONG, _PERCENTILES, args['workspace_dir']),
         kwargs={'start_value': _STARTING_PERC_RANGE},
         target_path_list=[file_registry['capwe_rc']],
@@ -976,7 +966,8 @@ def execute(args):
 
     task_graph.add_task(
         func=_create_percentile_rasters,
-        args=(file_registry['wp_kw'], file_registry['wp_rc'], _WP_UNITS_SHORT,
+        args=(file_registry['wp_kw'], file_registry['wp_rc'],
+              file_registry['wp_rc_csv'], _WP_UNITS_SHORT,
               _WP_UNITS_LONG, _PERCENTILES, args['workspace_dir']),
         kwargs={'start_value': _STARTING_PERC_RANGE},
         target_path_list=[file_registry['wp_rc']],
@@ -990,7 +981,7 @@ def execute(args):
         LOGGER.info('Valuation not selected')
         task_graph.close()
         task_graph.join()
-        return
+        return file_registry.registry
 
     LOGGER.info('Valuation selected')
 
@@ -1036,7 +1027,8 @@ def execute(args):
 
     task_graph.add_task(
         func=_create_percentile_rasters,
-        args=(file_registry['npv_usd'], file_registry['npv_rc'], _NPV_UNITS_SHORT,
+        args=(file_registry['npv_usd'], file_registry['npv_rc'],
+              file_registry['npv_rc_csv'], _NPV_UNITS_SHORT,
               _NPV_UNITS_LONG, _PERCENTILES, args['workspace_dir']),
         target_path_list=[file_registry['npv_rc']],
         task_name='create_npv_percentile_raster',
@@ -1541,8 +1533,8 @@ def _get_vector_spatial_ref(base_vector_path):
 
 
 def _create_percentile_rasters(base_raster_path, target_raster_path,
-                               units_short, units_long, percentile_list,
-                               working_dir, start_value=None):
+                               target_csv_path, units_short, units_long,
+                               percentile_list, working_dir, start_value=None):
     """Create a percentile (quartile) raster based on the raster_dataset.
 
     An attribute table is also constructed for the raster_dataset that displays
@@ -1675,9 +1667,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     table_df = pandas.DataFrame(table_dict)
 
     # Write dataframe to csv, with columns in designated sequence
-    base_attribute_table_path = os.path.splitext(target_raster_path)[0]
-    attribute_table_path = base_attribute_table_path + '.csv'
-    table_df.to_csv(attribute_table_path, index=False, columns=column_names)
+    table_df.to_csv(target_csv_path, index=False, columns=column_names)
 
 
 def _clip_vector_by_vector(base_vector_path, clip_vector_path,

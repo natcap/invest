@@ -284,6 +284,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="new_cover_c",
             path="new_cover_c.tif",
             about=gettext("Masked current land cover"),
+            created_if="lulc_bas_path",
             data_type=int,
             units=None
         ),
@@ -291,7 +292,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="new_cover_f",
             path="new_cover_f.tif",
             about=gettext("Masked future land cover"),
-            created_if="lulc_fut_path",
+            created_if="lulc_bas_path and lulc_fut_path",
             data_type=int,
             units=None
         ),
@@ -452,20 +453,6 @@ MODEL_SPEC = spec.ModelSpec(
             units=None
         ),
         spec.SingleBandRasterOutput(
-            id="filtered_[THREAT]_aligned",
-            path="intermediate/filtered_[THREAT]_aligned.tif",
-            about=gettext("Filtered threat raster"),
-            data_type=float,
-            units=None
-        ),
-        spec.SingleBandRasterOutput(
-            id="degradation_[THREAT]",
-            path="intermediate/degradation_[THREAT].tif",
-            about=gettext("Degradation raster for each threat"),
-            data_type=float,
-            units=None
-        ),
-        spec.SingleBandRasterOutput(
             id="habitat_cur",
             path="intermediate/habitat_c.tif",
             about=gettext("Current habitat raster"),
@@ -476,6 +463,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="habitat_fut",
             path="intermediate/habitat_f.tif",
             about=gettext("Future habitat raster"),
+            created_if="lulc_fut_path",
             data_type=float,
             units=None
         ),
@@ -483,6 +471,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="habitat_bas",
             path="intermediate/habitat_b.tif",
             about=gettext("Baseline habitat raster"),
+            created_if="lulc_bas_path",
             data_type=float,
             units=None
         ),
@@ -497,6 +486,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="[THREAT]_distance_transform_fut",
             path="intermediate/[THREAT]_distance_transform_f.tif",
             about=gettext("Map of distance to each threat in the future scenario"),
+            created_if="lulc_fut_path",
             data_type=float,
             units=None
         ),
@@ -504,6 +494,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="[THREAT]_distance_transform_bas",
             path="intermediate/[THREAT]_distance_transform_b.tif",
             about=gettext("Map of distance to each threat in the baseline scenario"),
+            created_if="lulc_bas_path",
             data_type=float,
             units=None
         ),
@@ -518,6 +509,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="filtered_[DECAY]_[THREAT]_fut",
             path="intermediate/filtered_[DECAY]_[THREAT]_f.tif",
             about=gettext("Decayed distance to each threat in the future scenario"),
+            created_if="lulc_fut_path",
             data_type=float,
             units=None
         ),
@@ -525,6 +517,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="filtered_[DECAY]_[THREAT]_bas",
             path="intermediate/filtered_[DECAY]_[THREAT]_b.tif",
             about=gettext("Decayed distance to each threat in the baseline scenario"),
+            created_if="lulc_bas_path",
             data_type=float,
             units=None
         ),
@@ -539,6 +532,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="sens_[THREAT]_fut",
             path="intermediate/sens_[THREAT]_f.tif",
             about=gettext("Threat sensitivity in the future scenario"),
+            created_if="lulc_fut_path",
             data_type=float,
             units=None
         ),
@@ -546,6 +540,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="sens_[THREAT]_bas",
             path="intermediate/sens_[THREAT]_b.tif",
             about=gettext("Threat sensitivity in the baseline scenario"),
+            created_if="lulc_bas_path",
             data_type=float,
             units=None
         ),
@@ -560,6 +555,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="degradation_[THREAT]_fut",
             path="intermediate/degradation_[THREAT]_f.tif",
             about=gettext("Degradation for each threat in the future scenario"),
+            created_if="lulc_fut_path",
             data_type=float,
             units=None
         ),
@@ -567,6 +563,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="degradation_[THREAT]_bas",
             path="intermediate/degradation_[THREAT]_b.tif",
             about=gettext("Degradation for each threat in the baseline scenario"),
+            created_if="lulc_bas_path",
             data_type=float,
             units=None
         ),

@@ -565,6 +565,7 @@ def execute(args):
     # close taskgraph
     task_graph.close()
     task_graph.join()
+    return file_registry.registry
 
 
 def combine_carbon_maps(*carbon_maps):

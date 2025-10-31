@@ -486,6 +486,7 @@ MODEL_SPEC = spec.ModelSpec(
             id="building_intensity",
             path="intermediate/building_intensity.tif",
             about=gettext("Map of building intensity."),
+            created_if="cc_method == 'intensity'",
             data_type=float,
             units=u.none
         ),
