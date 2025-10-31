@@ -32,8 +32,7 @@ MODEL_SPEC = spec.ModelSpec(
     aliases=(),
     module_name=__name__,
     input_field_order=[
-        [
-        "workspace_dir", "results_suffix"],
+        ["workspace_dir", "results_suffix"],
         ["dem_path", "detect_pour_points", "outlet_vector_path", "skip_invalid_geometry"],
         ["snap_points", "flow_threshold", "snap_distance"]
     ],

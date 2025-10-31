@@ -888,9 +888,9 @@ def execute(args):
     args, file_registry, task_graph = MODEL_SPEC.setup(args)
 
     # Resample the bathymetry raster if it does not have square pixel size
-    bathy_pixel_size = pygeoprocessing.get_raster_info(
-            args['bathymetry_path'])['pixel_size']
     try:
+        bathy_pixel_size = pygeoprocessing.get_raster_info(
+            args['bathymetry_path'])['pixel_size']
         mean_pixel_size, _ = utils.mean_pixel_size_and_area(bathy_pixel_size)
         target_pixel_size = (mean_pixel_size, -mean_pixel_size)
         LOGGER.debug(f'Target pixel size: {target_pixel_size}')
