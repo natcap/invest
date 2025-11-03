@@ -67,7 +67,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " detachment and transport by rainfall and runoff."
             ),
             data_type=float,
-            units=u.metric_ton * u.hectare * u.hour/ (u.hectare * u.megajoule * u.millimeter),
+            units=u.metric_ton * u.hectare * u.hour / (u.hectare * u.megajoule * u.millimeter),
             projected=True
         ),
         spec.SingleBandRasterInput(
