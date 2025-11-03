@@ -1157,9 +1157,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    model_spec = copy.deepcopy(MODEL_SPEC)
-    if 'pools_to_calculate' in args and args['pools_to_calculate'] == 'all':
-        model_spec.get_input('biophysical_table_path').get_column('c_below').required = True
-        model_spec.get_input('biophysical_table_path').get_column('c_soil').required = True
-        model_spec.get_input('biophysical_table_path').get_column('c_dead').required = True
-    return validation.validate(args, model_spec)
+    return validation.validate(args, MODEL_SPEC)
