@@ -1,6 +1,6 @@
+import collections
 import contextlib
 import copy
-import functools
 import importlib
 import json
 import logging
@@ -12,7 +12,6 @@ import threading
 import types
 import typing
 import warnings
-from urllib.parse import urlparse
 
 from osgeo import gdal
 from osgeo import ogr
@@ -24,7 +23,7 @@ import pint
 import pygeoprocessing
 from pygeoprocessing.geoprocessing_core import GDALUseExceptions
 from pydantic import AfterValidator, BaseModel, ConfigDict, \
-    field_validator, model_validator, ValidationError
+    field_validator, model_validator
 import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
@@ -1858,39 +1857,44 @@ class ModelSpec(BaseModel):
                 input_values.get(_input.id, None))
         return values
 
-    def generate_metadata_for_outputs(self, args_dict):
+    def generate_metadata_for_outputs(self, file_registry, args_dict):
         """Create metadata for all items in an invest model output workspace.
 
         Args:
+            file_registry (dict) - the file registry dict in the form
+                of ``FileRegistry.registry``
             args_dict (dict) - the arguments dictionary passed to the
                 model's ``execute`` function.
 
         Returns:
             None
         """
-        from natcap.invest import models
-        file_suffix = SUFFIX.preprocess(args_dict.get('results_suffix', None))
         formatted_args = pprint.pformat(args_dict)
         lineage_statement = (
             f'Created by {self.model_id} execute('
             f'\n{formatted_args})\nVersion {natcap.invest.__version__}')
         keywords = [self.model_id, 'InVEST']
 
-        def _walk_spec(output_spec, workspace):
-            for spec_data in output_spec:
-                if 'taskgraph.db' in spec_data.path:
-                    continue
-                pre, post = os.path.splitext(spec_data.path)
-                full_path = os.path.join(workspace, f'{pre}{file_suffix}{post}')
-                if os.path.exists(full_path):
+        def _generate_metadata(root_key, value):
+            if isinstance(value, collections.abc.Mapping):
+                # The root key for a registry filepath is the id for
+                # the output spec item. Intermediate keys do not matter
+                for k, v in value.items():
+                    _generate_metadata(root_key, v)
+            else:
+                if os.path.exists(value):
+                    if 'taskgraph.db' in value:
+                        return
                     try:
                         write_metadata_file(
-                            full_path, spec_data, keywords, lineage_statement)
+                            value, self.get_output(root_key),
+                            keywords, lineage_statement)
                     except ValueError as error:
                         # Some unsupported file formats, e.g. html
                         LOGGER.debug(error)
 
-        _walk_spec(self.outputs, args_dict['workspace_dir'])
+        for key, value in file_registry.items():
+            _generate_metadata(key, value)
 
     def create_output_directories(self, args):
         """Create the necessary output directories given a set of args.
@@ -2022,10 +2026,12 @@ class ModelSpec(BaseModel):
                 try:
                     # If there's an exception from creating metadata
                     # I don't think we want to indicate a model failure
-                    self.generate_metadata_for_outputs(preprocessed_args)
+                    self.generate_metadata_for_outputs(
+                        registry, preprocessed_args)
                 except Exception as exc:
                     LOGGER.warning(
-                        'Something went wrong while generating metadata', exc_info=exc)
+                        'Something went wrong while generating metadata',
+                        exc_info=exc)
 
             # optionally write the file registry dict to a JSON file in the workspace
             if save_file_registry:
@@ -2036,7 +2042,6 @@ class ModelSpec(BaseModel):
                     json.dump(registry, json_file, indent=4)
 
             return registry
-
 
 
 # Specs for common arg types ##################################################
@@ -2476,14 +2481,14 @@ def write_metadata_file(datasource_path, spec, keywords_list,
     if hasattr(spec, 'fields') and spec.fields:
         attr_specs = spec.fields
     if attr_specs:
-        # field names in attr_spec are always lowercase, but the
-        # actual fieldname in the data could be any case because
+        # field names in attr_spec might not match the case of the
+        # actual fieldname in the data because
         # invest does not require case-sensitive fieldnames
         field_lookup = {
             field.name.lower(): field for field in resource._get_fields()}
         for nested_spec in attr_specs:
             try:
-                field_metadata = field_lookup[nested_spec.id]
+                field_metadata = field_lookup[nested_spec.id.lower()]
                 # Field description only gets set if its empty, i.e. ''
                 if len(field_metadata.description.strip()) < 1:
                     resource.set_field_description(

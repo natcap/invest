@@ -1,11 +1,11 @@
 import os
 import shutil
 import tempfile
-import types
 import unittest
 
 import geometamaker
 from natcap.invest import spec
+from natcap.invest.file_registry import FileRegistry
 from natcap.invest.unit_registry import u
 from osgeo import gdal
 from osgeo import ogr
@@ -271,16 +271,14 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         self.assertEqual(repr(out), repr(expected_rst))
 
 
-def _generate_files_from_spec(output_spec, workspace):
+def _fake_execute(output_spec, workspace):
     """A utility function to support the metadata test."""
+    file_registry = FileRegistry(output_spec, workspace, '')
     for spec_data in output_spec:
-        filepath = os.path.join(workspace, spec_data.path)
-        filedir = os.path.dirname(filepath)
-        try:
-            os.makedirs(filedir)
-        except OSError:
-            if not os.path.isdir(filedir):
-                raise
+        reg_key = spec_data.id
+        if '[' in spec_data.id:
+            reg_key = (spec_data.id, 'A')
+        filepath = file_registry[reg_key]
         if isinstance(spec_data, spec.SingleBandRasterOutput):
             driver = gdal.GetDriverByName('GTIFF')
             raster = driver.Create(filepath, 2, 2, 1, gdal.GDT_Byte)
@@ -302,6 +300,7 @@ def _generate_files_from_spec(output_spec, workspace):
             # Such as taskgraph.db, just create the file.
             with open(filepath, 'w') as file:
                 pass
+    return file_registry.registry
 
 
 class TestMetadataFromSpec(unittest.TestCase):
@@ -354,8 +353,8 @@ class TestMetadataFromSpec(unittest.TestCase):
                 ]
             ),
             spec.SingleBandRasterOutput(
-                id="mask",
-                path="intermediate/mask.tif",
+                id="mask_[A]",  # testing with a pattern
+                path="intermediate/mask_[A].tif",
                 about="A mask for the final raster output.",
                 data_type=float,
                 units=u.m**2
@@ -364,11 +363,8 @@ class TestMetadataFromSpec(unittest.TestCase):
                 path="intermediate/taskgraph_cache/taskgraph.db")
             )
         ]
-        # Generate an output workspace with real files, without
-        # running an invest model.
-        _generate_files_from_spec(output_spec, self.workspace_dir)
 
-        model_spec=spec.ModelSpec(
+        model_spec = spec.ModelSpec(
             model_id='urban_nature_access',
             model_title='Urban Nature Access',
             userguide='',
@@ -378,18 +374,31 @@ class TestMetadataFromSpec(unittest.TestCase):
             module_name='',
             outputs=output_spec
         )
+        
+        # Generate an output workspace with real files, without
+        # running an invest model.
         args_dict = {'workspace_dir': self.workspace_dir}
-        model_spec.generate_metadata_for_outputs(args_dict)
+        model_spec.create_output_directories(args_dict)
+        file_registry = _fake_execute(model_spec.outputs, self.workspace_dir)
+        model_spec.generate_metadata_for_outputs(file_registry, args_dict)
 
         files, messages = geometamaker.validate_dir(self.workspace_dir)
         self.assertEqual(len(files), 4)
         self.assertFalse(any(messages))
 
+        # Test some specific content of the metadata
+        vector_spec = model_spec.get_output('admin_boundaries')
         resource = geometamaker.describe(
-            os.path.join(args_dict['workspace_dir'], 'output',
-                         'urban_nature_supply_percapita.tif'))
-        self.assertCountEqual(resource.get_keywords(),
-                              [model_spec.model_id, 'InVEST'])
+            os.path.join(self.workspace_dir, vector_spec.path))
+        self.assertCountEqual(
+            resource.get_keywords(),
+            [model_spec.model_id, 'InVEST'])
+        self.assertEqual(
+            resource.get_field_description('SUP_DEMadm_cap').description,
+            vector_spec.fields[0].about)
+        self.assertEqual(
+            resource.get_field_description('SUP_DEMadm_cap').units,
+            spec.format_unit(vector_spec.fields[0].units))
 
 
 class ResultsSuffixTests(unittest.TestCase):
