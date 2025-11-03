@@ -15,7 +15,6 @@ from osgeo import ogr
 from osgeo import osr
 
 from . import gettext
-from . import spec
 from . import utils
 from . import validation_messages
 
