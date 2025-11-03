@@ -472,12 +472,25 @@ def main(user_args=None):
             # Exceptions will already be logged to the logfile but will ALSO be
             # written to stdout if this exception is uncaught.  This is by
             # design.
-            model_module.MODEL_SPEC.execute(
+
+            # Not all models will have a reporter; that's okay.
+            has_reporter = False
+            if hasattr(model_module.MODEL_SPEC, 'reporter'):
+                try:
+                    reporter_module = importlib.import_module(
+                        model_module.MODEL_SPEC.reporter)
+                    has_reporter = hasattr(reporter_module, 'report')
+                except (ImportError, AttributeError) as exc:
+                    # Unexpected cases, but we will still execute the model.
+                    LOGGER.exception(exc)
+
+            _ = model_module.MODEL_SPEC.execute(
                 parsed_datastack.args,
                 create_logfile=True,
                 generate_metadata=True,
                 save_file_registry=True,
-                check_outputs=False)
+                check_outputs=False,
+                generate_report=has_reporter)
 
         if args.subcommand == 'serve':
             ui_server.app.run(port=args.port)
@@ -489,6 +502,7 @@ def main(user_args=None):
                 target_filepath = f'{args.model}_execute.py'
             export_to_python(target_filepath, args.model)
             parser.exit()
+
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
