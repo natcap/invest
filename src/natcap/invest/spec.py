@@ -853,6 +853,8 @@ class CSVInput(FileInput):
         Args:
             csv_path: Path to the CSV to process
             read_csv_kwargs: Additional kwargs to pass to `pandas.read_csv`
+            args: Optional. Dictionary of arg values used to evaluate the
+                `required` condition of self.columns.
 
         Returns:
             pandas dataframe
@@ -861,6 +863,9 @@ class CSVInput(FileInput):
             ValueError if the CSV cannot be parsed to fulfill the requirements
             for this input - if a required column or row is missing, or if the
             values in a column cannot be interpreted as the expected type.
+
+            AssertionError from ``utils.evaluate_expression`` if any conditonal
+            requirement string can't be evaluated given the values in ``args``.
         """
         if not (self.columns or self.rows):
             raise ValueError('One of columns or rows must be provided')
@@ -903,20 +908,16 @@ class CSVInput(FileInput):
 
         available_cols = set(df.columns)
 
-        if args:
-            columns = copy.deepcopy(columns)
-            for col_spec in columns:
-                if isinstance(col_spec.required, str):
-                    col_spec.required = bool(utils.evaluate_expression(
-                        col_spec.required, args))
+        # Evaluate any conditional requirement strings to booleans
+        # This will raise an error if any can't be evaluated
+        columns = copy.deepcopy(columns)
+        for col_spec in columns:
+            if isinstance(col_spec.required, str):
+                col_spec.required = bool(utils.evaluate_expression(
+                    col_spec.required, args or {}))
 
         for col_spec, pattern in zip(columns, patterns):
             matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
-            if not isinstance(col_spec.required, bool):
-                raise ValueError(
-                    'get_validated_dataframe called with spec that contains a '
-                    'conditional "required" string. The "required" attribute must '
-                    'be evaluated to a bool before calling this method.')
             if col_spec.required and not matching_cols:
                 if '[' in col_spec.id:
                     raise ValueError(validation_messages.PATTERN_MATCHED_NONE.format(
