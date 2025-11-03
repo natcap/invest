@@ -1032,9 +1032,9 @@ def tabulate_results(
         for yield_percentile_id in sorted(yield_percentile_headers) + [
             'yield_observed']]
 
-    # Since pixel values in observed and percentile rasters are Mg/(ha•yr),
-    # raster sums are (Mg•px)/(ha•yr). Before recording sums in
-    # production_lookup dictionary, convert to Mg/yr by multiplying by ha/px.
+    # Since pixel values in observed and percentile rasters are Mg/ha,
+    # raster sums are (Mg•px)/ha. Before recording sums in
+    # production_lookup dictionary, convert to Mg by multiplying by ha/px.
 
     with open(target_table_path, 'w') as result_table:
         result_table.write(
@@ -1149,9 +1149,9 @@ def aggregate_to_polygons(
         target_aggregate_vector_path,
         driver_name='ESRI Shapefile')
 
-    # Since pixel values are Mg/(ha•yr), zonal stats sum is (Mg•px)/(ha•yr).
+    # Since pixel values are Mg/ha, zonal stats sum is (Mg•px)/ha.
     # Before writing sum to results tables or when using sum to calculate
-    # nutrient yields, convert to Mg/yr by multiplying by ha/px.
+    # nutrient yields, convert to Mg by multiplying by ha/px.
 
     # loop over every crop and query with pgp function
     total_yield_lookup = {}
