@@ -603,17 +603,14 @@ class NDRTests(unittest.TestCase):
         """Test ``_calculate_load`` raises ValueError on bad load_type's."""
         from natcap.invest.ndr import ndr
 
-        lulc_path = os.path.join(self.workspace_dir, "lulc-load-type.tif")
-        target_load_path = os.path.join(self.workspace_dir, "load_raster.tif")
+        args = NDRTests.generate_base_args(self.workspace_dir)
 
-        # Calculate load
-        lucode_to_params = {
-            1: {'load_n': 10.0, 'eff_n': 0.5, 'load_type_n': 'measured-runoff'},
-            2: {'load_n': 20.0, 'eff_n': 0.5, 'load_type_n': 'cheese'},
-            3: {'load_n': 10.0, 'eff_n': 0.5, 'load_type_n': 'application-rate'},
-            4: {'load_n': 20.0, 'eff_n': 0.5, 'load_type_n': 'application-rate'}}
+        biophysical_path = os.path.join(self.workspace_dir, 'bad_table.csv')
+        biophysical_df = pandas.read_csv(args['biophysical_table_path'])
+        biophysical_df.at[2, 'load_type_n'] = 'cheese'
+        biophysical_df.to_csv(biophysical_path)
+        args['biophysical_table_path'] = biophysical_path
 
         with self.assertRaises(ValueError) as cm:
-            ndr._calculate_load(lulc_path, lucode_to_params, 'n', target_load_path)
-        actual_message = str(cm.exception)
-        self.assertTrue('found value of: "cheese"' in actual_message)
+            ndr.execute(args)
+        self.assertIn('Error in column "load_type_n", value "cheese"', str(cm.exception))

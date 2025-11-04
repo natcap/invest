@@ -127,6 +127,16 @@ LULC_RASTER_INPUT = spec.SingleBandRasterInput(
     projection_units=u.meter
 )
 
+class CropNameColumnInput(spec.OptionStringInput):
+    """Represents the 'crop_name' column in the crop nutrient table."""
+
+    def validate(self, value): return
+    """Overriding the validate method to skip checking values against the set
+    of valid options. Because this is the index column, it's okay if there are
+    extra crops included, they just won't be used. And we want to allow reusing
+    the table from the percentile model, which includes more crops."""
+
+
 MODEL_SPEC = spec.ModelSpec(
     model_id="crop_production_regression",
     model_title=gettext("Crop Production: Regression"),
@@ -209,7 +219,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " in the sample data."
             ),
             columns=[
-                spec.OptionStringInput(
+                CropNameColumnInput(
                     id="crop_name",
                     about=None,
                     options=CROP_OPTIONS
@@ -236,7 +246,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " in the sample data."
             ),
             columns=[
-                spec.OptionStringInput(
+                CropNameColumnInput(
                     id="crop_name",
                     about=None,
                     options=CROP_OPTIONS
@@ -263,7 +273,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " in the sample data."
             ),
             columns=[
-                spec.OptionStringInput(
+                CropNameColumnInput(
                     id="crop_name",
                     about=None,
                     options=CROP_OPTIONS
@@ -284,7 +294,9 @@ MODEL_SPEC = spec.ModelSpec(
                         spec.NumberInput(id="c_p2o5", about=None, units=u.none),
                         spec.NumberInput(id="c_k2o", about=None, units=u.none)
                     ],
-                    index_col="climate_bin"
+                    index_col="climate_bin",
+                    na_allowed=["yield_ceiling", "b_nut", "b_k2o", "c_n",
+                                "c_p2o5", "c_k2o"]
                 )
             ],
             index_col="crop_name"
@@ -298,7 +310,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " in the sample data."
             ),
             columns=[
-                spec.OptionStringInput(
+                CropNameColumnInput(
                     id="crop_name",
                     about=None,
                     options=CROP_OPTIONS
@@ -585,16 +597,6 @@ def execute(args):
             "The following lucodes are in the landcover raster but aren't "
             f"in the landcover to crop table: {lucodes_missing_from_table}")
 
-    LOGGER.info("Checking that crops are supported by the model.")
-    user_provided_crop_names = set(list(crop_to_landcover_df.index))
-    valid_crop_names = set([crop.key for crop in CROP_OPTIONS])
-    invalid_crop_names = user_provided_crop_names.difference(valid_crop_names)
-    if invalid_crop_names:
-        raise ValueError(
-            "The following crop names were provided in "
-            f"{args['landcover_to_crop_table_path']} but are not supported "
-            f"by the model: {invalid_crop_names}")
-
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
     pixel_area_ha = numpy.prod([
@@ -620,15 +622,9 @@ def execute(args):
     for crop_name, row in crop_to_landcover_df.iterrows():
         crop_lucode = row[_EXPECTED_LUCODE_TABLE_HEADER]
         LOGGER.info(f'Processing crop {crop_name}')
-        crop_climate_bin_raster_path = get_full_path_from_crop_table(
-            MODEL_SPEC,
-            CROP_TO_PATH_TABLES.climate_bin,
-            args[CROP_TO_PATH_TABLES.climate_bin],
-            crop_name)
-
-        if not crop_climate_bin_raster_path:
-            raise ValueError(
-                f'No climate bin raster path could be found for {crop_name}')
+        crop_climate_bin_raster_path = MODEL_SPEC.get_input(
+            CROP_TO_PATH_TABLES.climate_bin).get_validated_dataframe(
+            args[CROP_TO_PATH_TABLES.climate_bin]).at[crop_name, 'path']
 
         # Use file_registry for clipped climate bin raster path
         crop_climate_bin_raster_info = pygeoprocessing.get_raster_info(
@@ -644,11 +640,9 @@ def execute(args):
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
-        climate_regression_yield_table_path = get_full_path_from_crop_table(
-            MODEL_SPEC,
-            CROP_TO_PATH_TABLES.regression_yield,
-            args[CROP_TO_PATH_TABLES.regression_yield],
-            crop_name)
+        climate_regression_yield_table_path = MODEL_SPEC.get_input(
+            CROP_TO_PATH_TABLES.regression_yield).get_validated_dataframe(
+            args[CROP_TO_PATH_TABLES.regression_yield]).at[crop_name, 'path']
 
         crop_regression_df = MODEL_SPEC.get_input(
             CROP_TO_PATH_TABLES.regression_yield).get_column(
@@ -793,11 +787,10 @@ def execute(args):
         dependent_task_list.append(calc_min_NKP_task)
 
         LOGGER.info(f'Calculate observed yield for {crop_name}')
-        global_observed_yield_raster_path = get_full_path_from_crop_table(
-            MODEL_SPEC,
-            CROP_TO_PATH_TABLES.observed_yield,
-            args[CROP_TO_PATH_TABLES.observed_yield],
-            crop_name)
+        global_observed_yield_raster_path = MODEL_SPEC.get_input(
+            CROP_TO_PATH_TABLES.observed_yield).get_validated_dataframe(
+            args[CROP_TO_PATH_TABLES.observed_yield]).at[crop_name, 'path']
+
         global_observed_yield_raster_info = (
             pygeoprocessing.get_raster_info(
                 global_observed_yield_raster_path))
@@ -1181,44 +1174,6 @@ def aggregate_regression_results_to_polygons(
                         ',%s' % total_nutrient_table[
                             nutrient_id][model_type][id_index])
             aggregate_table.write('\n')
-
-
-def get_full_path_from_crop_table(
-        model_spec: spec.ModelSpec, table_id: str, table_path: str,
-        crop_name: str) -> typing.Union[str, None]:
-    """Given a crop-to-path table, look up a path and expand it if appropriate.
-
-    Args:
-        table_id (str): the id of the table as defined in the model spec.
-            One of ``CROP_TO_PATH_TABLES``.
-        table_path (str): the path to the table as defined in the model args.
-        crop_name (str): the name of the crop to look up in the table.
-            One of ``CROP_OPTIONS``.
-
-    Returns:
-        One of the following:
-            The full path (str), as an absolute path if it's local, or
-                normalized if it's remote.
-            ``None`` if ``crop_name`` is not in the table, or if the path
-                found in the table is empty or not a string.
-
-    Raises:
-        ``KeyError`` if ``table_id`` is not one of ``CROP_TO_PATH_TABLES``.
-    """
-    if table_id not in CROP_TO_PATH_TABLES:
-        raise KeyError(f'table_id {table_id} is not valid')
-    df = model_spec.get_input(table_id).get_validated_dataframe(table_path)
-    try:
-        path_str = df.at[crop_name, 'path']
-    except KeyError:
-        return None
-    if (path_str is NA) or (not path_str) or (type(path_str) is not str):
-        return None
-    gdal_path = utils._GDALPath.from_uri(path_str)
-    if gdal_path.is_local:
-        return utils.expand_path(path_str, table_path)
-    else:
-        return gdal_path.to_normalized_path()
 
 
 @validation.invest_validator

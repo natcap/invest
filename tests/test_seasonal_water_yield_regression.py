@@ -230,10 +230,10 @@ def make_biophysical_csv(biophysical_csv_path):
             'lucode,Description,CN_A,CN_B,CN_C,CN_D,Kc_1,Kc_2,Kc_3,Kc_4,')
         open_table.write('Kc_5,Kc_6,Kc_7,Kc_8,Kc_9,Kc_10,Kc_11,Kc_12\n')
 
-        open_table.write('0,"lulc 1",50,50,0,0,0.7,0.7,0.7,0.7,0.7,0.7,0.7,')
+        open_table.write('0,"lulc 1",50,50,1,1,0.7,0.7,0.7,0.7,0.7,0.7,0.7,')
         open_table.write('0.7,0.7,0.7,0.7,0.7\n')
 
-        open_table.write('1,"lulc 2",72,82,0,0,0.4,0.4,0.4,0.4,0.4,0.4,0.4,')
+        open_table.write('1,"lulc 2",72,82,1,1,0.4,0.4,0.4,0.4,0.4,0.4,0.4,')
         open_table.write('0.4,0.4,0.4,0.4,0.4\n')
 
 
@@ -252,9 +252,9 @@ def make_bad_biophysical_csv(biophysical_csv_path):
         open_table.write('Kc_5,Kc_6,Kc_7,Kc_8,Kc_9,Kc_10,Kc_11,Kc_12\n')
         # look at that 'fifty'
         open_table.write(
-            '0,"lulc 1",fifty,50,0,0,0.7,0.7,0.7,0.7,0.7,0.7,0.7,')
+            '0,"lulc 1",fifty,50,1,1,0.7,0.7,0.7,0.7,0.7,0.7,0.7,')
         open_table.write('0.7,0.7,0.7,0.7,0.7\n')
-        open_table.write('1,"lulc 2",72,82,0,0,0.4,0.4,0.4,0.4,0.4,0.4,0.4,')
+        open_table.write('1,"lulc 2",72,82,1,1,0.4,0.4,0.4,0.4,0.4,0.4,0.4,')
         open_table.write('0.4,0.4,0.4,0.4,0.4\n')
 
 

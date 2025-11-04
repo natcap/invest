@@ -64,9 +64,12 @@
 
 Unreleased Changes
 ------------------
-
 General
 =======
+* All columns in CSV inputs are now validated, not just the columns that
+  contain spatial filepaths. This may result in changes to the error messages
+  that are shown when invalid data is provided.
+  (`#2175 <https://github.com/natcap/invest/issues/2175>`_)
 * Fixed bugs in incomplete metadata creation.
   (`#2118 <https://github.com/natcap/invest/issues/2118>`_)
   (`#2217 <https://github.com/natcap/invest/issues/2217>`_)

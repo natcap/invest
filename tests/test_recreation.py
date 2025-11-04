@@ -1423,7 +1423,7 @@ class RecreationValidationTests(unittest.TestCase):
     def test_bad_predictor_table_header(self):
         """Recreation Validate: assert messages for bad table headers."""
         from natcap.invest.recreation import recmodel_client
-        from natcap.invest import validation
+        from natcap.invest import validation_messages
 
         table_path = os.path.join(self.workspace_dir, 'table.csv')
         with open(table_path, 'w') as file:
@@ -1432,7 +1432,7 @@ class RecreationValidationTests(unittest.TestCase):
 
         expected_message = [(
             ['predictor_table_path'],
-            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+            validation_messages.MATCHED_NO_HEADERS.format(
                 header='column', header_name='id'))]
         validation_warnings = recmodel_client.validate({
             'compute_regression': True,
@@ -1454,10 +1454,10 @@ class RecreationValidationTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
         expected_messages = [
             (['predictor_table_path'],
-             validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+             validation_messages.MATCHED_NO_HEADERS.format(
                 header='column', header_name='id')),
             (['scenario_predictor_table_path'],
-             validation.MESSAGES['MATCHED_NO_HEADERS'] .format(
+             validation_messages.MATCHED_NO_HEADERS .format(
                 header='column', header_name='id'))]
         self.assertEqual(len(validation_warnings), 2)
         for message in expected_messages:
@@ -1485,7 +1485,7 @@ class RecreationValidationTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
         }
         msgs = recmodel_client.validate(args)
-        self.assertIn('The table contains invalid type value(s)', msgs[0][1])
+        self.assertIn('Error in column "type", value "raster?mean"', msgs[0][1])
 
 
 class RecreationProductionServerHealth(unittest.TestCase):

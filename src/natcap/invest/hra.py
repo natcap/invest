@@ -126,7 +126,8 @@ MODEL_SPEC = spec.ModelSpec(
                     units=u.meter
                 )
             ],
-            index_col="name"
+            index_col="name",
+            na_allowed=["stressor buffer (meters)"]
         ),
         spec.CSVInput(
             id="criteria_table_path",
@@ -1787,7 +1788,7 @@ def _parse_info_table(info_table_path):
         table = MODEL_SPEC.get_input(
             'info_table_path').get_validated_dataframe(info_table_path)
     except ValueError as err:
-        if 'Index has duplicate keys' in str(err):
+        if 'Duplicates found in the index column' in str(err):
             raise ValueError("Habitat and stressor names may not overlap.")
         else:
             raise err

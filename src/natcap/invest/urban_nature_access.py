@@ -112,7 +112,8 @@ MODEL_SPEC = spec.ModelSpec(
                     expression="value >= 0"
                 )
             ],
-            index_col="lucode"
+            index_col="lucode",
+            na_allowed=["search_radius_m"]
         ),
         spec.SingleBandRasterInput(
             id="population_raster_path",
@@ -950,7 +951,8 @@ def execute(args):
             )
 
     attr_table = MODEL_SPEC.get_input(
-        'lulc_attribute_table').get_validated_dataframe(args['lulc_attribute_table'])
+        'lulc_attribute_table').get_validated_dataframe(
+        args['lulc_attribute_table'], args=args)
     kernel_tasks = {}  # search_radius, kernel task
 
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
@@ -1048,7 +1050,7 @@ def execute(args):
             _reclassify_urban_nature_area,
             kwargs={
                 'lulc_raster_path': file_registry['masked_lulc'],
-                'lulc_attribute_table': args['lulc_attribute_table'],
+                'lulc_attribute_df': attr_table,
                 'target_raster_path': file_registry['urban_nature_area'],
             },
             target_path_list=[file_registry['urban_nature_area']],
@@ -1130,7 +1132,7 @@ def execute(args):
                 _reclassify_urban_nature_area,
                 kwargs={
                     'lulc_raster_path': file_registry['masked_lulc'],
-                    'lulc_attribute_table': args['lulc_attribute_table'],
+                    'lulc_attribute_df': attr_table,
                     'target_raster_path': file_registry['urban_nature_area_[LUCODE]', lucode],
                     'only_these_urban_nature_codes': set([lucode]),
                 },
@@ -1208,7 +1210,7 @@ def execute(args):
             _reclassify_urban_nature_area,
             kwargs={
                 'lulc_raster_path': file_registry['masked_lulc'],
-                'lulc_attribute_table': args['lulc_attribute_table'],
+                'lulc_attribute_df': attr_table,
                 'target_raster_path': file_registry['urban_nature_area'],
             },
             target_path_list=[file_registry['urban_nature_area']],
@@ -1780,7 +1782,7 @@ def _rasterize_aois(base_raster_path, aois_vector_path,
 
 
 def _reclassify_urban_nature_area(
-        lulc_raster_path, lulc_attribute_table, target_raster_path,
+        lulc_raster_path, lulc_attribute_df, target_raster_path,
         only_these_urban_nature_codes=None):
     """Reclassify LULC pixels into the urban nature area they represent.
 
@@ -1791,7 +1793,7 @@ def _reclassify_urban_nature_area(
 
     Args:
         lulc_raster_path (string): The path to a land-use/land-cover raster.
-        lulc_attribute_table (string): The path to a CSV table representing
+        lulc_attribute_df (pandas.DataFrame): a dataframe representing
             LULC attributes.  Must have "lucode" and "urban_nature" columns.
             The "urban_nature" column represents a proportion 0-1 of how much
             of the pixel's area represents urban nature.
@@ -1806,9 +1808,6 @@ def _reclassify_urban_nature_area(
     Returns:
         ``None``
     """
-    lulc_attribute_df = MODEL_SPEC.get_input(
-        'lulc_attribute_table').get_validated_dataframe(lulc_attribute_table)
-
     squared_pixel_area = abs(
         numpy.multiply(*_square_off_pixels(lulc_raster_path)))
 

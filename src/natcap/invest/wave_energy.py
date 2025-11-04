@@ -778,21 +778,6 @@ def execute(args):
         'machine_param_path').get_validated_dataframe(
         args['machine_param_path'])['value'].to_dict()
 
-    # Check if required column fields are entered in the land grid csv file
-    if args['land_gridPts_path']:
-        # Create a grid_land_df dataframe for later use in valuation
-        grid_land_df = MODEL_SPEC.get_input(
-            'land_gridPts_path').get_validated_dataframe(args['land_gridPts_path'])
-        missing_grid_land_fields = []
-        for field in ['id', 'type', 'lat', 'long', 'location']:
-            if field not in grid_land_df.columns:
-                missing_grid_land_fields.append(field)
-
-        if missing_grid_land_fields:
-            raise ValueError(
-                'The following column fields are missing from the Grid '
-                'Connection Points File: %s' % missing_grid_land_fields)
-
     if args['valuation_container']:
         machine_econ_dict = MODEL_SPEC.get_input(
             'machine_econ_path').get_validated_dataframe(
@@ -993,6 +978,9 @@ def execute(args):
         return
 
     LOGGER.info('Valuation selected')
+
+    grid_land_df = MODEL_SPEC.get_input(
+            'land_gridPts_path').get_validated_dataframe(args['land_gridPts_path'])
 
     create_grid_points_vector_task = task_graph.add_task(
         func=_dict_to_point_vector,

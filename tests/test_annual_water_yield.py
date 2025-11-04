@@ -97,7 +97,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             annual_water_yield.execute(args)
-        self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
+        self.assertIn('Null value(s) found in column "lulc_veg"', str(cm.exception))
 
         table_df = pandas.read_csv(args['biophysical_table_path'])
         table_df['LULC_veg'] = ['-1']*len(table_df.index)
@@ -106,7 +106,9 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             annual_water_yield.execute(args)
-        self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
+        self.assertEqual(
+            'Error in column "lulc_veg", value "-1": Value does not meet condition value in {0, 1}',
+            str(cm.exception))
 
     def test_missing_lulc_value(self):
         """Hydro: catching missing LULC value in Biophysical table."""
@@ -281,7 +283,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
     def test_validation(self):
         """Hydro: test failure cases on the validation function."""
         from natcap.invest import annual_water_yield
-        from natcap.invest import validation
+        from natcap.invest import validation_messages
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
 
@@ -311,7 +313,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
             args_missing_key)
         self.assertEqual(
             validation_warnings,
-            [(['eto_path'], validation.MESSAGES['MISSING_KEY'])])
+            [(['eto_path'], validation_messages.MISSING_KEY)])
 
         # ensure that a missing landcover code in the biophysical table will
         # raise an exception that's helpful

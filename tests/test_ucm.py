@@ -380,7 +380,7 @@ class UCMTests(unittest.TestCase):
     def test_bad_args(self):
         """UCM: test validation of bad arguments."""
         from natcap.invest import urban_cooling_model
-        from natcap.invest import validation
+        from natcap.invest import validation_messages
         args = {
             'workspace_dir': self.workspace_dir,
             'results_suffix': 'test_suffix',
@@ -411,40 +411,40 @@ class UCMTests(unittest.TestCase):
 
         del args['t_ref']
         warnings = urban_cooling_model.validate(args)
-        expected_warning = (['t_ref'], validation.MESSAGES['MISSING_KEY'])
+        expected_warning = (['t_ref'], validation_messages.MISSING_KEY)
         self.assertTrue(expected_warning in warnings)
 
         args['t_ref'] = ''
         result = urban_cooling_model.validate(args)
-        self.assertEqual(result[0][1], validation.MESSAGES['MISSING_VALUE'])
+        self.assertEqual(result[0][1], validation_messages.MISSING_VALUE)
 
         args['t_ref'] = 35.0
         args['cc_weight_shade'] = -0.6
         result = urban_cooling_model.validate(args)
         self.assertEqual(
-            result[0][1], validation.MESSAGES['NOT_WITHIN_RANGE'].format(
+            result[0][1], validation_messages.NOT_WITHIN_RANGE.format(
                 value=args['cc_weight_shade'], range='[0, 1]'))
 
         args['cc_weight_shade'] = "not a number"
         result = urban_cooling_model.validate(args)
         self.assertEqual(
             result[0][1],
-            validation.MESSAGES['NOT_A_NUMBER'].format(value=args['cc_weight_shade']))
+            validation_messages.NOT_A_NUMBER.format(value=args['cc_weight_shade']))
 
         args['cc_method'] = 'nope'
         result = urban_cooling_model.validate(args)
         self.assertEqual(
             result[0][1],
-            validation.MESSAGES['INVALID_OPTION'].format(
+            validation_messages.INVALID_OPTION.format(
                 option_list=['factors', 'intensity']))
 
         args['cc_method'] = 'intensity'
         args['cc_weight_shade'] = 0.2  # reset this arg
 
-        # Create a new table like the original one, but without the green area
-        # column.
+        # Create a new table like the original one, but without the
+        # building_intensity column.
         old_df = pandas.read_csv(args['biophysical_table_path'])
-        new_df = old_df.drop('Green_area', axis='columns')
+        new_df = old_df.drop('building_intensity', axis='columns')
 
         args['biophysical_table_path'] = os.path.join(
             self.workspace_dir, 'new_csv.csv')
@@ -453,8 +453,8 @@ class UCMTests(unittest.TestCase):
         result = urban_cooling_model.validate(args)
         expected = [(
             ['biophysical_table_path'],
-            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
-                header='column', header_name='green_area'))]
+            validation_messages.MATCHED_NO_HEADERS.format(
+                header='column', header_name='building_intensity'))]
         self.assertEqual(result, expected)
 
     def test_do_energy_valuation_option(self): 

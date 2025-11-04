@@ -696,7 +696,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_validate(self):
         """Stormwater: test arg validation."""
-        from natcap.invest import stormwater, validation
+        from natcap.invest import stormwater, validation_messages
 
         # test args missing necessary values for adjust ratios
         args = {
@@ -714,7 +714,7 @@ class StormwaterTests(unittest.TestCase):
         messages = stormwater.validate(args)
         for arg_list, message in messages:
             if arg_list[0] in ['retention_radius', 'road_centerlines_path']:
-                self.assertEqual(message, validation.MESSAGES['MISSING_VALUE'])
+                self.assertEqual(message, validation_messages.MISSING_VALUE)
 
     def test_validate_noninteger_soil_raster(self):
         """Stormwater: test arg validation."""
