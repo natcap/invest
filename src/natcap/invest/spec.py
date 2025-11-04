@@ -1,7 +1,6 @@
 import collections
 import contextlib
 import copy
-import enum
 import importlib
 import json
 import logging
@@ -737,11 +736,6 @@ class RasterOrVectorInput(SpatialFileInput):
             return self._single_band_raster_input.validate(filepath)
         else:
             return self._vector_input.validate(filepath)
-
-
-class TableOrientation(enum.Enum):
-    ROWS = 'row'
-    COLUMNS = 'column'
 
 
 class CSVInput(FileInput):
