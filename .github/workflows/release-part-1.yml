@@ -2,11 +2,11 @@ name: Release (Part 1 of 2)
 
 on:
   schedule:
-    # every tuesday at 10:20am PST (6:20pm UTC)
+    # every tuesday (temporarily wednesday) at 6:20pm UTC (10:20am PST / 11:20am PDT)
     # cron doesn't support "first tuesday of the month", so we will use github
     # actions syntax below to skip tuesdays that aren't in the first week.
     # it is recommended not to start on the hour to avoid peak traffic
-    - cron: "20 20 * * 2"
+    - cron: "20 18 * * 3"
   workflow_dispatch:
     inputs:
       version:
