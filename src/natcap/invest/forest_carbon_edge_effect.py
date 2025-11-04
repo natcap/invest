@@ -262,7 +262,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Carbon stored in the aboveground biomass carbon pool."
             ),
             data_type=float,
-            units=u.metric_ton
+            units=u.metric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
             id="c_below_carbon_stocks",
@@ -271,7 +271,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Carbon stored in the belowground biomass carbon pool."
             ),
             data_type=float,
-            units=u.metric_ton
+            units=u.metric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
             id="c_dead_carbon_stocks",
@@ -280,14 +280,14 @@ MODEL_SPEC = spec.ModelSpec(
                 "Carbon stored in the dead matter biomass carbon pool."
             ),
             data_type=float,
-            units=u.metric_ton
+            units=u.metric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
             id="c_soil_carbon_stocks",
             path="intermediate_outputs/c_soil_carbon_stocks.tif",
             about=gettext("Carbon stored in the soil biomass carbon pool."),
             data_type=float,
-            units=u.metric_ton
+            units=u.metric_ton / u.hectare
         ),
         spec.VectorOutput(
             id="local_carbon_shape",

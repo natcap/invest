@@ -74,6 +74,17 @@ General
   (`#2118 <https://github.com/natcap/invest/issues/2118>`_)
   (`#2217 <https://github.com/natcap/invest/issues/2217>`_)
 
+Forest Carbon Edge Effect
+=========================
+* Corrected the units listed for some intermediate outputs
+  (`#2218 <https://github.com/natcap/invest/issues/2218>`_).
+
+NDR
+===
+* Corrected the units listed for some intermediate outputs
+  (`#2218 <https://github.com/natcap/invest/issues/2218>`_).
+
+
 3.17.0 (2025-10-16)
 -------------------
 

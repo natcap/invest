@@ -461,23 +461,23 @@ MODEL_SPEC = spec.ModelSpec(
         spec.SingleBandRasterOutput(
             id="load_n",
             path="intermediate_outputs/load_n.tif",
-            about=gettext("Nitrogen load (for surface transport) per pixel"),
+            about=gettext("Nitrogen load (for surface transport)"),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="load_p",
             path="intermediate_outputs/load_p.tif",
-            about=gettext("Phosphorus load (for surface transport) per pixel"),
+            about=gettext("Phosphorus load (for surface transport)"),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="modified_load_n",
             path="intermediate_outputs/modified_load_n.tif",
             about=gettext("Raw nitrogen load scaled by the runoff proxy index."),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="modified_load_p",
@@ -486,7 +486,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Raw phosphorus load scaled by the runoff proxy index."
             ),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="ndr_n",
@@ -539,7 +539,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/sub_load_n.tif",
             about=gettext("Nitrogen loads for subsurface transport"),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="sub_ndr_n",

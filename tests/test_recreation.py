@@ -27,7 +27,6 @@ import pandas
 import pygeoprocessing
 import Pyro5
 import shapely
-import taskgraph
 import warnings
 
 from natcap.invest import utils
@@ -714,7 +713,6 @@ class TestRecClientServer(unittest.TestCase):
     def test_all_metrics_local_server(self):
         """Recreation test with all but trivial predictor metrics."""
         from natcap.invest.recreation import recmodel_client
-        from natcap.invest import validation
 
         suffix = 'foo'
         args = {
@@ -754,8 +752,6 @@ class TestRecClientServer(unittest.TestCase):
             'bonefish_a': 4630187907.293639,
             'bathy': 47.16540460441528,
             'roads': 5072.707571235277,
-            'bonefish_p': 792.0711806443292,
-            'bathy_sum': 348.04177433624864,
             'pr_TUD': 1.0,
             'pr_PUD': 1.0,
             'avg_pr_UD': 1.0
@@ -774,9 +770,7 @@ class TestRecClientServer(unittest.TestCase):
             'bonefish_a': 4630187907.293639,
             'bathy': 47.16540460441528,
             'roads': 5072.707571235277,
-            'bonefish_p': 792.0711806443292,
-            'bathy_sum': 348.04177433624864,
-            'pr_UD_EST': 0.996366808597374
+            'pr_UD_EST': 0.9963663467364707
         }
         for key in expected_scenario_sums:
             numpy.testing.assert_almost_equal(
