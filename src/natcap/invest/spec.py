@@ -771,7 +771,7 @@ class CSVInput(FileInput):
     rst_section: typing.ClassVar[str] = 'csv'
 
     _columns_dict: dict[str, Input] = {}
-    _fields_dict: dict[str, Input] = {}
+    _rows_dict: dict[str, Input] = {}
 
     @model_validator(mode='after')
     def check_not_both_rows_and_columns(self):
@@ -1585,6 +1585,8 @@ class VectorOutput(FileOutput):
     """An iterable of `Output`s representing the fields created in this vector.
     The `key` of each input must match the corresponding field name."""
 
+    _fields_dict: dict[str, Input] = {}
+
     @model_validator(mode='after')
     def check_field_types(self):
         for field in (self.fields or []):
@@ -1595,6 +1597,12 @@ class VectorOutput(FileOutput):
             else:
                 raise ValueError(f'Field {field} is not an allowed type')
         return self
+
+    def model_post_init(self, context):
+        self._fields_dict = {field.id: field for field in self.fields}
+
+    def get_field(self, key: str) -> Input:
+        return self._fields_dict[key]
 
 
 class CSVOutput(FileOutput):
@@ -1616,6 +1624,9 @@ class CSVOutput(FileOutput):
 
     index_col: typing.Union[str, None] = None
     """The header name of the column that is the index of the table."""
+
+    _columns_dict: dict[str, Input] = {}
+    _rows_dict: dict[str, Input] = {}
 
     @model_validator(mode='after')
     def validate_index_col_in_columns(self):
@@ -1643,6 +1654,18 @@ class CSVOutput(FileOutput):
             else:
                 raise ValueError(f'Column {col} is not an allowed type')
         return self
+
+    def model_post_init(self, context):
+        if self.columns:
+            self._columns_dict = {col.id: col for col in self.columns}
+        if self.rows:
+            self._rows_dict = {row.id: row for row in self.rows}
+
+    def get_column(self, key: str) -> Input:
+        return self._columns_dict[key]
+
+    def get_row(self, key: str) -> Input:
+        return self._rows_dict[key]
 
 
 class NumberOutput(Output):
