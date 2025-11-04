@@ -484,7 +484,7 @@ MODEL_SPEC = spec.ModelSpec(
 )
 
 
-def execute(args): 
+def execute(args):
     """Urban Mental Health.
 
     The model estimates the impacts of nature exposure, and more specifically
@@ -509,7 +509,7 @@ def execute(args):
             pixel.
         args['search_radius'] (float): (required) Distance used to define
             the surrounding area of a person's residence that best represents
-            daily exposure to nearby nature.
+            daily exposure to nearby nature. Must be > 0.
         args['effect_size'] (float): (required) Health indicator-specific
             effect size representing the relationship between nature
             exposure and the mental health outcome, given as relative
@@ -586,17 +586,30 @@ def execute(args):
             args['ndvi_base'])
         pixel_size = base_ndvi_raster_info['pixel_size']
         target_projection = base_ndvi_raster_info['projection_wkt']
+        target_sr = osr.SpatialReference()
+        target_sr.ImportFromWkt(target_projection)
         ndvi_bbox = base_ndvi_raster_info['bounding_box']
         # alternative option is to have mode='intersection' and use AOI vector
         # to clip rasters during align/resize task
         # however, this would mean that edge pixels would be less accurate/
         # lack spatial context
 
+        pixel_radius = int(round(args['search_radius']/pixel_size[0]))
+        LOGGER.info(f"Search radius {args['search_radius']} results in "
+                    f"buffer of {pixel_radius} pixels")
+        if pixel_radius == 0:
+            raise ValueError(
+                f"Search radius {args['search_radius']} yielded pixel_radius "
+                "of zero. Please increase search radius.")
+
         # Users should input the AOI to which they want outputs clipped
         # InVEST will take care of buffering the processing AOI to ensure
         # correct edge pixel calculation
         aoi_info = pygeoprocessing.get_vector_info(args['aoi_path'])
-        if aoi_info["projection_wkt"] != target_projection:
+        aoi_sr = osr.SpatialReference()
+        aoi_sr.ImportFromWkt(aoi_info["projection_wkt"])
+
+        if not osr.IsSame(aoi_sr, target_sr):
             aoi_bbox = pygeoprocessing.transform_bounding_box(
                 aoi_info["bounding_box"], aoi_info["projection_wkt"],
                 target_projection)
@@ -604,29 +617,30 @@ def execute(args):
             aoi_bbox = aoi_info["bounding_box"]
 
         # Expand target bounding box to ensure correct edge pixel calculation
-        aoi_bbox += numpy.array(
+        aoi_buffered_bbox = aoi_bbox + numpy.array(
             [-args['search_radius'], -args['search_radius'],
              args['search_radius'], args['search_radius']])
-        aoi_bbox = list(aoi_bbox)
+        aoi_buffered_bbox = list(aoi_buffered_bbox)
 
         # Check if buffered AOI bbox is larger than input base and alt NDVI
-        check_raster_bounds_against_aoi(aoi_bbox, ndvi_bbox, "NDVI_base")
+        check_raster_bounds_against_aoi(aoi_buffered_bbox, ndvi_bbox,
+                                        "NDVI_base")
         check_raster_bounds_against_aoi(
-            aoi_bbox,
+            aoi_buffered_bbox,
             pygeoprocessing.get_raster_info(args['ndvi_alt'])['bounding_box'],
             "NDVI_alt")
 
         input_align_list = [args['ndvi_base'], args['ndvi_alt']]
         output_align_list = [file_registry['ndvi_base_aligned'],
                              file_registry['ndvi_alt_aligned']]
-        resample_method_list = ['cubicspline', 'cubicspline']
+        resample_method_list = ['cubic', 'cubic']
 
         if args['lulc_base']:
             input_align_list.append(args['lulc_base'])
             output_align_list.append(file_registry['lulc_base_aligned'])
             resample_method_list.append('near')
             check_raster_bounds_against_aoi(
-                aoi_bbox, pygeoprocessing.get_raster_info(
+                aoi_buffered_bbox, pygeoprocessing.get_raster_info(
                     args['lulc_base'])['bounding_box'], "LULC_base")
 
         ndvi_align_task = task_graph.add_task(
@@ -634,7 +648,7 @@ def execute(args):
             args=(input_align_list, output_align_list,
                   resample_method_list,
                   pixel_size,
-                  aoi_bbox),
+                  aoi_buffered_bbox),
             kwargs={
                 'raster_align_index': 0,  # align to base_ndvi
                 'target_projection_wkt': target_projection},
@@ -684,13 +698,6 @@ def execute(args):
             task_name="Mask alternate NDVI"
         )
 
-        pixel_radius = int(round(args['search_radius']/pixel_size[0]))
-        LOGGER.info(f"Search radius {args['search_radius']} results in "
-                    f"buffer of {pixel_radius} pixels")
-        if pixel_radius == 0:
-            raise ValueError(
-                f"Search radius {args['search_radius']} yielded pixel_radius "
-                "of zero. Please increase search radius.")
         kernel_task = task_graph.add_task(
             func=pygeoprocessing.kernels.dichotomous_kernel,
             kwargs={
@@ -753,7 +760,9 @@ def execute(args):
 
         pop_raster_info = pygeoprocessing.get_raster_info(
             args['population_raster'])
-        if pop_raster_info['projection_wkt'] != target_projection:
+        pop_sr = osr.SpatialReference()
+        pop_sr.ImportFromWkt(pop_raster_info['projection_wkt'])
+        if pop_sr != target_sr:
             transformed_bounding_box = pygeoprocessing.transform_bounding_box(
                 pop_raster_info['bounding_box'],
                 pop_raster_info['projection_wkt'],
@@ -816,6 +825,13 @@ def execute(args):
             task_name="calculate preventable cases"
         )
 
+        zonal_stats_inputs = [
+            args['aoi_path'],
+            file_registry['preventable_cases_cost_sum_table'],
+            file_registry['preventable_cases_cost_sum_vector'],
+            file_registry['preventable_cases']]
+        zonal_stats_dependent_tasks = [preventable_cases_task]
+
         if args['health_cost_rate']:
             LOGGER.info("Calculating preventable cost")
             preventable_cost_task = task_graph.add_task(
@@ -827,23 +843,13 @@ def execute(args):
                 dependent_task_list=[preventable_cases_task],
                 task_name="calculate preventable cost"
             )
+            LOGGER.info("Calculating sum preventable cases and cost by polygon")
+            zonal_stats_inputs.append(file_registry['preventable_cost'])
+            zonal_stats_dependent_tasks.append(preventable_cost_task)
 
         task_graph.join()
         # TODO ^ is this best way to require prev cost task has been completed?
         # Can't add as dependent task below as not done if not health_cost_rate
-
-        zonal_stats_inputs = [
-            args['aoi_path'],
-            file_registry['preventable_cases_cost_sum_table'],
-            file_registry['preventable_cases_cost_sum_vector'],
-            file_registry['preventable_cases']]
-
-        zonal_stats_dependent_tasks = [preventable_cases_task]
-
-        if args['health_cost_rate']:
-            LOGGER.info("Calculating sum preventable cases and cost by polygon")
-            zonal_stats_inputs.append(file_registry['preventable_cost'])
-            zonal_stats_dependent_tasks.append(preventable_cost_task)
 
         zonal_stats_task = task_graph.add_task(
             func=zonal_stats_preventable_cases_cost,
