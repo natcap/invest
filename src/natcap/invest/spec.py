@@ -1703,6 +1703,12 @@ class ModelSpec(BaseModel):
     module_name: str
     """The importable module name of the model e.g. ``natcap.invest.foo``."""
 
+    reporter: str = ''
+    """The importable name of a report-generating module with a ``report``
+    function.
+    e.g. ``'invest_reports.jinja_report_generators.cv_report_generator'``
+    """
+
     @model_validator(mode='after')
     def check_inputs_in_field_order(self):
         """Check that all inputs either appear in `input_field_order`,
