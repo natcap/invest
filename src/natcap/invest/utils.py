@@ -910,8 +910,6 @@ def resample_population_raster(
            and pixel size using bilinear interpolation.
         3. Convert the warped density raster back to population counts.
 
-    This function is pulled from urban_nature_access.
-
     Args:
         source_population_raster_path (string): The source population raster.
             Pixel values represent the number of people occupying the pixel.
