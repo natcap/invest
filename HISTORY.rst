@@ -62,8 +62,12 @@
 
 
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.17.1 (2025-11-05)
+-------------------
 General
 =======
 * All columns in CSV inputs are now validated, not just the columns that
