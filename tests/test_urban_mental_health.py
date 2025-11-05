@@ -108,7 +108,7 @@ def make_synthetic_data_and_params(workspace_dir):
     make_simple_vector(aoi_path)
 
     args = {
-        'aoi_vector_path': aoi_path,
+        'aoi_path': aoi_path,
         'baseline_prevalence_vector': baseline_prevalence_path,
         'effect_size': 0.94,
         'health_cost_rate': None,
@@ -260,7 +260,7 @@ class UMHTests(unittest.TestCase):
                          (xmin, ymax), (xmin, ymin)])]
         new_aoi_path = os.path.join(self.workspace_dir, "AOI_5070.shp")
         make_simple_vector(new_aoi_path, epsg=epsg, shapely_geometry_list=geom)
-        args["aoi_vector_path"] = new_aoi_path
+        args["aoi_path"] = new_aoi_path
 
         urban_mental_health.execute(args)
 
@@ -297,7 +297,7 @@ class UMHTests(unittest.TestCase):
                                     (xmin, 4923191)])])
 
         args = {
-            'aoi_vector_path': aoi_path,
+            'aoi_path': aoi_path,
             'baseline_prevalence_vector': '',
             'effect_size': '',
             'health_cost_rate': None,

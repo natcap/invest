@@ -609,7 +609,7 @@ def execute(args):
         aoi_sr = osr.SpatialReference()
         aoi_sr.ImportFromWkt(aoi_info["projection_wkt"])
 
-        if not osr.IsSame(aoi_sr, target_sr):
+        if not aoi_sr.IsSame(target_sr):
             aoi_bbox = pygeoprocessing.transform_bounding_box(
                 aoi_info["bounding_box"], aoi_info["projection_wkt"],
                 target_projection)
@@ -762,7 +762,7 @@ def execute(args):
             args['population_raster'])
         pop_sr = osr.SpatialReference()
         pop_sr.ImportFromWkt(pop_raster_info['projection_wkt'])
-        if pop_sr != target_sr:
+        if not pop_sr.IsSame(target_sr):
             transformed_bounding_box = pygeoprocessing.transform_bounding_box(
                 pop_raster_info['bounding_box'],
                 pop_raster_info['projection_wkt'],
