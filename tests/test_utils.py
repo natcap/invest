@@ -1068,7 +1068,7 @@ class ResamplePopulationRasterTest(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_resample_population_raster(self):
-        """UNA: Test population raster resampling."""
+        """Utils: Test population raster resampling."""
         from natcap.invest import utils
 
         origin = (444720, 3751320)

@@ -921,12 +921,14 @@ def resample_population_raster(
         target_bb (tuple): A tuple of the bounding box for the target raster.
             Passed directly to ``pygeoprocessing.warp_raster``.
         target_projection_wkt (string): The Well-Known Text of the target
-            spatial reference fro the target raster.  Passed directly to
-            ``pygeoprocessing.warp_raster``.  Assumed to be a linear projection
+            spatial reference for the target raster.  Passed directly to
+            ``pygeoprocessing.warp_raster``. Assumed to be a linear projection
             in meters.
-        working_dir (string): The path to a directory on disk.  A new directory
-            is created within this directory for the storage of temporary files
-            and then deleted upon successful completion of the function.
+        working_dir (string): The path to a directory on disk. If the
+            directory does not already exist, it will be created. A temporary
+            subdirectory will be generated within this location to store
+            temporary files, which is automatically removed upon successful
+            completion of the function.
 
     Returns:
         ``None``
