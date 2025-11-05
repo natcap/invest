@@ -475,7 +475,7 @@ def main(user_args=None):
 
             # Not all models will have a reporter; that's okay.
             has_reporter = False
-            if hasattr(model_module.MODEL_SPEC, 'reporter'):
+            if model_module.MODEL_SPEC.reporter:
                 try:
                     reporter_module = importlib.import_module(
                         model_module.MODEL_SPEC.reporter)

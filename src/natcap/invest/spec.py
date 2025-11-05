@@ -1994,7 +1994,11 @@ class ModelSpec(BaseModel):
 
             if generate_report:
                 reporter_module = importlib.import_module(self.reporter)
-                reporter_module.report(registry, preprocessed_args, self)
+                target_html_filepath = os.path.join(
+                    preprocessed_args['workspace_dir'],
+                    f'{self.model_id}_report{preprocessed_args["results_suffix"]}.html')
+                reporter_module.report(
+                    registry, preprocessed_args, self, target_html_filepath)
 
             return registry
 
