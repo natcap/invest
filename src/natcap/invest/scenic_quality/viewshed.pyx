@@ -352,11 +352,12 @@ def viewshed(dem_raster_path_band,
 
     # LRU-cached rasters for easier access to individual pixels.
     cdef ManagedRaster dem_managed_raster = (
-            ManagedRaster(dem_raster_path_band[0].encode('utf-8'), dem_raster_path_band[1], 0))
+            ManagedRaster(dem_raster_path_band[0].encode('utf-8'),
+            dem_raster_path_band[1], False))
     cdef ManagedRaster aux_managed_raster = (
-        ManagedRaster(aux_filepath.encode('utf-8'), 1, 1))
+        ManagedRaster(aux_filepath.encode('utf-8'), 1, True))
     cdef ManagedRaster visibility_managed_raster = (
-            ManagedRaster(visibility_filepath.encode('utf-8'), 1, 1))
+            ManagedRaster(visibility_filepath.encode('utf-8'), 1, True))
 
     # get the pixel size in terms of meters.
     dem_srs = osr.SpatialReference()
