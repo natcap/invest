@@ -1562,7 +1562,7 @@ class VectorOutput(FileOutput):
     """An iterable of `Output`s representing the fields created in this vector.
     The `key` of each input must match the corresponding field name."""
 
-    _fields_dict: dict[str, Input] = {}
+    _fields_dict: dict[str, Output] = {}
 
     @model_validator(mode='after')
     def check_field_types(self):
@@ -1604,7 +1604,7 @@ class CSVOutput(FileOutput):
     index_col: typing.Union[str, None] = None
     """The header name of the column that is the index of the table."""
 
-    _columns_dict: dict[str, Input] = {}
+    _columns_dict: dict[str, Output] = {}
 
     @model_validator(mode='after')
     def validate_index_col_in_columns(self):
