@@ -1578,7 +1578,7 @@ class VectorOutput(FileOutput):
     def model_post_init(self, context):
         self._fields_dict = {field.id: field for field in self.fields}
 
-    def get_field(self, key: str) -> Input:
+    def get_field(self, key: str) -> Output:
         return self._fields_dict[key]
 
 
@@ -1631,7 +1631,7 @@ class CSVOutput(FileOutput):
         if self.columns:
             self._columns_dict = {col.id: col for col in self.columns}
 
-    def get_column(self, key: str) -> Input:
+    def get_column(self, key: str) -> Output:
         return self._columns_dict[key]
 
 
