@@ -72,7 +72,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
-        os: [windows-latest, macos-13, ubuntu-latest]
+        os: [windows-latest, macos-15-intel, ubuntu-latest]
         include:
           - os: ubuntu-latest
             python-version: 3.9
@@ -187,7 +187,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
-        os: [windows-latest, macos-13, ubuntu-latest]
+        os: [windows-latest, macos-15-intel, ubuntu-latest]
         include:
           - os: ubuntu-latest
             python-version: 3.9
@@ -245,13 +245,13 @@ jobs:
         # overwrite artifacts or have duplicates (mac/windows sdists have
         # different extensions)
       - name: Authenticate GCP
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-13' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-15-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-13' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-15-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         uses: google-github-actions/setup-gcloud@v2
 
       # gsutil (part of make deploy) can't use python 3.13 yet, so set up 3.12 for use for now.
@@ -262,7 +262,7 @@ jobs:
         id: python-312-task
 
       - name: Deploy artifacts to GCS
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-13' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-15-intel' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         env:
           CLOUDSDK_GSUTIL_PYTHON: ${{ steps.python-312-task.outputs.python-path }}
         run: make deploy
@@ -301,7 +301,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        os: [windows-latest, macos-13]
+        os: [windows-latest, macos-15-intel]
 
     steps:
       - name: Check out repo
@@ -352,9 +352,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-13, windows-latest]
+        os: [macos-15-intel, windows-latest]
         include:
-          - os: macos-13
+          - os: macos-15-intel
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
             binary-extension: dmg
@@ -421,7 +421,7 @@ jobs:
           yarn install
 
       - name: Download micromamba for distribution (MacOS)
-        if: matrix.os == 'macos-13'
+        if: matrix.os == 'macos-15-intel'
         run: |
           curl -Ls https://micro.mamba.pm/api/micromamba/osx-64/latest | tar -xvj bin/micromamba
           mv bin/micromamba dist/
@@ -511,7 +511,7 @@ jobs:
         run: make invest_autotest
 
       - name: Tar the workspace to preserve permissions (macOS)
-        if: failure() && matrix.os == 'macos-13'
+        if: failure() && matrix.os == 'macos-15-intel'
         run: tar -cvf ${{ matrix.workspace-path}} ${{ github.workspace }}
 
       - name: Upload workspace on failure
