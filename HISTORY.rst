@@ -73,6 +73,10 @@ General
 * Fixed bugs in incomplete metadata creation.
   (`#2118 <https://github.com/natcap/invest/issues/2118>`_)
   (`#2217 <https://github.com/natcap/invest/issues/2217>`_)
+* Moved the ``_resample_population_raster`` helper function from Urban
+  Nature Access to ``utils.py`` for broader reuse, renaming it to
+  ``resample_population_raster`` to indicate public accessibility.
+  (`#2155 <https://github.com/natcap/invest/issues/2155>`_)
 
 Forest Carbon Edge Effect
 =========================
