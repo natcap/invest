@@ -62,8 +62,18 @@
 
 
 
+
 Unreleased Changes
 ------------------
+
+General
+=======
+* Updated codesigning to better handle repeated signing requests.
+  (`#2245 <https://github.com/natcap/invest/issues/2247>`_)
+
+
+3.17.1 (2025-11-06)
+-------------------
 General
 =======
 * All columns in CSV inputs are now validated, not just the columns that
