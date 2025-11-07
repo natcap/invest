@@ -70,6 +70,10 @@ General
 =======
 * Updated codesigning to better handle repeated signing requests.
   (`#2245 <https://github.com/natcap/invest/issues/2247>`_)
+* ``spec.CSVOutput`` now has a ``get_column`` method, and ``spec.VectorOutput``
+  now has a ``get_field`` method. ``CSVInput`` and ``CSVOutput`` no longer have
+  a ``rows`` attribute; ``orientation='row'`` may be used to indicate a row-wise
+  table layout. (`#2216 <https://github.com/natcap/invest/issues/2216>`_)
 
 
 3.17.1 (2025-11-06)
@@ -83,10 +87,6 @@ General
 * Fixed bugs in incomplete metadata creation.
   (`#2118 <https://github.com/natcap/invest/issues/2118>`_)
   (`#2217 <https://github.com/natcap/invest/issues/2217>`_)
-* ``spec.CSVOutput`` now has a ``get_column`` method, and ``spec.VectorOutput``
-  now has a ``get_field`` method. ``CSVInput`` and ``CSVOutput`` no longer have
-  a ``rows`` attribute; ``orientation='row'`` may be used to indicate a row-wise
-  table layout. (`#2216 <https://github.com/natcap/invest/issues/2216>`_)
 
 Forest Carbon Edge Effect
 =========================
