@@ -268,6 +268,25 @@ class Input(BaseModel):
         """
         return value
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(type(self))
+        required_string = self.format_required_string()
+
+        rst_line = f'**{name}** ({type_string}, *{required_string}*)'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace('_', '\\_')
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
+
 
 class Output(BaseModel):
     """A data output, or result, of an invest model.
@@ -545,6 +564,36 @@ class SingleBandRasterInput(SpatialFileInput):
             if projection_warning:
                 return projection_warning
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(type(self))
+
+        in_parentheses = [type_string]
+
+        if self.units:
+            units_string = format_unit(self.units)
+            if units_string:
+                # pybabel can't find the message if it's in the f-string
+                translated_units = gettext("units")
+                in_parentheses.append(f'{translated_units}: **{units_string}**')
+
+        required_string = self.format_required_string()
+        in_parentheses.append(f'*{required_string}*')
+
+        rst_line = f'**{name}** ({", ".join(in_parentheses)})'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace("_", "\\_")
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
+
 
 class VectorInput(SpatialFileInput):
     """A vector input, or parameter, of an invest model.
@@ -670,6 +719,42 @@ class VectorInput(SpatialFileInput):
             self.geometry_types,
             key=lambda g: GEOMETRY_ORDER.index(g))
         return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
+
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        This is used for documenting:
+            - a single top-level arg
+            - a row or column in a CSV
+            - a field in a vector
+            - an item in a directory
+
+        Args:
+            name (str): Name to give the section. For top-level args this is
+                arg['name']. For nested args it's typically their key in the
+                dictionary one level up.
+            spec (dict): A arg spec dictionary that conforms to the InVEST args
+                spec specification. It must at least have the key `'type'`, and
+                whatever other keys are expected for that type.
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+            The first line has the arg name, type, required state, description,
+            and units if applicable. Depending on the type, there may be additional
+            lines that are indented, that describe details of the arg such as
+            vector fields and geometry types, option_string options, etc.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(type(self))
+        required_string = self.format_required_string()
+        geom_string = self.format_geometry_types_rst()
+        rst_line = f'**{name}** ({type_string}, {geom_string}, *{required_string}*)'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace('_', '\\_')
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
 
 
 class RasterOrVectorInput(SpatialFileInput):
@@ -978,6 +1063,28 @@ class CSVInput(FileInput):
         """
         return value if value else None
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(type(self))
+        required_string = self.format_required_string()
+        rst_line = f'**{name}** ({type_string}, *{required_string}*)'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace("_", "\\_")
+            rst_line += f': {sanitized_about_string}'
+
+        if not self.columns and not self.rows:
+            rst_line += gettext(
+                ' Please see the sample data table for details on the format.')
+
+        return [rst_line]
+
 
 class DirectoryInput(Input):
     """A directory input, or parameter, of an invest model.
@@ -1162,6 +1269,36 @@ class NumberInput(Input):
         """
         return None if value in {None, ''} else float(value)
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(type(self))
+
+        in_parentheses = [type_string]
+
+        if self.units:
+            units_string = format_unit(self.units)
+            if units_string:
+                # pybabel can't find the message if it's in the f-string
+                translated_units = gettext("units")
+                in_parentheses.append(f'{translated_units}: **{units_string}**')
+
+        required_string = self.format_required_string()
+        in_parentheses.append(f'*{required_string}*')
+
+        rst_line = f'**{name}** ({", ".join(in_parentheses)})'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace("_", "\\_")
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
+
 
 class IntegerInput(NumberInput):
     """An integer input, or parameter, of an invest model."""
@@ -1338,6 +1475,41 @@ class BooleanInput(Input):
             bool or None
         """
         return None if value in {None, ''} else bool(value)
+
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        This is used for documenting:
+            - a single top-level arg
+            - a row or column in a CSV
+            - a field in a vector
+            - an item in a directory
+
+        Args:
+            name (str): Name to give the section. For top-level args this is
+                arg['name']. For nested args it's typically their key in the
+                dictionary one level up.
+            spec (dict): A arg spec dictionary that conforms to the InVEST args
+                spec specification. It must at least have the key `'type'`, and
+                whatever other keys are expected for that type.
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+            The first line has the arg name, type, required state, description,
+            and units if applicable. Depending on the type, there may be additional
+            lines that are indented, that describe details of the arg such as
+            vector fields and geometry types, option_string options, etc.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(type(self))
+        # It doesn't make sense to include the required string for booleans
+        rst_line = f'**{name}** ({type_string})'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace('_', '\\_')
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
 
 
 class StringInput(Input):
@@ -1536,6 +1708,50 @@ class OptionStringInput(Input):
             string
         """
         return None if value in {None, ''} else str(value).lower()
+
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        This is used for documenting:
+            - a single top-level arg
+            - a row or column in a CSV
+            - a field in a vector
+            - an item in a directory
+
+        Args:
+            name (str): Name to give the section. For top-level args this is
+                arg['name']. For nested args it's typically their key in the
+                dictionary one level up.
+            spec (dict): A arg spec dictionary that conforms to the InVEST args
+                spec specification. It must at least have the key `'type'`, and
+                whatever other keys are expected for that type.
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+            The first line has the arg name, type, required state, description,
+            and units if applicable. Depending on the type, there may be additional
+            lines that are indented, that describe details of the arg such as
+            vector fields and geometry types, option_string options, etc.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(type(self))
+        required_string = self.format_required_string()
+        rst_line = f'**{name}** ({type_string}, *{required_string}*)'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace("_", "\\_")
+            rst_line += f': {sanitized_about_string}'
+
+        indented_block = []
+        # if self.options is None, the options are dynamically generated.
+        # don't try to document them.
+        if self.options:
+            indented_block.append(gettext(
+                'Values must be one of the following text strings:'))
+            indented_block += self.format_rst()
+
+        # prepend the indent to each line in the indented block
+        return [rst_line] + ['\t' + line for line in indented_block]
 
 
 class FileOutput(Output):
@@ -2311,78 +2527,6 @@ def format_type_string(arg_type):
     return f'`{arg_type.display_name} <{INPUT_TYPES_HTML_FILE}#{arg_type.rst_section}>`__'
 
 
-def describe_arg_from_spec(name, spec):
-    """Generate RST documentation for an arg, given an arg spec.
-
-    This is used for documenting:
-        - a single top-level arg
-        - a row or column in a CSV
-        - a field in a vector
-        - an item in a directory
-
-    Args:
-        name (str): Name to give the section. For top-level args this is
-            arg['name']. For nested args it's typically their key in the
-            dictionary one level up.
-        spec (dict): A arg spec dictionary that conforms to the InVEST args
-            spec specification. It must at least have the key `'type'`, and
-            whatever other keys are expected for that type.
-    Returns:
-        list of strings, where each string is a line of RST-formatted text.
-        The first line has the arg name, type, required state, description,
-        and units if applicable. Depending on the type, there may be additional
-        lines that are indented, that describe details of the arg such as
-        vector fields and geometry types, option_string options, etc.
-    """
-    type_string = format_type_string(type(spec))
-    in_parentheses = [type_string]
-
-    # For numbers and rasters that have units, display the units
-    units = spec.units if hasattr(spec, 'units') else None
-    if units:
-        units_string = format_unit(units)
-        if units_string:
-            # pybabel can't find the message if it's in the f-string
-            translated_units = gettext("units")
-            in_parentheses.append(f'{translated_units}: **{units_string}**')
-
-    if type(spec) is VectorInput:
-        in_parentheses.append((spec.format_geometry_types_rst()))
-
-    # Represent the required state as a string, defaulting to required
-    # It doesn't make sense to include this for boolean checkboxes
-    if type(spec) is not BooleanInput:
-        required_string = spec.format_required_string()
-        in_parentheses.append(f'*{required_string}*')
-
-    # Nested args may not have an about section
-    if spec.about:
-        sanitized_about_string = spec.about.replace("_", "\\_")
-        about_string = f': {sanitized_about_string}'
-    else:
-        about_string = ''
-
-    first_line = f"**{name}** ({', '.join(in_parentheses)}){about_string}"
-
-    # Add details for the types that have them
-    indented_block = []
-    if type(spec) is OptionStringInput:
-        # may be either a dict or set. if it's empty, the options are
-        # dynamically generated. don't try to document them.
-        if spec.options:
-            indented_block.append(gettext(
-                'Values must be one of the following text strings:'))
-            indented_block += spec.format_rst()
-
-    elif type(spec) is CSVInput:
-        if not spec.columns and not spec.rows:
-            first_line += gettext(
-                ' Please see the sample data table for details on the format.')
-
-    # prepend the indent to each line in the indented block
-    return [first_line] + ['\t' + line for line in indented_block]
-
-
 def describe_arg_from_name(module_name, *arg_keys):
     """Generate RST documentation for an arg, given its model and name.
 
@@ -2435,7 +2579,7 @@ def describe_arg_from_name(module_name, *arg_keys):
     else:
         arg_name = arg_keys[-1]
 
-    rst_description = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
+    rst_description = '\n\n'.join(spec.describe_rst())
     return f'.. _{anchor_name}:\n\n{rst_description}'
 
 
