@@ -10,7 +10,7 @@ on:
 
 jobs:
     delete-autopr-branch:
-        # if: github.repository == 'natcap/invest'
+        if: github.repository == 'natcap/invest'
         name: "AutoPR delete merged autopr branch"
         runs-on: ubuntu-latest
         permissions:
