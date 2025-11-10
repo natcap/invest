@@ -48,6 +48,20 @@ def get_lock():
         lockfile.delete()
 
 
+def _to_datetime(last_modified_header):
+    """Convert a Last-Modified header to a python datetime object.
+
+    Args:
+        last_modified_header (str): A date string in the form "Thu, 06 Nov 2025
+            21:27:43 GMT"
+
+    Returns:
+        A python datetime.datetime object.
+
+    """
+    return datetime.datetime.strptime(last_modified_header, '%a, %d %b %Y %X %Z')
+
+
 @functions_framework.http
 def main(request):
     """Handle requests to this GCP Cloud Function.
@@ -134,8 +148,8 @@ def main(request):
         codesign_bucket = storage_client.bucket(CODESIGN_DATA_BUCKET)
 
         # If the file does not exist at this URL, reject it.
-        response = requests.head(url)
-        if response.status_code >= 400:
+        binary_response = requests.head(url)
+        if binary_response.status_code >= 400:
             logging.info('Rejecting URL because it does not exist')
             return jsonify('Requested file does not exist'), 403
 
@@ -144,17 +158,23 @@ def main(request):
         # I just pulled June 1 out of thin air as a date that is a little while
         # ago, but not so long ago that we could suddenly have many files
         # enqueued.
-        mday, mmonth, myear = response.headers['Last-Modified'].split(' ')[1:4]
-        modified_time = datetime.datetime.strptime(
-            ' '.join((mday, mmonth, myear)), '%d %b %Y')
-        if modified_time < datetime.datetime(year=2024, month=6, day=1):
+        binary_modified_time = _to_datetime(
+            binary_response.headers['Last-Modified'])
+        if binary_modified_time < datetime.datetime(year=2024, month=6, day=1):
             logging.info('Rejecting URL because it is too old')
             return jsonify('File is too old'), 400
 
-        response = requests.head(f'{url}.signature')
-        if response.status_code != 404:
-            logging.info('Rejecting URL because it has already been signed.')
-            return jsonify('File has already been signed'), 204
+        signature_response = requests.head(f'{url}.signature')
+        if signature_response.status_code != 404:
+            signature_modified_time = _to_datetime(
+                signature_response.headers['Last-Modified'])
+            if signature_modified_time > binary_modified_time:
+                logging.info('Rejecting URL - file already signed.')
+                return jsonify('File has already been signed'), 204
+            else:
+                logging.info(
+                    'File at this URL was previously signed, but has '
+                    'probably since been modified.  Continuing with signing.')
 
         with get_lock():
             # Since the file has not already been signed, add the file to the

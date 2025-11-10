@@ -837,10 +837,11 @@ class CSVInput(FileInput):
     expected to have. The `id` of each input must match the corresponding
     column header."""
 
-    rows: typing.Union[list[Input], None] = None
-    """An iterable of `Input`s representing the rows that this CSV is
-    expected to have. The `id` of each input must match the corresponding
-    row header."""
+    orientation: typing.Literal['column', 'row'] = 'column'
+    """Orientation of the table. Defaults to 'column', meaning that the column
+    headers go horizontally. This is the recommended orientation for most tables.
+    If the table must be oriented row-wise, meaning that the headers go
+    vertically, set this to 'row'."""
 
     index_col: typing.Union[str, None] = None
     """The header name of the column to use as the index. When processing a
@@ -856,13 +857,6 @@ class CSVInput(FileInput):
     rst_section: typing.ClassVar[str] = 'csv'
 
     _columns_dict: dict[str, Input] = {}
-    _fields_dict: dict[str, Input] = {}
-
-    @model_validator(mode='after')
-    def check_not_both_rows_and_columns(self):
-        if self.rows is not None and self.columns is not None:
-            raise ValueError('Cannot have both rows and columns')
-        return self
 
     @model_validator(mode='after')
     def check_index_col_in_columns(self):
@@ -872,17 +866,11 @@ class CSVInput(FileInput):
         return self
 
     @model_validator(mode='after')
-    def check_row_and_column_types(self):
+    def check_column_types(self):
         allowed_types = {
             BooleanInput, IntegerInput, NumberInput, OptionStringInput,
             PercentInput, RasterOrVectorInput, RatioInput, FileInput,
             SingleBandRasterInput, StringInput, VectorInput, CSVInput}
-        for row in (self.rows or []):
-            for input_type in allowed_types:
-                if isinstance(row, input_type):
-                    break
-            else:
-                raise ValueError(f'Row {row} is not an allowed type')
         for col in (self.columns or []):
             for input_type in allowed_types:
                 if isinstance(col, input_type):
@@ -894,14 +882,9 @@ class CSVInput(FileInput):
     def model_post_init(self, context):
         if self.columns:
             self._columns_dict = {col.id: col for col in self.columns}
-        if self.rows:
-            self._rows_dict = {row.id: row for row in self.rows}
 
     def get_column(self, key: str) -> Input:
         return self._columns_dict[key]
-
-    def get_row(self, key: str) -> Input:
-        return self._rows_dict[key]
 
     @timeout
     def validate(self, filepath: str):
@@ -919,7 +902,7 @@ class CSVInput(FileInput):
             if file_warning:
                 return file_warning
 
-        if self.columns or self.rows:
+        if self.columns:
             try:
                 self.get_validated_dataframe(filepath)
             except Exception as e:
@@ -928,8 +911,8 @@ class CSVInput(FileInput):
     def get_validated_dataframe(self, csv_path: str, read_csv_kwargs={}, args=None):
         """Read a CSV into a dataframe that is guaranteed to match the spec.
 
-        This is only supported when `columns` or `rows` is provided. Each
-        column will be read in to a dataframe and values will be pre-processed
+        This is only supported when `columns` is provided. Each column will
+        be read in to a dataframe and values will be pre-processed
         according to that column input type. Column/row headers are matched
         case-insensitively. Values are cast to the appropriate
         type and relative paths are expanded.
@@ -951,29 +934,22 @@ class CSVInput(FileInput):
             AssertionError from ``utils.evaluate_expression`` if any conditonal
             requirement string can't be evaluated given the values in ``args``.
         """
-        if not (self.columns or self.rows):
-            raise ValueError('One of columns or rows must be provided')
+        if not self.columns:
+            raise ValueError('Columns must be provided')
+
+        df = utils.read_csv_to_dataframe(
+            csv_path, **read_csv_kwargs,
+            header=None if self.orientation == "row" else 'infer')
+
+        if self.orientation == "row":  # swap rows and columns
+            df = df.set_index(df.columns[0]).rename_axis(
+                None, axis=0).T.reset_index(drop=True)
 
         # build up a list of regex patterns to match columns against columns from
         # the table that match a pattern in this list (after stripping whitespace
         # and lowercasing) will be included in the dataframe
-        axis = 'column' if self.columns else 'row'
-
-        if self.rows:
-            read_csv_kwargs = read_csv_kwargs.copy()
-            read_csv_kwargs['header'] = None
-
-        df = utils.read_csv_to_dataframe(csv_path, **read_csv_kwargs)
-
-        if self.rows:
-            # swap rows and column
-            df = df.set_index(df.columns[0]).rename_axis(
-                None, axis=0).T.reset_index(drop=True)
-
-        columns = self.columns if self.columns else self.rows
-
         patterns = []
-        for column in columns:
+        for column in self.columns:
             column = column.id.lower()
             match = re.match(r'(.*)\[(.+)\](.*)', column)
             if match:
@@ -994,7 +970,7 @@ class CSVInput(FileInput):
 
         # Evaluate any conditional requirement strings to booleans
         # This will raise an error if any can't be evaluated
-        columns = copy.deepcopy(columns)
+        columns = copy.deepcopy(self.columns)
         for col_spec in columns:
             if isinstance(col_spec.required, str):
                 col_spec.required = bool(utils.evaluate_expression(
@@ -1005,11 +981,11 @@ class CSVInput(FileInput):
             if col_spec.required and not matching_cols:
                 if '[' in col_spec.id:
                     raise ValueError(validation_messages.PATTERN_MATCHED_NONE.format(
-                        header=axis,
+                        header=self.orientation,
                         header_name=col_spec.id))
                 else:
                     raise ValueError(validation_messages.MATCHED_NO_HEADERS.format(
-                        header=axis,
+                        header=self.orientation,
                         header_name=col_spec.id))
             available_cols -= set(matching_cols)
             for col in matching_cols:
@@ -1027,7 +1003,8 @@ class CSVInput(FileInput):
                     err_msg = col_spec.validate(value)
                     if err_msg:
                         raise ValueError(
-                            f'Error in {axis} "{col}", value "{value}": {err_msg}')
+                            f'Error in {self.orientation} "{col}", '
+                            f'value "{value}": {err_msg}')
                 df[col][df[col].notna()].apply(check_value)
 
         if any(df.columns.duplicated()):
@@ -1801,6 +1778,8 @@ class VectorOutput(FileOutput):
     """An iterable of `Output`s representing the fields created in this vector.
     The `key` of each input must match the corresponding field name."""
 
+    _fields_dict: dict[str, Output] = {}
+
     @model_validator(mode='after')
     def check_field_types(self):
         for field in (self.fields or []):
@@ -1811,6 +1790,12 @@ class VectorOutput(FileOutput):
             else:
                 raise ValueError(f'Field {field} is not an allowed type')
         return self
+
+    def model_post_init(self, context):
+        self._fields_dict = {field.id: field for field in self.fields}
+
+    def get_field(self, key: str) -> Output:
+        return self._fields_dict[key]
 
 
 class CSVOutput(FileOutput):
@@ -1826,12 +1811,16 @@ class CSVOutput(FileOutput):
     """An iterable of `Output`s representing the table's columns. The `key` of
     each input must match the corresponding column header."""
 
-    rows: typing.Union[list[Output], None] = None
-    """An iterable of `Output`s representing the table's rows. The `key` of
-    each input must match the corresponding row header."""
+    orientation: typing.Literal['column', 'row'] = 'column'
+    """Orientation of the table. Defaults to 'column', meaning that the column
+    headers go horizontally. This is the recommended orientation for most tables.
+    If the table must be oriented row-wise, meaning that the headers go
+    vertically, set this to 'row'."""
 
     index_col: typing.Union[str, None] = None
     """The header name of the column that is the index of the table."""
+
+    _columns_dict: dict[str, Output] = {}
 
     @model_validator(mode='after')
     def validate_index_col_in_columns(self):
@@ -1841,17 +1830,11 @@ class CSVOutput(FileOutput):
         return self
 
     @model_validator(mode='after')
-    def check_row_and_column_types(self):
+    def check_column_types(self):
         allowed_types = {
             IntegerOutput, NumberOutput, OptionStringOutput, PercentOutput,
             FileOutput, RatioOutput, SingleBandRasterOutput, StringOutput,
             VectorOutput}
-        for row in (self.rows or []):
-            for output_type in allowed_types:
-                if isinstance(row, output_type):
-                    break
-            else:
-                raise ValueError(f'Row {row} is not an allowed type')
         for col in (self.columns or []):
             for output_type in allowed_types:
                 if isinstance(col, output_type):
@@ -1859,6 +1842,13 @@ class CSVOutput(FileOutput):
             else:
                 raise ValueError(f'Column {col} is not an allowed type')
         return self
+
+    def model_post_init(self, context):
+        if self.columns:
+            self._columns_dict = {col.id: col for col in self.columns}
+
+    def get_column(self, key: str) -> Output:
+        return self._columns_dict[key]
 
 
 class NumberOutput(Output):
@@ -2561,7 +2551,7 @@ def describe_arg_from_name(module_name, *arg_keys):
         elif i > 0 and arg_keys[i - 1] == 'columns':
             spec = spec.get_column(key)
         elif i > 0 and arg_keys[i - 1] == 'rows':
-            spec = spec.get_row(key)
+            spec = spec.get_column(key)
         elif key in {'bands', 'fields', 'contents', 'columns', 'rows'}:
             continue
         else:
