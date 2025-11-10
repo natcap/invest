@@ -5,62 +5,8 @@ from docutils import nodes
 from docutils import utils
 from docutils.parsers import rst
 from natcap.invest import set_locale
+from natcap.invest import spec
 
-"""
-# investspec extension for Sphinx
-
-This is a custom Sphinx extension that generates documentation of InVEST model
-inputs from the model's `MODEL_SPEC`. Its purpose is to help us reduce
-duplicated information and provide consistent, user-friendly documentation.
-The `investspec` extension provides the `:investspec:` role, which can be used
-inline in RST files to insert generated documentation anywhere you want.
-
-To use in a sphinx project, add 'natcap.invest.investspec' to the list of
-extensions in your conf.py.
-
-
-## Usage
-
-The `investspec` role takes two arguments: `` :investspec:`module key` ``
-
-`module` (or `f'{investspec_module_prefix}.{module}'` if
-`investspec_module_prefix` is defined) must be an importable python module.
-It must have an attribute `MODEL_SPEC` .
-
-The second argument specifies which (nested) arg to document. It is a
-period-separated series of dictionary keys accessed starting at
-`MODEL_SPEC.args`. For example:
-
-- `` :investspec:`annual_water_yield biophysical_table_path` ``
-
-- `` :investspec:`annual_water_yield biophysical_table_path.columns.kc` ``
-
-## What is not documented
-- `expression`s for `number` types. This can be any python expression, so it
-  may be too complicated to to auto-format into human readable text. Any limits
-  on a `number`'s value should also be described in the `about` text.
-- Conditional requirements (`"required": <str>`). This can be any python
-  expression, so it may be too complicated to auto-format into human readable
-  text. For any conditionally-required input, the conditions upon which it is
-  required should also be described in the `about` text.
-
-## Limitations
-- This implementation can only generate output that uses standard docutils
-  features, and no sphinx-specific features. See natcap/invest.users-guide#35
-  for details.
-- Relies on the `MODEL_SPEC` being complete. For example, columns in a table's
-  `columns` attribute should either all have an `about` attribute, or none have
-   an `about` attribute. However, it is still valid for only some to have an
-   `about` attribute. If some are missing, it will work, but the generated docs
-   will look a little strange.
-
-`make demo_investspec` exists as a sort-of integration test to prove that the
-extension works without errors. The output is not checked for correctness. It
-installs the mock module in `extensions/investspec/test/test_module`, then
-builds HTML docs from `extensions/investspec/test/index.rst`, using the
-`investspec` role. You can look at the output in
-`extensions/investspec/test/build` for examples of what the role does.
-"""
 
 def parse_rst(text):
     """Parse RST text into a list of docutils nodes.
@@ -86,10 +32,81 @@ def parse_rst(text):
     return list(first_node.findall(descend=False, siblings=True))
 
 
+def get_input_from_key(module_name, *arg_keys):
+    """Get the `Input` that corresponds to a given chain of keys
+
+    Args:
+        module_name (str): invest model module containing the arg.
+        *arg_keys: one or more strings that are nested arg keys.
+
+    Returns:
+        spec.Input
+    """
+    # import the specified module (that should have an MODEL_SPEC attribute)
+    module = importlib.import_module(module_name)
+
+    # start with the spec for all args
+    # narrow down to the nested spec indicated by the sequence of arg keys
+    spec = module.MODEL_SPEC.get_input(arg_keys[0])
+    arg_keys = arg_keys[1:]
+    for i, key in enumerate(arg_keys):
+        # convert raster band numbers to ints
+        if i > 0 and arg_keys[i - 1] == 'bands':
+            key = int(key)
+        elif i > 0 and arg_keys[i - 1] == 'fields':
+            spec = spec.get_field(key)
+        elif i > 0 and arg_keys[i - 1] == 'contents':
+            spec = spec.get_contents(key)
+        elif i > 0 and arg_keys[i - 1] == 'columns':
+            spec = spec.get_column(key)
+        elif i > 0 and arg_keys[i - 1] == 'rows':
+            spec = spec.get_row(key)
+        elif key in {'bands', 'fields', 'contents', 'columns', 'rows'}:
+            continue
+        else:
+            try:
+                spec = spec.get(key)
+            except KeyError:
+                keys_so_far = '.'.join(arg_keys[:i + 1])
+                raise ValueError(
+                    f"Could not find the key '{keys_so_far}' in the "
+                    f"{module_name} model's MODEL_SPEC")
+    return spec
+
+
 def invest_spec(name, rawtext, text, lineno, inliner, options={}, content=[]):
     """Custom docutils role to generate InVEST model input docs from spec.
 
-    Docutils expects a function that accepts all of these args.
+    This is a custom Sphinx extension that generates documentation of InVEST
+    model inputs from the model's `MODEL_SPEC`. Its purpose is to help us reduce
+    duplicated information and provide consistent, user-friendly documentation.
+    The `investspec` extension provides the `:investspec:` role, which can be
+    used inline in RST files to insert generated documentation anywhere you want.
+
+    To use in a sphinx project, add 'natcap.invest.investspec' to the list of
+    extensions in the conf.py.
+
+    Usage:
+
+    The `investspec` role takes two arguments: `` :investspec:`module key` ``
+
+    `module` (or `f'{investspec_module_prefix}.{module}'` if
+    `investspec_module_prefix` is defined) must be an importable python module.
+    It must have an attribute `MODEL_SPEC` .
+
+    The second argument specifies which (nested) arg to document. It is a
+    period-separated series of dictionary keys accessed starting at
+    `MODEL_SPEC.args`. For example:
+
+    - `` :investspec:`annual_water_yield biophysical_table_path` ``
+
+    - `` :investspec:`annual_water_yield biophysical_table_path.columns.kc` ``
+
+    Note that this implementation can only generate output that uses standard
+    docutils features, and no sphinx-specific features.
+    See natcap/invest.users-guide#35 for details.
+
+    Docutils expects a function that accepts all of these args:
 
     Args:
         name (str): the local name of the interpreted text role, the role name
@@ -127,13 +144,19 @@ def invest_spec(name, rawtext, text, lineno, inliner, options={}, content=[]):
     module_name = f'natcap.invest.{arguments[0]}'
     keys = arguments[1].split('.')  # period-separated series of keys
 
+    # anchor names cannot contain underscores. sphinx will replace them
+    # automatically, but lets explicitly replace them here
+    anchor_name = '-'.join(keys).replace('_', '-')
+
     # access the 'language' setting, and install it
     # before importing the desired invest module
     language = inliner.document.settings.env.app.config.language
     set_locale(language if language else 'en')
 
     spec = importlib.import_module('natcap.invest.spec')
-    rst = spec.describe_arg_from_name(module_name, *keys)
+    _input = get_input_from_key(module_name, *keys)
+    rst = '\n\n'.join(_input.describe_rst())
+    rst = f'.. _{anchor_name}:\n\n{rst}'
     return parse_rst(rst), []
 
 
