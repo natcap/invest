@@ -366,7 +366,7 @@ class UMHTests(unittest.TestCase):
             urban_mental_health.execute(args)
         self.assertTrue(
             "The extent of bounding box of the AOI buffered by the search "
-            "radius exceeds that of the LULC_base raster" in
+            "radius exceeds that of the lulc_base.tif" in
             str(context.exception))
 
     def test_masking_without_lulc(self):

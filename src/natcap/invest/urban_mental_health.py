@@ -622,26 +622,22 @@ def execute(args):
              args['search_radius'], args['search_radius']])
         aoi_buffered_bbox = list(aoi_buffered_bbox)
 
-        # Check if buffered AOI bbox is larger than input base and alt NDVI
-        check_raster_bounds_against_aoi(aoi_buffered_bbox, ndvi_bbox,
-                                        "NDVI_base")
-        check_raster_bounds_against_aoi(
-            aoi_buffered_bbox,
-            pygeoprocessing.get_raster_info(args['ndvi_alt'])['bounding_box'],
-            "NDVI_alt")
-
         input_align_list = [args['ndvi_base'], args['ndvi_alt']]
         output_align_list = [file_registry['ndvi_base_aligned'],
                              file_registry['ndvi_alt_aligned']]
         resample_method_list = ['cubic', 'cubic']
 
-        if args['lulc_base']:
-            input_align_list.append(args['lulc_base'])
-            output_align_list.append(file_registry['lulc_base_aligned'])
-            resample_method_list.append('near')
+        for input_raster in ['lulc_base', 'lulc_alt']:
+            if args[input_raster]:
+                input_align_list.append(args[input_raster])
+                output_align_list.append(file_registry[input_raster+'_aligned'])
+                resample_method_list.append('near')
+
+        # Ensure rasters to be clipped to buffered AOI bbox are large enough
+        for raster in input_align_list:
             check_raster_bounds_against_aoi(
                 aoi_buffered_bbox, pygeoprocessing.get_raster_info(
-                    args['lulc_base'])['bounding_box'], "LULC_base")
+                    raster)['bounding_box'], os.path.basename(raster))
 
         ndvi_align_task = task_graph.add_task(
             func=pygeoprocessing.align_and_resize_raster_stack,
@@ -661,12 +657,13 @@ def execute(args):
                            file_registry['ndvi_alt_aligned_masked']]
         mask_base_outputs = [file_registry['ndvi_base_aligned_masked']]
         mask_alt_outputs = [file_registry['ndvi_alt_aligned_masked']]
-        if args['lulc_base']:
+        if args['lulc_base'] and args['lulc_attr_csv']:
             LOGGER.info("Masking NDVI using LULC")
-            mask_base_inputs += [file_registry['lulc_base_aligned'],
-                                 args['lulc_attr_csv'],
-                                 file_registry['lulc_base_mask']]
-            mask_base_outputs.append(file_registry['lulc_base_mask'])
+            lulc_masking_inputs = [file_registry['lulc_base_aligned'],
+                                   args['lulc_attr_csv'],
+                                   file_registry['lulc_base_mask']]
+            mask_base_inputs += lulc_masking_inputs
+            mask_base_outputs.append(lulc_masking_inputs[-1])
 
             # Use lulc_alt to mask if provided. Otherwise, use lulc_base
             if args['lulc_alt']:
@@ -674,9 +671,7 @@ def execute(args):
                                     args['lulc_attr_csv'],
                                     file_registry['lulc_alt_mask']]
             else:
-                mask_alt_inputs += [file_registry['lulc_base_aligned'],
-                                    args['lulc_attr_csv'],
-                                    file_registry['lulc_alt_mask']]
+                mask_alt_inputs += lulc_masking_inputs
 
             mask_alt_outputs.append(file_registry['lulc_alt_mask'])
         else:
@@ -878,6 +873,7 @@ def check_raster_bounds_against_aoi(aoi_bbox, raster_bbox, raster_name):
             calculated by extending the input vector AOI bounds by
             `search_radius` meters (in the case of TCC, NDVI or LULC rasters)
         raster_bbox (list): raster bounds in format [xmin, ymin, xmax, ymax]
+        raster_name (str): name of raster for warning text
 
     Returns:
         None
