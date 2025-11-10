@@ -87,7 +87,7 @@ jobs:
                         git push origin ${AUTOPR_BRANCH}
                         export AUTOPR_BRANCH  # needed for envsubst
 
-                        # This PR will be assigned to $GITHUB_ACTOR, which should be
+                        # This PR will be assigned to $PR_USERNAME, which should be
                         # the person who merged the PR that caused this commit to be
                         # created. Others could of course be assigned later.
                         FAILED=0
