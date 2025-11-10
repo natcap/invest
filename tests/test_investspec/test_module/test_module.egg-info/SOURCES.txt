@@ -1,7 +1,0 @@
-setup.py
-test_module/test_module.py
-test_module.egg-info/PKG-INFO
-test_module.egg-info/SOURCES.txt
-test_module.egg-info/dependency_links.txt
-test_module.egg-info/not-zip-safe
-test_module.egg-info/top_level.txt

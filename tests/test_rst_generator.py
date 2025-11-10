@@ -4,14 +4,14 @@ import subprocess
 import unittest
 from unittest.mock import MagicMock
 
-import investspec
+import rst_generator
 from docutils.nodes import emphasis, Node, paragraph, reference, strong
 
 TEST_DIR = os.path.abspath(os.path.dirname(__file__))
 BUILD_DIR = os.path.join(TEST_DIR, 'build')
 
 
-class TestInvestSpec(unittest.TestCase):
+class TestRSTGenerator(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -26,7 +26,7 @@ class TestInvestSpec(unittest.TestCase):
 
     def test_parse_rst(self):
         """parse_rst should create a correct list of docutils nodes."""
-        nodes = investspec.parse_rst(
+        nodes = rst_generator.parse_rst(
             '**Bar** (`number <input_types.html#number>`__, '
             'units: **m³/month**, *required*): Description')
         # should be a list of one paragraph node
@@ -53,7 +53,7 @@ class TestInvestSpec(unittest.TestCase):
         mock_inliner = MagicMock()
         mock_inliner.document.settings.env.app.config.investspec_module_prefix = 'test_module'
         mock_inliner.document.settings.env.app.config.language = 'en'
-        nodes, messages = investspec.invest_spec(
+        nodes, messages = rst_generator.invest_spec(
             None, None, 'test_module number_input', None, mock_inliner)
         self.assertEqual(len(nodes), 2)
         for node in nodes:
