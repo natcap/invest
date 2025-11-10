@@ -271,6 +271,12 @@ class Input(BaseModel):
     def describe_rst(self):
         """Generate RST documentation for this input.
 
+        Note that conditional requirements (where `required` is a string
+        expression) are not documented because it may be too complicated to
+        auto-format into human readable text. For any conditionally-required
+        input, the conditions upon which it is required should also be
+        described in the `about` attribute.
+
         Returns:
             list of strings, where each string is a line of RST-formatted text.
         """
@@ -1271,6 +1277,11 @@ class NumberInput(Input):
 
     def describe_rst(self):
         """Generate RST documentation for this input.
+
+        Note that the `expression` attribute is not documented here because
+        it may be too complicated to to auto-format into human readable text.
+        The requirements enforced by the `expression` should also be described
+        in the `about` attribute.
 
         Returns:
             list of strings, where each string is a line of RST-formatted text.
@@ -2525,62 +2536,6 @@ def format_type_string(arg_type):
             f'`{SingleBandRasterInput.display_name} <{INPUT_TYPES_HTML_FILE}#{SingleBandRasterInput.rst_section}>`__ or '
             f'`{VectorInput.display_name} <{INPUT_TYPES_HTML_FILE}#{VectorInput.rst_section}>`__')
     return f'`{arg_type.display_name} <{INPUT_TYPES_HTML_FILE}#{arg_type.rst_section}>`__'
-
-
-def describe_arg_from_name(module_name, *arg_keys):
-    """Generate RST documentation for an arg, given its model and name.
-
-    Args:
-        module_name (str): invest model module containing the arg.
-        *arg_keys: one or more strings that are nested arg keys.
-
-    Returns:
-        String describing the arg in RST format. Contains an anchor named
-        <arg_keys[0]>-<arg_keys[1]>...-<arg_keys[n]>
-        where underscores in arg keys are replaced with hyphens.
-    """
-    # import the specified module (that should have an MODEL_SPEC attribute)
-    module = importlib.import_module(module_name)
-
-    # anchor names cannot contain underscores. sphinx will replace them
-    # automatically, but lets explicitly replace them here
-    anchor_name = '-'.join(arg_keys).replace('_', '-')
-
-    # start with the spec for all args
-    # narrow down to the nested spec indicated by the sequence of arg keys
-    spec = module.MODEL_SPEC.get_input(arg_keys[0])
-    arg_keys = arg_keys[1:]
-    for i, key in enumerate(arg_keys):
-        # convert raster band numbers to ints
-        if i > 0 and arg_keys[i - 1] == 'bands':
-            key = int(key)
-        elif i > 0 and arg_keys[i - 1] == 'fields':
-            spec = spec.get_field(key)
-        elif i > 0 and arg_keys[i - 1] == 'contents':
-            spec = spec.get_contents(key)
-        elif i > 0 and arg_keys[i - 1] == 'columns':
-            spec = spec.get_column(key)
-        elif i > 0 and arg_keys[i - 1] == 'rows':
-            spec = spec.get_row(key)
-        elif key in {'bands', 'fields', 'contents', 'columns', 'rows'}:
-            continue
-        else:
-            try:
-                spec = spec.get(key)
-            except KeyError:
-                keys_so_far = '.'.join(arg_keys[:i + 1])
-                raise ValueError(
-                    f"Could not find the key '{keys_so_far}' in the "
-                    f"{module_name} model's MODEL_SPEC")
-
-    # format spec into an RST formatted description string
-    if spec.name:
-        arg_name = spec.capitalize_name()
-    else:
-        arg_name = arg_keys[-1]
-
-    rst_description = '\n\n'.join(spec.describe_rst())
-    return f'.. _{anchor_name}:\n\n{rst_description}'
 
 
 def write_metadata_file(datasource_path, spec, keywords_list,
