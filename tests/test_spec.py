@@ -395,10 +395,10 @@ class TestMetadataFromSpec(unittest.TestCase):
             [model_spec.model_id, 'InVEST'])
         self.assertEqual(
             resource.get_field_description('SUP_DEMadm_cap').description,
-            vector_spec.fields[0].about)
+            vector_spec.get_field('SUP_DEMadm_cap').about)
         self.assertEqual(
             resource.get_field_description('SUP_DEMadm_cap').units,
-            spec.format_unit(vector_spec.fields[0].units))
+            spec.format_unit(vector_spec.get_field('SUP_DEMadm_cap').units))
 
 
 class ResultsSuffixTests(unittest.TestCase):

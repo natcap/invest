@@ -214,8 +214,8 @@ MODEL_SPEC = spec.ModelSpec(
             id="global_wind_parameters_path",
             name=gettext("global wind energy parameters"),
             about=gettext("A table of wind energy infrastructure parameters."),
-            columns=None,
-            rows=[
+            orientation="row",
+            columns=[
                 spec.NumberInput(
                     id="air_density",
                     about=gettext("Standard atmosphere air density."),
@@ -326,8 +326,8 @@ MODEL_SPEC = spec.ModelSpec(
             id="turbine_parameters_path",
             name=gettext("turbine parameters"),
             about=gettext("A table of parameters specific to the type of turbine."),
-            columns=None,
-            rows=[
+            orientation="row",
+            columns=[
                 spec.NumberInput(
                     id="hub_height",
                     about=gettext("Height of the turbine hub above sea level."),
