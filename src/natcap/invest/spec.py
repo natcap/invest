@@ -697,7 +697,7 @@ class VectorInput(SpatialFileInput):
                 for spec in self.fields:
                     # brackets are a special character for our args spec syntax
                     # they surround the part of the key that's user-defined
-                    # user-defined rows/columns/fields are not validated here, so skip
+                    # user-defined columns/fields are not validated here, so skip
                     if spec.required is True and '[' not in spec.id:
                         field_patterns.append(spec.id)
 
@@ -832,11 +832,10 @@ class RasterOrVectorInput(SpatialFileInput):
 class CSVInput(FileInput):
     """A CSV table input, or parameter, of an invest model.
 
-    For CSVs with a simple layout, `columns` or `rows` (but not both) may be
-    specified. For more complex table structures that cannot be described by
-    `columns` or `rows`, you may omit both attributes. Note that more complex
-    table structures are often more difficult to use; consider dividing them
-    into multiple, simpler tabular inputs.
+    For CSVs with a simple layout, `columns` may be specified. For more complex
+    table structures that cannot be described by `columns`, you may omit the
+    attribute. Note that more complex table structures are often more difficult
+    to use; consider dividing them into multiple, simpler tabular inputs.
     """
     columns: typing.Union[list[Input], None] = None
     """An iterable of `Input`s representing the columns that this CSV is
@@ -1062,7 +1061,7 @@ class CSVInput(FileInput):
             sanitized_about_string = self.about.replace("_", "\\_")
             rst_line += f': {sanitized_about_string}'
 
-        if not self.columns and not self.rows:
+        if not self.columns:
             rst_line += gettext(
                 ' Please see the sample data table for details on the format.')
 
@@ -1812,11 +1811,10 @@ class VectorOutput(FileOutput):
 class CSVOutput(FileOutput):
     """A CSV table output, or result, of an invest model.
 
-    For CSVs with a simple layout, `columns` or `rows` (but not both) may be
-    specified. For more complex table structures that cannot be described by
-    `columns` or `rows`, you may omit both attributes. Note that more complex
-    table structures are often more difficult to use; consider dividing them
-    into multiple, simpler tabular outputs.
+    For CSVs with a simple layout, `columns` may be specified. For more complex
+    table structures that cannot be described by `columns`, you may omit the
+    attribute. Note that more complex table structures are often more difficult
+    to use; consider dividing them into multiple, simpler tabular outputs.
     """
     columns: typing.Union[list[Output], None] = None
     """An iterable of `Output`s representing the table's columns. The `key` of
