@@ -160,7 +160,6 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=float,
             units=None,
-            projected=True,
             required="scenario=='tcc_ndvi'",
             allowed="scenario=='tcc_ndvi'"
         ),
@@ -174,7 +173,6 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=float,
             units=None,
-            projected=True,
             # require ndvi_base unless scenario is `lulc`` and user enters
             # an attribute table
             required="scenario!='lulc' or not lulc_attr_csv",
@@ -189,7 +187,6 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=float,
             units=None,
-            projected=True,
             required="scenario=='ndvi'",
             allowed="scenario=='ndvi'"
         ),
@@ -206,7 +203,6 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=int,
             units=None,
-            projected=True,
             required="scenario=='lulc' or lulc_attr_csv",
         ),
         spec.SingleBandRasterInput(
@@ -222,7 +218,6 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=int,
             units=None,
-            projected=True,
             required="scenario=='lulc'",
             allowed="scenario=='lulc' or lulc_base"
         ),
@@ -584,15 +579,8 @@ def execute(args):
         LOGGER.info("Using scenario option 3: NDVI")
         base_ndvi_raster_info = pygeoprocessing.get_raster_info(
             args['ndvi_base'])
+        # target pixel size for outputs
         pixel_size = base_ndvi_raster_info['pixel_size']
-        target_projection = base_ndvi_raster_info['projection_wkt']
-        target_sr = osr.SpatialReference()
-        target_sr.ImportFromWkt(target_projection)
-        ndvi_bbox = base_ndvi_raster_info['bounding_box']
-        # alternative option is to have mode='intersection' and use AOI vector
-        # to clip rasters during align/resize task
-        # however, this would mean that edge pixels would be less accurate/
-        # lack spatial context
 
         pixel_radius = int(round(args['search_radius']/pixel_size[0]))
         LOGGER.info(f"Search radius {args['search_radius']} results in "
@@ -606,15 +594,10 @@ def execute(args):
         # InVEST will take care of buffering the processing AOI to ensure
         # correct edge pixel calculation
         aoi_info = pygeoprocessing.get_vector_info(args['aoi_path'])
+        aoi_projection = aoi_info["projection_wkt"]
         aoi_sr = osr.SpatialReference()
-        aoi_sr.ImportFromWkt(aoi_info["projection_wkt"])
-
-        if not aoi_sr.IsSame(target_sr):
-            aoi_bbox = pygeoprocessing.transform_bounding_box(
-                aoi_info["bounding_box"], aoi_info["projection_wkt"],
-                target_projection)
-        else:
-            aoi_bbox = aoi_info["bounding_box"]
+        aoi_sr.ImportFromWkt(aoi_projection)
+        aoi_bbox = aoi_info["bounding_box"]
 
         # Expand target bounding box to ensure correct edge pixel calculation
         aoi_buffered_bbox = aoi_bbox + numpy.array(
@@ -635,9 +618,9 @@ def execute(args):
 
         # Ensure rasters to be clipped to buffered AOI bbox are large enough
         for raster in input_align_list:
-            check_raster_bounds_against_aoi(
-                aoi_buffered_bbox, pygeoprocessing.get_raster_info(
-                    raster)['bounding_box'], os.path.basename(raster))
+            check_raster_against_aoi_bounds(aoi_buffered_bbox, aoi_sr, raster)
+            # Note: population raster is not checked; it just needs to cover AOI
+            # which seems straighforward enough to not require checking bounds
 
         ndvi_align_task = task_graph.add_task(
             func=pygeoprocessing.align_and_resize_raster_stack,
@@ -647,7 +630,7 @@ def execute(args):
                   aoi_buffered_bbox),
             kwargs={
                 'raster_align_index': 0,  # align to base_ndvi
-                'target_projection_wkt': target_projection},
+                'target_projection_wkt': aoi_projection},
             target_path_list=output_align_list,
             task_name='align NDVI rasters')
 
@@ -757,20 +740,17 @@ def execute(args):
             args['population_raster'])
         pop_sr = osr.SpatialReference()
         pop_sr.ImportFromWkt(pop_raster_info['projection_wkt'])
-        if not pop_sr.IsSame(target_sr):
+        if not pop_sr.IsSame(aoi_sr):
             transformed_bounding_box = pygeoprocessing.transform_bounding_box(
                 pop_raster_info['bounding_box'],
                 pop_raster_info['projection_wkt'],
-                target_projection, edge_samples=11)
+                aoi_projection)
             pop_raster_info['bounding_box'] = transformed_bounding_box
 
+        # Use this bbox as target when aligning pop raster because extents
+        # should match when using raster calculator to calc preventable cases
         delta_ndvi_bbox = pygeoprocessing.get_raster_info(
                 file_registry['delta_ndvi'])['bounding_box']
-        target_bounding_box = pygeoprocessing.merge_bounding_box_list(
-            [delta_ndvi_bbox,
-             pop_raster_info['bounding_box']], 'intersection')
-        LOGGER.info("Target bounding box (intersection of population raster"
-                    f"and delta NDVI): {target_bounding_box}")
 
         population_align_task = task_graph.add_task(
             func=_resample_population_raster,
@@ -779,22 +759,12 @@ def execute(args):
                 'target_population_raster_path': file_registry[
                     'population_aligned'],
                 'target_pixel_size': pixel_size,
-                'target_bb': target_bounding_box,
-                'target_projection_wkt': target_projection,
+                'target_bb': delta_ndvi_bbox,
+                'target_projection_wkt': aoi_projection,
                 'working_dir': args['workspace_dir'],
             },
             target_path_list=[file_registry['population_aligned']],
             task_name='Resample population to NDVI resolution')
-
-        target_bounding_box = pygeoprocessing.get_raster_info(
-            file_registry['population_aligned'])["bounding_box"]
-        if not numpy.allclose(numpy.array(target_bounding_box),
-                              numpy.array(delta_ndvi_bbox), rtol=0, atol=1e-6):
-            raise ValueError(
-                "The bounding boxes of the preprocessed population raster and "
-                "delta_ndvi raster are not equal. This occurs when the "
-                "population raster is too small. The bounds of the population "
-                "raster should at least extend across the entire AOI.")
 
         baseline_cases_task = task_graph.add_task(
             func=calc_baseline_cases,
@@ -862,7 +832,7 @@ def execute(args):
     return file_registry.registry
 
 
-def check_raster_bounds_against_aoi(aoi_bbox, raster_bbox, raster_name):
+def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
     """Check if raster bounds are >= bounds of AOI + search_radius.
 
     Check if the bounds of the raster extend at least search_radius
@@ -872,13 +842,29 @@ def check_raster_bounds_against_aoi(aoi_bbox, raster_bbox, raster_name):
         aoi_bbox (list): aoi bounds in format [xmin, ymin, xmax, ymax],
             calculated by extending the input vector AOI bounds by
             `search_radius` meters (in the case of TCC, NDVI or LULC rasters)
-        raster_bbox (list): raster bounds in format [xmin, ymin, xmax, ymax]
-        raster_name (str): name of raster for warning text
+        aoi_sr (osr spatial reference): The defined spatial reference of the
+            AOI, which is the target spatial reference of the model
+        raster (str): path to raster
 
     Returns:
         None
 
+    Raises:
+        UserWarning: if the raster extent is too small
+
     """
+
+    raster_info = pygeoprocessing.get_raster_info(
+        raster)
+    raster_bbox = raster_info['bounding_box']
+    raster_projection = raster_info['projection_wkt']
+    raster_sr = osr.SpatialReference()
+    raster_sr.ImportFromWkt(raster_projection)
+
+    if not raster_sr.IsSame(aoi_sr):
+        raster_bbox = pygeoprocessing.transform_bounding_box(
+            raster_bbox, raster_projection, aoi_sr.ExportToWkt()
+        )
 
     errors_dict = {"xmin": aoi_bbox[0] < raster_bbox[0],
                    "ymin": aoi_bbox[1] < raster_bbox[1],
@@ -893,10 +879,10 @@ def check_raster_bounds_against_aoi(aoi_bbox, raster_bbox, raster_name):
         errors = [k for k, v in errors_dict.items() if v]
         raise UserWarning(
             "The extent of bounding box of the AOI buffered by the search "
-            f"radius exceeds that of the {raster_name} raster input. The "
-            f"issue is with the following coordinates: {errors}. For "
-            f"reference, the buffered AOI bounding box is: {aoi_bbox}, and "
-            f"the raster bbox is: {raster_bbox}")
+            f"radius exceeds that of the {os.path.basename(raster)} raster "
+            f"input. The issue is with the following coordinates: {errors}. "
+            f"For reference, the buffered AOI bounding box is: {aoi_bbox}, "
+            f"and the raster bbox is: {raster_bbox}")
 
 
 def _resample_population_raster(
