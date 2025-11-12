@@ -74,11 +74,7 @@ def get_input_from_key(module_name, *arg_keys):
     return spec
 
 
-def describe_input(module_name, keys, language='en'):
-
-    set_locale(language)
-    importlib.reload(spec)
-    importlib.reload(importlib.import_module(name=module_name))
+def describe_input(module_name, keys):
 
     _input = get_input_from_key(module_name, *keys)
     # anchor names cannot contain underscores. sphinx will replace them
@@ -159,7 +155,9 @@ def invest_spec(name, rawtext, text, lineno, inliner, options={}, content=[]):
     keys = arguments[1].split('.')  # period-separated series of keys
     # access the 'language' setting
     language = inliner.document.settings.env.app.config.language or 'en'
-    return parse_rst(describe_input(module_name, keys, language)), []
+    set_locale(language)
+    importlib.reload(importlib.import_module(name=module_name))
+    return parse_rst(describe_input(module_name, keys)), []
 
 
 def setup(app):

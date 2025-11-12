@@ -281,7 +281,7 @@ class Input(BaseModel):
             list of strings, where each string is a line of RST-formatted text.
         """
         name = self.name or self.id
-        type_string = format_type_string(type(self))
+        type_string = format_type_string(self)
         required_string = self.format_required_string()
 
         rst_line = f'**{name}** ({type_string}, *{required_string}*)'
@@ -331,9 +331,11 @@ class FileInput(Input):
 
     type: typing.ClassVar[str] = 'file'
 
-    display_name: typing.ClassVar[str] = gettext('file')
-
     rst_section: typing.ClassVar[str] = 'file'
+
+    @property
+    def display_name(self):
+        return gettext('file')
 
     @timeout
     def validate(self, filepath: str):
@@ -479,9 +481,11 @@ class RasterInput(SpatialFileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
-    display_name: typing.ClassVar[str] = gettext('raster')
-
     rst_section: typing.ClassVar[str] = 'raster'
+
+    @property
+    def display_name(self):
+        return gettext('raster')
 
     @timeout
     def validate(self, filepath: str):
@@ -533,9 +537,11 @@ class SingleBandRasterInput(SpatialFileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
-    display_name: typing.ClassVar[str] = gettext('raster')
-
     rst_section: typing.ClassVar[str] = 'raster'
+
+    @property
+    def display_name(self):
+        return gettext('raster')
 
     @timeout
     def validate(self, filepath: str):
@@ -577,7 +583,7 @@ class SingleBandRasterInput(SpatialFileInput):
             list of strings, where each string is a line of RST-formatted text.
         """
         name = self.name or self.id
-        type_string = format_type_string(type(self))
+        type_string = format_type_string(self)
 
         in_parentheses = [type_string]
 
@@ -617,8 +623,6 @@ class VectorInput(SpatialFileInput):
 
     type: typing.ClassVar[str] = 'vector'
 
-    display_name: typing.ClassVar[str] = gettext('vector')
-
     rst_section: typing.ClassVar[str] = 'vector'
 
     _fields_dict: dict[str, Input] = {}
@@ -636,6 +640,10 @@ class VectorInput(SpatialFileInput):
 
     def model_post_init(self, context):
         self._fields_dict = {field.id: field for field in self.fields}
+
+    @property
+    def display_name(self):
+        return gettext('vector')
 
     def get_field(self, key: str) -> Input:
         return self._fields_dict[key]
@@ -750,7 +758,7 @@ class VectorInput(SpatialFileInput):
             vector fields and geometry types, option_string options, etc.
         """
         name = self.name or self.id
-        type_string = format_type_string(type(self))
+        type_string = format_type_string(self)
         required_string = self.format_required_string()
         geom_string = self.format_geometry_types_rst()
         rst_line = f'**{name}** ({type_string}, {geom_string}, *{required_string}*)'
@@ -782,8 +790,6 @@ class RasterOrVectorInput(SpatialFileInput):
 
     type: typing.ClassVar[str] = 'raster_or_vector'
 
-    display_name: typing.ClassVar[str] = gettext('raster or vector')
-
     rst_section: typing.ClassVar[str] = 'raster'
 
     _single_band_raster_input: SingleBandRasterInput
@@ -804,6 +810,10 @@ class RasterOrVectorInput(SpatialFileInput):
             projected=self.projected,
             projection_units=self.projection_units)
         self._fields_dict = {field.id: field for field in self.fields}
+
+    @property
+    def display_name(self):
+        return gettext('raster or vector')
 
     def get_field(self, key: str) -> Input:
         return self.fields_dict[key]
@@ -857,8 +867,6 @@ class CSVInput(FileInput):
 
     type: typing.ClassVar[str] = 'csv'
 
-    display_name: typing.ClassVar[str] = gettext('CSV')
-
     rst_section: typing.ClassVar[str] = 'csv'
 
     _columns_dict: dict[str, Input] = {}
@@ -887,6 +895,10 @@ class CSVInput(FileInput):
     def model_post_init(self, context):
         if self.columns:
             self._columns_dict = {col.id: col for col in self.columns}
+
+    @property
+    def display_name(self):
+        return gettext('CSV')
 
     def get_column(self, key: str) -> Input:
         return self._columns_dict[key]
@@ -1052,7 +1064,7 @@ class CSVInput(FileInput):
             list of strings, where each string is a line of RST-formatted text.
         """
         name = self.name or self.id
-        type_string = format_type_string(type(self))
+        type_string = format_type_string(self)
         required_string = self.format_required_string()
         rst_line = f'**{name}** ({type_string}, *{required_string}*)'
 
@@ -1092,8 +1104,6 @@ class DirectoryInput(Input):
 
     type: typing.ClassVar[str] = 'directory'
 
-    display_name: typing.ClassVar[str] = gettext('directory')
-
     rst_section: typing.ClassVar[str] = 'directory'
 
     _contents_dict: dict[str, Input] = {}
@@ -1114,6 +1124,10 @@ class DirectoryInput(Input):
 
     def model_post_init(self, context):
         self._contents_dict = {x.id: x for x in self.contents}
+
+    @property
+    def display_name(self):
+        return gettext('directory')
 
     def get_contents(self, key: str) -> Input:
         return self._contents_dict[key]
@@ -1194,9 +1208,11 @@ class NumberInput(Input):
 
     type: typing.ClassVar[str] = 'number'
 
-    display_name: typing.ClassVar[str] = gettext('number')
-
     rst_section: typing.ClassVar[str] = 'number'
+
+    @property
+    def display_name(self):
+        return gettext('number')
 
     def validate(self, value):
         """Validate a numeric value against the requirements for this input.
@@ -1263,7 +1279,7 @@ class NumberInput(Input):
             list of strings, where each string is a line of RST-formatted text.
         """
         name = self.name or self.id
-        type_string = format_type_string(type(self))
+        type_string = format_type_string(self)
 
         in_parentheses = [type_string]
 
@@ -1291,11 +1307,13 @@ class IntegerInput(NumberInput):
     """An integer input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'integer'
 
-    display_name: typing.ClassVar[str] = gettext('integer')
-
     rst_section: typing.ClassVar[str] = 'integer'
 
     units: typing.Union[pint.Unit, None] = None
+
+    @property
+    def display_name(self):
+        return gettext('integer')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1363,11 +1381,13 @@ class RatioInput(NumberInput):
     """
     type: typing.ClassVar[str] = 'ratio'
 
-    display_name: typing.ClassVar[str] = gettext('ratio')
-
     rst_section: typing.ClassVar[str] = 'ratio'
 
     units: typing.ClassVar[None] = None
+
+    @property
+    def display_name(self):
+        return gettext('ratio')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1398,11 +1418,13 @@ class PercentInput(NumberInput):
     """
     type: typing.ClassVar[str] = 'percent'
 
-    display_name: typing.ClassVar[str] = gettext('percent')
-
     rst_section: typing.ClassVar[str] = 'percent'
 
     units: typing.ClassVar[None] = None
+
+    @property
+    def display_name(self):
+        return gettext('percent')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1422,9 +1444,11 @@ class BooleanInput(Input):
     """A boolean input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'boolean'
 
-    display_name: typing.ClassVar[str] = gettext('true/false')
-
     rst_section: typing.ClassVar[str] = 'truefalse'
+
+    @property
+    def display_name(self):
+        return gettext('true/false')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1487,7 +1511,7 @@ class BooleanInput(Input):
             vector fields and geometry types, option_string options, etc.
         """
         name = self.name or self.id
-        type_string = format_type_string(type(self))
+        type_string = format_type_string(self)
         # It doesn't make sense to include the required string for booleans
         rst_line = f'**{name}** ({type_string})'
 
@@ -1510,8 +1534,6 @@ class StringInput(Input):
 
     type: typing.ClassVar[str] = 'string'
 
-    display_name: typing.ClassVar[str] = gettext('text')
-
     rst_section: typing.ClassVar[str] = 'text'
 
     @field_validator('regexp', mode='after')
@@ -1523,6 +1545,10 @@ class StringInput(Input):
             except Exception:
                 raise ValueError(f'Failed to compile regexp {regexp}')
         return regexp
+
+    @property
+    def display_name(self):
+        return gettext('text')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1614,8 +1640,6 @@ class OptionStringInput(Input):
 
     type: typing.ClassVar[str] = 'option_string'
 
-    display_name: typing.ClassVar[str] = gettext('option')
-
     rst_section: typing.ClassVar[str] = 'option'
 
     @model_validator(mode='after')
@@ -1623,6 +1647,10 @@ class OptionStringInput(Input):
         if self.dropdown_function and self.options:
             raise ValueError(f'Cannot have both dropdown_function and options')
         return self
+
+    @property
+    def display_name(self):
+        return gettext('option')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1720,7 +1748,7 @@ class OptionStringInput(Input):
             vector fields and geometry types, option_string options, etc.
         """
         name = self.name or self.id
-        type_string = format_type_string(type(self))
+        type_string = format_type_string(self)
         required_string = self.format_required_string()
         rst_line = f'**{name}** ({type_string}, *{required_string}*)'
 
@@ -2509,21 +2537,20 @@ GEOMETRY_ORDER = [
 INPUT_TYPES_HTML_FILE = 'input_types.html'
 
 
-def format_type_string(arg_type):
+def format_type_string(_input):
     """Represent an arg type as a user-friendly string.
 
     Args:
-        arg_type (str|set(str)): the type to format. May be a single type or a
-            set of types.
+        _input (Input): the input to format.
 
     Returns:
         formatted string that links to a description of the input type(s)
     """
-    if arg_type is RasterOrVectorInput:
+    if isinstance(_input, RasterOrVectorInput):
         return (
-            f'`{SingleBandRasterInput.display_name} <{INPUT_TYPES_HTML_FILE}#{SingleBandRasterInput.rst_section}>`__ or '
-            f'`{VectorInput.display_name} <{INPUT_TYPES_HTML_FILE}#{VectorInput.rst_section}>`__')
-    return f'`{arg_type.display_name} <{INPUT_TYPES_HTML_FILE}#{arg_type.rst_section}>`__'
+            f'`{_input._single_band_raster_input.display_name} <{INPUT_TYPES_HTML_FILE}#{SingleBandRasterInput.rst_section}>`__ or '
+            f'`{_input._vector_input.display_name} <{INPUT_TYPES_HTML_FILE}#{VectorInput.rst_section}>`__')
+    return f'`{_input.display_name} <{INPUT_TYPES_HTML_FILE}#{_input.rst_section}>`__'
 
 
 def write_metadata_file(datasource_path, spec, keywords_list,
