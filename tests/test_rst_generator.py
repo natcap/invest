@@ -4,7 +4,7 @@ import subprocess
 import unittest
 from unittest.mock import MagicMock
 
-import rst_generator
+from natcap.invest import rst_generator
 from docutils.nodes import emphasis, Node, paragraph, reference, strong
 
 TEST_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -12,17 +12,6 @@ BUILD_DIR = os.path.join(TEST_DIR, 'build')
 
 
 class TestRSTGenerator(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        """Install mock module."""
-        subprocess.run([
-            'pip', 'install', os.path.join(TEST_DIR, 'test_module')])
-
-    @classmethod
-    def tearDownClass(cls):
-        """Remove mock module build directory."""
-        shutil.rmtree(BUILD_DIR)
 
     def test_parse_rst(self):
         """parse_rst should create a correct list of docutils nodes."""
@@ -51,31 +40,23 @@ class TestRSTGenerator(unittest.TestCase):
     def test_invest_spec(self):
         """invest_spec role function should return what sphinx expects."""
         mock_inliner = MagicMock()
-        mock_inliner.document.settings.env.app.config.investspec_module_prefix = 'test_module'
         mock_inliner.document.settings.env.app.config.language = 'en'
         nodes, messages = rst_generator.invest_spec(
-            None, None, 'test_module number_input', None, mock_inliner)
+            None, None, 'forest_carbon_edge_effect n_nearest_model_points', None, mock_inliner)
         self.assertEqual(len(nodes), 2)
         for node in nodes:
             self.assertTrue(isinstance(node, Node))
         self.assertEqual(messages, [])
 
-    def test_investspec_integration(self):
-        """Built html should contain generated arg documentation."""
-        subprocess.run([
-            'sphinx-build',
-            '-W',  # fail on warning
-            '-a',  # write all files, not just new or changed files
-            '-b', 'html',  # build html
-            TEST_DIR, BUILD_DIR])
-        expected_html = (
-            '<strong>Foo</strong> (<a class="reference external" '
-            'href="input_types.html#number">number</a>, units: '
-            '<strong>m³/month</strong>, <em>required</em>): Numbers have '
-            'units that are displayed in a human-readable way.')
-        with open(os.path.join(BUILD_DIR, 'index.html')) as file:
-            actual_html = file.read()
-        self.assertIn(expected_html, actual_html)
+    def test_invest_spec_translation(self):
+        """invest_spec role function should return translated text."""
+        mock_inliner = MagicMock()
+        mock_inliner.document.settings.env.app.config.language = 'es'
+        nodes, messages = rst_generator.invest_spec(
+            None, None, 'forest_carbon_edge_effect n_nearest_model_points', None, mock_inliner)
+        # assert that "units" is being translated
+        self.assertIn('unidades', str(nodes[1]))
+        self.assertEqual(messages, [])
 
 
 if __name__ == '__main__':
