@@ -74,6 +74,20 @@ def get_input_from_key(module_name, *arg_keys):
     return spec
 
 
+def describe_input(module_name, keys, language='en'):
+
+    set_locale(language)
+    importlib.reload(spec)
+    importlib.reload(importlib.import_module(name=module_name))
+
+    _input = get_input_from_key(module_name, *keys)
+    # anchor names cannot contain underscores. sphinx will replace them
+    # automatically, but lets explicitly replace them here
+    anchor_name = '-'.join(keys).replace('_', '-')
+    rst = '\n\n'.join(_input.describe_rst())
+    return f'.. _{anchor_name}:\n\n{rst}'
+
+
 def invest_spec(name, rawtext, text, lineno, inliner, options={}, content=[]):
     """Custom docutils role to generate InVEST model input docs from spec.
 
@@ -143,23 +157,9 @@ def invest_spec(name, rawtext, text, lineno, inliner, options={}, content=[]):
     arguments = text.split(' ', maxsplit=1)
     module_name = f'natcap.invest.{arguments[0]}'
     keys = arguments[1].split('.')  # period-separated series of keys
-
-    # anchor names cannot contain underscores. sphinx will replace them
-    # automatically, but lets explicitly replace them here
-    anchor_name = '-'.join(keys).replace('_', '-')
-
-    # access the 'language' setting, and install it
-    # before importing the desired invest module
-    language = inliner.document.settings.env.app.config.language
-    set_locale(language if language else 'en')
-    importlib.reload(spec)
-    model_module = importlib.reload(
-        importlib.import_module(name=module_name))
-
-    _input = get_input_from_key(module_name, *keys)
-    rst = '\n\n'.join(_input.describe_rst())
-    rst = f'.. _{anchor_name}:\n\n{rst}'
-    return parse_rst(rst), []
+    # access the 'language' setting
+    language = inliner.document.settings.env.app.config.language or 'en'
+    return parse_rst(describe_input(module_name, keys, language)), []
 
 
 def setup(app):

@@ -259,17 +259,6 @@ class TestDescribeArgFromSpec(unittest.TestCase):
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
-    def test_real_model_spec(self):
-        from natcap.invest import carbon
-        out = spec.describe_arg_from_name(
-            'natcap.invest.carbon', 'carbon_pools_path', 'columns', 'lucode')
-        expected_rst = (
-            '.. _carbon-pools-path-columns-lucode:\n\n' +
-            '**lucode** (`integer <input_types.html#integer>`__, *required*): ' +
-            carbon.MODEL_SPEC.get_input('carbon_pools_path').get_column('lucode').about
-        )
-        self.assertEqual(repr(out), repr(expected_rst))
-
 
 def _fake_execute(output_spec, workspace):
     """A utility function to support the metadata test."""

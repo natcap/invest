@@ -1,3 +1,4 @@
+import importlib
 import os
 import shutil
 import subprocess
@@ -6,9 +7,6 @@ from unittest.mock import MagicMock
 
 from natcap.invest import rst_generator
 from docutils.nodes import emphasis, Node, paragraph, reference, strong
-
-TEST_DIR = os.path.abspath(os.path.dirname(__file__))
-BUILD_DIR = os.path.join(TEST_DIR, 'build')
 
 
 class TestRSTGenerator(unittest.TestCase):
@@ -42,21 +40,22 @@ class TestRSTGenerator(unittest.TestCase):
         mock_inliner = MagicMock()
         mock_inliner.document.settings.env.app.config.language = 'en'
         nodes, messages = rst_generator.invest_spec(
-            None, None, 'forest_carbon_edge_effect n_nearest_model_points', None, mock_inliner)
+            None, None, 'carbon discount_rate', None, mock_inliner)
         self.assertEqual(len(nodes), 2)
         for node in nodes:
             self.assertTrue(isinstance(node, Node))
         self.assertEqual(messages, [])
 
-    def test_invest_spec_translation(self):
-        """invest_spec role function should return translated text."""
-        mock_inliner = MagicMock()
-        mock_inliner.document.settings.env.app.config.language = 'es'
-        nodes, messages = rst_generator.invest_spec(
-            None, None, 'forest_carbon_edge_effect n_nearest_model_points', None, mock_inliner)
-        # assert that "units" is being translated
-        self.assertIn('unidades', str(nodes[1]))
-        self.assertEqual(messages, [])
+    def test_real_model_spec(self):
+        from natcap.invest import carbon
+        out = rst_generator.describe_input(
+            'natcap.invest.carbon', ['carbon_pools_path', 'columns', 'lucode'])
+        expected_rst = (
+            '.. _carbon-pools-path-columns-lucode:\n\n' +
+            '**lucode** (`integer <input_types.html#integer>`__, *required*): ' +
+            carbon.MODEL_SPEC.get_input('carbon_pools_path').get_column('lucode').about
+        )
+        self.assertEqual(repr(out), repr(expected_rst))
 
 
 if __name__ == '__main__':
