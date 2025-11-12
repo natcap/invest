@@ -24,12 +24,13 @@ def make_simple_vector(path_to_shp, fields={"id": ogr.OFTReal},
                            Polygon([(461351, 4923191), (461451, 4923191),
                                     (461451, 4923245), (461351, 4923245),
                                     (461351, 4923191)])]):
-    
-    #Polygon([(461251, 4923195), (461501, 4923195),
-            # (461501, 4923445), (461251, 4923445),
-            # (461251, 4923195)])]): --> this is too large! good for last test rn
     """
     Generate shapefile with one rectangular polygon
+
+    This shapefile covers just over 1/2 of a pixel in the default raster
+    created via ``make_raster_from_array``. This is to allow for the smallest
+    possible raster to be used in testing, so that when the AOI is buffered
+    by ``search_radius``, the area of analysis becomes just 3x3 pixels.
 
     Args:
         path_to_shp (str): path to target shapefile
@@ -44,7 +45,7 @@ def make_simple_vector(path_to_shp, fields={"id": ogr.OFTReal},
     Returns:
         None.
     """
-    
+
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(epsg)
     projection_wkt = srs.ExportToWkt()
@@ -57,8 +58,10 @@ def make_simple_vector(path_to_shp, fields={"id": ogr.OFTReal},
 
 def make_raster_from_array(base_raster_path, array):
     """Create a raster on designated path with array values.
+
     Args:
         base_raster_path (str): the raster path for making the new raster.
+
     Returns:
         None.
     """
@@ -77,6 +80,7 @@ def make_raster_from_array(base_raster_path, array):
 
 
 def make_synthetic_data_and_params(workspace_dir):
+    """Make all data needed to run UMH model"""
 
     # make synthetic input data
     baseline_prevalence_path = os.path.join(
@@ -227,13 +231,12 @@ class UMHTests(unittest.TestCase):
         # i.e., (1 - (exp(ln(RR0.1NE)10*NE))) * bc
 
         # results contains only center pixel left bc AOI is small
-        expected_preventable_cases = numpy.array([
-            [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA],
-            [PGP_FLOAT32_NODATA, -15.914164, PGP_FLOAT32_NODATA],
-            [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+        expected_preventable_cases = numpy.full((3, 3), PGP_FLOAT32_NODATA)
+        expected_preventable_cases[1, 1] = -15.914164
+
         actual_preventable_cases_path = os.path.join(
-            self.workspace_dir,
-            f"output/preventable_cases_{args['results_suffix']}.tif")
+            self.workspace_dir, "output",
+            f"preventable_cases_{args['results_suffix']}.tif")
         actual_preventable_cases = pygeoprocessing.raster_to_numpy_array(
             actual_preventable_cases_path)
 
@@ -250,36 +253,36 @@ class UMHTests(unittest.TestCase):
 
         args = make_synthetic_data_and_params(self.workspace_dir)
 
-        # create AOI w different projection
-        epsg = 5070
-        xmin = -2151375
-        ymax = 2699058.8
-        xmax = xmin + 70
-        ymin = ymax - 70
-        geom = [Polygon([(xmin, ymin), (xmax, ymin), (xmax, ymax),
-                         (xmin, ymax), (xmin, ymin)])]
-        new_aoi_path = os.path.join(self.workspace_dir, "AOI_5070.shp")
-        make_simple_vector(new_aoi_path, epsg=epsg, shapely_geometry_list=geom)
-        args["aoi_path"] = new_aoi_path
+        # create NDVI base with different projection
+        ndvi_base_array = numpy.array(
+            [[.1, .2, .35], [.5, .6, .7],
+             [.8, .9, .10], [.11, .12, FLOAT32_NODATA]])
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(5070)
+        pygeoprocessing.numpy_array_to_raster(
+            ndvi_base_array.astype(numpy.float32), FLOAT32_NODATA,
+            pixel_size=(100, -100), origin=(-2151490, 2699260),
+            projection_wkt=srs.ExportToWkt(),
+            target_path=args['ndvi_base'])
 
         urban_mental_health.execute(args)
 
         actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
             os.path.join(self.workspace_dir, "output",
                          "preventable_cases_test1.tif"))
-        # most are nodata because AOI is < 1 pixel
-        expected_prev_cases = numpy.array(
-            [[PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA],
-             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA],
-             [PGP_FLOAT32_NODATA, -15.914164, PGP_FLOAT32_NODATA],
-             [PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA, PGP_FLOAT32_NODATA]])
+        # most are nodata because AOI is just under 1 pixel
+        # shape is 3x4 (rather than 3x3) because when ndvi_base is resampled,
+        # it causes extra nodata column to right of AOI
+        expected_prev_cases = numpy.full((3, 4), PGP_FLOAT32_NODATA)
+        expected_prev_cases[1, 1] = -47.76584
         numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases)
 
-    def test_AOI_too_large(self):
-        """Test that AOI larger than NDVI raises warning on option 3
+    def test_NDVI_extent_too_small(self):
+        """Test that NDVI smaller than buffered AOI extent raises warning
 
-        Test that if AOI is larger than the input NDVI, the model raises
-        a warning but still runs correctly
+        Test that if AOI is larger than the input NDVI extent by search_radius
+        distance, the model raises a warning.
         """
         from natcap.invest import urban_mental_health
 
@@ -314,11 +317,10 @@ class UMHTests(unittest.TestCase):
             'tc_target': '',
             'workspace_dir': self.workspace_dir,
         }
-
         with self.assertRaises(UserWarning) as context:
             urban_mental_health.execute(args)
-        self.assertTrue(
-            "The extent of bounding box of the AOI buffered by the search" in
+        self.assertIn(
+            "The extent of bounding box of the AOI buffered by the search",
             str(context.exception))
 
     def test_search_radius_smaller_than_resolution(self):
@@ -333,23 +335,71 @@ class UMHTests(unittest.TestCase):
             "Search radius 2.0 yielded pixel_radius of zero. " in
             str(context.exception))
 
-    def test_AOI_larger_than_population_raster(self):
-        """Test analysis area = pop raster bbox if latter has smallest extent
+    def test_population_raster_too_small(self):
+        """Test if pop raster is smaller than AOI, model runs 
 
-        Test that a warning is raised as well"""
+        Model will run, but output extent will have nodata where
+        population raster is nodata. That is, extent of outputs match
+        extent of population raster input.
+        """
         from natcap.invest import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir)
 
-        array = numpy.array(([40, 500], [90, 90]))
-        pop_path = os.path.join(self.workspace_dir, "population.tif")
-        make_raster_from_array(pop_path, array)
+        # make AOI larger than default so pop raster can only cover part of it
+        xmin = 461351  # same as default
+        ymax = 4923445 - 100
+        xmax = 461451  # same as default
+        ymin = 4923191  # same as default
+        make_simple_vector(os.path.join(self.workspace_dir, "aoi.shp"),
+                           shapely_geometry_list=[
+                                Polygon([(xmin, ymin), (xmax, ymin),
+                                         (xmax, ymax), (xmin, ymax),
+                                         (xmin, ymin)])])
+        
+        urban_mental_health.execute(args)
 
-        with self.assertRaises(ValueError) as context:
-            urban_mental_health.execute(args)
-        self.assertTrue(
-            "The bounding boxes of the preprocessed population raster" in
-            str(context.exception))
+        # check output prev cases
+        preventable_cases_path = os.path.join(
+            self.workspace_dir, "output",
+            f"preventable_cases_{args['results_suffix']}.tif")
+        actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
+            preventable_cases_path)
+
+        expected_prev_cases = numpy.full((4, 3), PGP_FLOAT32_NODATA)
+        expected_prev_cases[1, 1] = -49.75519
+        expected_prev_cases[2, 1] = -15.91417
+
+        numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases,
+                                      atol=1e-5)
+
+        # Now compare results to if population raster _doesn't_ cover AOI fully
+        # make small population raster that covers top pixel of AOI but not
+        # lower pixel
+        array = numpy.array(([40], [500]))
+        # UTM Zone 10N
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        projection_wkt = srs.ExportToWkt()
+        origin = (461251+100, 4923445)
+        pygeoprocessing.numpy_array_to_raster(
+            array.astype(numpy.float32), FLOAT32_NODATA, (100, -100), origin,
+            projection_wkt, args['population_raster'])
+
+        urban_mental_health.execute(args)
+
+        # check output prev cases
+        preventable_cases_path = os.path.join(
+            self.workspace_dir, "output",
+            f"preventable_cases_{args['results_suffix']}.tif")
+        actual_prev_cases = pygeoprocessing.raster_to_numpy_array(
+            preventable_cases_path)
+
+        expected_prev_cases = numpy.full((4, 3), PGP_FLOAT32_NODATA)
+        # data only exists where population raster covers AOI
+        expected_prev_cases[1, 1] = -829.2532
+
+        numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases)
 
     def test_AOI_larger_than_lulc_base_option3(self):
         """Test analysis area = lulc bbox if latter has smallest extent"""
