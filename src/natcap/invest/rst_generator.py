@@ -75,7 +75,15 @@ def get_input_from_key(module_name, *arg_keys):
 
 
 def describe_input(module_name, keys):
+    """Create RST description for a given model input.
 
+    Args:
+        module_name (str): name of the model module
+        keys (list[str]): series of keys identifying the input
+
+    Returns
+        RST string
+    """
     _input = get_input_from_key(module_name, *keys)
     # anchor names cannot contain underscores. sphinx will replace them
     # automatically, but lets explicitly replace them here
