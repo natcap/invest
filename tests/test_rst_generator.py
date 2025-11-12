@@ -48,6 +48,7 @@ class TestRSTGenerator(unittest.TestCase):
         self.assertEqual(messages, [])
 
     def test_real_model_spec(self):
+        """test rst description of a real model input."""
         from natcap.invest import carbon
         out = rst_generator.describe_input(
             'natcap.invest.carbon', ['carbon_pools_path', 'columns', 'lucode'])
@@ -69,6 +70,7 @@ class TestRSTGenerator(unittest.TestCase):
             self.assertIn('porcentaje', str(nodes[1]))
             self.assertEqual(messages, [])
         finally:
+            # restore original translation setting for subsequent tests
             set_locale('en')
             importlib.reload(importlib.import_module(name='natcap.invest.carbon'))
 
