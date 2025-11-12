@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from natcap.invest import rst_generator
+from natcap.invest import set_locale
 from docutils.nodes import emphasis, Node, paragraph, reference, strong
 
 
@@ -56,6 +57,20 @@ class TestRSTGenerator(unittest.TestCase):
             carbon.MODEL_SPEC.get_input('carbon_pools_path').get_column('lucode').about
         )
         self.assertEqual(repr(out), repr(expected_rst))
+
+    def test_invest_spec_translation(self):
+        """invest_spec role function should return translated text."""
+        try:
+            mock_inliner = MagicMock()
+            mock_inliner.document.settings.env.app.config.language = 'es'
+            nodes, messages = rst_generator.invest_spec(
+                None, None, 'carbon discount_rate', None, mock_inliner)
+            # assert that "percent" is being translated
+            self.assertIn('porcentaje', str(nodes[1]))
+            self.assertEqual(messages, [])
+        finally:
+            set_locale('en')
+            importlib.reload(importlib.import_module(name='natcap.invest.carbon'))
 
 
 if __name__ == '__main__':
