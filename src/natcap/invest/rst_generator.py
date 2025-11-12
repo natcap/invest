@@ -152,8 +152,10 @@ def invest_spec(name, rawtext, text, lineno, inliner, options={}, content=[]):
     # before importing the desired invest module
     language = inliner.document.settings.env.app.config.language
     set_locale(language if language else 'en')
+    importlib.reload(spec)
+    model_module = importlib.reload(
+        importlib.import_module(name=module_name))
 
-    spec = importlib.import_module('natcap.invest.spec')
     _input = get_input_from_key(module_name, *keys)
     rst = '\n\n'.join(_input.describe_rst())
     rst = f'.. _{anchor_name}:\n\n{rst}'
