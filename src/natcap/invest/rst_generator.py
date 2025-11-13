@@ -106,7 +106,7 @@ def invest_spec(name, rawtext, text, lineno, inliner, options={}, content=[]):
 
     Usage:
 
-    The `investspec` role takes two arguments: `` :investspec:`module key` ``
+    The `investspec` role takes two arguments: \:investspec:`module key`
 
     `module` (or `f'{investspec_module_prefix}.{module}'` if
     `investspec_module_prefix` is defined) must be an importable python module.
@@ -116,9 +116,9 @@ def invest_spec(name, rawtext, text, lineno, inliner, options={}, content=[]):
     period-separated series of dictionary keys accessed starting at
     `MODEL_SPEC.args`. For example:
 
-    - `` :investspec:`annual_water_yield biophysical_table_path` ``
+    - \:investspec:`annual_water_yield biophysical_table_path`
 
-    - `` :investspec:`annual_water_yield biophysical_table_path.columns.kc` ``
+    - \:investspec:`annual_water_yield biophysical_table_path.columns.kc`
 
     Note that this implementation can only generate output that uses standard
     docutils features, and no sphinx-specific features.
