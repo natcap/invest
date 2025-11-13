@@ -877,7 +877,7 @@ def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
 
     if any(errors_dict.values()):
         errors = [k for k, v in errors_dict.items() if v]
-        raise UserWarning(
+        LOGGER.warning(
             "The extent of bounding box of the AOI buffered by the search "
             f"radius exceeds that of the {os.path.basename(raster)} raster "
             f"input. The issue is with the following coordinates: {errors}. "

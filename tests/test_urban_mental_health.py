@@ -286,42 +286,27 @@ class UMHTests(unittest.TestCase):
         """
         from natcap.invest import urban_mental_health
 
-        #assert UserWarning
         # make synthetic input data
-        ndvi_base_array = numpy.array([[.1, .2, .35], [.5, .6, .7], [.8, .9, .10], [.11, .12, FLOAT32_NODATA]])
-        ndvi_base_path = os.path.join(self.workspace_dir, "ndvi_base.tif")
-        make_raster_from_array(ndvi_base_path, ndvi_base_array)
+        args = make_synthetic_data_and_params(self.workspace_dir)
 
-        aoi_path = os.path.join(self.workspace_dir, "aoi.shp")
+        # overwrite AOI referenced in args with larger AOI
         xmin = 461351 - 100
-        make_simple_vector(aoi_path, shapely_geometry_list=[
+        make_simple_vector(args['aoi_path'], shapely_geometry_list=[
                            Polygon([(xmin, 4923191), (461451, 4923191),
                                     (461451, 4923245), (xmin, 4923245),
                                     (xmin, 4923191)])])
 
-        args = {
-            'aoi_path': aoi_path,
-            'baseline_prevalence_vector': '',
-            'effect_size': '',
-            'health_cost_rate': None,
-            'lulc_alt': '',
-            'lulc_attr_csv': '',
-            'lulc_base': '',
-            'ndvi_alt': ndvi_base_path,
-            'ndvi_base': ndvi_base_path,
-            'population_raster': '',
-            'results_suffix': 'test1',
-            'scenario': 'ndvi',
-            'search_radius': 100,
-            'tc_raster': '',
-            'tc_target': '',
-            'workspace_dir': self.workspace_dir,
-        }
-        with self.assertRaises(UserWarning) as context:
+        with self.assertLogs(urban_mental_health.LOGGER,
+                             level="WARNING") as context:
             urban_mental_health.execute(args)
-        self.assertIn(
-            "The extent of bounding box of the AOI buffered by the search",
-            str(context.exception))
+
+        # Check that a WARNING-level log contains warning_text
+        warning_text = "The extent of bounding box of the AOI buffered by " \
+            "the search radius exceeds that of the ndvi_base.tif"
+        self.assertTrue(
+            any(warning_text in message for message in context.output),
+            f"Expected warning text not found in logs: {context.output}"
+        )
 
     def test_search_radius_smaller_than_resolution(self):
         """Test that search_radius < pixel size/2 of NDVI raises error on option 3"""
@@ -336,10 +321,10 @@ class UMHTests(unittest.TestCase):
             str(context.exception))
 
     def test_population_raster_too_small(self):
-        """Test if pop raster is smaller than AOI, model runs 
+        """Test if pop raster is smaller than AOI, model runs
 
         Model will run, but output extent will have nodata where
-        population raster is nodata. That is, extent of outputs match
+        population raster is nodata. That is, valid extent of outputs match
         extent of population raster input.
         """
         from natcap.invest import urban_mental_health
@@ -402,7 +387,7 @@ class UMHTests(unittest.TestCase):
         numpy.testing.assert_allclose(actual_prev_cases, expected_prev_cases)
 
     def test_AOI_larger_than_lulc_base_option3(self):
-        """Test analysis area = lulc bbox if latter has smallest extent"""
+        """Test warning raised but model runs if LULC raster too small"""
         from natcap.invest import urban_mental_health
 
         args = make_synthetic_data_and_params(self.workspace_dir)
@@ -412,12 +397,24 @@ class UMHTests(unittest.TestCase):
         make_raster_from_array(lulc_base, array)
         args["lulc_base"] = lulc_base
 
-        with self.assertRaises(UserWarning) as context:
+        with self.assertLogs(urban_mental_health.LOGGER,
+                             level="WARNING") as context:
             urban_mental_health.execute(args)
+
+        # Check that a WARNING-level log contains warning_text
+        warning_text = "The extent of bounding box of the AOI buffered by " \
+            "the search radius exceeds that of the lulc_base.tif"
         self.assertTrue(
-            "The extent of bounding box of the AOI buffered by the search "
-            "radius exceeds that of the lulc_base.tif" in
-            str(context.exception))
+            any(warning_text in message for message in context.output),
+            f"Expected warning text not found in logs: {context.output}"
+        )
+
+        # Check that model still ran and expected output was created
+        output_path = os.path.join(
+            self.workspace_dir, "output",
+            f"preventable_cases_{args['results_suffix']}.tif"
+        )
+        self.assertTrue(os.path.isfile(output_path))
 
     def test_masking_without_lulc(self):
         """Test NDVI threshold masking (given no lulc input for mask)"""
