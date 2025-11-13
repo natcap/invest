@@ -1369,7 +1369,7 @@ class TestGetValidatedDataframe(unittest.TestCase):
         with open(csv_file, 'w') as file_obj:
             file_obj.write("row1, a ,b\n")
             file_obj.write("row2,1,3\n")
-        input_spec = CSVInput(id='foo', rows=[
+        input_spec = CSVInput(id='foo', orientation='row', columns=[
             StringInput(id='row1'),
             NumberInput(id='row2', units=None)
         ])
@@ -1794,7 +1794,8 @@ class TestValidationFromSpec(unittest.TestCase):
                 ),
                 CSVInput(
                     id="csv",
-                    rows=[
+                    orientation='row',
+                    columns=[
                         RatioInput(
                             id="field_a",
                             required=True),

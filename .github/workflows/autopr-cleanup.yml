@@ -1,0 +1,45 @@
+name: "AutoPR: Clean up autopr branches"
+on:
+    pull_request:
+        types: [closed]
+        branches:
+            # This workflow trigger event identifies with the triggering branch
+            # being "release/*" even though the autoPR branch triggered the
+            # original PR.
+            - 'release/*'
+
+jobs:
+    delete-autopr-branch:
+        if: github.repository == 'natcap/invest'
+        name: "AutoPR delete merged autopr branch"
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            # We do need the repo to be checked out to be able to refer to an
+            # origin.  Shallow clone is fine.
+            - uses: actions/checkout@v5
+
+            - run: |
+                set -x
+
+                # head.ref points to <username>:<branchname>
+                # ref points to <branchname>
+                BRANCH_TO_DELETE="${{ github.event.pull_request.head.ref }}"
+
+                if [[ "$BRANCH_TO_DELETE" != "autopr/"* ]]
+                then
+                    echo "The branch merged was not an autoPR branch.  Skipping branch deletion."
+                    # Returning a zero exit code because this is expected, predictable behavior
+                    exit 0
+                fi
+
+                # Delete the branch on github.
+                # The local copy of the branch doesn't matter.
+                git push -d origin "$BRANCH_TO_DELETE"
+
+                # If someone wants to restore the branch, they can do so in the
+                # PR itself for as long as github allows it.  As of 2013 they
+                # were not cleaning up these branches
+                # (https://stackoverflow.com/a/17954767), but things may have
+                # changed since then.
