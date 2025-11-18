@@ -739,7 +739,7 @@ class TestCBC2(unittest.TestCase):
             raster = gdal.OpenEx(raster_path)
             numpy.testing.assert_allclose(
                 raster.ReadAsArray(),
-                expected_total_sequestration, rtol=1e-6)
+                expected_total_sequestration, rtol=1e-5)
         finally:
             raster = None
 

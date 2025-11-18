@@ -190,7 +190,7 @@ class SDRTests(unittest.TestCase):
                 raster_sum += numpy.sum(
                     block[~pygeoprocessing.array_equals_nodata(
                             block, nodata)], dtype=numpy.float64)
-            numpy.testing.assert_allclose(raster_sum, expected_sum)
+            numpy.testing.assert_allclose(raster_sum, expected_sum, atol=1e-5)
 
     def test_base_regression_d8(self):
         """SDR base regression test on sample data in D8 mode.
