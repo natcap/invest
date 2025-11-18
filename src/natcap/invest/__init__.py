@@ -37,6 +37,9 @@ LOCALES = sorted(set(os.listdir(LOCALE_DIR) + ['en']))
 LOCALE_NAME_MAP = {
     locale: babel.Locale(locale).display_name for locale in LOCALES
 }
+# track the current locale setting,
+# this can be changed during runtime by the set_locale function
+# the gettext function below uses this to set the translation language
 LOCALE_CODE = 'en'
 
 
