@@ -737,25 +737,8 @@ class VectorInput(SpatialFileInput):
     def describe_rst(self):
         """Generate RST documentation for this input.
 
-        This is used for documenting:
-            - a single top-level arg
-            - a row or column in a CSV
-            - a field in a vector
-            - an item in a directory
-
-        Args:
-            name (str): Name to give the section. For top-level args this is
-                arg['name']. For nested args it's typically their key in the
-                dictionary one level up.
-            spec (dict): A arg spec dictionary that conforms to the InVEST args
-                spec specification. It must at least have the key `'type'`, and
-                whatever other keys are expected for that type.
         Returns:
             list of strings, where each string is a line of RST-formatted text.
-            The first line has the arg name, type, required state, description,
-            and units if applicable. Depending on the type, there may be additional
-            lines that are indented, that describe details of the arg such as
-            vector fields and geometry types, option_string options, etc.
         """
         name = self.name or self.id
         type_string = format_type_string(self)
@@ -1490,25 +1473,8 @@ class BooleanInput(Input):
     def describe_rst(self):
         """Generate RST documentation for this input.
 
-        This is used for documenting:
-            - a single top-level arg
-            - a row or column in a CSV
-            - a field in a vector
-            - an item in a directory
-
-        Args:
-            name (str): Name to give the section. For top-level args this is
-                arg['name']. For nested args it's typically their key in the
-                dictionary one level up.
-            spec (dict): A arg spec dictionary that conforms to the InVEST args
-                spec specification. It must at least have the key `'type'`, and
-                whatever other keys are expected for that type.
         Returns:
             list of strings, where each string is a line of RST-formatted text.
-            The first line has the arg name, type, required state, description,
-            and units if applicable. Depending on the type, there may be additional
-            lines that are indented, that describe details of the arg such as
-            vector fields and geometry types, option_string options, etc.
         """
         name = self.name or self.id
         type_string = format_type_string(self)
@@ -1727,25 +1693,8 @@ class OptionStringInput(Input):
     def describe_rst(self):
         """Generate RST documentation for this input.
 
-        This is used for documenting:
-            - a single top-level arg
-            - a row or column in a CSV
-            - a field in a vector
-            - an item in a directory
-
-        Args:
-            name (str): Name to give the section. For top-level args this is
-                arg['name']. For nested args it's typically their key in the
-                dictionary one level up.
-            spec (dict): A arg spec dictionary that conforms to the InVEST args
-                spec specification. It must at least have the key `'type'`, and
-                whatever other keys are expected for that type.
         Returns:
             list of strings, where each string is a line of RST-formatted text.
-            The first line has the arg name, type, required state, description,
-            and units if applicable. Depending on the type, there may be additional
-            lines that are indented, that describe details of the arg such as
-            vector fields and geometry types, option_string options, etc.
         """
         name = self.name or self.id
         type_string = format_type_string(self)
