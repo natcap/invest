@@ -50,28 +50,28 @@ def get_input_from_key(module_name, *arg_keys):
     spec = module.MODEL_SPEC.get_input(arg_keys[0])
     arg_keys = arg_keys[1:]
     for i, key in enumerate(arg_keys):
-        # convert raster band numbers to ints
-        if i > 0 and arg_keys[i - 1] == 'bands':
-            key = int(key)
-        elif i > 0 and arg_keys[i - 1] == 'fields':
-            spec = spec.get_field(key)
-        elif i > 0 and arg_keys[i - 1] == 'contents':
-            spec = spec.get_contents(key)
-        elif i > 0 and arg_keys[i - 1] == 'columns':
-            spec = spec.get_column(key)
-        elif i > 0 and arg_keys[i - 1] == 'rows':
-            # the attibute is called columns regardless of table orientation
-            spec = spec.get_column(key)
-        elif key in {'bands', 'fields', 'contents', 'columns', 'rows'}:
-            continue
-        else:
-            try:
-                spec = spec.get(key)
-            except KeyError:
-                keys_so_far = '.'.join(arg_keys[:i + 1])
-                raise ValueError(
-                    f"Could not find the key '{keys_so_far}' in the "
-                    f"{module_name} model's MODEL_SPEC")
+        try:
+            # convert raster band numbers to ints
+            if i > 0 and arg_keys[i - 1] == 'bands':
+                key = int(key)
+            elif i > 0 and arg_keys[i - 1] == 'fields':
+                spec = spec.get_field(key)
+            elif i > 0 and arg_keys[i - 1] == 'contents':
+                spec = spec.get_contents(key)
+            elif i > 0 and arg_keys[i - 1] == 'columns':
+                spec = spec.get_column(key)
+            elif i > 0 and arg_keys[i - 1] == 'rows':
+                # the attibute is called columns regardless of table orientation
+                spec = spec.get_column(key)
+            elif key in {'bands', 'fields', 'contents', 'columns', 'rows'}:
+                continue
+            else:
+                spec = spec.getattr(key)
+        except KeyError:
+            keys_so_far = '.'.join(arg_keys[:i + 1])
+            raise ValueError(
+                f"Could not find the key '{keys_so_far}' in the "
+                f"{module_name} model's MODEL_SPEC")
     return spec
 
 

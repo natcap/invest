@@ -47,6 +47,14 @@ class TestRSTGenerator(unittest.TestCase):
             self.assertTrue(isinstance(node, Node))
         self.assertEqual(messages, [])
 
+    def test_invest_spec_invalid_key(self):
+        """invest_spec role function should raise ValueError on invalid key."""
+        mock_inliner = MagicMock()
+        mock_inliner.document.settings.env.app.config.language = 'en'
+        with self.assertRaises(ValueError):
+            rst_generator.invest_spec(
+                None, None, 'carbon carbon_pools_path.columns.foo', None, mock_inliner)
+
     def test_real_model_spec(self):
         """test rst description of a real model input."""
         from natcap.invest import carbon
