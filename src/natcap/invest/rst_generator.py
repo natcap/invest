@@ -60,6 +60,7 @@ def get_input_from_key(module_name, *arg_keys):
         elif i > 0 and arg_keys[i - 1] == 'columns':
             spec = spec.get_column(key)
         elif i > 0 and arg_keys[i - 1] == 'rows':
+            # the attibute is called columns regardless of table orientation
             spec = spec.get_column(key)
         elif key in {'bands', 'fields', 'contents', 'columns', 'rows'}:
             continue
