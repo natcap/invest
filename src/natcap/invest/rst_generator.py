@@ -1,7 +1,6 @@
 import importlib
 
 from docutils import frontend
-from docutils import nodes
 from docutils import utils
 from docutils.parsers import rst
 from natcap.invest import set_locale
