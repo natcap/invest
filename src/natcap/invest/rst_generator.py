@@ -101,7 +101,7 @@ def invest_spec(name, rawtext, text, lineno, inliner, options={}, content=[]):
     The `investspec` extension provides the `:investspec:` role, which can be
     used inline in RST files to insert generated documentation anywhere you want.
 
-    To use in a sphinx project, add 'natcap.invest.investspec' to the list of
+    To use in a sphinx project, add 'natcap.invest.rst_generator' to the list of
     extensions in the conf.py.
 
     Usage:
