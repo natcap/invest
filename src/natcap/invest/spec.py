@@ -268,6 +268,31 @@ class Input(BaseModel):
         """
         return value
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Note that conditional requirements (where `required` is a string
+        expression) are not documented because it may be too complicated to
+        auto-format into human readable text. For any conditionally-required
+        input, the conditions upon which it is required should also be
+        described in the `about` attribute.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+        required_string = self.format_required_string()
+
+        rst_line = f'**{name}** ({type_string}, *{required_string}*)'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace('_', '\\_')
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
+
 
 class Output(BaseModel):
     """A data output, or result, of an invest model.
@@ -306,9 +331,11 @@ class FileInput(Input):
 
     type: typing.ClassVar[str] = 'file'
 
-    display_name: typing.ClassVar[str] = gettext('file')
-
     rst_section: typing.ClassVar[str] = 'file'
+
+    @property
+    def display_name(self):
+        return gettext('file')
 
     @timeout
     def validate(self, filepath: str):
@@ -454,9 +481,11 @@ class RasterInput(SpatialFileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
-    display_name: typing.ClassVar[str] = gettext('raster')
-
     rst_section: typing.ClassVar[str] = 'raster'
+
+    @property
+    def display_name(self):
+        return gettext('raster')
 
     @timeout
     def validate(self, filepath: str):
@@ -508,9 +537,11 @@ class SingleBandRasterInput(SpatialFileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
-    display_name: typing.ClassVar[str] = gettext('raster')
-
     rst_section: typing.ClassVar[str] = 'raster'
+
+    @property
+    def display_name(self):
+        return gettext('raster')
 
     @timeout
     def validate(self, filepath: str):
@@ -545,6 +576,36 @@ class SingleBandRasterInput(SpatialFileInput):
             if projection_warning:
                 return projection_warning
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+
+        in_parentheses = [type_string]
+
+        if self.units:
+            units_string = format_unit(self.units)
+            if units_string:
+                # pybabel can't find the message if it's in the f-string
+                translated_units = gettext("units")
+                in_parentheses.append(f'{translated_units}: **{units_string}**')
+
+        required_string = self.format_required_string()
+        in_parentheses.append(f'*{required_string}*')
+
+        rst_line = f'**{name}** ({", ".join(in_parentheses)})'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace("_", "\\_")
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
+
 
 class VectorInput(SpatialFileInput):
     """A vector input, or parameter, of an invest model.
@@ -561,8 +622,6 @@ class VectorInput(SpatialFileInput):
     field name."""
 
     type: typing.ClassVar[str] = 'vector'
-
-    display_name: typing.ClassVar[str] = gettext('vector')
 
     rst_section: typing.ClassVar[str] = 'vector'
 
@@ -581,6 +640,10 @@ class VectorInput(SpatialFileInput):
 
     def model_post_init(self, context):
         self._fields_dict = {field.id: field for field in self.fields}
+
+    @property
+    def display_name(self):
+        return gettext('vector')
 
     def get_field(self, key: str) -> Input:
         return self._fields_dict[key]
@@ -642,7 +705,7 @@ class VectorInput(SpatialFileInput):
                 for spec in self.fields:
                     # brackets are a special character for our args spec syntax
                     # they surround the part of the key that's user-defined
-                    # user-defined rows/columns/fields are not validated here, so skip
+                    # user-defined columns/fields are not validated here, so skip
                     if spec.required is True and '[' not in spec.id:
                         field_patterns.append(spec.id)
 
@@ -671,6 +734,25 @@ class VectorInput(SpatialFileInput):
             key=lambda g: GEOMETRY_ORDER.index(g))
         return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+        required_string = self.format_required_string()
+        geom_string = self.format_geometry_types_rst()
+        rst_line = f'**{name}** ({type_string}, {geom_string}, *{required_string}*)'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace('_', '\\_')
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
+
 
 class RasterOrVectorInput(SpatialFileInput):
     """An invest model input that can be either a single-band raster or a vector."""
@@ -690,8 +772,6 @@ class RasterOrVectorInput(SpatialFileInput):
     field name."""
 
     type: typing.ClassVar[str] = 'raster_or_vector'
-
-    display_name: typing.ClassVar[str] = gettext('raster or vector')
 
     rst_section: typing.ClassVar[str] = 'raster'
 
@@ -713,6 +793,10 @@ class RasterOrVectorInput(SpatialFileInput):
             projected=self.projected,
             projection_units=self.projection_units)
         self._fields_dict = {field.id: field for field in self.fields}
+
+    @property
+    def display_name(self):
+        return gettext('raster or vector')
 
     def get_field(self, key: str) -> Input:
         return self.fields_dict[key]
@@ -741,11 +825,10 @@ class RasterOrVectorInput(SpatialFileInput):
 class CSVInput(FileInput):
     """A CSV table input, or parameter, of an invest model.
 
-    For CSVs with a simple layout, `columns` or `rows` (but not both) may be
-    specified. For more complex table structures that cannot be described by
-    `columns` or `rows`, you may omit both attributes. Note that more complex
-    table structures are often more difficult to use; consider dividing them
-    into multiple, simpler tabular inputs.
+    For CSVs with a simple layout, `columns` may be specified. For more complex
+    table structures that cannot be described by `columns`, you may omit the
+    attribute. Note that more complex table structures are often more difficult
+    to use; consider dividing them into multiple, simpler tabular inputs.
     """
     columns: typing.Union[list[Input], None] = None
     """An iterable of `Input`s representing the columns that this CSV is
@@ -766,8 +849,6 @@ class CSVInput(FileInput):
     """List of header names of columns in which NA values are allowed."""
 
     type: typing.ClassVar[str] = 'csv'
-
-    display_name: typing.ClassVar[str] = gettext('CSV')
 
     rst_section: typing.ClassVar[str] = 'csv'
 
@@ -797,6 +878,10 @@ class CSVInput(FileInput):
     def model_post_init(self, context):
         if self.columns:
             self._columns_dict = {col.id: col for col in self.columns}
+
+    @property
+    def display_name(self):
+        return gettext('CSV')
 
     def get_column(self, key: str) -> Input:
         return self._columns_dict[key]
@@ -955,6 +1040,28 @@ class CSVInput(FileInput):
         """
         return value if value else None
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+        required_string = self.format_required_string()
+        rst_line = f'**{name}** ({type_string}, *{required_string}*)'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace("_", "\\_")
+            rst_line += f': {sanitized_about_string}'
+
+        if not self.columns:
+            rst_line += gettext(
+                ' Please see the sample data table for details on the format.')
+
+        return [rst_line]
+
 
 class DirectoryInput(Input):
     """A directory input, or parameter, of an invest model.
@@ -980,8 +1087,6 @@ class DirectoryInput(Input):
 
     type: typing.ClassVar[str] = 'directory'
 
-    display_name: typing.ClassVar[str] = gettext('directory')
-
     rst_section: typing.ClassVar[str] = 'directory'
 
     _contents_dict: dict[str, Input] = {}
@@ -1002,6 +1107,10 @@ class DirectoryInput(Input):
 
     def model_post_init(self, context):
         self._contents_dict = {x.id: x for x in self.contents}
+
+    @property
+    def display_name(self):
+        return gettext('directory')
 
     def get_contents(self, key: str) -> Input:
         return self._contents_dict[key]
@@ -1082,9 +1191,11 @@ class NumberInput(Input):
 
     type: typing.ClassVar[str] = 'number'
 
-    display_name: typing.ClassVar[str] = gettext('number')
-
     rst_section: typing.ClassVar[str] = 'number'
+
+    @property
+    def display_name(self):
+        return gettext('number')
 
     def validate(self, value):
         """Validate a numeric value against the requirements for this input.
@@ -1139,16 +1250,53 @@ class NumberInput(Input):
         """
         return None if value in {None, ''} else float(value)
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Note that the `expression` attribute is not documented here because
+        it may be too complicated to to auto-format into human readable text.
+        The requirements enforced by the `expression` should also be described
+        in the `about` attribute.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+
+        in_parentheses = [type_string]
+
+        if self.units:
+            units_string = format_unit(self.units)
+            if units_string:
+                # pybabel can't find the message if it's in the f-string
+                translated_units = gettext("units")
+                in_parentheses.append(f'{translated_units}: **{units_string}**')
+
+        required_string = self.format_required_string()
+        in_parentheses.append(f'*{required_string}*')
+
+        rst_line = f'**{name}** ({", ".join(in_parentheses)})'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace("_", "\\_")
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
+
 
 class IntegerInput(NumberInput):
     """An integer input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'integer'
 
-    display_name: typing.ClassVar[str] = gettext('integer')
-
     rst_section: typing.ClassVar[str] = 'integer'
 
     units: typing.Union[pint.Unit, None] = None
+
+    @property
+    def display_name(self):
+        return gettext('integer')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1216,11 +1364,13 @@ class RatioInput(NumberInput):
     """
     type: typing.ClassVar[str] = 'ratio'
 
-    display_name: typing.ClassVar[str] = gettext('ratio')
-
     rst_section: typing.ClassVar[str] = 'ratio'
 
     units: typing.ClassVar[None] = None
+
+    @property
+    def display_name(self):
+        return gettext('ratio')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1251,11 +1401,13 @@ class PercentInput(NumberInput):
     """
     type: typing.ClassVar[str] = 'percent'
 
-    display_name: typing.ClassVar[str] = gettext('percent')
-
     rst_section: typing.ClassVar[str] = 'percent'
 
     units: typing.ClassVar[None] = None
+
+    @property
+    def display_name(self):
+        return gettext('percent')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1275,9 +1427,11 @@ class BooleanInput(Input):
     """A boolean input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'boolean'
 
-    display_name: typing.ClassVar[str] = gettext('true/false')
-
     rst_section: typing.ClassVar[str] = 'truefalse'
+
+    @property
+    def display_name(self):
+        return gettext('true/false')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1316,6 +1470,24 @@ class BooleanInput(Input):
         """
         return None if value in {None, ''} else bool(value)
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+        # It doesn't make sense to include the required string for booleans
+        rst_line = f'**{name}** ({type_string})'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace('_', '\\_')
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
+
 
 class StringInput(Input):
     """A string input, or parameter, of an invest model.
@@ -1328,8 +1500,6 @@ class StringInput(Input):
 
     type: typing.ClassVar[str] = 'string'
 
-    display_name: typing.ClassVar[str] = gettext('text')
-
     rst_section: typing.ClassVar[str] = 'text'
 
     @field_validator('regexp', mode='after')
@@ -1341,6 +1511,10 @@ class StringInput(Input):
             except Exception:
                 raise ValueError(f'Failed to compile regexp {regexp}')
         return regexp
+
+    @property
+    def display_name(self):
+        return gettext('text')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1432,8 +1606,6 @@ class OptionStringInput(Input):
 
     type: typing.ClassVar[str] = 'option_string'
 
-    display_name: typing.ClassVar[str] = gettext('option')
-
     rst_section: typing.ClassVar[str] = 'option'
 
     @model_validator(mode='after')
@@ -1441,6 +1613,10 @@ class OptionStringInput(Input):
         if self.dropdown_function and self.options:
             raise ValueError(f'Cannot have both dropdown_function and options')
         return self
+
+    @property
+    def display_name(self):
+        return gettext('option')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1514,6 +1690,33 @@ class OptionStringInput(Input):
         """
         return None if value in {None, ''} else str(value).lower()
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+        required_string = self.format_required_string()
+        rst_line = f'**{name}** ({type_string}, *{required_string}*)'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace("_", "\\_")
+            rst_line += f': {sanitized_about_string}'
+
+        indented_block = []
+        # if self.options is None, the options are dynamically generated.
+        # don't try to document them.
+        if self.options:
+            indented_block.append(gettext(
+                'Values must be one of the following text strings:'))
+            indented_block += self.format_rst()
+
+        # prepend the indent to each line in the indented block
+        return [rst_line] + ['\t' + line for line in indented_block]
+
 
 class FileOutput(Output):
     """A generic file output, or result, of an invest model.
@@ -1585,11 +1788,10 @@ class VectorOutput(FileOutput):
 class CSVOutput(FileOutput):
     """A CSV table output, or result, of an invest model.
 
-    For CSVs with a simple layout, `columns` or `rows` (but not both) may be
-    specified. For more complex table structures that cannot be described by
-    `columns` or `rows`, you may omit both attributes. Note that more complex
-    table structures are often more difficult to use; consider dividing them
-    into multiple, simpler tabular outputs.
+    For CSVs with a simple layout, `columns` may be specified. For more complex
+    table structures that cannot be described by `columns`, you may omit the
+    attribute. Note that more complex table structures are often more difficult
+    to use; consider dividing them into multiple, simpler tabular outputs.
     """
     columns: typing.Union[list[Output], None] = None
     """An iterable of `Output`s representing the table's columns. The `key` of
@@ -2284,149 +2486,20 @@ GEOMETRY_ORDER = [
 INPUT_TYPES_HTML_FILE = 'input_types.html'
 
 
-def format_type_string(arg_type):
+def format_type_string(_input):
     """Represent an arg type as a user-friendly string.
 
     Args:
-        arg_type (str|set(str)): the type to format. May be a single type or a
-            set of types.
+        _input (Input): the input to format.
 
     Returns:
         formatted string that links to a description of the input type(s)
     """
-    if arg_type is RasterOrVectorInput:
+    if isinstance(_input, RasterOrVectorInput):
         return (
-            f'`{SingleBandRasterInput.display_name} <{INPUT_TYPES_HTML_FILE}#{SingleBandRasterInput.rst_section}>`__ or '
-            f'`{VectorInput.display_name} <{INPUT_TYPES_HTML_FILE}#{VectorInput.rst_section}>`__')
-    return f'`{arg_type.display_name} <{INPUT_TYPES_HTML_FILE}#{arg_type.rst_section}>`__'
-
-
-def describe_arg_from_spec(name, spec):
-    """Generate RST documentation for an arg, given an arg spec.
-
-    This is used for documenting:
-        - a single top-level arg
-        - a row or column in a CSV
-        - a field in a vector
-        - an item in a directory
-
-    Args:
-        name (str): Name to give the section. For top-level args this is
-            arg['name']. For nested args it's typically their key in the
-            dictionary one level up.
-        spec (dict): A arg spec dictionary that conforms to the InVEST args
-            spec specification. It must at least have the key `'type'`, and
-            whatever other keys are expected for that type.
-    Returns:
-        list of strings, where each string is a line of RST-formatted text.
-        The first line has the arg name, type, required state, description,
-        and units if applicable. Depending on the type, there may be additional
-        lines that are indented, that describe details of the arg such as
-        vector fields and geometry types, option_string options, etc.
-    """
-    type_string = format_type_string(type(spec))
-    in_parentheses = [type_string]
-
-    # For numbers and rasters that have units, display the units
-    units = spec.units if hasattr(spec, 'units') else None
-    if units:
-        units_string = format_unit(units)
-        if units_string:
-            # pybabel can't find the message if it's in the f-string
-            translated_units = gettext("units")
-            in_parentheses.append(f'{translated_units}: **{units_string}**')
-
-    if type(spec) is VectorInput:
-        in_parentheses.append((spec.format_geometry_types_rst()))
-
-    # Represent the required state as a string, defaulting to required
-    # It doesn't make sense to include this for boolean checkboxes
-    if type(spec) is not BooleanInput:
-        required_string = spec.format_required_string()
-        in_parentheses.append(f'*{required_string}*')
-
-    # Nested args may not have an about section
-    if spec.about:
-        sanitized_about_string = spec.about.replace("_", "\\_")
-        about_string = f': {sanitized_about_string}'
-    else:
-        about_string = ''
-
-    first_line = f"**{name}** ({', '.join(in_parentheses)}){about_string}"
-
-    # Add details for the types that have them
-    indented_block = []
-    if type(spec) is OptionStringInput:
-        # may be either a dict or set. if it's empty, the options are
-        # dynamically generated. don't try to document them.
-        if spec.options:
-            indented_block.append(gettext(
-                'Values must be one of the following text strings:'))
-            indented_block += spec.format_rst()
-
-    elif type(spec) is CSVInput:
-        if not spec.columns:
-            first_line += gettext(
-                ' Please see the sample data table for details on the format.')
-
-    # prepend the indent to each line in the indented block
-    return [first_line] + ['\t' + line for line in indented_block]
-
-
-def describe_arg_from_name(module_name, *arg_keys):
-    """Generate RST documentation for an arg, given its model and name.
-
-    Args:
-        module_name (str): invest model module containing the arg.
-        *arg_keys: one or more strings that are nested arg keys.
-
-    Returns:
-        String describing the arg in RST format. Contains an anchor named
-        <arg_keys[0]>-<arg_keys[1]>...-<arg_keys[n]>
-        where underscores in arg keys are replaced with hyphens.
-    """
-    # import the specified module (that should have an MODEL_SPEC attribute)
-    module = importlib.import_module(module_name)
-
-    # anchor names cannot contain underscores. sphinx will replace them
-    # automatically, but lets explicitly replace them here
-    anchor_name = '-'.join(arg_keys).replace('_', '-')
-
-    # start with the spec for all args
-    # narrow down to the nested spec indicated by the sequence of arg keys
-    spec = module.MODEL_SPEC.get_input(arg_keys[0])
-    arg_keys = arg_keys[1:]
-    for i, key in enumerate(arg_keys):
-        # convert raster band numbers to ints
-        if i > 0 and arg_keys[i - 1] == 'bands':
-            key = int(key)
-        elif i > 0 and arg_keys[i - 1] == 'fields':
-            spec = spec.get_field(key)
-        elif i > 0 and arg_keys[i - 1] == 'contents':
-            spec = spec.get_contents(key)
-        elif i > 0 and arg_keys[i - 1] == 'columns':
-            spec = spec.get_column(key)
-        elif i > 0 and arg_keys[i - 1] == 'rows':
-            spec = spec.get_column(key)
-        elif key in {'bands', 'fields', 'contents', 'columns', 'rows'}:
-            continue
-        else:
-            try:
-                spec = spec.get(key)
-            except KeyError:
-                keys_so_far = '.'.join(arg_keys[:i + 1])
-                raise ValueError(
-                    f"Could not find the key '{keys_so_far}' in the "
-                    f"{module_name} model's MODEL_SPEC")
-
-    # format spec into an RST formatted description string
-    if spec.name:
-        arg_name = spec.capitalize_name()
-    else:
-        arg_name = arg_keys[-1]
-
-    rst_description = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
-    return f'.. _{anchor_name}:\n\n{rst_description}'
+            f'`{_input._single_band_raster_input.display_name} <{INPUT_TYPES_HTML_FILE}#{SingleBandRasterInput.rst_section}>`__ or '
+            f'`{_input._vector_input.display_name} <{INPUT_TYPES_HTML_FILE}#{VectorInput.rst_section}>`__')
+    return f'`{_input.display_name} <{INPUT_TYPES_HTML_FILE}#{_input.rst_section}>`__'
 
 
 def write_metadata_file(datasource_path, spec, keywords_list,
