@@ -817,7 +817,8 @@ def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
     """Check if raster bounds are >= bounds of AOI + search_radius.
 
     Check if the bounds of the raster extend at least search_radius
-    meters beyond the bounds of the AOI vector.
+    meters beyond the bounds of the AOI vector. Logs a warning if the
+    raster extent is too small.
 
     Args:
         aoi_bbox (list): aoi bounds in format [xmin, ymin, xmax, ymax],
@@ -829,9 +830,6 @@ def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
 
     Returns:
         None
-
-    Raises:
-        UserWarning: if the raster extent is too small
 
     """
 
@@ -866,36 +864,37 @@ def check_raster_against_aoi_bounds(aoi_bbox, aoi_sr, raster):
             f"and the raster bbox is: {raster_bbox}")
 
 
-def _get_masking_inputs_and_outputs(args, file_registry, scenario):
+def _get_masking_inputs_and_outputs(args, file_registry, base_or_alt):
     """Get lists of inputs and outputs for NDVI masking task
 
     Args:
         args (dict): args dictionary input to ``execute``.
         file_registry (FileRegistry): dict-like object which maps
             ``MODEL_SPEC`` output ids to absolute paths.
-        scenario (str): 'base' or 'alt', which determines if this function provides
-            the input/output files for masking baseline or alternate NDVI.
+        base_or_alt (str): 'base' or 'alt', which determines if this function
+            provides the input/output files for masking baseline or
+            alternate NDVI.
 
     Returns:
         mask_inputs, mask_outputs lists which represent files to input
         to mask task and target outputs for mask task, respectively.
 
     """
-    mask_inputs = [file_registry[f'ndvi_{scenario}_aligned'],
-                   file_registry[f'ndvi_{scenario}_aligned_masked']]
-    mask_outputs = [file_registry[f'ndvi_{scenario}_aligned_masked']]
+    mask_inputs = [file_registry[f'ndvi_{base_or_alt}_aligned'],
+                   file_registry[f'ndvi_{base_or_alt}_aligned_masked']]
+    mask_outputs = [file_registry[f'ndvi_{base_or_alt}_aligned_masked']]
     if args['lulc_attr_csv']:  # attr table can only be provided if lulc_base
         LOGGER.info("Masking NDVI using LULC")
-        # output filename references orig input scenario even if no lulc_alt
-        mask_outputs.append(file_registry[f'lulc_{scenario}_mask'])
+        # output filename references orig input base_or_alt even if no lulc_alt
+        mask_outputs.append(file_registry[f'lulc_{base_or_alt}_mask'])
         if not args['lulc_alt']:
             # in case tag='alt' but lulc_alt doesnt exist -> fallback to base
             LOGGER.info("Alt LULC raster not provided. Using LULC_base.tif "
                         "to mask NDVI_alt.tif")
-            scenario = 'base'
-        mask_inputs += [file_registry[f'lulc_{scenario}_aligned'],
+            base_or_alt = 'base'
+        mask_inputs += [file_registry[f'lulc_{base_or_alt}_aligned'],
                         args['lulc_attr_csv'],
-                        file_registry[f'lulc_{scenario}_mask']]
+                        file_registry[f'lulc_{base_or_alt}_mask']]
     else:
         LOGGER.info("Masking NDVI using threshold NDVI<0")
 
@@ -969,8 +968,8 @@ def calc_baseline_cases(population_raster, base_prevalence_vector,
         population_raster (str): path to aligned population raster
             representing the number of inhabitants per pixel across
             the study area. Pixels with no population should be
-            assigned a value of 0. 
-        base_prevalence_vector (str): path to vector with field # TODO: check units/intended range of rate?
+            assigned a value of 0.
+        base_prevalence_vector (str): path to vector with field
             `risk_rate` that provides the baseline prevalence
             (or incidence) rate of a mental health outcome by
             spatial unit (e.g., census tract).
@@ -1064,7 +1063,8 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
                                         (bc_nodata, "raw")]
 
     intermediate_raster = os.path.join(temp_dir, 'prev_cases_unclipped.tif')
-    pygeoprocessing.raster_calculator( # error here if population raster smaller than NDVI
+    # Output extent will match population raster if its smaller than NDVI
+    pygeoprocessing.raster_calculator(
         base_raster_path_band_const_list, _preventable_cases_op,
         intermediate_raster, target_dtype, nodata_target=bc_nodata)
 
