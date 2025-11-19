@@ -1,4 +1,3 @@
-# coding=UTF-8
 """Tests for the Urban Mental Health Model."""
 import os
 import shutil
@@ -16,14 +15,19 @@ from osgeo import gdal, ogr, osr
 # model beginning at the step where delta ndvi is calculated
 FLOAT32_NODATA = float(numpy.finfo(numpy.float32).min)
 PGP_FLOAT32_NODATA = pygeoprocessing.choose_nodata(numpy.float32)
+ORIGIN_X = 461251
+ORIGIN_Y = 4923445
 
 
 def make_simple_vector(path_to_shp, fields={"id": ogr.OFTReal},
                        attribute_list=[{"id": 0}], epsg=26910,
-                       shapely_geometry_list = [ # this polygon fits within middle pixel of raster
-                           Polygon([(461351, 4923191), (461451, 4923191),
-                                    (461451, 4923245), (461351, 4923245),
-                                    (461351, 4923191)])]):
+                       # this polygon fits within middle pixel of raster
+                       shapely_geometry_list=[
+                           Polygon([(ORIGIN_X+100, ORIGIN_Y-254),
+                                    (ORIGIN_X+200, ORIGIN_Y-254),
+                                    (ORIGIN_X+200, ORIGIN_Y-200),
+                                    (ORIGIN_X+100, ORIGIN_Y-200),
+                                    (ORIGIN_X+100, ORIGIN_Y-254)])]):
     """
     Generate shapefile with one rectangular polygon
 
@@ -70,13 +74,12 @@ def make_raster_from_array(base_raster_path, array):
     srs.ImportFromEPSG(26910)
     projection_wkt = srs.ExportToWkt()
 
-    origin = (461251, 4923445)
     pixel_size = (100, -100)
     no_data = FLOAT32_NODATA
 
     pygeoprocessing.numpy_array_to_raster(
-        array.astype(numpy.float32), no_data, pixel_size, origin,
-        projection_wkt, base_raster_path)
+        array.astype(numpy.float32), no_data, pixel_size,
+        (ORIGIN_X, ORIGIN_Y), projection_wkt, base_raster_path)
 
 
 def make_synthetic_data_and_params(workspace_dir):
@@ -89,9 +92,11 @@ def make_synthetic_data_and_params(workspace_dir):
     attribute_list = [{"id": 0, "risk_rate": 10}]
     make_simple_vector(baseline_prevalence_path, fields, attribute_list,
                        shapely_geometry_list=[
-                           Polygon([(461251, 4923195), (461501, 4923195),
-                                    (461501, 4923445), (461251, 4923445),
-                                    (461251, 4923195)])])
+                           Polygon([(ORIGIN_X, ORIGIN_Y-250),
+                                    (ORIGIN_X+250, ORIGIN_Y-250),
+                                    (ORIGIN_X+250, ORIGIN_Y),
+                                    (ORIGIN_X, ORIGIN_Y),
+                                    (ORIGIN_X, ORIGIN_Y-250)])])
 
     ndvi_base_array = numpy.array(
         [[.1, .2, .35], [.5, .6, .7],
@@ -290,11 +295,14 @@ class UMHTests(unittest.TestCase):
         args = make_synthetic_data_and_params(self.workspace_dir)
 
         # overwrite AOI referenced in args with larger AOI
-        xmin = 461351 - 100
+        xmin = ORIGIN_X
+        xmax = ORIGIN_X + 200
+        ymin = ORIGIN_Y - 254
+        ymax = ORIGIN_Y - 200
         make_simple_vector(args['aoi_path'], shapely_geometry_list=[
-                           Polygon([(xmin, 4923191), (461451, 4923191),
-                                    (461451, 4923245), (xmin, 4923245),
-                                    (xmin, 4923191)])])
+                           Polygon([(xmin, ymin), (xmax, ymin),
+                                    (xmax, ymax), (xmin, ymax),
+                                    (xmin, ymin)])])
 
         with self.assertLogs(urban_mental_health.LOGGER,
                              level="WARNING") as context:
@@ -332,10 +340,10 @@ class UMHTests(unittest.TestCase):
         args = make_synthetic_data_and_params(self.workspace_dir)
 
         # make AOI larger than default so pop raster can only cover part of it
-        xmin = 461351  # same as default
-        ymax = 4923445 - 100
-        xmax = 461451  # same as default
-        ymin = 4923191  # same as default
+        xmin = ORIGIN_X + 100  # same as default
+        ymax = ORIGIN_Y - 100
+        xmax = ORIGIN_X + 200  # same as default
+        ymin = ORIGIN_Y - 254  # same as default
         make_simple_vector(os.path.join(self.workspace_dir, "aoi.shp"),
                            shapely_geometry_list=[
                                 Polygon([(xmin, ymin), (xmax, ymin),
@@ -366,7 +374,7 @@ class UMHTests(unittest.TestCase):
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(26910)
         projection_wkt = srs.ExportToWkt()
-        origin = (461251+100, 4923445)
+        origin = (ORIGIN_X+100, ORIGIN_Y)
         pygeoprocessing.numpy_array_to_raster(
             array.astype(numpy.float32), FLOAT32_NODATA, (100, -100), origin,
             projection_wkt, args['population_raster'])
@@ -495,12 +503,16 @@ class UMHTests(unittest.TestCase):
         # polygon covers bottom left 1x2 pixels
         make_simple_vector(baseline_prevalence_path, fields, attribute_list,
                            shapely_geometry_list=[
-                               Polygon([(461251, 4923155), (461521, 4923155),
-                                        (461521, 4923445), (461251, 4923445),
-                                        (461251, 4923155)]),
-                               Polygon([(461251, 4922995), (461451, 4922995),
-                                        (461451, 4923125), (461251, 4923125),
-                                        (461251, 4922995)])
+                               Polygon([(ORIGIN_X, ORIGIN_Y - 290),
+                                        (ORIGIN_X+270, ORIGIN_Y-290),
+                                        (ORIGIN_X+270, ORIGIN_Y),
+                                        (ORIGIN_X, ORIGIN_Y),
+                                        (ORIGIN_X, ORIGIN_Y-290)]),
+                               Polygon([(ORIGIN_X, ORIGIN_Y-450),
+                                        (ORIGIN_X+200, ORIGIN_Y-450),
+                                        (ORIGIN_X+200, ORIGIN_Y-320),
+                                        (ORIGIN_X, ORIGIN_Y-320),
+                                        (ORIGIN_X, ORIGIN_Y-450)])
                                 ])
 
         target_base_prevalence_raster = os.path.join(
@@ -538,7 +550,7 @@ class UMHTests(unittest.TestCase):
 
         ndvi_array = numpy.array(([FLOAT32_NODATA, .3, .1], [.2, 0, 0],
                                   [-.1, .3, .1], [-0.2, .5, 1]))
-        delta_ndvi = os.path.join(self.workspace_dir, "ndvi_base.tif")
+        delta_ndvi = os.path.join(self.workspace_dir, "delta_ndvi.tif")
         make_raster_from_array(delta_ndvi, ndvi_array)
 
         bc_array = numpy.array(([5, FLOAT32_NODATA, 0], [1, 100, 10],
@@ -547,10 +559,10 @@ class UMHTests(unittest.TestCase):
         make_raster_from_array(baseline_cases, bc_array)
 
         aoi_path = os.path.join(self.workspace_dir, "aoi.shp")
-        xmin = 461251  # origin of raster
-        ymax = 4923445  # origin of raster
-        xmax = xmin + 300
-        ymin = ymax - 300  # cut off lowest row
+        xmin = ORIGIN_X  # origin of raster
+        ymax = ORIGIN_Y  # origin of raster
+        xmax = ORIGIN_X + 300
+        ymin = ORIGIN_Y - 300  # cut off lowest row
         make_simple_vector(aoi_path,
                            shapely_geometry_list=[
                                 Polygon([(xmin, ymin), (xmax, ymin),
@@ -617,12 +629,16 @@ class UMHTests(unittest.TestCase):
         # polygon covers bottom left 1x2 pixels
         make_simple_vector(aoi_vector, fields, attribute_list,
                            shapely_geometry_list=[
-                               Polygon([(461251, 4923155), (461521, 4923155),
-                                        (461521, 4923445), (461251, 4923445),
-                                        (461251, 4923155)]),
-                               Polygon([(461251, 4922995), (461451, 4922995),
-                                        (461451, 4923125), (461251, 4923125),
-                                        (461251, 4922995)])
+                               Polygon([(ORIGIN_X, ORIGIN_Y-290),
+                                        (ORIGIN_X+270, ORIGIN_Y-290),
+                                        (ORIGIN_X+270, ORIGIN_Y),
+                                        (ORIGIN_X, ORIGIN_Y),
+                                        (ORIGIN_X, ORIGIN_Y-290)]),
+                               Polygon([(ORIGIN_X, ORIGIN_Y-450),
+                                        (ORIGIN_X+200, ORIGIN_Y-450),
+                                        (ORIGIN_X+200, ORIGIN_Y-320),
+                                        (ORIGIN_X, ORIGIN_Y-320),
+                                        (ORIGIN_X, ORIGIN_Y-450)])
                                 ])
 
         preventable_cases = os.path.join(self.workspace_dir, "prev_cases.tif")
