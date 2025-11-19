@@ -159,7 +159,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "least the search radius distance."
             ),
             data_type=float,
-            units=None,
+            units=u.percent,
             required="scenario=='tcc_ndvi'",
             allowed="scenario=='tcc_ndvi'"
         ),
@@ -634,31 +634,8 @@ def execute(args):
             target_path_list=output_align_list,
             task_name='align NDVI rasters')
 
-        mask_base_inputs = [file_registry['ndvi_base_aligned'],
-                            file_registry['ndvi_base_aligned_masked']]
-        mask_alt_inputs = [file_registry['ndvi_alt_aligned'],
-                           file_registry['ndvi_alt_aligned_masked']]
-        mask_base_outputs = [file_registry['ndvi_base_aligned_masked']]
-        mask_alt_outputs = [file_registry['ndvi_alt_aligned_masked']]
-        if args['lulc_base'] and args['lulc_attr_csv']:
-            LOGGER.info("Masking NDVI using LULC")
-            lulc_masking_inputs = [file_registry['lulc_base_aligned'],
-                                   args['lulc_attr_csv'],
-                                   file_registry['lulc_base_mask']]
-            mask_base_inputs += lulc_masking_inputs
-            mask_base_outputs.append(lulc_masking_inputs[-1])
-
-            # Use lulc_alt to mask if provided. Otherwise, use lulc_base
-            if args['lulc_alt']:
-                mask_alt_inputs += [file_registry['lulc_alt_aligned'],
-                                    args['lulc_attr_csv'],
-                                    file_registry['lulc_alt_mask']]
-            else:
-                mask_alt_inputs += lulc_masking_inputs
-
-            mask_alt_outputs.append(file_registry['lulc_alt_mask'])
-        else:
-            LOGGER.info("Masking NDVI using threshold NDVI<0")
+        mask_base_inputs, mask_base_outputs = _get_masking_inputs_and_outputs(
+            args, file_registry, 'base')
 
         mask_base_ndvi_task = task_graph.add_task(
             func=mask_ndvi,
@@ -667,6 +644,9 @@ def execute(args):
             dependent_task_list=[ndvi_align_task],
             task_name="Mask baseline NDVI"
         )
+
+        mask_alt_inputs, mask_alt_outputs = _get_masking_inputs_and_outputs(
+            args, file_registry, 'alt')
 
         mask_alt_ndvi_task = task_graph.add_task(
             func=mask_ndvi,
@@ -1000,6 +980,42 @@ def _resample_population_raster(
     shutil.rmtree(tmp_working_dir, ignore_errors=True)
 
 
+def _get_masking_inputs_and_outputs(args, file_registry, scenario):
+    """Get lists of inputs and outputs for NDVI masking task
+
+    Args:
+        args (dict): args dictionary input to ``execute``.
+        file_registry (FileRegistry): dict-like object which maps
+            ``MODEL_SPEC`` output ids to absolute paths.
+        scenario (str): 'base' or 'alt', which determines if this function provides
+            the input/output files for masking baseline or alternate NDVI.
+
+    Returns:
+        mask_inputs, mask_outputs lists which represent files to input
+        to mask task and target outputs for mask task, respectively.
+
+    """
+    mask_inputs = [file_registry[f'ndvi_{scenario}_aligned'],
+                   file_registry[f'ndvi_{scenario}_aligned_masked']]
+    mask_outputs = [file_registry[f'ndvi_{scenario}_aligned_masked']]
+    if args['lulc_attr_csv']:  # attr table can only be provided if lulc_base
+        LOGGER.info("Masking NDVI using LULC")
+        # output filename references orig input scenario even if no lulc_alt
+        mask_outputs.append(file_registry[f'lulc_{scenario}_mask'])
+        if not args['lulc_alt']:
+            # in case tag='alt' but lulc_alt doesnt exist -> fallback to base
+            LOGGER.info("Alt LULC raster not provided. Using LULC_base.tif "
+                        "to mask NDVI_alt.tif")
+            scenario = 'base'
+        mask_inputs += [file_registry[f'lulc_{scenario}_aligned'],
+                        args['lulc_attr_csv'],
+                        file_registry[f'lulc_{scenario}_mask']]
+    else:
+        LOGGER.info("Masking NDVI using threshold NDVI<0")
+
+    return mask_inputs, mask_outputs
+
+
 def mask_ndvi(input_ndvi, target_masked_ndvi, input_lulc=None,
               lulc_attr_table=None, target_lulc_mask=None):
     """Mask NDVI using either threshold of NDVI<0 or LULC exclude codes
@@ -1115,10 +1131,9 @@ def calc_preventable_cases(delta_ndvi, baseline_cases, effect_size,
     RR: relative risk or risk ratio
     NE: nature exposure, as approximated by NDVI
     RR0.1NE: RR per 0.1 NE increase.
-        By default, the model uses the relative risk associated with a
-        0.1 increase in NDVI-based nature exposure. This value must be
-        provided by users in the effect size table, based on empirical
-        studies or meta-analyses relevant to the selected health outcome.
+        The model uses the relative risk associated with a 0.1 increase
+        in NDVI-based nature exposure. This value is provided by users as
+        the effect size value.
 
     Args:
         delta_ndvi (str): path to raster representing change in NDVI from
