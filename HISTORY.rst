@@ -75,6 +75,12 @@ General
   a ``rows`` attribute; ``orientation='row'`` may be used to indicate a row-wise
   table layout. (`#2216 <https://github.com/natcap/invest/issues/2216>`_)
 
+Coastal Vulnerability
+=====================
+* Various updates to model input and output data metadata, including
+  correcting the units of some intermediate outputs.
+  (`#2254 <https://github.com/natcap/invest/issues/2254>`_)
+
 
 3.17.1 (2025-11-06)
 -------------------
