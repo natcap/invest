@@ -129,7 +129,8 @@ MODEL_SPEC = spec.ModelSpec(
                     units=u.metric_ton / u.hectare
                 )
             ],
-            index_col="lucode"
+            index_col="lucode",
+            na_allowed=["c_above"]
         ),
         spec.SingleBandRasterInput(
             id="lulc_raster_path",
@@ -261,7 +262,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Carbon stored in the aboveground biomass carbon pool."
             ),
             data_type=float,
-            units=u.metric_ton
+            units=u.metric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
             id="c_below_carbon_stocks",
@@ -270,7 +271,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Carbon stored in the belowground biomass carbon pool."
             ),
             data_type=float,
-            units=u.metric_ton
+            units=u.metric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
             id="c_dead_carbon_stocks",
@@ -279,14 +280,14 @@ MODEL_SPEC = spec.ModelSpec(
                 "Carbon stored in the dead matter biomass carbon pool."
             ),
             data_type=float,
-            units=u.metric_ton
+            units=u.metric_ton / u.hectare
         ),
         spec.SingleBandRasterOutput(
             id="c_soil_carbon_stocks",
             path="intermediate_outputs/c_soil_carbon_stocks.tif",
             about=gettext("Carbon stored in the soil biomass carbon pool."),
             data_type=float,
-            units=u.metric_ton
+            units=u.metric_ton / u.hectare
         ),
         spec.VectorOutput(
             id="local_carbon_shape",
@@ -459,7 +460,7 @@ def execute(args):
     carbon_maps = []
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
-        args['biophysical_table_path'])
+        args['biophysical_table_path'], args=args)
     pool_list = [('c_above', True)]
     if args['pools_to_calculate'] == 'all':
         pool_list.extend([
@@ -471,7 +472,7 @@ def execute(args):
             task_graph.add_task(
                 func=_calculate_lulc_carbon_map,
                 args=(args['lulc_raster_path'],
-                      args['biophysical_table_path'],
+                      biophysical_df,
                       carbon_pool_type, ignore_tropical_type,
                       args['compute_forest_edge_effects'],
                       file_registry[f'{carbon_pool_type}_carbon_stocks']),
@@ -486,7 +487,7 @@ def execute(args):
         map_distance_task = task_graph.add_task(
             func=_map_distance_from_tropical_forest_edge,
             args=(args['lulc_raster_path'],
-                  args['biophysical_table_path'],
+                  biophysical_df,
                   file_registry['edge_distance'],
                   file_registry['non_forest_mask']),
             target_path_list=[file_registry['edge_distance'],
@@ -665,14 +666,14 @@ def _aggregate_carbon_map(
 
 
 def _calculate_lulc_carbon_map(
-        lulc_raster_path, biophysical_table_path, carbon_pool_type,
+        lulc_raster_path, biophysical_df, carbon_pool_type,
         ignore_tropical_type, compute_forest_edge_effects, carbon_map_path):
     """Calculates the carbon on the map from non-forest landcover types only.
 
     Args:
         lulc_raster_path (string): a filepath to the landcover map that
             contains integer landcover codes
-        biophysical_table_path (string): a filepath to a csv table that indexes
+        biophysical_df (pandas.DataFrame): a dataframe that indexes
             landcover codes to surface carbon, contains at least the fields
             'lucode' (landcover integer code), 'is_tropical_forest' (0 or 1
             depending on landcover code type), and 'c_above' (carbon density in
@@ -692,9 +693,6 @@ def _calculate_lulc_carbon_map(
 
     """
     # classify forest pixels from lulc
-    biophysical_df = MODEL_SPEC.get_input(
-        'biophysical_table_path').get_validated_dataframe(biophysical_table_path)
-
     lucode_to_per_cell_carbon = {}
 
     # Build a lookup table
@@ -727,7 +725,7 @@ def _calculate_lulc_carbon_map(
 
 
 def _map_distance_from_tropical_forest_edge(
-        base_lulc_raster_path, biophysical_table_path, edge_distance_path,
+        base_lulc_raster_path, biophysical_df, edge_distance_path,
         target_non_forest_mask_path):
     """Generates a raster of forest edge distances.
 
@@ -737,7 +735,7 @@ def _map_distance_from_tropical_forest_edge(
     Args:
         base_lulc_raster_path (string): path to the landcover raster that
             contains integer landcover codes
-        biophysical_table_path (string): path to a csv table that indexes
+        biophysical_df (pandas.DataFrame): a dataframe that indexes
             landcover codes to forest type, contains at least the fields
             'lucode' (landcover integer code) and 'is_tropical_forest' (0 or 1
             depending on landcover code type)
@@ -752,9 +750,6 @@ def _map_distance_from_tropical_forest_edge(
 
     """
     # Build a list of forest lucodes
-    biophysical_df = MODEL_SPEC.get_input(
-        'biophysical_table_path').get_validated_dataframe(
-        biophysical_table_path)
     forest_codes = biophysical_df[biophysical_df['is_tropical_forest']].index.values
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
@@ -1162,9 +1157,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    model_spec = copy.deepcopy(MODEL_SPEC)
-    if 'pools_to_calculate' in args and args['pools_to_calculate'] == 'all':
-        model_spec.get_input('biophysical_table_path').get_column('c_below').required = True
-        model_spec.get_input('biophysical_table_path').get_column('c_soil').required = True
-        model_spec.get_input('biophysical_table_path').get_column('c_dead').required = True
-    return validation.validate(args, model_spec)
+    return validation.validate(args, MODEL_SPEC)

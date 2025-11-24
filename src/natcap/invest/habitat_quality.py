@@ -25,12 +25,6 @@ MISSING_THREAT_RASTER_MSG = gettext(
     "A threat raster for threats: {threat_list} was not found or it "
     "could not be opened by GDAL.")
 DUPLICATE_PATHS_MSG = gettext("Threat paths must be unique. Duplicates: ")
-INVALID_MAX_DIST_MSG = gettext(
-    "The maximum distance value for threats: {threat_list} is less than "
-    "or equal to 0. MAX_DIST must be a positive value.")
-MISSING_MAX_DIST_MSG = gettext(
-    "Maximum distance value is missing for threats: {threat_list}.")
-MISSING_WEIGHT_MSG = gettext("Weight value is missing for threats: {threat_list}.")
 
 MODEL_SPEC = spec.ModelSpec(
     model_id="habitat_quality",
@@ -112,7 +106,8 @@ MODEL_SPEC = spec.ModelSpec(
                         " zero at this maximum distance. This value must be greater than"
                         " or equal to the pixel size of your LULC raster(s)."
                     ),
-                    units=u.meter
+                    units=u.meter,
+                    expression="value > 0"
                 ),
                 spec.RatioInput(
                     id="weight",
@@ -177,7 +172,8 @@ MODEL_SPEC = spec.ModelSpec(
                     projected=None
                 )
             ],
-            index_col="threat"
+            index_col="threat",
+            na_allowed=["fut_path", "base_path"]
         ),
         spec.VectorInput(
             id="access_vector_path",
@@ -631,7 +627,7 @@ def execute(args):
     # Get CSVs as dictionaries and ensure the key is a string for threats.
     threat_df = MODEL_SPEC.get_input(
         'threats_table_path').get_validated_dataframe(
-        args['threats_table_path']).fillna('')
+        args['threats_table_path'], args=args).fillna('')
     sensitivity_df = MODEL_SPEC.get_input(
         'sensitivity_table_path').get_validated_dataframe(
         args['sensitivity_table_path'])
@@ -834,11 +830,6 @@ def execute(args):
                     ' calculation for this land cover.')
                 exit_landcover = True
                 break
-            # Check to make sure max_dist is greater than 0
-            if row['max_dist'] <= 0:
-                raise ValueError(
-                    f"The max distance for threat: '{threat}' is less than"
-                    " or equal to 0. MAX_DIST should be a positive value.")
 
             dist_edt_task = task_graph.add_task(
                 func=pygeoprocessing.distance_transform_edt,
@@ -1224,18 +1215,12 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
             dist > max_dist_pixel, 0,
             numpy.exp((-dist * 2.99) / max_dist_pixel))
 
-    if decay_type == 'linear':
-        decay_op = linear_op
-    elif decay_type == 'exponential':
-        decay_op = exp_op
-    else:
-        raise ValueError(
-            "Unknown type of decay in threat table, should be"
-            f" either 'linear' or 'exponential'. Input was '{decay_type}' for"
-            f" output raster path : '{target_path}'")
-
+    decay_funcs = {
+        'linear': linear_op,
+        'exponential': exp_op
+    }
     pygeoprocessing.raster_map(
-        op=decay_op,
+        op=decay_funcs[decay_type],
         rasters=[dist_raster_path],
         target_path=target_path)
 
@@ -1268,7 +1253,7 @@ def validate(args, limit_to=None):
         # Get CSVs as dictionaries and ensure the key is a string for threats.
         threat_df = MODEL_SPEC.get_input(
             'threats_table_path').get_validated_dataframe(
-            args['threats_table_path']).fillna('')
+            args['threats_table_path'], args=MODEL_SPEC.preprocess_inputs(args)).fillna('')
         sensitivity_df = MODEL_SPEC.get_input(
             'sensitivity_table_path').get_validated_dataframe(
             args['sensitivity_table_path'])
@@ -1287,41 +1272,6 @@ def validate(args, limit_to=None):
                     column_names=sens_header_set)))
 
             invalid_keys.add('sensitivity_table_path')
-
-        # check that max_dist and weight values are included in the
-        # threats table and that max_dist >= 0
-        invalid_max_dist = []
-        missing_max_dist = []
-        missing_weight = []
-        for threat, row in threat_df.iterrows():
-            if row['max_dist'] == '':
-                missing_max_dist.append(threat)
-            elif row['max_dist'] <= 0:
-                invalid_max_dist.append(threat)
-
-            if row['weight'] == '':
-                missing_weight.append(threat)
-
-        if invalid_max_dist:
-            validation_warnings.append((
-                ['threats_table_path'],
-                INVALID_MAX_DIST_MSG.format(threat_list=invalid_max_dist)
-            ))
-
-        if missing_max_dist:
-            validation_warnings.append((
-                ['threats_table_path'],
-                MISSING_MAX_DIST_MSG.format(threat_list=missing_max_dist)
-            ))
-
-        if missing_weight:
-            validation_warnings.append((
-                ['threats_table_path'],
-                MISSING_WEIGHT_MSG.format(threat_list=missing_weight)
-            ))
-
-        if invalid_max_dist or missing_max_dist or missing_weight:
-            invalid_keys.add('threats_table_path')
 
         # Validate threat raster paths and their nodata values
         bad_threat_paths = []

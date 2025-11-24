@@ -1,5 +1,4 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
-import copy
 import logging
 import os
 import pickle
@@ -462,23 +461,23 @@ MODEL_SPEC = spec.ModelSpec(
         spec.SingleBandRasterOutput(
             id="load_n",
             path="intermediate_outputs/load_n.tif",
-            about=gettext("Nitrogen load (for surface transport) per pixel"),
+            about=gettext("Nitrogen load (for surface transport)"),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="load_p",
             path="intermediate_outputs/load_p.tif",
-            about=gettext("Phosphorus load (for surface transport) per pixel"),
+            about=gettext("Phosphorus load (for surface transport)"),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="modified_load_n",
             path="intermediate_outputs/modified_load_n.tif",
             about=gettext("Raw nitrogen load scaled by the runoff proxy index."),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="modified_load_p",
@@ -487,7 +486,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Raw phosphorus load scaled by the runoff proxy index."
             ),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="ndr_n",
@@ -540,7 +539,7 @@ MODEL_SPEC = spec.ModelSpec(
             path="intermediate_outputs/sub_load_n.tif",
             about=gettext("Nitrogen loads for subsurface transport"),
             data_type=float,
-            units=u.kilogram / u.year
+            units=u.kilogram / u.hectare / u.year
         ),
         spec.SingleBandRasterOutput(
             id="sub_ndr_n",
@@ -759,7 +758,7 @@ def execute(args):
 
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
-        args['biophysical_table_path'])
+        args['biophysical_table_path'], args=args)
 
     # Ensure that if user doesn't explicitly assign a value,
     # runoff_proxy_av = None
@@ -1420,23 +1419,12 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    spec_copy = copy.deepcopy(MODEL_SPEC)
     # Check required fields given the state of ``calc_n`` and ``calc_p``
+    validation_warnings = validation.validate(args, MODEL_SPEC)
     nutrients_selected = []
     for nutrient_letter in ('n', 'p'):
         if f'calc_{nutrient_letter}' in args and args[f'calc_{nutrient_letter}']:
             nutrients_selected.append(nutrient_letter)
-
-    for param in ['load', 'eff', 'crit_len']:
-        for nutrient in nutrients_selected:
-            spec_copy.get_input('biophysical_table_path').get_column(
-                f'{param}_{nutrient}').required = True
-
-    if 'n' in nutrients_selected:
-        spec_copy.get_input('biophysical_table_path').get_column(
-            'proportion_subsurface_n').required = True
-
-    validation_warnings = validation.validate(args, spec_copy)
 
     if not nutrients_selected:
         validation_warnings.append(
@@ -1493,7 +1481,7 @@ def _calculate_load(
         lulc_raster_path (string): path to integer landcover raster.
         lucode_to_load (dict): a mapping of landcover IDs to nutrient load,
             efficiency, and load type. The load type value can be one of:
-            [ 'measured-runoff' | 'appliation-rate' ].
+            [ 'measured-runoff' | 'application-rate' ].
         nutrient_type (str): the nutrient type key ('p' | 'n').
         target_load_raster (string): path to target raster that will have
             load values (kg/ha) mapped to pixels based on LULC.
@@ -1507,16 +1495,6 @@ def _calculate_load(
     load_key = f'load_{nutrient_type}'
     eff_key = f'eff_{nutrient_type}'
     load_type_key = f'load_type_{nutrient_type}'
-
-    # Raise ValueError if unknown load_type
-    for key, value in lucode_to_load.items():
-        load_type = value[load_type_key]
-        if not load_type in [app_rate, measured_runoff]:
-            # unknown load type, raise ValueError
-            raise ValueError(
-                'nutrient load type must be: '
-                f'"{app_rate}" | "{measured_runoff}". Instead '
-                f'found value of: "{load_type}".')
 
     def _map_load_op(lucode_array):
         """Convert unit load to total load."""

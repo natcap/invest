@@ -9,15 +9,15 @@ from unittest.mock import patch
 
 from babel.messages import Catalog, mofile
 import natcap.invest
-from natcap.invest import validation
+from natcap.invest import validation_messages
 from osgeo import gdal
 
 gdal.UseExceptions()
 TEST_LANG = 'll'
 
 # assign to local variable so that it won't be changed by translation
-missing_key_msg = validation.MESSAGES['MISSING_KEY']
-not_a_number_msg = validation.MESSAGES['NOT_A_NUMBER']
+missing_key_msg = validation_messages.MISSING_KEY
+not_a_number_msg = validation_messages.NOT_A_NUMBER
 
 # Fake translations for testing
 TEST_MESSAGES = {
@@ -43,7 +43,7 @@ def reset_locale():
     # NOTE: it would be better to run each test in a new process,
     # but that's difficult on windows: https://stackoverflow.com/a/48310939
     importlib.reload(natcap.invest)
-    importlib.reload(validation)
+    importlib.reload(validation_messages)
     importlib.reload(cli)
     importlib.reload(carbon)
     importlib.reload(ui_server)
@@ -156,12 +156,12 @@ class TranslationTests(unittest.TestCase):
 
     def test_translate_formatted_string(self):
         """Translation: test that f-string can be translated."""
-        from natcap.invest import carbon, validation, set_locale
+        from natcap.invest import carbon, validation_messages, set_locale
         set_locale(TEST_LANG)
-        importlib.reload(validation)
+        importlib.reload(validation_messages)
         importlib.reload(carbon)
         args = {'n_workers': 'not a number'}
-        validation_messages = carbon.validate(args)
+        msgs = carbon.validate(args)
         self.assertIn(
             TEST_MESSAGES[not_a_number_msg].format(value=args['n_workers']),
-            str(validation_messages))
+            str(msgs))

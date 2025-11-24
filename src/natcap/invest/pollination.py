@@ -1144,29 +1144,9 @@ def _parse_scenario_variables(args):
     """
     guild_df = MODEL_SPEC.get_input(
         'guild_table_path').get_validated_dataframe(args['guild_table_path'])
-
-    LOGGER.info('Checking to make sure guild table has all expected headers')
-    for header in _EXPECTED_GUILD_HEADERS:
-        matches = re.findall(header, " ".join(guild_df.columns))
-        if len(matches) == 0:
-            raise ValueError(
-                "Expected a header in guild table that matched the pattern "
-                f"'{header}' but was unable to find one. Here are all the "
-                f"headers from {args['guild_table_path']}: "
-                f"{', '.join(guild_df.columns)}")
-
     landcover_biophysical_df = MODEL_SPEC.get_input(
         'landcover_biophysical_table_path').get_validated_dataframe(
         args['landcover_biophysical_table_path'])
-    biophysical_table_headers = landcover_biophysical_df.columns
-    for header in _EXPECTED_BIOPHYSICAL_HEADERS:
-        matches = re.findall(header, " ".join(biophysical_table_headers))
-        if len(matches) == 0:
-            raise ValueError(
-                "Expected a header in biophysical table that matched the "
-                f"pattern '{header}' but was unable to find one. Here are all "
-                f"the headers from {args['landcover_biophysical_table_path']}: "
-                f"{', '.join(biophysical_table_headers)}")
 
     # this dict to dict will map seasons to guild/biophysical headers
     # ex season_to_header['spring']['guilds']
@@ -1216,7 +1196,7 @@ def _parse_scenario_variables(args):
                 substrate = match.group(1)
                 substrate_to_header[substrate]['farm'] = match.group()
 
-    for header in biophysical_table_headers:
+    for header in landcover_biophysical_df.columns:
         match = re.match(_FLORAL_RESOURCES_AVAILABLE_PATTERN, header)
         if match:
             season = match.group(1)

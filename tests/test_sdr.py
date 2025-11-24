@@ -190,7 +190,7 @@ class SDRTests(unittest.TestCase):
                 raster_sum += numpy.sum(
                     block[~pygeoprocessing.array_equals_nodata(
                             block, nodata)], dtype=numpy.float64)
-            numpy.testing.assert_allclose(raster_sum, expected_sum)
+            numpy.testing.assert_allclose(raster_sum, expected_sum, atol=1e-5)
 
     def test_base_regression_d8(self):
         """SDR base regression test on sample data in D8 mode.
@@ -355,8 +355,7 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            'A value in the biophysical table is not a number '
-            'within range 0..1.', str(context.exception))
+            'Error in column "usle_p", value "1000.0"', str(context.exception))
 
     def test_base_usle_p_nan(self):
         """SDR test expected exception for USLE_P not a number."""

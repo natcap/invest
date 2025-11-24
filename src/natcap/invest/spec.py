@@ -1,5 +1,6 @@
 import collections
 import contextlib
+import copy
 import importlib
 import json
 import logging
@@ -27,9 +28,9 @@ import taskgraph
 
 from natcap.invest.file_registry import FileRegistry
 from natcap.invest import utils
-from natcap.invest.validation import get_message
 from . import gettext
 from .unit_registry import u
+from . import validation_messages
 
 
 LOGGER = logging.getLogger(__name__)
@@ -104,11 +105,11 @@ def check_headers(expected_headers, actual_headers, header_type='header'):
     for expected in expected_headers:
         count = actual_headers.count(expected)
         if count == 0:
-            return get_message('MATCHED_NO_HEADERS').format(
+            return validation_messages.MATCHED_NO_HEADERS.format(
                 header=header_type,
                 header_name=expected)
         elif count > 1:
-            return get_message('DUPLICATE_HEADER').format(
+            return validation_messages.DUPLICATE_HEADER.format(
                 header=header_type,
                 header_name=expected,
                 number=count)
@@ -131,11 +132,11 @@ def _check_projection(srs, projected, projection_units):
     with GDALUseExceptions():
         empty_srs = osr.SpatialReference()
         if srs is None or srs.IsSame(empty_srs):
-            return get_message('INVALID_PROJECTION')
+            return validation_messages.INVALID_PROJECTION
 
         if projected:
             if not srs.IsProjected():
-                return get_message('NOT_PROJECTED')
+                return validation_messages.NOT_PROJECTED
 
         if projection_units:
             # pint uses underscores in multi-word units e.g. 'survey_foot'
@@ -146,10 +147,10 @@ def _check_projection(srs, projected, projection_units):
                 layer_units = u.Unit(layer_units_name)
                 # Compare pint Unit objects
                 if projection_units != layer_units:
-                    return get_message('WRONG_PROJECTION_UNIT').format(
+                    return validation_messages.WRONG_PROJECTION_UNIT.format(
                         unit_a=projection_units, unit_b=layer_units_name)
             except pint.errors.UndefinedUnitError:
-                return get_message('WRONG_PROJECTION_UNIT').format(
+                return validation_messages.WRONG_PROJECTION_UNIT.format(
                     unit_a=projection_units, unit_b=layer_units_name)
 
 
@@ -267,6 +268,31 @@ class Input(BaseModel):
         """
         return value
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Note that conditional requirements (where `required` is a string
+        expression) are not documented because it may be too complicated to
+        auto-format into human readable text. For any conditionally-required
+        input, the conditions upon which it is required should also be
+        described in the `about` attribute.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+        required_string = self.format_required_string()
+
+        rst_line = f'**{name}** ({type_string}, *{required_string}*)'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace('_', '\\_')
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
+
 
 class Output(BaseModel):
     """A data output, or result, of an invest model.
@@ -305,9 +331,11 @@ class FileInput(Input):
 
     type: typing.ClassVar[str] = 'file'
 
-    display_name: typing.ClassVar[str] = gettext('file')
-
     rst_section: typing.ClassVar[str] = 'file'
+
+    @property
+    def display_name(self):
+        return gettext('file')
 
     @timeout
     def validate(self, filepath: str):
@@ -320,14 +348,14 @@ class FileInput(Input):
             A string error message if an error was found.  ``None`` otherwise.
         """
         if not os.path.exists(filepath):
-            return get_message('FILE_NOT_FOUND')
+            return validation_messages.FILE_NOT_FOUND
 
         for letter, mode, descriptor in (
                 ('r', os.R_OK, 'read'),
                 ('w', os.W_OK, 'write'),
                 ('x', os.X_OK, 'execute')):
             if letter in self.permissions and not os.access(filepath, mode):
-                return get_message('NEED_PERMISSION_FILE').format(permission=descriptor)
+                return validation_messages.NEED_PERMISSION_FILE.format(permission=descriptor)
 
     @staticmethod
     def format_column(col: pandas.Series, base_path: str) -> pandas.Series:
@@ -349,6 +377,7 @@ class FileInput(Input):
                 return p
             p = str(p).strip()
             # don't expand remote paths
+            # this method is originally for GDAL paths but it works on all file types
             if utils._GDALPath.from_uri(p).is_local:
                 if not utils._GDALPath.from_uri(base_path).is_local:
                     raise ValueError('Remote CSVs cannot reference local file paths')
@@ -390,6 +419,35 @@ class SpatialFileInput(FileInput):
             return utils._GDALPath.from_uri(value).to_normalized_path()
         return None  # if None or empty string, return None
 
+    @staticmethod
+    def format_column(col: pandas.Series, base_path: str) -> pandas.Series:
+        """Format a dataframe column that contains spatial file paths.
+
+        File path values are cast to `pandas.StringDtype`. Relative paths are
+        expanded to absolute paths relative to `base_path`. NA values remain NA.
+
+        Args:
+            col: Column of a pandas dataframe to format
+            base_path: Base path of the source CSV. Relative file path values
+                will be expanded relative to this base path.
+
+        Returns:
+            Transformed dataframe column
+        """
+        def format_path(p):
+            if pandas.isna(p):
+                return p
+            p = str(p).strip()
+            # don't expand remote paths
+            # this method is originally for GDAL paths but it works on all file types
+            if utils._GDALPath.from_uri(p).is_local:
+                if not utils._GDALPath.from_uri(base_path).is_local:
+                    raise ValueError('Remote CSVs cannot reference local file paths')
+                return utils.expand_path(p, base_path)
+            return utils._GDALPath.from_uri(p).to_normalized_path()
+
+        return col.apply(format_path).astype(pandas.StringDtype())
+
 
 class RasterBand(BaseModel):
     """A single-band raster input, or parameter, of an invest model.
@@ -423,9 +481,11 @@ class RasterInput(SpatialFileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
-    display_name: typing.ClassVar[str] = gettext('raster')
-
     rst_section: typing.ClassVar[str] = 'raster'
+
+    @property
+    def display_name(self):
+        return gettext('raster')
 
     @timeout
     def validate(self, filepath: str):
@@ -448,11 +508,11 @@ class RasterInput(SpatialFileInput):
                 gdal_dataset = gdal.OpenEx(
                     gdal_path.to_normalized_path(), gdal.OF_RASTER)
             except RuntimeError:
-                return get_message('NOT_GDAL_RASTER')
+                return validation_messages.NOT_GDAL_RASTER
 
             # Check that an overview .ovr file wasn't opened.
             if os.path.splitext(filepath)[1] == '.ovr':
-                return get_message('OVR_FILE')
+                return validation_messages.OVR_FILE
 
             srs = gdal_dataset.GetSpatialRef()
             projection_warning = _check_projection(
@@ -477,9 +537,11 @@ class SingleBandRasterInput(SpatialFileInput):
 
     type: typing.ClassVar[str] = 'raster'
 
-    display_name: typing.ClassVar[str] = gettext('raster')
-
     rst_section: typing.ClassVar[str] = 'raster'
+
+    @property
+    def display_name(self):
+        return gettext('raster')
 
     @timeout
     def validate(self, filepath: str):
@@ -502,17 +564,47 @@ class SingleBandRasterInput(SpatialFileInput):
                 gdal_dataset = gdal.OpenEx(
                     gdal_path.to_normalized_path(), gdal.OF_RASTER)
             except RuntimeError:
-                return get_message('NOT_GDAL_RASTER')
+                return validation_messages.NOT_GDAL_RASTER
 
             # Check that an overview .ovr file wasn't opened.
             if os.path.splitext(filepath)[1] == '.ovr':
-                return get_message('OVR_FILE')
+                return validation_messages.OVR_FILE
 
             srs = gdal_dataset.GetSpatialRef()
             projection_warning = _check_projection(
                 srs, self.projected, self.projection_units)
             if projection_warning:
                 return projection_warning
+
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+
+        in_parentheses = [type_string]
+
+        if self.units:
+            units_string = format_unit(self.units)
+            if units_string:
+                # pybabel can't find the message if it's in the f-string
+                translated_units = gettext("units")
+                in_parentheses.append(f'{translated_units}: **{units_string}**')
+
+        required_string = self.format_required_string()
+        in_parentheses.append(f'*{required_string}*')
+
+        rst_line = f'**{name}** ({", ".join(in_parentheses)})'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace("_", "\\_")
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
 
 
 class VectorInput(SpatialFileInput):
@@ -531,8 +623,6 @@ class VectorInput(SpatialFileInput):
 
     type: typing.ClassVar[str] = 'vector'
 
-    display_name: typing.ClassVar[str] = gettext('vector')
-
     rst_section: typing.ClassVar[str] = 'vector'
 
     _fields_dict: dict[str, Input] = {}
@@ -540,13 +630,20 @@ class VectorInput(SpatialFileInput):
     @model_validator(mode='after')
     def check_field_types(self):
         for field in (self.fields or []):
-            if type(field) not in {IntegerInput, NumberInput, OptionStringInput,
-                                   PercentInput, RatioInput, StringInput}:
+            for input_type in {IntegerInput, NumberInput, OptionStringInput,
+                               PercentInput, RatioInput, StringInput}:
+                if isinstance(field, input_type):
+                    break
+            else:
                 raise ValueError(f'Field {field} is not an allowed type')
         return self
 
     def model_post_init(self, context):
         self._fields_dict = {field.id: field for field in self.fields}
+
+    @property
+    def display_name(self):
+        return gettext('vector')
 
     def get_field(self, key: str) -> Input:
         return self._fields_dict[key]
@@ -572,7 +669,7 @@ class VectorInput(SpatialFileInput):
                 gdal_dataset = gdal.OpenEx(
                     gdal_path.to_normalized_path(), gdal.OF_VECTOR)
             except RuntimeError:
-                return get_message('NOT_GDAL_VECTOR')
+                return validation_messages.NOT_GDAL_VECTOR
 
             geom_map = {
                 'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM,
@@ -601,14 +698,14 @@ class VectorInput(SpatialFileInput):
             # Currently not supporting ogr.wkbUnknown which allows mixed types.
             layer = gdal_dataset.GetLayer()
             if layer.GetGeomType() not in allowed_geom_types:
-                return get_message('WRONG_GEOM_TYPE').format(allowed=self.geometry_types)
+                return validation_messages.WRONG_GEOM_TYPE.format(allowed=self.geometry_types)
 
             if self.fields:
                 field_patterns = []
                 for spec in self.fields:
                     # brackets are a special character for our args spec syntax
                     # they surround the part of the key that's user-defined
-                    # user-defined rows/columns/fields are not validated here, so skip
+                    # user-defined columns/fields are not validated here, so skip
                     if spec.required is True and '[' not in spec.id:
                         field_patterns.append(spec.id)
 
@@ -637,6 +734,25 @@ class VectorInput(SpatialFileInput):
             key=lambda g: GEOMETRY_ORDER.index(g))
         return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+        required_string = self.format_required_string()
+        geom_string = self.format_geometry_types_rst()
+        rst_line = f'**{name}** ({type_string}, {geom_string}, *{required_string}*)'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace('_', '\\_')
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
+
 
 class RasterOrVectorInput(SpatialFileInput):
     """An invest model input that can be either a single-band raster or a vector."""
@@ -656,8 +772,6 @@ class RasterOrVectorInput(SpatialFileInput):
     field name."""
 
     type: typing.ClassVar[str] = 'raster_or_vector'
-
-    display_name: typing.ClassVar[str] = gettext('raster or vector')
 
     rst_section: typing.ClassVar[str] = 'raster'
 
@@ -679,6 +793,10 @@ class RasterOrVectorInput(SpatialFileInput):
             projected=self.projected,
             projection_units=self.projection_units)
         self._fields_dict = {field.id: field for field in self.fields}
+
+    @property
+    def display_name(self):
+        return gettext('raster or vector')
 
     def get_field(self, key: str) -> Input:
         return self.fields_dict[key]
@@ -707,40 +825,34 @@ class RasterOrVectorInput(SpatialFileInput):
 class CSVInput(FileInput):
     """A CSV table input, or parameter, of an invest model.
 
-    For CSVs with a simple layout, `columns` or `rows` (but not both) may be
-    specified. For more complex table structures that cannot be described by
-    `columns` or `rows`, you may omit both attributes. Note that more complex
-    table structures are often more difficult to use; consider dividing them
-    into multiple, simpler tabular inputs.
+    For CSVs with a simple layout, `columns` may be specified. For more complex
+    table structures that cannot be described by `columns`, you may omit the
+    attribute. Note that more complex table structures are often more difficult
+    to use; consider dividing them into multiple, simpler tabular inputs.
     """
     columns: typing.Union[list[Input], None] = None
     """An iterable of `Input`s representing the columns that this CSV is
     expected to have. The `id` of each input must match the corresponding
     column header."""
 
-    rows: typing.Union[list[Input], None] = None
-    """An iterable of `Input`s representing the rows that this CSV is
-    expected to have. The `id` of each input must match the corresponding
-    row header."""
+    orientation: typing.Literal['column', 'row'] = 'column'
+    """Orientation of the table. Defaults to 'column', meaning that the column
+    headers go horizontally. This is the recommended orientation for most tables.
+    If the table must be oriented row-wise, meaning that the headers go
+    vertically, set this to 'row'."""
 
     index_col: typing.Union[str, None] = None
     """The header name of the column to use as the index. When processing a
     CSV file to a dataframe, the dataframe index will be set to this column."""
 
-    type: typing.ClassVar[str] = 'csv'
+    na_allowed: list[str] = []
+    """List of header names of columns in which NA values are allowed."""
 
-    display_name: typing.ClassVar[str] = gettext('CSV')
+    type: typing.ClassVar[str] = 'csv'
 
     rst_section: typing.ClassVar[str] = 'csv'
 
     _columns_dict: dict[str, Input] = {}
-    _fields_dict: dict[str, Input] = {}
-
-    @model_validator(mode='after')
-    def check_not_both_rows_and_columns(self):
-        if self.rows is not None and self.columns is not None:
-            raise ValueError('Cannot have both rows and columns')
-        return self
 
     @model_validator(mode='after')
     def check_index_col_in_columns(self):
@@ -750,30 +862,29 @@ class CSVInput(FileInput):
         return self
 
     @model_validator(mode='after')
-    def check_row_and_column_types(self):
+    def check_column_types(self):
         allowed_types = {
             BooleanInput, IntegerInput, NumberInput, OptionStringInput,
             PercentInput, RasterOrVectorInput, RatioInput, FileInput,
             SingleBandRasterInput, StringInput, VectorInput, CSVInput}
-        for row in (self.rows or []):
-            if type(row) not in allowed_types:
-                raise ValueError(f'Row {row} is not an allowed type')
         for col in (self.columns or []):
-            if type(col) not in allowed_types:
+            for input_type in allowed_types:
+                if isinstance(col, input_type):
+                    break
+            else:
                 raise ValueError(f'Column {col} is not an allowed type')
         return self
 
     def model_post_init(self, context):
         if self.columns:
             self._columns_dict = {col.id: col for col in self.columns}
-        if self.rows:
-            self._rows_dict = {row.id: row for row in self.rows}
+
+    @property
+    def display_name(self):
+        return gettext('CSV')
 
     def get_column(self, key: str) -> Input:
         return self._columns_dict[key]
-
-    def get_row(self, key: str) -> Input:
-        return self._rows_dict[key]
 
     @timeout
     def validate(self, filepath: str):
@@ -791,17 +902,17 @@ class CSVInput(FileInput):
             if file_warning:
                 return file_warning
 
-        if self.columns or self.rows:
+        if self.columns:
             try:
                 self.get_validated_dataframe(filepath)
             except Exception as e:
                 return str(e)
 
-    def get_validated_dataframe(self, csv_path: str, read_csv_kwargs={}):
+    def get_validated_dataframe(self, csv_path: str, read_csv_kwargs={}, args=None):
         """Read a CSV into a dataframe that is guaranteed to match the spec.
 
-        This is only supported when `columns` or `rows` is provided. Each
-        column will be read in to a dataframe and values will be pre-processed
+        This is only supported when `columns` is provided. Each column will
+        be read in to a dataframe and values will be pre-processed
         according to that column input type. Column/row headers are matched
         case-insensitively. Values are cast to the appropriate
         type and relative paths are expanded.
@@ -809,6 +920,8 @@ class CSVInput(FileInput):
         Args:
             csv_path: Path to the CSV to process
             read_csv_kwargs: Additional kwargs to pass to `pandas.read_csv`
+            args: Optional. Dictionary of arg values used to evaluate the
+                `required` condition of self.columns.
 
         Returns:
             pandas dataframe
@@ -817,34 +930,29 @@ class CSVInput(FileInput):
             ValueError if the CSV cannot be parsed to fulfill the requirements
             for this input - if a required column or row is missing, or if the
             values in a column cannot be interpreted as the expected type.
+
+            AssertionError from ``utils.evaluate_expression`` if any conditonal
+            requirement string can't be evaluated given the values in ``args``.
         """
-        if not (self.columns or self.rows):
-            raise ValueError('One of columns or rows must be provided')
+        if not self.columns:
+            raise ValueError('Columns must be provided')
+
+        df = utils.read_csv_to_dataframe(
+            csv_path, **read_csv_kwargs,
+            header=None if self.orientation == "row" else 'infer')
+
+        if self.orientation == "row":  # swap rows and columns
+            df = df.set_index(df.columns[0]).rename_axis(
+                None, axis=0).T.reset_index(drop=True)
 
         # build up a list of regex patterns to match columns against columns from
         # the table that match a pattern in this list (after stripping whitespace
         # and lowercasing) will be included in the dataframe
-        axis = 'column' if self.columns else 'row'
-
-        if self.rows:
-            read_csv_kwargs = read_csv_kwargs.copy()
-            read_csv_kwargs['header'] = None
-
-        df = utils.read_csv_to_dataframe(csv_path, **read_csv_kwargs)
-
-        if self.rows:
-            # swap rows and column
-            df = df.set_index(df.columns[0]).rename_axis(
-                None, axis=0).T.reset_index(drop=True)
-
-        columns = self.columns if self.columns else self.rows
-
         patterns = []
-        for column in columns:
+        for column in self.columns:
             column = column.id.lower()
             match = re.match(r'(.*)\[(.+)\](.*)', column)
             if match:
-                # for column name patterns, convert it to a regex pattern
                 groups = match.groups()
                 patterns.append(f'{groups[0]}(.+){groups[2]}')
             else:
@@ -860,12 +968,25 @@ class CSVInput(FileInput):
 
         available_cols = set(df.columns)
 
+        # Evaluate any conditional requirement strings to booleans
+        # This will raise an error if any can't be evaluated
+        columns = copy.deepcopy(self.columns)
+        for col_spec in columns:
+            if isinstance(col_spec.required, str):
+                col_spec.required = bool(utils.evaluate_expression(
+                    col_spec.required, args or {}))
+
         for col_spec, pattern in zip(columns, patterns):
             matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
-            if col_spec.required is True and '[' not in col_spec.id and not matching_cols:
-                raise ValueError(get_message('MATCHED_NO_HEADERS').format(
-                    header=axis,
-                    header_name=col_spec.id))
+            if col_spec.required and not matching_cols:
+                if '[' in col_spec.id:
+                    raise ValueError(validation_messages.PATTERN_MATCHED_NONE.format(
+                        header=self.orientation,
+                        header_name=col_spec.id))
+                else:
+                    raise ValueError(validation_messages.MATCHED_NO_HEADERS.format(
+                        header=self.orientation,
+                        header_name=col_spec.id))
             available_cols -= set(matching_cols)
             for col in matching_cols:
                 try:
@@ -874,45 +995,37 @@ class CSVInput(FileInput):
                     raise ValueError(
                         f'Value(s) in the "{col}" column could not be interpreted '
                         f'as {type(col_spec).__name__}s. Original error: {err}')
+                if col_spec.id not in self.na_allowed and any(df[col].isna()):
+                    raise ValueError(f'Null value(s) found in column "{col}"')
 
-                if (isinstance(col_spec, SingleBandRasterInput) or
-                    isinstance(col_spec, VectorInput) or
-                    isinstance(col_spec, RasterOrVectorInput)):
-                    # recursively validate the files within the column
-                    def check_value(value):
-                        if pandas.isna(value):
-                            return
-                        err_msg = col_spec.validate(value)
-                        if err_msg:
-                            raise ValueError(
-                                f'Error in {axis} "{col}", value "{value}": {err_msg}')
-
-                    def normalize_path(value):
-                        if pandas.isna(value):
-                            return value
-                        return utils._GDALPath.from_uri(value).to_normalized_path()
-
-                    df[col].apply(check_value)
-                    df[col] = df[col].apply(normalize_path)
+                # recursively validate the values within the column
+                def check_value(value):
+                    err_msg = col_spec.validate(value)
+                    if err_msg:
+                        raise ValueError(
+                            f'Error in {self.orientation} "{col}", '
+                            f'value "{value}": {err_msg}')
+                df[col][df[col].notna()].apply(check_value)
 
         if any(df.columns.duplicated()):
             duplicated_columns = df.columns[df.columns.duplicated]
-            return get_message('DUPLICATE_HEADER').format(
+            raise ValueError(validation_messages.DUPLICATE_HEADER.format(
                 header=header_type,
                 header_name=expected,
-                number=count)
+                number=count))
 
         # set the index column, if specified
         if self.index_col is not None:
             index_col = self.index_col.lower()
-            try:
-                df = df.set_index(index_col, verify_integrity=True)
-            except KeyError:
-                # If 'index_col' is not a column then KeyError is raised for using
-                # it as the index column
-                LOGGER.error(f"The column '{index_col}' could not be found "
-                             f"in the table {csv_path}")
-                raise
+            if index_col not in df.columns:
+                # If 'index_col' is not a column then KeyError is raised for
+                # using it as the index column
+                raise KeyError(f"The column '{index_col}' could not be found "
+                               f"in the table {csv_path}")
+            if any(df[index_col].duplicated()):
+                raise ValueError(
+                    f"Duplicates found in the index column '{index_col}'")
+            df = df.set_index(index_col)
 
         return df
 
@@ -926,6 +1039,28 @@ class CSVInput(FileInput):
             path string or None
         """
         return value if value else None
+
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+        required_string = self.format_required_string()
+        rst_line = f'**{name}** ({type_string}, *{required_string}*)'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace("_", "\\_")
+            rst_line += f': {sanitized_about_string}'
+
+        if not self.columns:
+            rst_line += gettext(
+                ' Please see the sample data table for details on the format.')
+
+        return [rst_line]
 
 
 class DirectoryInput(Input):
@@ -952,8 +1087,6 @@ class DirectoryInput(Input):
 
     type: typing.ClassVar[str] = 'directory'
 
-    display_name: typing.ClassVar[str] = gettext('directory')
-
     rst_section: typing.ClassVar[str] = 'directory'
 
     _contents_dict: dict[str, Input] = {}
@@ -964,13 +1097,20 @@ class DirectoryInput(Input):
             CSVInput, DirectoryInput, FileInput, RasterOrVectorInput,
             SingleBandRasterInput, VectorInput}
         for content in (self.contents or []):
-            if type(content) not in allowed_types:
+            for input_type in allowed_types:
+                if isinstance(content, input_type):
+                    break
+            else:
                 raise ValueError(
                     f'Directory contents {content} is not an allowed type')
         return self
 
     def model_post_init(self, context):
         self._contents_dict = {x.id: x for x in self.contents}
+
+    @property
+    def display_name(self):
+        return gettext('directory')
 
     def get_contents(self, key: str) -> Input:
         return self._contents_dict[key]
@@ -990,11 +1130,11 @@ class DirectoryInput(Input):
 
         if self.must_exist:
             if not os.path.exists(dirpath):
-                return get_message('DIR_NOT_FOUND')
+                return validation_messages.DIR_NOT_FOUND
 
         if os.path.exists(dirpath):
             if not os.path.isdir(dirpath):
-                return get_message('NOT_A_DIR')
+                return validation_messages.NOT_A_DIR
         else:
             # find the parent directory that does exist and check permissions
             child = dirpath
@@ -1007,13 +1147,11 @@ class DirectoryInput(Input):
                     dirpath = parent
                     break
 
-        MESSAGE_KEY = 'NEED_PERMISSION_DIRECTORY'
-
         if 'r' in self.permissions:
             try:
                 os.scandir(dirpath).close()
             except OSError:
-                return get_message(MESSAGE_KEY).format(permission='read')
+                return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='read')
 
         # Check for x access before checking for w,
         # since w operations to a dir are dependent on x access
@@ -1022,7 +1160,7 @@ class DirectoryInput(Input):
                 cwd = os.getcwd()
                 os.chdir(dirpath)
             except OSError:
-                return get_message(MESSAGE_KEY).format(permission='execute')
+                return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='execute')
             finally:
                 os.chdir(cwd)
 
@@ -1033,7 +1171,7 @@ class DirectoryInput(Input):
                     temp.close()
                     os.remove(temp_path)
             except OSError:
-                return get_message(MESSAGE_KEY).format(permission='write')
+                return validation_messages.NEED_PERMISSION_DIRECTORY.format(permission='write')
 
 
 class NumberInput(Input):
@@ -1053,9 +1191,11 @@ class NumberInput(Input):
 
     type: typing.ClassVar[str] = 'number'
 
-    display_name: typing.ClassVar[str] = gettext('number')
-
     rst_section: typing.ClassVar[str] = 'number'
+
+    @property
+    def display_name(self):
+        return gettext('number')
 
     def validate(self, value):
         """Validate a numeric value against the requirements for this input.
@@ -1069,7 +1209,7 @@ class NumberInput(Input):
         try:
             float(value)
         except (TypeError, ValueError):
-            return get_message('NOT_A_NUMBER').format(value=value)
+            return validation_messages.NOT_A_NUMBER.format(value=value)
 
         if self.expression:
             # Check to make sure that 'value' is in the expression.
@@ -1083,7 +1223,7 @@ class NumberInput(Input):
             # be raised if asteval can't evaluate the expression.
             result = utils.evaluate_expression(self.expression, {'value': float(value)})
             if not result:  # A python bool object is returned.
-                return get_message('INVALID_VALUE').format(condition=self.expression)
+                return validation_messages.INVALID_VALUE.format(condition=self.expression)
 
     @staticmethod
     def format_column(col, *args):
@@ -1110,16 +1250,53 @@ class NumberInput(Input):
         """
         return None if value in {None, ''} else float(value)
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Note that the `expression` attribute is not documented here because
+        it may be too complicated to to auto-format into human readable text.
+        The requirements enforced by the `expression` should also be described
+        in the `about` attribute.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+
+        in_parentheses = [type_string]
+
+        if self.units:
+            units_string = format_unit(self.units)
+            if units_string:
+                # pybabel can't find the message if it's in the f-string
+                translated_units = gettext("units")
+                in_parentheses.append(f'{translated_units}: **{units_string}**')
+
+        required_string = self.format_required_string()
+        in_parentheses.append(f'*{required_string}*')
+
+        rst_line = f'**{name}** ({", ".join(in_parentheses)})'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace("_", "\\_")
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
+
 
 class IntegerInput(NumberInput):
     """An integer input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'integer'
 
-    display_name: typing.ClassVar[str] = gettext('integer')
-
     rst_section: typing.ClassVar[str] = 'integer'
 
     units: typing.Union[pint.Unit, None] = None
+
+    @property
+    def display_name(self):
+        return gettext('integer')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1138,7 +1315,7 @@ class IntegerInput(NumberInput):
         # since we already called super().validate, we know that the value
         # can be cast to float
         if not float(value).is_integer():
-            return get_message('NOT_AN_INTEGER').format(value=value)
+            return validation_messages.NOT_AN_INTEGER.format(value=value)
 
 
     @staticmethod
@@ -1187,11 +1364,13 @@ class RatioInput(NumberInput):
     """
     type: typing.ClassVar[str] = 'ratio'
 
-    display_name: typing.ClassVar[str] = gettext('ratio')
-
     rst_section: typing.ClassVar[str] = 'ratio'
 
     units: typing.ClassVar[None] = None
+
+    @property
+    def display_name(self):
+        return gettext('ratio')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1207,7 +1386,7 @@ class RatioInput(NumberInput):
             return message
         as_float = float(value)
         if as_float < 0 or as_float > 1:
-            return get_message('NOT_WITHIN_RANGE').format(
+            return validation_messages.NOT_WITHIN_RANGE.format(
                 value=as_float,
                 range='[0, 1]')
 
@@ -1222,11 +1401,13 @@ class PercentInput(NumberInput):
     """
     type: typing.ClassVar[str] = 'percent'
 
-    display_name: typing.ClassVar[str] = gettext('percent')
-
     rst_section: typing.ClassVar[str] = 'percent'
 
     units: typing.ClassVar[None] = None
+
+    @property
+    def display_name(self):
+        return gettext('percent')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1246,9 +1427,11 @@ class BooleanInput(Input):
     """A boolean input, or parameter, of an invest model."""
     type: typing.ClassVar[str] = 'boolean'
 
-    display_name: typing.ClassVar[str] = gettext('true/false')
-
     rst_section: typing.ClassVar[str] = 'truefalse'
+
+    @property
+    def display_name(self):
+        return gettext('true/false')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1260,7 +1443,7 @@ class BooleanInput(Input):
             A string error message if an error was found.  ``None`` otherwise.
         """
         if not isinstance(value, bool):
-            return get_message('NOT_BOOLEAN').format(value=value)
+            return validation_messages.NOT_BOOLEAN.format(value=value)
 
     @staticmethod
     def format_column(col, *args):
@@ -1287,6 +1470,24 @@ class BooleanInput(Input):
         """
         return None if value in {None, ''} else bool(value)
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+        # It doesn't make sense to include the required string for booleans
+        rst_line = f'**{name}** ({type_string})'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace('_', '\\_')
+            rst_line += f': {sanitized_about_string}'
+
+        return [rst_line]
+
 
 class StringInput(Input):
     """A string input, or parameter, of an invest model.
@@ -1298,8 +1499,6 @@ class StringInput(Input):
     """An optional regex pattern which the text value must match"""
 
     type: typing.ClassVar[str] = 'string'
-
-    display_name: typing.ClassVar[str] = gettext('text')
 
     rst_section: typing.ClassVar[str] = 'text'
 
@@ -1313,6 +1512,10 @@ class StringInput(Input):
                 raise ValueError(f'Failed to compile regexp {regexp}')
         return regexp
 
+    @property
+    def display_name(self):
+        return gettext('text')
+
     def validate(self, value):
         """Validate a value against the requirements for this input.
 
@@ -1325,7 +1528,7 @@ class StringInput(Input):
         if self.regexp:
             matches = re.fullmatch(self.regexp, str(value))
             if not matches:
-                return get_message('REGEXP_MISMATCH').format(regexp=self.regexp)
+                return validation_messages.REGEXP_MISMATCH.format(regexp=self.regexp)
 
     @staticmethod
     def format_column(col, *args):
@@ -1403,8 +1606,6 @@ class OptionStringInput(Input):
 
     type: typing.ClassVar[str] = 'option_string'
 
-    display_name: typing.ClassVar[str] = gettext('option')
-
     rst_section: typing.ClassVar[str] = 'option'
 
     @model_validator(mode='after')
@@ -1412,6 +1613,10 @@ class OptionStringInput(Input):
         if self.dropdown_function and self.options:
             raise ValueError(f'Cannot have both dropdown_function and options')
         return self
+
+    @property
+    def display_name(self):
+        return gettext('option')
 
     def validate(self, value):
         """Validate a value against the requirements for this input.
@@ -1428,7 +1633,7 @@ class OptionStringInput(Input):
         if self.options:
             option_keys = self.list_options()
             if str(value).lower() not in option_keys:
-                return get_message('INVALID_OPTION').format(option_list=option_keys)
+                return validation_messages.INVALID_OPTION.format(option_list=option_keys)
 
     @staticmethod
     def format_column(col, *args):
@@ -1485,6 +1690,33 @@ class OptionStringInput(Input):
         """
         return None if value in {None, ''} else str(value).lower()
 
+    def describe_rst(self):
+        """Generate RST documentation for this input.
+
+        Returns:
+            list of strings, where each string is a line of RST-formatted text.
+        """
+        name = self.name or self.id
+        type_string = format_type_string(self)
+        required_string = self.format_required_string()
+        rst_line = f'**{name}** ({type_string}, *{required_string}*)'
+
+        # Nested args may not have an about section
+        if self.about:
+            sanitized_about_string = self.about.replace("_", "\\_")
+            rst_line += f': {sanitized_about_string}'
+
+        indented_block = []
+        # if self.options is None, the options are dynamically generated.
+        # don't try to document them.
+        if self.options:
+            indented_block.append(gettext(
+                'Values must be one of the following text strings:'))
+            indented_block += self.format_rst()
+
+        # prepend the indent to each line in the indented block
+        return [rst_line] + ['\t' + line for line in indented_block]
+
 
 class FileOutput(Output):
     """A generic file output, or result, of an invest model.
@@ -1533,34 +1765,48 @@ class VectorOutput(FileOutput):
     """An iterable of `Output`s representing the fields created in this vector.
     The `key` of each input must match the corresponding field name."""
 
+    _fields_dict: dict[str, Output] = {}
+
     @model_validator(mode='after')
     def check_field_types(self):
         for field in (self.fields or []):
-            if type(field) not in {IntegerOutput, NumberOutput, OptionStringOutput,
-                                   PercentOutput, RatioOutput, StringOutput}:
+            for output_type in {IntegerOutput, NumberOutput, OptionStringOutput,
+                                PercentOutput, RatioOutput, StringOutput}:
+                if isinstance(field, output_type):
+                    break
+            else:
                 raise ValueError(f'Field {field} is not an allowed type')
         return self
+
+    def model_post_init(self, context):
+        self._fields_dict = {field.id: field for field in self.fields}
+
+    def get_field(self, key: str) -> Output:
+        return self._fields_dict[key]
 
 
 class CSVOutput(FileOutput):
     """A CSV table output, or result, of an invest model.
 
-    For CSVs with a simple layout, `columns` or `rows` (but not both) may be
-    specified. For more complex table structures that cannot be described by
-    `columns` or `rows`, you may omit both attributes. Note that more complex
-    table structures are often more difficult to use; consider dividing them
-    into multiple, simpler tabular outputs.
+    For CSVs with a simple layout, `columns` may be specified. For more complex
+    table structures that cannot be described by `columns`, you may omit the
+    attribute. Note that more complex table structures are often more difficult
+    to use; consider dividing them into multiple, simpler tabular outputs.
     """
     columns: typing.Union[list[Output], None] = None
     """An iterable of `Output`s representing the table's columns. The `key` of
     each input must match the corresponding column header."""
 
-    rows: typing.Union[list[Output], None] = None
-    """An iterable of `Output`s representing the table's rows. The `key` of
-    each input must match the corresponding row header."""
+    orientation: typing.Literal['column', 'row'] = 'column'
+    """Orientation of the table. Defaults to 'column', meaning that the column
+    headers go horizontally. This is the recommended orientation for most tables.
+    If the table must be oriented row-wise, meaning that the headers go
+    vertically, set this to 'row'."""
 
     index_col: typing.Union[str, None] = None
     """The header name of the column that is the index of the table."""
+
+    _columns_dict: dict[str, Output] = {}
 
     @model_validator(mode='after')
     def validate_index_col_in_columns(self):
@@ -1570,18 +1816,25 @@ class CSVOutput(FileOutput):
         return self
 
     @model_validator(mode='after')
-    def check_row_and_column_types(self):
+    def check_column_types(self):
         allowed_types = {
             IntegerOutput, NumberOutput, OptionStringOutput, PercentOutput,
             FileOutput, RatioOutput, SingleBandRasterOutput, StringOutput,
             VectorOutput}
-        for row in (self.rows or []):
-            if type(row) not in allowed_types:
-                raise ValueError(f'Row {row} is not an allowed type')
         for col in (self.columns or []):
-            if type(col) not in allowed_types:
+            for output_type in allowed_types:
+                if isinstance(col, output_type):
+                    break
+            else:
                 raise ValueError(f'Column {col} is not an allowed type')
         return self
+
+    def model_post_init(self, context):
+        if self.columns:
+            self._columns_dict = {col.id: col for col in self.columns}
+
+    def get_column(self, key: str) -> Output:
+        return self._columns_dict[key]
 
 
 class NumberOutput(Output):
@@ -2253,149 +2506,20 @@ GEOMETRY_ORDER = [
 INPUT_TYPES_HTML_FILE = 'input_types.html'
 
 
-def format_type_string(arg_type):
+def format_type_string(_input):
     """Represent an arg type as a user-friendly string.
 
     Args:
-        arg_type (str|set(str)): the type to format. May be a single type or a
-            set of types.
+        _input (Input): the input to format.
 
     Returns:
         formatted string that links to a description of the input type(s)
     """
-    if arg_type is RasterOrVectorInput:
+    if isinstance(_input, RasterOrVectorInput):
         return (
-            f'`{SingleBandRasterInput.display_name} <{INPUT_TYPES_HTML_FILE}#{SingleBandRasterInput.rst_section}>`__ or '
-            f'`{VectorInput.display_name} <{INPUT_TYPES_HTML_FILE}#{VectorInput.rst_section}>`__')
-    return f'`{arg_type.display_name} <{INPUT_TYPES_HTML_FILE}#{arg_type.rst_section}>`__'
-
-
-def describe_arg_from_spec(name, spec):
-    """Generate RST documentation for an arg, given an arg spec.
-
-    This is used for documenting:
-        - a single top-level arg
-        - a row or column in a CSV
-        - a field in a vector
-        - an item in a directory
-
-    Args:
-        name (str): Name to give the section. For top-level args this is
-            arg['name']. For nested args it's typically their key in the
-            dictionary one level up.
-        spec (dict): A arg spec dictionary that conforms to the InVEST args
-            spec specification. It must at least have the key `'type'`, and
-            whatever other keys are expected for that type.
-    Returns:
-        list of strings, where each string is a line of RST-formatted text.
-        The first line has the arg name, type, required state, description,
-        and units if applicable. Depending on the type, there may be additional
-        lines that are indented, that describe details of the arg such as
-        vector fields and geometry types, option_string options, etc.
-    """
-    type_string = format_type_string(type(spec))
-    in_parentheses = [type_string]
-
-    # For numbers and rasters that have units, display the units
-    units = spec.units if hasattr(spec, 'units') else None
-    if units:
-        units_string = format_unit(units)
-        if units_string:
-            # pybabel can't find the message if it's in the f-string
-            translated_units = gettext("units")
-            in_parentheses.append(f'{translated_units}: **{units_string}**')
-
-    if type(spec) is VectorInput:
-        in_parentheses.append((spec.format_geometry_types_rst()))
-
-    # Represent the required state as a string, defaulting to required
-    # It doesn't make sense to include this for boolean checkboxes
-    if type(spec) is not BooleanInput:
-        required_string = spec.format_required_string()
-        in_parentheses.append(f'*{required_string}*')
-
-    # Nested args may not have an about section
-    if spec.about:
-        sanitized_about_string = spec.about.replace("_", "\\_")
-        about_string = f': {sanitized_about_string}'
-    else:
-        about_string = ''
-
-    first_line = f"**{name}** ({', '.join(in_parentheses)}){about_string}"
-
-    # Add details for the types that have them
-    indented_block = []
-    if type(spec) is OptionStringInput:
-        # may be either a dict or set. if it's empty, the options are
-        # dynamically generated. don't try to document them.
-        if spec.options:
-            indented_block.append(gettext(
-                'Values must be one of the following text strings:'))
-            indented_block += spec.format_rst()
-
-    elif type(spec) is CSVInput:
-        if not spec.columns and not spec.rows:
-            first_line += gettext(
-                ' Please see the sample data table for details on the format.')
-
-    # prepend the indent to each line in the indented block
-    return [first_line] + ['\t' + line for line in indented_block]
-
-
-def describe_arg_from_name(module_name, *arg_keys):
-    """Generate RST documentation for an arg, given its model and name.
-
-    Args:
-        module_name (str): invest model module containing the arg.
-        *arg_keys: one or more strings that are nested arg keys.
-
-    Returns:
-        String describing the arg in RST format. Contains an anchor named
-        <arg_keys[0]>-<arg_keys[1]>...-<arg_keys[n]>
-        where underscores in arg keys are replaced with hyphens.
-    """
-    # import the specified module (that should have an MODEL_SPEC attribute)
-    module = importlib.import_module(module_name)
-
-    # anchor names cannot contain underscores. sphinx will replace them
-    # automatically, but lets explicitly replace them here
-    anchor_name = '-'.join(arg_keys).replace('_', '-')
-
-    # start with the spec for all args
-    # narrow down to the nested spec indicated by the sequence of arg keys
-    spec = module.MODEL_SPEC.get_input(arg_keys[0])
-    arg_keys = arg_keys[1:]
-    for i, key in enumerate(arg_keys):
-        # convert raster band numbers to ints
-        if i > 0 and arg_keys[i - 1] == 'bands':
-            key = int(key)
-        elif i > 0 and arg_keys[i - 1] == 'fields':
-            spec = spec.get_field(key)
-        elif i > 0 and arg_keys[i - 1] == 'contents':
-            spec = spec.get_contents(key)
-        elif i > 0 and arg_keys[i - 1] == 'columns':
-            spec = spec.get_column(key)
-        elif i > 0 and arg_keys[i - 1] == 'rows':
-            spec = spec.get_row(key)
-        elif key in {'bands', 'fields', 'contents', 'columns', 'rows'}:
-            continue
-        else:
-            try:
-                spec = spec.get(key)
-            except KeyError:
-                keys_so_far = '.'.join(arg_keys[:i + 1])
-                raise ValueError(
-                    f"Could not find the key '{keys_so_far}' in the "
-                    f"{module_name} model's MODEL_SPEC")
-
-    # format spec into an RST formatted description string
-    if spec.name:
-        arg_name = spec.capitalize_name()
-    else:
-        arg_name = arg_keys[-1]
-
-    rst_description = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
-    return f'.. _{anchor_name}:\n\n{rst_description}'
+            f'`{_input._single_band_raster_input.display_name} <{INPUT_TYPES_HTML_FILE}#{SingleBandRasterInput.rst_section}>`__ or '
+            f'`{_input._vector_input.display_name} <{INPUT_TYPES_HTML_FILE}#{VectorInput.rst_section}>`__')
+    return f'`{_input.display_name} <{INPUT_TYPES_HTML_FILE}#{_input.rst_section}>`__'
 
 
 def write_metadata_file(datasource_path, spec, keywords_list,

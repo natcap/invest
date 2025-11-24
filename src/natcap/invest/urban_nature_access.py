@@ -112,7 +112,8 @@ MODEL_SPEC = spec.ModelSpec(
                     expression="value >= 0"
                 )
             ],
-            index_col="lucode"
+            index_col="lucode",
+            na_allowed=["search_radius_m"]
         ),
         spec.SingleBandRasterInput(
             id="population_raster_path",
@@ -794,13 +795,13 @@ def execute(args):
     )
 
     population_alignment_task = graph.add_task(
-        _resample_population_raster,
+        utils.resample_population_raster,
         kwargs={
             'source_population_raster_path': args['population_raster_path'],
             'target_population_raster_path': file_registry['aligned_population'],
-            'lulc_pixel_size': squared_lulc_pixel_size,
-            'lulc_bb': target_bounding_box,
-            'lulc_projection_wkt': lulc_raster_info['projection_wkt'],
+            'target_pixel_size': squared_lulc_pixel_size,
+            'target_bb': target_bounding_box,
+            'target_projection_wkt': lulc_raster_info['projection_wkt'],
             'working_dir': args['workspace_dir'],
         },
         target_path_list=[file_registry['aligned_population']],
@@ -950,7 +951,8 @@ def execute(args):
             )
 
     attr_table = MODEL_SPEC.get_input(
-        'lulc_attribute_table').get_validated_dataframe(args['lulc_attribute_table'])
+        'lulc_attribute_table').get_validated_dataframe(
+        args['lulc_attribute_table'], args=args)
     kernel_tasks = {}  # search_radius, kernel task
 
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
@@ -1048,7 +1050,7 @@ def execute(args):
             _reclassify_urban_nature_area,
             kwargs={
                 'lulc_raster_path': file_registry['masked_lulc'],
-                'lulc_attribute_table': args['lulc_attribute_table'],
+                'lulc_attribute_df': attr_table,
                 'target_raster_path': file_registry['urban_nature_area'],
             },
             target_path_list=[file_registry['urban_nature_area']],
@@ -1130,7 +1132,7 @@ def execute(args):
                 _reclassify_urban_nature_area,
                 kwargs={
                     'lulc_raster_path': file_registry['masked_lulc'],
-                    'lulc_attribute_table': args['lulc_attribute_table'],
+                    'lulc_attribute_df': attr_table,
                     'target_raster_path': file_registry['urban_nature_area_[LUCODE]', lucode],
                     'only_these_urban_nature_codes': set([lucode]),
                 },
@@ -1208,7 +1210,7 @@ def execute(args):
             _reclassify_urban_nature_area,
             kwargs={
                 'lulc_raster_path': file_registry['masked_lulc'],
-                'lulc_attribute_table': args['lulc_attribute_table'],
+                'lulc_attribute_df': attr_table,
                 'target_raster_path': file_registry['urban_nature_area'],
             },
             target_path_list=[file_registry['urban_nature_area']],
@@ -1780,7 +1782,7 @@ def _rasterize_aois(base_raster_path, aois_vector_path,
 
 
 def _reclassify_urban_nature_area(
-        lulc_raster_path, lulc_attribute_table, target_raster_path,
+        lulc_raster_path, lulc_attribute_df, target_raster_path,
         only_these_urban_nature_codes=None):
     """Reclassify LULC pixels into the urban nature area they represent.
 
@@ -1791,7 +1793,7 @@ def _reclassify_urban_nature_area(
 
     Args:
         lulc_raster_path (string): The path to a land-use/land-cover raster.
-        lulc_attribute_table (string): The path to a CSV table representing
+        lulc_attribute_df (pandas.DataFrame): a dataframe representing
             LULC attributes.  Must have "lucode" and "urban_nature" columns.
             The "urban_nature" column represents a proportion 0-1 of how much
             of the pixel's area represents urban nature.
@@ -1806,9 +1808,6 @@ def _reclassify_urban_nature_area(
     Returns:
         ``None``
     """
-    lulc_attribute_df = MODEL_SPEC.get_input(
-        'lulc_attribute_table').get_validated_dataframe(lulc_attribute_table)
-
     squared_pixel_area = abs(
         numpy.multiply(*_square_off_pixels(lulc_raster_path)))
 
@@ -2276,118 +2275,6 @@ def _square_off_pixels(raster_path):
         pixel_tuple += (average_absolute_size * sign_factor,)
 
     return pixel_tuple
-
-
-def _resample_population_raster(
-        source_population_raster_path, target_population_raster_path,
-        lulc_pixel_size, lulc_bb, lulc_projection_wkt, working_dir):
-    """Resample a population raster without losing or gaining people.
-
-    Population rasters are an interesting special case where the data are
-    neither continuous nor categorical, and the total population count
-    typically matters.  Common resampling methods for continuous
-    (interpolation) and categorical (nearest-neighbor) datasets leave room for
-    the total population of a resampled raster to significantly change.  This
-    function resamples a population raster with the following steps:
-
-        1. Convert a population count raster to population density per pixel
-        2. Warp the population density raster to the target spatial reference
-           and pixel size using bilinear interpolation.
-        3. Convert the warped density raster back to population counts.
-
-    Args:
-        source_population_raster_path (string): The source population raster.
-            Pixel values represent the number of people occupying the pixel.
-            Must be linearly projected in meters.
-        target_population_raster_path (string): The path to where the target,
-            warped population raster will live on disk.
-        lulc_pixel_size (tuple): A tuple of the pixel size for the target
-            raster.  Passed directly to ``pygeoprocessing.warp_raster``.
-        lulc_bb (tuple): A tuple of the bounding box for the target raster.
-            Passed directly to ``pygeoprocessing.warp_raster``.
-        lulc_projection_wkt (string): The Well-Known Text of the target
-            spatial reference fro the target raster.  Passed directly to
-            ``pygeoprocessing.warp_raster``.  Assumed to be a linear projection
-            in meters.
-        working_dir (string): The path to a directory on disk.  A new directory
-            is created within this directory for the storage of temporary files
-            and then deleted upon successful completion of the function.
-
-    Returns:
-        ``None``
-    """
-    tmp_working_dir = tempfile.mkdtemp(dir=working_dir)
-    population_raster_info = pygeoprocessing.get_raster_info(
-        source_population_raster_path)
-    pixel_area = numpy.multiply(*population_raster_info['pixel_size'])
-
-    population_srs = osr.SpatialReference()
-    population_srs.ImportFromWkt(population_raster_info['projection_wkt'])
-
-    # Convert population pixel area to square km
-    population_pixel_area = (
-        pixel_area * population_srs.GetLinearUnits()) / 1e6
-
-    def _convert_population_to_density(population):
-        """Convert population counts to population per square km.
-
-        Args:
-            population (numpy.array): A numpy array where pixel values
-                represent the number of people who reside in a pixel.
-
-        Returns:
-            """
-        return population / population_pixel_area
-
-    # Step 1: convert the population raster to population density per sq. km
-    density_raster_path = os.path.join(tmp_working_dir, 'pop_density.tif')
-    pygeoprocessing.raster_map(
-        rasters=[source_population_raster_path],
-        op=_convert_population_to_density,
-        target_path=density_raster_path,
-        target_dtype=numpy.float32)
-
-    # Step 2: align to the LULC
-    warped_density_path = os.path.join(tmp_working_dir, 'warped_density.tif')
-    pygeoprocessing.warp_raster(
-        density_raster_path,
-        target_pixel_size=lulc_pixel_size,
-        target_raster_path=warped_density_path,
-        resample_method='bilinear',
-        target_bb=lulc_bb,
-        target_projection_wkt=lulc_projection_wkt)
-
-    # Step 3: convert the warped population raster back from density to the
-    # population per pixel
-    target_srs = osr.SpatialReference()
-    target_srs.ImportFromWkt(lulc_projection_wkt)
-    # Calculate target pixel area in km to match above
-    target_pixel_area = (
-        numpy.multiply(*lulc_pixel_size) * target_srs.GetLinearUnits()) / 1e6
-
-    def _convert_density_to_population(density):
-        """Convert a population density raster back to population counts.
-
-        Args:
-            density (numpy.array): An array of the population density per
-                square kilometer.
-
-        Returns:
-            A ``numpy.array`` of the population counts given the target pixel
-            size of the output raster."""
-        # We're using a float32 array here because doing these unit
-        # conversions is likely to end up with partial people spread out
-        # between multiple pixels.  So it's preserving an unrealistic degree of
-        # precision, but that's probably OK because pixels are imprecise
-        # measures anyways.
-        return density * target_pixel_area
-
-    pygeoprocessing.raster_map(
-        op=_convert_density_to_population,
-        rasters=[warped_density_path],
-        target_path=target_population_raster_path)
-
-    shutil.rmtree(tmp_working_dir, ignore_errors=True)
 
 
 def _kernel_power(distance, max_distance, beta):

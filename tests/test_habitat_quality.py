@@ -670,7 +670,7 @@ class HabitatQualityTests(unittest.TestCase):
                 '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ValueError):
             habitat_quality.execute(args)
 
     def test_habitat_quality_missing_threat(self):
@@ -809,7 +809,7 @@ class HabitatQualityTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             habitat_quality.execute(args)
 
-        self.assertIn("max distance for threat: 'threat_1' is less",
+        self.assertIn('Error in column "max_dist", value "0.0"',
                       str(cm.exception))
 
     def test_habitat_quality_invalid_decay_type(self):
@@ -1430,9 +1430,8 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         self.assertEqual(len(validate_result), 1)
         self.assertEqual(validate_result[0][0], ['threats_table_path'])
-        self.assertTrue(utils.matches_format_string(
-            validate_result[0][1],
-            habitat_quality.INVALID_MAX_DIST_MSG))
+        self.assertIn('Error in column "max_dist", value "0.0"',
+                      validate_result[0][1])
 
     def test_habitat_quality_validation_missing_max_dist(self):
         """Habitat Quality: test validation for missing max_dist."""
@@ -1481,9 +1480,9 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         self.assertEqual(len(validate_result), 1)
         self.assertEqual(validate_result[0][0], ['threats_table_path'])
-        self.assertTrue(utils.matches_format_string(
-            validate_result[0][1],
-            habitat_quality.MISSING_MAX_DIST_MSG))
+        self.assertIn(
+            'Null value(s) found in column "max_dist"',
+            validate_result[0][1])
 
     def test_habitat_quality_validation_missing_weight(self):
         """Habitat Quality: test validation for missing weight."""
@@ -1532,9 +1531,9 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         self.assertEqual(len(validate_result), 1)
         self.assertEqual(validate_result[0][0], ['threats_table_path'])
-        self.assertTrue(utils.matches_format_string(
-            validate_result[0][1],
-            habitat_quality.MISSING_WEIGHT_MSG))
+        self.assertIn(
+            'Null value(s) found in column "weight"',
+            validate_result[0][1])
 
     def test_habitat_quality_validation_bad_threat_path(self):
         """Habitat Quality: test validation for bad threat paths."""
@@ -1634,8 +1633,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         actual_message = str(cm.exception)
         self.assertIn(
-            'There was an Error locating a threat raster from '
-            'the path in CSV for column: cur_path and threat: threat_1',
+            'Null value(s) found in column "cur_path"',
             actual_message)
 
     def test_habitat_quality_missing_fut_threat_path(self):
@@ -1790,8 +1788,7 @@ class HabitatQualityTests(unittest.TestCase):
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertEqual(
-            habitat_quality.MISSING_THREAT_RASTER_MSG.format(
-                threat_list=[('threat_1', 'cur_path')]),
+            'Null value(s) found in column "cur_path"',
             validate_result[0][1])
 
     def test_habitat_quality_validate_missing_fut_threat_path(self):
@@ -2068,7 +2065,7 @@ class HabitatQualityTests(unittest.TestCase):
     def test_habitat_quality_argspec_missing_projection(self):
         """Habitat Quality: raise error on missing projection."""
         from natcap.invest import habitat_quality
-        from natcap.invest import validation
+        from natcap.invest import validation_messages
 
         args = {
             'half_saturation_constant': '0.5',
@@ -2139,13 +2136,13 @@ class HabitatQualityTests(unittest.TestCase):
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args)
-        expected = [(['lulc_cur_path'], validation.MESSAGES['INVALID_PROJECTION'])]
+        expected = [(['lulc_cur_path'], validation_messages.INVALID_PROJECTION)]
         self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_argspec_missing_threat_header(self):
         """Habitat Quality: test validate for a threat header."""
         from natcap.invest import habitat_quality
-        from natcap.invest import validation
+        from natcap.invest import validation_messages
 
         args = {
             'half_saturation_constant': '0.5',
@@ -2189,14 +2186,14 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
             ['threats_table_path'],
-            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+            validation_messages.MATCHED_NO_HEADERS.format(
                 header='column', header_name='decay'))]
         self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_validate_missing_base_column(self):
         """Habitat Quality: test validate for a missing base column."""
         from natcap.invest import habitat_quality
-        from natcap.invest import validation
+        from natcap.invest import validation_messages
 
         args = {
             'half_saturation_constant': '0.5',
@@ -2241,7 +2238,7 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
             ['threats_table_path'],
-            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+            validation_messages.MATCHED_NO_HEADERS.format(
                 header="column", header_name="base_path")
         )]
         self.assertEqual(validate_result, expected)
@@ -2249,7 +2246,7 @@ class HabitatQualityTests(unittest.TestCase):
     def test_habitat_quality_validate_missing_fut_column(self):
         """Habitat Quality: test validate for a missing fut column."""
         from natcap.invest import habitat_quality
-        from natcap.invest import validation
+        from natcap.invest import validation_messages
 
         args = {
             'half_saturation_constant': '0.5',
@@ -2293,7 +2290,7 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
             ['threats_table_path'],
-            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+            validation_messages.MATCHED_NO_HEADERS.format(
                 header='column', header_name='fut_path')
         )]
         self.assertEqual(validate_result, expected)
@@ -2340,7 +2337,7 @@ class HabitatQualityTests(unittest.TestCase):
                 '70,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             habitat_quality.execute(args)
 
     def test_compute_rarity_operation(self):

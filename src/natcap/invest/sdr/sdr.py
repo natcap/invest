@@ -67,7 +67,7 @@ MODEL_SPEC = spec.ModelSpec(
                 " detachment and transport by rainfall and runoff."
             ),
             data_type=float,
-            units=u.metric_ton * u.hectare * u.hour/ (u.hectare * u.megajoule * u.millimeter),
+            units=u.metric_ton * u.hectare * u.hour / (u.hectare * u.megajoule * u.millimeter),
             projected=True
         ),
         spec.SingleBandRasterInput(
@@ -632,16 +632,6 @@ def execute(args):
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
         args['biophysical_table_path'])
-
-    # Test to see if c or p values are outside of 0..1
-    for key in ['usle_c', 'usle_p']:
-        for lulc_code, row in biophysical_df.iterrows():
-            if row[key] < 0 or row[key] > 1:
-                raise ValueError(
-                    f'A value in the biophysical table is not a number '
-                    f'within range 0..1. The offending value is in '
-                    f'column "{key}", lucode row "{lulc_code}", '
-                    f'and has value "{row[key]}"')
 
     base_list = []
     aligned_list = []

@@ -1,0 +1,115 @@
+name: "AutoPR: Create PRs into release branches"
+env:
+    SOURCE_BRANCH: main
+on:
+    pull_request:
+        types: [closed]
+        branches:
+            # Triggered when PR into this branch is closed.
+            - main
+    push:
+        branches:
+            - main
+
+jobs:
+    create-pr-into-release:
+        if: github.repository == 'natcap/invest'
+        name: "AutoPR main into release branches"
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: write
+        steps:
+            - uses: actions/checkout@v5
+              with:
+                  fetch-tags: true
+
+            - name: Open a PR into each open release branch
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  SOURCE_BRANCH: ${{ env.SOURCE_BRANCH }}
+              run: |
+                  # NOTE ABOUT DEPENDENCIES: gettext-base is required for
+                  # envsubst. Both deps appear to be installed on the ubuntu
+                  # runner as of 2025-11-07.
+                  set -x
+
+                  if [[ "${{ github.event_name }}" == "pull_request" ]]
+                  then
+                      PR_NUM="${{ github.event.pull_request.number }}"
+                      PR_USERNAME="${{ github.event.pull_request.user.login }}"
+                      echo "Latest PR on main ($PR_NUM) was authored by $PR_USERNAME."
+                      export PR_MSG="due to #$PR_NUM."
+                  else
+                      # event_name is presumed to have been a push.
+                      # A push could include a bunch of commits, so just get
+                      # the login name of the user that pushed
+                      PR_USERNAME="${{ github.event.push.pusher.username }}"
+                      export PR_MSG="due to a push to `main`."
+                  fi
+
+                  # Using grep with pattern ^release filters out any autorelease branches.
+                  # If no release branches are found, exit github actions.
+                  BRANCHES=$(git ls-remote --heads origin | cut -d '/' -f 3- | grep ^release || echo '')
+                  if [ -z "$BRANCHES" ]
+                  then
+                      echo "No release branches found; exiting github actions workflow."
+                      exit 0
+                  fi
+
+                  echo $BRANCHES  # debugging
+                  ERRORSPRESENT=0
+                  for BRANCH in $BRANCHES
+                    do
+                        # Always start from main
+                        git checkout main
+
+                        export RELEASE_BRANCH=$BRANCH  # needed for envsubst
+                        PR_BODY_FILE=pr_body.txt
+                        cat .github/auto-main-into-release-pr-body.md | envsubst > $PR_BODY_FILE
+                        cat $PR_BODY_FILE  # for debugging
+
+                        PR_TITLE="[Auto-generated] Merge main into $BRANCH"
+
+                        # Skip this branch if a PR from main into $BRANCH already exists.
+                        EXISTING_PR=$(gh pr list --search "$PR_TITLE in:title" || echo '')
+                        if ! [ -z "$EXISTING_PR" ]
+                        then
+                            echo "PR into $BRANCH already exists; skipping."
+                            continue
+                        fi
+
+                        # Create a new autopr branch.
+                        SHORTREV=$(git rev-parse --short main)
+                        CLEAN_BRANCH=$(echo "$BRANCH" | tr '/' '-')
+                        AUTOPR_BRANCH="autopr/${SOURCE_BRANCH}-rev${SHORTREV}-into-${CLEAN_BRANCH}"
+                        git checkout -b "${AUTOPR_BRANCH}"
+                        git push origin ${AUTOPR_BRANCH}
+                        export AUTOPR_BRANCH  # needed for envsubst
+
+                        # This PR will be assigned to $PR_USERNAME, which should be
+                        # the person who merged the PR that caused this commit to be
+                        # created. Others could of course be assigned later.
+                        FAILED=0
+                        gh pr create \
+                            --head ${AUTOPR_BRANCH} \
+                            --base ${RELEASE_BRANCH} \
+                            --reviewer "${PR_USERNAME}" \
+                            --assignee "${PR_USERNAME}" \
+                            --label "auto" \
+                            --title "${PR_TITLE}" \
+                            --body-file $PR_BODY_FILE || FAILED=1
+
+                        if [[ $FAILED -eq 1 ]]
+                        then
+                            echo "PR failed; deleting autopr branch"
+                            git push -d origin ${AUTOPR_BRANCH}
+                            ERRORSPRESENT=$((${ERRORSPRESENT} | 1))
+                        fi
+                    done
+
+                    if [[ $ERRORSPRESENT -gt 0 ]]
+                    then
+                        echo "At least one of the PRs failed and might need to be revisited."
+                        exit 1
+                    fi

@@ -1,5 +1,4 @@
 """Urban Cooling Model."""
-import copy
 import logging
 import math
 import os
@@ -624,7 +623,7 @@ def execute(args):
 
     biophysical_df = MODEL_SPEC.get_input(
         'biophysical_table_path').get_validated_dataframe(
-        args['biophysical_table_path'])
+        args['biophysical_table_path'], args=args)
 
     # Use default weights for shade, albedo, eti if the user didn't provide
     # weights.
@@ -1610,25 +1609,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(args, MODEL_SPEC)
-
-    invalid_keys = validation.get_invalid_keys(validation_warnings)
-    if ('biophysical_table_path' not in invalid_keys and
-            'cc_method' not in invalid_keys):
-        spec = copy.deepcopy(MODEL_SPEC.get_input('biophysical_table_path'))
-        if args['cc_method'] == 'factors':
-            spec.get_column('shade').required = True
-            spec.get_column('albedo').required = True
-        else:
-            # args['cc_method'] must be 'intensity'.
-            # If args['cc_method'] isn't one of these two allowed values
-            # ('intensity' or 'factors'), it'll be caught by
-            # validation.validate due to the allowed values stated in
-            # MODEL_SPEC.
-            spec.get_column('building_intensity').required = True
-
-        error_msg = spec.validate(args['biophysical_table_path'])
-        if error_msg:
-            validation_warnings.append((['biophysical_table_path'], error_msg))
-
-    return validation_warnings
+    return validation.validate(args, MODEL_SPEC)

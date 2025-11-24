@@ -15,8 +15,7 @@ from . import spec
 from . import utils
 from . import validation
 from .crop_production_regression import (
-    NUTRIENTS, NUTRIENT_UNITS, CROP_TO_PATH_TABLES, LULC_RASTER_INPUT,
-    get_full_path_from_crop_table)
+    NUTRIENTS, NUTRIENT_UNITS, CROP_TO_PATH_TABLES, LULC_RASTER_INPUT)
 from .file_registry import FileRegistry
 from .unit_registry import u
 
@@ -347,7 +346,8 @@ MODEL_SPEC = spec.ModelSpec(
                             units=u.metric_ton / u.hectare
                         ),
                     ],
-                    index_col="climate_bin"
+                    index_col="climate_bin",
+                    na_allowed=["yield_25th", "yield_50th", "yield_75th", "yield_95th"]
                 )
             ],
             index_col="crop_name"
@@ -661,16 +661,6 @@ def execute(args):
             "The following lucodes are in the landcover raster but aren't "
             f"in the landcover to crop table: {lucodes_missing_from_table}")
 
-    LOGGER.info("Checking that crops are supported by the model.")
-    user_provided_crop_names = set(list(crop_to_landcover_df.index))
-    valid_crop_names = set([crop.key for crop in CROP_OPTIONS])
-    invalid_crop_names = user_provided_crop_names.difference(valid_crop_names)
-    if invalid_crop_names:
-        raise ValueError(
-            "The following crop names were provided in "
-            f"{args['landcover_to_crop_table_path']} but are not supported "
-            f"by the model: {invalid_crop_names}")
-
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
     pixel_area_ha = numpy.prod([
@@ -697,15 +687,9 @@ def execute(args):
     for crop_name, row in crop_to_landcover_df.iterrows():
         crop_lucode = row[_EXPECTED_LUCODE_TABLE_HEADER]
         LOGGER.info(f'Processing crop {crop_name}')
-        crop_climate_bin_raster_path = get_full_path_from_crop_table(
-            MODEL_SPEC,
-            CROP_TO_PATH_TABLES.climate_bin,
-            args[CROP_TO_PATH_TABLES.climate_bin],
-            crop_name)
-
-        if not crop_climate_bin_raster_path:
-            raise ValueError(
-                f'No climate bin raster path could be found for {crop_name}')
+        crop_climate_bin_raster_path = MODEL_SPEC.get_input(
+            CROP_TO_PATH_TABLES.climate_bin).get_validated_dataframe(
+            args[CROP_TO_PATH_TABLES.climate_bin]).at[crop_name, 'path']
 
         LOGGER.info(
             "Clipping global climate bin raster to landcover bounding box.")
@@ -723,11 +707,9 @@ def execute(args):
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
-        climate_percentile_yield_table_path = get_full_path_from_crop_table(
-            MODEL_SPEC,
-            CROP_TO_PATH_TABLES.percentile_yield,
-            args[CROP_TO_PATH_TABLES.percentile_yield],
-            crop_name)
+        climate_percentile_yield_table_path = MODEL_SPEC.get_input(
+            CROP_TO_PATH_TABLES.percentile_yield).get_validated_dataframe(
+            args[CROP_TO_PATH_TABLES.percentile_yield]).at[crop_name, 'path']
 
         crop_climate_percentile_df = MODEL_SPEC.get_input(
             CROP_TO_PATH_TABLES.percentile_yield).get_column(
@@ -808,11 +790,10 @@ def execute(args):
             dependent_task_list.append(create_percentile_production_task)
 
         LOGGER.info(f'Calculate observed yield for {crop_name}')
-        global_observed_yield_raster_path = get_full_path_from_crop_table(
-            MODEL_SPEC,
-            CROP_TO_PATH_TABLES.observed_yield,
-            args[CROP_TO_PATH_TABLES.observed_yield],
-            crop_name)
+        global_observed_yield_raster_path = MODEL_SPEC.get_input(
+            CROP_TO_PATH_TABLES.observed_yield).get_validated_dataframe(
+            args[CROP_TO_PATH_TABLES.observed_yield]).at[crop_name, 'path']
+
         global_observed_yield_raster_info = (
             pygeoprocessing.get_raster_info(
                 global_observed_yield_raster_path))
@@ -1032,9 +1013,9 @@ def tabulate_results(
         for yield_percentile_id in sorted(yield_percentile_headers) + [
             'yield_observed']]
 
-    # Since pixel values in observed and percentile rasters are Mg/(ha•yr),
-    # raster sums are (Mg•px)/(ha•yr). Before recording sums in
-    # production_lookup dictionary, convert to Mg/yr by multiplying by ha/px.
+    # Since pixel values in observed and percentile rasters are Mg/ha,
+    # raster sums are (Mg•px)/ha. Before recording sums in
+    # production_lookup dictionary, convert to Mg by multiplying by ha/px.
 
     with open(target_table_path, 'w') as result_table:
         result_table.write(
@@ -1149,9 +1130,9 @@ def aggregate_to_polygons(
         target_aggregate_vector_path,
         driver_name='ESRI Shapefile')
 
-    # Since pixel values are Mg/(ha•yr), zonal stats sum is (Mg•px)/(ha•yr).
+    # Since pixel values are Mg/ha, zonal stats sum is (Mg•px)/ha.
     # Before writing sum to results tables or when using sum to calculate
-    # nutrient yields, convert to Mg/yr by multiplying by ha/px.
+    # nutrient yields, convert to Mg by multiplying by ha/px.
 
     # loop over every crop and query with pgp function
     total_yield_lookup = {}
