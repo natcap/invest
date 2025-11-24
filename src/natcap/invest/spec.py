@@ -1956,6 +1956,12 @@ class ModelSpec(BaseModel):
     module_name: str
     """The importable module name of the model e.g. ``natcap.invest.foo``."""
 
+    reporter: str = ''
+    """The importable name of a report-generating module with a ``report``
+    function.
+    e.g. ``'invest_reports.jinja_report_generators.cv_report_generator'``
+    """
+
     @model_validator(mode='after')
     def check_inputs_in_field_order(self):
         """Check that all inputs either appear in `input_field_order`,
@@ -2141,8 +2147,8 @@ class ModelSpec(BaseModel):
         return args, file_registry, graph
 
     def execute(self, args, create_logfile=False, log_level=logging.NOTSET,
-            generate_metadata=False, save_file_registry=False,
-            check_outputs=False):
+                generate_metadata=False, save_file_registry=False,
+                check_outputs=False, generate_report=False):
         """Invest model execute function wrapper.
 
         Performs additonal work before and after the execute function runs:
@@ -2168,6 +2174,10 @@ class ModelSpec(BaseModel):
                 the expected outputs and no others were created based on the
                 given args and the ``created_if`` attribute of each output. An
                 error will be raised if a discrepancy is found.
+            generate_report (bool): Defaults to False. If True, create an html
+                report that summarizes model results. Requires ``self.reporter``
+                to be a Python module with a ``report`` function. If True,
+                ``generate_metadata`` will be overridden.
 
         Returns:
             file registry dictionary
@@ -2176,11 +2186,13 @@ class ModelSpec(BaseModel):
             RuntimeError if ``check_outputs`` is ``True`` and a discrepancy is
             detected between actual and expected outputs
         """
+        if generate_report:
+            generate_metadata = True
         if create_logfile:
             cm = utils.prepare_workspace(args['workspace_dir'],
                                          model_id=self.model_id,
                                          logging_level=log_level)
-        else: # null context manager, has no effect
+        else:  # null context manager, has no effect
             cm = contextlib.nullcontext()
 
         with GDALUseExceptions(), cm:
@@ -2232,6 +2244,14 @@ class ModelSpec(BaseModel):
                     f'file_registry{preprocessed_args["results_suffix"]}.json')
                 with open(file_registry_path, 'w') as json_file:
                     json.dump(registry, json_file, indent=4)
+
+            if generate_report:
+                reporter_module = importlib.import_module(self.reporter)
+                target_html_filepath = os.path.join(
+                    preprocessed_args['workspace_dir'],
+                    f'{self.model_id}_report{preprocessed_args["results_suffix"]}.html')
+                reporter_module.report(
+                    registry, preprocessed_args, self, target_html_filepath)
 
             return registry
 
