@@ -10,6 +10,8 @@ import pygeoprocessing
 from shapely import Polygon
 from osgeo import gdal, ogr, osr
 
+gdal.UseExceptions()
+
 # FLOAT32_NODATA is used as a "custom" nodata vs PGP_FLOAT32_NODATA is
 # pygeoprocessing's default nodata for a float32 raster and is used in the
 # model beginning at the step where delta ndvi is calculated
@@ -136,9 +138,6 @@ def make_synthetic_data_and_params(workspace_dir):
     }
 
     return args
-
-
-gdal.UseExceptions()
 
 
 class UMHTests(unittest.TestCase):

@@ -42,7 +42,6 @@ MODEL_SPEC = spec.ModelSpec(
         spec.SUFFIX,
         spec.N_WORKERS,
         spec.AOI.model_copy(update=dict(  #  TODO: potentially want to have this req to be census tract pop. shp? or only req that if opt 1 but optional for opts 2-3?
-            id="aoi_path",
             about=gettext(
                 "Map of the area over which to run the model. The AOI must be "
                 "smaller than the raster inputs by at least the search radius "
@@ -174,7 +173,7 @@ MODEL_SPEC = spec.ModelSpec(
             ),
             data_type=float,
             units=None,
-            # require ndvi_base unless scenario is `lulc`` and user enters
+            # require ndvi_base unless scenario is `lulc` and user enters
             # an attribute table
             required="scenario!='lulc' or not lulc_attr_csv",
         ),
@@ -717,17 +716,6 @@ def execute(args):
             task_name="calculate delta ndvi"  # change in nature exposure
         )
 
-        pop_raster_info = pygeoprocessing.get_raster_info(
-            args['population_raster'])
-        pop_sr = osr.SpatialReference()
-        pop_sr.ImportFromWkt(pop_raster_info['projection_wkt'])
-        if not pop_sr.IsSame(aoi_sr):
-            transformed_bounding_box = pygeoprocessing.transform_bounding_box(
-                pop_raster_info['bounding_box'],
-                pop_raster_info['projection_wkt'],
-                aoi_projection)
-            pop_raster_info['bounding_box'] = transformed_bounding_box
-
         # Use this bbox as target when aligning pop raster because extents
         # should match when using raster calculator to calc preventable cases
         delta_ndvi_bbox = pygeoprocessing.get_raster_info(
@@ -793,9 +781,6 @@ def execute(args):
             zonal_stats_inputs.append(file_registry['preventable_cost'])
             zonal_stats_dependent_tasks.append(preventable_cost_task)
 
-        task_graph.join()
-        # TODO ^ is this best way to require prev cost task has been completed?
-        # Can't add as dependent task below as not done if not health_cost_rate
 
         zonal_stats_task = task_graph.add_task(
             func=zonal_stats_preventable_cases_cost,
@@ -970,7 +955,7 @@ def calc_baseline_cases(population_raster, base_prevalence_vector,
             the study area. Pixels with no population should be
             assigned a value of 0.
         base_prevalence_vector (str): path to vector with field
-            `risk_rate` that provides the baseline prevalence
+            ``risk_rate`` that provides the baseline prevalence
             (or incidence) rate of a mental health outcome by
             spatial unit (e.g., census tract).
         target_base_prevalence_raster (str): target output path for
