@@ -75,6 +75,13 @@ General
   a ``rows`` attribute; ``orientation='row'`` may be used to indicate a row-wise
   table layout. (`#2216 <https://github.com/natcap/invest/issues/2216>`_)
 
+Coastal Vulnerability
+=====================
+* Fixed a bug where the TaskGraph ``target_path_list`` was incomplete for
+  several tasks that created multiple files, resulting in these tasks always
+  evaluating to "not precalculated"
+  (`#2231 <https://github.com/natcap/invest/issues/2231>`_)
+
 
 3.17.1 (2025-11-06)
 -------------------
