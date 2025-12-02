@@ -1,6 +1,6 @@
 {
   "name": "invest-workbench",
-  "version": "3.17.1",
+  "version": "3.17.2",
   "description": "Models that map and value the goods and services from nature that sustain and fulfill human life",
   "main": "build/main/main.js",
   "homepage": "./",

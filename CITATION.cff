@@ -12,12 +12,12 @@ authors:
     website: 'https://naturalcapitalproject.stanford.edu'
 identifiers:
   - type: doi
-    value: 10.60793/natcap-invest-3.17.1
+    value: 10.60793/natcap-invest-3.17.2
     description: Persistent identifier for this version of InVEST
 repository-code: 'https://github.com/natcap/invest'
 url: 'https://naturalcapitalproject.stanford.edu/software/invest'
 repository-artifact: >-
-  http://releases.naturalcapitalproject.org/?prefix=invest/3.17.1
+  http://releases.naturalcapitalproject.org/?prefix=invest/3.17.2
 abstract: >-
   InVEST® is a suite of free, open-source software models
   used to map and value the goods and services from nature
@@ -56,5 +56,5 @@ keywords:
   - Geospatial
   - Natural Capital
 license: Apache-2.0
-version: 3.17.1
-date-released: 2025-11-06
+version: 3.17.2
+date-released: 2025-12-02
