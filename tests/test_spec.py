@@ -46,7 +46,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             units=u.meter**3/u.month,
             expression="value >= 0"
         )
-        out = spec.describe_arg_from_spec(number_spec.name, number_spec)
+        out = number_spec.describe_rst()
         expected_rst = ([
             '**Bar** (`number <input_types.html#number>`__, '
             'units: **m³/month**, *required*): Description'])
@@ -58,7 +58,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             name="Bar",
             about="Description"
         )
-        out = spec.describe_arg_from_spec(ratio_spec.name, ratio_spec)
+        out = ratio_spec.describe_rst()
         expected_rst = (['**Bar** (`ratio <input_types.html#ratio>`__, '
                          '*required*): Description'])
         self.assertEqual(repr(out), repr(expected_rst))
@@ -70,7 +70,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             about="Description",
             required=False
         )
-        out = spec.describe_arg_from_spec(percent_spec.name, percent_spec)
+        out = percent_spec.describe_rst()
         expected_rst = (['**Bar** (`percent <input_types.html#percent>`__, '
                          '*optional*): Description'])
         self.assertEqual(repr(out), repr(expected_rst))
@@ -82,7 +82,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             about="Description",
             required=True
         )
-        out = spec.describe_arg_from_spec(integer_spec.name, integer_spec)
+        out = integer_spec.describe_rst()
         expected_rst = (['**Bar** (`integer <input_types.html#integer>`__, '
                          '*required*): Description'])
         self.assertEqual(repr(out), repr(expected_rst))
@@ -93,7 +93,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             name="Bar",
             about="Description"
         )
-        out = spec.describe_arg_from_spec(boolean_spec.name, boolean_spec)
+        out = boolean_spec.describe_rst()
         expected_rst = (['**Bar** (`true/false <input_types.html#truefalse>'
                          '`__): Description'])
         self.assertEqual(repr(out), repr(expected_rst))
@@ -104,7 +104,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             name="Bar",
             about="Description"
         )
-        out = spec.describe_arg_from_spec(string_spec.name, string_spec)
+        out = string_spec.describe_rst()
         expected_rst = (['**Bar** (`text <input_types.html#text>`__, '
                          '*required*): Description'])
         self.assertEqual(repr(out), repr(expected_rst))
@@ -123,7 +123,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
                     about="do something else")])
         # expect that option case is ignored
         # otherwise, c would sort before A
-        out = spec.describe_arg_from_spec(option_spec.name, option_spec)
+        out = option_spec.describe_rst()
         expected_rst = ([
             '**Bar** (`option <input_types.html#option>`__, *required*): Description',
             '\tValues must be one of the following text strings:',
@@ -141,7 +141,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             about="Description",
             name="Bar"
         )
-        out = spec.describe_arg_from_spec(raster_spec.name, raster_spec)
+        out = raster_spec.describe_rst()
         expected_rst = ([
             '**Bar** (`raster <input_types.html#raster>`__, *required*): Description'
         ])
@@ -154,7 +154,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             about="Description",
             name="Bar"
         )
-        out = spec.describe_arg_from_spec(raster_spec.name, raster_spec)
+        out = raster_spec.describe_rst()
         expected_rst = ([
             '**Bar** (`raster <input_types.html#raster>`__, units: **mm/year**, *required*): Description'
         ])
@@ -168,7 +168,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             about="Description",
             name="Bar"
         )
-        out = spec.describe_arg_from_spec(vector_spec.name, vector_spec)
+        out = vector_spec.describe_rst()
         expected_rst = ([
             '**Bar** (`vector <input_types.html#vector>`__, linestring, *required*): Description'
         ])
@@ -191,7 +191,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             about="Description",
             name="Bar"
         )
-        out = spec.describe_arg_from_spec(vector_spec.name, vector_spec)
+        out = vector_spec.describe_rst()
         expected_rst = ([
             '**Bar** (`vector <input_types.html#vector>`__, polygon/multipolygon, *required*): Description',
         ])
@@ -203,7 +203,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             about="Description.",
             name="Bar"
         )
-        out = spec.describe_arg_from_spec(csv_spec.name, csv_spec)
+        out = csv_spec.describe_rst()
         expected_rst = ([
             '**Bar** (`CSV <input_types.html#csv>`__, *required*): Description. '
             'Please see the sample data table for details on the format.'
@@ -223,7 +223,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
                 )
             ]
         )
-        out = spec.describe_arg_from_spec(csv_spec.name, csv_spec)
+        out = csv_spec.describe_rst()
         expected_rst = ([
             '**Bar** (`CSV <input_types.html#csv>`__, *required*): Description'
         ])
@@ -237,7 +237,7 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             name="Bar",
             contents=[]
         )
-        out = spec.describe_arg_from_spec(dir_spec.name, dir_spec)
+        out = dir_spec.describe_rst()
         expected_rst = ([
             '**Bar** (`directory <input_types.html#directory>`__, *required*): Description'
         ])
@@ -253,21 +253,10 @@ class TestDescribeArgFromSpec(unittest.TestCase):
             geometry_types={"POLYGON"},
             fields=[]
         )
-        out = spec.describe_arg_from_spec(multi_spec.name, multi_spec)
+        out = multi_spec.describe_rst()
         expected_rst = ([
             '**Bar** (`raster <input_types.html#raster>`__ or `vector <input_types.html#vector>`__, *required*): Description'
         ])
-        self.assertEqual(repr(out), repr(expected_rst))
-
-    def test_real_model_spec(self):
-        from natcap.invest import carbon
-        out = spec.describe_arg_from_name(
-            'natcap.invest.carbon', 'carbon_pools_path', 'columns', 'lucode')
-        expected_rst = (
-            '.. _carbon-pools-path-columns-lucode:\n\n' +
-            '**lucode** (`integer <input_types.html#integer>`__, *required*): ' +
-            carbon.MODEL_SPEC.get_input('carbon_pools_path').get_column('lucode').about
-        )
         self.assertEqual(repr(out), repr(expected_rst))
 
 

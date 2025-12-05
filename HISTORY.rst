@@ -62,9 +62,18 @@
 
 
 
-
 Unreleased Changes
 ------------------
+
+Coastal Vulnerability
+=====================
+* Various updates to model input and output data metadata, including
+  correcting the units of some intermediate outputs.
+  (`#2254 <https://github.com/natcap/invest/issues/2254>`_)
+
+
+3.17.2 (2025-12-02)
+-------------------
 
 General
 =======
@@ -77,9 +86,10 @@ General
 
 Coastal Vulnerability
 =====================
-* Various updates to model input and output data metadata, including
-  correcting the units of some intermediate outputs.
-  (`#2254 <https://github.com/natcap/invest/issues/2254>`_)
+* Fixed a bug where the TaskGraph ``target_path_list`` was incomplete for
+  several tasks that created multiple files, resulting in these tasks always
+  evaluating to "not precalculated"
+  (`#2231 <https://github.com/natcap/invest/issues/2231>`_)
 
 
 3.17.1 (2025-11-06)
