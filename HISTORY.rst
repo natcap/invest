@@ -62,10 +62,15 @@
 
 
 
+Unreleased Changes
+------------------
 
-..
-  Unreleased Changes
-  ------------------
+Coastal Vulnerability
+=====================
+* Various updates to model input and output data metadata, including
+  correcting the units of some intermediate outputs.
+  (`#2254 <https://github.com/natcap/invest/issues/2254>`_)
+
 
 3.17.2 (2025-12-02)
 -------------------
