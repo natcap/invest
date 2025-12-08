@@ -14,6 +14,7 @@ from osgeo import osr
 
 from utils import assert_complete_execute
 
+
 gdal.UseExceptions()
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ndr')
@@ -211,7 +212,7 @@ class NDRTests(unittest.TestCase):
             f.write(b'')
 
         execute_kwargs = {
-            'generate_report': True,
+            'generate_report': bool(ndr.MODEL_SPEC.reporter),
             'save_file_registry': True
         }
         ndr.MODEL_SPEC.execute(args, **execute_kwargs)

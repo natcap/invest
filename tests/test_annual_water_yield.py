@@ -11,6 +11,8 @@ import pandas
 import pygeoprocessing
 from osgeo import gdal, ogr, osr
 
+from utils import assert_complete_execute
+
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'annual_water_yield')
 SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
@@ -170,7 +172,14 @@ class AnnualWaterYieldTests(unittest.TestCase):
         args['sub_watersheds_path'] = os.path.join(
             SAMPLE_DATA, 'subwatersheds.shp')
         args['results_suffix'] = 'test'
-        annual_water_yield.execute(args)
+        execute_kwargs = {
+            'generate_report': bool(annual_water_yield.MODEL_SPEC.reporter),
+            'save_file_registry': True
+        }
+        annual_water_yield.MODEL_SPEC.execute(args, **execute_kwargs)
+        assert_complete_execute(
+            args['workspace_dir'], args, annual_water_yield.MODEL_SPEC,
+            **execute_kwargs)
 
         raster_results = ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
         for raster_path in raster_results:

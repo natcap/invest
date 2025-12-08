@@ -136,7 +136,7 @@ class SDRTests(unittest.TestCase):
         args = SDRTests.generate_base_args(self.workspace_dir)
 
         execute_kwargs = {
-            'generate_report': True,
+            'generate_report': bool(sdr.MODEL_SPEC.reporter),
             'save_file_registry': True
         }
         sdr.MODEL_SPEC.execute(args, **execute_kwargs)
