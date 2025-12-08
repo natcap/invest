@@ -363,13 +363,6 @@ MODEL_SPEC = spec.ModelSpec(
             units=u.millimeter
         ),
         spec.SingleBandRasterOutput(
-            id="l",
-            path="L.tif",
-            about=gettext("Map of local recharge values"),
-            data_type=float,
-            units=u.millimeter
-        ),
-        spec.SingleBandRasterOutput(
             id="l_sum_avail",
             path="L_sum_avail.tif",
             about=gettext(
@@ -440,13 +433,6 @@ MODEL_SPEC = spec.ModelSpec(
             id="aet",
             path="intermediate_outputs/aet.tif",
             about=gettext("Map of actual evapotranspiration"),
-            data_type=float,
-            units=u.millimeter
-        ),
-        spec.SingleBandRasterOutput(
-            id="aetm_[MONTH]",
-            path="intermediate_outputs/aetm_[MONTH].tif",
-            about=gettext("Maps of monthly evapotranspiration"),
             data_type=float,
             units=u.millimeter
         ),
@@ -567,6 +553,7 @@ MODEL_SPEC = spec.ModelSpec(
                 "Copy of user-defined climate zones raster, aligned and clipped"
                 " to match the other spatial inputs"
             ),
+            created_if="user_defined_climate_zones",
             data_type=int,
             units=None
         ),
