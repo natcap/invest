@@ -2253,8 +2253,6 @@ class ModelSpec(BaseModel):
                 reporter_module.report(
                     registry, preprocessed_args, self, target_html_filepath)
 
-            return registry
-
 
 # Specs for common arg types ##################################################
 WORKSPACE = DirectoryInput(

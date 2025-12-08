@@ -484,7 +484,7 @@ def main(user_args=None):
                     # Unexpected cases, but we will still execute the model.
                     LOGGER.exception(exc)
 
-            _ = model_module.MODEL_SPEC.execute(
+            model_module.MODEL_SPEC.execute(
                 parsed_datastack.args,
                 create_logfile=True,
                 generate_metadata=True,
